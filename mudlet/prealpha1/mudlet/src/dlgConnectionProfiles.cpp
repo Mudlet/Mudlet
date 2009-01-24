@@ -65,19 +65,7 @@ void dlgConnectionProfiles::slot_addProfile()
         newname = trick;
     }
 
-    do
-    {
-        newname = QInputDialog::getText(this, tr("Profile name"), tr("Enter profile name"), QLineEdit::Normal, newname);
-        if (HostManager::self()->getHost( newname ))
-            QMessageBox::information( this, tr("Profile name exist"), tr("This profile name is already taken"));
-    } while (!newname.isEmpty() && HostManager::self()->getHost( newname ));
-
-    if (newname.isEmpty())
-        return;
-
-    QStringList sList;
-    sList << newname;
-    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, sList);
+    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, QStringList(newname));
     profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
     HostManager::self()->addHost( newname, QString("23"), QString(""), QString("") );
     //Host * pHost = HostManager::self()->getHost( newname );
@@ -92,6 +80,9 @@ void dlgConnectionProfiles::slot_addProfile()
     basic_info_groupbox->show();
     autologin_groupbox->show();
     mud_info_groupbox->show();
+
+    profile_name_entry->setFocus();
+    profile_name_entry->selectAll();
 }
 
 void dlgConnectionProfiles::slot_deleteProfile()
