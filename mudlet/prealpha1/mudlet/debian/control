@@ -1,0 +1,19 @@
+Source: mudlet
+Section: games
+Priority: extra
+Maintainer: Bruno Bigras <bruno@burnbox.net>
+Build-Depends: debhelper (>= 7),
+ libqscintilla2-dev, lua5.1,
+ liblua5.1-0-dev, qt4-dev-tools,
+ libqt4-dev
+Standards-Version: 3.7.3
+Homepage: http://www.mudlet.org/
+
+Package: mudlet
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Freshly-minted MUD client, designed to take mudding to a new level
+ A new breed of a client on the MUD scene - with an intuitive user interface, a specially designed scripting framework, and a very fast text display.
+ Add to that cross-platform capability, an open-source development model, and you have a very likable MUD client.
+ .
+ Homepage: http://www.mudlet.org/
