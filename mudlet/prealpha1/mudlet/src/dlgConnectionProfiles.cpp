@@ -187,9 +187,9 @@ void dlgConnectionProfiles::save()
         HostManager::self()->renameHost(active_profile);
         active_item->setText( 0, profile_name);
 
-        Host *pHost = HostManager::self()->getHost( profile_name );
+        /*Host *pHost = HostManager::self()->getHost( profile_name );
         TConsole * pConsole = ((mudlet*)parentWidget())->mConsoleMap[pHost];
-        pConsole->setWindowTitle( profile_name );
+        pConsole->setWindowTitle( profile_name );*/
     }
 }
 
