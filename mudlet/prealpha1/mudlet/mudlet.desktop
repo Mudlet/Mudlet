@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Name=Mudlet
+X-AppInstall-Package=mudlet
+GenericName=Mud Client
+Comment=Play online text-based games (MUDs)
+Exec=mudlet
+Terminal=false
+Type=Application
+Icon=mudlet
+Categories=Game;AdventureGame;RolePlaying;ActionGame
