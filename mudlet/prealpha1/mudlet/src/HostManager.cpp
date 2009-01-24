@@ -68,6 +68,11 @@ bool HostManager::deleteHost( QString url )
     return mHostPool.deleteHost( url );
 }
 
+bool HostManager::renameHost( QString url )
+{
+    return mHostPool.renameHost( url );
+}
+
 bool HostManager::serialize()
 {
     QString directory = QDir::homePath()+"/.config/mudlet/profiles/";

@@ -24,11 +24,13 @@
 #include "dlgConnectionProfiles.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "mudlet.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
 {
     setupUi( this );
-    active_profile = "";
+    active_profile.clear();
+    active_item = NULL;
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/dialog-ok-apply.png"));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
@@ -64,19 +66,7 @@ void dlgConnectionProfiles::slot_addProfile()
         newname = trick;
     }
 
-    do
-    {
-        newname = QInputDialog::getText(this, tr("Profile name"), tr("Enter profile name"), QLineEdit::Normal, newname);
-        if (HostManager::self()->getHost( newname ))
-            QMessageBox::information( this, tr("Profile name exist"), tr("This profile name is already taken"));
-    } while (newname != "" && HostManager::self()->getHost( newname ));
-
-    if (newname == "")
-        return;
-
-    QStringList sList;
-    sList << newname;
-    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, sList);
+    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, QStringList(newname));
     profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
     HostManager::self()->addHost( newname, QString("23"), QString(""), QString("") );
     //Host * pHost = HostManager::self()->getHost( newname );
@@ -91,6 +81,9 @@ void dlgConnectionProfiles::slot_addProfile()
     basic_info_groupbox->show();
     autologin_groupbox->show();
     mud_info_groupbox->show();
+
+    profile_name_entry->setFocus();
+    profile_name_entry->selectAll();
 }
 
 void dlgConnectionProfiles::slot_deleteProfile()
@@ -107,7 +100,8 @@ void dlgConnectionProfiles::slot_deleteProfile()
     if( hostList.size() > 0 )
         slot_item_changed(profiles_tree_widget->currentItem(), NULL);
     else {
-        active_profile = "";
+        active_profile.clear();
+        active_item = NULL;
         welcome_message->show();
         basic_info_groupbox->hide();
         autologin_groupbox->hide();
@@ -122,6 +116,7 @@ void dlgConnectionProfiles::slot_item_changed(QTreeWidgetItem *pItem, QTreeWidge
         save();
         QString profile_name = pItem->text( 0 );
         active_profile = profile_name;
+        active_item = pItem;
         Host * pHost = HostManager::self()->getHost( profile_name );
         profile_name_entry->setText( profile_name );
         profile_name_entry->setCursorPosition(0);
@@ -186,6 +181,15 @@ void dlgConnectionProfiles::save()
         pHost->setPass( pass );
         pHost->setLogin( login );
         pHost->setPort( port );
+    }
+
+    if ( profile_name != active_profile ) {
+        HostManager::self()->renameHost(active_profile);
+        active_item->setText( 0, profile_name);
+
+        Host *pHost = HostManager::self()->getHost( profile_name );
+        TConsole * pConsole = ((mudlet*)parentWidget())->mConsoleMap[pHost];
+        pConsole->setWindowTitle( profile_name );
     }
 }
 

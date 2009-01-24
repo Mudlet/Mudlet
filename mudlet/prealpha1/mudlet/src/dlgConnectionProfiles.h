@@ -50,6 +50,7 @@ public slots:
     void slot_finished ( int f );
 private:
     QString active_profile;
+    QTreeWidgetItem *active_item;
     void save();
 };
 
