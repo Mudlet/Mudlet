@@ -1,0 +1,418 @@
+<ui version="4.0" >
+ <class>profile_dialog</class>
+ <widget class="QDialog" name="profile_dialog" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>662</width>
+    <height>668</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Select a profile to connect with</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_5" >
+   <item rowspan="4" row="0" column="0" >
+    <widget class="QWidget" native="1" name="widget" >
+     <layout class="QGridLayout" name="gridLayout_4" >
+      <property name="margin" >
+       <number>0</number>
+      </property>
+      <item row="0" column="0" colspan="2" >
+       <widget class="QTreeWidget" name="profiles_tree_widget" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize" >
+         <size>
+          <width>250</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="frameShape" >
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow" >
+         <enum>QFrame::Sunken</enum>
+        </property>
+        <property name="dragEnabled" >
+         <bool>true</bool>
+        </property>
+        <property name="dragDropMode" >
+         <enum>QAbstractItemView::DragDrop</enum>
+        </property>
+        <property name="alternatingRowColors" >
+         <bool>true</bool>
+        </property>
+        <property name="rootIsDecorated" >
+         <bool>false</bool>
+        </property>
+        <property name="itemsExpandable" >
+         <bool>false</bool>
+        </property>
+        <property name="sortingEnabled" >
+         <bool>true</bool>
+        </property>
+        <property name="animated" >
+         <bool>true</bool>
+        </property>
+        <property name="headerHidden" >
+         <bool>true</bool>
+        </property>
+        <property name="columnCount" >
+         <number>1</number>
+        </property>
+        <column>
+         <property name="text" >
+          <string>1</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+      <item row="1" column="0" >
+       <widget class="QPushButton" name="remove_profile_button" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text" >
+         <string>Remove Profile</string>
+        </property>
+        <property name="icon" >
+         <iconset resource="../application.qrc" >
+          <normaloff>:/dialog-close.png</normaloff>:/dialog-close.png</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" >
+       <widget class="QPushButton" name="new_profile_button" >
+        <property name="text" >
+         <string>New Profile</string>
+        </property>
+        <property name="icon" >
+         <iconset resource="../application.qrc" >
+          <normaloff>:/list-add.png</normaloff>:/list-add.png</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="1" >
+    <widget class="QTextBrowser" name="welcome_message" >
+     <property name="enabled" >
+      <bool>true</bool>
+     </property>
+     <property name="sizePolicy" >
+      <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize" >
+      <size>
+       <width>370</width>
+       <height>140</height>
+      </size>
+     </property>
+     <property name="maximumSize" >
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="html" >
+      <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+&lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
+p, li { white-space: pre-wrap; }
+&lt;/style>&lt;/head>&lt;body style=" font-family:'DejaVu Sans'; font-size:9pt; font-weight:400; font-style:normal;">
+&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:8pt;">&lt;span style=" font-size:16pt; font-weight:600;">Welcome to Mudlet!&lt;/span>&lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:16pt;">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">Click on the &lt;img src=":/list-add_small.png" />&lt;span style=" font-size:8pt; color:#aa0000;"> Create New Profile&lt;/span> button below to create your new profile, and fill in the &lt;span style=" font-style:italic;">Profile Name&lt;/span>, &lt;span style=" font-style:italic;">Host&lt;/span>, and &lt;span style=" font-style:italic;">Port&lt;/span> fields. &lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">After that, click &lt;span style=" font-weight:600;">Connect&lt;/span> to play!&lt;/p>&lt;/body>&lt;/html></string>
+     </property>
+     <property name="openLinks" >
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" >
+    <widget class="QGroupBox" name="basic_info_groupbox" >
+     <property name="title" >
+      <string>Required</string>
+     </property>
+     <property name="alignment" >
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+     <property name="flat" >
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout" >
+      <property name="horizontalSpacing" >
+       <number>12</number>
+      </property>
+      <property name="verticalSpacing" >
+       <number>6</number>
+      </property>
+      <property name="margin" >
+       <number>6</number>
+      </property>
+      <item row="0" column="0" colspan="2" >
+       <widget class="QLabel" name="label" >
+        <property name="text" >
+         <string>Profile name:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2" colspan="3" >
+       <widget class="QLineEdit" name="profile_name_entry" >
+        <property name="readOnly" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" >
+       <widget class="QLabel" name="label_2" >
+        <property name="text" >
+         <string>Host:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2" >
+       <widget class="QLineEdit" name="host_name_entry" >
+        <property name="minimumSize" >
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3" >
+       <widget class="QLabel" name="label_3" >
+        <property name="text" >
+         <string>Port:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="4" >
+       <widget class="QLineEdit" name="port_entry" >
+        <property name="minimumSize" >
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="inputMask" >
+         <string comment="Ports can be # only" >999999; </string>
+        </property>
+        <property name="text" >
+         <string/>
+        </property>
+        <property name="maxLength" >
+         <number>6</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="1" >
+    <widget class="QGroupBox" name="autologin_groupbox" >
+     <property name="enabled" >
+      <bool>false</bool>
+     </property>
+     <property name="title" >
+      <string>Use auto-login</string>
+     </property>
+     <property name="alignment" >
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+     <property name="flat" >
+      <bool>true</bool>
+     </property>
+     <property name="checkable" >
+      <bool>true</bool>
+     </property>
+     <property name="checked" >
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2" >
+      <property name="horizontalSpacing" >
+       <number>12</number>
+      </property>
+      <property name="margin" >
+       <number>6</number>
+      </property>
+      <item row="0" column="0" >
+       <widget class="QLabel" name="label_4" >
+        <property name="text" >
+         <string>Character name:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" >
+       <widget class="QLineEdit" name="login_entry" >
+        <property name="echoMode" >
+         <enum>QLineEdit::Normal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" >
+       <widget class="QLabel" name="label_5" >
+        <property name="text" >
+         <string>Password:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" >
+       <widget class="QLineEdit" name="character_password_entry" >
+        <property name="echoMode" >
+         <enum>QLineEdit::Password</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="1" >
+    <widget class="QGroupBox" name="mud_info_groupbox" >
+     <property name="sizePolicy" >
+      <sizepolicy vsizetype="Expanding" hsizetype="Preferred" >
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title" >
+      <string>Show mud list</string>
+     </property>
+     <property name="alignment" >
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+     <property name="flat" >
+      <bool>true</bool>
+     </property>
+     <property name="checkable" >
+      <bool>true</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3" >
+      <property name="horizontalSpacing" >
+       <number>12</number>
+      </property>
+      <property name="margin" >
+       <number>6</number>
+      </property>
+      <item row="0" column="0" >
+       <widget class="QLabel" name="label_6" >
+        <property name="text" >
+         <string>Website:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" >
+       <widget class="QLineEdit" name="website_entry" />
+      </item>
+      <item row="1" column="0" >
+       <widget class="QLabel" name="label_7" >
+        <property name="text" >
+         <string>Description:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" >
+       <widget class="QPlainTextEdit" name="mud_description_textedit" />
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="2" >
+    <widget class="QTreeWidget" name="mud_treewidget" >
+     <property name="font" >
+      <font>
+       <pointsize>8</pointsize>
+      </font>
+     </property>
+     <property name="rootIsDecorated" >
+      <bool>false</bool>
+     </property>
+     <property name="columnCount" >
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2" >
+    <widget class="QDialogButtonBox" name="dialog_buttonbox" >
+     <property name="orientation" >
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons" >
+      <set>QDialogButtonBox::Cancel</set>
+     </property>
+     <property name="centerButtons" >
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../application.qrc" />
+ </resources>
+ <connections>
+  <connection>
+   <sender>dialog_buttonbox</sender>
+   <signal>accepted()</signal>
+   <receiver>profile_dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>257</x>
+     <y>658</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dialog_buttonbox</sender>
+   <signal>rejected()</signal>
+   <receiver>profile_dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>325</x>
+     <y>658</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>mud_info_groupbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>mud_treewidget</receiver>
+   <slot>setShown(bool)</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>306</x>
+     <y>374</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>212</x>
+     <y>600</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

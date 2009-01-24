@@ -1,0 +1,116 @@
+<ui version="4.0" >
+ <class>aliases_main_area</class>
+ <widget class="QWidget" name="aliases_main_area" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>619</width>
+    <height>100</height>
+   </rect>
+  </property>
+  <property name="sizePolicy" >
+   <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize" >
+   <size>
+    <width>0</width>
+    <height>100</height>
+   </size>
+  </property>
+  <property name="maximumSize" >
+   <size>
+    <width>16777215</width>
+    <height>100</height>
+   </size>
+  </property>
+  <property name="windowTitle" >
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout" >
+   <item row="0" column="0" >
+    <widget class="QLabel" name="label_2" >
+     <property name="text" >
+      <string>Alias name:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1" >
+    <widget class="QLineEdit" name="lineEdit_alias_name" />
+   </item>
+   <item row="1" column="1" >
+    <widget class="QLineEdit" name="pattern_textedit" >
+     <property name="font" >
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+    </widget>
+   </item>
+   <item rowspan="2" row="2" column="1" >
+    <widget class="QLineEdit" name="pattern_textedit2" >
+     <property name="font" >
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="toolTip" >
+      <string>what is in here is being sent to the MUD if the regex matches. The script is not being run. So if you want to run a script, leave this field empty.</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" >
+    <widget class="QLabel" name="label_3" >
+     <property name="sizePolicy" >
+      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize" >
+      <size>
+       <width>50</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="text" >
+      <string>Substitution:</string>
+     </property>
+    </widget>
+   </item>
+   <item rowspan="2" row="1" column="0" >
+    <widget class="QLabel" name="label" >
+     <property name="sizePolicy" >
+      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize" >
+      <size>
+       <width>67</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="text" >
+      <string>Regex:</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+  <zorder>lineEdit_alias_name</zorder>
+  <zorder>label_2</zorder>
+  <zorder>lineEdit_alias_name</zorder>
+  <zorder>label_2</zorder>
+  <zorder>label_3</zorder>
+  <zorder>pattern_textedit2</zorder>
+  <zorder>label</zorder>
+ </widget>
+ <resources>
+  <include location="../application.qrc" />
+ </resources>
+ <connections/>
+</ui>

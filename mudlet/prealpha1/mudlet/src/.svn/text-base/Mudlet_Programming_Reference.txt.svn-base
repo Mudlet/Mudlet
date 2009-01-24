@@ -1,0 +1,82 @@
+
+
+
+
+
+                                                    (= manages all mud sessions)
+                                                 +-------------+        +-----------------+                                               
+                                                 | HostManager |   <--- | HostManagerView |                                          
+                                                 +------+------+        +-----------------+                                          
+                                                        |                        
+                                                   +----+-----+              
+                                                   | HostPool | (= one mud session)
+                                                   +----+-----+
+                            (= html conversion)         |               
+ +------------------+      +--------------------+   +---+--------+        +----------+
+ | Browser Display  | <--- | OutputPreprocessor +---+    Host    |   <--- | HostView |                                             
+ +------------------+      +--------------------+   +---+----+---+        +----------+  
+                                                    |   |    |
+                                                    |   |    |                     
+                               +--------------------+   |    +-----------+      
+      (= host session scripts) |                        |                |  (= manages stand alone scripts)     
+          +--------------------+-------+        +-------+----+     +-----+----------+        +----------------+
+          |   Host ScriptingModule     |        |  DataPool  #######   JobManager   |   <--- | JobManagerView +
+          +--------+-------------------+        +--+--#--+---+     +-+------------+-+        +----------------+
+                   |                               |  #  |           |            |         
+                   |                 +-------------+  #  |      +----+----+    +--+-------------+           
+     +-------------+------+          |   Telnet    |  #  |      | JobPool |    |   JobProcessor |         
+     |  Scripting engines |          +-------------+  #  |      +---------+    +-----+----------+           
+     +--------------------+                           #  |                           |      
+                    *                           +-----#--+-----------+        +------+--------------+        
+                    *                           | DataProcessingUnit |        | Job ScriptingModule |      
+                    *                           +--+---------+-------+        +--------+------------+
+                    *                              |         |                         |
+                    *         +-------------+------+     +------------+         +------+-----------+
+                    ********  | TriggerUnit |      |     | FilterUnit |         | Scripting engine |            
+                    *         +-------------+      |     +------------+         +------------------+
+                    *                              |          *    /\                    
+                    *           +-----------+------+          *     \               
+                    **********  | AliasUnit |                 *      \ +--------------------------+                         
+                    *           +-----------+                 *       \| Filter/Trigger/AliasView |                         
+                    *                                         *        +--------------------------+
+                    *******************************************           
+                                               
+                               
+
+                                     Data Flow Chart
+                                     ===============
+
+   Input Stream:
+   -------------
+
+  Server => Telnet     +---> JobManager ----------------------------------------+
+              |        |  (stand alone scripts have direct access               |
+              |        |   to both original Input and direct output, i.e. they  |                                         
+              |        |       can exec or call Javascript functions/code in    |                                           
+              +---> DataPool     the display browser, but more often will use   |                
+                       |            the OutputPreprocessor for convenience.     |
+                       |                                                        |
+                       +---> DataProcessingUnit                                 |
+                                 |                                              |
+                                 |                                              |
+                                 +--- >FilterUnit                               |
+                                          |                                     |
+                                          |                         +-----------+
+                                          +---> TriggerUnit         |           |
+                                                   |                |           |
+                                                   |                |           |
+                                                   +---> OutputPreprocessor     |
+                                                           |                    |
+                                                           |                    |
+                                                           +---> TConsole (Display)
+
+  Output Stream                               
+  -------------
+
+  User Actions/Input  =>
+  stand alone Scripts =>  AliasUnit -> Telnet  => Server 
+  Trigger Scripts     =>
+
+
+
+

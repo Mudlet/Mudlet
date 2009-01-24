@@ -1,0 +1,18 @@
+<ui version="4.0" >
+ <class>options_area_aliases</class>
+ <widget class="QWidget" name="options_area_aliases" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>230</width>
+    <height>48</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Form</string>
+  </property>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

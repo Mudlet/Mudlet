@@ -1,0 +1,997 @@
+/***************************************************************************
+ *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   KoehnHeiko@googlemail.com                                             *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include <QDebug>
+#include "TConsole.h"
+#include "mudlet.h"
+#include <QScrollBar>
+#include "TCommandLine.h"
+#include <QVBoxLayout>
+#include <sys/time.h>
+#include <stdio.h>
+#include <iostream>
+#include <string>
+#include <time.h>
+#include <unistd.h>
+#include <QTextCodec>
+#include <QHostAddress>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <sys/types.h>
+#include <stdio.h>
+#include "TDebug.h"
+#include "TTextEdit.h"
+#include <QGraphicsSimpleTextItem>
+
+using namespace std;
+
+
+TConsole::TConsole(Host * pH, mudlet * pM) 
+: mpHost( pH )
+, mp_Mudlet( pM )
+, m_pageInitialized( false )
+, m_fontSpecs( pH )
+, buffer( pH )
+{
+    mCursorHome = 0;
+    mUserCursorX = 0;
+    mUserCursorY = 0;
+    mWaitingForHighColorCode = false;
+    mHighColorModeForeground = false;
+    mHighColorModeBackground = false;
+    mIsHighColorMode = false;
+    
+    QVBoxLayout * layout = new QVBoxLayout( this );
+    layout->setContentsMargins(0,0,0,0);
+    QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy sizePolicy3( QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy sizePolicy2( QSizePolicy::Expanding, QSizePolicy::Fixed);
+    
+    mpCommandLine = new TCommandLine( pH, this );
+    mpCommandLine->setSizePolicy( sizePolicy );
+    mpCommandLine->setMaximumHeight( 30 );
+    mpCommandLine->setFocusPolicy( Qt::StrongFocus );
+    
+    QWidget * layer = new QWidget( this );
+    layer->setSizePolicy( sizePolicy );
+    layer->setFocusPolicy( Qt::NoFocus );
+    
+    QSplitter * splitter = new QSplitter( Qt::Vertical, layer );
+    QVBoxLayout * layout2 = new QVBoxLayout( splitter );
+    splitter->setHandleWidth( 3 );
+    
+    setFocusProxy( mpCommandLine );
+    
+    console = new TTextEdit( this, splitter, &buffer, mpHost );
+    console->setSizePolicy( sizePolicy3 );
+    console->setFocusPolicy( Qt::NoFocus );
+    splitter->addWidget( console );
+    
+    console2 = new TTextEdit( this, splitter, &buffer, mpHost );
+    console2->setSizePolicy( sizePolicy3 );
+    console2->setFocusPolicy( Qt::NoFocus );
+    splitter->addWidget( console2 );
+   
+    splitter->setCollapsible( 1, false );
+    splitter->setCollapsible( 0, false );
+    splitter->setStretchFactor(0,3);
+    splitter->setStretchFactor(1,1);
+    
+    layout->addWidget( splitter );
+    layout->addWidget( mpCommandLine );
+    
+    m_paragraphIsComplete = true;
+    
+    console->setFont( mpHost->mDisplayFont );
+    console2->setFont( mpHost->mDisplayFont );
+    
+    QPalette palette;
+    
+    palette.setColor( QPalette::Text, QColor(250,250,255) );
+    palette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    palette.setColor( QPalette::Base, mpHost->mBgColor );
+    console->setPalette( palette );
+    console2->setPalette( palette );
+    console->show();
+    console2->hide();
+    
+    isUserScrollBack = false;
+       
+    m_fontSpecs.init();
+    changeColors();
+    console2->setSplitScreen();
+    
+}
+
+void TConsole::changeColors()
+{
+    mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
+    console->setFont( mpHost->mDisplayFont );
+    console2->setFont( mpHost->mDisplayFont );
+    QPalette palette;
+    palette.setColor( QPalette::Text, mpHost->mFgColor );
+    palette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    palette.setColor( QPalette::Base, mpHost->mBgColor );
+    console->setPalette( palette );
+    console2->setPalette( palette );
+}
+
+/*std::string TConsole::getCurrentTime()
+{
+    time_t t;
+    time(&t);
+    tm lt;
+    ostringstream s;
+    s.str("");
+    struct timeval tv;
+    struct timezone tz;
+    gettimeofday(&tv, &tz);
+    localtime_r( &t, &lt ); 
+    s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
+    string time = s.str();
+    return time;
+} */
+
+void TConsole::set_text_properties(int tag)
+{
+    //qDebug()<<"tag="<<tag;
+    // are we dealing with 256 color mode enabled servers or standard ANSI colors?
+    if( mWaitingForHighColorCode )
+    {
+        if( mHighColorModeForeground )
+        {
+            if( tag < 16 )
+            {
+                mHighColorModeForeground = false;
+                mWaitingForHighColorCode = false;
+                mIsHighColorMode = false;
+                goto NORMAL_ANSI_COLOR_TAG;
+            }
+            if( tag < 232 )
+            {
+                tag-=16; // because color 1-15 behave like normal ANSI colors
+                // 6x6 RGB color space 
+                int r = tag / 36; 
+                int g = (tag-(r*36)) / 6; 
+                int b = (tag-(r*36))-(g*6); 
+                m_fontSpecs.fgColor = QColor( r*42, g*42, b*42 ); 
+            }
+            else
+            {
+                // black + 23 tone grayscale from dark to light gray
+                tag -= 232;
+                m_fontSpecs.fgColor = QColor( tag*10, tag*10, tag*10 );
+            }
+            mHighColorModeForeground = false;
+            mWaitingForHighColorCode = false;
+            mIsHighColorMode = false;
+            return;
+        }
+        if( mHighColorModeBackground )
+        {
+            if( tag < 16 )
+            {
+                mHighColorModeBackground = false;
+                mWaitingForHighColorCode = false;
+                mIsHighColorMode = false;
+                goto NORMAL_ANSI_COLOR_TAG;
+            }
+            if( tag < 232 )
+            {
+                tag-=16;
+                int r = tag / 36; 
+                int g = (tag-(r*36)) / 6; 
+                int b = (tag-(r*36))-(g*6); 
+                m_fontSpecs.bgColor = QColor( r*42, g*42, b*42 ); 
+            }
+            else
+            {
+                // black + 23 tone grayscale from dark to light gray
+                tag -= 232;
+                m_fontSpecs.fgColor = QColor( tag*10, tag*10, tag*10 );
+            }
+            mHighColorModeBackground = false;
+            mWaitingForHighColorCode = false;
+            mIsHighColorMode = false;
+            return;
+        }
+    }
+    
+    if( tag == 38 ) 
+    {
+        mIsHighColorMode = true; 
+        mHighColorModeForeground = true;
+        return;
+    }
+    if( tag == 48 )    
+    {
+        mIsHighColorMode = true;
+        mHighColorModeBackground = true;
+    }
+    if( ( mIsHighColorMode ) && ( tag == 5 ) )
+    {
+        mWaitingForHighColorCode = true;    
+        return;
+    }
+    
+    // we are dealing with standard ANSI colors
+NORMAL_ANSI_COLOR_TAG:
+    
+    switch( tag )
+    {
+    case 0: 
+        mHighColorModeForeground = false;
+        mHighColorModeBackground = false;
+        mWaitingForHighColorCode = false;
+        mIsHighColorMode = false;
+        m_fontSpecs.reset();
+        break;
+    case 1: 
+        m_fontSpecs.bold = true;
+        break;
+    case 2: 
+        m_fontSpecs.bold = false;
+        break;
+    case 3: 
+        m_fontSpecs.italics = true;
+        break;
+    case 4:
+        m_fontSpecs.underline = true;
+    case 5: 
+        break; //FIXME support blinking
+    case 6:
+        break; //FIXME support fast blinking
+    case 7:
+        break; //FIXME support inverse
+    case 9:
+        break; //FIXME support strikethrough
+    case 22:
+        m_fontSpecs.bold = false;
+        break;
+    case 23: 
+        m_fontSpecs.italics = false;
+        break;
+    case 24: 
+        m_fontSpecs.underline = false;
+        break;
+    case 27: 
+        break; //FIXME inverse off
+    case 29: 
+        break; //FIXME
+    case 30:
+        m_fontSpecs.fgColor = mpHost->mBlack;
+        m_fontSpecs.fgColorLight = mpHost->mLightBlack;
+        break;
+    case 31:
+        m_fontSpecs.fgColor = mpHost->mRed;
+        m_fontSpecs.fgColorLight = mpHost->mLightRed;
+        break;
+    case 32:
+        m_fontSpecs.fgColor = mpHost->mGreen;
+        m_fontSpecs.fgColorLight = mpHost->mLightGreen;
+        break;
+    case 33:
+        m_fontSpecs.fgColor = mpHost->mYellow;
+        m_fontSpecs.fgColorLight = mpHost->mLightYellow;
+        break;
+    case 34:
+        m_fontSpecs.fgColor = mpHost->mBlue;
+        m_fontSpecs.fgColorLight = mpHost->mLightBlue;
+        break;
+    case 35:
+        m_fontSpecs.fgColor = mpHost->mMagenta;
+        m_fontSpecs.fgColorLight = mpHost->mLightMagenta;
+        break;
+    case 36:
+        m_fontSpecs.fgColor = mpHost->mCyan; 
+        m_fontSpecs.fgColorLight = mpHost->mLightCyan;
+        break;
+    case 37:
+        m_fontSpecs.fgColor = mpHost->mWhite;
+        m_fontSpecs.fgColorLight = mpHost->mLightWhite;
+        break;
+    case 39:
+        m_fontSpecs.bgColor = mpHost->mBgColor;//mWhite
+        break;
+    case 40:
+        m_fontSpecs.bgColor = mpHost->mBlack;
+        break;
+    case 41:
+        m_fontSpecs.bgColor = mpHost->mRed;
+        break;
+    case 42:
+        m_fontSpecs.bgColor = mpHost->mGreen;
+        break;
+    case 43:
+        m_fontSpecs.bgColor = mpHost->mYellow;
+        break;
+    case 44:
+        m_fontSpecs.bgColor = mpHost->mBlue;
+        break;
+    case 45:
+        m_fontSpecs.bgColor = mpHost->mMagenta;
+        break;
+    case 46:
+        m_fontSpecs.bgColor = mpHost->mCyan;
+        break;
+    case 47:
+        m_fontSpecs.bgColor = mpHost->mWhite;
+        break;
+    };
+}
+
+
+QString TConsole::translate( QString & s )
+{
+}
+
+/*  QTextDocument *document = edit->document();
+   QTextCursor cursor(document);
+
+   cursor.movePosition(QTextCursor::Start);
+   cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+
+   QTextCharFormat format;
+   format.setFontWeight(QFont::Bold); 
+   cursor.mergeCharFormat(format);
+*/
+
+/* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
+      -----------------------------------------
+      0 reset
+      1 intensity bold on 
+      2 intensity faint
+      3 italics on       
+      4 underline on     
+      5 blink slow
+      6 blink fast
+      7 inverse on       
+      9 strikethrough    
+      22 intensity normal (not bold, not faint)
+      23 italics off
+      24 underline off
+      27 inverse off
+      28 strikethrough off
+      30 fg black
+      31 fg red
+      32 fg green
+      33 fg yellow
+      34 fg blue
+      35 fg magenta
+      36 fg cyan
+      37 fg white
+      39 bg default white
+      40 bg black
+      41 bg red
+      42 bg green
+      43 bg yellow
+      44 bg blue
+      45 bg magenta
+      46 bg cyan
+      47 bg white
+      49 bg black    
+
+      sequences for 256 Color support:
+      38;5;0-256 foreground color
+      48;5;0-256 background color */
+
+void TConsole::translateToPlainText( QString & s )
+{
+    int cursorX=0, cursorY=0;
+    if( mFormatSequenceRest.size() > 0 ) 
+    {
+        s.prepend( mFormatSequenceRest );
+    }
+    mFormatSequenceRest="";
+    int sequence_begin = 0;
+    int sequence_end = 0;
+    int pos = 0;
+    QString sequence;
+    sequence_begin = s.indexOf(QString("\033["), 0);
+    if( ( sequence_begin == -1 ) || ( sequence_begin > 0 ) ) 
+    {
+        //if( m_fontSpecs.bold ) charFormat.setFontWeight(QFont::Bold);
+        //else charFormat.setFontWeight(QFont::Normal);
+        //charFormat.setForeground( m_fontSpecs.fgColor );
+        //charFormat.setBackground( m_fontSpecs.bgColor );
+        //cursor.setCharFormat( charFormat );
+        //cursor.mergeCharFormat( charFormat );
+        if( sequence_begin == -1 )
+        {
+            //cursor.insertText( s );
+            buffer.addText( s, m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
+            return;
+        }
+        else
+        {
+            //cursor.insertText( s.mid( 0, sequence_begin ) );
+            buffer.addText( s.mid( 0, sequence_begin ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
+        }
+    }
+    while( sequence_begin != -1 )
+    {
+        int t1,t2,t3,t4;
+        t1=t2=t3=t4=0;
+        QTime time;
+        time.restart();
+        // what kind of control sequence is this?
+        bool isCursorMove = false;
+        QChar control_sequence_type = 'x';
+        int control_sequence_type_minor = -1;
+        for( int k=0; k<s.size(); k++ )
+        {
+            QChar c_k = s[sequence_begin+k];
+            if( c_k == QChar('m') )
+            {
+                control_sequence_type = QChar('m');
+                break;
+            }
+            if( c_k == QChar('H') )
+            {
+                isCursorMove = true;
+                control_sequence_type = QChar('H');
+                break;
+            }
+            if( c_k == QChar('J') )
+            {
+                isCursorMove = true;
+                control_sequence_type = QChar('J');
+                break;
+            }
+            if( c_k == QChar('f') )
+            {
+                isCursorMove = true;
+                control_sequence_type = QChar('H');
+                break;
+            }
+            if( c_k == QChar('A') )
+            {
+                isCursorMove = true;
+                control_sequence_type = QChar('A');
+                break;
+            }
+            if( c_k == QChar('B') )
+            {        
+                isCursorMove = true;
+                control_sequence_type = QChar('B');
+                break;
+            }
+            if( c_k == QChar('C') )
+            {
+                isCursorMove = true;
+                control_sequence_type = QChar('C');
+                break;
+            }
+            if( c_k == QChar('D') )
+            {
+                isCursorMove = true;
+                control_sequence_type = QChar('D');
+                break;
+            }
+           
+            if( c_k == QChar('K') )
+            {        
+                isCursorMove = true;
+                control_sequence_type = QChar('K');
+                break;
+            }
+        }
+        QStringList textPropertyList;
+        sequence_end = s.indexOf( control_sequence_type ,sequence_begin );
+        int sequence_length = abs(sequence_begin - sequence_end );
+        if( sequence_end != -1 )
+        {
+            sequence = s.mid(sequence_begin+2,sequence_length-2); // weil 3 elemente ausgelassen werden
+            if( sequence.indexOf(QChar(';'),0) != -1 )
+            {
+                if( control_sequence_type == QChar('m') )
+                {
+                    textPropertyList = sequence.split(QChar(';'),QString::SkipEmptyParts);
+                }
+                if( control_sequence_type == QChar('H') )
+                {
+                    textPropertyList = sequence.split(QChar(';'),QString::SkipEmptyParts);
+                } 
+            }
+            else
+            {
+                if( control_sequence_type == QChar('J') )
+                {
+                    control_sequence_type_minor = sequence.toInt();
+                    textPropertyList << sequence;
+                }
+                if( control_sequence_type == QChar('D') )
+                {
+                    control_sequence_type_minor = sequence.toInt();
+                    textPropertyList << sequence;
+                } 
+                if( control_sequence_type == QChar('m') )
+                {
+                    textPropertyList << sequence;
+                }
+            }            
+            if( textPropertyList.size() == 0 )
+            {
+                if( control_sequence_type == QChar('H') )
+                {
+                    cursorX=0;
+                    cursorY=0;
+                } 
+                if( control_sequence_type == QChar('D') )
+                {
+                   cursorX--;
+                } 
+                if( control_sequence_type == QChar('J') )
+                {
+                    // ESC[J or [0J -> clear screen from cursor downwards
+                    // clear screen from cursor down
+                    //FIXME
+                }    
+            } 
+            for( int i=0; i<textPropertyList.size(); i++ )
+            {
+                if( control_sequence_type == QChar('m') )
+                {
+                    set_text_properties( textPropertyList[i].toInt() );
+                    continue;
+                }
+                if( control_sequence_type == QChar('D') )
+                {
+                    cursorX-=textPropertyList[i].toInt();
+                } 
+                if( control_sequence_type == QChar('H') )
+                {
+                    if( textPropertyList.size()-i < 2 ) break;
+                    cursorY = textPropertyList[i].toInt();
+                    cursorX = textPropertyList[++i].toInt();
+                    break;
+                } 
+                if( control_sequence_type == QChar('J') )
+                {
+                    // ANSI(ESC[2J): clear screen -> our screen size is fixed at 80x25
+                    // other ESC[0J or ESC[1J or ESC[J are not ANSI but VT100 control sequences, but they are being used e.g. by LD-Driver Muds
+                    // ESC[J or [0J -> clear screen from cursor downwards
+                    // ESC[1J -> clear screen from cursor upwareds
+                    if( control_sequence_type_minor == 2 )
+                    {
+                        // clear screen (ESC[2J)
+                        cursorX = 0;
+                        cursorY = 0;
+                        //FIXME buffer.clearScreen();
+                    }
+                    if( control_sequence_type_minor ==  1 )
+                    {
+                        //FIXME buffer.clearScreenUpwards();
+                    }  
+                    if( control_sequence_type_minor ==  0 )
+                    {
+                        //FIXME buffer.clearSceenDownwards();
+                    }    
+                }
+            }
+            pos = sequence_begin + sequence_length;
+            sequence_begin = s.indexOf( QString( "\033[" ), pos );
+            if( (sequence_begin > pos + 1 ) || ( sequence_begin == -1 ) )
+            {
+                if( ! m_fontSpecs.bold ) buffer.addText( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline );
+                else buffer.addText( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColorLight, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline ); 
+            }
+        }// is sequence_end included in this data packet?
+        else
+        {
+            // sequence_end is in next TCP/IPpacket keep translation state
+            mFormatSequenceRest = s.mid( sequence_begin, -1 );
+            return;
+        }
+    }//while
+}
+
+void TConsole::printOnDisplay( QString & incomingSocketData )  
+{   
+    QTime time; 
+    int t1, t2, t3, t4, t5, t6;
+    t1=0;t2=0;t3=0;t4=0;t5=0;t6=0;
+    mEchoBuffer = "";
+    QString lineVar = "line"; //FIXME make constant
+    QString prompt ="";//FIXME
+    
+    time.start();
+    int lineBeforeNewContent = buffer.size()-1;
+    translateToPlainText( incomingSocketData );
+    buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount );
+    t1=time.elapsed();
+    
+    int x=0, y=0;
+    if( buffer.size()-1 > 40 ) y = buffer.size()-1-40;
+    else y=0;
+    int newLine = 0;
+    for( int i=y; i<buffer.size()-1; i++ )
+    {
+        QString line = buffer.line( i );
+        mpHost->getLuaInterpreter()->set_lua_string( lineVar, line );
+        if( mudlet::debugMode ) TDebug() << "new line = " << line;
+        newLine++;
+        mpHost->incomingStreamProcessor( line, prompt );
+        mUserCursorY = i;
+    }
+    t2=time.elapsed()-t1;
+    
+    console->showNewLines();
+    console2->showNewLines();
+}
+
+void TConsole::scrollDown( int lines )
+{
+    console->scrollDown( lines );
+    if( console->isAtEndPosition() ) console2->hide();
+}
+
+void TConsole::scrollUp( int lines )
+{
+    console2->show();
+    console->scrollUp( lines );    
+}
+
+void TConsole::replace( QString text )
+{ /*
+    if( ! cursor2.hasSelection() ) return;
+    int x = cursor2.columnNumber();
+    int o = cursor2.selectedText().size();
+    int r = text.size();
+    if( cursor2.hasSelection() )
+    {
+        if( r < o )
+        {
+            int a = -1*(o-r);
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
+        }
+        if( r > o )
+        {
+            int a = r-o;
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
+        }
+    }
+    else
+    {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
+    }
+    cursor2.removeSelectedText();
+    cursor2.insertText( text );
+    */
+}
+
+void TConsole::deleteLine()
+{
+    /*
+    cursor2.select( QTextCursor::BlockUnderCursor );
+    cursor2.removeSelectedText();*/
+}
+
+void TConsole::insertText( QString text )
+{
+    /*
+    int x = cursor2.columnNumber();
+    int o = cursor2.selectedText().size();
+    int r = text.size();
+    if( cursor2.hasSelection() )
+    {
+        if( r < o )
+        {
+            int a = -1*(o-r);
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
+        }
+        if( r > o )
+        {
+            int a = r-o;
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
+        }
+    }
+    else
+    {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
+    }
+    cursor2.insertText( text );*/
+}
+
+void TConsole::insertHTML( QString text )
+{
+    /*
+    int x = cursor2.columnNumber();
+    int o = cursor2.selectedText().size();
+    int r = text.size();
+    if( cursor2.hasSelection() )
+    {
+        if( r < o )
+        {
+            int a = -1*(o-r);
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
+        }
+        if( r > o )
+        {
+            int a = r-o;
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
+        }
+    }
+    else
+    {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
+    }
+    cursor2.insertHtml( text );    */
+}
+
+int TConsole::getLineNumber()
+{
+    /*
+    return cursor2.blockNumber();    */
+}
+
+int TConsole::getColumnNumber()
+{/*
+    return cursor2.columnNumber();    */
+}
+
+int TConsole::getLineCount()
+{
+    /*
+    return mpTextDocument->blockCount();    */
+}
+
+QStringList TConsole::getLines( int from, int to )
+{
+    /*
+    QStringList ret;
+    int pos = cursor2.position();
+    int y = abs( from - to );
+    cursor2.movePosition( QTextCursor::Start );
+    if( to <= getLineCount() )
+    {
+        for( int i=0; i<from; i++ ) cursor2.movePosition( QTextCursor::Down );
+    
+        cursor2.movePosition( QTextCursor::StartOfLine );
+        for( int i=0; i<y; i++ )
+        {
+            cursor2.movePosition( QTextCursor::Down, QTextCursor::KeepAnchor );
+        }
+        cursor2.movePosition( QTextCursor::EndOfLine, QTextCursor::KeepAnchor );
+        QString text = cursor2.selectedText();
+        text.replace( QChar('\n'), "" );
+        text.replace( QChar(0x2029), QChar('\n') );
+        ret = text.split(QChar('\n'));
+    }
+    cursor2.setPosition( pos );
+    return ret;*/
+}
+
+bool TConsole::moveCursor( int x, int y )
+{
+    /*
+    int oldPos = cursor2.position();
+    if( y < 0 )
+    {
+        y = abs( y );
+        for( int i=0; i<y; i++ )
+        {
+            if( ! cursor2.movePosition( QTextCursor::Up ) )
+            {
+                cursor2.setPosition( oldPos );
+                return false;   
+            }
+        }
+    }
+    else
+    {
+        for( int i=0; i<y; i++ )
+        {
+            if( ! cursor2.movePosition( QTextCursor::Down ) )
+            {
+                cursor2.setPosition( oldPos );
+                return false;   
+            }
+        }
+    }
+    if( x < 0 )
+    {
+        x = abs( x );
+        for( int i=0; i<x; i++ )
+        {
+            if( ! cursor2.movePosition( QTextCursor::PreviousCharacter ) )
+            {
+                cursor2.setPosition( oldPos );
+                return false;
+            }
+        }
+    }
+    else
+    {
+        for( int i=0; i<x; i++ )
+        {
+            if( ! cursor2.movePosition( QTextCursor::NextCharacter ) )
+            {
+                cursor2.setPosition( oldPos );
+                return false;   
+            }
+        }
+    }
+    return true;    */
+}
+
+void TConsole::setUserWindow()
+{
+    //cursor2 = QTextCursor( cursor );
+}
+
+int TConsole::select( QString text, int numOfMatch )
+{
+    /*
+    cursor2.clearSelection();
+    cursor2.movePosition( QTextCursor::StartOfLine );
+    int pos = cursor2.position();
+    cursor2.select( QTextCursor::LineUnderCursor );
+    QString line = cursor2.selectedText();
+    if( mudlet::debugMode ) TDebug() <<"line under current user cursor: "<<line>>0;
+    cursor2.clearSelection();
+    int begin;
+    for( int i=0;i<numOfMatch; i++ )
+    {
+        begin = line.indexOf( text, i );
+        if( begin == -1 ) return -1;
+    }   
+    int end = text.size();
+    cursor2.setPosition( pos + begin );
+    cursor2.movePosition( QTextCursor::NextCharacter, QTextCursor::KeepAnchor, end );
+    return begin;*/
+}
+
+bool TConsole::selectSection( int from, int to )
+{
+    /* if( mudlet::debugMode )
+    {
+        cursor2.select( QTextCursor::LineUnderCursor );
+        QString line = cursor2.selectedText();
+        if( mudlet::debugMode ) TDebug() <<"line under current user cursor: "<<line>>0;
+    }
+    
+    cursor2.clearSelection();
+    cursor2.movePosition( QTextCursor::StartOfLine );
+    int pos = cursor2.position();
+    cursor2.setPosition( cursor2.position() + from );
+       
+    if( cursor2.movePosition( QTextCursor::NextCharacter, QTextCursor::KeepAnchor, to ) )
+    {
+        if( mudlet::debugMode ) TDebug()<<"selectedText = "<<cursor2.selectedText()>>0;
+        return true;
+    }
+    else
+    {
+        cursor2.setPosition( pos );
+        return false;
+    } */
+}
+
+void TConsole::setFgColor( int r, int g, int b )
+{
+    /* QTextCharFormat format;
+    format.setForeground( QBrush( QColor( r, g, b ) ) );
+    cursor2.mergeCharFormat( format );    */
+}
+
+void TConsole::setBgColor( int r, int g, int b )
+{
+    /*QTextCharFormat format;
+    format.setBackground( QBrush( QColor( r, g, b ) ) );
+    cursor2.mergeCharFormat( format );    */
+}
+
+void TConsole::printCommand( QString & msg )
+{
+    /*//cursor2.insertText( msg );
+    textEdit->setUpdatesEnabled( false );
+    QString cmd = msg + "\n";
+    cursor.insertText( cmd );
+    cursor.movePosition( QTextCursor::Up );//FIXME
+    if( ! isUserScrollBack )
+    {
+        int max = textEdit->verticalScrollBar()->maximum();
+        int delta = max - textEdit->verticalScrollBar()->value();
+        textEdit->verticalScrollBar()->setPageStep( delta );
+        textEdit->verticalScrollBar()->setValue( max );    
+        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
+    }
+    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
+    textEdit->setUpdatesEnabled( true );
+    return;*/
+}
+
+void TConsole::echo( QString & msg )
+{
+    //  mEchoBuffer.append( msg );    
+}
+
+void TConsole::printMessageOnDisplay( QString msg )
+{
+    m_fontSpecs.reset();
+    buffer.addText( msg, m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
+    
+    /*//cursor2.insertText( msg );
+    cursor.insertText(msg);
+    if( ! isUserScrollBack )
+    {
+        int max = textEdit->verticalScrollBar()->maximum();
+        int delta = max - textEdit->verticalScrollBar()->value();
+        textEdit->verticalScrollBar()->setPageStep( delta );
+        textEdit->verticalScrollBar()->setValue( max );        
+        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
+    }
+    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
+    return;*/
+}
+
+void TConsole::echoUserWindow( QString & msg )
+{
+    /* cursor.insertText(msg);
+    if( ! isUserScrollBack )
+    {
+        int max = textEdit->verticalScrollBar()->maximum();
+        int delta = max - textEdit->verticalScrollBar()->value();
+        textEdit->verticalScrollBar()->setPageStep( delta );
+        textEdit->verticalScrollBar()->setValue( max );    
+        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
+    }
+    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
+    return;*/
+}
+
+void TConsole::copy()
+{
+    //mCurrentFragment = cursor2.selection();    
+}
+
+void TConsole::cut()
+{
+    /*mCurrentFragment = cursor2.selection();
+    cursor2.removeSelectedText();*/
+}
+
+void TConsole::paste()
+{
+    //cursor2.insertFragment( mCurrentFragment );
+}
+
+void TConsole::pasteWindow( QTextDocumentFragment & fragment )
+{
+    /*cursor2.insertFragment( fragment );
+    if( ! isUserScrollBack )
+    {
+        int max = textEdit->verticalScrollBar()->maximum();
+        int delta = max - textEdit->verticalScrollBar()->value();
+        textEdit->verticalScrollBar()->setPageStep( delta );
+        textEdit->verticalScrollBar()->setValue( max );    
+        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
+    }
+    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
+    return;*/
+}
+
+void TConsole::slot_user_scrolling( int action )
+{
+}
+
+

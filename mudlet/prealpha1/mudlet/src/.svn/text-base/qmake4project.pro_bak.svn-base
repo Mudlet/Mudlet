@@ -1,0 +1,13 @@
+QT += webkit
+SOURCES += mudlet.cpp \
+           TConsole.cpp \
+           main.cpp
+HEADERS += mudlet.h \
+           TConsole.h
+
+TEMPLATE = app
+CONFIG += warn_on \
+          thread \
+          qt
+TARGET = mudlet
+RESOURCES = application.qrc 

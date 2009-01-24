@@ -1,0 +1,143 @@
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svnroot/mudlet/!svn/ver/7/prealpha1/mudlet/src/ui
+END
+options_area_actions.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_actions.ui
+END
+filters_main_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/filters_main_area.ui
+END
+options_area_timers.ui
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_timers.ui
+END
+help_dialog.ui
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/help_dialog.ui
+END
+trigger_editor.ui
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svnroot/mudlet/!svn/ver/19/prealpha1/mudlet/src/ui/trigger_editor.ui
+END
+options_area_filters.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_filters.ui
+END
+main_window.ui
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/main_window.ui
+END
+extended_search_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/extended_search_area.ui
+END
+aliases_main_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/aliases_main_area.ui
+END
+system_message_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/system_message_area.ui
+END
+profile_preferences.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/ui/profile_preferences.ui
+END
+triggers_main_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/triggers_main_area.ui
+END
+scripts_main_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/scripts_main_area.ui
+END
+options_area_aliases.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_aliases.ui
+END
+options_area_triggers.ui
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_triggers.ui
+END
+about_dialog.ui
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svnroot/mudlet/!svn/ver/39/prealpha1/mudlet/src/ui/about_dialog.ui
+END
+options_area_scripts.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_scripts.ui
+END
+actions_main_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/actions_main_area.ui
+END
+source_editor_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/source_editor_area.ui
+END
+timers_main_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/timers_main_area.ui
+END
+keybindings_main_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svnroot/mudlet/!svn/ver/15/prealpha1/mudlet/src/ui/keybindings_main_area.ui
+END
+console.ui
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/console.ui
+END
+connection_profiles.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/ui/connection_profiles.ui
+END

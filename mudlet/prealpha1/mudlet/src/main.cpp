@@ -1,0 +1,110 @@
+/***************************************************************************
+ *   Copyright (C) 2008 by Heiko Koehn   *
+ *   KoehnHeiko@googlemail.com   *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#undef QT_NO_DEBUG_OUTPUT
+
+#include <QApplication>
+#include "mudlet.h"
+#include "TConsole.h"
+#include <QSplashScreen>
+
+QPlainTextEdit *  spDebugConsole = 0;
+
+void debugOutput(QtMsgType type, const char *msg)
+{
+    switch (type) 
+    {
+    case QtDebugMsg:
+        if( mudlet::mpDebugConsole != 0 )
+        {
+            //mudlet::mpDebugConsole->appendPlainText( msg );    
+        }
+        fprintf(stderr, "Debug: %s\n", msg);
+        break;
+    case QtWarningMsg:
+        fprintf(stderr, "Warning: %s\n", msg);
+        break;
+    case QtCriticalMsg:
+        fprintf(stderr, "Critical: %s\n", msg);
+        break;
+    case QtFatalMsg:
+        fprintf(stderr, "Fatal: %s\n", msg);
+        abort();
+    }
+}
+
+
+int main(int argc, char *argv[])
+{
+    spDebugConsole = 0;
+    qInstallMsgHandler( debugOutput );
+    
+    Q_INIT_RESOURCE(application);
+    QApplication app(argc, argv);
+    QPixmap pixmap(":/Mudlet_splashscreen_main");
+    QSplashScreen splash(pixmap);
+    splash.show();
+    
+    splash.showMessage("Loading profiles ...");
+    
+    app.processEvents();
+    
+    QString directory = QDir::homePath()+"/.config/mudlet";
+    QDir dir;
+    if( ! dir.exists( directory ) )
+    {
+        dir.mkpath( directory );    
+    }
+    QFile file_doc( "mudlet_documentation.html" );
+    QFile file_doc_old( directory+"/mudlet_documentation.html" );
+    if( file_doc_old.exists() )
+    {
+        file_doc_old.remove();
+    }
+    file_doc.copy( directory+"/mudlet_documentation.html" );
+    QFile file_lua( "LuaGlobal.lua" );
+    QFile file_lua_old( directory+"/LuaGlobal.lua" );
+    if( file_lua_old.exists() )
+    {
+        file_lua_old.remove();
+    }
+    file_lua.copy( directory+"/LuaGlobal.lua" );
+    
+    mudlet::self();
+    
+    mudlet::debugMode = false;
+    
+    mudlet::debugMode = false;
+    HostManager::self();
+    HostManager::self()->restore();  
+    
+    //mudlet::self();
+      
+    mudlet::self()->resize(790,590);
+    mudlet::self()->show();
+    splash.showMessage("All data has been loaded successfully.\n\nHave fun!");
+    
+    splash.finish( mudlet::self() );
+    app.exec();
+    HostManager::self()->serialize();
+}
+
+
+
