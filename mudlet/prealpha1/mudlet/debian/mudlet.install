@@ -1,0 +1,4 @@
+src/mudlet				usr/share/mudlet
+LuaGlobal.lua				usr/share/mudlet
+src/mudlet_documentation.html		usr/share/mudlet
+debian/scripts/mudlet			usr/bin
