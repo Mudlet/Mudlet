@@ -50,6 +50,10 @@ public:
     void wrap( unsigned int startLine, unsigned int screenWidth, unsigned int indentSize );
     unsigned int size(){ return buffer.size(); }    
     QString & line( int n );
+    int find( int line, QString what, int pos );
+    QStringList split( int line, QString splitter );
+    QStringList split( int line, QRegExp splitter );
+    void replace( int line, QString what, QString with );
     
     
     std::deque<TChar *> bufferLine;
