@@ -24,6 +24,7 @@
 #include "dlgConnectionProfiles.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "mudlet.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
 {
@@ -185,6 +186,10 @@ void dlgConnectionProfiles::save()
     if ( profile_name != active_profile ) {
         HostManager::self()->renameHost(active_profile);
         active_item->setText( 0, profile_name);
+
+        Host *pHost = HostManager::self()->getHost( profile_name );
+        TConsole * pConsole = ((mudlet*)parentWidget())->mConsoleMap[pHost];
+        pConsole->setWindowTitle( profile_name );
     }
 }
 
