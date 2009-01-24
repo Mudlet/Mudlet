@@ -165,6 +165,37 @@ QString & TBuffer::line( int n )
     return lineBuffer[n];
 }
 
+int TBuffer::find( int line, QString what, int pos=0 )
+{
+    if( lineBuffer[line].size() >= pos ) return -1;
+    if( pos < 0 ) return -1;
+    if( ( line >= buffer.size() ) || ( line < 0 ) ) return -1;
+    return lineBuffer[line].indexOf( what, pos );
+}
+
+QStringList TBuffer::split( int line, QString splitter )
+{
+    if( lineBuffer[line].size() >= pos ) return QStringList();
+    if( pos < 0 ) return QStringList();
+    if( ( line >= buffer.size() ) || ( line < 0 ) ) return QStringList;   
+    return lineBuffer[line].split( splitter );
+}
+
+QStringList TBuffer::split( int line, QRegExp splitter )
+{
+    if( lineBuffer[line].size() >= pos ) return QStringList();
+    if( pos < 0 ) return QStringList();
+    if( ( line >= buffer.size() ) || ( line < 0 ) ) return QStringList;   
+    return lineBuffer[line].split( splitter );
+}
+
+void TBuffer::replace( int line, QString what, QString with )
+{
+    if( lineBuffer[line].size() >= pos ) return -1;
+    if( pos < 0 ) return -1;
+    if( ( line >= buffer.size() ) || ( line < 0 ) ) return -1;
+    lineBuffer[line].replace( what, with );
+}
 
 
 
