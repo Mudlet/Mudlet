@@ -29,6 +29,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
 {
     setupUi( this );
     active_profile.clear();
+    active_item = NULL;
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/dialog-ok-apply.png"));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
@@ -108,6 +109,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         slot_item_changed(profiles_tree_widget->currentItem(), NULL);
     else {
         active_profile.clear();
+        active_item = NULL;
         welcome_message->show();
         basic_info_groupbox->hide();
         autologin_groupbox->hide();
@@ -122,6 +124,7 @@ void dlgConnectionProfiles::slot_item_changed(QTreeWidgetItem *pItem, QTreeWidge
         save();
         QString profile_name = pItem->text( 0 );
         active_profile = profile_name;
+        active_item = pItem;
         Host * pHost = HostManager::self()->getHost( profile_name );
         profile_name_entry->setText( profile_name );
         profile_name_entry->setCursorPosition(0);
@@ -188,8 +191,10 @@ void dlgConnectionProfiles::save()
         pHost->setPort( port );
     }
 
-    if ( profile_name != active_profile )
+    if ( profile_name != active_profile ) {
         HostManager::self()->renameHost(active_profile);
+        active_item->setText( 0, profile_name);
+    }
 }
 
 void dlgConnectionProfiles::slot_finished(int f)
