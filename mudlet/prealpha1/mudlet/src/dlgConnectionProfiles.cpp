@@ -28,7 +28,7 @@
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
 {
     setupUi( this );
-    active_profile = "";
+    active_profile.clear();
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/dialog-ok-apply.png"));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
@@ -69,9 +69,9 @@ void dlgConnectionProfiles::slot_addProfile()
         newname = QInputDialog::getText(this, tr("Profile name"), tr("Enter profile name"), QLineEdit::Normal, newname);
         if (HostManager::self()->getHost( newname ))
             QMessageBox::information( this, tr("Profile name exist"), tr("This profile name is already taken"));
-    } while (newname != "" && HostManager::self()->getHost( newname ));
+    } while (!newname.isEmpty() && HostManager::self()->getHost( newname ));
 
-    if (newname == "")
+    if (newname.isEmpty())
         return;
 
     QStringList sList;
@@ -107,7 +107,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     if( hostList.size() > 0 )
         slot_item_changed(profiles_tree_widget->currentItem(), NULL);
     else {
-        active_profile = "";
+        active_profile.clear();
         welcome_message->show();
         basic_info_groupbox->hide();
         autologin_groupbox->hide();
@@ -187,6 +187,9 @@ void dlgConnectionProfiles::save()
         pHost->setLogin( login );
         pHost->setPort( port );
     }
+
+    if ( profile_name != active_profile )
+        HostManager::self()->renameHost(active_profile);
 }
 
 void dlgConnectionProfiles::slot_finished(int f)

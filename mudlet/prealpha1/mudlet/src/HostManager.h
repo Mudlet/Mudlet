@@ -44,6 +44,7 @@ public:
     Host *             getNextHost( QString LastHost ){ return mHostPool.getNextHost(LastHost); } //get next host key by providing a LastHost
     bool               addHost( QString url, QString port, QString login, QString pass );
     bool               deleteHost( QString url );
+    bool               renameHost( QString url );
     //Host *             getActiveHost(){ return getFirstHost();} //FIXME{ QMutexLocker locker(& mLock); return mpActiveHost; }
     Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
     bool               serialize();

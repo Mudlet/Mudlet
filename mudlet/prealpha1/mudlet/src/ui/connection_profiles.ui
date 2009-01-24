@@ -174,7 +174,7 @@ p, li { white-space: pre-wrap; }
       <item row="0" column="2" colspan="3" >
        <widget class="QLineEdit" name="profile_name_entry" >
         <property name="readOnly" >
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
        </widget>
       </item>

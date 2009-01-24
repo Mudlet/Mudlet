@@ -165,7 +165,7 @@ QString & TBuffer::line( int n )
     return lineBuffer[n];
 }
 
-int TBuffer::find( int line, QString what, int pos=0 )
+/*int TBuffer::find( int line, QString what, int pos=0 )
 {
     if( lineBuffer[line].size() >= pos ) return -1;
     if( pos < 0 ) return -1;
@@ -195,10 +195,4 @@ void TBuffer::replace( int line, QString what, QString with )
     if( pos < 0 ) return -1;
     if( ( line >= buffer.size() ) || ( line < 0 ) ) return -1;
     lineBuffer[line].replace( what, with );
-}
-
-
-
-
-
-
+}*/

@@ -47,6 +47,27 @@ bool HostPool::deleteHost(QString hostname)
     return true;
 }
 
+bool HostPool::renameHost(QString hostname)
+{
+    QMutexLocker locker(& mPoolLock);
+	
+    // make sure this is really a new host
+    if( mHostPool.find( hostname ) == mHostPool.end() )
+    {
+        return false;
+    }
+    else
+    {
+        //Host * pNewHost = getHost( hostname ); // see why it doesn't work
+        Host * pNewHost = mHostPool[hostname];
+        mHostPool.remove( hostname );
+        mHostPool.insert(pNewHost->getName(), pNewHost);
+    }
+
+    return true;
+
+}
+
 bool HostPool::addNewHost( QString hostname, QString port, QString login, QString pass )
 {
     QMutexLocker locker(&mPoolLock);	
