@@ -30,8 +30,14 @@
 #include <QStringList>
 #include <deque>
 
-struct TChar
+class Host;
+
+class TChar
 {
+public:
+           TChar();
+           TChar( Host * );
+           TChar( TChar const & copy );
     QColor fgColor;
     QColor bgColor;
     bool   italics;
@@ -50,10 +56,12 @@ public:
     void wrap( unsigned int startLine, unsigned int screenWidth, unsigned int indentSize );
     unsigned int size(){ return buffer.size(); }    
     QString & line( int n );
-    /*int find( int line, QString what, int pos );
+    int find( int line, QString what, int pos );
     QStringList split( int line, QString splitter );
     QStringList split( int line, QRegExp splitter );
-    void replace( int line, QString what, QString with );*/
+    bool replace( int line, QString what, QString with );
+    bool deleteLines( int from, int to );
+    bool applyFormat( int line, int x1, int x2, TChar & format );
     
     
     std::deque<TChar *> bufferLine;

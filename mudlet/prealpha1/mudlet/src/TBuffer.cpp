@@ -29,6 +29,25 @@
 
 using namespace std;
 
+TChar::TChar(){}
+
+TChar::TChar( Host * pH )
+{
+    fgColor = pH->mFgColor;
+    bgColor = pH->mBgColor;
+    italics = false;
+    bold = false;
+    underline = false;    
+}
+
+TChar::TChar( TChar const & copy )
+{
+    fgColor = copy.fgColor;
+    bgColor = copy.bgColor;
+    italics = copy.italics;
+    bold = copy.bold;
+    underline = copy.underline;     
+}
 
 TBuffer::TBuffer( Host * pH )
 : mpHost( pH )
@@ -165,7 +184,8 @@ QString & TBuffer::line( int n )
     return lineBuffer[n];
 }
 
-/*int TBuffer::find( int line, QString what, int pos=0 )
+
+int TBuffer::find( int line, QString what, int pos=0 )
 {
     if( lineBuffer[line].size() >= pos ) return -1;
     if( pos < 0 ) return -1;
@@ -185,8 +205,99 @@ QStringList TBuffer::split( int line, QRegExp splitter )
     return lineBuffer[line].split( splitter );
 }
 
-void TBuffer::replace( int line, QString what, QString with )
+bool TBuffer::replace( int line, QString what, QString with )
 {
-    if( ( line >= buffer.size() ) || ( line < 0 ) ) return;
+    if( ( line >= buffer.size() ) || ( line < 0 ) ) 
+        return false;
     lineBuffer[line].replace( what, with );
-}*/
+    
+    // fix size of the corresponding format buffer
+    
+    int delta = lineBuffer[line].size() - buffer[line].size();
+    
+    if( delta > 0 )
+    {
+        for( int i=0; i<delta; i++ )
+        {
+            TChar * pC = new TChar( mpHost ); // cloning default char format according to profile
+                                              // because a lookup would be too expensive as
+                                              // this is a very often used function and this standard
+                                              // behaviour is acceptable. If the user wants special colors
+                                              // he can apply format changes
+            buffer[line].push_back( pC );    
+        }
+    }
+    else if( delta < 0 )
+    {
+        for( int i=0; i<delta; i++ )
+        {
+            buffer[line].pop_back();
+        }
+    }
+    return true;
+}
+
+bool TBuffer::deleteLines( int from, int to )
+{
+    if( ( from >= 0 ) 
+     && ( from <= buffer.size() )
+     && ( from < to )   
+     && ( to >=0 )
+     && ( to <= buffer.size() ) )
+    {
+        int delta = to - from;
+        
+        for( int i=from; i<from+delta; i++ )
+        {
+            lineBuffer.removeAt( i );
+            for( int k=0; k<buffer[i].size(); k++ )
+            {
+                delete buffer[i][k];    
+            }
+        }
+        
+        int i = buffer.size();
+        
+        // we do reverse lookup as the wanted lines are usually at the end of the buffer
+        // std::revers_iterator is not defined for usage in erase()
+        
+        typedef std::deque<std::deque<TChar *> >::iterator IT;
+        for( IT it=buffer.end(); it!=buffer.begin(); it-- )
+        {
+            if( --i >= to ) 
+                continue;
+            
+            if( --delta >= 0 ) 
+                buffer.erase( it );
+            else
+                break;
+        }
+        
+        return true;
+    }
+    else 
+        return false;
+}
+
+bool TBuffer::applyFormat( int line, int from, int to, TChar & format )
+{
+    if( ( from >= 0 ) 
+     && ( from <= buffer.size() )
+     && ( to >=0 )
+     && ( to <= buffer.size() ) ) 
+    {
+        for( int i=from; i<to; i++ )
+        {
+            *buffer[line][i] = format;
+        }
+        return true;
+    }
+    else 
+        return false;            
+}
+
+
+
+
+
+
