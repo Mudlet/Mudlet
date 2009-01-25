@@ -62,7 +62,7 @@ public:
     bool replace( int line, QString what, QString with );
     bool deleteLines( int from, int to );
     bool applyFormat( int line, int x1, int x2, TChar & format );
-    
+    int getLastLineNumber();
     
     std::deque<TChar *> bufferLine;
     std::deque< std::deque<TChar*> > buffer; 
@@ -80,6 +80,7 @@ private:
     int maxx;
     int maxy;
     bool hadLF;
+    unsigned int mLastLine;
     
     
 };
