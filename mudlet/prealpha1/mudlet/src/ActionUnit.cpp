@@ -90,7 +90,7 @@ void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID )
     }
     if( ! pOldParent )
     {
-        removeActionRootNode( pOldParent );    
+        removeActionRootNode( pChild );    
     }
     if( pNewParent ) 
     {

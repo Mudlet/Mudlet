@@ -96,7 +96,7 @@ void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID )
     }
     if( ! pOldParent )
     {
-        removeAliasRootNode( pOldParent );    
+        removeAliasRootNode( pChild );    
     }
     if( pNewParent ) 
     {
