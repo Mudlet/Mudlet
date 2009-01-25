@@ -174,13 +174,16 @@ void TTreeWidget::dragMoveEvent(QDragMoveEvent *event)
 void TTreeWidget::dropEvent(QDropEvent *event)
 {
     qDebug()<<"dropEvent()";
+
     if (!itemAt( event->pos() )) {
+        dragged_item->parent()->removeChild(dragged_item);
+        topLevelItem(0)->addChild(dragged_item);
+        setCurrentItem(dragged_item);
         event->ignore();
         return;    
     }
 
     QTreeWidgetItem * pItem = itemAt( event->pos() );
-
     if( pItem && pItem->parent() )
     {
         bool test_is_folder = false;
@@ -216,29 +219,19 @@ void TTreeWidget::dropEvent(QDropEvent *event)
             if (!mpHost->getScriptUnit()->getScript(ID)->isFolder())
                 mpHost->getScriptUnit()->getScript(ID)->setIsFolder(true);
         }
-
-        /*if( ! test_is_folder )
-        {
-            qDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";
-            event->ignore();
-            return;
-        }
-        else
-        {
-            qDebug()<<"DROP OK -> kein root item";
-        }*/
     }
 
     //event->accept();
     mIsDropAction = true;
     QTreeWidget::dropEvent( event );
+    expandItem(pItem);
+    setCurrentItem(dragged_item);
     return;
 }
 
-
 void TTreeWidget::startDrag( Qt::DropActions supportedActions )
 {
-    //QTreeWidgetItem * item = currentItem();
+    dragged_item = currentItem();
     
     QTreeWidget::startDrag( supportedActions );
 }
