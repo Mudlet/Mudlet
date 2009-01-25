@@ -174,10 +174,32 @@ void TTreeWidget::dragMoveEvent(QDragMoveEvent *event)
 void TTreeWidget::dropEvent(QDropEvent *event)
 {
     qDebug()<<"dropEvent()";
+    if (!itemAt( event->pos() )) {
+        event->ignore();
+        return;    
+    }
+
     QTreeWidgetItem * pItem = itemAt( event->pos() );
-    if( pItem )
+
+    if( pItem && pItem->parent() )
     {
-        /*if( ! pItem->parent() )
+        bool test_is_folder = false;
+        int ID = pItem->data(0,Qt::UserRole).toInt();
+
+        if( mIsTriggerTree )
+            test_is_folder = mpHost->getTriggerUnit()->getTrigger(ID)->isFolder();
+        if (mIsAliasTree )
+            test_is_folder = mpHost->getAliasUnit()->getAlias(ID)->isFolder();
+        if (mIsTimerTree )
+            test_is_folder = mpHost->getTimerUnit()->getTimer(ID)->isFolder();
+        if (mIsScriptTree )
+            test_is_folder = mpHost->getScriptUnit()->getScript(ID)->isFolder();
+        if (mIsKeyTree )
+            test_is_folder = mpHost->getKeyUnit()->getKey(ID)->isFolder();
+        if (mIsActionTree )
+            test_is_folder = mpHost->getActionUnit()->getAction(ID)->isFolder();
+
+        if( ! test_is_folder )
         {
             qDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";
             event->ignore();
@@ -186,14 +208,9 @@ void TTreeWidget::dropEvent(QDropEvent *event)
         else
         {
             qDebug()<<"DROP OK -> kein root item";
-        } */
+        }
     }
-    else
-    {
-        qDebug()<<"ERROR pItem im drop = 0";
-        event->ignore();
-        return;
-    }
+
     //event->accept();
     mIsDropAction = true;
     QTreeWidget::dropEvent( event );
