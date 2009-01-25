@@ -75,7 +75,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     }
     if( ! pOldParent )
     {
-        removeTriggerRootNode( pOldParent );    
+        removeTriggerRootNode( pChild );    
     }
     if( pNewParent ) 
     {

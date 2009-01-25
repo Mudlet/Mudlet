@@ -114,7 +114,7 @@ void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID )
     }
     if( ! pOldParent )
     {
-        removeKeyRootNode( pOldParent );    
+        removeKeyRootNode( pChild );    
     }
     if( pNewParent ) 
     {
