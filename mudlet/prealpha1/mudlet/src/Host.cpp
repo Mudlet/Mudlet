@@ -285,7 +285,7 @@ bool Host::serialize()
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open(QIODevice::WriteOnly);
+    file.open( QIODevice::Append );
     QDataStream ofs(&file); 
     ofs << mHostName;
     ofs << mLogin;
@@ -320,7 +320,7 @@ void Host::serialize_options2( QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open(QIODevice::WriteOnly);
+    file.open( QIODevice::Append );
     QDataStream ofs(&file); 
     ofs << mWrapAt;
     ofs << mWrapIndentCount;
@@ -453,7 +453,7 @@ void Host::saveOptions(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     ofs << mFgColor;
     ofs << mBgColor;
@@ -525,7 +525,7 @@ void Host::saveTriggerUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mTriggerUnit.serialize( ofs );
     file.close();
@@ -553,7 +553,7 @@ void Host::saveTimerUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mTimerUnit.serialize( ofs );
     file.close();
@@ -581,7 +581,7 @@ void Host::saveScriptUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mScriptUnit.serialize( ofs );
     file.close();
@@ -609,7 +609,7 @@ void Host::saveAliasUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mAliasUnit.serialize( ofs );
     file.close();
@@ -637,7 +637,7 @@ void Host::saveKeyUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mKeyUnit.serialize( ofs );
     file.close();
@@ -665,7 +665,7 @@ void Host::saveActionUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mActionUnit.serialize( ofs );
     file.close();
