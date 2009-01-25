@@ -75,7 +75,7 @@ void ScriptUnit::reParentScript( int childID, int oldParentID, int newParentID )
     }
     if( ! pOldParent )
     {
-        removeScriptRootNode( pOldParent );    
+        removeScriptRootNode( pChild );    
     }
     if( pNewParent ) 
     {

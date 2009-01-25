@@ -75,7 +75,7 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID )
     }
     if( ! pOldParent )
     {
-        removeTimerRootNode( pOldParent );    
+        removeTimerRootNode( pChild );    
     }
     if( pNewParent ) 
     {
