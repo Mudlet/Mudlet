@@ -190,7 +190,7 @@ void dlgConnectionProfiles::slot_addProfile()
     mud_info_groupbox->show();
 
     QStringList newname;
-    QString profile = tr("new profile");
+    QString profile = tr("");
     newname << profile;
     
     QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, newname);
@@ -198,7 +198,7 @@ void dlgConnectionProfiles::slot_addProfile()
     {
         return;
     }
-    
+    profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
     profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
     
     profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
