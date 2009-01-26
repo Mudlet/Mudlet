@@ -1224,10 +1224,23 @@ void dlgTriggerEditor::addScript( bool isFolder )
     treeWidget_scripts->setCurrentItem( pNewItem );
 }  
 
-
-
-void dlgTriggerEditor::slot_saveTriggerAfterEdit()
+void dlgTriggerEditor::closeEvent(QCloseEvent *event)
 {
+    switch( mCurrentView )
+    {
+        case cmTriggerView:
+            if (!slot_saveTriggerAfterEdit())
+                event->ignore();
+            break;
+        
+        default:
+        break;
+    }
+}
+
+bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
+{
+    bool result = true;
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     mpTriggersMainArea->lineEdit->clear();
     bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
@@ -1269,7 +1282,8 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
     if( pItem )
     {
         int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+        TTrigger * pT2 = mpHost->getTriggerUnit()->getTrigger( triggerID );
+        TTrigger * pT = new TTrigger(*pT2);
         if( pT )
         {
             pT->setName( name );
@@ -1301,12 +1315,28 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
+
+            if (!(*pT == *pT2))
+            {
+                if (ask)
+                {
+                    QMessageBox::StandardButton ask_result = QMessageBox::question ( this, tr("Trigger was modified"), tr("trigger \"%1\" was modified, do you want to save it?").arg(name), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+                    if (ask_result == QMessageBox::Cancel)
+                        result = false;
+                    else if (ask_result == QMessageBox::Save)
+                        *pT2 = *pT;
+                } else {
+                    *pT2 = *pT;
+                }
+            }
             
             pItem->setIcon( 0, icon); 
             pItem->setText( 0, name );
         }
     }
     mpTriggerMainAreaEditRegexItem = 0;
+    return result;
 }
 
 void dlgTriggerEditor::slot_saveTimerAfterEdit()
@@ -2767,7 +2797,7 @@ void dlgTriggerEditor::slot_save_edit()
     switch( mCurrentView )
     {
         case cmTriggerView:
-            slot_saveTriggerAfterEdit();
+            slot_saveTriggerAfterEdit(false);
             break;
         case cmTimerView:
             slot_saveTimerAfterEdit();

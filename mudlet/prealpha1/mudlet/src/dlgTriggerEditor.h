@@ -74,7 +74,7 @@ public slots:
     void                        slot_export();
     void                        slot_import();
     void                        slot_debug_mode();
-    void                        slot_saveTriggerAfterEdit();
+    bool                        slot_saveTriggerAfterEdit(bool ask = true);
     void                        slot_saveTimerAfterEdit();
     void                        slot_saveScriptAfterEdit();
     void                        slot_saveAliasAfterEdit();
@@ -136,6 +136,7 @@ public slots:
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
     void                        slot_grab_key();
     bool                        event( QEvent * event );
+    void                        closeEvent(QCloseEvent *event);
     void                        grab_key_callback( int key, int modifier );
  
     
