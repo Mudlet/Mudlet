@@ -1334,6 +1334,7 @@ bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
             pItem->setIcon( 0, icon); 
             pItem->setText( 0, name );
         }
+        delete pT;
     }
     mpTriggerMainAreaEditRegexItem = 0;
     return result;
