@@ -157,6 +157,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget->setRootIsDecorated( false );
     treeWidget->setHost( mpHost );
     treeWidget->header()->hide();
+    treeWidget->setPoint(this);
     
     tree_widget_search_results_main->hide(); // hide search results
     
@@ -1279,7 +1280,7 @@ bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
     QString script = mpSourceEditorArea->script_scintilla->text();    
     
     QTreeWidgetItem * pItem = treeWidget->currentItem(); 
-    if( pItem )
+    if( pItem->parent() )
     {
         int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
         TTrigger * pT2 = mpHost->getTriggerUnit()->getTrigger( triggerID );

@@ -171,6 +171,30 @@ void TTreeWidget::dragMoveEvent(QDragMoveEvent *event)
     QTreeWidget::dragMoveEvent( event );
 }
 
+void TTreeWidget::setPoint(QWidget * p)
+{
+    point = p;
+}
+
+void TTreeWidget::mousePressEvent ( QMouseEvent * event )
+{
+    //qDebug() << ((dlgTriggerEditor*)point)->CurrentView();
+    //qDebug() << ((dlgTriggerEditor*)parentWidget())->CurrentView();
+    //qDebug() << ((dlgTriggerEditor*)parent())->CurrentView();
+
+    if (itemAt( event->pos() )) {
+        QTreeWidgetItem * pItem = itemAt( event->pos() );
+
+        if (mIsTriggerTree) {
+            if (((dlgTriggerEditor*)point)->slot_saveTriggerAfterEdit()) {
+                QTreeWidget::mousePressEvent( event );
+            } else {
+                event->ignore();
+            }
+        }
+    }
+}
+
 void TTreeWidget::dropEvent(QDropEvent *event)
 {
     qDebug()<<"dropEvent()";
