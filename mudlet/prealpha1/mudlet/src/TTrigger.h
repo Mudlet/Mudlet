@@ -56,6 +56,7 @@ public:
                      TTrigger( TTrigger * parent, Host * pHost ); 
                      TTrigger( QString name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
                      TTrigger( const TTrigger & );
+                     TTrigger& operator= (const TTrigger& );
                       //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
                       //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
      
