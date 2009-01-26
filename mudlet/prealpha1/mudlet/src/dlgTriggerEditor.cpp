@@ -1283,7 +1283,8 @@ bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
     {
         int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
         TTrigger * pT2 = mpHost->getTriggerUnit()->getTrigger( triggerID );
-        TTrigger * pT = new TTrigger(*pT2);
+        TTrigger * pT = new TTrigger(pT2->getParent(), mpHost);
+        pT->clone(*pT2);
         if( pT )
         {
             pT->setName( name );
@@ -1316,7 +1317,7 @@ bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
                 }
             }
 
-            if (!(*pT == *pT2))
+            if (!pT->isClone(*pT2))
             {
                 if (ask)
                 {
@@ -1325,9 +1326,9 @@ bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
                     if (ask_result == QMessageBox::Cancel)
                         result = false;
                     else if (ask_result == QMessageBox::Save)
-                        *pT2 = *pT;
+                        pT2->clone(*pT);
                 } else {
-                    *pT2 = *pT;
+                    pT2->clone(*pT);
                 }
             }
             
