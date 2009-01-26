@@ -76,10 +76,11 @@ void dlgConnectionProfiles::slot_update_url( const QString url )
     QString profile = pItem->text(0);
     if( pItem )
     {
-        QUrl check( url, QUrl::StrictMode );            
+        QUrl check;
+        check.setHost( url );//, QUrl::StrictMode );            
         if( check.isValid() )
         {
-            profile_name_entry->setPalette( mOKPalette );
+            host_name_entry->setPalette( mOKPalette );
             notificationArea->hide();
             notificationAreaIconLabelWarning->hide();
             notificationAreaIconLabelError->hide();
@@ -89,7 +90,7 @@ void dlgConnectionProfiles::slot_update_url( const QString url )
         }
         else
         {
-            profile_name_entry->setPalette( mErrorPalette );
+            host_name_entry->setPalette( mErrorPalette );
             notificationArea->show();
             notificationAreaIconLabelWarning->hide();
             notificationAreaIconLabelError->show();
@@ -109,7 +110,7 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
         int num = port.toInt();
         if( (num > 20) && (num < 65536) )
         {
-            profile_name_entry->setPalette( mOKPalette );
+            port_entry->setPalette( mOKPalette );
             notificationArea->hide();
             notificationAreaIconLabelWarning->hide();
             notificationAreaIconLabelError->hide();
@@ -119,7 +120,7 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
         }
         else
         {
-            profile_name_entry->setPalette( mErrorPalette );
+            port_entry->setPalette( mErrorPalette );
             notificationArea->show();
             notificationAreaIconLabelWarning->hide();
             notificationAreaIconLabelError->show();
@@ -143,9 +144,12 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
         if( mEditOK )
         {
             mCurrentProfileEditName = pItem->text( 0 );
-        
-            mProfileList[mProfileList.indexOf( mCurrentProfileEditName )] = name;
-            pItem->setText( 0, name );
+            int row = mProfileList.indexOf( mCurrentProfileEditName );
+            if( (row >= 0) && ( row < mProfileList.size() ) )
+            {
+                mProfileList[row] = name;
+                pItem->setText( 0, name );
+            }
             QDir dir(QDir::homePath()+"/.config/mudlet/profiles");
             dir.rename( mCurrentProfileEditName, name );
             profile_name_entry->setPalette( mOKPalette );
@@ -178,25 +182,6 @@ void dlgConnectionProfiles::slot_showmudlist_clicked ( bool checked )
 
 void dlgConnectionProfiles::slot_addProfile()
 {
-    QStringList newname;
-    newname << tr("new");
-
-    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, newname);
-    if( ! pItem )
-    {
-        return;
-    }
-    
-    profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
-
-    profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
-    profiles_tree_widget->setCurrentItem(pItem);
-    profiles_tree_widget->setItemSelected(pItem, true);
-    
-    //slot_item_clicked( pItem );
-    
-    //profiles_tree_widget->sortByColumn(0, Qt::AscendingOrder);
-
     fillout_form();
     
     welcome_message->hide();
@@ -204,8 +189,30 @@ void dlgConnectionProfiles::slot_addProfile()
     autologin_groupbox->show();
     mud_info_groupbox->show();
 
+    QStringList newname;
+    QString profile = tr("new profile");
+    newname << profile;
+    
+    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, newname);
+    if( ! pItem )
+    {
+        return;
+    }
+    
+    profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
+    
+    profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
+    profiles_tree_widget->setCurrentItem( pItem );
+    profiles_tree_widget->setItemSelected( pItem, true );
+    QDir dir;
+    dir.mkpath( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
+    
+    //profiles_tree_widget->sortByColumn(0, Qt::AscendingOrder);
+    
+    profile_name_entry->setText( profile );
     profile_name_entry->setFocus();
     profile_name_entry->selectAll();
+    
 }
 
 void dlgConnectionProfiles::slot_deleteProfile()
@@ -217,9 +224,14 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     
     profiles_tree_widget->takeTopLevelItem( profiles_tree_widget->currentIndex().row() );
-    //mProfileList.removeAt( mProfileList.indexOf( profile ) );
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
-    //dir.remove();
+    QStringList deleteList = dir.entryList();
+    for( int i=0; i<deleteList.size(); i++ )
+    {
+        dir.remove( deleteList[i] );
+    }
+    dir.rmpath( dir.path());
+    
     if( ! mProfileList.size() )
     {
         welcome_message->show();
