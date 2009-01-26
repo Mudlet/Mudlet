@@ -658,7 +658,30 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
         
     pT->setIsActive( ! pT->isActive() );
     
-    slot_trigger_clicked(pItem, NULL);
+    QIcon icon;
+    if( pT->isFolder() )
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-blue.png")), QIcon::Normal, QIcon::Off);    
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);    
+        }
+    }
+    else
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+        }
+    }
+    pItem->setIcon(0, icon);
 }
 
 void dlgTriggerEditor::slot_timer_toggle_active()
@@ -671,7 +694,30 @@ void dlgTriggerEditor::slot_timer_toggle_active()
     
     pT->setIsActive( ! pT->isActive() );
     
-    slot_timer_clicked(pItem, NULL);
+    QIcon icon;
+    if( pT->isFolder() )
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-green.png")), QIcon::Normal, QIcon::Off);    
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-green-locked.png")), QIcon::Normal, QIcon::Off);    
+        }
+    }
+    else
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+        }
+    }
+    pItem->setIcon(0, icon);
 }
 
 void dlgTriggerEditor::slot_alias_toggle_active()
@@ -795,7 +841,30 @@ void dlgTriggerEditor::slot_key_toggle_active()
     
     pT->setIsActive( ! pT->isActive() );
     
-    slot_key_clicked(pItem, NULL);
+    QIcon icon;
+    if( pT->isFolder() )
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-cyan.png")), QIcon::Normal, QIcon::Off);    
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);    
+        }
+    }
+    else
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+        }
+    }
+    pItem->setIcon(0, icon);
 }
 
 
