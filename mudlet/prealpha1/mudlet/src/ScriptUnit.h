@@ -43,7 +43,7 @@ public:
     bool                  registerScript( TScript * pT );
     void                  unregisterScript( TScript * pT );
     bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream & );
+    bool                  restore( QDataStream &, bool );
     void                  reParentScript( int childID, int oldParentID, int newParentID );
     qint64                getNewID();
     QMutex                mScriptUnitLock;

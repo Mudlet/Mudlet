@@ -222,21 +222,32 @@ bool AliasUnit::serialize( QDataStream & ofs )
 }
 
 
-bool AliasUnit::restore( QDataStream & ifs )
+bool AliasUnit::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mMaxID;
     qint64 children;
     ifs >> children;
-    bool ret = true;
+    
+    bool ret1 = false;
+    bool ret2 = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret1 = true;
+    
     mMaxID = 0;
     for( qint64 i=0; i<children; i++ )
     {
         TAlias * pChild = new TAlias( 0, mpHost );
-        ret = pChild->restore( ifs );
-        //pChild->Dump();
-        registerAlias( pChild );
+        ret2 = pChild->restore( ifs, initMode );
+        
+        if( ! initMode )
+        {
+            delete pChild;
+        }
+        else 
+            registerAlias( pChild );
     }
     
-    return ret;
+    return ret1 & ret2;
 }
 

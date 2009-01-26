@@ -165,12 +165,10 @@ bool TScript::serialize( QDataStream & ofs )
     return ret;
 } 
 
-bool TScript::restore( QDataStream & ifs )
+bool TScript::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mName;
-    qDebug()<<"restoring:"<<mName;
     ifs >> mScript;
-    
     ifs >> mID;
     ifs >> mIsActive;
     ifs >> mIsFolder;
@@ -181,16 +179,22 @@ bool TScript::restore( QDataStream & ifs )
     
     mID = mpHost->getScriptUnit()->getNewID();
     
-    bool ret = true;
+    bool ret = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret = true;
+    
     for( qint64 i=0; i<children; i++ )
     {
         TScript * pChild = new TScript( this, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->registerScript();
+        ret = pChild->restore( ifs, initMode );
+        if( initMode ) 
+            pChild->registerScript();
     }
 
     if (getChildrenList()->size() > 0)
         mIsFolder = true;
+    
     return ret;
 }
 

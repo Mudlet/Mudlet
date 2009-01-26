@@ -106,6 +106,7 @@ public:
     void               serialize_options2( QString );
     void               restore_options2( QString );
     bool               restore( QString path );
+    int                loadProfileHistory( QString, int );
     void               saveTriggerUnit( QString hostname );
     void               loadTriggerUnit( QString hostname );
     void               saveTimerUnit( QString hostname );

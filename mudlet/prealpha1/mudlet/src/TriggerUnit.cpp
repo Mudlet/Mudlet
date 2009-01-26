@@ -208,23 +208,33 @@ bool TriggerUnit::serialize( QDataStream & ofs )
 }
 
 
-bool TriggerUnit::restore( QDataStream & ifs )
+bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mMaxID;
     qint64 children;
     ifs >> children;
-    bool ret = true;
+    
+    bool ret1 = false;
+    bool ret2 = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret1 = true;
+    
     mMaxID = 0;
     for( qint64 i=0; i<children; i++ )
     {
         TTrigger * pChild = new TTrigger( 0, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->Dump();
-        if( pChild->isTempTrigger() ) delete pChild;
-        else registerTrigger( pChild );
+        ret2 = pChild->restore( ifs, initMode );
+        
+        if( ( pChild->isTempTrigger() ) || ( ! initMode ) ) 
+        {
+            delete pChild;
+        }
+        else 
+            registerTrigger( pChild );
     }
     
-    return ret;
+    return ret1 & ret2;
 }
 
 void TriggerUnit::enableTrigger( QString & name )
