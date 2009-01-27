@@ -29,8 +29,8 @@ e *                                                                         *
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
 {
     setupUi( this );
-    active_profile.clear();
-    active_item = NULL;
+    //    active_profile.clear();
+    //active_item = NULL;
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/dialog-ok-apply.png"));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
@@ -134,14 +134,23 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
 void dlgConnectionProfiles::slot_update_name( const QString name )             
 {
     QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
+    
     if( pItem )
     {
-        if( ! mProfileList.contains( name ) )
+        if( ! mProfileList.contains( name ) ) 
             mEditOK = true;
         else
             mEditOK = false;
         
-        if( mEditOK )
+
+        if( ! mSavedNewName )
+        {
+            // keep track of the new profile name that isnt yet valid
+            // and thus hasnt been written to disc yet
+            mUnsavedProfileName = name;
+            pItem->setText( 0, name );
+        }
+        else
         {
             mCurrentProfileEditName = pItem->text( 0 );
             int row = mProfileList.indexOf( mCurrentProfileEditName );
@@ -150,8 +159,24 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
                 mProfileList[row] = name;
                 pItem->setText( 0, name );
             }
+        }
+        
+        if( mEditOK )
+        {
             QDir dir(QDir::homePath()+"/.config/mudlet/profiles");
-            dir.rename( mCurrentProfileEditName, name );
+            if( ! mSavedNewName )
+            {
+                dir.mkpath( QDir::homePath()+"/.config/mudlet/profiles/"+mUnsavedProfileName );
+                mProfileList << name;
+                pItem->setText( 0, name );
+                mSavedNewName = true;
+                mUnsavedProfileName = "";
+            }
+            else     
+            {
+                dir.rename( mCurrentProfileEditName, name );
+            }
+            
             profile_name_entry->setPalette( mOKPalette );
             notificationArea->hide();
             notificationAreaIconLabelWarning->hide();
@@ -190,26 +215,25 @@ void dlgConnectionProfiles::slot_addProfile()
     mud_info_groupbox->show();
 
     QStringList newname;
-    QString profile = tr("");
-    newname << profile;
+    mUnsavedProfileName = tr("new profile name");
+    newname << mUnsavedProfileName;
     
     QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, newname);
     if( ! pItem )
     {
         return;
     }
+    mSavedNewName = false;
     profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
     profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
     
     profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
     profiles_tree_widget->setCurrentItem( pItem );
     profiles_tree_widget->setItemSelected( pItem, true );
-    QDir dir;
-    dir.mkpath( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
-    
+        
     //profiles_tree_widget->sortByColumn(0, Qt::AscendingOrder);
     
-    profile_name_entry->setText( profile );
+    profile_name_entry->setText( mUnsavedProfileName );
     profile_name_entry->setFocus();
     profile_name_entry->selectAll();
     
@@ -365,6 +389,15 @@ void dlgConnectionProfiles::slot_finished(int f)
     if (f == 1)
     {
         QString profile_name = profile_name_entry->text().trimmed();
+        bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+        Host * pHost = HostManager::self()->getHost( profile_name );
+        if( pHost )
+        {
+            pHost->setUrl( host_name_entry->text().trimmed() );
+        }
+        else 
+            return;
+        
         if( profile_name.size() < 1 ) return;
         emit signal_establish_connection( profile_name );
     }

@@ -57,14 +57,16 @@ public slots:
     
 private:
     
-    QString active_profile;
-    QTreeWidgetItem *active_item;
-    QStringList mProfileList;
-    bool mEditOK;
-    QPalette mRegularPalette;
-    QPalette mOKPalette;
-    QPalette mErrorPalette;
-    QString mCurrentProfileEditName;
+    QString            mUnsavedProfileName;
+    bool               mSavedNewName;
+    //QString            active_profile;
+    //QTreeWidgetItem *  active_item;
+    QStringList        mProfileList;
+    bool               mEditOK;
+    QPalette           mRegularPalette;
+    QPalette           mOKPalette;
+    QPalette           mErrorPalette;
+    QString            mCurrentProfileEditName;
     
 };
 
