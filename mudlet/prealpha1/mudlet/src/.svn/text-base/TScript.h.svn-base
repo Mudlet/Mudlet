@@ -64,7 +64,7 @@ public:
     void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
     bool             registerScript();
     bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs );
+    bool             restore( QDataStream & fs, bool );
     void             callEventHandler( QString &, TEvent * );
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()            { QMutexLocker locker(& mLock); return mEventHandlerList; }

@@ -274,7 +274,7 @@ bool TBuffer::replace( int line, QString what, QString with )
     return true;
 }
 
-bool TBuffer::deleteLines( int from, int to )
+bool TBuffer::deleteLines( unsigned int from, unsigned int to )
 {
     if( ( from >= 0 ) 
      && ( from <= buffer.size() )
@@ -282,18 +282,18 @@ bool TBuffer::deleteLines( int from, int to )
      && ( to >=0 )
      && ( to <= buffer.size() ) )
     {
-        int delta = to - from;
+        unsigned int delta = to - from;
         
-        for( int i=from; i<from+delta; i++ )
+        for( unsigned int i=from; i<from+delta; i++ )
         {
             lineBuffer.removeAt( i );
-            for( int k=0; k<buffer[i].size(); k++ )
+            for( unsigned int k=0; k<buffer[i].size(); k++ )
             {
                 delete buffer[i][k];    
             }
         }
         
-        int i = buffer.size();
+        unsigned int i = buffer.size();
         
         // we do reverse lookup as the wanted lines are usually at the end of the buffer
         // std::revers_iterator is not defined for usage in erase()

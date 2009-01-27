@@ -60,6 +60,7 @@ private:
     bool mIsTimerTree;
     bool mIsKeyTree;
     bool mIsActionTree;
+    QTreeWidgetItem * dragged_item;
     
     
 signals:

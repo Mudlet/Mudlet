@@ -285,7 +285,7 @@ bool Host::serialize()
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open(QIODevice::WriteOnly);
+    file.open( QIODevice::Append );
     QDataStream ofs(&file); 
     ofs << mHostName;
     ofs << mLogin;
@@ -320,7 +320,7 @@ void Host::serialize_options2( QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open(QIODevice::WriteOnly);
+    file.open( QIODevice::Append );
     QDataStream ofs(&file); 
     ofs << mWrapAt;
     ofs << mWrapIndentCount;
@@ -399,10 +399,8 @@ bool Host::importHost( QString directory )
     ifs >> mRetries;
     ifs >> mPort;
     ifs >> mUserDefinedName;
-    //ifs >> mHostID;
     file.close();
     
-    // loading TriggerUnit 
     loadTriggerUnit( directory );    
     loadTimerUnit( directory );
     loadAliasUnit( directory );
@@ -416,32 +414,165 @@ bool Host::importHost( QString directory )
 
 bool Host::restore( QString directory )
 {
-    QString filename = directory + "/Host.dat";
-    QFile file( filename );
-    file.open(QIODevice::ReadOnly);
-    QDataStream ifs(&file); 
-    ifs >> mHostName;
-    ifs >> mLogin;
-    ifs >> mPass;
-    ifs >> mUrl;
-    ifs >> mTimeout;
-    ifs >> mRetries;
-    ifs >> mPort;
-    ifs >> mUserDefinedName;
+    qDebug()<< "analyzing profile history for *"<<directory<<"* ...";
+    int restorableProfileCount = loadProfileHistory( directory, -1 );
+    if( restorableProfileCount != -1 )
+    {
+        qDebug()<<"loading history #"<<restorableProfileCount<<" of profile: "<<directory;
+        int load = loadProfileHistory( directory, restorableProfileCount );
+        if( load == restorableProfileCount )
+        {
+            qDebug()<< "( OK ) loaded history #"<<restorableProfileCount<<" of profile: "<<directory;
+            mScriptUnit.compileAll();
+            return true;
+        }
+        else
+        {
+            qDebug()<<"[ ERROR ] loading history #"<<restorableProfileCount<<" of profile: "<<directory<<" FAILED."; 
+            return false;
+        }
+    }
+}
+
+int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
+{
+    if( restoreProfileNumber > -1 ) 
+        qDebug()<< "RESTORING: profile history #"<<restoreProfileNumber<<" profile: "<<directory;
+    else
+        qDebug()<<"ANALYSING profile history of profile: "<<directory;
     
-    file.close();
+    QString host = directory + "/Host.dat";
+    QFile fileHost( host );
+    fileHost.open(QIODevice::ReadOnly);
+    QDataStream ifsHost(&fileHost); 
     
-    restore_options2( directory );
+    QString triggerUnit = directory + "/Triggers.dat";
+    QFile fileTriggerUnit( triggerUnit );
+    fileTriggerUnit.open( QIODevice::ReadOnly );
+    QDataStream ifs_triggerUnit( &fileTriggerUnit ); 
     
-    loadTriggerUnit( directory );    
-    loadTimerUnit( directory );
-    loadAliasUnit( directory );
-    loadScriptUnit( directory );
-    loadActionUnit( directory );
-    loadKeyUnit( directory );
-    loadOptions( directory );
-    mScriptUnit.compileAll();
-    return true;
+    QString timerUnit = directory + "/Timers.dat";
+    QFile fileTimerUnit( timerUnit );
+    fileTimerUnit.open( QIODevice::ReadOnly );
+    QDataStream ifs_timerUnit( &fileTimerUnit ); 
+    
+    QString aliasUnit = directory + "/Aliases.dat";
+    QFile fileAliasUnit( aliasUnit );
+    fileAliasUnit.open( QIODevice::ReadOnly );
+    QDataStream ifs_aliasUnit( &fileAliasUnit ); 
+    
+    QString scriptUnit = directory + "/Scripts.dat";
+    QFile fileScriptUnit( scriptUnit );
+    fileScriptUnit.open( QIODevice::ReadOnly );
+    QDataStream ifs_scriptUnit( &fileScriptUnit ); 
+    
+    QString actionUnit = directory + "/Actions.dat";
+    QFile fileActionsUnit( actionUnit );
+    fileActionsUnit.open( QIODevice::ReadOnly );
+    QDataStream ifs_actionsUnit( &fileActionsUnit ); 
+    
+    
+    QString keyUnit = directory + "/Keys.dat";
+    QFile fileKeyUnit( keyUnit );
+    fileKeyUnit.open( QIODevice::ReadOnly );
+    QDataStream ifs_keyUnit( &fileKeyUnit ); 
+    
+    QString options = directory + "/Options.dat";
+    QFile fileOptions( options );
+    fileOptions.open( QIODevice::ReadOnly );
+    QDataStream ifsOptions( &fileOptions ); 
+    
+    QString options_2 = directory + "/Host_options2.dat";
+    QFile fileOptions_2( options_2 );
+    fileOptions_2.open(QIODevice::ReadOnly);
+    QDataStream ifsOptions_2(&fileOptions_2); 
+    
+    bool isRestorable = true;
+    bool isRestorableUnits;
+    bool isRestorableHost;
+    
+    int restorableProfileCount = 0;
+    bool initMode = false;
+    
+    while( isRestorable )
+    {
+        qDebug() << "analyzing profile #"<< restorableProfileCount;
+        
+        if( restorableProfileCount == restoreProfileNumber )
+            initMode = true;
+        
+        ifsHost >> mHostName;
+        ifsHost >> mLogin;
+        ifsHost >> mPass;
+        ifsHost >> mUrl;
+        ifsHost >> mTimeout;
+        ifsHost >> mRetries;
+        ifsHost >> mPort;
+        ifsHost >> mUserDefinedName;
+        
+        isRestorableUnits = mTriggerUnit.restore( ifs_timerUnit, initMode );
+        isRestorableUnits = mTimerUnit.restore( ifs_timerUnit, initMode ); 
+        isRestorableUnits = mAliasUnit.restore( ifs_aliasUnit, initMode ); 
+        isRestorableUnits = mScriptUnit.restore( ifs_scriptUnit, initMode ); 
+        isRestorableUnits = mActionUnit.restore( ifs_actionsUnit, initMode ); 
+        isRestorableUnits = mKeyUnit.restore( ifs_keyUnit, initMode ); 
+    
+        ifsOptions >> mFgColor;
+        ifsOptions >> mBgColor;
+        ifsOptions >> mBlack;
+        ifsOptions >> mLightBlack;
+        ifsOptions >> mRed;
+        ifsOptions >> mLightRed;
+        ifsOptions >> mBlue;
+        ifsOptions >> mLightBlue;
+        ifsOptions >> mGreen;
+        ifsOptions >> mLightGreen;
+        ifsOptions >> mYellow;
+        ifsOptions >> mLightYellow;
+        ifsOptions >> mCyan;
+        ifsOptions >> mLightCyan;
+        ifsOptions >> mMagenta;
+        ifsOptions >> mLightMagenta;
+        ifsOptions >> mWhite;
+        ifsOptions >> mLightWhite;
+        ifsOptions >> mDisplayFont;
+        ifsOptions >> mCommandLineFont;
+        ifsOptions >> mCommandSeperator;
+    
+        ifsOptions_2 >> mWrapAt;
+        ifsOptions_2 >> mWrapIndentCount;
+        ifsOptions_2 >> mPrintCommand;
+        ifsOptions_2 >> mAutoClearCommandLineAfterSend;
+        ifsOptions_2 >> mCommandSeperator;
+        ifsOptions_2 >> mDisableAutoCompletion;
+    
+        if( ifsHost.status() == QDataStream::Ok )
+            isRestorableHost = true;
+        
+        qDebug()<< "result: isRestorable="<<(bool)(isRestorableUnits & isRestorableHost)<<" isRestorableUnits="<<isRestorableUnits<<" isRestorableHost="<<isRestorableHost;
+        
+        isRestorable = isRestorableUnits & isRestorableHost; //FIXME: add both options
+        
+        if( restorableProfileCount == restoreProfileNumber )
+            break;
+        
+        if( isRestorable ) 
+            restorableProfileCount++;
+    }
+    
+    fileTriggerUnit.close();
+    fileTimerUnit.close();
+    fileAliasUnit.close();
+    fileScriptUnit.close();
+    fileActionsUnit.close();
+    fileKeyUnit.close();
+    fileOptions.close();
+    fileOptions_2.close();
+    
+    if( ( restorableProfileCount == 0 ) && ( ! isRestorable ) )
+        return -1;
+    else    
+        return restorableProfileCount;
 }
 
 void Host::saveOptions(QString directory )
@@ -454,7 +585,7 @@ void Host::saveOptions(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     ofs << mFgColor;
     ofs << mBgColor;
@@ -483,11 +614,9 @@ void Host::saveOptions(QString directory )
 void Host::loadOptions( QString directory )
 {
     QString filename = directory + "/Options.dat";
-    qDebug()<< "restoring data from path:"<<filename;
     QFile file( filename );
     if( file.exists() )
     {
-        qDebug()<< "restoring ***OPTIONS*** data from path:"<<filename;
         file.open( QIODevice::ReadOnly );
         QDataStream ifs( &file ); 
         ifs >> mFgColor;
@@ -526,7 +655,7 @@ void Host::saveTriggerUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mTriggerUnit.serialize( ofs );
     file.close();
@@ -540,9 +669,10 @@ void Host::loadTriggerUnit( QString directory )
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( &file ); 
 
-    mTriggerUnit.restore( ifs );
+    mTriggerUnit.restore( ifs, true );
     file.close();
 }
+
 
 void Host::saveTimerUnit(QString directory )
 {
@@ -554,7 +684,7 @@ void Host::saveTimerUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mTimerUnit.serialize( ofs );
     file.close();
@@ -568,7 +698,7 @@ void Host::loadTimerUnit( QString directory )
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( &file ); 
     
-    mTimerUnit.restore( ifs );
+    mTimerUnit.restore( ifs, true );
     file.close();
 }
 
@@ -582,7 +712,7 @@ void Host::saveScriptUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mScriptUnit.serialize( ofs );
     file.close();
@@ -596,7 +726,7 @@ void Host::loadScriptUnit( QString directory )
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( &file ); 
     
-    mScriptUnit.restore( ifs );
+    mScriptUnit.restore( ifs, true );
     file.close();
 }
 
@@ -610,7 +740,7 @@ void Host::saveAliasUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mAliasUnit.serialize( ofs );
     file.close();
@@ -624,7 +754,7 @@ void Host::loadAliasUnit( QString directory )
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( &file ); 
     
-    mAliasUnit.restore( ifs );
+    mAliasUnit.restore( ifs, true );
     file.close();
 }
 
@@ -638,7 +768,7 @@ void Host::saveKeyUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mKeyUnit.serialize( ofs );
     file.close();
@@ -652,7 +782,7 @@ void Host::loadKeyUnit( QString directory )
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( &file ); 
     
-    mKeyUnit.restore( ifs );
+    mKeyUnit.restore( ifs, true );
     file.close();
 }
 
@@ -666,7 +796,7 @@ void Host::saveActionUnit(QString directory )
         dir.mkpath( directory );    
     }
     QFile file( filename );
-    file.open( QIODevice::WriteOnly );
+    file.open( QIODevice::Append );
     QDataStream ofs( &file ); 
     mActionUnit.serialize( ofs );
     file.close();
@@ -680,7 +810,7 @@ void Host::loadActionUnit( QString directory )
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( &file ); 
     
-    mActionUnit.restore( ifs );
+    mActionUnit.restore( ifs, true );
     file.close();
 }
 

@@ -174,7 +174,7 @@ bool TAlias::serialize( QDataStream & ofs )
     return ret;
 } 
 
-bool TAlias::restore( QDataStream & ifs )
+bool TAlias::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mName;
     ifs >> mScript;
@@ -189,12 +189,17 @@ bool TAlias::restore( QDataStream & ifs )
     ifs >> children;
     mID = mpHost->getAliasUnit()->getNewID();
     
-    bool ret = true;
+    bool ret = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret = true;
+    
     for( qint64 i=0; i<children; i++ )
     {
         TAlias * pChild = new TAlias( this, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->registerAlias();
+        ret = pChild->restore( ifs, initMode );
+        if( initMode ) 
+            pChild->registerAlias();
     }
 
     if (getChildrenList()->size() > 0)

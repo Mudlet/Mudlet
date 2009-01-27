@@ -45,7 +45,7 @@ public:
     bool                  registerTrigger( TTrigger * pT );
     void                  unregisterTrigger( TTrigger * pT );
     bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream & );
+    bool                  restore( QDataStream &, bool );
     void                  reParentTrigger( int childID, int oldParentID, int newParentID );
     void                  processDataStream( QString & );
     qint64                getNewID();

@@ -188,7 +188,7 @@ bool TKey::serialize( QDataStream & ofs )
     return ret;
 } 
 
-bool TKey::restore( QDataStream & ifs )
+bool TKey::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mName;
     ifs >> mKeyCode;
@@ -202,12 +202,17 @@ bool TKey::restore( QDataStream & ifs )
     ifs >> children;
     mID = mpHost->getKeyUnit()->getNewID();
     
-    bool ret = true;
+    bool ret = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret = true;
+    
     for( qint64 i=0; i<children; i++ )
     {
         TKey * pChild = new TKey( this, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->registerKey();
+        ret = pChild->restore( ifs, initMode );
+        if( initMode ) 
+            pChild->registerKey();
     }
 
     if (getChildrenList()->size() > 0)

@@ -227,10 +227,9 @@ bool TTimer::serialize( QDataStream & ofs )
 } 
 
 
-bool TTimer::restore( QDataStream & ifs )
+bool TTimer::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mName;
-    qDebug()<<"restoring:"<<mName;
     ifs >> mScript;
     ifs >> mTime;
     ifs >> mCommand;
@@ -242,16 +241,22 @@ bool TTimer::restore( QDataStream & ifs )
     ifs >> children;
     mID = mpHost->getTimerUnit()->getNewID();
     
-    bool ret = true;
+    bool ret = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret = true;
+    
     for( qint64 i=0; i<children; i++ )
     {
         TTimer * pChild = new TTimer( this, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->registerTimer();
+        ret = pChild->restore( ifs, initMode );
+        if( initMode )
+            pChild->registerTimer();
     }
 
     if (getChildrenList()->size() > 0)
         mIsFolder = true;
+    
     return ret;
 }
 

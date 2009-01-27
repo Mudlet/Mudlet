@@ -526,10 +526,9 @@ bool TTrigger::serialize( QDataStream & ofs )
     return ret;
 } 
 
-bool TTrigger::restore( QDataStream & ifs )
+bool TTrigger::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mName;
-    qDebug()<<"HEIKO_***TEST*** restoring:"<<mName;
     ifs >> mScript;
     QStringList regexList;
     QList<int> propertyList;
@@ -548,16 +547,22 @@ bool TTrigger::restore( QDataStream & ifs )
     
     mID = mpHost->getTriggerUnit()->getNewID();
     
-    bool ret = true;
+    bool ret = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret = true;
+    
     for( qint64 i=0; i<children; i++ )
     {
         TTrigger * pChild = new TTrigger( this, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->registerTrigger();
+        ret = pChild->restore( ifs, initMode );
+        if( initMode ) 
+            pChild->registerTrigger();
     }
 
-    if (getChildrenList()->size() > 0)
+    if( getChildrenList()->size() > 0 )
         mIsFolder = true;
+    
     return ret;
 }
 

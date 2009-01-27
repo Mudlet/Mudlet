@@ -46,6 +46,7 @@ class HostPool
     QStringList           getHostList();
     bool                  addNewHost( QString hostname, QString port, QString login, QString pass );
     bool                  deleteHost( QString url );
+    bool                  renameHost( QString url );
     bool                  serialize( QString path );
     bool                  restore( QString path );
     void                  orderShutDown();

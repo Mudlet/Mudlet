@@ -93,7 +93,6 @@ Tree<T>::Tree( T *  pParent )
 template<class T> 
 Tree<T>::~Tree()
 {  
-    qDebug()<<"DESTRUCTOR TREE called..";
     while( mpMyChildrenList->size() > 0 )
     {
         typename std::list<T*>::iterator it = mpMyChildrenList->begin();

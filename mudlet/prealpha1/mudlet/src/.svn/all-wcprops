@@ -31,13 +31,13 @@ TTimer.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 59
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TTimer.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TTimer.cpp
 END
 TriggerUnit.h
 K 25
 svn:wc:ra_dav:version-url
-V 61
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TriggerUnit.h
+V 62
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TriggerUnit.h
 END
 preferences-desktop-keyboard.png
 K 25
@@ -48,14 +48,14 @@ END
 ScriptUnit.h
 K 25
 svn:wc:ra_dav:version-url
-V 60
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ScriptUnit.h
+V 61
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/ScriptUnit.h
 END
 TCommandLine.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 65
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TCommandLine.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TCommandLine.cpp
 END
 accessories-text-editor.png
 K 25
@@ -108,8 +108,8 @@ END
 ActionUnit.h
 K 25
 svn:wc:ra_dav:version-url
-V 60
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ActionUnit.h
+V 61
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/ActionUnit.h
 END
 help-contents.png
 K 25
@@ -133,7 +133,7 @@ TTreeWidget.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 64
-/svnroot/mudlet/!svn/ver/10/prealpha1/mudlet/src/TTreeWidget.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TTreeWidget.cpp
 END
 Mudlet_splashscreen_main
 K 25
@@ -151,7 +151,7 @@ TScript.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 60
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TScript.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TScript.cpp
 END
 dlgOptionsAreaScripts.h
 K 25
@@ -163,7 +163,7 @@ KeyUnit.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 60
-/svnroot/mudlet/!svn/ver/31/prealpha1/mudlet/src/KeyUnit.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/KeyUnit.cpp
 END
 okteta.png
 K 25
@@ -217,7 +217,7 @@ dlgConnectionProfiles.h
 K 25
 svn:wc:ra_dav:version-url
 V 72
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/dlgConnectionProfiles.h
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/dlgConnectionProfiles.h
 END
 EActionGroup.cpp
 K 25
@@ -228,8 +228,8 @@ END
 TriggerUnit.cpp
 K 25
 svn:wc:ra_dav:version-url
-V 63
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TriggerUnit.cpp
+V 64
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TriggerUnit.cpp
 END
 dialog-close.png
 K 25
@@ -289,7 +289,7 @@ Host.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 57
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/Host.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/Host.cpp
 END
 TCommandLine.h
 K 25
@@ -361,19 +361,7 @@ TLuaInterpreter.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 68
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TLuaInterpreter.cpp
-END
-dlgSearchArea.h
-K 25
-svn:wc:ra_dav:version-url
-V 63
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/dlgSearchArea.h
-END
-folder-txt.png
-K 25
-svn:wc:ra_dav:version-url
-V 62
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/folder-txt.png
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TLuaInterpreter.cpp
 END
 mudlet.cpp
 K 25
@@ -387,17 +375,35 @@ svn:wc:ra_dav:version-url
 V 71
 /svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/view-sort-ascending.png
 END
+dlgSearchArea.h
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/dlgSearchArea.h
+END
+folder-txt.png
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/folder-txt.png
+END
 folder-development.png
 K 25
 svn:wc:ra_dav:version-url
 V 70
 /svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/folder-development.png
 END
+TBuffer.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svnroot/mudlet/!svn/ver/41/prealpha1/mudlet/src/TBuffer.cpp
+END
 AliasUnit.h
 K 25
 svn:wc:ra_dav:version-url
-V 59
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/AliasUnit.h
+V 60
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/AliasUnit.h
 END
 application-x-compressed-tar.png
 K 25
@@ -456,8 +462,8 @@ END
 TAction.h
 K 25
 svn:wc:ra_dav:version-url
-V 57
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TAction.h
+V 58
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TAction.h
 END
 dlgTriggerEditor.h
 K 25
@@ -480,14 +486,14 @@ END
 HostPool.h
 K 25
 svn:wc:ra_dav:version-url
-V 58
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/HostPool.h
+V 59
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/HostPool.h
 END
 TKey.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 57
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TKey.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TKey.cpp
 END
 folder.png
 K 25
@@ -606,8 +612,8 @@ END
 ScriptUnit.cpp
 K 25
 svn:wc:ra_dav:version-url
-V 62
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ScriptUnit.cpp
+V 63
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/ScriptUnit.cpp
 END
 dlgHelpDialog.h
 K 25
@@ -631,7 +637,7 @@ HostPool.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 61
-/svnroot/mudlet/!svn/ver/29/prealpha1/mudlet/src/HostPool.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/HostPool.cpp
 END
 dlgActionMainArea.h
 K 25
@@ -660,8 +666,8 @@ END
 HostManager.h
 K 25
 svn:wc:ra_dav:version-url
-V 61
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/HostManager.h
+V 62
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/HostManager.h
 END
 user-away.png
 K 25
@@ -690,8 +696,8 @@ END
 TimerUnit.h
 K 25
 svn:wc:ra_dav:version-url
-V 59
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TimerUnit.h
+V 60
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TimerUnit.h
 END
 arrow-up-double.png
 K 25
@@ -762,8 +768,8 @@ END
 Tree.h
 K 25
 svn:wc:ra_dav:version-url
-V 54
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/Tree.h
+V 55
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/Tree.h
 END
 folder-cyan-locked.png
 K 25
@@ -793,7 +799,7 @@ TAlias.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 59
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TAlias.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TAlias.cpp
 END
 dlgAliasMainArea.cpp
 K 25
@@ -823,7 +829,7 @@ Host.h
 K 25
 svn:wc:ra_dav:version-url
 V 55
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/Host.h
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/Host.h
 END
 folder-red-locked.png
 K 25
@@ -921,6 +927,12 @@ svn:wc:ra_dav:version-url
 V 64
 /svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/folder-brown.png
 END
+TBuffer.h
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svnroot/mudlet/!svn/ver/41/prealpha1/mudlet/src/TBuffer.h
+END
 folder-cyan.png
 K 25
 svn:wc:ra_dav:version-url
@@ -930,8 +942,8 @@ END
 TTimer.h
 K 25
 svn:wc:ra_dav:version-url
-V 56
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TTimer.h
+V 57
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TTimer.h
 END
 TDebug.cpp
 K 25
@@ -949,7 +961,7 @@ ActionUnit.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 63
-/svnroot/mudlet/!svn/ver/21/prealpha1/mudlet/src/ActionUnit.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/ActionUnit.cpp
 END
 TTextEdit.cpp
 K 25
@@ -1044,20 +1056,20 @@ END
 TTrigger.h
 K 25
 svn:wc:ra_dav:version-url
-V 58
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TTrigger.h
+V 59
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TTrigger.h
 END
 TScript.h
 K 25
 svn:wc:ra_dav:version-url
-V 57
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TScript.h
+V 58
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TScript.h
 END
 KeyUnit.h
 K 25
 svn:wc:ra_dav:version-url
 V 58
-/svnroot/mudlet/!svn/ver/31/prealpha1/mudlet/src/KeyUnit.h
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/KeyUnit.h
 END
 ctelnet.cpp
 K 25
@@ -1104,8 +1116,8 @@ END
 HostManager.cpp
 K 25
 svn:wc:ra_dav:version-url
-V 63
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/HostManager.cpp
+V 64
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/HostManager.cpp
 END
 draw-freehand.png
 K 25
@@ -1176,8 +1188,8 @@ END
 TimerUnit.cpp
 K 25
 svn:wc:ra_dav:version-url
-V 61
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TimerUnit.cpp
+V 62
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TimerUnit.cpp
 END
 dlgOptionsAreaTriggers.cpp
 K 25
@@ -1225,13 +1237,13 @@ TTrigger.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 61
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TTrigger.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TTrigger.cpp
 END
 AliasUnit.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 62
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/AliasUnit.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/AliasUnit.cpp
 END
 .folder-violet.png.autosave.kra
 K 25
@@ -1249,7 +1261,7 @@ TAction.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 60
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/TAction.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TAction.cpp
 END
 folder-brown-locked.png
 K 25
@@ -1369,13 +1381,13 @@ TKey.h
 K 25
 svn:wc:ra_dav:version-url
 V 55
-/svnroot/mudlet/!svn/ver/31/prealpha1/mudlet/src/TKey.h
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TKey.h
 END
 TAlias.h
 K 25
 svn:wc:ra_dav:version-url
-V 56
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/TAlias.h
+V 57
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TAlias.h
 END
 dialog-cancel.png
 K 25
@@ -1429,7 +1441,7 @@ dlgConnectionProfiles.cpp
 K 25
 svn:wc:ra_dav:version-url
 V 74
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/dlgConnectionProfiles.cpp
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/dlgConnectionProfiles.cpp
 END
 dialog-ok-apply.png
 K 25
@@ -1441,5 +1453,5 @@ TTreeWidget.h
 K 25
 svn:wc:ra_dav:version-url
 V 62
-/svnroot/mudlet/!svn/ver/10/prealpha1/mudlet/src/TTreeWidget.h
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/TTreeWidget.h
 END

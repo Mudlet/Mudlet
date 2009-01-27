@@ -40,18 +40,34 @@ signals:
     void update();
     
 public slots:
-      
-    void slot_item_changed( QTreeWidgetItem *, QTreeWidgetItem * );
+    
+    void slot_update_name( const QString ) ;  
+    void slot_update_url( const QString ) ;
+    void slot_update_port( const QString ) ;
+    void writeProfileData( QString, QString, QString );
+    QString readProfileData( QString, QString );
+    void slot_item_clicked( QTreeWidgetItem * );
     void slot_update();
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_connection_dlg_finnished();
     void slot_showmudlist_clicked ( bool checked );
     void slot_finished ( int f );
-private:
-    QString active_profile;
-    QTreeWidgetItem *active_item;
     void save();
+    
+private:
+    
+    QString            mUnsavedProfileName;
+    bool               mSavedNewName;
+    //QString            active_profile;
+    //QTreeWidgetItem *  active_item;
+    QStringList        mProfileList;
+    bool               mEditOK;
+    QPalette           mRegularPalette;
+    QPalette           mOKPalette;
+    QPalette           mErrorPalette;
+    QString            mCurrentProfileEditName;
+    
 };
 
 #endif
