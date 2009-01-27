@@ -3,7 +3,7 @@
 <KDevPrjSession>
  <DocsAndViews NumberOfDocuments="96" >
   <Doc0 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/ActionUnit.cpp" >
-   <View0 Encoding="" line="0" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc0>
   <Doc1 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/ActionUnit.h" >
    <View0 Encoding="" Type="Source" />
@@ -201,10 +201,10 @@
    <View0 Encoding="" Type="Source" />
   </Doc65>
   <Doc66 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/TBuffer.cpp" >
-   <View0 Encoding="" line="246" Type="Source" />
+   <View0 Encoding="" line="97" Type="Source" />
   </Doc66>
   <Doc67 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/TBuffer.h" >
-   <View0 Encoding="" line="56" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc67>
   <Doc68 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/TCommandLine.cpp" >
    <View0 Encoding="" Type="Source" />
@@ -240,7 +240,7 @@
    <View0 Encoding="" Type="Source" />
   </Doc78>
   <Doc79 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/TLuaInterpreter.cpp" >
-   <View0 Encoding="" line="1186" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc79>
   <Doc80 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/TLuaInterpreter.h" >
    <View0 Encoding="" Type="Source" />

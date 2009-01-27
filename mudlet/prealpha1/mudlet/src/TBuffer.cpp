@@ -61,36 +61,73 @@ TBuffer::TBuffer( Host * pH )
     QString nothing;
     lineBuffer.append( nothing );
     newLines = 0;
+    mLastLine = buffer.size()-1;
 }
 
 void TBuffer::handleNewLine()
 {
-    hadLF = true;
+    int y = lineBuffer.size();
+    if( y > 0 )
+    {
+        if( lineBuffer[y-1].size() == 1 )
+        {
+            lineBuffer[y-1].chop( 1 );
+            delete buffer[y-1][0];
+            buffer[y-1].pop_back();    
+        }
+    }
     std::deque<TChar *> newLine;
-    QString nextLine = "";
+    newLine.push_back( new TChar( mpHost ) );
+    QString nextLine = "\n";
     buffer.push_back( newLine );
     lineBuffer.append( nextLine );
+    mLastLine++;
     newLines++;
+}
+
+int TBuffer::getLastLineNumber()
+{
+    return lineBuffer.size()-1;
 }
 
 void TBuffer::addText( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
+    // special case if line ends on <LF> with a prior format code change
+    if( text == QString("\n") )
+    {
+        handleNewLine();
+        return;
+    }
+    
     QStringList lines = text.split( '\n' );
+    
+    int y;
     for( int i=0; i<lines.size(); i++ )
     {
         // the content of lines[0] is to be added to the last line in the buffer
         // unless lines[0] is itself an <LF>
         // all other lines represent corresponding <LF>
-        if( i > 0 ) handleNewLine();
-        
-        if( lines[i].size() == 0 ) 
+        if( lines[i].size() == 0 )
         {
-            // <LF> 
+            handleNewLine();
             continue;
         }
+        else if( i > 0 ) 
+        {
+            handleNewLine();
+        }
+            
+        y = getLastLineNumber();
         
-        lineBuffer[buffer.size()-1].append( lines[i] );
+        // replace preceding <LF>
+        if( lineBuffer[y].size() == 1 )
+        {
+            lineBuffer[y].chop( 1 );
+            delete buffer[y][0];
+            buffer[y].pop_back();
+        }
         
+        lineBuffer[y].append( lines[i] );
         for( int i2=0; i2<lines[i].size(); i2++ )
         {
             TChar * pC = new TChar;
@@ -99,7 +136,7 @@ void TBuffer::addText( QString text, QColor & fgColor, QColor & bgColor, bool bo
             pC->italics = italics;
             pC->bold = bold;
             pC->underline = underline;
-            buffer[buffer.size()-1].push_back( pC );
+            buffer[y].push_back( pC );
         }
     }
 }
