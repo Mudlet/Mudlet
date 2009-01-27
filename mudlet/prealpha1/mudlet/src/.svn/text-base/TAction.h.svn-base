@@ -72,7 +72,7 @@ public:
     bool             match( QString & toMatch );
     bool             registerAction();
     bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs );
+    bool             restore( QDataStream & fs, bool );
     void             insertActions( mudlet *, QToolBar *, QMenu * );
     
 private:

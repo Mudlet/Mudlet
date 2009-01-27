@@ -173,8 +173,8 @@ void TCommandLine::enterCommand( QKeyEvent * event )
 {
     mHistoryBuffer = 0;
     setPalette( mRegularPalette );
-    // split commands according to command seperator ";"
-    QStringList commandList = text().split( QChar(';'), QString::SkipEmptyParts );
+   
+    QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
     if( commandList.size() == 0 ) mpHost->send( QString("") );
     for( int i=0; i<commandList.size(); i++ )
     {

@@ -1184,7 +1184,7 @@ bool TLuaInterpreter::compile( QString & code )
     }
     lua_setglobal( L, "matches" );*/
     
-    int error = luaL_loadstring( L, code.toLatin1().data() );
+    int error = luaL_dostring( L, code.toLatin1().data() );
     QString n;
     if( error != 0 )
     {

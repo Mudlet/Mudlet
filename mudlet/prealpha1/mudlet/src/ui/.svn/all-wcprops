@@ -33,29 +33,29 @@ svn:wc:ra_dav:version-url
 V 69
 /svnroot/mudlet/!svn/ver/19/prealpha1/mudlet/src/ui/trigger_editor.ui
 END
-options_area_filters.ui
-K 25
-svn:wc:ra_dav:version-url
-V 74
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_filters.ui
-END
 main_window.ui
 K 25
 svn:wc:ra_dav:version-url
 V 65
 /svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/main_window.ui
 END
-extended_search_area.ui
+options_area_filters.ui
 K 25
 svn:wc:ra_dav:version-url
 V 74
-/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/extended_search_area.ui
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/options_area_filters.ui
 END
 aliases_main_area.ui
 K 25
 svn:wc:ra_dav:version-url
 V 71
 /svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/aliases_main_area.ui
+END
+extended_search_area.ui
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/mudlet/!svn/ver/2/prealpha1/mudlet/src/ui/extended_search_area.ui
 END
 system_message_area.ui
 K 25
@@ -139,5 +139,5 @@ connection_profiles.ui
 K 25
 svn:wc:ra_dav:version-url
 V 74
-/svnroot/mudlet/!svn/ver/38/prealpha1/mudlet/src/ui/connection_profiles.ui
+/svnroot/mudlet/!svn/ver/40/prealpha1/mudlet/src/ui/connection_profiles.ui
 END

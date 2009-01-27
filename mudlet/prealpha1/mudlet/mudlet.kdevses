@@ -39,10 +39,10 @@
    <View0 Encoding="" Type="Source" />
   </Doc11>
   <Doc12 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/dlgConnectionProfiles.cpp" >
-   <View0 Encoding="" line="223" Type="Source" />
+   <View0 Encoding="" line="401" Type="Source" />
   </Doc12>
   <Doc13 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/dlgConnectionProfiles.h" >
-   <View0 Encoding="" line="47" Type="Source" />
+   <View0 Encoding="" line="61" Type="Source" />
   </Doc13>
   <Doc14 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/dlgHelpDialog.cpp" >
    <View0 Encoding="" Type="Source" />
@@ -153,19 +153,19 @@
    <View0 Encoding="" line="473" Type="Source" />
   </Doc49>
   <Doc50 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/Host.h" >
-   <View0 Encoding="" Type="Source" />
+   <View0 Encoding="" line="0" Type="Source" />
   </Doc50>
   <Doc51 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/HostManager.cpp" >
-   <View0 Encoding="" Type="Source" />
+   <View0 Encoding="" line="0" Type="Source" />
   </Doc51>
   <Doc52 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/HostManager.h" >
-   <View0 Encoding="" Type="Source" />
+   <View0 Encoding="" line="45" Type="Source" />
   </Doc52>
   <Doc53 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/HostPool.cpp" >
-   <View0 Encoding="" Type="Source" />
+   <View0 Encoding="" line="0" Type="Source" />
   </Doc53>
   <Doc54 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/HostPool.h" >
-   <View0 Encoding="" Type="Source" />
+   <View0 Encoding="" line="0" Type="Source" />
   </Doc54>
   <Doc55 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/KeyUnit.cpp" >
    <View0 Encoding="" Type="Source" />
@@ -207,7 +207,7 @@
    <View0 Encoding="" Type="Source" />
   </Doc67>
   <Doc68 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/TCommandLine.cpp" >
-   <View0 Encoding="" line="49" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc68>
   <Doc69 NumberOfViews="1" URL="file:///home/heiko/git/mudlet/prealpha1/mudlet/src/TCommandLine.h" >
    <View0 Encoding="" Type="Source" />
@@ -304,7 +304,7 @@
    <subversion base="" />
   </kdevsubversion>
   <kdevvalgrind>
-   <executable path="/home/heiko/git/mudlet/prealpha1/mudlet/src/mudlet" params="" />
+   <executable path="" params="" />
    <valgrind path="" params="" />
    <calltree path="valgrind" params="--tool=callgrind" />
    <kcachegrind path="/usr/bin/kcachegrind" />

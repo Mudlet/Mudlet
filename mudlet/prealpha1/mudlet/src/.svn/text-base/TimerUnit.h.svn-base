@@ -46,7 +46,7 @@ public:
     bool                  registerTimer( TTimer * pT );
     void                  unregisterTimer( TTimer * pT );
     bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream & );
+    bool                  restore( QDataStream &, bool );
     void                  reParentTimer( int childID, int oldParentID, int newParentID );
     qint64                getNewID();
     QMutex                mTimerUnitLock;
