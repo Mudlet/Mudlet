@@ -44,6 +44,10 @@ public slots:
     void slot_update_name( const QString ) ;  
     void slot_update_url( const QString ) ;
     void slot_update_port( const QString ) ;
+    void slot_update_login( const QString );
+    void slot_update_pass( const QString );
+    void slot_update_website( const QString );
+    void slot_update_description();
     void writeProfileData( QString, QString, QString );
     QString readProfileData( QString, QString );
     void slot_item_clicked( QTreeWidgetItem * );
@@ -53,14 +57,14 @@ public slots:
     void slot_connection_dlg_finnished();
     void slot_showmudlist_clicked ( bool checked );
     void slot_finished ( int f );
-    void save();
+    void slot_update_autologin( int state );    
+    void slot_connectToServer();
+    void slot_cancel();
     
 private:
     
     QString            mUnsavedProfileName;
     bool               mSavedNewName;
-    //QString            active_profile;
-    //QTreeWidgetItem *  active_item;
     QStringList        mProfileList;
     bool               mEditOK;
     QPalette           mRegularPalette;

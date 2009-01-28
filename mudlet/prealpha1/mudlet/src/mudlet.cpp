@@ -526,13 +526,36 @@ void mudlet::printMessageOnDisplay( Host * pH, QString s )
 }
 
 
+void mudlet::slot_send_login()
+{
+    qDebug()<<"send login";
+    Host * pHost = tempHostQueue.dequeue();
+    QString login = pHost->getLogin();
+    pHost->sendRaw( login );
+    qDebug()<<"end send login";
+}
+
+void mudlet::slot_send_pass()
+{
+    qDebug()<<"send pass";
+    Host * pHost = tempHostQueue.dequeue();
+    QString pass = pHost->getPass();
+    pHost->sendRaw( pass );
+    qDebug()<<"pass ende";
+}
+
+void mudlet::startAutoLogin( Host * pHost )
+{
+}
+
 void mudlet::slot_connection_dlg_finnished( QString profile )
 {
+    qDebug()<<"ready"      ;
     Host * pHost = HostManager::self()->getHost( profile );
-    if( ! pHost ) return;
+    if( ! pHost ) 
+        return;
     addConsoleForNewHost( pHost );
-    QString url = pHost->getUrl();
-    //int port = pHost->getPort();
+    
     pHost->connectToServer();     
 }
 

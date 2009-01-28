@@ -20,7 +20,6 @@ e *                                                                         *
 
 #include <QInputDialog>
 #include <QMessageBox>
-
 #include "dlgConnectionProfiles.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -29,16 +28,29 @@ e *                                                                         *
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
 {
     setupUi( this );
-    //    active_profile.clear();
-    //active_item = NULL;
+    
+    // selection mode is important. if this is not set the selection behaviour is
+    // undefined. this is an undocumented qt bug, as it only shows on certain OS
+    // and certain architectures.
+        
+    profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
+    
+    QAbstractButton * abort = dialog_buttonbox->button( QDialogButtonBox::Cancel );
+    abort->setIcon(QIcon(":/dialog-close.png"));
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/dialog-ok-apply.png"));
+    connect( connect_button, SIGNAL(pressed()), this, SLOT(slot_connectToServer()));
+    connect( abort, SIGNAL(pressed()), this, SLOT(slot_cancel()));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
     connect( remove_profile_button, SIGNAL( pressed() ), this, SLOT( slot_deleteProfile() ) );
-    connect( mud_info_groupbox, SIGNAL ( clicked ( bool ) ), this, SLOT ( slot_showmudlist_clicked ( bool ) )) ;
     connect( profile_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_name(const QString)));
     connect( host_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_url(const QString)));
-    connect( port_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_port(const QString)));    
+    connect( port_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_port(const QString)));   
+    connect( autologin_checkBox, SIGNAL(stateChanged( int )), this, SLOT(slot_update_autologin(int)));    
+    connect( login_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_login(const QString)));
+    connect( character_password_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_pass(const QString)));
+    connect( mud_description_textedit, SIGNAL(textChanged()), this, SLOT(slot_update_description()));
+    connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( profiles_tree_widget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
     connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
@@ -54,7 +66,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     mRegularPalette.setColor(QPalette::Text,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    mRegularPalette.setColor(QPalette::Base,QColor(255,255,225));
+    mRegularPalette.setColor(QPalette::Base,QColor(255,255,255));
     
     mOKPalette.setColor(QPalette::Text,QColor(0,0,192));
     mOKPalette.setColor(QPalette::Highlight,QColor(0,0,192));
@@ -70,12 +82,55 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     
 }
 
+void dlgConnectionProfiles::slot_update_description()
+{
+    QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
+    
+    if( pItem )
+    {
+        QString profile = pItem->text(0);
+        QString desc = mud_description_textedit->toPlainText();
+        writeProfileData( profile, "description", desc );
+    }
+}
+
+void dlgConnectionProfiles::slot_update_website( const QString url )
+{
+    QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
+    if( pItem )
+    {
+        QString profile = pItem->text(0);
+        writeProfileData( profile, "website", url );
+    }
+}
+
+void dlgConnectionProfiles::slot_update_pass( const QString pass )
+{
+    QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
+    if( pItem )
+    {
+        QString profile = pItem->text(0);
+        writeProfileData( profile, "password", pass );
+    }
+}
+
+void dlgConnectionProfiles::slot_update_login( const QString login )
+{
+    QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
+    if( pItem )
+    {
+        QString profile = pItem->text(0);
+        writeProfileData( profile, "login", login );
+    }
+}
+
 void dlgConnectionProfiles::slot_update_url( const QString url )
 {
     QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
-    QString profile = pItem->text(0);
+    
     if( pItem )
     {
+        QString profile = pItem->text(0);
         QUrl check;
         check.setHost( url );//, QUrl::StrictMode );            
         if( check.isValid() )
@@ -101,14 +156,38 @@ void dlgConnectionProfiles::slot_update_url( const QString url )
     }
 }
 
-void dlgConnectionProfiles::slot_update_port( const QString port )
+void dlgConnectionProfiles::slot_update_autologin( int state )
 {
     QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
-    QString profile = pItem->text(0);
+    if( ! pItem ) 
+        return;
+    QString profile = pItem->text( 0 );
+    writeProfileData( profile, "autologin", QString::number( state ) );    
+}
+
+void dlgConnectionProfiles::slot_update_port( const QString port )
+{
+    const QString zahlen = "012345789";
+    if( ! zahlen.contains( port.right( 1 ) ) )
+    {
+        QString val = port;
+        val.chop( 1 );
+        port_entry->setText( val );
+        notificationArea->show();
+        notificationAreaIconLabelWarning->show();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->show();
+        notificationAreaMessageBox->setText( QString("You have to enter a number. Other characters are not permitted.") );
+        return; 
+    }
+    QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
+    
     if( pItem )
     {
-        int num = port.toInt();
-        if( (num > 20) && (num < 65536) )
+        QString profile = pItem->text(0);
+        int num = port.trimmed().toInt();
+        if( num < 65536 ) 
         {
             port_entry->setPalette( mOKPalette );
             notificationArea->hide();
@@ -120,13 +199,12 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
         }
         else
         {
-            port_entry->setPalette( mErrorPalette );
             notificationArea->show();
             notificationAreaIconLabelWarning->hide();
             notificationAreaIconLabelError->show();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText( QString("Please enter the port number of the server.") );
+            port_entry->setPalette( mErrorPalette );
         }
     }
 }
@@ -134,7 +212,20 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
 void dlgConnectionProfiles::slot_update_name( const QString name )             
 {
     QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
-    
+    const QString allowedChars = "012345789 _-#aAbBcCdDeEfFg GhHiIjJkKl LmMnNoOpPqQ rRsStTuUvV wWxXyYzZ";
+    if( ! allowedChars.contains( name.right( 1 ) ) )
+    {
+        QString val = name;
+        val.chop( 1 );
+        profile_name_entry->setText( val );
+        notificationArea->show();
+        notificationAreaIconLabelWarning->show();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->show();
+        notificationAreaMessageBox->setText( QString("This character is not permitted. Use one of the following:\n")+allowedChars );
+        return; 
+    }
     if( pItem )
     {
         if( ! mProfileList.contains( name ) ) 
@@ -210,9 +301,6 @@ void dlgConnectionProfiles::slot_addProfile()
     fillout_form();
     
     welcome_message->hide();
-    basic_info_groupbox->show();
-    autologin_groupbox->show();
-    mud_info_groupbox->show();
 
     QStringList newname;
     mUnsavedProfileName = tr("new profile name");
@@ -224,15 +312,18 @@ void dlgConnectionProfiles::slot_addProfile()
         return;
     }
     mSavedNewName = false;
+    
     profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
-    profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
+    profiles_tree_widget->insertTopLevelItem( 0, pItem );    
+    
+    // insert newest entry on top of the list as the general sorting 
+    // is always newest item first -> fillout->form() filters
+    // this is more practical for the user as they use the same profile most of the time
     
     profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
     profiles_tree_widget->setCurrentItem( pItem );
     profiles_tree_widget->setItemSelected( pItem, true );
         
-    //profiles_tree_widget->sortByColumn(0, Qt::AscendingOrder);
-    
     profile_name_entry->setText( mUnsavedProfileName );
     profile_name_entry->setFocus();
     profile_name_entry->selectAll();
@@ -241,7 +332,8 @@ void dlgConnectionProfiles::slot_addProfile()
 
 void dlgConnectionProfiles::slot_deleteProfile()
 {
-    if( ! profiles_tree_widget->currentItem() ) return;
+    if( ! profiles_tree_widget->currentItem() ) 
+        return;
 
     QString profile = profiles_tree_widget->currentItem()->text( 0 );
     if ( QMessageBox::question(this, tr("Confirmation"), tr("Are you sure you want to delete %1 ?").arg( profile ), QMessageBox::Yes|QMessageBox::No, QMessageBox::No) == QMessageBox::No )
@@ -259,9 +351,6 @@ void dlgConnectionProfiles::slot_deleteProfile()
     if( ! mProfileList.size() )
     {
         welcome_message->show();
-        basic_info_groupbox->hide();
-        autologin_groupbox->hide();
-        mud_info_groupbox->hide();
     }
     fillout_form();
     profiles_tree_widget->setFocus();
@@ -307,8 +396,30 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
         item = "port";
         val = readProfileData( profile, item );
         port_entry->setText( val );
-        //character_password_entry->setText(  );
-        //login_entry->setText(  );
+        item = "password";
+        val = readProfileData( profile, item );
+        character_password_entry->setText( val );
+        item = "login";
+        val = readProfileData( profile, item );
+        login_entry->setText( val );
+        item = "autologin";
+        val = readProfileData( profile, item );
+        if( val.toInt() == Qt::Checked )
+        {
+            autologin_checkBox->setChecked( true );    
+        }
+        else
+        {
+            autologin_checkBox->setChecked( false );
+        }
+        item = "description";
+        val = readProfileData( profile, item );
+        mud_description_textedit->clear();
+        mud_description_textedit->insertPlainText( val );
+        item = "website";
+        val = readProfileData( profile, item );
+        website_entry->setText( val );
+        
     }
 }
 
@@ -325,17 +436,11 @@ void dlgConnectionProfiles::fillout_form()
     {
         welcome_message->show();
         profiles_tree_widget->hide();
-        basic_info_groupbox->hide();
-        autologin_groupbox->hide();
-        mud_info_groupbox->hide();
     }
     else
     {
         profiles_tree_widget->show();
         welcome_message->hide();
-        basic_info_groupbox->show();
-        autologin_groupbox->show();
-        mud_info_groupbox->show();
     }
     for( int i=0; i<mProfileList.size(); i++ )
     {
@@ -349,59 +454,52 @@ void dlgConnectionProfiles::fillout_form()
         QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, sList);
         profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
     }
+    QTreeWidgetItem * pTopItem = profiles_tree_widget->itemAt( 0, 0 );
+    if( pTopItem )
+        profiles_tree_widget->setCurrentItem( pTopItem );
 }
 
 void dlgConnectionProfiles::slot_connection_dlg_finnished()
 {
-    QDialog::accept();
 }
 
-void dlgConnectionProfiles::save()
-{
-    /*   if (active_profile.isEmpty())
-        return;
-
-    QString profile_name = profile_name_entry->text().trimmed();
-    QString url = host_name_entry->text().trimmed();
-    QString pass = character_password_entry->text().trimmed();
-    QString login = login_entry->text().trimmed();
-    int port = port_entry->text().trimmed().toInt();
-    QString website = website_entry->text().trimmed();
-
-    if (Host *pHost = HostManager::self()->getHost( active_profile )) 
-    {
-        pHost->setName( profile_name );
-        pHost->setUrl( url );
-        pHost->setPass( pass );
-        pHost->setLogin( login );
-        pHost->setPort( port );
-    }
-
-    if ( profile_name != active_profile ) 
-    {
-        HostManager::self()->renameHost(active_profile);
-        active_item->setText( 0, profile_name);
-    } */
-}
 
 void dlgConnectionProfiles::slot_finished(int f)
 {
-    if (f == 1)
-    {
-        QString profile_name = profile_name_entry->text().trimmed();
-        bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
-        Host * pHost = HostManager::self()->getHost( profile_name );
-        if( pHost )
-        {
-            pHost->setUrl( host_name_entry->text().trimmed() );
-        }
-        else 
-            return;
-        
-        if( profile_name.size() < 1 ) return;
-        emit signal_establish_connection( profile_name );
-    }
 }
+
+void dlgConnectionProfiles::slot_cancel()
+{
+    QDialog::done( 0 );    
+}
+
+void dlgConnectionProfiles::slot_connectToServer()
+{
+    QString profile_name = profile_name_entry->text().trimmed();
+    bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+    Host * pHost = HostManager::self()->getHost( profile_name );
+    if( pHost )
+    {
+        pHost->setUrl( host_name_entry->text().trimmed() );
+        if( autologin_checkBox->isChecked() )
+        {
+            pHost->setPass( character_password_entry->text().trimmed() );
+            pHost->setLogin( login_entry->text().trimmed() );
+        }
+        else
+        {
+            pHost->setPass( "" );
+            pHost->setLogin( "" );
+        }
+    }
+    else 
+        return;
+    
+    //if( profile_name.size() < 1 ) return;
+    emit signal_establish_connection( profile_name );
+    QDialog::accept();
+}
+
 
 void dlgConnectionProfiles::slot_update()
 {

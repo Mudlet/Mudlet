@@ -62,6 +62,10 @@ public:
    void                          clearUserWindow( Host *, QString & ); 
    void                          pasteWindow( Host * pHost, QString name ); 
    void                          userWindowLineWrap( Host * pHost, QString & name, bool on );
+    void                         startAutoLogin( Host * );
+    
+    
+    
    static QPlainTextEdit *       mpDebugConsole; 
    static QMdiSubWindow *        mpDebugArea; 
    static bool                   debugMode; 
@@ -73,6 +77,8 @@ public slots:
    void                          slot_userToolBar_hovered( QAction* pA );
    void                          slot_connection_dlg_finnished( QString profile );
    void                          slot_timer_fires();   
+   void                          slot_send_login();
+   void                          slot_send_pass();
 
     
 protected:
@@ -90,8 +96,11 @@ private slots:
    void                          show_action_dialog();
    void                          show_key_dialog(); 
    void                          show_options_dialog();
-
+    
+    
 private:
+    
+    
     
    void                          createActions();
    void                          createMenus();
@@ -99,6 +108,12 @@ private:
    void                          createStatusBar();
    void                          readSettings();
    void                          writeSettings();
+    
+    
+    QQueue<QString> tempLoginQueue;
+    QQueue<QString> tempPassQueue;
+    QQueue<Host *>  tempHostQueue;
+    
     
    static                        mudlet * _self;
   

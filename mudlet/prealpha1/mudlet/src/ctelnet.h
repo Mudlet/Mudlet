@@ -90,7 +90,9 @@ protected slots:
   void                handle_socket_signal_disconnected();
   void                handle_socket_signal_readyRead();
   void                handle_socket_signal_error();
-  void                slot_timerPosting();  
+  void                slot_timerPosting();
+    void                slot_send_login();
+    void                slot_send_pass();
 
 private:
                       cTelnet(){;}    
@@ -136,6 +138,8 @@ private:
   QTimer *            mpPostingTimer;
   std::string         mMudData;
   bool                mIsTimerPosting;
+    QTimer * mTimerLogin;
+    QTimer * mTimerPass;
 };
 
 #endif

@@ -92,9 +92,7 @@ void Host::setReplacementCommand( QString s )
 void Host::send( QString command )
 { 
     mReplacementCommand = "";
-    //command.append(QChar('\n'));
     mpConsole->printCommand( command );
-    //qDebug()<<"Host<name="<<mHostName<<", ID="<<mHostID<<" sending command:"<<command;
     if( ! mAliasUnit.processDataStream( command ) )
     {
         if( mReplacementCommand.size() > 0 ) 
