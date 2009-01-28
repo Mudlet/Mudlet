@@ -75,7 +75,7 @@ public slots:
    void                          slot_show_about_dialog();
    void                          slot_userToolBar_triggered(QAction*);   
    void                          slot_userToolBar_hovered( QAction* pA );
-   void                          slot_connection_dlg_finnished( QString profile );
+   void                          slot_connection_dlg_finnished( QString profile, int historyVersion );
    void                          slot_timer_fires();   
    void                          slot_send_login();
    void                          slot_send_pass();

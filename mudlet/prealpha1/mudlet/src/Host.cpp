@@ -407,16 +407,49 @@ bool Host::importHost( QString directory )
     return true;
 }
 
-bool Host::restore( QString directory )
+QString Host::readProfileData( QString profile, QString item )
 {
-    qDebug()<< "[ ANALYSING ] history of "<<directory;
-    int restorableProfileCount = loadProfileHistory( directory, -1 );
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    
+    file.open( QIODevice::ReadOnly );
+    QString fname=QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item;
+    QDataStream ifs( & file ); 
+    QString ret;
+    ifs >> ret;
+    file.close();
+    return ret;
+}
+
+void Host::writeProfileData( QString profile, QString item, QString what )
+{
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
+    QDataStream ofs( & file ); 
+    ofs << what;
+    file.close();
+}
+
+bool Host::restore( QString directory, int selectedHistoryVersion )
+{
+    int restorableProfileCount;
+    if( selectedHistoryVersion > -1 )
+    {
+        qDebug()<<"[ LOADING ] profile history version #"<<selectedHistoryVersion;
+        restorableProfileCount = loadProfileHistory( directory, selectedHistoryVersion );
+    }
+    else
+    {
+        qDebug()<< "[ ANALYSING ] history of "<<directory;
+        restorableProfileCount = loadProfileHistory( directory, -1 );
+    }
     if( restorableProfileCount != -1 )
     {
         qDebug()<<"[ RESTORING ] history #"<<restorableProfileCount<<" of profile: "<<directory;
         int load = loadProfileHistory( directory, restorableProfileCount );
         if( load == restorableProfileCount-1 )
         {
+            QString profile = mHostName;
+            writeProfileData( profile, "history_version", QString::number( restorableProfileCount-1 ) ); 
             qDebug()<< "[ OK ] restored history #"<<restorableProfileCount<<" of profile: "<<directory;
             mScriptUnit.compileAll();
             return true;

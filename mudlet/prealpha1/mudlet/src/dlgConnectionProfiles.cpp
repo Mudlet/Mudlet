@@ -36,9 +36,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
     
     QAbstractButton * abort = dialog_buttonbox->button( QDialogButtonBox::Cancel );
-    abort->setIcon(QIcon(":/dialog-close.png"));
+    abort->setIcon(QIcon(":/icons/icons/dialog-close.png"));
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    connect_button->setIcon(QIcon(":/dialog-ok-apply.png"));
+    connect_button->setIcon(QIcon(":/icons/icons/dialog-ok-apply.png"));
     connect( connect_button, SIGNAL(pressed()), this, SLOT(slot_connectToServer()));
     connect( abort, SIGNAL(pressed()), this, SLOT(slot_cancel()));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
@@ -420,6 +420,18 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
         val = readProfileData( profile, item );
         website_entry->setText( val );
         
+        profile_history->clear();
+        item = "history_version";
+        val = readProfileData( profile, item );
+        QStringList versionList;
+        versionList << "Newest Profile";
+        for( int i=val.toInt(); i>0; i-- )
+        {
+            versionList << QString::number( i );
+        }
+        versionList << "Oldest Profile";
+        profile_history->insertItems( 1, versionList );
+        
     }
 }
 
@@ -488,15 +500,18 @@ void dlgConnectionProfiles::slot_connectToServer()
         }
         else
         {
-            pHost->setPass( "box unchecked" );
-            pHost->setLogin( "kein autologon gewollt" );
+            pHost->setPass( "" );
+            pHost->setLogin( "" );
         }
     }
     else 
         return;
     
-    //if( profile_name.size() < 1 ) return;
-    emit signal_establish_connection( profile_name );
+    if( profile_name.size() < 1 ) 
+        return;
+    
+    int historyVersion = profile_history->currentText().toInt();
+    emit signal_establish_connection( profile_name, historyVersion );
     QDialog::accept();
 }
 

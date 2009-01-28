@@ -16,7 +16,7 @@
    <string>Mudlet 1.0 - alpha 1</string>
   </property>
   <property name="windowIcon" >
-   <iconset resource="../application.qrc" >
+   <iconset>
     <normaloff>:/mudlet_main_16px.png</normaloff>:/mudlet_main_16px.png</iconset>
   </property>
   <property name="iconSize" >
@@ -146,7 +146,7 @@
   <action name="actionConnect" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/preferences-web-browser-cache.png</normaloff>:/preferences-web-browser-cache.png</iconset>
+     <normaloff>:/icons/icons/preferences-web-browser-cache.png</normaloff>:/icons/icons/preferences-web-browser-cache.png</iconset>
    </property>
    <property name="text" >
     <string>Connect</string>
@@ -155,7 +155,7 @@
   <action name="actionTriggers" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/tools-wizard.png</normaloff>:/tools-wizard.png</iconset>
+     <normaloff>:/icons/icons/tools-wizard.png</normaloff>:/icons/icons/tools-wizard.png</iconset>
    </property>
    <property name="text" >
     <string>Triggers</string>
@@ -164,7 +164,7 @@
   <action name="actionTimers" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/chronometer.png</normaloff>:/chronometer.png</iconset>
+     <normaloff>:/icons/icons/chronometer.png</normaloff>:/icons/icons/chronometer.png</iconset>
    </property>
    <property name="text" >
     <string>Timers</string>
@@ -173,7 +173,7 @@
   <action name="actionScripts" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/accessories-text-editor.png</normaloff>:/accessories-text-editor.png</iconset>
+     <normaloff>:/icons/icons/document-properties.png</normaloff>:/icons/icons/document-properties.png</iconset>
    </property>
    <property name="text" >
     <string>Scripts</string>
@@ -182,7 +182,7 @@
   <action name="actionAliases" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/system-users.png</normaloff>:/system-users.png</iconset>
+     <normaloff>:/icons/icons/system-users.png</normaloff>:/icons/icons/system-users.png</iconset>
    </property>
    <property name="text" >
     <string>Aliases</string>
@@ -191,7 +191,7 @@
   <action name="actionButtons" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/rating.png</normaloff>:/rating.png</iconset>
+     <normaloff>:/icons/icons/bookmarks.png</normaloff>:/icons/icons/bookmarks.png</iconset>
    </property>
    <property name="text" >
     <string>Buttons</string>
@@ -200,7 +200,7 @@
   <action name="actionKeys" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/preferences-desktop-keyboard.png</normaloff>:/preferences-desktop-keyboard.png</iconset>
+     <normaloff>:/icons/icons/preferences-desktop-keyboard.png</normaloff>:/icons/icons/preferences-desktop-keyboard.png</iconset>
    </property>
    <property name="text" >
     <string>Keys</string>
@@ -209,7 +209,7 @@
   <action name="actionHelp" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/help-hint.png</normaloff>:/help-hint.png</iconset>
+     <normaloff>:/icons/icons/help-hint.png</normaloff>:/icons/icons/help-hint.png</iconset>
    </property>
    <property name="text" >
     <string>Help</string>
@@ -218,16 +218,16 @@
   <action name="actionOptions" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/configure.png</normaloff>:/configure.png</iconset>
+     <normaloff>:/icons/icons/configure.png</normaloff>:/icons/icons/configure.png</iconset>
    </property>
    <property name="text" >
-    <string>Options</string>
+    <string>Preferences</string>
    </property>
   </action>
   <action name="actionNotes" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/view-pim-notes.png</normaloff>:/view-pim-notes.png</iconset>
+     <normaloff>:/icons/icons/view-pim-notes.png</normaloff>:/icons/icons/view-pim-notes.png</iconset>
    </property>
    <property name="text" >
     <string>Notes</string>
@@ -236,7 +236,7 @@
   <action name="actionAbout" >
    <property name="icon" >
     <iconset resource="../application.qrc" >
-     <normaloff>:/mudlet_main_32px.png</normaloff>:/mudlet_main_32px.png</iconset>
+     <normaloff>:/icons/icons/mudlet_main_48px.png</normaloff>:/icons/icons/mudlet_main_48px.png</iconset>
    </property>
    <property name="text" >
     <string>About</string>

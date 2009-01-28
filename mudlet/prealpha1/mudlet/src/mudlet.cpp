@@ -325,7 +325,7 @@ void mudlet::writeSettings()
 void mudlet::connectToServer()
 {
     dlgConnectionProfiles * pDlg = new dlgConnectionProfiles(this);
-    connect (pDlg, SIGNAL (signal_establish_connection( QString )), this, SLOT (slot_connection_dlg_finnished(QString)));
+    connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
     pDlg->fillout_form();
     pDlg->exec();
 }
@@ -461,7 +461,7 @@ void mudlet::startAutoLogin()
         cout << "----> [ OK ] autologin finished" << endl;
 }
 
-void mudlet::slot_connection_dlg_finnished( QString profile )
+void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion )
 {
     Host * pHost = HostManager::self()->getHost( profile );
     if( ! pHost ) 

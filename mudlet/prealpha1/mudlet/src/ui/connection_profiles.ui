@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>698</width>
-    <height>544</height>
+    <height>605</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -59,333 +59,6 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QTextBrowser" name="welcome_message" >
-           <property name="enabled" >
-            <bool>true</bool>
-           </property>
-           <property name="sizePolicy" >
-            <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize" >
-            <size>
-             <width>0</width>
-             <height>140</height>
-            </size>
-           </property>
-           <property name="maximumSize" >
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="html" >
-            <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-&lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
-p, li { white-space: pre-wrap; }
-&lt;/style>&lt;/head>&lt;body style=" font-family:'DejaVu Sans'; font-size:9pt; font-weight:400; font-style:normal;">
-&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:8pt;">&lt;span style=" font-size:16pt; font-weight:600;">Welcome to Mudlet!&lt;/span>&lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:16pt;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">Click on one of the MUDs on the list below or click on the &lt;img src=":/list-add_small.png" />&lt;span style=" font-size:8pt; color:#aa0000;"> Create New Profile&lt;/span> button below to create your own new profile, and fill in the &lt;span style=" font-style:italic;">Profile Name&lt;/span>, &lt;span style=" font-style:italic;">Host&lt;/span>, and &lt;span style=" font-style:italic;">Port&lt;/span> fields. &lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">&lt;/p>
-&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">After that, click &lt;span style=" font-weight:600;">Connect&lt;/span> to play!&lt;/p>&lt;/body>&lt;/html></string>
-           </property>
-           <property name="openLinks" >
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTreeWidget" name="profiles_tree_widget" >
-           <property name="sizePolicy" >
-            <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize" >
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="sizeIncrement" >
-            <size>
-             <width>0</width>
-             <height>5</height>
-            </size>
-           </property>
-           <property name="frameShape" >
-            <enum>QFrame::StyledPanel</enum>
-           </property>
-           <property name="frameShadow" >
-            <enum>QFrame::Sunken</enum>
-           </property>
-           <property name="showDropIndicator" stdset="0" >
-            <bool>false</bool>
-           </property>
-           <property name="dragEnabled" >
-            <bool>false</bool>
-           </property>
-           <property name="dragDropMode" >
-            <enum>QAbstractItemView::NoDragDrop</enum>
-           </property>
-           <property name="alternatingRowColors" >
-            <bool>true</bool>
-           </property>
-           <property name="rootIsDecorated" >
-            <bool>false</bool>
-           </property>
-           <property name="itemsExpandable" >
-            <bool>false</bool>
-           </property>
-           <property name="sortingEnabled" >
-            <bool>false</bool>
-           </property>
-           <property name="animated" >
-            <bool>false</bool>
-           </property>
-           <property name="headerHidden" >
-            <bool>true</bool>
-           </property>
-           <property name="expandsOnDoubleClick" >
-            <bool>false</bool>
-           </property>
-           <property name="columnCount" >
-            <number>1</number>
-           </property>
-           <column>
-            <property name="text" >
-             <string>1</string>
-            </property>
-           </column>
-          </widget>
-         </item>
-         <item>
-          <widget class="QWidget" native="1" name="widget_12" >
-           <property name="sizePolicy" >
-            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize" >
-            <size>
-             <width>0</width>
-             <height>35</height>
-            </size>
-           </property>
-           <widget class="QPushButton" name="remove_profile_button" >
-            <property name="geometry" >
-             <rect>
-              <x>24</x>
-              <y>4</y>
-              <width>127</width>
-              <height>25</height>
-             </rect>
-            </property>
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize" >
-             <size>
-              <width>127</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize" >
-             <size>
-              <width>127</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="text" >
-             <string>Remove Profile</string>
-            </property>
-            <property name="icon" >
-             <iconset resource="../application.qrc" >
-              <normaloff>:/dialog-close.png</normaloff>:/dialog-close.png</iconset>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="new_profile_button" >
-            <property name="geometry" >
-             <rect>
-              <x>170</x>
-              <y>4</y>
-              <width>127</width>
-              <height>25</height>
-             </rect>
-            </property>
-            <property name="minimumSize" >
-             <size>
-              <width>127</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize" >
-             <size>
-              <width>127</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="text" >
-             <string>New Profile</string>
-            </property>
-            <property name="icon" >
-             <iconset resource="../application.qrc" >
-              <normaloff>:/list-add.png</normaloff>:/list-add.png</iconset>
-            </property>
-           </widget>
-          </widget>
-         </item>
-         <item>
-          <widget class="QWidget" native="1" name="widget_8" >
-           <property name="sizePolicy" >
-            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize" >
-            <size>
-             <width>0</width>
-             <height>30</height>
-            </size>
-           </property>
-           <widget class="QLabel" name="label_11" >
-            <property name="geometry" >
-             <rect>
-              <x>6</x>
-              <y>4</y>
-              <width>325</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text" >
-             <string>Here is a list of nice MUDs with ready made profiles:</string>
-            </property>
-           </widget>
-           <widget class="QWidget" native="1" name="widget_9" >
-            <property name="geometry" >
-             <rect>
-              <x>0</x>
-              <y>0</y>
-              <width>339</width>
-              <height>25</height>
-             </rect>
-            </property>
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize" >
-             <size>
-              <width>0</width>
-              <height>25</height>
-             </size>
-            </property>
-            <widget class="QLabel" name="label_13" >
-             <property name="geometry" >
-              <rect>
-               <x>6</x>
-               <y>4</y>
-               <width>325</width>
-               <height>22</height>
-              </rect>
-             </property>
-             <property name="sizePolicy" >
-              <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text" >
-              <string>Here is a list of nice MUDs with ready made profiles:</string>
-             </property>
-            </widget>
-           </widget>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTreeWidget" name="mud_treewidget" >
-           <property name="sizePolicy" >
-            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize" >
-            <size>
-             <width>0</width>
-             <height>150</height>
-            </size>
-           </property>
-           <property name="maximumSize" >
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="sizeIncrement" >
-            <size>
-             <width>0</width>
-             <height>150</height>
-            </size>
-           </property>
-           <property name="baseSize" >
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="font" >
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="rootIsDecorated" >
-            <bool>false</bool>
-           </property>
-           <property name="columnCount" >
-            <number>0</number>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" native="1" name="widget_2" >
-        <property name="sizePolicy" >
-         <sizepolicy vsizetype="Expanding" hsizetype="Fixed" >
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout" >
-         <property name="topMargin" >
-          <number>0</number>
-         </property>
-         <property name="rightMargin" >
-          <number>0</number>
-         </property>
-         <property name="bottomMargin" >
-          <number>0</number>
-         </property>
-         <item>
           <widget class="QFrame" name="notificationArea" >
            <property name="sizePolicy" >
             <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
@@ -395,13 +68,13 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="minimumSize" >
             <size>
-             <width>348</width>
+             <width>0</width>
              <height>70</height>
             </size>
            </property>
            <property name="maximumSize" >
             <size>
-             <width>348</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -931,7 +604,7 @@ p, li { white-space: pre-wrap; }
                <string/>
               </property>
               <property name="pixmap" >
-               <pixmap resource="../application.qrc" >:/dialog-warning.png</pixmap>
+               <pixmap resource="../application.qrc" >:/icons/icons/dialog-warning.png</pixmap>
               </property>
               <property name="scaledContents" >
                <bool>false</bool>
@@ -1380,7 +1053,7 @@ p, li { white-space: pre-wrap; }
                <string/>
               </property>
               <property name="pixmap" >
-               <pixmap resource="../application.qrc" >:/dialog-error.png</pixmap>
+               <pixmap resource="../application.qrc" >:/icons/icons/dialog-error.png</pixmap>
               </property>
               <property name="scaledContents" >
                <bool>false</bool>
@@ -1829,7 +1502,7 @@ p, li { white-space: pre-wrap; }
                <string/>
               </property>
               <property name="pixmap" >
-               <pixmap resource="../application.qrc" >:/dialog-information.png</pixmap>
+               <pixmap resource="../application.qrc" >:/icons/icons/dialog-information.png</pixmap>
               </property>
               <property name="scaledContents" >
                <bool>false</bool>
@@ -2301,6 +1974,368 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
            </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTreeWidget" name="profiles_tree_widget" >
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize" >
+            <size>
+             <width>348</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="sizeIncrement" >
+            <size>
+             <width>0</width>
+             <height>5</height>
+            </size>
+           </property>
+           <property name="frameShape" >
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="frameShadow" >
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="showDropIndicator" stdset="0" >
+            <bool>false</bool>
+           </property>
+           <property name="dragEnabled" >
+            <bool>false</bool>
+           </property>
+           <property name="dragDropMode" >
+            <enum>QAbstractItemView::NoDragDrop</enum>
+           </property>
+           <property name="alternatingRowColors" >
+            <bool>true</bool>
+           </property>
+           <property name="rootIsDecorated" >
+            <bool>false</bool>
+           </property>
+           <property name="itemsExpandable" >
+            <bool>false</bool>
+           </property>
+           <property name="sortingEnabled" >
+            <bool>false</bool>
+           </property>
+           <property name="animated" >
+            <bool>false</bool>
+           </property>
+           <property name="headerHidden" >
+            <bool>true</bool>
+           </property>
+           <property name="expandsOnDoubleClick" >
+            <bool>false</bool>
+           </property>
+           <property name="columnCount" >
+            <number>1</number>
+           </property>
+           <column>
+            <property name="text" >
+             <string>1</string>
+            </property>
+           </column>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" native="1" name="widget_12" >
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize" >
+            <size>
+             <width>0</width>
+             <height>35</height>
+            </size>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_4" >
+            <item>
+             <spacer name="horizontalSpacer_4" >
+              <property name="orientation" >
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0" >
+               <size>
+                <width>15</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="remove_profile_button" >
+              <property name="sizePolicy" >
+               <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize" >
+               <size>
+                <width>127</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize" >
+               <size>
+                <width>127</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text" >
+               <string>Remove Profile</string>
+              </property>
+              <property name="icon" >
+               <iconset resource="../application.qrc" >
+                <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_2" >
+              <property name="orientation" >
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0" >
+               <size>
+                <width>24</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="new_profile_button" >
+              <property name="minimumSize" >
+               <size>
+                <width>127</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize" >
+               <size>
+                <width>127</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text" >
+               <string>New Profile</string>
+              </property>
+              <property name="icon" >
+               <iconset resource="../application.qrc" >
+                <normaloff>:/icons/icons/list-add_small.png</normaloff>:/icons/icons/list-add_small.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_3" >
+              <property name="orientation" >
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0" >
+               <size>
+                <width>15</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+           <zorder>remove_profile_button</zorder>
+           <zorder>new_profile_button</zorder>
+           <zorder>horizontalSpacer_2</zorder>
+           <zorder>horizontalSpacer_3</zorder>
+           <zorder>horizontalSpacer_4</zorder>
+           <zorder>widget_8</zorder>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" native="1" name="widget_8" >
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize" >
+            <size>
+             <width>0</width>
+             <height>30</height>
+            </size>
+           </property>
+           <widget class="QLabel" name="label_11" >
+            <property name="geometry" >
+             <rect>
+              <x>6</x>
+              <y>4</y>
+              <width>325</width>
+              <height>22</height>
+             </rect>
+            </property>
+            <property name="sizePolicy" >
+             <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text" >
+             <string>Here is a list of nice MUDs with ready made profiles:</string>
+            </property>
+           </widget>
+           <widget class="QWidget" native="1" name="widget_9" >
+            <property name="geometry" >
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>339</width>
+              <height>25</height>
+             </rect>
+            </property>
+            <property name="sizePolicy" >
+             <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize" >
+             <size>
+              <width>0</width>
+              <height>25</height>
+             </size>
+            </property>
+            <widget class="QLabel" name="label_13" >
+             <property name="geometry" >
+              <rect>
+               <x>6</x>
+               <y>4</y>
+               <width>325</width>
+               <height>22</height>
+              </rect>
+             </property>
+             <property name="sizePolicy" >
+              <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text" >
+              <string>Here is a list of nice MUDs with ready made profiles:</string>
+             </property>
+            </widget>
+           </widget>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTreeWidget" name="mud_treewidget" >
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize" >
+            <size>
+             <width>0</width>
+             <height>150</height>
+            </size>
+           </property>
+           <property name="maximumSize" >
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="sizeIncrement" >
+            <size>
+             <width>0</width>
+             <height>150</height>
+            </size>
+           </property>
+           <property name="baseSize" >
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="font" >
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="rootIsDecorated" >
+            <bool>false</bool>
+           </property>
+           <property name="columnCount" >
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" native="1" name="widget_2" >
+        <property name="sizePolicy" >
+         <sizepolicy vsizetype="Expanding" hsizetype="Fixed" >
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout" >
+         <property name="topMargin" >
+          <number>0</number>
+         </property>
+         <property name="rightMargin" >
+          <number>0</number>
+         </property>
+         <property name="bottomMargin" >
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QTextBrowser" name="welcome_message" >
+           <property name="enabled" >
+            <bool>true</bool>
+           </property>
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize" >
+            <size>
+             <width>0</width>
+             <height>140</height>
+            </size>
+           </property>
+           <property name="maximumSize" >
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="html" >
+            <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+&lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
+p, li { white-space: pre-wrap; }
+&lt;/style>&lt;/head>&lt;body style=" font-family:'DejaVu Sans'; font-size:9pt; font-weight:400; font-style:normal;">
+&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:8pt;">&lt;span style=" font-size:16pt; font-weight:600;">Welcome to Mudlet!&lt;/span>&lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:16pt;">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">Click on one of the MUDs on the list below or click on the &lt;img src=":/list-add_small.png" />&lt;span style=" font-size:8pt; color:#aa0000;"> Create New Profile&lt;/span> button below to create your own new profile, and fill in the &lt;span style=" font-style:italic;">Profile Name&lt;/span>, &lt;span style=" font-style:italic;">Host&lt;/span>, and &lt;span style=" font-style:italic;">Port&lt;/span> fields. &lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">&lt;/p>
+&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">After that, click &lt;span style=" font-weight:600;">Connect&lt;/span> to play!&lt;/p>&lt;/body>&lt;/html></string>
+           </property>
+           <property name="openLinks" >
+            <bool>false</bool>
+           </property>
           </widget>
          </item>
          <item>
@@ -2896,6 +2931,9 @@ p, li { white-space: pre-wrap; }
        </widget>
       </item>
      </layout>
+     <zorder>widget_5</zorder>
+     <zorder>widget_2</zorder>
+     <zorder>welcome_message</zorder>
     </widget>
    </item>
    <item>
@@ -2965,7 +3003,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>dialog_buttonbox</tabstop>
   <tabstop>remove_profile_button</tabstop>
   <tabstop>new_profile_button</tabstop>
-  <tabstop>welcome_message</tabstop>
  </tabstops>
  <resources>
   <include location="../application.qrc" />

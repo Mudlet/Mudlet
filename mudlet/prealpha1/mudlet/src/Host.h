@@ -105,7 +105,7 @@ public:
     bool               serialize();
     void               serialize_options2( QString );
     void               restore_options2( QString );
-    bool               restore( QString path );
+    bool               restore( QString path, int );
     int                loadProfileHistory( QString, int );
     void               saveTriggerUnit( QString hostname );
     void               loadTriggerUnit( QString hostname );
@@ -121,7 +121,8 @@ public:
     void               loadKeyUnit( QString hostname );
     void               saveOptions( QString );
     void               loadOptions( QString );
-    
+    QString            readProfileData( QString profile, QString item );
+    void               writeProfileData( QString profile, QString item, QString what );
     QStringList        getLastBuffer();  
     bool               exportHost( QString );
     bool               importHost( QString );

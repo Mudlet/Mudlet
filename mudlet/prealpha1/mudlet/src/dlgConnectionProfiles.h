@@ -35,7 +35,7 @@ public:
     
 signals:
      
-    void signal_establish_connection( QString profile_name );
+    void signal_establish_connection( QString profile_name, int historyVersion );
     void accept();
     void update();
     
