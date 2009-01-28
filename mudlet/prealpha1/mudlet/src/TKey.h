@@ -74,7 +74,7 @@ public:
     
     bool             registerKey();
     bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs );
+    bool             restore( QDataStream & fs, bool );
     
 private:
     

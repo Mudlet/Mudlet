@@ -35,23 +35,43 @@ public:
     
 signals:
      
-    void signal_establish_connection( QString profile_name );
+    void signal_establish_connection( QString profile_name, int historyVersion );
     void accept();
     void update();
     
 public slots:
-      
-    void slot_item_changed( QTreeWidgetItem *, QTreeWidgetItem * );
+    
+    void slot_update_name( const QString ) ;  
+    void slot_update_url( const QString ) ;
+    void slot_update_port( const QString ) ;
+    void slot_update_login( const QString );
+    void slot_update_pass( const QString );
+    void slot_update_website( const QString );
+    void slot_update_description();
+    void writeProfileData( QString, QString, QString );
+    QString readProfileData( QString, QString );
+    void slot_item_clicked( QTreeWidgetItem * );
     void slot_update();
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_connection_dlg_finnished();
     void slot_showmudlist_clicked ( bool checked );
     void slot_finished ( int f );
+    void slot_update_autologin( int state );    
+    void slot_connectToServer();
+    void slot_cancel();
+    
 private:
-    QString active_profile;
-    QTreeWidgetItem *active_item;
-    void save();
+    
+    QString            mUnsavedProfileName;
+    bool               mSavedNewName;
+    QStringList        mProfileList;
+    bool               mEditOK;
+    QPalette           mRegularPalette;
+    QPalette           mOKPalette;
+    QPalette           mErrorPalette;
+    QString            mCurrentProfileEditName;
+    
 };
 
 #endif

@@ -60,7 +60,7 @@ public:
     QStringList split( int line, QString splitter );
     QStringList split( int line, QRegExp splitter );
     bool replace( int line, QString what, QString with );
-    bool deleteLines( int from, int to );
+    bool deleteLines( unsigned int from, unsigned int to );
     bool applyFormat( int line, int x1, int x2, TChar & format );
     int getLastLineNumber();
     

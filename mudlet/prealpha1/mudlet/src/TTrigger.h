@@ -94,7 +94,7 @@ public:
     bool             registerTrigger();
     
     bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs );
+    bool             restore( QDataStream & fs, bool );
     bool             mTriggerContainsPerlRegex;
     
 private:

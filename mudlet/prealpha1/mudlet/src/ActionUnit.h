@@ -43,7 +43,7 @@ public:
     bool                  registerAction( TAction * pT );
     void                  unregisterAction( TAction * pT );
     bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream & );
+    bool                  restore( QDataStream &, bool );
     void                  reParentAction( int childID, int oldParentID, int newParentID );
     qint64                getNewID();
     void                  updateToolbar();

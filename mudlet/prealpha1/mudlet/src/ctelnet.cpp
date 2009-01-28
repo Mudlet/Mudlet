@@ -54,15 +54,23 @@ cTelnet::cTelnet( Host * pH )
     // initialize the socket
     connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
-    connect(&socket, SIGNAL(error()), this, SLOT (handle_socket_signal_error()));
+    //connect(&socket, SIGNAL(error()), this, SLOT (handle_socket_signal_error()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT (handle_socket_signal_readyRead()));
-    connect(&socket, SIGNAL(hostFound()), this, SLOT (handle_socket_signal_hostFound()));
+    //connect(&socket, SIGNAL(hostFound()), this, SLOT (handle_socket_signal_hostFound()));
 
     // initialize telnet session
     reset ();
         
-    mpPostingTimer->setInterval( 200 ); //5 times per second
+    mpPostingTimer->setInterval( 100 ); // 10 times per second
     connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
+    
+    mTimerLogin = new QTimer( this );
+    mTimerLogin->setSingleShot(true);
+    connect(mTimerLogin, SIGNAL(timeout()), this, SLOT(slot_send_login()));
+    
+    mTimerPass = new QTimer( this );
+    mTimerPass->setSingleShot( true );
+    connect(mTimerPass, SIGNAL(timeout()), this, SLOT(slot_send_pass()));
 }
 
 void cTelnet::reset ()
@@ -83,7 +91,6 @@ void cTelnet::reset ()
 
 cTelnet::~cTelnet()
 {
-    cout << "ACHTUNG: cTelnet destructor called!"<<endl;
     disconnect();
     socket.deleteLater();
 }
@@ -130,12 +137,30 @@ void cTelnet::handle_socket_signal_error()
     postMessage( err );
 }
 
-void cTelnet::handle_socket_signal_connected ()
+void cTelnet::slot_send_login()
+{
+    qDebug()<<"sending login";
+    sendData( mpHost->getLogin() );    
+}
+
+void cTelnet::slot_send_pass()
+{
+    qDebug()<<"sending pass";
+    sendData( mpHost->getPass() );
+}
+
+void cTelnet::handle_socket_signal_connected()
 {
     reset();
     QString msg = "A connection has been established successfully.\n";
     postMessage( msg );
-  
+    
+    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0) )
+    {
+        mTimerLogin->start(2000);
+        mTimerPass->start(3000);
+    }
+    
     //negotiate some telnet options, if allowed
     string cmd;
     //NAWS (used to send info about window size)
@@ -830,18 +855,8 @@ void cTelnet::handle_socket_signal_readyRead()
         }
         else
         {
-            if( ch != '\r' ) cleandata += ch;
-        /* else 
-        {
-            if( ch != '\r' ) cleandata += ch;
-            if( ch == '\n' )
-            {
-                gotLine( cleandata );
-                cleandata = "";
-            }
-        } */
-        //we've just received the GA signal - higher layers shall be informed about it
-       
+            if( ch != '\r' ) 
+                cleandata += ch;
         }
         MAIN_LOOP_END: ;
     }//for

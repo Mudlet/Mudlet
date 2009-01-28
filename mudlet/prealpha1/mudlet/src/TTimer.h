@@ -75,7 +75,7 @@ public:
     void             disableTimer( QString & );
     TTimer *         killTimer( QString & );
     bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs );
+    bool             restore( QDataStream & fs, bool );
     void             slot_timer_fires();
     
 private:

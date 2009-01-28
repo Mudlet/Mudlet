@@ -252,23 +252,32 @@ bool TimerUnit::serialize( QDataStream & ofs )
     }
 } */
 
-bool TimerUnit::restore( QDataStream & ifs )
+bool TimerUnit::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mMaxID;
     qint64 children;
     ifs >> children;
-    bool ret = true;
+    bool ret1 = false;
+    bool ret2 = true; 
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret1 = true;
+    
     mMaxID = 0;
+    
     for( qint64 i=0; i<children; i++ )
     {
         TTimer * pChild = new TTimer( 0, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->Dump();
-        if( pChild->isTempTimer() ) delete pChild;
-        else registerTimer( pChild );
+        ret2 = pChild->restore( ifs, initMode );
+        if( ( pChild->isTempTimer() ) || ( ! initMode ) ) 
+        {
+            delete pChild;
+        }
+        else 
+            registerTimer( pChild );
     }
     
-    return ret;
+    return ret1 && ret2;
 }
 
 

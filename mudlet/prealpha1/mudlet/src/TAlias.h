@@ -67,7 +67,7 @@ public:
     bool             match( QString & toMatch );
     bool             registerAlias();
     bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs );
+    bool             restore( QDataStream & fs, bool );
     
 private:
     

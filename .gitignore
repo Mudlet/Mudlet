@@ -3,3 +3,5 @@ moc_*.cpp
 ui_*.h
 *~
 mudlet/prealpha1/mudlet/src/mudlet
+.svn*
+

@@ -211,12 +211,10 @@ bool TAction::serialize( QDataStream & ofs )
     return ret;
 } 
 
-bool TAction::restore( QDataStream & ifs )
+bool TAction::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mName;
-    qDebug()<<"restoring:"<<mName;
     ifs >> mScript;
-    
     ifs >> mID;
     ifs >> mIsActive;
     ifs >> mIsPushDownButton;
@@ -227,12 +225,17 @@ bool TAction::restore( QDataStream & ifs )
     
     mID = mpHost->getActionUnit()->getNewID();
     
-    bool ret = true;
+    bool ret = false;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret = true;
+    
     for( qint64 i=0; i<children; i++ )
     {
         TAction * pChild = new TAction( this, mpHost );
-        ret = pChild->restore( ifs );
-        pChild->registerAction();
+        ret = pChild->restore( ifs, initMode );
+        if( initMode )
+            pChild->registerAction();
     }
 
     if (getChildrenList()->size() > 0)

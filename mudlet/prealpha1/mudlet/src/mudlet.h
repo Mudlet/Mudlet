@@ -62,6 +62,10 @@ public:
    void                          clearUserWindow( Host *, QString & ); 
    void                          pasteWindow( Host * pHost, QString name ); 
    void                          userWindowLineWrap( Host * pHost, QString & name, bool on );
+    
+    
+    
+    
    static QPlainTextEdit *       mpDebugConsole; 
    static QMdiSubWindow *        mpDebugArea; 
    static bool                   debugMode; 
@@ -71,9 +75,11 @@ public slots:
    void                          slot_show_about_dialog();
    void                          slot_userToolBar_triggered(QAction*);   
    void                          slot_userToolBar_hovered( QAction* pA );
-   void                          slot_connection_dlg_finnished( QString profile );
+   void                          slot_connection_dlg_finnished( QString profile, int historyVersion );
    void                          slot_timer_fires();   
-
+   void                          slot_send_login();
+   void                          slot_send_pass();
+   void                          startAutoLogin();
     
 protected:
     
@@ -90,15 +96,24 @@ private slots:
    void                          show_action_dialog();
    void                          show_key_dialog(); 
    void                          show_options_dialog();
-
+    
+    
 private:
     
-   void                          createActions();
+    
+    
+    /*void                          createActions();
    void                          createMenus();
    void                          createToolBars();
-   void                          createStatusBar();
+   void                          createStatusBar();*/
    void                          readSettings();
    void                          writeSettings();
+    
+    
+    QQueue<QString> tempLoginQueue;
+    QQueue<QString> tempPassQueue;
+    QQueue<Host *>  tempHostQueue;
+    
     
    static                        mudlet * _self;
   
@@ -109,7 +124,7 @@ private:
    QToolBar *                    mpUserToolBar;
    
     
-   QString                       curFile;
+    /*QString                       curFile;
 
    QMenu *                       fileMenu;
    QMenu *                       editMenu;
@@ -126,7 +141,7 @@ private:
    QAction *                     copyAct;
    QAction *                     pasteAct;
    QAction *                     aboutAct;
-   QAction *                     aboutQtAct;
+   QAction *                     aboutQtAct;*/
 };
 
 #endif

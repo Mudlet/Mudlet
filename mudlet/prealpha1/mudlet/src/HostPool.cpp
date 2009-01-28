@@ -254,7 +254,7 @@ bool HostPool::restore( QString directory )
         QString nothing = "";
         Host * pH = new Host( 0, hostname, nothing, nothing, createNewHostID() );				
         mHostPool[hostname] = pH;
-        if( ! pH->restore( directory + hostname ) )
+        if( ! pH->restore( directory + hostname, -1 ) )
         {
             return false;
         }

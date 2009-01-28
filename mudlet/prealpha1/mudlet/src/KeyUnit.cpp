@@ -239,22 +239,33 @@ bool KeyUnit::serialize( QDataStream & ofs )
 }
 
 
-bool KeyUnit::restore( QDataStream & ifs )
+bool KeyUnit::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mMaxID;
     qint64 children;
     ifs >> children;
-    bool ret = true;
+    
+    bool ret1 = false;
+    bool ret2 = true;
+    
+    if( ifs.status() == QDataStream::Ok )
+        ret1 = true;
+    
     mMaxID = 0;
     for( qint64 i=0; i<children; i++ )
     {
         TKey * pChild = new TKey( 0, mpHost );
-        ret = pChild->restore( ifs );
-        //pChild->Dump();
-        registerKey( pChild );
+        ret2 = pChild->restore( ifs, initMode );
+        
+        if( ! initMode ) 
+        {
+            delete pChild;
+        }
+        else 
+            registerKey( pChild );
     }
     
-    return ret;
+    return ret1 && ret2;
 }
 
 QString KeyUnit::getKeyName( int keyCode, int modifierCode )
