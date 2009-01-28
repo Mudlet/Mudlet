@@ -191,6 +191,7 @@ private:
     bool                        mIsGrabKey;
     QsciDocument                mDocument;
     Host *                      mpHost;
+    bool                        saved_ok();
 };
 
 #endif

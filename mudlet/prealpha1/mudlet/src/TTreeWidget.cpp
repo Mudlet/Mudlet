@@ -191,6 +191,8 @@ void TTreeWidget::mousePressEvent ( QMouseEvent * event )
             } else {
                 event->ignore();
             }
+        } else {
+            QTreeWidget::mousePressEvent( event );
         }
     }
 }

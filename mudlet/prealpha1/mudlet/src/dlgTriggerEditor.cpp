@@ -2588,6 +2588,8 @@ void dlgTriggerEditor::slot_show_search_area()
 
 void dlgTriggerEditor::slot_show_timers()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmTimerView;
@@ -2624,6 +2626,8 @@ void dlgTriggerEditor::slot_show_timers()
 
 void dlgTriggerEditor::slot_show_triggers()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmTriggerView;
@@ -2658,6 +2662,8 @@ void dlgTriggerEditor::slot_show_triggers()
 
 void dlgTriggerEditor::slot_show_scripts()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmScriptView;
@@ -2691,6 +2697,8 @@ void dlgTriggerEditor::slot_show_scripts()
 
 void dlgTriggerEditor::slot_show_keys()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmKeysView;
@@ -2725,6 +2733,8 @@ void dlgTriggerEditor::slot_show_keys()
 
 void dlgTriggerEditor::slot_show_aliases()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmAliasView;
@@ -2761,6 +2771,8 @@ void dlgTriggerEditor::slot_show_aliases()
 
 void dlgTriggerEditor::slot_show_actions()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmActionView;
@@ -2793,6 +2805,23 @@ void dlgTriggerEditor::slot_show_actions()
     treeWidget_actions->show();
     mIsTriggerMainAreaEditRegex = false;
     slot_action_clicked( treeWidget_actions->currentItem(), NULL);
+}
+
+bool dlgTriggerEditor::saved_ok()
+{
+    bool result = true;
+    switch( mCurrentView )
+    {
+        case cmTriggerView:
+            if (mpTriggersMainArea->isVisible())
+                result = slot_saveTriggerAfterEdit();
+            else
+                result = true;
+            break;
+        default:
+            result = true;
+    }
+    return result;
 }
 
 void dlgTriggerEditor::slot_save_edit()
