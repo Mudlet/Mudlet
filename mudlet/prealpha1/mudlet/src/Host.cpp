@@ -428,10 +428,11 @@ bool Host::restore( QString directory )
     ifs >> mRetries;
     ifs >> mPort;
     ifs >> mUserDefinedName;
-    //ifs >> mHostID;
+    
     file.close();
     
-    // loading TriggerUnit 
+    restore_options2( directory );
+    
     loadTriggerUnit( directory );    
     loadTimerUnit( directory );
     loadAliasUnit( directory );
