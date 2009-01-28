@@ -422,23 +422,18 @@ void mudlet::printMessageOnDisplay( Host * pH, QString s )
     mConsoleMap[pH]->printMessageOnDisplay(s);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// these two callbacks are called from cTelnet::handleConnectedToServer()
-void mudlet::slot_send_login()
+QString mudlet::readProfileData( QString profile, QString item )
 {
-    Host * pHost = tempHostQueue.dequeue();
-    QString login = pHost->getLogin();
-    pHost->sendRaw( login );
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    
+    file.open( QIODevice::ReadOnly );
+    QString fname=QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item;
+    QDataStream ifs( & file ); 
+    QString ret;
+    ifs >> ret;
+    file.close();
+    return ret;
 }
-
-void mudlet::slot_send_pass()
-{
-    Host * pHost = tempHostQueue.dequeue();
-    QString pass = pHost->getPass();
-    pHost->sendRaw( pass );
-}
-//////////////////////////////////////////////////////////////////////////////
-
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
@@ -448,11 +443,19 @@ void mudlet::startAutoLogin()
     for( int i=0; i<hostList.size(); i++ )
     {
         Host * pH = HostManager::self()->getHost( hostList[i] );
-        if( (pH->getLogin().size()>0) && (pH->getPass().size()>0) )
+        QString profile = pH->getName();
+        QString item = "autologin";
+        QString val = readProfileData( profile, item );
+        if( val.toInt() == Qt::Checked )
         {
             qDebug()<<"----> Host:"<<pH->getName()<<" URL:"<<pH->getUrl()<<"Login:"<<pH->getLogin();
             addConsoleForNewHost( pH );
             pH->connectToServer();
+        }
+        else
+        {
+            // remove Hosts that don't have autologin defined from HostPool
+            HostManager::self()->deleteHost( profile );    
         }
     }
     if( hostList.size() < 1 )
@@ -461,12 +464,41 @@ void mudlet::startAutoLogin()
         cout << "----> [ OK ] autologin finished" << endl;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// these two callbacks are called from cTelnet::handleConnectedToServer()
+void mudlet::slot_send_login()
+{
+    if( tempHostQueue.isEmpty() )
+        return;
+    Host * pHost = tempHostQueue.dequeue();
+    QString login = pHost->getLogin();
+    pHost->sendRaw( login );
+}
+
+void mudlet::slot_send_pass()
+{
+    if( tempHostQueue.isEmpty() )
+        return;
+    Host * pHost = tempHostQueue.dequeue();
+    QString pass = pHost->getPass();
+    pHost->sendRaw( pass );
+}
+//////////////////////////////////////////////////////////////////////////////
+
+
 void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion )
 {
     Host * pHost = HostManager::self()->getHost( profile );
     if( ! pHost ) 
         return;
     addConsoleForNewHost( pHost );
+    
+    //NOTE: this is a potential problem if users connect by hand quickly 
+    //      and one host has a slower response time as the other one, but
+    //      the worst that can happen is that they have to login manually.
+
+    tempHostQueue.enqueue( pHost );
+    tempHostQueue.enqueue( pHost );
     pHost->connectToServer();     
 }
 

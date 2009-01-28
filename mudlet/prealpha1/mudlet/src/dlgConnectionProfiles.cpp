@@ -68,6 +68,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
     mRegularPalette.setColor(QPalette::Base,QColor(255,255,255));
     
+    mReadOnlyPalette.setColor(QPalette::Base,QColor(212,212,212));
+    mReadOnlyPalette.setColor(QPalette::Text,QColor(0,0,192));
+    mReadOnlyPalette.setColor(QPalette::Highlight,QColor(0,0,192));
+    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    
     mOKPalette.setColor(QPalette::Text,QColor(0,0,192));
     mOKPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mOKPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
@@ -383,10 +388,53 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
     if( pItem )
     {
         QString profile_name = pItem->text( 0 );
+        QStringList loadedProfiles = HostManager::self()->getHostList();
+        if( loadedProfiles.contains( profile_name ) )
+        {
+            profile_name_entry->setReadOnly( true );   
+            host_name_entry->setReadOnly( true );  
+            port_entry->setReadOnly( true );  
+            
+            profile_name_entry->setFocusPolicy( Qt::NoFocus );
+            host_name_entry->setFocusPolicy( Qt::NoFocus );
+            port_entry->setFocusPolicy( Qt::NoFocus );
+            
+            profile_name_entry->setPalette( mReadOnlyPalette );
+            host_name_entry->setPalette( mReadOnlyPalette );
+            port_entry->setPalette( mReadOnlyPalette );
+            
+            notificationArea->show();
+            notificationAreaIconLabelWarning->hide();
+            notificationAreaIconLabelError->hide();
+            notificationAreaIconLabelInformation->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(tr("This profile is currently loaded. You cant change all parameters on loaded profiles. Disconnect the profile and then do the changes."));
+            
+        }
+        else
+        {
+            profile_name_entry->setReadOnly( false );   
+            host_name_entry->setReadOnly( false );
+            port_entry->setReadOnly( false );  
+            
+            profile_name_entry->setFocusPolicy( Qt::StrongFocus );
+            host_name_entry->setFocusPolicy( Qt::StrongFocus );
+            port_entry->setFocusPolicy( Qt::StrongFocus );
+            
+            profile_name_entry->setPalette( mRegularPalette );
+            host_name_entry->setPalette( mRegularPalette );
+            port_entry->setPalette( mRegularPalette );
+            
+            notificationArea->hide();
+            notificationAreaIconLabelWarning->hide();
+            notificationAreaIconLabelError->hide();
+            notificationAreaIconLabelInformation->hide();
+            notificationAreaMessageBox->hide();
+            notificationAreaMessageBox->setText(tr(""));
+            
+        }
         
-        profile_name_entry->setPalette( mRegularPalette );        
-        host_name_entry->setPalette( mRegularPalette );
-        port_entry->setPalette( mRegularPalette );
+       
         
         profile_name_entry->setText( profile_name );
         QString profile = profile_name;

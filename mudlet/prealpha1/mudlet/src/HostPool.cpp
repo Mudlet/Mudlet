@@ -224,9 +224,7 @@ bool HostPool::serialize( QString directory )
     for( IT it=mHostPool.begin(); it!=mHostPool.end(); it++ )
     {
         ofs << it.key(); //host pool selbst serialisen
-        qDebug()<< "directory="<<directory;
         QString host_directory = directory + it.key();
-        qDebug()<<"host_directory="<<host_directory;
         if( ! it.value()->serialize() ) //jeder hostname wird ein directory f�r Hostinfo, JobPool und DirData
         {
             file.close();

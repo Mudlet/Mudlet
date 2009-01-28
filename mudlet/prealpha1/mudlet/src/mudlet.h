@@ -62,7 +62,7 @@ public:
    void                          clearUserWindow( Host *, QString & ); 
    void                          pasteWindow( Host * pHost, QString name ); 
    void                          userWindowLineWrap( Host * pHost, QString & name, bool on );
-    
+   QString                       readProfileData( QString profile, QString item ); 
     
     
     

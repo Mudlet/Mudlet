@@ -70,6 +70,7 @@ private:
     QPalette           mRegularPalette;
     QPalette           mOKPalette;
     QPalette           mErrorPalette;
+    QPalette           mReadOnlyPalette;
     QString            mCurrentProfileEditName;
     
 };

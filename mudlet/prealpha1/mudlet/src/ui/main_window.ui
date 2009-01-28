@@ -66,6 +66,7 @@
       </property>
       <property name="font" >
        <font>
+        <pointsize>6</pointsize>
         <stylestrategy>PreferAntialias</stylestrategy>
        </font>
       </property>
