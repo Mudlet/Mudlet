@@ -293,12 +293,12 @@ bool Host::serialize()
     ofs << mRetries;
     ofs << mPort;
     ofs << mUserDefinedName;
-    //ofs << mHostID;
+    qDebug()<<"SERIALIZING: hostname="<<mHostName<<" url="<<mUrl<<" login="<<mLogin<<" pass="<<mPass;
+    
     file.close();
     
     serialize_options2( directory );
     
-    // serialize TriggerUnit
     saveTriggerUnit( directory );    
     saveTimerUnit( directory );
     saveAliasUnit( directory );
@@ -368,10 +368,8 @@ bool Host::exportHost( QString userDir )
     ofs << mRetries;
     ofs << mPort;
     ofs << mUserDefinedName;
-    //ofs << mHostID;
     file.close();
     
-    // serialize TriggerUnit
     saveTriggerUnit( directory );    
     saveTimerUnit( directory );
     saveAliasUnit( directory );
@@ -384,7 +382,6 @@ bool Host::exportHost( QString userDir )
 
 bool Host::importHost( QString directory )
 {
-    //FIXME windows
     QString filename = directory + "/Host.dat";
     QFile file( filename );
     file.open(QIODevice::ReadOnly);
@@ -412,21 +409,21 @@ bool Host::importHost( QString directory )
 
 bool Host::restore( QString directory )
 {
-    qDebug()<< "analyzing profile history for *"<<directory<<"* ...";
+    qDebug()<< "[ ANALYSING ] history of "<<directory;
     int restorableProfileCount = loadProfileHistory( directory, -1 );
     if( restorableProfileCount != -1 )
     {
-        qDebug()<<"loading history #"<<restorableProfileCount<<" of profile: "<<directory;
+        qDebug()<<"[ RESTORING ] history #"<<restorableProfileCount<<" of profile: "<<directory;
         int load = loadProfileHistory( directory, restorableProfileCount );
-        if( load == restorableProfileCount )
+        if( load == restorableProfileCount-1 )
         {
-            qDebug()<< "( OK ) loaded history #"<<restorableProfileCount<<" of profile: "<<directory;
+            qDebug()<< "[ OK ] restored history #"<<restorableProfileCount<<" of profile: "<<directory;
             mScriptUnit.compileAll();
             return true;
         }
         else
         {
-            qDebug()<<"[ ERROR ] loading history #"<<restorableProfileCount<<" of profile: "<<directory<<" FAILED."; 
+            qDebug()<<"[ ERROR ] restoring history #"<<restorableProfileCount<<" of profile: "<<directory<<" FAILED."; 
             return false;
         }
     }
@@ -434,11 +431,6 @@ bool Host::restore( QString directory )
 
 int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
 {
-    if( restoreProfileNumber > -1 ) 
-        qDebug()<< "RESTORING: profile history #"<<restoreProfileNumber<<" profile: "<<directory;
-    else
-        qDebug()<<"ANALYSING profile history of profile: "<<directory;
-    
     QString host = directory + "/Host.dat";
     QFile fileHost( host );
     fileHost.open(QIODevice::ReadOnly);
@@ -494,7 +486,7 @@ int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
     
     while( isRestorable )
     {
-        qDebug() << "analyzing profile #"<< restorableProfileCount;
+        qDebug() << "loading history #"<< restorableProfileCount;
         
         if( restorableProfileCount == restoreProfileNumber )
             initMode = true;
@@ -507,6 +499,8 @@ int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
         ifsHost >> mRetries;
         ifsHost >> mPort;
         ifsHost >> mUserDefinedName;
+        
+        qDebug()<<"----------> hostname="<<mHostName<<" url="<<mUrl<<" login="<<mLogin<<" pass="<<mPass<<" port="<<mPort;
         
         isRestorableUnits = mTriggerUnit.restore( ifs_timerUnit, initMode );
         isRestorableUnits = mTimerUnit.restore( ifs_timerUnit, initMode ); 
@@ -547,9 +541,9 @@ int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
         if( ifsHost.status() == QDataStream::Ok )
             isRestorableHost = true;
         
-        qDebug()<< "result: isRestorable="<<(bool)(isRestorableUnits & isRestorableHost)<<" isRestorableUnits="<<isRestorableUnits<<" isRestorableHost="<<isRestorableHost;
+        qDebug()<< "----------> result: isRestorableUnits="<<isRestorableUnits<<" isRestorableHost="<<isRestorableHost<<" RESULT: isRestorable="<<(bool)(isRestorableUnits && isRestorableHost);
         
-        isRestorable = isRestorableUnits & isRestorableHost; //FIXME: add both options
+        isRestorable = isRestorableUnits && isRestorableHost; //FIXME: add both options
         
         if( restorableProfileCount == restoreProfileNumber )
             break;
@@ -570,7 +564,7 @@ int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
     if( ( restorableProfileCount == 0 ) && ( ! isRestorable ) )
         return -1;
     else    
-        return restorableProfileCount;
+        return restorableProfileCount-1;
 }
 
 void Host::saveOptions(QString directory )

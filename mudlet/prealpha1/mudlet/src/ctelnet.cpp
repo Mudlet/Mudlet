@@ -54,9 +54,9 @@ cTelnet::cTelnet( Host * pH )
     // initialize the socket
     connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
-    connect(&socket, SIGNAL(error()), this, SLOT (handle_socket_signal_error()));
+    //connect(&socket, SIGNAL(error()), this, SLOT (handle_socket_signal_error()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT (handle_socket_signal_readyRead()));
-    connect(&socket, SIGNAL(hostFound()), this, SLOT (handle_socket_signal_hostFound()));
+    //connect(&socket, SIGNAL(hostFound()), this, SLOT (handle_socket_signal_hostFound()));
 
     // initialize telnet session
     reset ();

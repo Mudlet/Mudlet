@@ -215,7 +215,7 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
     ifs >> children;
     
     bool ret1 = false;
-    bool ret2 = false;
+    bool ret2 = true;
     
     if( ifs.status() == QDataStream::Ok )
         ret1 = true;
@@ -234,7 +234,7 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
             registerTrigger( pChild );
     }
     
-    return ret1 & ret2;
+    return ret1 && ret2;
 }
 
 void TriggerUnit::enableTrigger( QString & name )

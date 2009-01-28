@@ -229,7 +229,7 @@ bool AliasUnit::restore( QDataStream & ifs, bool initMode )
     ifs >> children;
     
     bool ret1 = false;
-    bool ret2 = false;
+    bool ret2 = true;
     
     if( ifs.status() == QDataStream::Ok )
         ret1 = true;
@@ -248,6 +248,6 @@ bool AliasUnit::restore( QDataStream & ifs, bool initMode )
             registerAlias( pChild );
     }
     
-    return ret1 & ret2;
+    return ret1 && ret2;
 }
 

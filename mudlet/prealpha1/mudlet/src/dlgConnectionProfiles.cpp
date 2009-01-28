@@ -488,8 +488,8 @@ void dlgConnectionProfiles::slot_connectToServer()
         }
         else
         {
-            pHost->setPass( "" );
-            pHost->setLogin( "" );
+            pHost->setPass( "box unchecked" );
+            pHost->setLogin( "kein autologon gewollt" );
         }
     }
     else 
