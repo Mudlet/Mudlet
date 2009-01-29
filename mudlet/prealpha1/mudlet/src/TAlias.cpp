@@ -128,8 +128,8 @@ TAlias& TAlias::clone(const TAlias& b)
 }
 
 bool TAlias::isClone(TAlias &b) const {
-    return (mName == mName && mCommand == mCommand && mRegexCode == mRegexCode && mRegex == mRegex && mScript == mScript && mIsActive == mIsActive && mIsFolder == mIsFolder && \
-        mpHost == mpHost && mNeedsToBeCompiled == mNeedsToBeCompiled);
+    return (mName == b.mName && mCommand == b.mCommand && mRegexCode == b.mRegexCode && mRegex == b.mRegex && mScript == b.mScript && mIsActive == b.mIsActive && \
+        mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled);
 }
 
 bool TAlias::registerAlias()
