@@ -240,3 +240,23 @@ bool TAction::restore( QDataStream & ifs )
     return ret;
 }
 
+TAction& TAction::clone(const TAction& b)
+{
+    mName = b.mName;
+    mCommand = b.mCommand;
+    mRegexCode = b.mRegexCode;
+    mRegex = b.mRegex;
+    mScript = b.mScript;
+    mIsPushDownButton = b.mIsPushDownButton;
+    mIsActive = b.mIsActive;
+    mIsFolder = b.mIsFolder;
+    mpHost = b.mpHost;
+    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
+    mIcon = b.mIcon;
+    return *this;
+}
+
+bool TAction::isClone(TAction &b) const {
+    return (mName == b.mName && mCommand == b.mCommand && mRegexCode == b.mRegexCode && mRegex == b.mRegex && mScript == b.mScript && mIsPushDownButton == b.mIsPushDownButton && \
+        mIsActive == b.mIsActive && mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled && mIcon == b.mIcon);
+}
