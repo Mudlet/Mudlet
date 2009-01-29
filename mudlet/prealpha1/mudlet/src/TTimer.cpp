@@ -255,3 +255,21 @@ bool TTimer::restore( QDataStream & ifs )
     return ret;
 }
 
+TTimer& TTimer::clone(const TTimer& b)
+{
+    mName = b.mName;
+    mScript = b.mScript;
+    mTime = b.mTime;
+    mCommand = b.mCommand;
+    mIsActive = b.mIsActive;
+    mIsFolder = b.mIsFolder;
+    mpHost = b.mpHost;
+    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
+    mIsTempTimer = b.mIsTempTimer;
+    return *this;
+}
+
+bool TTimer::isClone(TTimer &b) const {
+    return (mName == b.mName && mScript == b.mScript && mTime == b.mTime && mCommand == b.mCommand && mIsActive == b.mIsActive && \
+        mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled && mIsTempTimer == b.mIsTempTimer);
+}
