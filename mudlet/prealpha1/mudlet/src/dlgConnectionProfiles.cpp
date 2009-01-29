@@ -250,7 +250,7 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
         {
             mCurrentProfileEditName = pItem->text( 0 );
             int row = mProfileList.indexOf( mCurrentProfileEditName );
-            if( (row >= 0) && ( row < mProfileList.size() ) )
+            if( ( row >= 0 ) && ( row < mProfileList.size() ) )
             {
                 mProfileList[row] = name;
                 pItem->setText( 0, name );
@@ -265,6 +265,25 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
                 dir.mkpath( QDir::homePath()+"/.config/mudlet/profiles/"+mUnsavedProfileName );
                 mProfileList << name;
                 pItem->setText( 0, name );
+               
+                if( mNeedsCopyOfProfileName.size() > 0 )
+                {
+                    // special case of a new profile that has to be cloned from
+                    // an existing profile
+                    QString what = QDir::homePath()+"/.config/mudlet/profiles/"+mNeedsCopyOfProfileName;
+                    QString where = QDir::homePath()+"/.config/mudlet/profiles/"+mUnsavedProfileName;
+                    QDir dirFrom = QDir( what );
+                    QStringList entries = dirFrom.entryList();
+                    qDebug()<<"entries="<<entries;
+                    
+                    for( int i=0; i<entries.size(); i++ )
+                    {
+                        QFile file( where + mNeedsCopyOfProfileName+"/"+entries[i] );    
+                        file.copy( where );
+                        qDebug()<<"kopiere von:"<< what+"/"+entries[i] << " nach:"<<where+"/"+entries[i];
+                    }
+                    mNeedsCopyOfProfileName = "";
+                }
                 mSavedNewName = true;
                 mUnsavedProfileName = "";
             }
@@ -334,6 +353,61 @@ void dlgConnectionProfiles::slot_addProfile()
     profile_name_entry->selectAll();
     
 }
+
+// if the user has chosen to connect to an already loaded profile
+// the old profile will be copied and he has to give a new name for it
+void dlgConnectionProfiles::copy_profile( QString oldProfile )
+{
+    //fillout_form();
+    
+    profile_name_entry->setPalette( mErrorPalette );
+    notificationArea->show();
+    notificationAreaIconLabelWarning->show();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(tr("A profile with the current name has already been loaded. The profile you have chosen will be copied, but you have to find a new name for it. Then press on connect again."));
+    
+    QStringList newname;
+    mUnsavedProfileName = oldProfile;
+    newname << mUnsavedProfileName;
+    
+    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, newname);
+    if( ! pItem )
+    {
+        return;
+    }
+    mSavedNewName = false;
+    
+    profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
+    profiles_tree_widget->insertTopLevelItem( 0, pItem );    
+    
+    // insert newest entry on top of the list as the general sorting 
+    // is always newest item first -> fillout->form() filters
+    // this is more practical for the user as they use the same profile most of the time
+    
+    profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
+    profiles_tree_widget->setCurrentItem( pItem );
+    profiles_tree_widget->setItemSelected( pItem, true );
+    
+    profile_name_entry->setReadOnly( false );   
+    host_name_entry->setReadOnly( false );
+    port_entry->setReadOnly( false );  
+    
+    profile_name_entry->setFocusPolicy( Qt::StrongFocus );
+    host_name_entry->setFocusPolicy( Qt::StrongFocus );
+    port_entry->setFocusPolicy( Qt::StrongFocus );
+    
+    profile_name_entry->setPalette( mErrorPalette );
+    host_name_entry->setPalette( mErrorPalette );
+    port_entry->setPalette( mErrorPalette );
+    
+    profile_name_entry->setText( mUnsavedProfileName );
+    profile_name_entry->setFocus();
+    profile_name_entry->selectAll();
+    
+}
+
 
 void dlgConnectionProfiles::slot_deleteProfile()
 {
@@ -536,6 +610,17 @@ void dlgConnectionProfiles::slot_cancel()
 void dlgConnectionProfiles::slot_connectToServer()
 {
     QString profile_name = profile_name_entry->text().trimmed();
+    
+    QStringList loadedProfiles = HostManager::self()->getHostList();
+    if( loadedProfiles.contains( profile_name ) )
+    {
+        // copy profile as the same profile is already loaded
+        // show information that he has to select a new name for this copy
+        copy_profile( profile_name );
+        mNeedsCopyOfProfileName = profile_name;
+        return;
+    }
+    
     bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
     Host * pHost = HostManager::self()->getHost( profile_name );
     if( pHost )

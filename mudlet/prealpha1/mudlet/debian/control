@@ -13,7 +13,5 @@ Package: mudlet
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Freshly-minted MUD client, designed to take mudding to a new level
- A new breed of a client on the MUD scene - with an intuitive user interface, a specially designed scripting framework, and a very fast text display.
+ Mudlet is a new breed of a client on the MUD scene - with an intuitive user interface, a specially designed scripting framework, and a very fast text display.
  Add to that cross-platform capability, an open-source development model, and you have a very likable MUD client.
- .
- Homepage: http://www.mudlet.org/

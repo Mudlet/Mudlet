@@ -32,6 +32,9 @@ public:
    
          dlgConnectionProfiles(QWidget * parent = 0);
     void fillout_form();
+    void copy_profile( QString );
+    void writeProfileData( QString, QString, QString );
+    QString readProfileData( QString, QString );
     
 signals:
      
@@ -48,8 +51,7 @@ public slots:
     void slot_update_pass( const QString );
     void slot_update_website( const QString );
     void slot_update_description();
-    void writeProfileData( QString, QString, QString );
-    QString readProfileData( QString, QString );
+    
     void slot_item_clicked( QTreeWidgetItem * );
     void slot_update();
     void slot_addProfile();
@@ -61,8 +63,10 @@ public slots:
     void slot_connectToServer();
     void slot_cancel();
     
+    
 private:
     
+    QString            mNeedsCopyOfProfileName;
     QString            mUnsavedProfileName;
     bool               mSavedNewName;
     QStringList        mProfileList;

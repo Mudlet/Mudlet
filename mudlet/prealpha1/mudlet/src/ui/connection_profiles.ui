@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>698</width>
-    <height>605</height>
+    <height>624</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -2073,7 +2073,7 @@
             <item>
              <widget class="QPushButton" name="remove_profile_button" >
               <property name="sizePolicy" >
-               <sizepolicy vsizetype="Fixed" hsizetype="Minimum" >
+               <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -2081,7 +2081,7 @@
               <property name="minimumSize" >
                <size>
                 <width>127</width>
-                <height>25</height>
+                <height>30</height>
                </size>
               </property>
               <property name="maximumSize" >
@@ -2100,24 +2100,17 @@
              </widget>
             </item>
             <item>
-             <spacer name="horizontalSpacer_2" >
-              <property name="orientation" >
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0" >
-               <size>
-                <width>24</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
              <widget class="QPushButton" name="new_profile_button" >
+              <property name="sizePolicy" >
+               <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="minimumSize" >
                <size>
                 <width>127</width>
-                <height>25</height>
+                <height>30</height>
                </size>
               </property>
               <property name="maximumSize" >
@@ -2135,26 +2128,10 @@
               </property>
              </widget>
             </item>
-            <item>
-             <spacer name="horizontalSpacer_3" >
-              <property name="orientation" >
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0" >
-               <size>
-                <width>15</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
            </layout>
            <zorder>remove_profile_button</zorder>
            <zorder>new_profile_button</zorder>
-           <zorder>horizontalSpacer_2</zorder>
-           <zorder>horizontalSpacer_3</zorder>
            <zorder>horizontalSpacer_4</zorder>
-           <zorder>widget_8</zorder>
           </widget>
          </item>
          <item>
@@ -2195,8 +2172,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>339</width>
-              <height>25</height>
+              <width>271</width>
+              <height>35</height>
              </rect>
             </property>
             <property name="sizePolicy" >
@@ -2211,25 +2188,7 @@
               <height>25</height>
              </size>
             </property>
-            <widget class="QLabel" name="label_13" >
-             <property name="geometry" >
-              <rect>
-               <x>6</x>
-               <y>4</y>
-               <width>325</width>
-               <height>22</height>
-              </rect>
-             </property>
-             <property name="sizePolicy" >
-              <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text" >
-              <string>Here is a list of nice MUDs with ready made profiles:</string>
-             </property>
-            </widget>
+            <layout class="QGridLayout" name="gridLayout" />
            </widget>
           </widget>
          </item>
@@ -2422,6 +2381,11 @@ p, li { white-space: pre-wrap; }
              </disabled>
             </palette>
            </property>
+           <property name="font" >
+            <font>
+             <kerning>true</kerning>
+            </font>
+           </property>
            <property name="autoFillBackground" >
             <bool>true</bool>
            </property>
@@ -2438,11 +2402,11 @@ p, li { white-space: pre-wrap; }
              <font>
               <weight>75</weight>
               <bold>true</bold>
-              <underline>true</underline>
+              <underline>false</underline>
              </font>
             </property>
             <property name="text" >
-             <string>Profile History</string>
+             <string>Profile history:</string>
             </property>
            </widget>
            <widget class="QLineEdit" name="port_entry" >
@@ -2489,7 +2453,7 @@ p, li { white-space: pre-wrap; }
              </rect>
             </property>
             <property name="text" >
-             <string>Load Profile:</string>
+             <string>Load profile:</string>
             </property>
            </widget>
            <widget class="QLineEdit" name="profile_name_entry" >
@@ -2520,7 +2484,7 @@ p, li { white-space: pre-wrap; }
              </font>
             </property>
             <property name="text" >
-             <string>Server Address:</string>
+             <string>Server address:</string>
             </property>
            </widget>
            <widget class="QComboBox" name="profile_history" >
@@ -2605,7 +2569,7 @@ p, li { white-space: pre-wrap; }
              <font>
               <weight>75</weight>
               <bold>true</bold>
-              <underline>true</underline>
+              <underline>false</underline>
              </font>
             </property>
             <property name="text" >
@@ -2698,6 +2662,9 @@ p, li { white-space: pre-wrap; }
              </disabled>
             </palette>
            </property>
+           <property name="toolTip" >
+            <string>If you'd like to enable auto-login, enter your character name and password here</string>
+           </property>
            <property name="autoFillBackground" >
             <bool>true</bool>
            </property>
@@ -2709,6 +2676,9 @@ p, li { white-space: pre-wrap; }
               <width>225</width>
               <height>22</height>
              </rect>
+            </property>
+            <property name="toolTip" >
+             <string>Characters password. Note that the password isn't encrypted in storage</string>
             </property>
             <property name="echoMode" >
              <enum>QLineEdit::Password</enum>
@@ -2749,6 +2719,9 @@ p, li { white-space: pre-wrap; }
               <height>22</height>
              </rect>
             </property>
+            <property name="toolTip" >
+             <string>The characters name</string>
+            </property>
             <property name="echoMode" >
              <enum>QLineEdit::Normal</enum>
             </property>
@@ -2766,8 +2739,11 @@ p, li { white-space: pre-wrap; }
              <font>
               <weight>75</weight>
               <bold>true</bold>
-              <underline>true</underline>
+              <underline>false</underline>
              </font>
+            </property>
+            <property name="toolTip" >
+             <string>If you'd like to enable auto-login, enter your character name and password here</string>
             </property>
             <property name="text" >
              <string>Optional:</string>
@@ -2782,11 +2758,14 @@ p, li { white-space: pre-wrap; }
               <height>21</height>
              </rect>
             </property>
+            <property name="toolTip" >
+             <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
+            </property>
             <property name="layoutDirection" >
              <enum>Qt::LeftToRight</enum>
             </property>
             <property name="text" >
-             <string>Automatic Login on Startup:</string>
+             <string>Auto-connect on startup</string>
             </property>
            </widget>
           </widget>
@@ -2867,7 +2846,7 @@ p, li { white-space: pre-wrap; }
                <font>
                 <weight>75</weight>
                 <bold>true</bold>
-                <underline>true</underline>
+                <underline>false</underline>
                </font>
               </property>
               <property name="text" >
@@ -2891,6 +2870,9 @@ p, li { white-space: pre-wrap; }
                  <width>265</width>
                  <height>22</height>
                 </rect>
+               </property>
+               <property name="toolTip" >
+                <string>MUD website</string>
                </property>
               </widget>
               <widget class="QLabel" name="label_7" >
@@ -2922,6 +2904,9 @@ p, li { white-space: pre-wrap; }
                 <height>16777215</height>
                </size>
               </property>
+              <property name="toolTip" >
+               <string>MUD description</string>
+              </property>
              </widget>
             </item>
            </layout>
@@ -2931,9 +2916,6 @@ p, li { white-space: pre-wrap; }
        </widget>
       </item>
      </layout>
-     <zorder>widget_5</zorder>
-     <zorder>widget_2</zorder>
-     <zorder>welcome_message</zorder>
     </widget>
    </item>
    <item>
