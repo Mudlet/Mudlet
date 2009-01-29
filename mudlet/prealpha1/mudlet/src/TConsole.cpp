@@ -44,12 +44,17 @@
 using namespace std;
 
 
-TConsole::TConsole(Host * pH, mudlet * pM) 
+TConsole::TConsole( Host * pH, bool isDebugConsole ) 
 : mpHost( pH )
-, mp_Mudlet( pM )
 , m_pageInitialized( false )
 , m_fontSpecs( pH )
 , buffer( pH )
+, mIsDebugConsole( isDebugConsole )
+, mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
+, mFgColor( QColor( 0, 0, 0 ) )
+, mBgColor( QColor( 255, 255, 255 ) )
+, mWrapAt( 100 )
+, mIndentCount( 5 )
 {
     mCursorHome = 0;
     mUserCursorX = 0;
@@ -79,59 +84,65 @@ TConsole::TConsole(Host * pH, mudlet * pM)
     splitter->setHandleWidth( 3 );
     
     setFocusProxy( mpCommandLine );
-    
-    console = new TTextEdit( this, splitter, &buffer, mpHost );
+    console = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole );
     console->setSizePolicy( sizePolicy3 );
     console->setFocusPolicy( Qt::NoFocus );
     splitter->addWidget( console );
     
-    console2 = new TTextEdit( this, splitter, &buffer, mpHost );
+    console2 = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole );
     console2->setSizePolicy( sizePolicy3 );
     console2->setFocusPolicy( Qt::NoFocus );
     splitter->addWidget( console2 );
    
     splitter->setCollapsible( 1, false );
     splitter->setCollapsible( 0, false );
-    splitter->setStretchFactor(0,3);
+    splitter->setStretchFactor(0,5);
     splitter->setStretchFactor(1,1);
     
     layout->addWidget( splitter );
     layout->addWidget( mpCommandLine );
     
     m_paragraphIsComplete = true;
+    changeColors();
     
-    console->setFont( mpHost->mDisplayFont );
-    console2->setFont( mpHost->mDisplayFont );
-    
-    QPalette palette;
-    
-    palette.setColor( QPalette::Text, QColor(250,250,255) );
-    palette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    palette.setColor( QPalette::Base, mpHost->mBgColor );
-    console->setPalette( palette );
-    console2->setPalette( palette );
+    console->setSplitScreen();
     console->show();
     console2->hide();
     
+    if( mIsDebugConsole )
+        mpCommandLine->hide();
+  
     isUserScrollBack = false;
        
     m_fontSpecs.init();
-    changeColors();
-    console2->setSplitScreen();
-    
 }
 
 void TConsole::changeColors()
 {
-    mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
-    console->setFont( mpHost->mDisplayFont );
-    console2->setFont( mpHost->mDisplayFont );
-    QPalette palette;
-    palette.setColor( QPalette::Text, mpHost->mFgColor );
-    palette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    palette.setColor( QPalette::Base, mpHost->mBgColor );
-    console->setPalette( palette );
-    console2->setPalette( palette );
+    if( mIsDebugConsole )
+    {
+        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
+        console->setFont( mDisplayFont );
+        console2->setFont( mDisplayFont );
+        QPalette palette;
+        palette.setColor( QPalette::Text, mFgColor );
+        palette.setColor( QPalette::Highlight, QColor(55,55,255) );
+        palette.setColor( QPalette::Base, mBgColor );
+        console->setPalette( palette );
+        console2->setPalette( palette );    
+    }
+    else
+    {
+        mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
+        console->setFont( mpHost->mDisplayFont );
+        console2->setFont( mpHost->mDisplayFont );
+        QPalette palette;
+        palette.setColor( QPalette::Text, mpHost->mFgColor );
+        palette.setColor( QPalette::Highlight, QColor(55,55,255) );
+        palette.setColor( QPalette::Base, mpHost->mBgColor );
+        console->setPalette( palette );
+        console2->setPalette( palette );
+    }
 }
 
 /*std::string TConsole::getCurrentTime()
@@ -925,23 +936,19 @@ void TConsole::echo( QString & msg )
     //  mEchoBuffer.append( msg );    
 }
 
-void TConsole::printMessageOnDisplay( QString msg )
+void TConsole::print( QString msg )
 {
-    m_fontSpecs.reset();
-    buffer.addText( msg, m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
-    
-    /*//cursor2.insertText( msg );
-    cursor.insertText(msg);
-    if( ! isUserScrollBack )
-    {
-        int max = textEdit->verticalScrollBar()->maximum();
-        int delta = max - textEdit->verticalScrollBar()->value();
-        textEdit->verticalScrollBar()->setPageStep( delta );
-        textEdit->verticalScrollBar()->setValue( max );        
-        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
-    }
-    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
-    return;*/
+    QColor fgColor = QColor(0,0,0);
+    QColor bgColor = QColor(255,255,255);
+    int lineBeforeNewContent = buffer.getLastLineNumber();
+    buffer.addText( msg, 
+                    fgColor,
+                    bgColor, 
+                    false, 
+                    false,
+                    false );
+    buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount );
+    console->showNewLines();
 }
 
 void TConsole::echoUserWindow( QString & msg )

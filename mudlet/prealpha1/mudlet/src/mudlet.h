@@ -66,8 +66,8 @@ public:
     
     
     
-   static QPlainTextEdit *       mpDebugConsole; 
-   static QMdiSubWindow *        mpDebugArea; 
+   static TConsole *             mpDebugConsole; 
+   static QMainWindow *        mpDebugArea; 
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
 
@@ -109,6 +109,7 @@ private:
    void                          readSettings();
    void                          writeSettings();
     
+    Host * mpDefaultHost; 
     
     QQueue<QString> tempLoginQueue;
     QQueue<QString> tempPassQueue;

@@ -32,8 +32,14 @@ TDebug::TDebug()
 
 TDebug & TDebug::operator>>( const int code) 
 { 
-   mudlet::mpDebugConsole->appendPlainText( msg );
+    mudlet::mpDebugConsole->print( msg );
 }
+
+TDebug::~TDebug()
+{
+    mudlet::mpDebugConsole->print( msg+"\n" );    
+}
+
 TDebug & TDebug::operator<<( const QString & t )
 { 
     msg += t; 

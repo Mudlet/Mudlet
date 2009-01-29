@@ -83,6 +83,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     mErrorPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
     mErrorPalette.setColor(QPalette::Base,QColor(255,235,235));    
     
+    resize( 698, 419 );
     
     
 }
@@ -314,17 +315,16 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
              
 void dlgConnectionProfiles::slot_showmudlist_clicked ( bool checked )
 {
-    if (checked)
-        mud_treewidget->show();
-    else
-        mud_treewidget->hide();
 }
 
 void dlgConnectionProfiles::slot_addProfile()
 {
     fillout_form();
-    
     welcome_message->hide();
+    
+    requiredArea->show();
+    informationalArea->show();
+    optionalArea->show();
 
     QStringList newname;
     mUnsavedProfileName = tr("new profile name");
@@ -566,15 +566,21 @@ void dlgConnectionProfiles::fillout_form()
     
     mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Time);
     
-    if( mProfileList.size() < 1 ) 
+    if( mProfileList.size() < 3 ) 
     {
         welcome_message->show();
-        profiles_tree_widget->hide();
+        requiredArea->hide();
+        informationalArea->hide();
+        optionalArea->hide();
+        resize( 698, 419 );
     }
     else
     {
-        profiles_tree_widget->show();
         welcome_message->hide();
+        
+        requiredArea->show();
+        informationalArea->show();
+        optionalArea->show();
     }
     for( int i=0; i<mProfileList.size(); i++ )
     {
@@ -611,6 +617,9 @@ void dlgConnectionProfiles::slot_connectToServer()
 {
     QString profile_name = profile_name_entry->text().trimmed();
     
+    if( profile_name.size() < 1 ) 
+        return;
+    
     QStringList loadedProfiles = HostManager::self()->getHostList();
     if( loadedProfiles.contains( profile_name ) )
     {
@@ -621,29 +630,24 @@ void dlgConnectionProfiles::slot_connectToServer()
         return;
     }
     
-    bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
-    Host * pHost = HostManager::self()->getHost( profile_name );
+    // load an old profile if there is any
+    int historyVersion = profile_history->currentIndex();
+    QString hostPath = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name;
+    Host * pHost = HostManager::self()->loadHostProfile( hostPath, historyVersion );
+    
+    if( ! pHost )
+    {
+        bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+        pHost = HostManager::self()->getHost( profile_name );
+    }
+    
     if( pHost )
     {
+        pHost->setName( profile_name );
         pHost->setUrl( host_name_entry->text().trimmed() );
-        if( autologin_checkBox->isChecked() )
-        {
-            pHost->setPass( character_password_entry->text().trimmed() );
-            pHost->setLogin( login_entry->text().trimmed() );
-        }
-        else
-        {
-            pHost->setPass( "" );
-            pHost->setLogin( "" );
-        }
+        pHost->setPass( character_password_entry->text().trimmed() );
+        pHost->setLogin( login_entry->text().trimmed() );
     }
-    else 
-        return;
-    
-    if( profile_name.size() < 1 ) 
-        return;
-    
-    int historyVersion = profile_history->currentText().toInt();
     emit signal_establish_connection( profile_name, historyVersion );
     QDialog::accept();
 }

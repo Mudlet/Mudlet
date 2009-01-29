@@ -48,6 +48,7 @@ public:
     Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
     bool               serialize();
 	   bool               restore();
+    Host *             loadHostProfile( QString path, int profileHistory );
     Host *             importHost( QString path );
     
 private:

@@ -737,6 +737,10 @@
    <property name="text" >
     <string>Close</string>
    </property>
+   <property name="icon" >
+    <iconset resource="../application.qrc" >
+     <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+   </property>
   </widget>
  </widget>
  <tabstops>

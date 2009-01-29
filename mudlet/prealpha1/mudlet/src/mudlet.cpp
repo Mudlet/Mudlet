@@ -35,9 +35,10 @@
 #include "EAction.h"
 #include "dlgHelpDialog.h"
 #include "dlgProfilePreferences.h"
+#include "TDebug.h"
 
-QPlainTextEdit *  mudlet::mpDebugConsole = 0;
-QMdiSubWindow * mudlet::mpDebugArea = 0;
+TConsole *  mudlet::mpDebugConsole = 0;
+QMainWindow * mudlet::mpDebugArea = 0;
 bool mudlet::debugMode = false;
 
 mudlet * mudlet::_self = 0;
@@ -55,31 +56,22 @@ mudlet::mudlet() : Ui::MainWindow()
 {
     setupUi(this);
     mudlet::debugMode = false;
-    /*    
-    QStringList hostList = HostManager::self()->getHostList();
-    for( int i=0; i<hostList.size(); i++ )
-    {
-        Host * pH = HostManager::self()->getHost(hostList[i]);
-        TConsole * pConsole = new TConsole( pH, this );
-        pH->mpConsole = pConsole;
-        mConsoleMap[pH] = pConsole;
-        mdiArea->addSubWindow(pConsole);
-    } */
     
     //mdiArea->tileSubWindows();
     mdiArea->setViewMode( QMdiArea::TabbedView );
-    mpDebugConsole = new QPlainTextEdit( this );
-    mpDebugConsole->setEnabled(true);
-    mpDebugConsole->setReadOnly(true);
-    mpDebugConsole->setWindowTitle( "Debug Messages" );
-    mpDebugArea = mdiArea->addSubWindow( mpDebugConsole );
+   
+    mpDebugArea = new QMainWindow(0);
+    HostManager::self()->addHost("default_host", "", "","" );  
+    mpDefaultHost = HostManager::self()->getHost(QString("default_host"));
+    mpDebugConsole = new TConsole( mpDefaultHost, true );
+    QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mpDebugConsole->setSizePolicy( sizePolicy );
+    mpDebugArea->setCentralWidget( mpDebugConsole );
+    mpDebugArea->resize(800,600);
     mpDebugArea->hide();
-    QFont font("Courier New", 10, QFont::Courier);
-    mpDebugArea->setFont( font );
-    //mdiArea->setTabShape(QTabWidget::Triangular);
-    //mdiArea->tileSubWindows();
+    QFont font("Monospace", 10, QFont::Courier);
     mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
-    //    createActions();
+    
     toolBar->addAction( actionConnect );
     toolBar->addAction( actionTriggers );
     toolBar->addAction( actionTimers );
@@ -105,6 +97,8 @@ mudlet::mudlet() : Ui::MainWindow()
     connect(actionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
     
+    readSettings();
+    
     QTimer * timerAutologin = new QTimer( this );
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
@@ -114,7 +108,7 @@ mudlet::mudlet() : Ui::MainWindow()
 void mudlet::addConsoleForNewHost( Host * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
-    TConsole * pConsole = new TConsole( pH, this );
+    TConsole * pConsole = new TConsole( pH, false );
     pH->mpConsole = pConsole;
     
     pConsole->setWindowTitle( pH->getName() );
@@ -180,22 +174,19 @@ void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
 
 void mudlet::openUserWindow( Host * pHost, QString & name )
 {
-    //QMap<QString, QDockWidget *>  dockWindowMap;
-    //QMap<QString, TConsole *>     dockWindowConsoleMap;    
     if( ! dockWindowMap.contains( name ) )
     {
         QDockWidget * pD = new QDockWidget;
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
-        TConsole * pC = new TConsole( pHost, this );
+        TConsole * pC = new TConsole( pHost, false );
         pD->setWidget( pC );
         pC->show();
         pC->mpCommandLine->hide();
         pC->setUserWindow();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
-        
     }
 }
 
@@ -297,29 +288,25 @@ void mudlet::addSubWindow( TConsole* pConsole )
 
 void mudlet::closeEvent(QCloseEvent *event)
 {
-    
-    /*  if (maybeSave()) {
-            writeSettings();
-            event->accept();
-      } else {
-            event->ignore();
-      }*/
+    delete mpDebugConsole;
+    writeSettings();
+    event->accept();
 }
 
 void mudlet::readSettings()
 {
- //     QSettings settings("Trolltech", "Application Example");
- //     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
- //     QSize size = settings.value("size", QSize(400, 400)).toSize();
-//      resize(size);
-  //    move(pos);
+    QSettings settings("Mudlet", "Mudlet 1.0");
+    QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
+    QSize size = settings.value("size", QSize(0, 0)).toSize();
+    resize( size );
+    move( pos );
 }
 
 void mudlet::writeSettings()
 {
- //     QSettings settings("Trolltech", "Application Example");
-//      settings.setValue("pos", pos());
- //     settings.setValue("size", size());
+    QSettings settings("Mudlet", "Mudlet 1.0");
+    settings.setValue("pos", pos());
+    settings.setValue("size", size());
 }
 
 void mudlet::connectToServer()
@@ -419,17 +406,19 @@ void mudlet::printOnDisplay( Host * pH, QString s )
 
 void mudlet::printMessageOnDisplay( Host * pH, QString s )
 {
-    mConsoleMap[pH]->printMessageOnDisplay(s);
+    mConsoleMap[pH]->print( s );
 }
 
 QString mudlet::readProfileData( QString profile, QString item )
 {
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
-    
     file.open( QIODevice::ReadOnly );
-    QString fname=QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item;
+    if( ! file.exists() )
+        return "";
+    
     QDataStream ifs( & file ); 
     QString ret;
+    
     ifs >> ret;
     file.close();
     return ret;
@@ -438,30 +427,39 @@ QString mudlet::readProfileData( QString profile, QString item )
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    cout << "[ AUTOLOGIN ] checking if there are any autologin profiles" << endl;
+    TDebug() << "[ AUTOLOGIN BEGIN ] checking if there are any autologin profiles";
     QList<QString> hostList = HostManager::self()->getHostList();
     for( int i=0; i<hostList.size(); i++ )
     {
         Host * pH = HostManager::self()->getHost( hostList[i] );
         QString profile = pH->getName();
+        if( profile.size() < 1 )
+        {
+            HostManager::self()->deleteHost( profile ); 
+            continue;
+        }
+            
+        TDebug()<<"----> verifying autoloader status: "<<profile;
         QString item = "autologin";
         QString val = readProfileData( profile, item );
         if( val.toInt() == Qt::Checked )
         {
-            qDebug()<<"----> Host:"<<pH->getName()<<" URL:"<<pH->getUrl()<<"Login:"<<pH->getLogin();
+            TDebug()<<"----> Host:"<<pH->getName()<<" URL:"<<pH->getUrl()<<"Login:"<<pH->getLogin();
             addConsoleForNewHost( pH );
             pH->connectToServer();
         }
         else
         {
             // remove Hosts that don't have autologin defined from HostPool
+            TDebug() << "----> [ EXPIRED ] " << profile.toLatin1().data() << " Host ist no longer an autoloader. Due to user decision.";
             HostManager::self()->deleteHost( profile );    
         }
     }
     if( hostList.size() < 1 )
-        cout << "----> [ OK ] nothing to be done (no autologin profiles defined)"<<endl;
+        TDebug() << "----> [ OK ] nothing to be done (no autologin profiles defined)";
     else
-        cout << "----> [ OK ] autologin finished" << endl;
+        TDebug() << "----> [ OK ] autologin finished";
+    TDebug()<<"[ AUTOLOGIN END ] currently loaded hosts after removal of non-autoloaders:"<<HostManager::self()->getHostList();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

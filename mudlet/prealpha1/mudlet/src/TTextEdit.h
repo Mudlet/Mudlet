@@ -43,7 +43,12 @@ Q_OBJECT
         
 public:
     
-                      TTextEdit( TConsole *, QWidget *, TBuffer * pB, Host * pH );
+                      TTextEdit( TConsole *, 
+                                 QWidget *, 
+                                 TBuffer * pB, 
+                                 Host * pH, 
+                                 bool isDebugConsole );
+    
     void              paintEvent( QPaintEvent* );
     void              drawForeground(QPainter &, const QRect & );
     void              drawBackground( QPainter &, const QRect &, const QColor & );
@@ -85,6 +90,17 @@ public slots:
     void              slot_copySelectionToClipboard();
     
 private:
+    
+    void              initDefaultSettings();
+    
+    QColor            mFgColor;
+    QColor            mBgColor;
+    QFont             mDisplayFont;
+    QFont             mCommandLineFont;
+    QFont             mCommandSeperator;
+    int               mWrapAt;    
+    int               mWrapIndentCount;
+    bool              mIsDebugConsole;    
     
     int               mLeftMargin;
     int               mTopMargin;
