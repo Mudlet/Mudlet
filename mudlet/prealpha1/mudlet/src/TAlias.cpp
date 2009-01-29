@@ -113,6 +113,24 @@ bool TAlias::match( QString & toMatch )
     return false;
 }
 
+TAlias& TAlias::clone(const TAlias& b)
+{
+    mName = b.mName;
+    mCommand = b.mCommand;
+    mRegexCode = b.mRegexCode;
+    mRegex = b.mRegex;
+    mScript = b.mScript;
+    mIsActive = b.mIsActive;
+    mIsFolder = b.mIsFolder;
+    mpHost = b.mpHost;
+    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
+    return *this;
+}
+
+bool TAlias::isClone(TAlias &b) const {
+    return (mName == mName && mCommand == mCommand && mRegexCode == mRegexCode && mRegex == mRegex && mScript == mScript && mIsActive == mIsActive && mIsFolder == mIsFolder && \
+        mpHost == mpHost && mNeedsToBeCompiled == mNeedsToBeCompiled);
+}
 
 bool TAlias::registerAlias()
 {
