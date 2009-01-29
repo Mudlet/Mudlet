@@ -142,10 +142,10 @@ TTrigger& TTrigger::clone(const TTrigger& b)
 }
 
 bool TTrigger::isClone(TTrigger &b) const {
-    return ((mName == b.mName) && (mRegexCodeList == b.mRegexCodeList) && (mRegexCodePropertyList == b.mRegexCodePropertyList) && (mRegexMap == b.mRegexMap) && (mpHost == b.mpHost) && \
-        (mScript == b.mScript) && (mIsActive == b.mIsActive) && (mIsTempTrigger == b.mIsTempTrigger) && (mIsFolder == b.mIsFolder) && (mNeedsToBeCompiled == b.mNeedsToBeCompiled) && \
-        (mTriggerType == b.mTriggerType) && (mIsLineTrigger == b.mIsLineTrigger) && (mStartOfLineDelta == b.mStartOfLineDelta) && (mLineDelta == b.mLineDelta) && \
-        (mIsMultiline == b.mIsMultiline) && (mConditionLineDelta == b.mConditionLineDelta) && (mConditionMap == b.mConditionMap));
+    return (mName == b.mName && mRegexCodeList == b.mRegexCodeList && mRegexCodePropertyList == b.mRegexCodePropertyList && mRegexMap == b.mRegexMap && mpHost == b.mpHost && \
+        mScript == b.mScript && mIsActive == b.mIsActive && mIsTempTrigger == b.mIsTempTrigger && mIsFolder == b.mIsFolder && mNeedsToBeCompiled == b.mNeedsToBeCompiled && \
+        mTriggerType == b.mTriggerType && mIsLineTrigger == b.mIsLineTrigger && mStartOfLineDelta == b.mStartOfLineDelta && mLineDelta == b.mLineDelta && \
+        mIsMultiline == b.mIsMultiline && mConditionLineDelta == b.mConditionLineDelta && mConditionMap == b.mConditionMap);
 }
 
 bool TTrigger::match_perl( QString & toMatch, int regexNumber )
