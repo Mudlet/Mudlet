@@ -1301,6 +1301,10 @@ bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
     QString script = mpSourceEditorArea->script_scintilla->text();    
     
     QTreeWidgetItem * pItem = treeWidget->currentItem(); 
+
+    if (!pItem)
+        return true;
+
     if( pItem->parent() )
     {
         int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
@@ -1369,6 +1373,10 @@ bool dlgTriggerEditor::slot_saveTimerAfterEdit(bool ask)
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     QTreeWidgetItem * pItem = treeWidget_timers->currentItem(); 
+
+    if (!pItem)
+        return true;
+
     if( pItem->parent() )
     {
         int timerID = pItem->data(0, Qt::UserRole).toInt();
@@ -1448,6 +1456,9 @@ bool dlgTriggerEditor::slot_saveAliasAfterEdit(bool ask)
     QString command = mpAliasMainArea->pattern_textedit2->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     QTreeWidgetItem * pItem = treeWidget_alias->currentItem(); 
+    if (!pItem)
+        return true;
+
     if( pItem->parent() )
     {
         int aliasID = pItem->data(0, Qt::UserRole).toInt();
@@ -1520,6 +1531,10 @@ bool dlgTriggerEditor::slot_saveActionAfterEdit(bool ask)
     QString script = mpSourceEditorArea->script_scintilla->text();    
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     QTreeWidgetItem * pItem = treeWidget_actions->currentItem(); 
+
+    if (!pItem)
+        return true;
+
     if( pItem->parent() )
     {
         int actionID = pItem->data(0, Qt::UserRole).toInt();
@@ -1603,6 +1618,10 @@ bool dlgTriggerEditor::slot_saveScriptAfterEdit(bool ask)
     }
     
     QTreeWidgetItem * pItem = treeWidget_scripts->currentItem(); 
+
+    if (!pItem)
+        return true;
+
     if( pItem->parent() )
     {
         int scriptID = pItem->data(0, Qt::UserRole).toInt();
@@ -1676,6 +1695,10 @@ bool dlgTriggerEditor::slot_saveKeyAfterEdit(bool ask)
     QString command = mpKeysMainArea->lineEdit_command->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     QTreeWidgetItem * pItem = treeWidget_keys->currentItem(); 
+
+    if (!pItem)
+        return true;
+
     if( pItem->parent() )
     {
         int keyID = pItem->data(0, Qt::UserRole).toInt();
