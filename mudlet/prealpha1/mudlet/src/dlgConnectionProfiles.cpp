@@ -41,13 +41,13 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect_button->setIcon(QIcon(":/icons/icons/dialog-ok-apply.png"));
     
     QStringList headerList;
-    headerList << "Name of the MUD" << "Language";
+    headerList << "MUD name" << "Language";
     mud_list_treewidget->setHeaderLabels( headerList );
     
-    connect( connect_button, SIGNAL(pressed()), this, SLOT(slot_connectToServer()));
-    connect( abort, SIGNAL(pressed()), this, SLOT(slot_cancel()));
-    connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
-    connect( remove_profile_button, SIGNAL( pressed() ), this, SLOT( slot_deleteProfile() ) );
+    connect( connect_button, SIGNAL(clicked()), this, SLOT(slot_connectToServer()));
+    connect( abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
+    connect( new_profile_button, SIGNAL( clicked() ), this, SLOT( slot_addProfile() ) );
+    connect( remove_profile_button, SIGNAL( clicked() ), this, SLOT( slot_deleteProfile() ) );
     connect( profile_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_name(const QString)));
     connect( host_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_url(const QString)));
     connect( port_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_port(const QString)));   
