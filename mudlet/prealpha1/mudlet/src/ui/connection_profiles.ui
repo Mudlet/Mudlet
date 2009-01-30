@@ -2074,8 +2074,8 @@
              <height>16777215</height>
             </size>
            </property>
-           <layout class="QGridLayout" name="gridLayout_3" >
-            <item row="0" column="0" >
+           <layout class="QHBoxLayout" name="horizontalLayout_5" >
+            <item>
              <spacer name="horizontalSpacer_4" >
               <property name="orientation" >
                <enum>Qt::Horizontal</enum>
@@ -2088,7 +2088,7 @@
               </property>
              </spacer>
             </item>
-            <item row="0" column="1" >
+            <item>
              <widget class="QPushButton" name="remove_profile_button" >
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Preferred" hsizetype="Fixed" >
@@ -2098,7 +2098,7 @@
               </property>
               <property name="minimumSize" >
                <size>
-                <width>127</width>
+                <width>0</width>
                 <height>25</height>
                </size>
               </property>
@@ -2109,7 +2109,7 @@
                </size>
               </property>
               <property name="text" >
-               <string>Remove Profile</string>
+               <string>Remove</string>
               </property>
               <property name="icon" >
                <iconset resource="../application.qrc" >
@@ -2117,8 +2117,8 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="2" >
-             <widget class="QPushButton" name="new_profile_button" >
+            <item>
+             <widget class="QPushButton" name="copy_profile_button" >
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Preferred" hsizetype="Fixed" >
                 <horstretch>0</horstretch>
@@ -2127,7 +2127,7 @@
               </property>
               <property name="minimumSize" >
                <size>
-                <width>127</width>
+                <width>0</width>
                 <height>25</height>
                </size>
               </property>
@@ -2138,7 +2138,36 @@
                </size>
               </property>
               <property name="text" >
-               <string>New Profile</string>
+               <string>Copy</string>
+              </property>
+              <property name="icon" >
+               <iconset resource="../application.qrc" >
+                <normaloff>:/icons/icons/list-add_small.png</normaloff>:/icons/icons/list-add_small.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="new_profile_button_2" >
+              <property name="sizePolicy" >
+               <sizepolicy vsizetype="Preferred" hsizetype="Fixed" >
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize" >
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize" >
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text" >
+               <string>New</string>
               </property>
               <property name="icon" >
                <iconset resource="../application.qrc" >
@@ -2147,9 +2176,6 @@
              </widget>
             </item>
            </layout>
-           <zorder>remove_profile_button</zorder>
-           <zorder>new_profile_button</zorder>
-           <zorder>horizontalSpacer_4</zorder>
           </widget>
          </item>
          <item>
@@ -2417,7 +2443,7 @@ p, li { white-space: pre-wrap; }
            <property name="autoFillBackground" >
             <bool>true</bool>
            </property>
-           <layout class="QGridLayout" name="gridLayout_4" >
+           <layout class="QGridLayout" name="gridLayout" >
             <item row="0" column="0" >
              <widget class="QLabel" name="label_6" >
               <property name="font" >
@@ -2524,7 +2550,14 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item rowspan="2" row="3" column="1" colspan="3" >
+            <item row="4" column="0" >
+             <widget class="QLabel" name="label_9" >
+              <property name="text" >
+               <string>Load profile:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1" colspan="3" >
              <widget class="QComboBox" name="profile_history" >
               <property name="minimumSize" >
                <size>
@@ -2544,14 +2577,17 @@ p, li { white-space: pre-wrap; }
               </item>
              </widget>
             </item>
-            <item row="4" column="0" >
-             <widget class="QLabel" name="label_9" >
-              <property name="text" >
-               <string>Load profile:</string>
-              </property>
-             </widget>
-            </item>
            </layout>
+           <zorder>label_6</zorder>
+           <zorder>label</zorder>
+           <zorder>profile_name_entry</zorder>
+           <zorder>label_2</zorder>
+           <zorder>host_name_entry</zorder>
+           <zorder>label_3</zorder>
+           <zorder>port_entry</zorder>
+           <zorder>label_8</zorder>
+           <zorder>label_9</zorder>
+           <zorder>profile_history</zorder>
           </widget>
          </item>
          <item>
@@ -2662,13 +2698,6 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="1" column="0" >
-             <widget class="QLabel" name="label_4" >
-              <property name="text" >
-               <string>Character name:</string>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="1" >
              <widget class="QLineEdit" name="login_entry" >
               <property name="toolTip" >
@@ -2706,6 +2735,13 @@ p, li { white-space: pre-wrap; }
               </property>
               <property name="text" >
                <string>Auto-connect on startup</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0" >
+             <widget class="QLabel" name="label_4" >
+              <property name="text" >
+               <string>Character name:</string>
               </property>
              </widget>
             </item>
@@ -2922,7 +2958,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>mud_list_treewidget</tabstop>
   <tabstop>dialog_buttonbox</tabstop>
   <tabstop>remove_profile_button</tabstop>
-  <tabstop>new_profile_button</tabstop>
  </tabstops>
  <resources>
   <include location="../application.qrc" />
