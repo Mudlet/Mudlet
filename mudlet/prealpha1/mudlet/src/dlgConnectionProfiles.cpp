@@ -59,8 +59,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( profiles_tree_widget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
     connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
-    connect( mud_list_treewidget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
-    connect( mud_list_treewidget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
+    //connect( mud_list_treewidget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
+    //connect( mud_list_treewidget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
     
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     connect( this, SIGNAL (finished(int)), this, SLOT (slot_finished(int)));
@@ -640,6 +640,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     
     // load an old profile if there is any
     int historyVersion = profile_history->currentIndex();
+    
     QString hostPath = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name;
     Host * pHost = HostManager::self()->loadHostProfile( hostPath, historyVersion );
     
