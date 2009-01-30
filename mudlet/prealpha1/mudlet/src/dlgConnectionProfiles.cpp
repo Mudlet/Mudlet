@@ -192,7 +192,7 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
         notificationAreaIconLabelError->hide();
         notificationAreaIconLabelInformation->hide();
         notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText( QString("You have to enter a number. Other characters are not permitted.") );
+        notificationAreaMessageBox->setText( tr("You have to enter a number. Other characters are not permitted.") );
         return; 
     }
     QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
@@ -237,7 +237,7 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
         notificationAreaIconLabelError->hide();
         notificationAreaIconLabelInformation->hide();
         notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText( QString("This character is not permitted. Use one of the following:\n")+allowedChars );
+        notificationAreaMessageBox->setText( tr("This character is not permitted. Use one of the following: %1\n").arg(allowedChars) );
         return; 
     }
     if( pItem )
@@ -572,7 +572,9 @@ void dlgConnectionProfiles::fillout_form()
     host_name_entry->clear();
     port_entry->clear();
     
-    mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Time);
+    mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
+//QStringList mProfileList2 = QDir(QDir::homePath()+"/.config/mudlet/profiles/*/Host.dat").entryList(QDir::Dirs, QDir::Name);
+//qDebug() << "lolo : " << mProfileList2[0];
     
     if( mProfileList.size() < 3 ) 
     {
@@ -590,6 +592,9 @@ void dlgConnectionProfiles::fillout_form()
         informationalArea->show();
         optionalArea->show();
     }
+
+    QDateTime test_date;
+    QTreeWidgetItem * toselect=NULL;
     for( int i=0; i<mProfileList.size(); i++ )
     {
         QString s = mProfileList[i];
@@ -597,14 +602,21 @@ void dlgConnectionProfiles::fillout_form()
             continue;
         if( (mProfileList[i] == ".") || (mProfileList[i] == ".." ) )
             continue;
+
         QStringList sList;
         sList << mProfileList[i];
         QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, sList);
         profiles_tree_widget->insertTopLevelItem( profiles_tree_widget->topLevelItemCount(), pItem );    
+
+        QDateTime profile_lastRead = QFileInfo(QDir::homePath()+"/.config/mudlet/profiles/"+mProfileList[i]+"/Host.dat").lastRead();
+        if (profile_lastRead > test_date)
+        {
+            test_date = profile_lastRead;
+            toselect = pItem;
+        }
     }
-    QTreeWidgetItem * pTopItem = profiles_tree_widget->itemAt( 0, 0 );
-    if( pTopItem )
-        profiles_tree_widget->setCurrentItem( pTopItem );
+    if( toselect )
+        profiles_tree_widget->setCurrentItem( toselect );
 }
 
 void dlgConnectionProfiles::slot_connection_dlg_finnished()
