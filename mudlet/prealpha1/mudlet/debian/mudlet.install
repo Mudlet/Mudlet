@@ -2,3 +2,10 @@ src/mudlet				usr/share/mudlet
 LuaGlobal.lua				usr/share/mudlet
 src/mudlet_documentation.html		usr/share/mudlet
 debian/scripts/mudlet			usr/bin
+debian/mudlet.desktop				usr/share/app-install/desktop
+debian/mudlet.desktop				usr/share/applications
+debian/mudlet.png				usr/share/icons/hicolor/48x48/apps
+debian/mudlet.png				usr/share/app-install/icons
+debian/mudlet.png				usr/share/pixmaps
+debian/mudlet.xpm				usr/share/pixmaps
+debian/mudlet.xpm				usr/share/app-install/icons

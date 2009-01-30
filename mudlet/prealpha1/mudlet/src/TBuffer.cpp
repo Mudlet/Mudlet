@@ -29,12 +29,31 @@
 
 using namespace std;
 
-TChar::TChar(){}
+const QColor TCharDefaultFgColor = QColor(255,255,255);
+const QColor TCharDefaultBgColor = QColor(0,0,0); 
+
+TChar::TChar()
+{
+    fgColor = QColor(255,255,255);
+    bgColor = QColor(0,0,0);
+    italics = false;
+    bold = false;
+    underline = false;
+}
 
 TChar::TChar( Host * pH )
 {
-    fgColor = pH->mFgColor;
-    bgColor = pH->mBgColor;
+    if( pH )
+    {
+        fgColor = pH->mFgColor;
+        bgColor = pH->mBgColor;
+    }
+    else
+    {
+        
+        fgColor = TCharDefaultFgColor;
+        bgColor = TCharDefaultBgColor;   
+    }
     italics = false;
     bold = false;
     underline = false;    
@@ -52,9 +71,9 @@ TChar::TChar( TChar const & copy )
 TBuffer::TBuffer( Host * pH )
 : mpHost( pH )
 {   
-    mpHost->mScreenHeight = 40;
-    mpHost->mScreenWidth = 80; //TODO: make this a user option
-    
+    // FIXME: check if this is set somewhere else
+    //mpHost->mScreenHeight = 40;
+    //mpHost->mScreenWidth = 80; //TODO: make this a user option
     buffer.clear();
     buffer.push_back( bufferLine );
     lineBuffer.clear();
@@ -160,11 +179,11 @@ void TBuffer::wrap( unsigned int startLine, unsigned int screenWidth, unsigned i
             for( unsigned int i3=0; i3<indentSize; i3++ )
             {
                 TChar * pSpace = new TChar;
-                pSpace->fgColor = mpHost->mFgColor;
-                pSpace->bgColor = mpHost->mBgColor;
+                /*pSpace->fgColor = mFgColor;
+                pSpace->bgColor = mBgColor;
                 pSpace->italics = false;
                 pSpace->bold = false;
-                pSpace->underline = false;
+                pSpace->underline = false;*/
                 newLine.push_back( pSpace );
                 lineText.append( " " );
             }

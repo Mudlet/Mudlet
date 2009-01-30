@@ -737,6 +737,10 @@
    <property name="text" >
     <string>Close</string>
    </property>
+   <property name="icon" >
+    <iconset resource="../application.qrc" >
+     <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+   </property>
   </widget>
  </widget>
  <tabstops>
@@ -766,5 +770,22 @@
  <resources>
   <include location="../application.qrc" />
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>closeButton</sender>
+   <signal>pressed()</signal>
+   <receiver>profile_preferences</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>513</x>
+     <y>534</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>560</x>
+     <y>-19</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

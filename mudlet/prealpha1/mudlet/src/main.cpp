@@ -25,18 +25,21 @@
 #include "TConsole.h"
 #include <QSplashScreen>
 
-QPlainTextEdit *  spDebugConsole = 0;
+TConsole *  spDebugConsole = 0;
 
 void debugOutput(QtMsgType type, const char *msg)
 {
     switch (type) 
     {
     case QtDebugMsg:
-        if( mudlet::mpDebugConsole != 0 )
+        if( mudlet::mpDebugConsole )
         {
-            //mudlet::mpDebugConsole->appendPlainText( msg );    
+            mudlet::mpDebugConsole->print( msg );
         }
-        fprintf(stderr, "Debug: %s\n", msg);
+        else
+        {
+            fprintf(stderr, "Debug: %s\n", msg);
+        }
         break;
     case QtWarningMsg:
         fprintf(stderr, "Warning: %s\n", msg);
@@ -71,36 +74,34 @@ int main(int argc, char *argv[])
     if( ! dir.exists( directory ) )
     {
         dir.mkpath( directory );    
+    
+        QFile file_doc( "mudlet_documentation.html" );
+        QFile file_doc_old( directory+"/mudlet_documentation.html" );
+        if( file_doc_old.exists() )
+        {
+            file_doc_old.remove();
+        }
+        file_doc.copy( directory+"/mudlet_documentation.html" );
+        QFile file_lua( "LuaGlobal.lua" );
+        QFile file_lua_old( directory+"/LuaGlobal.lua" );
+        if( file_lua_old.exists() )
+        {
+            file_lua_old.remove();
+        }
+        file_lua.copy( directory+"/LuaGlobal.lua" );
     }
-    QFile file_doc( "mudlet_documentation.html" );
-    QFile file_doc_old( directory+"/mudlet_documentation.html" );
-    if( file_doc_old.exists() )
-    {
-        file_doc_old.remove();
-    }
-    file_doc.copy( directory+"/mudlet_documentation.html" );
-    QFile file_lua( "LuaGlobal.lua" );
-    QFile file_lua_old( directory+"/LuaGlobal.lua" );
-    if( file_lua_old.exists() )
-    {
-        file_lua_old.remove();
-    }
-    file_lua.copy( directory+"/LuaGlobal.lua" );
     
     mudlet::self();
     
     mudlet::debugMode = false;
-    
-    mudlet::debugMode = false;
     HostManager::self();
     HostManager::self()->restore();  
-    
-    //mudlet::self();
-      
-    mudlet::self()->resize(790,590);
     mudlet::self()->show();
-    splash.showMessage("All data has been loaded successfully.\n\nHave fun!");
     
+    splash.showMessage("All data has been loaded successfully.\n\nHave fun!");
+    QTime t;
+    t.start();
+    while( t.elapsed() < 1500 ){}
     splash.finish( mudlet::self() );
     app.exec();
     HostManager::self()->serialize();

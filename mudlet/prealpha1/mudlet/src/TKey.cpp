@@ -220,4 +220,23 @@ bool TKey::restore( QDataStream & ifs, bool initMode )
     return ret;
 }
 
+TKey& TKey::clone(const TKey& b)
+{
+    mName = b.mName;
+    mCommand = b.mCommand;
+    mKeyCode = b.mKeyCode;
+    mKeyModifier = b.mKeyModifier;
+    mRegexCode = b.mRegexCode;
+    mRegex = b.mRegex;
+    mScript = b.mScript;
+    mIsActive = b.mIsActive;
+    mIsFolder = b.mIsFolder;
+    mpHost = b.mpHost;
+    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
+    return *this;
+}
 
+bool TKey::isClone(TKey &b) const {
+    return (mName == b.mName && mCommand == b.mCommand && mKeyCode == b.mKeyCode && mKeyModifier == b.mKeyModifier && mRegexCode == b.mRegexCode && mRegex == b.mRegex && \
+        mScript == b.mScript && mIsActive == b.mIsActive && mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled);
+}

@@ -407,17 +407,24 @@ bool Host::importHost( QString directory )
     return true;
 }
 
+// returns an empty string as error
 QString Host::readProfileData( QString profile, QString item )
 {
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
     
+    if( ! file.exists() )
+        return "";
+    
     file.open( QIODevice::ReadOnly );
-    QString fname=QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item;
+    
     QDataStream ifs( & file ); 
     QString ret;
     ifs >> ret;
     file.close();
-    return ret;
+    if( ifs.status() == QDataStream::Ok )
+        return ret;
+    else
+        return "";
 }
 
 void Host::writeProfileData( QString profile, QString item, QString what )
@@ -460,53 +467,72 @@ bool Host::restore( QString directory, int selectedHistoryVersion )
             return false;
         }
     }
+    qDebug()<<"---> [ RESTORE FAILED ] profile directory:"<<directory;
 }
 
 int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
 {
     QString host = directory + "/Host.dat";
     QFile fileHost( host );
+    if( ! fileHost.exists() )
+        return -1;
     fileHost.open(QIODevice::ReadOnly);
     QDataStream ifsHost(&fileHost); 
-    
+   
     QString triggerUnit = directory + "/Triggers.dat";
     QFile fileTriggerUnit( triggerUnit );
+    if( ! fileTriggerUnit.exists() )
+        return -1;
     fileTriggerUnit.open( QIODevice::ReadOnly );
     QDataStream ifs_triggerUnit( &fileTriggerUnit ); 
     
     QString timerUnit = directory + "/Timers.dat";
     QFile fileTimerUnit( timerUnit );
+    if( ! fileTimerUnit.exists() )
+        return -1;
     fileTimerUnit.open( QIODevice::ReadOnly );
     QDataStream ifs_timerUnit( &fileTimerUnit ); 
     
     QString aliasUnit = directory + "/Aliases.dat";
     QFile fileAliasUnit( aliasUnit );
+    if( ! fileAliasUnit.exists() )
+        return -1;
     fileAliasUnit.open( QIODevice::ReadOnly );
     QDataStream ifs_aliasUnit( &fileAliasUnit ); 
     
     QString scriptUnit = directory + "/Scripts.dat";
     QFile fileScriptUnit( scriptUnit );
+    if( ! fileScriptUnit.exists() )
+        return -1;
     fileScriptUnit.open( QIODevice::ReadOnly );
     QDataStream ifs_scriptUnit( &fileScriptUnit ); 
     
     QString actionUnit = directory + "/Actions.dat";
     QFile fileActionsUnit( actionUnit );
+    if( ! fileActionsUnit.exists() )
+        return -1;
     fileActionsUnit.open( QIODevice::ReadOnly );
     QDataStream ifs_actionsUnit( &fileActionsUnit ); 
     
     
     QString keyUnit = directory + "/Keys.dat";
     QFile fileKeyUnit( keyUnit );
+    if( ! fileKeyUnit.exists() )
+        return -1;
     fileKeyUnit.open( QIODevice::ReadOnly );
     QDataStream ifs_keyUnit( &fileKeyUnit ); 
     
     QString options = directory + "/Options.dat";
     QFile fileOptions( options );
+    if( ! fileOptions.exists() )
+        return -1;
     fileOptions.open( QIODevice::ReadOnly );
     QDataStream ifsOptions( &fileOptions ); 
     
     QString options_2 = directory + "/Host_options2.dat";
     QFile fileOptions_2( options_2 );
+    if( ! fileOptions_2.exists() )
+        return -1;
     fileOptions_2.open(QIODevice::ReadOnly);
     QDataStream ifsOptions_2(&fileOptions_2); 
     

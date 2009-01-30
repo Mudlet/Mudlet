@@ -63,6 +63,11 @@ Host * HostManager::importHost( QString path )
     return mHostPool.importHost( path );
 }
 
+Host * HostManager::loadHostProfile( QString path, int profileHistory )
+{
+    return mHostPool.loadHostProfile( path, profileHistory );
+}
+
 bool HostManager::deleteHost( QString url )
 {
     return mHostPool.deleteHost( url );

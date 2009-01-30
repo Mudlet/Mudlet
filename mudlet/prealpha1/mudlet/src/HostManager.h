@@ -42,13 +42,13 @@ public:
     QList<QString>     getHostNameList() { return mHostPool.getHostNameList(); }
     Host *             getFirstHost(){ return mHostPool.getFirstHost(); }
     Host *             getNextHost( QString LastHost ){ return mHostPool.getNextHost(LastHost); } //get next host key by providing a LastHost
-    bool               addHost( QString url, QString port, QString login, QString pass );
-    bool               deleteHost( QString url );
-    bool               renameHost( QString url );
-    //Host *             getActiveHost(){ return getFirstHost();} //FIXME{ QMutexLocker locker(& mLock); return mpActiveHost; }
+    bool               addHost( QString name, QString port, QString login, QString pass );
+    bool               deleteHost( QString );
+    bool               renameHost( QString );
     Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
     bool               serialize();
 	   bool               restore();
+    Host *             loadHostProfile( QString path, int profileHistory );
     Host *             importHost( QString path );
     
 private:

@@ -109,8 +109,8 @@ Q_OBJECT
 
 public:
    
-                        TConsole( Host *, mudlet * );
-      void              printMessageOnDisplay( QString msg );
+                        TConsole( Host *, bool isDebugConsole );
+      void              print( QString msg );
       void              printOnDisplay(QString  &);
       void              printCommand( QString & );
       void              echoUserWindow( QString & );
@@ -129,6 +129,8 @@ public:
       int               getLineCount();
       void              deleteLine();
       int               getColumnNumber();
+      void              setWrapAt( int pos ){ mWrapAt = pos; }
+      void              setIndentCount( int count ){ mIndentCount = count; }
       void              echo( QString & );
       bool              moveCursor( int x, int y );
       int               select( QString, int numOfMatch = 1 );
@@ -156,7 +158,6 @@ private:
       QString           assemble_html_font_specs();
           
       Host *            mpHost;  
-      mudlet *          mp_Mudlet;
     
       bool              m_pageInitialized;
       QString           mEchoBuffer;
@@ -173,7 +174,12 @@ private:
       int               currentFgColorProperty;
       QString           mFormatSequenceRest;
       int               mCursorHome;
-      
+      QFont             mDisplayFont;
+      QColor            mFgColor;
+      QColor            mBgColor;
+      bool              mIsDebugConsole;
+      int               mWrapAt;
+      int               mIndentCount;
       TBuffer           buffer;
 
 signals:

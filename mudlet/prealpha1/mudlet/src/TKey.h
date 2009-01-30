@@ -48,6 +48,7 @@ public:
     virtual          ~TKey();
     TKey( TKey * parent, Host * pHost ); 
     TKey( QString name, Host * pHost ); 
+    TKey& clone(const TKey& );
     
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
@@ -75,6 +76,7 @@ public:
     bool             registerKey();
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
+    bool             isClone(TKey &b) const;
     
 private:
     

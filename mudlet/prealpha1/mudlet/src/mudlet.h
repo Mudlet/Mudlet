@@ -62,12 +62,12 @@ public:
    void                          clearUserWindow( Host *, QString & ); 
    void                          pasteWindow( Host * pHost, QString name ); 
    void                          userWindowLineWrap( Host * pHost, QString & name, bool on );
+   QString                       readProfileData( QString profile, QString item ); 
     
     
     
-    
-   static QPlainTextEdit *       mpDebugConsole; 
-   static QMdiSubWindow *        mpDebugArea; 
+   static TConsole *             mpDebugConsole; 
+   static QMainWindow *        mpDebugArea; 
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
 
@@ -109,6 +109,7 @@ private:
    void                          readSettings();
    void                          writeSettings();
     
+    Host * mpDefaultHost; 
     
     QQueue<QString> tempLoginQueue;
     QQueue<QString> tempPassQueue;

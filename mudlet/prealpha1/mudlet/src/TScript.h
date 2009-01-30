@@ -50,6 +50,7 @@ public:
     virtual          ~TScript();
     TScript( TScript * parent, Host * pHost ); 
     TScript( QString name, Host * pHost ); 
+    TScript& clone(const TScript& );
     
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
@@ -68,6 +69,7 @@ public:
     void             callEventHandler( QString &, TEvent * );
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()            { QMutexLocker locker(& mLock); return mEventHandlerList; }
+    bool             isClone(TScript &b) const;
     
     
 private:

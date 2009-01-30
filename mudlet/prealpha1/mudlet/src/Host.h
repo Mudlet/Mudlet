@@ -121,11 +121,14 @@ public:
     void               loadKeyUnit( QString hostname );
     void               saveOptions( QString );
     void               loadOptions( QString );
+    void               setIsAutologin( bool b ){ mIsAutologin = b; }
+    bool               isAutologin(){ return mIsAutologin; }
     QString            readProfileData( QString profile, QString item );
     void               writeProfileData( QString profile, QString item, QString what );
     QStringList        getLastBuffer();  
     bool               exportHost( QString );
     bool               importHost( QString );
+    bool               loadHostProfile( QString );
     void               setReplacementCommand( QString );
     void               registerEventHandler( QString, TScript * );
     void               unregisterEventHandler( QString, TScript * );
@@ -206,6 +209,7 @@ private:
     QString            mReplacementCommand;
     QMap<QString, QList<TScript *> > mEventHandlerMap;
     QMap<QString, TEvent *> mEventMap;
+    bool               mIsAutologin;
     
         
     

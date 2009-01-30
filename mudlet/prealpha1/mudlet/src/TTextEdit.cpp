@@ -31,7 +31,7 @@
 #include "TTextEdit.h"
 #include <math.h>
 
-TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH ) 
+TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole ) 
 : QWidget( pW )
 , mpBuffer( pB )
 , mpHost( pH )
@@ -45,15 +45,24 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH )
 , mIsSplitScreen( false )
 , mInversOn( false )
 {
-    mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-    mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );    
-      
+    if( ! isDebugConsole )
+    {
+        mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
+        mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );    
+        mIsDebugConsole = false;
+    }
+    else
+    {
+        initDefaultSettings();
+        mIsDebugConsole = true;
+        mFontHeight = QFontMetrics( mDisplayFont ).height();
+        mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );    
+    }
     mScreenHeight = height() / mFontHeight;
+    //FIXME
     mScreenWidth = 100;//width() / mFontWidth; //TODO: user defined value is much faster than dynamically calculated values 
-                                         //      because we can cut away large side rectangles this way that doent have
-                                         //      to be painted. performance gain is substantial
-    
-    //setMaximumHeight( (mScreenHeight+1) * mFontHeight );
+                                                   //      because we can cut away large side rectangles this way that doent have
+                                                   //      to be painted. performance gain is substantial
     setMouseTracking( true );
     setFocusPolicy( Qt::WheelFocus );
     setAutoFillBackground( false ); //experimental
@@ -63,8 +72,19 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH )
     showNewLines();
 }
 
+void TTextEdit::initDefaultSettings()
+{
+    mFgColor = QColor(255,255,255);
+    mBgColor = QColor(0,0,0);
+    mDisplayFont = QFont("Monospace", 10, QFont::Courier);
+    mCommandLineFont = QFont("Monospace", 10, QFont::Courier);
+    mCommandSeperator = QString(";");
+    mWrapAt = 100;    
+    mWrapIndentCount = 5;
+}
+
 /*
-void TConsole::setScroll(int cursor, int lines)
+void TTextEdit::setScroll(int cursor, int lines)
 {
     disconnect( mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(scrollBarPositionChanged(int)));
     mpScrollBar->setRange( 0, lines - mScreenHeight );
@@ -95,15 +115,24 @@ void TTextEdit::updateScreenView()
 {
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     mScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
-    mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-    mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
+    if( ! mIsDebugConsole )
+    {
+        mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
+        mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
+    }
+    else
+    {
+        mFontHeight = QFontMetrics( mDisplayFont ).height();
+        mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
+    }
     
     //update( visibleRegion().boundingRect() );    
 }
 
 void TTextEdit::showNewLines() 
 {
-    if( ! isAtEndPosition() ) return;
+    if( ! isAtEndPosition() ) 
+        return;
     
     mCursorY = mpBuffer->size()-1;
     
@@ -477,8 +506,11 @@ void TTextEdit::showEvent( QShowEvent * event )
 
 void TTextEdit::resizeEvent( QResizeEvent * event ) 
 {
+    cout<<"TTextEdit::resizeEvent() updateScreenView()"<<endl;
     updateScreenView();    
+    cout << "OK returned"<<endl;    
     QWidget::resizeEvent( event );
+    cout<<" resizeEvent() ende"<<endl;
 }
 
 void TTextEdit::wheelEvent ( QWheelEvent * e ) 

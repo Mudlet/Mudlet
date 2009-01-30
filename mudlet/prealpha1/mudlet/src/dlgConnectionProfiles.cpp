@@ -1,12 +1,12 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
-e *                                                                         *
+ *                                                                         *
  *   This program is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
@@ -39,6 +39,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     abort->setIcon(QIcon(":/icons/icons/dialog-close.png"));
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/icons/icons/dialog-ok-apply.png"));
+    
+    QStringList headerList;
+    headerList << "Name of the MUD" << "Language";
+    mud_list_treewidget->setHeaderLabels( headerList );
+    
     connect( connect_button, SIGNAL(pressed()), this, SLOT(slot_connectToServer()));
     connect( abort, SIGNAL(pressed()), this, SLOT(slot_cancel()));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );
@@ -54,6 +59,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( profiles_tree_widget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
     connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
+    connect( mud_list_treewidget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
+    connect( mud_list_treewidget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
+    
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     connect( this, SIGNAL (finished(int)), this, SLOT (slot_finished(int)));
     
@@ -68,6 +76,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
     mRegularPalette.setColor(QPalette::Base,QColor(255,255,255));
     
+    mReadOnlyPalette.setColor(QPalette::Base,QColor(212,212,212));
+    mReadOnlyPalette.setColor(QPalette::Text,QColor(0,0,192));
+    mReadOnlyPalette.setColor(QPalette::Highlight,QColor(0,0,192));
+    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    
     mOKPalette.setColor(QPalette::Text,QColor(0,0,192));
     mOKPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mOKPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
@@ -78,6 +91,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     mErrorPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
     mErrorPalette.setColor(QPalette::Base,QColor(255,235,235));    
     
+    resize( 698, 419 );
     
     
 }
@@ -132,7 +146,7 @@ void dlgConnectionProfiles::slot_update_url( const QString url )
     {
         QString profile = pItem->text(0);
         QUrl check;
-        check.setHost( url );//, QUrl::StrictMode );            
+        check.setHost( url );         
         if( check.isValid() )
         {
             host_name_entry->setPalette( mOKPalette );
@@ -245,7 +259,7 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
         {
             mCurrentProfileEditName = pItem->text( 0 );
             int row = mProfileList.indexOf( mCurrentProfileEditName );
-            if( (row >= 0) && ( row < mProfileList.size() ) )
+            if( ( row >= 0 ) && ( row < mProfileList.size() ) )
             {
                 mProfileList[row] = name;
                 pItem->setText( 0, name );
@@ -260,6 +274,25 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
                 dir.mkpath( QDir::homePath()+"/.config/mudlet/profiles/"+mUnsavedProfileName );
                 mProfileList << name;
                 pItem->setText( 0, name );
+               
+                if( mNeedsCopyOfProfileName.size() > 0 )
+                {
+                    // special case of a new profile that has to be cloned from
+                    // an existing profile
+                    QString what = QDir::homePath()+"/.config/mudlet/profiles/"+mNeedsCopyOfProfileName;
+                    QString where = QDir::homePath()+"/.config/mudlet/profiles/"+mUnsavedProfileName;
+                    QDir dirFrom = QDir( what );
+                    QStringList entries = dirFrom.entryList();
+                    qDebug()<<"entries="<<entries;
+                    
+                    for( int i=0; i<entries.size(); i++ )
+                    {
+                        QFile file( where + mNeedsCopyOfProfileName+"/"+entries[i] );    
+                        file.copy( where );
+                        qDebug()<<"kopiere von:"<< what+"/"+entries[i] << " nach:"<<where+"/"+entries[i];
+                    }
+                    mNeedsCopyOfProfileName = "";
+                }
                 mSavedNewName = true;
                 mUnsavedProfileName = "";
             }
@@ -290,17 +323,16 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
              
 void dlgConnectionProfiles::slot_showmudlist_clicked ( bool checked )
 {
-    if (checked)
-        mud_treewidget->show();
-    else
-        mud_treewidget->hide();
 }
 
 void dlgConnectionProfiles::slot_addProfile()
 {
     fillout_form();
-    
     welcome_message->hide();
+    
+    requiredArea->show();
+    informationalArea->show();
+    optionalArea->show();
 
     QStringList newname;
     mUnsavedProfileName = tr("new profile name");
@@ -329,6 +361,61 @@ void dlgConnectionProfiles::slot_addProfile()
     profile_name_entry->selectAll();
     
 }
+
+// if the user has chosen to connect to an already loaded profile
+// the old profile will be copied and he has to give a new name for it
+void dlgConnectionProfiles::copy_profile( QString oldProfile )
+{
+    //fillout_form();
+    
+    profile_name_entry->setPalette( mErrorPalette );
+    notificationArea->show();
+    notificationAreaIconLabelWarning->show();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(tr("A profile with the current name has already been loaded. The profile you have chosen will be copied, but you have to find a new name for it. Then press on connect again."));
+    
+    QStringList newname;
+    mUnsavedProfileName = oldProfile;
+    newname << mUnsavedProfileName;
+    
+    QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, newname);
+    if( ! pItem )
+    {
+        return;
+    }
+    mSavedNewName = false;
+    
+    profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
+    profiles_tree_widget->insertTopLevelItem( 0, pItem );    
+    
+    // insert newest entry on top of the list as the general sorting 
+    // is always newest item first -> fillout->form() filters
+    // this is more practical for the user as they use the same profile most of the time
+    
+    profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
+    profiles_tree_widget->setCurrentItem( pItem );
+    profiles_tree_widget->setItemSelected( pItem, true );
+    
+    profile_name_entry->setReadOnly( false );   
+    host_name_entry->setReadOnly( false );
+    port_entry->setReadOnly( false );  
+    
+    profile_name_entry->setFocusPolicy( Qt::StrongFocus );
+    host_name_entry->setFocusPolicy( Qt::StrongFocus );
+    port_entry->setFocusPolicy( Qt::StrongFocus );
+    
+    profile_name_entry->setPalette( mErrorPalette );
+    host_name_entry->setPalette( mErrorPalette );
+    port_entry->setPalette( mErrorPalette );
+    
+    profile_name_entry->setText( mUnsavedProfileName );
+    profile_name_entry->setFocus();
+    profile_name_entry->selectAll();
+    
+}
+
 
 void dlgConnectionProfiles::slot_deleteProfile()
 {
@@ -383,10 +470,53 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
     if( pItem )
     {
         QString profile_name = pItem->text( 0 );
+        QStringList loadedProfiles = HostManager::self()->getHostList();
+        if( loadedProfiles.contains( profile_name ) )
+        {
+            profile_name_entry->setReadOnly( true );   
+            host_name_entry->setReadOnly( true );  
+            port_entry->setReadOnly( true );  
+            
+            profile_name_entry->setFocusPolicy( Qt::NoFocus );
+            host_name_entry->setFocusPolicy( Qt::NoFocus );
+            port_entry->setFocusPolicy( Qt::NoFocus );
+            
+            profile_name_entry->setPalette( mReadOnlyPalette );
+            host_name_entry->setPalette( mReadOnlyPalette );
+            port_entry->setPalette( mReadOnlyPalette );
+            
+            notificationArea->show();
+            notificationAreaIconLabelWarning->hide();
+            notificationAreaIconLabelError->hide();
+            notificationAreaIconLabelInformation->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(tr("This profile is currently loaded. You cant change all parameters on loaded profiles. Disconnect the profile and then do the changes."));
+            
+        }
+        else
+        {
+            profile_name_entry->setReadOnly( false );   
+            host_name_entry->setReadOnly( false );
+            port_entry->setReadOnly( false );  
+            
+            profile_name_entry->setFocusPolicy( Qt::StrongFocus );
+            host_name_entry->setFocusPolicy( Qt::StrongFocus );
+            port_entry->setFocusPolicy( Qt::StrongFocus );
+            
+            profile_name_entry->setPalette( mRegularPalette );
+            host_name_entry->setPalette( mRegularPalette );
+            port_entry->setPalette( mRegularPalette );
+            
+            notificationArea->hide();
+            notificationAreaIconLabelWarning->hide();
+            notificationAreaIconLabelError->hide();
+            notificationAreaIconLabelInformation->hide();
+            notificationAreaMessageBox->hide();
+            notificationAreaMessageBox->setText(tr(""));
+            
+        }
         
-        profile_name_entry->setPalette( mRegularPalette );        
-        host_name_entry->setPalette( mRegularPalette );
-        port_entry->setPalette( mRegularPalette );
+       
         
         profile_name_entry->setText( profile_name );
         QString profile = profile_name;
@@ -444,15 +574,21 @@ void dlgConnectionProfiles::fillout_form()
     
     mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Time);
     
-    if( mProfileList.size() < 1 ) 
+    if( mProfileList.size() < 3 ) 
     {
         welcome_message->show();
-        profiles_tree_widget->hide();
+        requiredArea->hide();
+        informationalArea->hide();
+        optionalArea->hide();
+        resize( 698, 419 );
     }
     else
     {
-        profiles_tree_widget->show();
         welcome_message->hide();
+        
+        requiredArea->show();
+        informationalArea->show();
+        optionalArea->show();
     }
     for( int i=0; i<mProfileList.size(); i++ )
     {
@@ -488,29 +624,38 @@ void dlgConnectionProfiles::slot_cancel()
 void dlgConnectionProfiles::slot_connectToServer()
 {
     QString profile_name = profile_name_entry->text().trimmed();
-    bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
-    Host * pHost = HostManager::self()->getHost( profile_name );
-    if( pHost )
-    {
-        pHost->setUrl( host_name_entry->text().trimmed() );
-        if( autologin_checkBox->isChecked() )
-        {
-            pHost->setPass( character_password_entry->text().trimmed() );
-            pHost->setLogin( login_entry->text().trimmed() );
-        }
-        else
-        {
-            pHost->setPass( "" );
-            pHost->setLogin( "" );
-        }
-    }
-    else 
-        return;
     
     if( profile_name.size() < 1 ) 
         return;
     
-    int historyVersion = profile_history->currentText().toInt();
+    QStringList loadedProfiles = HostManager::self()->getHostList();
+    if( loadedProfiles.contains( profile_name ) )
+    {
+        // copy profile as the same profile is already loaded
+        // show information that he has to select a new name for this copy
+        copy_profile( profile_name );
+        mNeedsCopyOfProfileName = profile_name;
+        return;
+    }
+    
+    // load an old profile if there is any
+    int historyVersion = profile_history->currentIndex();
+    QString hostPath = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name;
+    Host * pHost = HostManager::self()->loadHostProfile( hostPath, historyVersion );
+    
+    if( ! pHost )
+    {
+        bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+        pHost = HostManager::self()->getHost( profile_name );
+    }
+    
+    if( pHost )
+    {
+        pHost->setName( profile_name );
+        pHost->setUrl( host_name_entry->text().trimmed() );
+        pHost->setPass( character_password_entry->text().trimmed() );
+        pHost->setLogin( login_entry->text().trimmed() );
+    }
     emit signal_establish_connection( profile_name, historyVersion );
     QDialog::accept();
 }

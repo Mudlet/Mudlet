@@ -52,6 +52,7 @@ class HostPool
     void                  orderShutDown();
     Host *                getHostFromHostID( int id );
     Host *                importHost( QString path );
+    Host *                loadHostProfile( QString path, int profileHistory );
     
 private:
     

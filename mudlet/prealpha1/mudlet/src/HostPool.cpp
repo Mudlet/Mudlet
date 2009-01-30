@@ -77,12 +77,15 @@ bool HostPool::addNewHost( QString hostname, QString port, QString login, QStrin
     {
         return false;
     }
+    if( hostname.size() < 1 )
+        return false;
     
     int portnumber = 23;
-    if(port!="")
+    if( port.size() >= 1 )
     {
         portnumber = port.toInt();
     }
+    
     int id = createNewHostID();
     Host * pNewHost = new Host( portnumber, hostname, login, pass, id );
     
@@ -106,8 +109,8 @@ QStringList HostPool::getHostList()
    
     QStringList strlist;
     QList<QString> hostList = mHostPool.keys();
-    qDebug()<<"hostList ="<<hostList<<"size="<<hostList.size()<<"keys="<<mHostPool.keys()<<"isEmpty="<<mHostPool.isEmpty()<<"dump="<<mHostPool;
-    if( hostList.size() > 0 ) strlist << hostList;
+    if( hostList.size() > 0 ) 
+        strlist << hostList;
     return strlist;
 }
 
@@ -224,10 +227,8 @@ bool HostPool::serialize( QString directory )
     for( IT it=mHostPool.begin(); it!=mHostPool.end(); it++ )
     {
         ofs << it.key(); //host pool selbst serialisen
-        qDebug()<< "directory="<<directory;
         QString host_directory = directory + it.key();
-        qDebug()<<"host_directory="<<host_directory;
-        if( ! it.value()->serialize() ) //jeder hostname wird ein directory f�r Hostinfo, JobPool und DirData
+        if( ! it.value()->serialize() ) 
         {
             file.close();
             qDebug() << "ERROR: can't serialize " << it.key() << endl;
@@ -280,5 +281,20 @@ Host * HostPool::importHost( QString path )
     mHostPool[pH->getName()] = pH;
     return pH;
 }
+
+Host * HostPool::loadHostProfile( QString path, int profileHistory )
+{
+    QString nothing = "";
+    Host * pH = new Host( 0, nothing, nothing, nothing, createNewHostID() );    
+    
+    if( ! pH->restore( path, profileHistory ) )
+    {
+        return 0;
+    }
+    mHostPool[pH->getName()] = pH;
+    return pH;
+}
+
+
 
 

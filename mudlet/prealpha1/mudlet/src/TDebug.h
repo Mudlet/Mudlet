@@ -32,6 +32,7 @@ class TDebug
 public:
         
     TDebug();
+   ~TDebug();
     TDebug & operator>>( const int ); 
     TDebug & operator<<( const QString & t );
     TDebug & operator<<( const int & t );

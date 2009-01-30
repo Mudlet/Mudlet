@@ -157,6 +157,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget->setRootIsDecorated( false );
     treeWidget->setHost( mpHost );
     treeWidget->header()->hide();
+    treeWidget->setPoint(this);
     
     tree_widget_search_results_main->hide(); // hide search results
     
@@ -172,6 +173,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_alias->setColumnCount(1);
     treeWidget_alias->header()->hide();
     treeWidget_alias->setRootIsDecorated( false );
+    treeWidget_alias->setPoint(this);
     
     treeWidget_actions->hide();
     treeWidget_actions->setHost( mpHost );
@@ -179,6 +181,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated( false );
+    treeWidget_actions->setPoint(this);
     
     treeWidget_timers->hide();
     treeWidget_timers->setHost( mpHost );
@@ -186,6 +189,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated( false );
+    treeWidget_timers->setPoint(this);
     
     treeWidget_keys->hide();
     treeWidget_keys->setHost( mpHost );
@@ -193,6 +197,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated( false );
+    treeWidget_keys->setPoint(this);
     
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost( mpHost );
@@ -200,6 +205,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated( false );
+    treeWidget_scripts->setPoint(this);
     
     
     QAction * viewTriggerAction = new QAction(QIcon(":/icons/icons/tools-wizard.png"), tr("Triggers"), this);
@@ -658,7 +664,30 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
         
     pT->setIsActive( ! pT->isActive() );
     
-    slot_trigger_clicked(pItem, NULL);
+    QIcon icon;
+    if( pT->isFolder() )
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-blue.png")), QIcon::Normal, QIcon::Off);    
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);    
+        }
+    }
+    else
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+        }
+    }
+    pItem->setIcon(0, icon);
 }
 
 void dlgTriggerEditor::slot_timer_toggle_active()
@@ -671,7 +700,30 @@ void dlgTriggerEditor::slot_timer_toggle_active()
     
     pT->setIsActive( ! pT->isActive() );
     
-    slot_timer_clicked(pItem, NULL);
+    QIcon icon;
+    if( pT->isFolder() )
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-green.png")), QIcon::Normal, QIcon::Off);    
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-green-locked.png")), QIcon::Normal, QIcon::Off);    
+        }
+    }
+    else
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+        }
+    }
+    pItem->setIcon(0, icon);
 }
 
 void dlgTriggerEditor::slot_alias_toggle_active()
@@ -795,7 +847,30 @@ void dlgTriggerEditor::slot_key_toggle_active()
     
     pT->setIsActive( ! pT->isActive() );
     
-    slot_key_clicked(pItem, NULL);
+    QIcon icon;
+    if( pT->isFolder() )
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-cyan.png")), QIcon::Normal, QIcon::Off);    
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);    
+        }
+    }
+    else
+    {
+        if( pT->isActive() )
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        }
+        else
+        {
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+        }
+    }
+    pItem->setIcon(0, icon);
 }
 
 
@@ -1155,10 +1230,44 @@ void dlgTriggerEditor::addScript( bool isFolder )
     treeWidget_scripts->setCurrentItem( pNewItem );
 }  
 
-
-
-void dlgTriggerEditor::slot_saveTriggerAfterEdit()
+void dlgTriggerEditor::closeEvent(QCloseEvent *event)
 {
+    switch( mCurrentView )
+    {
+        case cmTriggerView:
+            if (!slot_saveTriggerAfterEdit())
+                event->ignore();
+            break;
+        case cmTimerView:
+            if (!slot_saveTimerAfterEdit())
+                event->ignore();
+            break;
+        case cmAliasView:
+            if (!slot_saveAliasAfterEdit())
+                event->ignore();
+            break;
+        case cmScriptView:
+            if (!slot_saveScriptAfterEdit())
+                event->ignore();
+            break;
+        case cmActionView:
+            if (!slot_saveActionAfterEdit())
+                event->ignore();
+            break;
+        case cmKeysView:
+            if (!slot_saveKeyAfterEdit())
+                event->ignore();
+            break;
+        
+        default:
+            event->ignore();
+            break;
+    }
+}
+
+bool dlgTriggerEditor::slot_saveTriggerAfterEdit(bool ask)
+{
+    bool result = true;
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     mpTriggersMainArea->lineEdit->clear();
     bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
@@ -1197,10 +1306,16 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
     QString script = mpSourceEditorArea->script_scintilla->text();    
     
     QTreeWidgetItem * pItem = treeWidget->currentItem(); 
-    if( pItem )
+
+    if (!pItem)
+        return true;
+
+    if( pItem->parent() )
     {
         int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+        TTrigger * pT2 = mpHost->getTriggerUnit()->getTrigger( triggerID );
+        TTrigger * pT = new TTrigger(pT2->getParent(), mpHost);
+        pT->clone(*pT2);
         if( pT )
         {
             pT->setName( name );
@@ -1232,23 +1347,47 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
+
+            if (!pT->isClone(*pT2))
+            {
+                if (ask)
+                {
+                    QMessageBox::StandardButton ask_result = QMessageBox::question ( this, tr("Trigger was modified"), tr("trigger \"%1\" was modified, do you want to save it?").arg(name), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+                    if (ask_result == QMessageBox::Cancel)
+                        result = false;
+                    else if (ask_result == QMessageBox::Save)
+                        pT2->clone(*pT);
+                } else {
+                    pT2->clone(*pT);
+                }
+            }
             
             pItem->setIcon( 0, icon); 
             pItem->setText( 0, name );
         }
+        delete pT;
     }
     mpTriggerMainAreaEditRegexItem = 0;
+    return result;
 }
 
-void dlgTriggerEditor::slot_saveTimerAfterEdit()
+bool dlgTriggerEditor::slot_saveTimerAfterEdit(bool ask)
 {
+    bool result = true;
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     QTreeWidgetItem * pItem = treeWidget_timers->currentItem(); 
-    if( pItem )
+
+    if (!pItem)
+        return true;
+
+    if( pItem->parent() )
     {
         int timerID = pItem->data(0, Qt::UserRole).toInt();
-        TTimer * pT = mpHost->getTimerUnit()->getTimer( timerID );
+        TTimer * pT2 = mpHost->getTimerUnit()->getTimer( timerID );
+        TTimer * pT = new TTimer(pT2->getParent(), mpHost);
+        pT->clone(*pT2);
         if( pT )
         {
             pT->setName( name );
@@ -1288,15 +1427,33 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
+
+            if (!pT->isClone(*pT2))
+            {
+                if (ask)
+                {
+                    QMessageBox::StandardButton ask_result = QMessageBox::question ( this, tr("Timer was modified"), tr("timer \"%1\" was modified, do you want to save it?").arg(name), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+                    if (ask_result == QMessageBox::Cancel)
+                        result = false;
+                    else if (ask_result == QMessageBox::Save)
+                        pT2->clone(*pT);
+                } else {
+                    pT2->clone(*pT);
+                }
+            }
             
             pItem->setIcon(0, icon); 
             pItem->setText( 0, name );
         }
+        delete pT;
     }
+    return result;
 }
 
-void dlgTriggerEditor::slot_saveAliasAfterEdit()
+bool dlgTriggerEditor::slot_saveAliasAfterEdit(bool ask)
 {
+    bool result = true;
     
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
     QString regex = mpAliasMainArea->pattern_textedit->text();
@@ -1304,10 +1461,15 @@ void dlgTriggerEditor::slot_saveAliasAfterEdit()
     QString command = mpAliasMainArea->pattern_textedit2->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     QTreeWidgetItem * pItem = treeWidget_alias->currentItem(); 
-    if( pItem )
+    if (!pItem)
+        return true;
+
+    if( pItem->parent() )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        TAlias * pT = mpHost->getAliasUnit()->getAlias( triggerID );
+        int aliasID = pItem->data(0, Qt::UserRole).toInt();
+        TAlias * pT2 = mpHost->getAliasUnit()->getAlias( aliasID );
+        TAlias * pT = new TAlias(pT2->getParent(), mpHost);
+        pT->clone(*pT2);
         if( pT )
         {
             pT->setName( name );
@@ -1340,15 +1502,33 @@ void dlgTriggerEditor::slot_saveAliasAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
+
+            if (!pT->isClone(*pT2))
+            {
+                if (ask)
+                {
+                    QMessageBox::StandardButton ask_result = QMessageBox::question ( this, tr("Alias was modified"), tr("alias \"%1\" was modified, do you want to save it?").arg(name), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+                    if (ask_result == QMessageBox::Cancel)
+                        result = false;
+                    else if (ask_result == QMessageBox::Save)
+                        pT2->clone(*pT);
+                } else {
+                    pT2->clone(*pT);
+                }
+            }
             
             pItem->setIcon( 0, icon); 
             pItem->setText( 0, name );
         }
+        delete pT;
     }
+    return result;
 }
 
-void dlgTriggerEditor::slot_saveActionAfterEdit()
+bool dlgTriggerEditor::slot_saveActionAfterEdit(bool ask)
 {
+    bool result = true;
     
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     //QString regex = mpAliasMainArea->pattern_textedit->toPlainText();
@@ -1356,10 +1536,16 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
     QString script = mpSourceEditorArea->script_scintilla->text();    
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     QTreeWidgetItem * pItem = treeWidget_actions->currentItem(); 
-    if( pItem )
+
+    if (!pItem)
+        return true;
+
+    if( pItem->parent() )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        TAction * pT = mpHost->getActionUnit()->getAction( triggerID );
+        int actionID = pItem->data(0, Qt::UserRole).toInt();
+        TAction * pT2 = mpHost->getActionUnit()->getAction( actionID );
+        TAction * pT = new TAction(pT2->getParent(), mpHost);
+        pT->clone(*pT2);
         if( pT )
         {
             pT->setName( name );
@@ -1392,17 +1578,34 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
+
+            if (!pT->isClone(*pT2))
+            {
+                if (ask)
+                {
+                    QMessageBox::StandardButton ask_result = QMessageBox::question ( this, tr("Action was modified"), tr("action \"%1\" was modified, do you want to save it?").arg(name), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+                    if (ask_result == QMessageBox::Cancel)
+                        result = false;
+                    else if (ask_result == QMessageBox::Save)
+                        pT2->clone(*pT);
+                } else {
+                    pT2->clone(*pT);
+                }
+            }
             
             pItem->setIcon( 0, icon); 
             pItem->setText( 0, name );
         }
+        delete pT;
     }
     mpHost->getActionUnit()->updateToolbar();
+    return result;
 }
 
-
-void dlgTriggerEditor::slot_saveScriptAfterEdit()
+bool dlgTriggerEditor::slot_saveScriptAfterEdit(bool ask)
 {
+    bool result = true;
     QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     
@@ -1420,10 +1623,16 @@ void dlgTriggerEditor::slot_saveScriptAfterEdit()
     }
     
     QTreeWidgetItem * pItem = treeWidget_scripts->currentItem(); 
-    if( pItem )
+
+    if (!pItem)
+        return true;
+
+    if( pItem->parent() )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        TScript * pT = mpHost->getScriptUnit()->getScript( triggerID );
+        int scriptID = pItem->data(0, Qt::UserRole).toInt();
+        TScript * pT2 = mpHost->getScriptUnit()->getScript( scriptID );
+        TScript * pT = new TScript(pT2->getParent(), mpHost);
+        pT->clone(*pT2);
         if( pT )
         {
             pT->setName( name );
@@ -1455,15 +1664,33 @@ void dlgTriggerEditor::slot_saveScriptAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
+
+            if (!pT->isClone(*pT2))
+            {
+                if (ask)
+                {
+                    QMessageBox::StandardButton ask_result = QMessageBox::question ( this, tr("Script was modified"), tr("script \"%1\" was modified, do you want to save it?").arg(name), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+                    if (ask_result == QMessageBox::Cancel)
+                        result = false;
+                    else if (ask_result == QMessageBox::Save)
+                        pT2->clone(*pT);
+                } else {
+                    pT2->clone(*pT);
+                }
+            }
             
             pItem->setIcon( 0, icon); 
             pItem->setText( 0, name );
         }
+        delete pT;
     }
+    return result;
 }
 
-void dlgTriggerEditor::slot_saveKeyAfterEdit()
+bool dlgTriggerEditor::slot_saveKeyAfterEdit(bool ask)
 {
+    bool result = true;
     
     QString name = mpKeysMainArea->lineEdit_name->text();
     if( name.size() < 1 )
@@ -1473,10 +1700,16 @@ void dlgTriggerEditor::slot_saveKeyAfterEdit()
     QString command = mpKeysMainArea->lineEdit_command->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     QTreeWidgetItem * pItem = treeWidget_keys->currentItem(); 
-    if( pItem )
+
+    if (!pItem)
+        return true;
+
+    if( pItem->parent() )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        TKey * pT = mpHost->getKeyUnit()->getKey( triggerID );
+        int keyID = pItem->data(0, Qt::UserRole).toInt();
+        TKey * pT2 = mpHost->getKeyUnit()->getKey( keyID );
+        TKey * pT = new TKey(pT2->getParent(), mpHost);
+        pT->clone(*pT2);
         if( pT )
         {
             pItem->setText(0,name );
@@ -1508,11 +1741,28 @@ void dlgTriggerEditor::slot_saveKeyAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
+
+            if (!pT->isClone(*pT2))
+            {
+                if (ask)
+                {
+                    QMessageBox::StandardButton ask_result = QMessageBox::question ( this, tr("Key was modified"), tr("key \"%1\" was modified, do you want to save it?").arg(name), QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+                    if (ask_result == QMessageBox::Cancel)
+                        result = false;
+                    else if (ask_result == QMessageBox::Save)
+                        pT2->clone(*pT);
+                } else {
+                    pT2->clone(*pT);
+                }
+            }
             
             pItem->setIcon( 0, icon); 
             pItem->setText( 0, name );
         }
+        delete pT;
     }
+    return result;
 }
 
 
@@ -2486,6 +2736,8 @@ void dlgTriggerEditor::slot_show_search_area()
 
 void dlgTriggerEditor::slot_show_timers()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmTimerView;
@@ -2522,6 +2774,8 @@ void dlgTriggerEditor::slot_show_timers()
 
 void dlgTriggerEditor::slot_show_triggers()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmTriggerView;
@@ -2556,6 +2810,8 @@ void dlgTriggerEditor::slot_show_triggers()
 
 void dlgTriggerEditor::slot_show_scripts()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmScriptView;
@@ -2589,6 +2845,8 @@ void dlgTriggerEditor::slot_show_scripts()
 
 void dlgTriggerEditor::slot_show_keys()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmKeysView;
@@ -2623,6 +2881,8 @@ void dlgTriggerEditor::slot_show_keys()
 
 void dlgTriggerEditor::slot_show_aliases()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmAliasView;
@@ -2659,6 +2919,8 @@ void dlgTriggerEditor::slot_show_aliases()
 
 void dlgTriggerEditor::slot_show_actions()
 {
+    if (!saved_ok())
+        return;
     
     mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmActionView;
@@ -2693,27 +2955,56 @@ void dlgTriggerEditor::slot_show_actions()
     slot_action_clicked( treeWidget_actions->currentItem(), NULL);
 }
 
+bool dlgTriggerEditor::saved_ok()
+{
+    bool result = true;
+    switch( mCurrentView )
+    {
+        case cmTriggerView:
+            result = mpTriggersMainArea->isVisible() ? slot_saveTriggerAfterEdit() : true;
+            break;
+        case cmTimerView:
+            result = mpTimersMainArea->isVisible() ? slot_saveTimerAfterEdit() : true;
+            break;
+        case cmAliasView:
+            result = mpAliasMainArea->isVisible() ? slot_saveAliasAfterEdit() : true;
+            break;
+        case cmScriptView:
+            result = mpScriptsMainArea->isVisible() ? slot_saveScriptAfterEdit() : true;
+            break;
+        case cmActionView:
+            result = mpActionsMainArea->isVisible() ? slot_saveActionAfterEdit() : true;
+            break;
+        case cmKeysView:
+            result = mpKeysMainArea->isVisible() ? slot_saveKeyAfterEdit() : true;
+            break;
+        default:
+            result = true;
+    }
+    return result;
+}
+
 void dlgTriggerEditor::slot_save_edit()
 {
     switch( mCurrentView )
     {
         case cmTriggerView:
-            slot_saveTriggerAfterEdit();
+            slot_saveTriggerAfterEdit(false);
             break;
         case cmTimerView:
-            slot_saveTimerAfterEdit();
+            slot_saveTimerAfterEdit(false);
             break;
         case cmAliasView:
-            slot_saveAliasAfterEdit();
+            slot_saveAliasAfterEdit(false);
             break;
         case cmScriptView:
-            slot_saveScriptAfterEdit();
+            slot_saveScriptAfterEdit(false);
             break;
         case cmActionView:
-            slot_saveActionAfterEdit();
+            slot_saveActionAfterEdit(false);
             break;
         case cmKeysView:
-            slot_saveKeyAfterEdit();
+            slot_saveKeyAfterEdit(false);
             break;
         
         default: qWarning()<<"ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
