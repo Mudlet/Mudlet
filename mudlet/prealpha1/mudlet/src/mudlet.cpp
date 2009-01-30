@@ -278,7 +278,7 @@ void mudlet::addSubWindow( TConsole* pConsole )
 
 void mudlet::closeEvent(QCloseEvent *event)
 {
-    delete mpDebugConsole;
+    mpDebugConsole->close();
     writeSettings();
     event->accept();
 }
