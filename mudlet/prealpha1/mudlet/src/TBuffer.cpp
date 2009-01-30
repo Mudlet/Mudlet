@@ -83,16 +83,21 @@ TBuffer::TBuffer( Host * pH )
     mLastLine = buffer.size()-1;
 }
 
+
+
 void TBuffer::handleNewLine()
 {
     int y = lineBuffer.size();
     if( y > 0 )
     {
-        if( lineBuffer[y-1].size() == 1 )
+        if( lineBuffer[y-1].size() > 1 )
         {
-            lineBuffer[y-1].chop( 1 );
-            delete buffer[y-1][0];
-            buffer[y-1].pop_back();    
+            if( lineBuffer[y-1][0] == cLF )
+            {
+                lineBuffer[y-1].remove( 0, 1 );
+                delete buffer[y-1][0];
+                buffer[y-1].pop_back();    
+            }
         }
     }
     std::deque<TChar *> newLine;

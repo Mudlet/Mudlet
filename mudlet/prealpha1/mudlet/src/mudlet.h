@@ -51,8 +51,9 @@ public:
                                 ~mudlet();
    static                        mudlet * self();
    void                          addSubWindow(TConsole* p); 
-   void                          printMessageOnDisplay( Host * pH, QString s ); 
-   void                          printOnDisplay( Host * pH, QString s );
+   void                          printSystemMessage( Host * pH, QString & s ); 
+   void                          printOnDisplay( Host * pH, QString & s );
+   void                          print( Host *, QString & );
    void                          addConsoleForNewHost( Host * pH );
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * ); 

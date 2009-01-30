@@ -469,7 +469,8 @@ bool Host::restore( QString directory, int selectedHistoryVersion )
         }
     }
     qDebug()<<"\n---> [ RESTORE FAILED ] profile directory:"<<directory<<"\n";
-    return false; //this is a new profile
+    return 
+        false; //this is a new profile
 }
 
 int Host::loadProfileHistory( QString directory, int restoreProfileNumber )

@@ -936,10 +936,45 @@ void TConsole::echo( QString & msg )
     //  mEchoBuffer.append( msg );    
 }
 
-void TConsole::print( QString msg )
+void TConsole::print( const char * msg )
 {
     QColor fgColor = QColor(0,0,0);
     QColor bgColor = QColor(255,255,255);
+    int lineBeforeNewContent = buffer.getLastLineNumber();
+    buffer.addText( msg, 
+                    fgColor,
+                    bgColor, 
+                    false, 
+                    false,
+                    false );
+    buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount );
+    console->showNewLines();
+}
+
+void TConsole::print( QString & msg )
+{
+    QColor fgColor = QColor(0,0,0);
+    QColor bgColor = QColor(255,255,255);
+    int lineBeforeNewContent = buffer.getLastLineNumber();
+    buffer.addText( msg, 
+                    fgColor,
+                    bgColor, 
+                    false, 
+                    false,
+                    false );
+    buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount );
+    console->showNewLines();
+}
+
+void TConsole::printSystemMessage( QString & msg )
+{
+    QColor fgColor = QColor(255,0,0);
+    
+    QColor bgColor;
+    if( mIsDebugConsole ) 
+        bgColor = mBgColor;
+    else
+        bgColor = mpHost->mBgColor;
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.addText( msg, 
                     fgColor,

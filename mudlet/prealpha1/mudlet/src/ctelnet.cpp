@@ -577,7 +577,7 @@ void cTelnet::postMessage( QString msg )
 #ifdef DEBUG 
     qDebug() << " POSTING to message to GUI: " << msg;
 #endif
-    mudlet::self()->printMessageOnDisplay( mpHost, msg );
+    mudlet::self()->printSystemMessage( mpHost, msg );
 }
 
 //forward data for further processing

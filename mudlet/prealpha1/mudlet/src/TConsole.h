@@ -110,7 +110,9 @@ Q_OBJECT
 public:
    
                         TConsole( Host *, bool isDebugConsole );
-      void              print( QString msg );
+      void              print( QString & msg );
+      void              print( const char * );
+      void              printSystemMessage( QString & msg );
       void              printOnDisplay(QString  &);
       void              printCommand( QString & );
       void              echoUserWindow( QString & );
