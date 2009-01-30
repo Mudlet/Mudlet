@@ -198,4 +198,19 @@ bool TScript::restore( QDataStream & ifs, bool initMode )
     return ret;
 }
 
+TScript& TScript::clone(const TScript& b)
+{
+    mName = b.mName;
+    mScript = b.mScript;
+    mIsActive = b.mIsActive;
+    mIsFolder = b.mIsFolder;
+    mpHost = b.mpHost;
+    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
+    mEventHandlerList = b.mEventHandlerList;
+    return *this;
+}
 
+bool TScript::isClone(TScript &b) const {
+    return (mName == b.mName && mScript == b.mScript && mIsActive == b.mIsActive && mIsFolder == b.mIsFolder && mpHost == b.mpHost && \
+        mNeedsToBeCompiled == b.mNeedsToBeCompiled && mEventHandlerList == b.mEventHandlerList);
+}

@@ -50,6 +50,7 @@ public:
     virtual         ~TTimer();
                      TTimer( TTimer * parent, Host * pHost ); 
                      TTimer( QString name, QTime time, Host * pHost ); 
+                     TTimer& clone(const TTimer& );
     
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
@@ -77,6 +78,7 @@ public:
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     void             slot_timer_fires();
+    bool             isClone(TTimer &b) const;
     
 private:
     

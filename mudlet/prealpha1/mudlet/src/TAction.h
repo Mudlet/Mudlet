@@ -52,6 +52,7 @@ public:
     virtual          ~TAction();
                      TAction( TAction * parent, Host * pHost ); 
                      TAction( QString name, Host * pHost ); 
+                     TAction& clone(const TAction& );
     
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
@@ -74,6 +75,7 @@ public:
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     void             insertActions( mudlet *, QToolBar *, QMenu * );
+    bool             isClone(TAction &b) const;
     
 private:
     

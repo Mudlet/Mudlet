@@ -74,12 +74,12 @@ public slots:
     void                        slot_export();
     void                        slot_import();
     void                        slot_debug_mode();
-    void                        slot_saveTriggerAfterEdit();
-    void                        slot_saveTimerAfterEdit();
-    void                        slot_saveScriptAfterEdit();
-    void                        slot_saveAliasAfterEdit();
-    void                        slot_saveActionAfterEdit();
-    void                        slot_saveKeyAfterEdit();
+    bool                        slot_saveTriggerAfterEdit(bool ask = true);
+    bool                        slot_saveTimerAfterEdit(bool ask = true);
+    bool                        slot_saveScriptAfterEdit(bool ask = true);
+    bool                        slot_saveAliasAfterEdit(bool ask = true);
+    bool                        slot_saveActionAfterEdit(bool ask = true);
+    bool                        slot_saveKeyAfterEdit(bool ask = true);
     void                        slot_show_timers();
     void                        slot_show_triggers();
     void                        slot_show_scripts();
@@ -136,6 +136,7 @@ public slots:
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
     void                        slot_grab_key();
     bool                        event( QEvent * event );
+    void                        closeEvent(QCloseEvent *event);
     void                        grab_key_callback( int key, int modifier );
  
     
@@ -190,6 +191,7 @@ private:
     bool                        mIsGrabKey;
     QsciDocument                mDocument;
     Host *                      mpHost;
+    bool                        saved_ok();
 };
 
 #endif

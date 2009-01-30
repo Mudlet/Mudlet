@@ -49,6 +49,7 @@ public:
     virtual          ~TAlias();
     TAlias( TAlias * parent, Host * pHost ); 
     TAlias( QString name, Host * pHost ); 
+    TAlias& clone(const TAlias& );
     
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
@@ -68,6 +69,7 @@ public:
     bool             registerAlias();
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
+    bool             isClone(TAlias &b) const;
     
 private:
     
