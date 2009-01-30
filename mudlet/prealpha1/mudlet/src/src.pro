@@ -2,9 +2,9 @@
 QT += webkit \
  network 
 
-
-unix : LIBS += -lqscintilla2 \
-	-llua5.1
+unix : LIBS += -lqscintilla2
+unix : CONFIG += link_pkgconfig
+unix : PKGCONFIG += lua
 
 win32 : LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release -lqscintilla2 \
  -Lc:\lua-5.1.4\src -llua51 
