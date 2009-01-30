@@ -640,7 +640,8 @@ void dlgConnectionProfiles::slot_connectToServer()
     
     // load an old profile if there is any
     int historyVersion = profile_history->currentIndex();
-    
+    if( historyVersion == -1 )
+        historyVersion = 0;
     QString hostPath = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name;
     Host * pHost = HostManager::self()->loadHostProfile( hostPath, historyVersion );
     
