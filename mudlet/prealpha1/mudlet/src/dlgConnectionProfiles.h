@@ -62,6 +62,7 @@ public slots:
     void slot_update_autologin( int state );    
     void slot_connectToServer();
     void slot_cancel();
+    void slot_copy_profile();
     
     
 private:

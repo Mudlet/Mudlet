@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>698</width>
-    <height>605</height>
+    <height>634</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -1999,7 +1999,7 @@
            <property name="minimumSize" >
             <size>
              <width>348</width>
-             <height>140</height>
+             <height>120</height>
             </size>
            </property>
            <property name="sizeIncrement" >
@@ -2057,7 +2057,7 @@
          <item>
           <widget class="QWidget" native="1" name="profileAdminArea" >
            <property name="sizePolicy" >
-            <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+            <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -2065,22 +2065,16 @@
            <property name="minimumSize" >
             <size>
              <width>0</width>
-             <height>35</height>
+             <height>50</height>
             </size>
            </property>
            <property name="maximumSize" >
             <size>
              <width>16777215</width>
-             <height>35</height>
+             <height>16777215</height>
             </size>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_4" >
-            <property name="spacing" >
-             <number>9</number>
-            </property>
-            <property name="margin" >
-             <number>5</number>
-            </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_5" >
             <item>
              <spacer name="horizontalSpacer_4" >
               <property name="orientation" >
@@ -2097,25 +2091,25 @@
             <item>
              <widget class="QPushButton" name="remove_profile_button" >
               <property name="sizePolicy" >
-               <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+               <sizepolicy vsizetype="Preferred" hsizetype="Fixed" >
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize" >
                <size>
-                <width>127</width>
+                <width>0</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize" >
                <size>
-                <width>127</width>
-                <height>25</height>
+                <width>16777215</width>
+                <height>16777215</height>
                </size>
               </property>
               <property name="text" >
-               <string>Remove Profile</string>
+               <string>Remove</string>
               </property>
               <property name="icon" >
                <iconset resource="../application.qrc" >
@@ -2124,27 +2118,56 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="new_profile_button" >
+             <widget class="QPushButton" name="copy_profile_button" >
               <property name="sizePolicy" >
-               <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+               <sizepolicy vsizetype="Preferred" hsizetype="Fixed" >
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize" >
                <size>
-                <width>127</width>
+                <width>0</width>
                 <height>25</height>
                </size>
               </property>
               <property name="maximumSize" >
                <size>
-                <width>127</width>
-                <height>25</height>
+                <width>16777215</width>
+                <height>16777215</height>
                </size>
               </property>
               <property name="text" >
-               <string>New Profile</string>
+               <string>Copy</string>
+              </property>
+              <property name="icon" >
+               <iconset resource="../application.qrc" >
+                <normaloff>:/icons/icons/list-add_small.png</normaloff>:/icons/icons/list-add_small.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="new_profile_button" >
+              <property name="sizePolicy" >
+               <sizepolicy vsizetype="Preferred" hsizetype="Fixed" >
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize" >
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize" >
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text" >
+               <string>New</string>
               </property>
               <property name="icon" >
                <iconset resource="../application.qrc" >
@@ -2153,9 +2176,6 @@
              </widget>
             </item>
            </layout>
-           <zorder>remove_profile_button</zorder>
-           <zorder>new_profile_button</zorder>
-           <zorder>horizontalSpacer_4</zorder>
           </widget>
          </item>
          <item>
@@ -2172,54 +2192,27 @@
              <height>30</height>
             </size>
            </property>
-           <widget class="QLabel" name="label_11" >
-            <property name="geometry" >
-             <rect>
-              <x>6</x>
-              <y>4</y>
-              <width>325</width>
-              <height>22</height>
-             </rect>
+           <layout class="QGridLayout" name="gridLayout_6" >
+            <property name="margin" >
+             <number>0</number>
             </property>
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+            <property name="spacing" >
+             <number>0</number>
             </property>
-            <property name="text" >
-             <string>Here is a list of nice MUDs with ready made profiles:</string>
-            </property>
-           </widget>
-           <widget class="QWidget" native="1" name="widget_9" >
-            <property name="geometry" >
-             <rect>
-              <x>0</x>
-              <y>0</y>
-              <width>271</width>
-              <height>25</height>
-             </rect>
-            </property>
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize" >
-             <size>
-              <width>0</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize" >
-             <size>
-              <width>16777215</width>
-              <height>25</height>
-             </size>
-            </property>
-            <layout class="QGridLayout" name="gridLayout" />
-           </widget>
+            <item row="0" column="0" >
+             <widget class="QLabel" name="label_11" >
+              <property name="sizePolicy" >
+               <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text" >
+               <string>Here is a list of nice MUDs with ready made profiles:</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
          <item>
@@ -2326,7 +2319,7 @@
            </property>
            <property name="minimumSize" >
             <size>
-             <width>0</width>
+             <width>350</width>
              <height>140</height>
             </size>
            </property>
@@ -2340,19 +2333,18 @@
             <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
 &lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
 p, li { white-space: pre-wrap; }
-&lt;/style>&lt;/head>&lt;body style=" font-family:'DejaVu Sans'; font-size:9pt; font-weight:400; font-style:normal;">
+&lt;/style>&lt;/head>&lt;body style=" font-family:'Sans Serif'; font-size:10pt; font-weight:400; font-style:normal;">
 &lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:8pt;">&lt;span style=" font-size:16pt; font-weight:600;">Welcome to Mudlet!&lt;/span>&lt;/p>
 &lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:16pt;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">&lt;span style=" font-weight:600;">Click on one of the MUDs on the list below to play.&lt;/span>&lt;/p>
-&lt;p align="center" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">If you want to play on a server that is not on the list, click on the &lt;img src=":/icons/icons/list-add_small.png" />&lt;span style=" font-size:8pt; color:#aa0000;"> Create New Profile&lt;/span> button below and create your own profile, and fill in the &lt;span style=" font-style:italic;">Profile Name&lt;/span>, &lt;span style=" font-style:italic;">Host&lt;/span>, and &lt;span style=" font-style:italic;">Port&lt;/span> fields in the &lt;span style=" font-style:italic;">required &lt;/span>area. &lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">You can ignore the fields listed under &lt;span style=" font-style:italic;">optional&lt;/span> and &lt;span style=" font-style:italic;">informational&lt;/span>.&lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;">&lt;span style=" font-weight:600;">After that, click Connect to play.&lt;/span>&lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt; font-weight:600;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt; font-weight:600;">&lt;span style=" font-weight:400;">Have Fun!&lt;/span>&lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt; font-weight:600;">&lt;/p>
-&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt; font-weight:600;">The Mudlet Team&lt;/p>&lt;/body>&lt;/html></string>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;span style=" font-weight:600;">Click on one of the MUDs on the list below to play.&lt;/span>&lt;/p>
+&lt;p align="center" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">If you want to play on a server that is not on the list, click on the &lt;img src=":/icons/icons/list-add_small.png" />&lt;span style=" font-size:8pt; color:#aa0000;"> Create New Profile&lt;/span> button on your left, create your own profile, and fill in the &lt;span style=" font-style:italic;">Profile Name&lt;/span>, &lt;span style=" font-style:italic;">Host&lt;/span>, and &lt;span style=" font-style:italic;">Port&lt;/span> fields in the R&lt;span style=" font-style:italic;">equired &lt;/span>area. &lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;span style=" font-weight:600;">After that, click Connect to play.&lt;/span>&lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">&lt;span style=" font-weight:400;">Have fun!&lt;/span>&lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">&lt;/p>
+&lt;p align="right" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">- The Mudlet Team&lt;/p>&lt;/body>&lt;/html></string>
            </property>
            <property name="openLinks" >
             <bool>false</bool>
@@ -2451,193 +2443,141 @@ p, li { white-space: pre-wrap; }
            <property name="autoFillBackground" >
             <bool>true</bool>
            </property>
-           <widget class="QLabel" name="label_8" >
-            <property name="geometry" >
-             <rect>
-              <x>8</x>
-              <y>86</y>
-              <width>97</width>
-              <height>17</height>
-             </rect>
-            </property>
-            <property name="font" >
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-              <underline>false</underline>
-             </font>
-            </property>
-            <property name="text" >
-             <string>Profile history:</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="port_entry" >
-            <property name="geometry" >
-             <rect>
-              <x>284</x>
-              <y>56</y>
-              <width>50</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="minimumSize" >
-             <size>
-              <width>50</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="maximumSize" >
-             <size>
-              <width>50</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text" >
-             <string/>
-            </property>
-            <property name="maxLength" >
-             <number>32767</number>
-            </property>
-            <property name="echoMode" >
-             <enum>QLineEdit::Normal</enum>
-            </property>
-            <property name="cursorPosition" >
-             <number>0</number>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_9" >
-            <property name="geometry" >
-             <rect>
-              <x>8</x>
-              <y>106</y>
-              <width>97</width>
-              <height>17</height>
-             </rect>
-            </property>
-            <property name="text" >
-             <string>Load profile:</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="profile_name_entry" >
-            <property name="geometry" >
-             <rect>
-              <x>110</x>
-              <y>30</y>
-              <width>225</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="readOnly" >
-             <bool>false</bool>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_2" >
-            <property name="geometry" >
-             <rect>
-              <x>8</x>
-              <y>54</y>
-              <width>97</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="font" >
-             <font>
-              <underline>false</underline>
-             </font>
-            </property>
-            <property name="text" >
-             <string>Server address:</string>
-            </property>
-           </widget>
-           <widget class="QComboBox" name="profile_history" >
-            <property name="geometry" >
-             <rect>
-              <x>110</x>
-              <y>100</y>
-              <width>225</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <item>
-             <property name="text" >
-              <string>load newest profile</string>
-             </property>
+           <layout class="QGridLayout" name="gridLayout" >
+            <item row="0" column="0" >
+             <widget class="QLabel" name="label_6" >
+              <property name="font" >
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+                <underline>false</underline>
+               </font>
+              </property>
+              <property name="text" >
+               <string>Required:</string>
+              </property>
+             </widget>
             </item>
-            <item>
-             <property name="text" >
-              <string>load oldest profile</string>
-             </property>
+            <item row="1" column="0" >
+             <widget class="QLabel" name="label" >
+              <property name="font" >
+               <font>
+                <weight>50</weight>
+                <bold>false</bold>
+                <underline>false</underline>
+               </font>
+              </property>
+              <property name="text" >
+               <string>Profile name:</string>
+              </property>
+             </widget>
             </item>
-           </widget>
-           <widget class="QLineEdit" name="host_name_entry" >
-            <property name="geometry" >
-             <rect>
-              <x>110</x>
-              <y>56</y>
-              <width>135</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="minimumSize" >
-             <size>
-              <width>100</width>
-              <height>0</height>
-             </size>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label" >
-            <property name="geometry" >
-             <rect>
-              <x>8</x>
-              <y>32</y>
-              <width>76</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="font" >
-             <font>
-              <weight>50</weight>
-              <bold>false</bold>
-              <underline>false</underline>
-             </font>
-            </property>
-            <property name="text" >
-             <string>Profile name:</string>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_3" >
-            <property name="geometry" >
-             <rect>
-              <x>250</x>
-              <y>56</y>
-              <width>29</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="text" >
-             <string>Port:</string>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_6" >
-            <property name="geometry" >
-             <rect>
-              <x>8</x>
-              <y>4</y>
-              <width>76</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="font" >
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-              <underline>false</underline>
-             </font>
-            </property>
-            <property name="text" >
-             <string>Required:</string>
-            </property>
-           </widget>
+            <item row="1" column="1" colspan="3" >
+             <widget class="QLineEdit" name="profile_name_entry" >
+              <property name="readOnly" >
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0" >
+             <widget class="QLabel" name="label_2" >
+              <property name="font" >
+               <font>
+                <underline>false</underline>
+               </font>
+              </property>
+              <property name="text" >
+               <string>Server address:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1" >
+             <widget class="QLineEdit" name="host_name_entry" >
+              <property name="minimumSize" >
+               <size>
+                <width>100</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2" >
+             <widget class="QLabel" name="label_3" >
+              <property name="text" >
+               <string>Port:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="3" >
+             <widget class="QLineEdit" name="port_entry" >
+              <property name="minimumSize" >
+               <size>
+                <width>50</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize" >
+               <size>
+                <width>50</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text" >
+               <string/>
+              </property>
+              <property name="maxLength" >
+               <number>32767</number>
+              </property>
+              <property name="echoMode" >
+               <enum>QLineEdit::Normal</enum>
+              </property>
+              <property name="cursorPosition" >
+               <number>0</number>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0" >
+             <widget class="QLabel" name="label_8" >
+              <property name="font" >
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+                <underline>false</underline>
+               </font>
+              </property>
+              <property name="text" >
+               <string>Profile history:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0" >
+             <widget class="QLabel" name="label_9" >
+              <property name="text" >
+               <string>Load profile:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1" colspan="3" >
+             <widget class="QComboBox" name="profile_history" >
+              <property name="minimumSize" >
+               <size>
+                <width>0</width>
+                <height>24</height>
+               </size>
+              </property>
+              <item>
+               <property name="text" >
+                <string>load newest profile</string>
+               </property>
+              </item>
+              <item>
+               <property name="text" >
+                <string>load oldest profile</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
          <item>
@@ -2730,106 +2670,72 @@ p, li { white-space: pre-wrap; }
            <property name="autoFillBackground" >
             <bool>true</bool>
            </property>
-           <widget class="QLineEdit" name="character_password_entry" >
-            <property name="geometry" >
-             <rect>
-              <x>110</x>
-              <y>54</y>
-              <width>225</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="toolTip" >
-             <string>Characters password. Note that the password isn't encrypted in storage</string>
-            </property>
-            <property name="echoMode" >
-             <enum>QLineEdit::Password</enum>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_4" >
-            <property name="geometry" >
-             <rect>
-              <x>10</x>
-              <y>26</y>
-              <width>96</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="text" >
-             <string>Character name:</string>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_5" >
-            <property name="geometry" >
-             <rect>
-              <x>10</x>
-              <y>54</y>
-              <width>96</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="text" >
-             <string>Password:</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="login_entry" >
-            <property name="geometry" >
-             <rect>
-              <x>110</x>
-              <y>26</y>
-              <width>225</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="toolTip" >
-             <string>The characters name</string>
-            </property>
-            <property name="echoMode" >
-             <enum>QLineEdit::Normal</enum>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_10" >
-            <property name="geometry" >
-             <rect>
-              <x>10</x>
-              <y>4</y>
-              <width>69</width>
-              <height>22</height>
-             </rect>
-            </property>
-            <property name="font" >
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-              <underline>false</underline>
-             </font>
-            </property>
-            <property name="toolTip" >
-             <string>If you'd like to enable auto-login, enter your character name and password here</string>
-            </property>
-            <property name="text" >
-             <string>Optional:</string>
-            </property>
-           </widget>
-           <widget class="QCheckBox" name="autologin_checkBox" >
-            <property name="geometry" >
-             <rect>
-              <x>10</x>
-              <y>82</y>
-              <width>173</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="toolTip" >
-             <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
-            </property>
-            <property name="layoutDirection" >
-             <enum>Qt::LeftToRight</enum>
-            </property>
-            <property name="text" >
-             <string>Auto-connect on startup</string>
-            </property>
-           </widget>
+           <layout class="QGridLayout" name="gridLayout_5" >
+            <item row="0" column="0" >
+             <widget class="QLabel" name="label_10" >
+              <property name="font" >
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+                <underline>false</underline>
+               </font>
+              </property>
+              <property name="toolTip" >
+               <string>If you'd like to enable auto-login, enter your character name and password here</string>
+              </property>
+              <property name="text" >
+               <string>Optional:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1" >
+             <widget class="QLineEdit" name="login_entry" >
+              <property name="toolTip" >
+               <string>The characters name</string>
+              </property>
+              <property name="echoMode" >
+               <enum>QLineEdit::Normal</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0" >
+             <widget class="QLabel" name="label_5" >
+              <property name="text" >
+               <string>Password:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1" >
+             <widget class="QLineEdit" name="character_password_entry" >
+              <property name="toolTip" >
+               <string>Characters password. Note that the password isn't encrypted in storage</string>
+              </property>
+              <property name="echoMode" >
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0" colspan="2" >
+             <widget class="QCheckBox" name="autologin_checkBox" >
+              <property name="toolTip" >
+               <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
+              </property>
+              <property name="layoutDirection" >
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text" >
+               <string>Auto-connect on startup</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0" >
+             <widget class="QLabel" name="label_4" >
+              <property name="text" >
+               <string>Character name:</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
          <item>
@@ -2924,32 +2830,28 @@ p, li { white-space: pre-wrap; }
                 <height>25</height>
                </size>
               </property>
-              <widget class="QLineEdit" name="website_entry" >
-               <property name="geometry" >
-                <rect>
-                 <x>60</x>
-                 <y>2</y>
-                 <width>265</width>
-                 <height>22</height>
-                </rect>
+              <layout class="QHBoxLayout" name="horizontalLayout_4" >
+               <property name="spacing" >
+                <number>6</number>
                </property>
-               <property name="toolTip" >
-                <string>MUD website</string>
+               <property name="margin" >
+                <number>0</number>
                </property>
-              </widget>
-              <widget class="QLabel" name="label_7" >
-               <property name="geometry" >
-                <rect>
-                 <x>0</x>
-                 <y>2</y>
-                 <width>55</width>
-                 <height>22</height>
-                </rect>
-               </property>
-               <property name="text" >
-                <string>Website:</string>
-               </property>
-              </widget>
+               <item>
+                <widget class="QLabel" name="label_7" >
+                 <property name="text" >
+                  <string>Website:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="website_entry" >
+                 <property name="toolTip" >
+                  <string>MUD website</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </widget>
             </item>
             <item row="2" column="0" >
@@ -3046,7 +2948,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>mud_list_treewidget</tabstop>
   <tabstop>dialog_buttonbox</tabstop>
   <tabstop>remove_profile_button</tabstop>
-  <tabstop>new_profile_button</tabstop>
  </tabstops>
  <resources>
   <include location="../application.qrc" />
