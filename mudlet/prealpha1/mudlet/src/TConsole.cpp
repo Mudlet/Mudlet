@@ -54,7 +54,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mBgColor( QColor( 255, 255, 255 ) )
 , mWrapAt( 100 )
-, mIndentCount( 5 )
+, mIndentCount( 0 )
 {
     mCursorHome = 0;
     mUserCursorX = 0;

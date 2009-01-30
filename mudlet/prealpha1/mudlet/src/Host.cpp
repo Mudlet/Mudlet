@@ -439,35 +439,37 @@ void Host::writeProfileData( QString profile, QString item, QString what )
 bool Host::restore( QString directory, int selectedHistoryVersion )
 {
     int restorableProfileCount;
-    if( selectedHistoryVersion > -1 )
+    if( selectedHistoryVersion > 0 )
     {
-        qDebug()<<"[ LOADING ] profile history version #"<<selectedHistoryVersion;
+        qDebug()<<"\n[ LOADING ] profile history version #"<<selectedHistoryVersion<<"\n";
         restorableProfileCount = loadProfileHistory( directory, selectedHistoryVersion );
     }
-    else
+    
+    if( restorableProfileCount <= 0 ) 
     {
-        qDebug()<< "[ ANALYSING ] history of "<<directory;
+        qDebug()<< "\n[ ANALYSING ] history of "<<directory<<"\n";
         restorableProfileCount = loadProfileHistory( directory, -1 );
     }
     if( restorableProfileCount != -1 )
     {
-        qDebug()<<"[ RESTORING ] history #"<<restorableProfileCount<<" of profile: "<<directory;
+        qDebug()<<"\n[ RESTORING ] history #"<<restorableProfileCount<<" of profile: "<<directory<<"\n";
         int load = loadProfileHistory( directory, restorableProfileCount );
         if( load == restorableProfileCount-1 )
         {
             QString profile = mHostName;
             writeProfileData( profile, "history_version", QString::number( restorableProfileCount-1 ) ); 
-            qDebug()<< "[ OK ] restored history #"<<restorableProfileCount<<" of profile: "<<directory;
+            qDebug()<< "\n[ OK ] restored history #"<<restorableProfileCount<<" of profile: "<<directory<<"\n";
             mScriptUnit.compileAll();
             return true;
         }
         else
         {
-            qDebug()<<"[ ERROR ] restoring history #"<<restorableProfileCount<<" of profile: "<<directory<<" FAILED."; 
+            qDebug()<<"\n[ ERROR ] restoring history #"<<restorableProfileCount<<" of profile: "<<directory<<" FAILED."<<"\n"; 
             return false;
         }
     }
-    qDebug()<<"---> [ RESTORE FAILED ] profile directory:"<<directory;
+    qDebug()<<"\n---> [ RESTORE FAILED ] profile directory:"<<directory<<"\n";
+    return false; //this is a new profile
 }
 
 int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
