@@ -173,6 +173,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_alias->setColumnCount(1);
     treeWidget_alias->header()->hide();
     treeWidget_alias->setRootIsDecorated( false );
+    treeWidget_alias->setPoint(this);
     
     treeWidget_actions->hide();
     treeWidget_actions->setHost( mpHost );
@@ -180,6 +181,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated( false );
+    treeWidget_actions->setPoint(this);
     
     treeWidget_timers->hide();
     treeWidget_timers->setHost( mpHost );
@@ -187,6 +189,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated( false );
+    treeWidget_timers->setPoint(this);
     
     treeWidget_keys->hide();
     treeWidget_keys->setHost( mpHost );
@@ -194,6 +197,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated( false );
+    treeWidget_keys->setPoint(this);
     
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost( mpHost );
@@ -201,6 +205,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH , QWidget * parent) : QMainWindow(
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated( false );
+    treeWidget_scripts->setPoint(this);
     
     
     QAction * viewTriggerAction = new QAction(QIcon(":/tools-wizard.png"), tr("Triggers"), this);

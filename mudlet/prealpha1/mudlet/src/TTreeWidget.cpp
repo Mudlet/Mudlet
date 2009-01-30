@@ -186,11 +186,35 @@ void TTreeWidget::mousePressEvent ( QMouseEvent * event )
         QTreeWidgetItem * pItem = itemAt( event->pos() );
 
         if (mIsTriggerTree) {
-            if (((dlgTriggerEditor*)point)->slot_saveTriggerAfterEdit()) {
+            if (((dlgTriggerEditor*)point)->slot_saveTriggerAfterEdit())
                 QTreeWidget::mousePressEvent( event );
-            } else {
+            else
                 event->ignore();
-            }
+        } else if (mIsAliasTree) {
+            if (((dlgTriggerEditor*)point)->slot_saveAliasAfterEdit())
+                QTreeWidget::mousePressEvent( event );
+            else
+                event->ignore();
+        } else if (mIsScriptTree) {
+            if (((dlgTriggerEditor*)point)->slot_saveScriptAfterEdit())
+                QTreeWidget::mousePressEvent( event );
+            else
+                event->ignore();
+        } else if (mIsTimerTree) {
+            if (((dlgTriggerEditor*)point)->slot_saveTimerAfterEdit())
+                QTreeWidget::mousePressEvent( event );
+            else
+                event->ignore();
+        } else if (mIsKeyTree) {
+            if (((dlgTriggerEditor*)point)->slot_saveKeyAfterEdit())
+                QTreeWidget::mousePressEvent( event );
+            else
+                event->ignore();
+        } else if (mIsActionTree) {
+            if (((dlgTriggerEditor*)point)->slot_saveActionAfterEdit())
+                QTreeWidget::mousePressEvent( event );
+            else
+                event->ignore();
         } else {
             QTreeWidget::mousePressEvent( event );
         }
