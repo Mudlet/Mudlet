@@ -2147,7 +2147,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="new_profile_button_2" >
+             <widget class="QPushButton" name="new_profile_button" >
               <property name="sizePolicy" >
                <sizepolicy vsizetype="Preferred" hsizetype="Fixed" >
                 <horstretch>0</horstretch>
@@ -2333,18 +2333,18 @@
             <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
 &lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
 p, li { white-space: pre-wrap; }
-&lt;/style>&lt;/head>&lt;body style=" font-family:'Sans'; font-size:9pt; font-weight:400; font-style:normal;">
-&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8pt;">&lt;span style=" font-size:16pt; font-weight:600;">Welcome to Mudlet!&lt;/span>&lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:16pt;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt;">&lt;span style=" font-weight:600;">Click on one of the MUDs on the list below to play.&lt;/span>&lt;/p>
-&lt;p align="center" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt;">If you want to play on a server that is not on the list, click on the &lt;img src=":/icons/icons/list-add_small.png" />&lt;span style=" font-size:8pt; color:#aa0000;"> Create New Profile&lt;/span> button on your left, create your own profile, and fill in the &lt;span style=" font-style:italic;">Profile Name&lt;/span>, &lt;span style=" font-style:italic;">Host&lt;/span>, and &lt;span style=" font-style:italic;">Port&lt;/span> fields in the R&lt;span style=" font-style:italic;">equired &lt;/span>area. &lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt;">&lt;span style=" font-weight:600;">After that, click Connect to play.&lt;/span>&lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt; font-weight:600;">&lt;/p>
-&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt; font-weight:600;">&lt;span style=" font-weight:400;">Have fun!&lt;/span>&lt;/p>
-&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt; font-weight:600;">&lt;/p>
-&lt;p align="right" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:10pt; font-weight:600;">- The Mudlet Team&lt;/p>&lt;/body>&lt;/html></string>
+&lt;/style>&lt;/head>&lt;body style=" font-family:'Sans Serif'; font-size:10pt; font-weight:400; font-style:normal;">
+&lt;p align="center" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:8pt;">&lt;span style=" font-size:16pt; font-weight:600;">Welcome to Mudlet!&lt;/span>&lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:16pt;">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;span style=" font-weight:600;">Click on one of the MUDs on the list below to play.&lt;/span>&lt;/p>
+&lt;p align="center" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">If you want to play on a server that is not on the list, click on the &lt;img src=":/icons/icons/list-add_small.png" />&lt;span style=" font-size:8pt; color:#aa0000;"> Create New Profile&lt;/span> button on your left, create your own profile, and fill in the &lt;span style=" font-style:italic;">Profile Name&lt;/span>, &lt;span style=" font-style:italic;">Host&lt;/span>, and &lt;span style=" font-style:italic;">Port&lt;/span> fields in the R&lt;span style=" font-style:italic;">equired &lt;/span>area. &lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans';">&lt;span style=" font-weight:600;">After that, click Connect to play.&lt;/span>&lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">&lt;/p>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">&lt;span style=" font-weight:400;">Have fun!&lt;/span>&lt;/p>
+&lt;p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">&lt;/p>
+&lt;p align="right" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-weight:600;">- The Mudlet Team&lt;/p>&lt;/body>&lt;/html></string>
            </property>
            <property name="openLinks" >
             <bool>false</bool>
@@ -2578,16 +2578,6 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
            </layout>
-           <zorder>label_6</zorder>
-           <zorder>label</zorder>
-           <zorder>profile_name_entry</zorder>
-           <zorder>label_2</zorder>
-           <zorder>host_name_entry</zorder>
-           <zorder>label_3</zorder>
-           <zorder>port_entry</zorder>
-           <zorder>label_8</zorder>
-           <zorder>label_9</zorder>
-           <zorder>profile_history</zorder>
           </widget>
          </item>
          <item>

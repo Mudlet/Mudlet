@@ -47,6 +47,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( connect_button, SIGNAL(clicked()), this, SLOT(slot_connectToServer()));
     connect( abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
     connect( new_profile_button, SIGNAL( clicked() ), this, SLOT( slot_addProfile() ) );
+    connect( copy_profile_button, SIGNAL( clicked() ), this, SLOT( slot_copy_profile() ) );
     connect( remove_profile_button, SIGNAL( clicked() ), this, SLOT( slot_deleteProfile() ) );
     connect( profile_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_name(const QString)));
     connect( host_name_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_url(const QString)));
@@ -378,6 +379,22 @@ void dlgConnectionProfiles::copy_profile( QString oldProfile )
     
     QStringList newname;
     mUnsavedProfileName = oldProfile;
+
+    if (mUnsavedProfileName[mUnsavedProfileName.size()-1].isDigit())
+    {
+        int i=1;
+        do {
+            mUnsavedProfileName = mUnsavedProfileName.left(mUnsavedProfileName.size()-1) + QString::number(mUnsavedProfileName[mUnsavedProfileName.size()-1].digitValue() + i++);
+        } while (mProfileList.contains(mUnsavedProfileName));
+    } else {
+        int i=1;
+        QString mUnsavedProfileName2;
+        do {
+            mUnsavedProfileName2 = mUnsavedProfileName + '_' + QString::number(i++);
+        } while (mProfileList.contains(mUnsavedProfileName2));
+        mUnsavedProfileName = mUnsavedProfileName2;
+    }
+
     newname << mUnsavedProfileName;
     
     QTreeWidgetItem * pItem = new QTreeWidgetItem( (QTreeWidgetItem *)0, newname);
@@ -573,8 +590,6 @@ void dlgConnectionProfiles::fillout_form()
     port_entry->clear();
     
     mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
-//QStringList mProfileList2 = QDir(QDir::homePath()+"/.config/mudlet/profiles/*/Host.dat").entryList(QDir::Dirs, QDir::Name);
-//qDebug() << "lolo : " << mProfileList2[0];
     
     if( mProfileList.size() < 3 ) 
     {
@@ -631,6 +646,21 @@ void dlgConnectionProfiles::slot_finished(int f)
 void dlgConnectionProfiles::slot_cancel()
 {
     QDialog::done( 0 );    
+}
+
+void dlgConnectionProfiles::slot_copy_profile()
+{
+    QString profile_name = profile_name_entry->text().trimmed();
+    
+    if( profile_name.size() < 1 ) 
+        return;
+    
+    QStringList loadedProfiles = HostManager::self()->getHostList();
+    // copy profile as the same profile is already loaded
+    // show information that he has to select a new name for this copy
+    copy_profile( profile_name );
+    mNeedsCopyOfProfileName = profile_name;
+    return;
 }
 
 void dlgConnectionProfiles::slot_connectToServer()
