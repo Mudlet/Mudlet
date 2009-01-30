@@ -8,9 +8,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>822</width>
-    <height>695</height>
+    <width>750</width>
+    <height>502</height>
    </rect>
+  </property>
+  <property name="baseSize" >
+   <size>
+    <width>780</width>
+    <height>590</height>
+   </size>
   </property>
   <property name="windowTitle" >
    <string>Mudlet 1.0 - alpha 1</string>
@@ -33,8 +39,8 @@
     <rect>
      <x>0</x>
      <y>14</y>
-     <width>822</width>
-     <height>681</height>
+     <width>750</width>
+     <height>488</height>
     </rect>
    </property>
    <property name="sizePolicy" >
@@ -97,7 +103,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>822</width>
+     <width>750</width>
      <height>14</height>
     </rect>
    </property>

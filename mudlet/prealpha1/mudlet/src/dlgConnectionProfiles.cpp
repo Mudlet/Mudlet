@@ -1,12 +1,12 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
-e *                                                                         *
+ *                                                                         *
  *   This program is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
@@ -54,6 +54,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( profiles_tree_widget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
     connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
+    connect( mud_list_treewidget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
+    connect( mud_list_treewidget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
+    
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     connect( this, SIGNAL (finished(int)), this, SLOT (slot_finished(int)));
     
@@ -138,7 +141,7 @@ void dlgConnectionProfiles::slot_update_url( const QString url )
     {
         QString profile = pItem->text(0);
         QUrl check;
-        check.setHost( url );//, QUrl::StrictMode );            
+        check.setHost( url );         
         if( check.isValid() )
         {
             host_name_entry->setPalette( mOKPalette );

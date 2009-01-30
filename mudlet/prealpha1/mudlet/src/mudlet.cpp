@@ -297,7 +297,7 @@ void mudlet::readSettings()
 {
     QSettings settings("Mudlet", "Mudlet 1.0");
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
-    QSize size = settings.value("size", QSize(0, 0)).toSize();
+    QSize size = settings.value("size", QSize(400, 400)).toSize();
     resize( size );
     move( pos );
 }

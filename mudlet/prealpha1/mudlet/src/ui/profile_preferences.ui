@@ -770,5 +770,22 @@
  <resources>
   <include location="../application.qrc" />
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>closeButton</sender>
+   <signal>pressed()</signal>
+   <receiver>closeButton</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>496</x>
+     <y>534</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>496</x>
+     <y>534</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
