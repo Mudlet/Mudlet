@@ -774,16 +774,16 @@
   <connection>
    <sender>closeButton</sender>
    <signal>pressed()</signal>
-   <receiver>closeButton</receiver>
-   <slot>close()</slot>
+   <receiver>profile_preferences</receiver>
+   <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel" >
-     <x>496</x>
+     <x>513</x>
      <y>534</y>
     </hint>
     <hint type="destinationlabel" >
-     <x>496</x>
-     <y>534</y>
+     <x>560</x>
+     <y>-19</y>
     </hint>
    </hints>
   </connection>

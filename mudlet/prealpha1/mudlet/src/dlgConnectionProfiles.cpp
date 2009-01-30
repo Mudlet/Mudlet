@@ -39,6 +39,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     abort->setIcon(QIcon(":/icons/icons/dialog-close.png"));
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/icons/icons/dialog-ok-apply.png"));
+    
+    QStringList headerList;
+    headerList << "Name of the MUD" << "Language";
+    mud_list_treewidget->setHeaderLabels( headerList );
+    
     connect( connect_button, SIGNAL(pressed()), this, SLOT(slot_connectToServer()));
     connect( abort, SIGNAL(pressed()), this, SLOT(slot_cancel()));
     connect( new_profile_button, SIGNAL( pressed() ), this, SLOT( slot_addProfile() ) );

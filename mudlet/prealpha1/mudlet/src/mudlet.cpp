@@ -274,16 +274,6 @@ void mudlet::addSubWindow( TConsole* pConsole )
 {  
     mdiArea->addSubWindow( pConsole );
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
-    //mdiArea->tileSubWindows();
-    
-    /*    toolButton_connect->setEnabled( true );
-    toolButton_filters->setEnabled( false );
-    toolButton_options->setEnabled( false );
-    toolButton_triggers->setEnabled( true );
-    toolButton_timers->setEnabled( true );
-    toolButton_aliases->setEnabled( true );
-    toolButton_scripts->setEnabled( true );
-    toolButton_action_buttons->setEnabled( true );*/
 }
 
 void mudlet::closeEvent(QCloseEvent *event)
@@ -297,7 +287,7 @@ void mudlet::readSettings()
 {
     QSettings settings("Mudlet", "Mudlet 1.0");
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
-    QSize size = settings.value("size", QSize(400, 400)).toSize();
+    QSize size = settings.value("size", QSize(750, 550)).toSize();
     resize( size );
     move( pos );
 }
