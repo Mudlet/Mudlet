@@ -37,7 +37,8 @@ TDebug & TDebug::operator>>( const int code)
 
 TDebug::~TDebug()
 {
-    mudlet::mpDebugConsole->print( msg+"\n" );    
+    msg.append( QChar('\n') );
+    mudlet::mpDebugConsole->print( msg );    
 }
 
 TDebug & TDebug::operator<<( const QString & t )
@@ -60,7 +61,6 @@ TDebug & TDebug::operator<<( QString & t )
     
 TDebug & TDebug::operator<<( const QMap<QString, QString> &map )
 {
-    msg += "QMap(";
     for( QMap<QString, QString>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) 
     {
         msg += "(";
@@ -75,7 +75,6 @@ TDebug & TDebug::operator<<( const QMap<QString, QString> &map )
     
 TDebug & TDebug::operator<<( const QMap<QString, int> &map )
 {
-    msg += "QMap(";
     for( QMap<QString, int>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) 
     {
         msg += "(";
@@ -90,7 +89,6 @@ TDebug & TDebug::operator<<( const QMap<QString, int> &map )
     
 TDebug & TDebug::operator<<( const QMap<int, QString> &map )
 {
-    msg += "QMap(";
     for( QMap<int, QString>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) 
     {
         msg += "(";
@@ -105,7 +103,6 @@ TDebug & TDebug::operator<<( const QMap<int, QString> &map )
     
 TDebug & TDebug::operator<<( const QMap<int, int> &map )
 {
-    msg += "QMap(";
     for( QMap<int, int>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) 
     {
         msg += "(";
@@ -120,7 +117,6 @@ TDebug & TDebug::operator<<( const QMap<int, int> &map )
     
 TDebug & TDebug::operator<<( const QList<QString> &list )
 {
-    msg += "QList(";
     for( QList<QString>::const_iterator it = list.constBegin(); it != list.constEnd(); ++it) 
     {
         msg += (*it);
@@ -132,7 +128,6 @@ TDebug & TDebug::operator<<( const QList<QString> &list )
     
 TDebug & TDebug::operator<<( const QList<int> &list )
 {
-    msg += "QList(";
     for( QList<int>::const_iterator it = list.constBegin(); it != list.constEnd(); ++it) 
     {
         msg += QString::number(*it);

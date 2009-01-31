@@ -1505,7 +1505,7 @@ void TLuaInterpreter::initLuaGlobals()
 void TLuaInterpreter::slotEchoMessage(int hostID, QString msg)
 {
     Host * pHost = HostManager::self()->getHostFromHostID( hostID );  
-    mudlet::self()->printMessageOnDisplay( pHost, msg );
+    mudlet::self()->print( pHost, msg );
 }
 
 

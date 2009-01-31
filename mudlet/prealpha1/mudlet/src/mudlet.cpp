@@ -389,15 +389,21 @@ void mudlet::slot_show_about_dialog()
     pDlg->show();
 }
 
-void mudlet::printOnDisplay( Host * pH, QString s )
+void mudlet::printOnDisplay( Host * pH, QString & s )
 {
     mConsoleMap[pH]->printOnDisplay(s);
 }
 
-void mudlet::printMessageOnDisplay( Host * pH, QString s )
+void mudlet::printSystemMessage( Host * pH, QString & s )
+{
+    mConsoleMap[pH]->printSystemMessage( s );
+}
+
+void mudlet::print( Host * pH, QString & s )
 {
     mConsoleMap[pH]->print( s );
 }
+
 
 QString mudlet::readProfileData( QString profile, QString item )
 {

@@ -47,6 +47,10 @@ public:
 
 class Host;
 
+
+const QChar cLF = QChar('\n');
+const QChar cSPACE = QChar(' ');
+
 class TBuffer
 {
 public: 

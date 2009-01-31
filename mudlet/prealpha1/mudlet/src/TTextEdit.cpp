@@ -144,16 +144,17 @@ void TTextEdit::showNewLines()
     scrollRect.setTop( widgetRect.top() ); 
     scrollRect.setHeight( mScreenHeight * mFontHeight );
     
-    scroll( 0, mFontHeight * ( -1 * mpBuffer->newLines ) );
-    
     QRect drawRect;
     drawRect.setLeft( 0 );
     drawRect.setRight( mScreenWidth * mFontWidth );
     int lines = mpBuffer->newLines;
            
-    drawRect.setTop( abs(mScreenHeight - lines - 1) * mFontHeight );
+    drawRect.setTop( abs(mScreenHeight - lines ) * mFontHeight );  //old:abs(mScreenHeight - lines -1 )
     drawRect.setHeight( lines * mFontHeight );
-    
+    if( scrollRect.height() < widgetRect.height() )
+    {
+        scroll( 0, -1 * (scrollRect.height()), scrollRect );// mFontHeight * ( -1 * ( mpBuffer->newLines ) );
+    }
     update( drawRect );
     mpBuffer->newLines = 0;
 }
@@ -161,32 +162,52 @@ void TTextEdit::showNewLines()
 void TTextEdit::scrollUp( int lines )
 {
     lines = bufferScrollUp( lines );
-    if( lines == 0 ) return;
-    scroll( 0, mFontHeight * lines );        
-    return;
+    if( lines == 0 ) 
+        return;
     
-    QRect drawRect;
-    drawRect.setLeft( 0 );
-    drawRect.setRight( mScreenWidth * mFontWidth );
-    drawRect.setTop( abs(mScreenHeight - lines - 1) * mFontHeight );
-    drawRect.setHeight( lines * mFontHeight );
+    if( lines > 0 )
+    {
+        scroll( 0, mFontHeight * lines );        
+        return;
+    }
+    else
+    {
+        // lines < 0 => skip scrolling and paint frame directly,
+        //              as scrollRect covers the entire area of the screen
+        lines = mScreenHeight;
+        
+        QRect drawRect;
+        drawRect.setLeft( 0 );
+        drawRect.setRight( mScreenWidth * mFontWidth );
+        drawRect.setTop( abs(mScreenHeight - lines - 1) * mFontHeight );
+        drawRect.setHeight( lines * mFontHeight );
     
-    update( drawRect );
+        update( drawRect );
+    }
 }
 
 void TTextEdit::scrollDown( int lines )
 {
     lines = bufferScrollDown( lines );
     if( lines == 0 ) return;
-    scroll( 0, mFontHeight * ( -1 * lines ) );        
-
-    QRect drawRect;
-    drawRect.setLeft( 0 );
-    drawRect.setRight( mScreenWidth * mFontWidth );
-    drawRect.setTop( 0 );
-    drawRect.setHeight( lines * mFontHeight );
+    if( lines > 0 )
+    {
+        scroll( 0, mFontHeight * ( -1 * lines ) );        
+        return;
+    }
+    else
+    {
+        // lines < 0 => skip scrolling and paint frame directly,
+        //              as scrollRect covers the entire area of the screen
+        lines = mScreenHeight;
+        QRect drawRect;
+        drawRect.setLeft( 0 );
+        drawRect.setRight( mScreenWidth * mFontWidth );
+        drawRect.setTop( 0 );
+        drawRect.setHeight( lines * mFontHeight );
     
-    update( drawRect );
+        update( drawRect );
+    }
 }
 
 void TTextEdit::drawBackground( QPainter & painter, 
@@ -196,7 +217,7 @@ void TTextEdit::drawBackground( QPainter & painter,
     QRect bR = rect;
     if( rect.width() > mScreenWidth * mFontWidth ) bR.setWidth( mScreenWidth * mFontWidth );
     
-    painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor);//QColor(rand()%255,rand()%255,rand()%255));//bgColor);
+    painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor );//, QColor(rand()%255,rand()%255,rand()%255));//bgColor);
 }
 
 void TTextEdit::drawCharacters( QPainter & painter,
@@ -294,8 +315,10 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                 }
                 drawBackground( painter, textRect, bgColor );
             }
-            
-            drawCharacters( painter, textRect, text, isBold, isUnderline, isItalics, fgColor, bgColor );  
+            if( text[0] != cLF )
+            {
+                drawCharacters( painter, textRect, text, isBold, isUnderline, isItalics, fgColor, bgColor );  
+            }
             
             i2+=delta;
         }
@@ -506,11 +529,8 @@ void TTextEdit::showEvent( QShowEvent * event )
 
 void TTextEdit::resizeEvent( QResizeEvent * event ) 
 {
-    cout<<"TTextEdit::resizeEvent() updateScreenView()"<<endl;
     updateScreenView();    
-    cout << "OK returned"<<endl;    
     QWidget::resizeEvent( event );
-    cout<<" resizeEvent() ende"<<endl;
 }
 
 void TTextEdit::wheelEvent ( QWheelEvent * e ) 
@@ -560,33 +580,43 @@ bool TTextEdit::isAtEndPosition()
 
 int TTextEdit::bufferScrollUp( int lines )
 {
-    if( ( mCursorY - lines - mScreenHeight ) > 0 )
+    if( (mCursorY - lines) > mScreenHeight  )
     {
-        mIsTailMode = false;
-        mCursorY -= lines;  
+        mCursorY -= lines;
         return lines;
     }
     else
-    {   
-        lines = mCursorY;
-        mCursorY = 0;
-        return lines;
+    {
+        mCursorY -= lines;  
+        if( mCursorY < 0 )
+        {
+            int delta = mCursorY;
+            mCursorY = 0;
+            return delta; //this is needed to compute the optimal size of the scroll rect
+        }
+        else
+            return 0;
     }
 }
 
 int TTextEdit::bufferScrollDown( int lines )
 {
-    if( ( mCursorY + lines ) < mpBuffer->size()-1 )
+    if( ( mCursorY + lines ) < (mpBuffer->size()-1 - mScreenHeight) )
     {
         mCursorY += lines;
         return lines;
     }
     else
     {
-        lines = mpBuffer->size()-1 - mCursorY;
-        mCursorY = mpBuffer->size()-1;
+        mCursorY += lines;
+        if( mCursorY > (mpBuffer->size()-1) )
+        {
+            int delta = mCursorY;
+            mCursorY = mpBuffer->size()-1;
+            return (-1 * delta); //this is needed to compute the optimal size of the scroll rect
+        }
         mIsTailMode = true;
-        return lines;
+        return 0;
     }
 }
 
