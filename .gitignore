@@ -3,5 +3,7 @@ moc_*.cpp
 ui_*.h
 *~
 mudlet/prealpha1/mudlet/src/mudlet
+mudlet/prealpha1/mudlet/Makefile
+mudlet/prealpha1/mudlet/src/Makefile
 .svn*
 
