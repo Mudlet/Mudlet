@@ -26,18 +26,18 @@
 
 class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
 {
-Q_OBJECT
-
-public:
-   
-         dlgConnectionProfiles(QWidget * parent = 0);
+    Q_OBJECT
+        
+        public:
+        
+        dlgConnectionProfiles(QWidget * parent = 0);
     void fillout_form();
     void copy_profile( QString );
     void writeProfileData( QString, QString, QString );
     QString readProfileData( QString, QString );
     
 signals:
-     
+    
     void signal_establish_connection( QString profile_name, int historyVersion );
     void accept();
     void update();
@@ -67,7 +67,7 @@ public slots:
     
 private:
     
-    QString            mNeedsCopyOfProfileName;
+    QString            mOrigin;
     QString            mUnsavedProfileName;
     bool               mSavedNewName;
     QStringList        mProfileList;
