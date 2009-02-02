@@ -1,9 +1,14 @@
 *.o
 moc_*.cpp
+*.cxx
 ui_*.h
 *~
 mudlet/prealpha1/mudlet/src/mudlet
 mudlet/prealpha1/mudlet/Makefile
 mudlet/prealpha1/mudlet/src/Makefile
 .svn*
-
+mudlet/prealpha1/mudlet/mudlet.kdevelop.pcs
+mudlet/prealpha1/mudlet/mudlet.kdevses
+mudlet/prealpha1/mudlet/src/CMakeCache.txt
+mudlet/prealpha1/mudlet/src/CMakeFiles/
+mudlet/prealpha1/mudlet/src/cmake_install.cmake
