@@ -110,7 +110,7 @@
     <string/>
    </property>
    <property name="pixmap" >
-    <pixmap resource="../application.qrc" >:/Mudlet_splashscreen_main</pixmap>
+    <pixmap resource="../mudlet_alpha.qrc" >:/Mudlet_splashscreen_main</pixmap>
    </property>
    <property name="scaledContents" >
     <bool>false</bool>
@@ -378,7 +378,7 @@ p, li { white-space: pre-wrap; }
   </widget>
  </widget>
  <resources>
-  <include location="../application.qrc" />
+  <include location="../mudlet_alpha.qrc" />
  </resources>
  <connections/>
 </ui>

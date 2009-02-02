@@ -173,13 +173,15 @@ void TCommandLine::enterCommand( QKeyEvent * event )
 {
     mHistoryBuffer = 0;
     setPalette( mRegularPalette );
-   
+    
     QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
-    if( commandList.size() == 0 ) mpHost->send( QString("") );
+    if( commandList.size() == 0 ) 
+        mpHost->send( "\n" );
+    
     for( int i=0; i<commandList.size(); i++ )
     {
         mHistoryMap[ commandList[i] ] = 0;
-        mHistoryList.push_front( commandList[i] );
+        mHistoryList.push_front( commandList[i].append("\n" ) );
         //qDebug()<<"TCommandLine:enterCommand() sending to Host:"<<mpHost<<" text="<<commandList[i];
         mpHost->send( commandList[i].replace(QChar('\n'),"") );
     }

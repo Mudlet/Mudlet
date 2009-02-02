@@ -53,6 +53,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mBgColor( QColor( 255, 255, 255 ) )
+, mCommandFgColor( QColor( 0, 255, 255 ) )
+, mCommandBgColor( mBgColor )
+, mSystemMessageFgColor( QColor( 255,0,0 ) )
+, mSystemMessageBgColor( mBgColor )
 , mWrapAt( 100 )
 , mIndentCount( 0 )
 {
@@ -105,7 +109,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     m_paragraphIsComplete = true;
     changeColors();
     
-    console->setSplitScreen();
+    console2->setSplitScreen();
     console->show();
     console2->hide();
     
@@ -652,7 +656,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
 void TConsole::scrollDown( int lines )
 {
     console->scrollDown( lines );
-    if( console->isAtEndPosition() ) console2->hide();
+    if( console->isTailMode() ) console2->hide();
 }
 
 void TConsole::scrollUp( int lines )
@@ -913,22 +917,8 @@ void TConsole::setBgColor( int r, int g, int b )
 
 void TConsole::printCommand( QString & msg )
 {
-    /*//cursor2.insertText( msg );
-    textEdit->setUpdatesEnabled( false );
-    QString cmd = msg + "\n";
-    cursor.insertText( cmd );
-    cursor.movePosition( QTextCursor::Up );//FIXME
-    if( ! isUserScrollBack )
-    {
-        int max = textEdit->verticalScrollBar()->maximum();
-        int delta = max - textEdit->verticalScrollBar()->value();
-        textEdit->verticalScrollBar()->setPageStep( delta );
-        textEdit->verticalScrollBar()->setValue( max );    
-        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
-    }
-    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
-    textEdit->setUpdatesEnabled( true );
-    return;*/
+    msg.append("\n");
+    print( msg, mCommandFgColor, mCommandBgColor );
 }
 
 void TConsole::echo( QString & msg )
@@ -966,19 +956,38 @@ void TConsole::print( QString & msg )
     console->showNewLines();
 }
 
-void TConsole::printSystemMessage( QString & msg )
+void TConsole::print( QString & msg, QColor & fgColor, QColor & bgColor )
 {
-    QColor fgColor = QColor(255,0,0);
-    
-    QColor bgColor;
-    if( mIsDebugConsole ) 
-        bgColor = mBgColor;
-    else
-        bgColor = mpHost->mBgColor;
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.addText( msg, 
                     fgColor,
                     bgColor, 
+                    false, 
+                    false,
+                    false );
+    buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount );
+    console->showNewLines();
+}
+
+
+void TConsole::printSystemMessage( QString & msg )
+{
+    QColor bgColor;
+    QColor fgColor;
+    
+    if( mIsDebugConsole ) 
+    {
+        bgColor = mBgColor;
+    }
+    else
+    {
+        bgColor = mpHost->mBgColor;
+    }
+    
+    int lineBeforeNewContent = buffer.getLastLineNumber();
+    buffer.addText( msg, 
+                    mSystemMessageFgColor,
+                    mSystemMessageBgColor,
                     false, 
                     false,
                     false );

@@ -203,11 +203,12 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     }
 }
 
-bool cTelnet::sendData( const QString & data )
+bool cTelnet::sendData( QString & data )
 {
-  string outdata = (outgoingDataCodec->fromUnicode(data)).data();
-  outdata+="\r\n";
-  return socketOutRaw(outdata);
+    data.replace(QChar('\n'),"");
+    string outdata = (outgoingDataCodec->fromUnicode(data)).data();
+    outdata += "\r\n";
+    return socketOutRaw(outdata);
 }
 
 

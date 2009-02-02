@@ -19,6 +19,14 @@
    <string>Script Editor</string>
   </property>
   <widget class="QWidget" name="randomwidget" >
+   <property name="geometry" >
+    <rect>
+     <x>0</x>
+     <y>14</y>
+     <width>864</width>
+     <height>614</height>
+    </rect>
+   </property>
    <property name="sizePolicy" >
     <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
      <horstretch>0</horstretch>
@@ -761,7 +769,7 @@
                 <string>Search</string>
                </property>
                <property name="icon" >
-                <iconset resource="../application.qrc" >
+                <iconset>
                  <normaloff>:/edit-find.png</normaloff>:/edit-find.png</iconset>
                </property>
                <property name="iconSize" >
@@ -806,7 +814,7 @@
                 <string>Close</string>
                </property>
                <property name="icon" >
-                <iconset resource="../application.qrc" >
+                <iconset>
                  <normaloff>:/application-exit.png</normaloff>:/application-exit.png</iconset>
                </property>
                <property name="iconSize" >
@@ -835,6 +843,14 @@
    <property name="enabled" >
     <bool>false</bool>
    </property>
+   <property name="geometry" >
+    <rect>
+     <x>0</x>
+     <y>628</y>
+     <width>16</width>
+     <height>0</height>
+    </rect>
+   </property>
    <property name="sizePolicy" >
     <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
      <horstretch>0</horstretch>
@@ -849,6 +865,14 @@
    </property>
   </widget>
   <widget class="QToolBar" name="toolBar" >
+   <property name="geometry" >
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>864</width>
+     <height>14</height>
+    </rect>
+   </property>
    <property name="minimumSize" >
     <size>
      <width>0</width>
@@ -973,7 +997,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../application.qrc" />
+  <include location="../mudlet_alpha.qrc" />
  </resources>
  <connections>
   <connection>

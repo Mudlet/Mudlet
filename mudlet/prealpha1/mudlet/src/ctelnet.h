@@ -76,10 +76,10 @@ public:
                      ~cTelnet();
   void                connectIt(const QString &address, int port);
   void                disconnect();
-  bool                sendData (const QString &data);
-  void                setCommandEcho(bool cmdEcho);
-  void                setLPMudStyle (bool lpmustyle);
-  void                setNegotiateOnStartup (bool startupneg);
+  bool                sendData ( QString & data );
+  void                setCommandEcho( bool cmdEcho );
+  void                setLPMudStyle ( bool lpmustyle );
+  void                setNegotiateOnStartup( bool startupneg );
   void                setDisplayDimensions();
   void                encodingChanged(QString encoding);
 

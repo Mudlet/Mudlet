@@ -121,7 +121,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../application.qrc" />
+  <include location="../mudlet_alpha.qrc" />
  </resources>
  <connections/>
 </ui>

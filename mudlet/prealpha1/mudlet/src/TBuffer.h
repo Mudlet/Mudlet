@@ -57,14 +57,14 @@ public:
     
     TBuffer( Host * pH );
     void addText( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
-    void wrap( unsigned int startLine, unsigned int screenWidth, unsigned int indentSize );
-    unsigned int size(){ return buffer.size(); }    
+    void wrap( int startLine, int screenWidth, int indentSize );
+    int size(){ return buffer.size(); }    
     QString & line( int n );
     int find( int line, QString what, int pos );
     QStringList split( int line, QString splitter );
     QStringList split( int line, QRegExp splitter );
     bool replace( int line, QString what, QString with );
-    bool deleteLines( unsigned int from, unsigned int to );
+    bool deleteLines( int from, int to );
     bool applyFormat( int line, int x1, int x2, TChar & format );
     int getLastLineNumber();
     
@@ -84,7 +84,8 @@ private:
     int maxx;
     int maxy;
     bool hadLF;
-    unsigned int mLastLine;
+    int mLastLine;
+    bool mCursorMoved;
     
     
 };

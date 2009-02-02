@@ -66,9 +66,9 @@ public:
     void               setUserDefinedName( QString s )  { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
     void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
-    QString            getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
+    QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
     void               setLogin( QString s )            { QMutexLocker locker(& mLock); mLogin = s; }
-    QString            getPass()                        { QMutexLocker locker(& mLock); return mPass; }
+    QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
     void               setPass( QString s )             { QMutexLocker locker(& mLock); mPass = s; }
     int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
     void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }

@@ -31,16 +31,6 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout" >
-   <item row="0" column="0" >
-    <widget class="QLabel" name="label_2" >
-     <property name="text" >
-      <string>Alias name:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1" >
-    <widget class="QLineEdit" name="lineEdit_alias_name" />
-   </item>
    <item row="1" column="1" >
     <widget class="QLineEdit" name="pattern_textedit" >
      <property name="font" >
@@ -50,15 +40,13 @@
      </property>
     </widget>
    </item>
-   <item rowspan="2" row="2" column="1" >
-    <widget class="QLineEdit" name="pattern_textedit2" >
-     <property name="font" >
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="toolTip" >
-      <string>what is in here is being sent to the MUD if the regex matches. The script is not being run. So if you want to run a script, leave this field empty.</string>
+   <item row="0" column="1" >
+    <widget class="QLineEdit" name="lineEdit_alias_name" />
+   </item>
+   <item row="0" column="0" >
+    <widget class="QLabel" name="label_2" >
+     <property name="text" >
+      <string>Alias name:</string>
      </property>
     </widget>
    </item>
@@ -78,6 +66,18 @@
      </property>
      <property name="text" >
       <string>Substitution:</string>
+     </property>
+    </widget>
+   </item>
+   <item rowspan="2" row="2" column="1" >
+    <widget class="QLineEdit" name="pattern_textedit2" >
+     <property name="font" >
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="toolTip" >
+      <string>what is in here is being sent to the MUD if the regex matches. The script is not being run. So if you want to run a script, leave this field empty.</string>
      </property>
     </widget>
    </item>
@@ -101,8 +101,7 @@
     </widget>
    </item>
   </layout>
-  <zorder>lineEdit_alias_name</zorder>
-  <zorder>label_2</zorder>
+  <zorder>pattern_textedit</zorder>
   <zorder>lineEdit_alias_name</zorder>
   <zorder>label_2</zorder>
   <zorder>label_3</zorder>
@@ -110,7 +109,7 @@
   <zorder>label</zorder>
  </widget>
  <resources>
-  <include location="../application.qrc" />
+  <include location="../mudlet_alpha.qrc" />
  </resources>
  <connections/>
 </ui>

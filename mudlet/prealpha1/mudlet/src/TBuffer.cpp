@@ -70,102 +70,86 @@ TChar::TChar( TChar const & copy )
 
 TBuffer::TBuffer( Host * pH )
 : mpHost( pH )
+, mCursorMoved( false )
 {   
     // FIXME: check if this is set somewhere else
     //mpHost->mScreenHeight = 40;
     //mpHost->mScreenWidth = 80; //TODO: make this a user option
     buffer.clear();
-    buffer.push_back( bufferLine );
     lineBuffer.clear();
-    QString nothing;
-    lineBuffer.append( nothing );
+    
+    std::deque<TChar *> newLine;
+    TChar * pC = new TChar;
+    newLine.push_back( pC );
+    buffer.push_back( newLine );
+    lineBuffer << QChar( 0x21af );
+
     newLines = 0;
     mLastLine = buffer.size()-1;
 }
 
-
-
-void TBuffer::handleNewLine()
-{
-    int y = lineBuffer.size();
-    if( y > 0 )
-    {
-        if( lineBuffer[y-1].size() > 1 )
-        {
-            if( lineBuffer[y-1][0] == cLF )
-            {
-                lineBuffer[y-1].remove( 0, 1 );
-                delete buffer[y-1][0];
-                buffer[y-1].pop_back();    
-            }
-        }
-    }
-    std::deque<TChar *> newLine;
-    newLine.push_back( new TChar( mpHost ) );
-    QString nextLine = "\n";
-    buffer.push_back( newLine );
-    lineBuffer.append( nextLine );
-    mLastLine++;
-    newLines++;
-}
-
 int TBuffer::getLastLineNumber()
 {
-    return lineBuffer.size()-1;
+    return buffer.size()-1;
 }
 
 void TBuffer::addText( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
-    // special case if line ends on <LF> with a prior format code change
-    if( text == QString("\n") )
+    for( int i=0; i<text.size(); i++ )
     {
-        handleNewLine();
-        return;
-    }
-    
-    QStringList lines = text.split( '\n' );
-    
-    int y;
-    for( int i=0; i<lines.size(); i++ )
-    {
-        // the content of lines[0] is to be added to the last line in the buffer
-        // unless lines[0] is itself an <LF>
-        // all other lines represent corresponding <LF>
-        if( lines[i].size() == 0 )
+        int last = buffer.size()-1;
+        if( mCursorMoved ) 
         {
-            handleNewLine();
-            continue;
+            if(lineBuffer[last].size() == 1) // <LF> at beginning of new line marker
+            {
+                if( lineBuffer[last][0] == QChar( 0x21af ) )
+                {
+                    mCursorMoved = false;
+                    lineBuffer[last].replace( 0, 1, text.at( i ) );
+                    buffer[last].pop_back();
+                    TChar * pC = new TChar;
+                    pC->fgColor = fgColor;
+                    pC->bgColor = bgColor;
+                    pC->italics = italics;
+                    pC->bold = bold;
+                    pC->underline = underline;
+                    buffer[last].push_back( pC );
+                }
+            }
         }
-        else if( i > 0 ) 
+        else
         {
-            handleNewLine();
-        }
-            
-        y = getLastLineNumber();
-        
-        // replace preceding <LF>
-        if( lineBuffer[y].size() == 1 )
-        {
-            lineBuffer[y].chop( 1 );
-            delete buffer[y][0];
-            buffer[y].pop_back();
-        }
-        
-        lineBuffer[y].append( lines[i] );
-        for( int i2=0; i2<lines[i].size(); i2++ )
-        {
+            lineBuffer[last].append( text.at( i ) );
             TChar * pC = new TChar;
             pC->fgColor = fgColor;
             pC->bgColor = bgColor;
             pC->italics = italics;
             pC->bold = bold;
             pC->underline = underline;
-            buffer[y].push_back( pC );
+            buffer[last].push_back( pC );
         }
+        if( text.at(i) == QChar('\n') )
+        {
+            std::deque<TChar *> newLine;
+            TChar * pC = new TChar;
+            pC->fgColor = fgColor;
+            pC->bgColor = bgColor;
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;
+            newLine.push_back( pC );
+            buffer.push_back( newLine );
+            lineBuffer << QChar( 0x21af );
+            mLastLine++;
+            newLines++;
+            mCursorMoved = true;
+        }
+        
     }
+   
 }
 
-void TBuffer::wrap( unsigned int startLine, unsigned int screenWidth, unsigned int indentSize )
+void TBuffer::wrap( int startLine, int screenWidth, int indentSize )
 {
     if( buffer.size() <= startLine ) return;
     
@@ -173,7 +157,7 @@ void TBuffer::wrap( unsigned int startLine, unsigned int screenWidth, unsigned i
     QStringList tempList;
     int lineCount = 0;
     
-    for( unsigned int i=startLine; i<buffer.size(); i++ )
+    for( int i=startLine; i<buffer.size(); i++ )
     {
         std::deque<TChar *> newLine;
         QString lineText;
@@ -194,9 +178,9 @@ void TBuffer::wrap( unsigned int startLine, unsigned int screenWidth, unsigned i
             }
             indent = indentSize;
         }
-        for( unsigned int i2=0; i2<buffer[i].size();  )
+        for( int i2=0; i2<buffer[i].size();  )
         {  
-            for( unsigned int i3=0; i3<screenWidth-indent; i3++ )
+            for( int i3=0; i3<screenWidth-indent; i3++ )
             {
                 if( i2 >= buffer[i].size() )
                 {
@@ -298,7 +282,7 @@ bool TBuffer::replace( int line, QString what, QString with )
     return true;
 }
 
-bool TBuffer::deleteLines( unsigned int from, unsigned int to )
+bool TBuffer::deleteLines( int from, int to )
 {
     if( ( from >= 0 ) 
      && ( from <= buffer.size() )
@@ -306,18 +290,18 @@ bool TBuffer::deleteLines( unsigned int from, unsigned int to )
      && ( to >=0 )
      && ( to <= buffer.size() ) )
     {
-        unsigned int delta = to - from;
+        int delta = to - from;
         
-        for( unsigned int i=from; i<from+delta; i++ )
+        for( int i=from; i<from+delta; i++ )
         {
             lineBuffer.removeAt( i );
-            for( unsigned int k=0; k<buffer[i].size(); k++ )
+            for( int k=0; k<buffer[i].size(); k++ )
             {
                 delete buffer[i][k];    
             }
         }
         
-        unsigned int i = buffer.size();
+        int i = (int)buffer.size();
         
         // we do reverse lookup as the wanted lines are usually at the end of the buffer
         // std::revers_iterator is not defined for usage in erase()

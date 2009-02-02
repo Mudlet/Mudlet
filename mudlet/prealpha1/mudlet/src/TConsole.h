@@ -110,11 +110,7 @@ Q_OBJECT
 public:
    
                         TConsole( Host *, bool isDebugConsole );
-      void              print( QString & msg );
-      void              print( const char * );
-      void              printSystemMessage( QString & msg );
-      void              printOnDisplay(QString  &);
-      void              printCommand( QString & );
+      
       void              echoUserWindow( QString & );
       Host *            getHost() { return mpHost; }
       TCommandLine *    mpCommandLine;
@@ -143,7 +139,13 @@ public:
       void              changeColors();
       void              scrollDown( int lines );
       void              scrollUp( int lines );
-    
+      void              print( QString &, QColor &, QColor & );
+      void              print( QString & msg );
+      void              print( const char * );
+      void              printSystemMessage( QString & msg );
+      void              printOnDisplay(QString  &);
+      void              printCommand( QString & );
+      
       TTextEdit *       console;
       TTextEdit *       console2;
       int               mUserCursorX;
@@ -165,6 +167,11 @@ private:
       QString           mEchoBuffer;
       bool              m_paragraphIsComplete;
       bool              m_previousParagraphWasClosed;
+    
+      QColor            mCommandFgColor;
+      QColor            mCommandBgColor;
+      QColor            mSystemMessageFgColor;
+      QColor            mSystemMessageBgColor;
      
       bool              mWaitingForHighColorCode;
       bool              mHighColorModeForeground;

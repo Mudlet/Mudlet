@@ -292,8 +292,8 @@ p, li { white-space: pre-wrap; }
       <string/>
      </property>
      <property name="icon" >
-      <iconset resource="../application.qrc" >
-       <normaloff>:/list-remove.png</normaloff>:/list-remove.png</iconset>
+      <iconset resource="../mudlet_alpha.qrc" >
+       <normaloff>:/icons/dialog-cancel.png</normaloff>:/icons/dialog-cancel.png</iconset>
      </property>
     </widget>
    </item>
@@ -309,15 +309,15 @@ p, li { white-space: pre-wrap; }
       <string/>
      </property>
      <property name="icon" >
-      <iconset resource="../application.qrc" >
-       <normaloff>:/list-add.png</normaloff>:/list-add.png</iconset>
+      <iconset resource="../mudlet_alpha.qrc" >
+       <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
  <resources>
-  <include location="../application.qrc" />
+  <include location="../mudlet_alpha.qrc" />
  </resources>
  <connections/>
 </ui>

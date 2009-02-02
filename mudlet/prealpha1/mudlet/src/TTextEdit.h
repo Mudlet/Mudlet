@@ -80,7 +80,7 @@ public:
     int               imageTopLine();
     int               bufferScrollUp( int lines );
     int               bufferScrollDown( int lines );
-    bool              isAtEndPosition();
+    bool              isTailMode();
     void              copySelectionToClipboard();
     
 signals:

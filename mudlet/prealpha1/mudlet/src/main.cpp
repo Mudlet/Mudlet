@@ -35,7 +35,7 @@ void debugOutput(QtMsgType type, const char *msg)
         cout << msg << endl;
         if( mudlet::mpDebugConsole )
         {
-            mudlet::mpDebugConsole->print( msg );
+            //mudlet::mpDebugConsole->print( msg );
         }
         else
         {
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     spDebugConsole = 0;
     qInstallMsgHandler( debugOutput );
     
-    Q_INIT_RESOURCE(application);
+    Q_INIT_RESOURCE(mudlet_alpha);
     QApplication app(argc, argv);
     QPixmap pixmap(":/Mudlet_splashscreen_main");
     QSplashScreen splash(pixmap);

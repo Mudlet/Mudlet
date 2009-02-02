@@ -92,7 +92,8 @@ void Host::setReplacementCommand( QString s )
 void Host::send( QString command )
 { 
     mReplacementCommand = "";
-    mpConsole->printCommand( command );
+    mpConsole->printCommand( command ); // used to print the terminal <LF> that terminates a telnet command
+                                        // this is important to get the cursor position right
     if( ! mAliasUnit.processDataStream( command ) )
     {
         if( mReplacementCommand.size() > 0 ) 

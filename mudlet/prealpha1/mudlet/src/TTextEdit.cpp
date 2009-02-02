@@ -130,9 +130,14 @@ void TTextEdit::updateScreenView()
 }
 
 void TTextEdit::showNewLines() 
-{
-    if( ! isAtEndPosition() ) 
-        return;
+{   
+    if( ! mIsSplitScreen ) 
+    {
+        if( ! isTailMode() ) 
+        {
+            return;
+        }
+    }
     
     mCursorY = mpBuffer->size()-1;
     
@@ -179,8 +184,8 @@ void TTextEdit::scrollUp( int lines )
         QRect drawRect;
         drawRect.setLeft( 0 );
         drawRect.setRight( mScreenWidth * mFontWidth );
-        drawRect.setTop( abs(mScreenHeight - lines - 1) * mFontHeight );
-        drawRect.setHeight( lines * mFontHeight );
+        drawRect.setTop( abs(mScreenHeight - lines -1 ) * mFontHeight );
+        drawRect.setHeight( mScreenHeight * mFontHeight );
     
         update( drawRect );
     }
@@ -190,12 +195,8 @@ void TTextEdit::scrollDown( int lines )
 {
     lines = bufferScrollDown( lines );
     if( lines == 0 ) return;
-    if( lines > 0 )
-    {
-        scroll( 0, mFontHeight * ( -1 * lines ) );        
-        return;
-    }
-    else
+        
+    if( ( lines < 0 ) || ( ! imageTopLine() ) )
     {
         // lines < 0 => skip scrolling and paint frame directly,
         //              as scrollRect covers the entire area of the screen
@@ -204,10 +205,15 @@ void TTextEdit::scrollDown( int lines )
         drawRect.setLeft( 0 );
         drawRect.setRight( mScreenWidth * mFontWidth );
         drawRect.setTop( 0 );
-        drawRect.setHeight( lines * mFontHeight );
+        drawRect.setHeight( mScreenHeight * mFontHeight );
     
         update( drawRect );
     }
+    else
+    {
+        scroll( 0, mFontHeight * ( -1 * lines ) );        
+        return;
+    }    
 }
 
 void TTextEdit::drawBackground( QPainter & painter, 
@@ -265,15 +271,26 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     
     int lineOffset = imageTopLine(); 
     bool invers = false;
-    if( mHighlight_on && mInversOn ) invers = true;
+    
+    if( mHighlight_on && mInversOn ) 
+    {
+        invers = true;
+    }
+    
     for( int i=0; i<mScreenHeight; i++ )
     {
-        if( mpBuffer->buffer.size() <= i+lineOffset ) break;
+        if( mpBuffer->buffer.size() <= i+lineOffset ) 
+        {
+            break;
+        }
         
         int lineLength = mpBuffer->buffer[i+lineOffset].size();
         for( int i2=x1; i2<lineLength; )
         {
-            if( i2 >= x2 ) break;
+            if( i2 >= x2 )
+            {
+                break;
+            }
             QString text = mpBuffer->lineBuffer[i+lineOffset].at(i2);
             bool isBold = mpBuffer->buffer[i+lineOffset][i2]->bold;
             bool isUnderline = mpBuffer->buffer[i+lineOffset][i2]->underline;
@@ -405,7 +422,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
     
     int x = event->x() / mFontWidth;
     int y = ( event->y() / mFontHeight ) + imageTopLine();
-    if( ( x < 0 ) || ( y < 0 ) || ( y > mpBuffer->size()-1 ) ) return;
+    if( ( x < 0 ) || ( y < 0 ) || ( y > (int) mpBuffer->size()-1 ) ) return;
     
     QPoint PC( x, y );
        
@@ -488,12 +505,12 @@ void TTextEdit::copySelectionToClipboard()
     {
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
-        while( x < mpBuffer->buffer[y].size() )
+        while( x < (int) mpBuffer->buffer[y].size() )
         {
             text.append( mpBuffer->lineBuffer[y].at(x) );
             if( y >= mPB.y() )
             {
-                if( ( x == mPB.x()-1 ) || ( x >= mpBuffer->buffer[y].size()-1 ) )
+                if( ( x == mPB.x()-1 ) || ( x >= (int) mpBuffer->buffer[y].size()-1 ) )
                 {
                     QClipboard * clipboard = QApplication::clipboard();
                     clipboard->setText( text );
@@ -566,16 +583,18 @@ int TTextEdit::imageTopLine()
     }
 } 
 
-bool TTextEdit::isAtEndPosition()
+bool TTextEdit::isTailMode()
 {
-    if( mIsTailMode ) return true;
-    
-    if( mCursorY == mpBuffer->size()-1 )
+    if( ( mCursorY == (int) mpBuffer->size()-1 ) 
+        || ( mIsDebugConsole ) 
+        || ( mIsTailMode ) 
+        || ( (int)mpBuffer->size() <= mScreenHeight) )
     {
         mIsTailMode = true;
         return true;    
     }
-    else return false;
+    else 
+        return false;
 }
 
 int TTextEdit::bufferScrollUp( int lines )
@@ -592,7 +611,7 @@ int TTextEdit::bufferScrollUp( int lines )
         {
             int delta = mCursorY;
             mCursorY = 0;
-            return delta; //this is needed to compute the optimal size of the scroll rect
+            return delta; 
         }
         else
             return 0;
@@ -601,19 +620,20 @@ int TTextEdit::bufferScrollUp( int lines )
 
 int TTextEdit::bufferScrollDown( int lines )
 {
-    if( ( mCursorY + lines ) < (mpBuffer->size()-1 - mScreenHeight) )
+    if( ( mCursorY + lines ) < (int)(mpBuffer->size()-1 - mScreenHeight) )
     {
         mCursorY += lines;
+        mIsTailMode = false;
         return lines;
     }
     else
     {
         mCursorY += lines;
-        if( mCursorY > (mpBuffer->size()-1) )
+        if( mCursorY > (int)(mpBuffer->size()-1) )
         {
             int delta = mCursorY;
             mCursorY = mpBuffer->size()-1;
-            return (-1 * delta); //this is needed to compute the optimal size of the scroll rect
+            return (-1 * delta);
         }
         mIsTailMode = true;
         return 0;

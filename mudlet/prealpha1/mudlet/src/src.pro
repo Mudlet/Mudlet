@@ -140,7 +140,7 @@ TEMPLATE = app
 
 TARGET = mudlet
 
-RESOURCES = application.qrc 
+RESOURCES = mudlet_alpha.qrc 
 
 DISTFILES += paragraph.css
 

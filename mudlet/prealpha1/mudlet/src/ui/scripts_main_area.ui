@@ -196,7 +196,7 @@
       <string/>
      </property>
      <property name="icon" >
-      <iconset resource="../application.qrc" >
+      <iconset>
        <normaloff>:/list-remove.png</normaloff>:/list-remove.png</iconset>
      </property>
     </widget>
@@ -207,7 +207,7 @@
       <string/>
      </property>
      <property name="icon" >
-      <iconset resource="../application.qrc" >
+      <iconset>
        <normaloff>:/list-add.png</normaloff>:/list-add.png</iconset>
      </property>
     </widget>
@@ -215,7 +215,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../application.qrc" />
+  <include location="../mudlet_alpha.qrc" />
  </resources>
  <connections/>
 </ui>
