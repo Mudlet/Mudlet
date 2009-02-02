@@ -25,7 +25,7 @@
 #include <QList>
 #include <QMutex>
 #include <QString>
-#include <Host.h>
+#include "Host.h"
 
 using namespace std;
 
