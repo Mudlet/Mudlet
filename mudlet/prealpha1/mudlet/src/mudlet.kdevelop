@@ -1,17 +1,18 @@
 <?xml version = '1.0'?>
 <kdevelop>
   <general>
-  <author></author>
-  <email></email>
-  <version>$VERSION$</version>
-  <projectmanagement>KDevCustomProject</projectmanagement>
-  <primarylanguage>C++</primarylanguage>
-  <ignoreparts/>
-  <projectdirectory>/home/bruno/mudlet/mudlet/prealpha1/mudlet</projectdirectory>
-  <absoluteprojectpath>true</absoluteprojectpath>
-  <secondaryLanguages>
-     <language>C</language>
-  </secondaryLanguages>
+    <author/>
+    <email/>
+    <version>$VERSION$</version>
+    <projectmanagement>KDevCustomProject</projectmanagement>
+    <primarylanguage>C++</primarylanguage>
+    <ignoreparts/>
+    <projectdirectory>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src</projectdirectory>
+    <absoluteprojectpath>true</absoluteprojectpath>
+    <secondaryLanguages>
+      <language>C</language>
+    </secondaryLanguages>
+    <projectname>mudlet</projectname>
   </general>
   <kdevcustomproject>
     <filelistdirectory>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src</filelistdirectory>
@@ -19,7 +20,7 @@
       <mainprogram>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src/mudlet</mainprogram>
       <directoryradio>custom</directoryradio>
       <customdirectory>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src</customdirectory>
-      <programargs></programargs>
+      <programargs/>
       <terminal>false</terminal>
       <autocompile>true</autocompile>
       <envvars/>
@@ -40,10 +41,25 @@
         </default>
       </environments>
     </make>
-    <blacklist>
-      <path>CMakeFiles</path>
-      <path>src</path>
-    </blacklist>
+    <blacklist/>
+    <filetypes>
+      <filetype>*.java</filetype>
+      <filetype>*.h</filetype>
+      <filetype>*.H</filetype>
+      <filetype>*.hh</filetype>
+      <filetype>*.hxx</filetype>
+      <filetype>*.hpp</filetype>
+      <filetype>*.c</filetype>
+      <filetype>*.C</filetype>
+      <filetype>*.cc</filetype>
+      <filetype>*.cpp</filetype>
+      <filetype>*.c++</filetype>
+      <filetype>*.cxx</filetype>
+      <filetype>Makefile</filetype>
+      <filetype>CMakeLists.txt</filetype>
+      <filetype>*.png</filetype>
+      <filetype>*.ui</filetype>
+    </filetypes>
   </kdevcustomproject>
   <kdevfilecreate>
     <filetypes/>
@@ -82,17 +98,42 @@
       <codeCompletionDelay>250</codeCompletionDelay>
       <argumentsHintDelay>400</argumentsHintDelay>
       <headerCompletionDelay>250</headerCompletionDelay>
+      <showOnlyAccessibleItems>false</showOnlyAccessibleItems>
+      <completionBoxItemOrder>0</completionBoxItemOrder>
+      <howEvaluationContextMenu>true</howEvaluationContextMenu>
+      <showCommentWithArgumentHint>true</showCommentWithArgumentHint>
+      <statusBarTypeEvaluation>false</statusBarTypeEvaluation>
+      <namespaceAliases>std=_GLIBCXX_STD;__gnu_cxx=std</namespaceAliases>
+      <processPrimaryTypes>true</processPrimaryTypes>
+      <processFunctionArguments>false</processFunctionArguments>
+      <preProcessAllHeaders>false</preProcessAllHeaders>
+      <parseMissingHeadersExperimental>false</parseMissingHeadersExperimental>
+      <resolveIncludePathsUsingMakeExperimental>false</resolveIncludePathsUsingMakeExperimental>
+      <alwaysParseInBackground>true</alwaysParseInBackground>
+      <usePermanentCaching>true</usePermanentCaching>
+      <alwaysIncludeNamespaces>false</alwaysIncludeNamespaces>
+      <includePaths>.;</includePaths>
     </codecompletion>
     <references/>
+    <qt>
+      <used>false</used>
+      <version>3</version>
+      <includestyle>3</includestyle>
+      <root>/usr/lib/qt3</root>
+      <designerintegration>EmbeddedKDevDesigner</designerintegration>
+      <qmake>/usr/lib/qt3/bin/qmake</qmake>
+      <designer>/usr/lib/qt3/bin/designer</designer>
+      <designerpluginpaths/>
+    </qt>
   </kdevcppsupport>
   <kdevfileview>
     <groups>
-      <group pattern="CMakeLists.txt;*.cmake;" name="CMake" />
-      <group pattern="*.h;*.hxx;*.hpp" name="Header" />
-      <group pattern="*.c" name="C Sources" />
-      <group pattern="*.cpp;*.C;*.cxx;*.cc" name="C++ Sources"/>
-      <group pattern="*.ui" name="Qt Designer files" />
+      <group pattern="*.cpp;*.cxx;*.h" name="Sources" />
+      <group pattern="*.ui" name="User Interface" />
+      <group pattern="*.png" name="Icons" />
+      <group pattern="*" name="Others" />
       <hidenonprojectfiles>true</hidenonprojectfiles>
+      <hidenonlocation>false</hidenonlocation>
     </groups>
     <tree>
       <hidepatterns>*.o,*.lo,CVS,*~,cmake*</hidepatterns>
