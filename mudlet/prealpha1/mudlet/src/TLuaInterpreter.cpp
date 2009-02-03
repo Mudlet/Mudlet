@@ -477,7 +477,7 @@ int TLuaInterpreter::replace( lua_State * L )
 int TLuaInterpreter::deleteLine( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    pHost->mpConsole->deleteLine();
+    pHost->mpConsole->skipLine();
     return 0;
 }
 
@@ -1014,6 +1014,7 @@ int TLuaInterpreter::Echo( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString txt(luaSendText.c_str());
+    qDebug()<<"TLua::Echo() calling console::echo("<<txt<<")";
     pHost->mpConsole->echo( txt );    
     return 0;
 }
@@ -1334,7 +1335,7 @@ void TLuaInterpreter::set_lua_table( QString & tableName, QStringList & variable
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
 }
 
-void TLuaInterpreter::set_lua_string( QString & varName, QString & varValue )
+void TLuaInterpreter::set_lua_string( const QString & varName, QString & varValue )
 {
     lua_State * L = pGlobalLua;
     if( ! L )

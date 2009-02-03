@@ -576,6 +576,8 @@ bool TTrigger::restore( QDataStream & ifs, bool initMode )
     
     mID = mpHost->getTriggerUnit()->getNewID();
     
+    if( initMode ) qDebug()<<"TTrigger::restore() mName="<<mName<<" mID="<<mID<<" children="<<children;
+    
     bool ret = false;
     
     if( ifs.status() == QDataStream::Ok )

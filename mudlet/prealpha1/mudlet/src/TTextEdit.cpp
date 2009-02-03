@@ -68,7 +68,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     setAutoFillBackground( false ); //experimental
     setAttribute( Qt::WA_InputMethodEnabled, true );
     setAttribute( Qt::WA_OpaquePaintEvent );
-    
+    setAttribute( Qt::WA_DeleteOnClose );
     showNewLines();
 }
 
@@ -184,7 +184,7 @@ void TTextEdit::scrollUp( int lines )
         QRect drawRect;
         drawRect.setLeft( 0 );
         drawRect.setRight( mScreenWidth * mFontWidth );
-        drawRect.setTop( abs(mScreenHeight - lines -1 ) * mFontHeight );
+        drawRect.setTop( abs(mScreenHeight - lines ) * mFontHeight );
         drawRect.setHeight( mScreenHeight * mFontHeight );
     
         update( drawRect );
@@ -196,16 +196,16 @@ void TTextEdit::scrollDown( int lines )
     lines = bufferScrollDown( lines );
     if( lines == 0 ) return;
         
-    if( ( lines < 0 ) || ( ! imageTopLine() ) )
+    if( ( lines < 0 ) || ( imageTopLine() == 0 ) )
     {
         // lines < 0 => skip scrolling and paint frame directly,
         //              as scrollRect covers the entire area of the screen
-        lines = mScreenHeight;
+        lines = lines * -1;
         QRect drawRect;
         drawRect.setLeft( 0 );
         drawRect.setRight( mScreenWidth * mFontWidth );
-        drawRect.setTop( 0 );
-        drawRect.setHeight( mScreenHeight * mFontHeight );
+        drawRect.setBottom( mScreenHeight*mFontHeight );
+        drawRect.setHeight( lines*mFontHeight );
     
         update( drawRect );
     }
@@ -599,7 +599,7 @@ bool TTextEdit::isTailMode()
 
 int TTextEdit::bufferScrollUp( int lines )
 {
-    if( (mCursorY - lines) > mScreenHeight  )
+    if( (mCursorY - lines) >= mScreenHeight  )
     {
         mCursorY -= lines;
         return lines;
@@ -622,8 +622,20 @@ int TTextEdit::bufferScrollDown( int lines )
 {
     if( ( mCursorY + lines ) < (int)(mpBuffer->size()-1 - mScreenHeight) )
     {
-        mCursorY += lines;
+        if( mCursorY + lines < mScreenHeight + lines )
+        {
+            mCursorY = mScreenHeight+lines;
+            if( mCursorY > (int)(mpBuffer->size()-1 ) )
+            {
+                mCursorY = mpBuffer->size()-1;    
+            }
+        }
+        else
+        {
+            mCursorY += lines;
+        }
         mIsTailMode = false;
+        qDebug()<<"mCursorY="<<mCursorY;
         return lines;
     }
     else

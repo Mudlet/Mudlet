@@ -43,10 +43,10 @@
 
 using namespace std;
 
+const QString TConsole::cmLuaLineVariable("line");
 
 TConsole::TConsole( Host * pH, bool isDebugConsole ) 
 : mpHost( pH )
-, m_pageInitialized( false )
 , m_fontSpecs( pH )
 , buffer( pH )
 , mIsDebugConsole( isDebugConsole )
@@ -59,10 +59,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mSystemMessageBgColor( mBgColor )
 , mWrapAt( 100 )
 , mIndentCount( 0 )
+, mTriggerEngineMode( false )
 {
-    mCursorHome = 0;
-    mUserCursorX = 0;
-    mUserCursorY = 0;
+    setAttribute( Qt::WA_DeleteOnClose );
+    
     mWaitingForHighColorCode = false;
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
@@ -106,7 +106,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layout->addWidget( splitter );
     layout->addWidget( mpCommandLine );
     
-    m_paragraphIsComplete = true;
     changeColors();
     
     console2->setSplitScreen();
@@ -432,13 +431,13 @@ void TConsole::translateToPlainText( QString & s )
         if( sequence_begin == -1 )
         {
             //cursor.insertText( s );
-            buffer.addText( s, m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
+            buffer.append( s, m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
             return;
         }
         else
         {
             //cursor.insertText( s.mid( 0, sequence_begin ) );
-            buffer.addText( s.mid( 0, sequence_begin ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
+            buffer.append( s.mid( 0, sequence_begin ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
         }
     }
     while( sequence_begin != -1 )
@@ -606,8 +605,8 @@ void TConsole::translateToPlainText( QString & s )
             sequence_begin = s.indexOf( QString( "\033[" ), pos );
             if( (sequence_begin > pos + 1 ) || ( sequence_begin == -1 ) )
             {
-                if( ! m_fontSpecs.bold ) buffer.addText( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline );
-                else buffer.addText( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColorLight, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline ); 
+                if( ! m_fontSpecs.bold ) buffer.append( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline );
+                else buffer.append( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColorLight, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline ); 
             }
         }// is sequence_end included in this data packet?
         else
@@ -619,35 +618,43 @@ void TConsole::translateToPlainText( QString & s )
     }//while
 }
 
+//const QString TConsole::cmLuaLineVariable = "line";
+
 void TConsole::printOnDisplay( QString & incomingSocketData )  
 {   
-    QTime time; 
+    /*QTime time; 
     int t1, t2, t3, t4, t5, t6;
-    t1=0;t2=0;t3=0;t4=0;t5=0;t6=0;
-    mEchoBuffer = "";
-    QString lineVar = "line"; //FIXME make constant
+    t1=0;t2=0;t3=0;t4=0;t5=0;t6=0;*/
+    
     QString prompt ="";//FIXME
+   
+// time.start();
     
-    time.start();
-    int lineBeforeNewContent = buffer.size()-1;
+    int lineBeforeNewContent = buffer.getLastLineNumber();
+    qDebug()<<"LastLine vor translate:"<<lineBeforeNewContent;
     translateToPlainText( incomingSocketData );
-    buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount );
-    t1=time.elapsed();
     
-    int x=0, y=0;
-    if( buffer.size()-1 > 40 ) y = buffer.size()-1-40;
-    else y=0;
-    int newLine = 0;
-    for( int i=y; i<buffer.size()-1; i++ )
+    qDebug()<<"buffer.size-1 after translate:"<<buffer.getLastLineNumber();    
+//t1=time.elapsed();
+    
+    mTriggerEngineMode = true;
+    mUserCursor.setY( lineBeforeNewContent );
+    for( int i=lineBeforeNewContent; i<buffer.getLastLineNumber()+1; i++ )
     {
+        
         QString line = buffer.line( i );
-        mpHost->getLuaInterpreter()->set_lua_string( lineVar, line );
+        qDebug()<<"schiebe line#"<<i<<":"<<line;
+        mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, line );
         if( mudlet::debugMode ) TDebug() << "new line = " << line;
-        newLine++;
         mpHost->incomingStreamProcessor( line, prompt );
-        mUserCursorY = i;
+        mUserCursor.setY( mUserCursor.y() + 1 );
+        mUserCursor.setX( 0 );
+        qDebug()<<"mUserCursorY="<<mUserCursor.y();
     }
-    t2=time.elapsed()-t1;
+    mTriggerEngineMode = false;    
+//t2=time.elapsed()-t1;
+    
+    buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount );
     
     console->showNewLines();
     console2->showNewLines();
@@ -693,20 +700,43 @@ void TConsole::replace( QString text )
     */
 }
 
-void TConsole::deleteLine()
+// skips the current Line in the trigger unit
+// resulting in aborting further triggering on this line
+// and skips transfer of this line to the display buffer
+void TConsole::skipLine()
 {
-    /*
-    cursor2.select( QTextCursor::BlockUnderCursor );
-    cursor2.removeSelectedText();*/
+    if( mTriggerEngineMode )
+    {
+        mCurrentLine.clear();
+    }
+}
+
+bool TConsole::deleteLine( int y )
+{
+    return buffer.deleteLine( y );    
+}
+
+
+bool TConsole::hasSelection() 
+{
+    if( mP_start != mP_end )
+        return true;
+    else
+        return false;
 }
 
 void TConsole::insertText( QString text )
 {
-    /*
-    int x = cursor2.columnNumber();
-    int o = cursor2.selectedText().size();
+    if( mTriggerEngineMode )
+    {
+        buffer.insertInLine( mUserCursor, text );
+        return;
+    }
+    int x = mUserCursor.x();
+    int y = mUserCursor.y();
+    int o = 0;//FIXME:mSelectedText.size();
     int r = text.size();
-    if( cursor2.hasSelection() )
+    if( hasSelection() )
     {
         if( r < o )
         {
@@ -723,50 +753,33 @@ void TConsole::insertText( QString text )
     {
         mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
     }
-    cursor2.insertText( text );*/
+    buffer.insert( mUserCursor, 
+                   text, 
+                   mFgColor, 
+                   mBgColor, 
+                   false, 
+                   false, 
+                   false );
 }
 
 void TConsole::insertHTML( QString text )
 {
-    /*
-    int x = cursor2.columnNumber();
-    int o = cursor2.selectedText().size();
-    int r = text.size();
-    if( cursor2.hasSelection() )
-    {
-        if( r < o )
-        {
-            int a = -1*(o-r);
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
-        }
-        if( r > o )
-        {
-            int a = r-o;
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
-        }
-    }
-    else
-    {
-        mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
-    }
-    cursor2.insertHtml( text );    */
+    insertText( text );
 }
 
 int TConsole::getLineNumber()
 {
-    /*
-    return cursor2.blockNumber();    */
+    return mUserCursor.y(); 
 }
 
 int TConsole::getColumnNumber()
-{/*
-    return cursor2.columnNumber();    */
+{
+    return mUserCursor.x();
 }
 
 int TConsole::getLineCount()
 {
-    /*
-    return mpTextDocument->blockCount();    */
+    return buffer.getLastLineNumber();
 }
 
 QStringList TConsole::getLines( int from, int to )
@@ -797,56 +810,17 @@ QStringList TConsole::getLines( int from, int to )
 
 bool TConsole::moveCursor( int x, int y )
 {
-    /*
-    int oldPos = cursor2.position();
-    if( y < 0 )
+    QPoint P(x,y);
+    if( buffer.moveCursor( P ) )
     {
-        y = abs( y );
-        for( int i=0; i<y; i++ )
-        {
-            if( ! cursor2.movePosition( QTextCursor::Up ) )
-            {
-                cursor2.setPosition( oldPos );
-                return false;   
-            }
-        }
+        mUserCursor.setX( x );
+        mUserCursor.setY( y );
+        return true;
     }
     else
-    {
-        for( int i=0; i<y; i++ )
-        {
-            if( ! cursor2.movePosition( QTextCursor::Down ) )
-            {
-                cursor2.setPosition( oldPos );
-                return false;   
-            }
-        }
-    }
-    if( x < 0 )
-    {
-        x = abs( x );
-        for( int i=0; i<x; i++ )
-        {
-            if( ! cursor2.movePosition( QTextCursor::PreviousCharacter ) )
-            {
-                cursor2.setPosition( oldPos );
-                return false;
-            }
-        }
-    }
-    else
-    {
-        for( int i=0; i<x; i++ )
-        {
-            if( ! cursor2.movePosition( QTextCursor::NextCharacter ) )
-            {
-                cursor2.setPosition( oldPos );
-                return false;   
-            }
-        }
-    }
-    return true;    */
+        return false;
 }
+
 
 void TConsole::setUserWindow()
 {
@@ -923,7 +897,8 @@ void TConsole::printCommand( QString & msg )
 
 void TConsole::echo( QString & msg )
 {
-    //  mEchoBuffer.append( msg );    
+    qDebug()<<"TConsole::echo("<<msg<<")";
+    insertText( msg );    
 }
 
 void TConsole::print( const char * msg )
@@ -931,12 +906,12 @@ void TConsole::print( const char * msg )
     QColor fgColor = QColor(0,0,0);
     QColor bgColor = QColor(255,255,255);
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    buffer.addText( msg, 
-                    fgColor,
-                    bgColor, 
-                    false, 
-                    false,
-                    false );
+    buffer.append( msg, 
+                   fgColor,
+                   bgColor, 
+                   false, 
+                   false,
+                   false );
     buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount );
     console->showNewLines();
 }
@@ -946,7 +921,7 @@ void TConsole::print( QString & msg )
     QColor fgColor = QColor(0,0,0);
     QColor bgColor = QColor(255,255,255);
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    buffer.addText( msg, 
+    buffer.append(  msg, 
                     fgColor,
                     bgColor, 
                     false, 
@@ -959,7 +934,7 @@ void TConsole::print( QString & msg )
 void TConsole::print( QString & msg, QColor & fgColor, QColor & bgColor )
 {
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    buffer.addText( msg, 
+    buffer.append(  msg, 
                     fgColor,
                     bgColor, 
                     false, 
@@ -985,7 +960,7 @@ void TConsole::printSystemMessage( QString & msg )
     }
     
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    buffer.addText( msg, 
+    buffer.append(  msg, 
                     mSystemMessageFgColor,
                     mSystemMessageBgColor,
                     false, 

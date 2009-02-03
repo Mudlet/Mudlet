@@ -176,7 +176,7 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     
     QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
     if( commandList.size() == 0 ) 
-        mpHost->send( "\n" );
+        mpHost->send( "" );
     
     for( int i=0; i<commandList.size(); i++ )
     {

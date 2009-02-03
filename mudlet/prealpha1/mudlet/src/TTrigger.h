@@ -55,7 +55,7 @@ public:
     virtual          ~TTrigger();
                      TTrigger( TTrigger * parent, Host * pHost ); 
                      TTrigger( QString name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
-                     TTrigger& clone(const TTrigger& );
+                     TTrigger & clone( const TTrigger & );
                       //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
                       //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
      
@@ -97,7 +97,7 @@ public:
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     bool             mTriggerContainsPerlRegex;
-    bool             isClone(TTrigger &b) const;
+    bool             isClone( TTrigger & ) const;
     
 private:
     

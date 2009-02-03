@@ -58,7 +58,7 @@ Q_OBJECT
         
 public:
         
-                                dlgTriggerEditor( Host *, QWidget * parent = 0 );
+                                dlgTriggerEditor( Host * );
     void                        fillout_form();
         
     QsciLexerLua *              mpLuaLexer;
@@ -74,24 +74,24 @@ public slots:
     void                        slot_export();
     void                        slot_import();
     void                        slot_debug_mode();
-    bool                        slot_saveTriggerAfterEdit(bool ask = true);
-    bool                        slot_saveTimerAfterEdit(bool ask = true);
-    bool                        slot_saveScriptAfterEdit(bool ask = true);
-    bool                        slot_saveAliasAfterEdit(bool ask = true);
-    bool                        slot_saveActionAfterEdit(bool ask = true);
-    bool                        slot_saveKeyAfterEdit(bool ask = true);
+    void                        slot_saveTriggerAfterEdit();
+    void                        slot_saveTimerAfterEdit();
+    void                        slot_saveScriptAfterEdit();
+    void                        slot_saveAliasAfterEdit();
+    void                        slot_saveActionAfterEdit();
+    void                        slot_saveKeyAfterEdit();
     void                        slot_show_timers();
     void                        slot_show_triggers();
     void                        slot_show_scripts();
     void                        slot_show_aliases();
     void                        slot_show_actions();
     void                        slot_show_keys();
-    void                        slot_trigger_clicked( QTreeWidgetItem *, QTreeWidgetItem *);
-    void                        slot_timer_clicked( QTreeWidgetItem *, QTreeWidgetItem *);
-    void                        slot_scripts_clicked( QTreeWidgetItem *, QTreeWidgetItem *);
-    void                        slot_alias_clicked( QTreeWidgetItem *, QTreeWidgetItem *);
-    void                        slot_action_clicked( QTreeWidgetItem *, QTreeWidgetItem *);
-    void                        slot_key_clicked( QTreeWidgetItem *, QTreeWidgetItem *);
+    void                        slot_trigger_clicked( QTreeWidgetItem *pItem, int column );
+    void                        slot_timer_clicked( QTreeWidgetItem *pItem, int column );
+    void                        slot_scripts_clicked( QTreeWidgetItem *pItem, int column );
+    void                        slot_alias_clicked( QTreeWidgetItem *pItem, int column );
+    void                        slot_action_clicked( QTreeWidgetItem * pItem, int column );
+    void                        slot_key_clicked( QTreeWidgetItem *pItem, int column );
     void                        slot_update();
     void                        slot_deleteProfile();
     void                        slot_connection_dlg_finnished();
@@ -136,7 +136,6 @@ public slots:
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
     void                        slot_grab_key();
     bool                        event( QEvent * event );
-    void                        closeEvent(QCloseEvent *event);
     void                        grab_key_callback( int key, int modifier );
  
     
@@ -191,7 +190,6 @@ private:
     bool                        mIsGrabKey;
     QsciDocument                mDocument;
     Host *                      mpHost;
-    bool                        saved_ok();
 };
 
 #endif

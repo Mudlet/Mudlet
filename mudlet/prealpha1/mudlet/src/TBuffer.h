@@ -23,7 +23,7 @@
 
 #ifndef TBUFFER_H
 #define TBUFFER_H
-
+#include <QPoint>
 #include <QColor>
 #include <QChar>
 #include <QString>
@@ -56,7 +56,10 @@ class TBuffer
 public: 
     
     TBuffer( Host * pH );
-    void addText( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
+    void append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
+    QPoint insert( QPoint &, QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
+    bool insertInLine( QPoint & cursor, QString & what );
+    void expandLine( int y, int count, TChar * pC );
     void wrap( int startLine, int screenWidth, int indentSize );
     int size(){ return buffer.size(); }    
     QString & line( int n );
@@ -64,8 +67,12 @@ public:
     QStringList split( int line, QString splitter );
     QStringList split( int line, QRegExp splitter );
     bool replace( int line, QString what, QString with );
+    bool replace( QPoint & start, QPoint & end, QString & with );
+    bool deleteLine( int );
     bool deleteLines( int from, int to );
     bool applyFormat( int line, int x1, int x2, TChar & format );
+    bool moveCursor( QPoint & where );
+    QPoint & insertText( QString & what, QPoint & where );
     int getLastLineNumber();
     
     std::deque<TChar *> bufferLine;

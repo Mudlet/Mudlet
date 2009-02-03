@@ -71,7 +71,7 @@ public:
     bool compileAndExecuteScript( QString & );
     //void execLuaCode( QString code );
     QString get_lua_string( QString & stringName );
-    void set_lua_string( QString & varName, QString & varValue );
+    void set_lua_string( const QString & varName, QString & varValue );
     void set_lua_table( QString & tableName, QStringList & variableList );
     void setCaptureGroups( QStringList, QList<int> );
     void startLuaSessionInterpreter();

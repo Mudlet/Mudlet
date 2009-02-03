@@ -37,8 +37,8 @@ TDebug & TDebug::operator>>( const int code)
 
 TDebug::~TDebug()
 {
-    msg.append( QChar('\n') );
-    mudlet::mpDebugConsole->print( msg );    
+    //msg.append( QChar('\n') );
+    //mudlet::mpDebugConsole->print( msg );    
 }
 
 TDebug & TDebug::operator<<( const QString & t )

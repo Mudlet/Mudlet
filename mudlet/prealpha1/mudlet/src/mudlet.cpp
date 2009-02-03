@@ -119,7 +119,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pConsole->show();
     mdiArea->show();
     
-    dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH, this );
+    dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH );
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
     
@@ -279,6 +279,13 @@ void mudlet::addSubWindow( TConsole* pConsole )
 void mudlet::closeEvent(QCloseEvent *event)
 {
     mpDebugConsole->close();
+    
+    foreach( TConsole * pC, mConsoleMap )
+    {
+        pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
+        pC->mpHost->mpEditorDialog->close();    
+    }
+    
     writeSettings();
     event->accept();
 }
@@ -341,7 +348,7 @@ void mudlet::show_script_dialog()
 {
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;  
     if( ! pEditor ) return;
     pEditor->slot_show_scripts();
     pEditor->show();

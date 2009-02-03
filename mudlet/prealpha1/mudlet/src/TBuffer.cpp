@@ -32,6 +32,7 @@ using namespace std;
 const QColor TCharDefaultFgColor = QColor(255,255,255);
 const QColor TCharDefaultBgColor = QColor(0,0,0); 
 
+
 TChar::TChar()
 {
     fgColor = QColor(255,255,255);
@@ -40,6 +41,7 @@ TChar::TChar()
     bold = false;
     underline = false;
 }
+
 
 TChar::TChar( Host * pH )
 {
@@ -59,6 +61,7 @@ TChar::TChar( Host * pH )
     underline = false;    
 }
 
+
 TChar::TChar( TChar const & copy )
 {
     fgColor = copy.fgColor;
@@ -67,6 +70,7 @@ TChar::TChar( TChar const & copy )
     bold = copy.bold;
     underline = copy.underline;     
 }
+
 
 TBuffer::TBuffer( Host * pH )
 : mpHost( pH )
@@ -88,12 +92,14 @@ TBuffer::TBuffer( Host * pH )
     mLastLine = buffer.size()-1;
 }
 
+
 int TBuffer::getLastLineNumber()
 {
     return buffer.size()-1;
 }
 
-void TBuffer::addText( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
+
+void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
     for( int i=0; i<text.size(); i++ )
     {
@@ -104,16 +110,20 @@ void TBuffer::addText( QString text, QColor & fgColor, QColor & bgColor, bool bo
             {
                 if( lineBuffer[last][0] == QChar( 0x21af ) )
                 {
-                    mCursorMoved = false;
-                    lineBuffer[last].replace( 0, 1, text.at( i ) );
-                    buffer[last].pop_back();
-                    TChar * pC = new TChar;
-                    pC->fgColor = fgColor;
-                    pC->bgColor = bgColor;
-                    pC->italics = italics;
-                    pC->bold = bold;
-                    pC->underline = underline;
-                    buffer[last].push_back( pC );
+                    if( text.at( i ) != QChar( '\n' ) )
+                    {
+                        mCursorMoved = false;
+                        lineBuffer[last].replace( 0, 1, text.at( i ) );
+                        TChar * pC = new TChar;
+                        pC->fgColor = fgColor;
+                        pC->bgColor = bgColor;
+                        pC->italics = italics;
+                        pC->bold = bold;
+                        pC->underline = underline;
+                        buffer[last].push_back( pC );
+                        buffer[last].pop_front();
+                        continue;
+                    }
                 }
             }
         }
@@ -132,7 +142,7 @@ void TBuffer::addText( QString text, QColor & fgColor, QColor & bgColor, bool bo
         {
             std::deque<TChar *> newLine;
             TChar * pC = new TChar;
-            pC->fgColor = fgColor;
+            pC->fgColor = bgColor;    // make the <LF>-marker invisible
             pC->bgColor = bgColor;
             pC->italics = italics;
             pC->bold = bold;
@@ -144,9 +154,113 @@ void TBuffer::addText( QString text, QColor & fgColor, QColor & bgColor, bool bo
             newLines++;
             mCursorMoved = true;
         }
-        
     }
-   
+}
+
+QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
+{
+    QPoint P(-1, -1);
+    
+    int x = where.x();
+    int y = where.y();
+    
+    if( y < 0 ) return P;
+    if( y >= buffer.size() ) return P;
+    
+    
+    for( int i=0; i<text.size(); i++ )
+    {
+        if( mCursorMoved ) 
+        {
+            if(lineBuffer[y].size() == 1) // <LF> at beginning of new line marker
+            {
+                if( lineBuffer[y][0] == QChar( 0x21af ) )
+                {
+                    if( text.at( i ) != QChar( '\n' ) )
+                    {
+                        mCursorMoved = false;
+                        x = 0;
+                        lineBuffer[y].replace( 0, 1, text.at( i ) );
+                        TChar * pC = new TChar;
+                        pC->fgColor = fgColor;
+                        pC->bgColor = bgColor;
+                        pC->italics = italics;
+                        pC->bold = bold;
+                        pC->underline = underline;
+                        buffer[y].push_back( pC );
+                        buffer[y].pop_front();
+                        continue;
+                    }
+                }
+            }
+        }
+        else
+        {
+            lineBuffer[y].insert( x, text.at( i ) );
+            TChar * pC = new TChar;
+            pC->fgColor = fgColor;
+            pC->bgColor = bgColor;
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;
+            typedef std::deque<TChar *>::iterator IT;
+            IT it = buffer[y].begin();
+            buffer[y].insert( it+x, pC );
+        }
+        if( text.at(i) == QChar('\n') )
+        {
+            std::deque<TChar *> newLine;
+            TChar * pC = new TChar;
+            pC->fgColor = fgColor;
+            pC->bgColor = bgColor;
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;
+            newLine.push_back( pC );
+            buffer.push_back( newLine );
+            lineBuffer << QChar( 0x21af );
+            mLastLine++;
+            newLines++;
+            x = 0;
+            y++;
+            mCursorMoved = true;
+        }
+    }
+    P.setX( x );
+    P.setY( y );
+    return P;
+}
+
+bool TBuffer::insertInLine( QPoint & P, QString & text )
+{
+    int x = P.x();
+    int y = P.y();
+    if( ( y > 0 ) && ( y <= (int)buffer.size()-1 ) )
+    {
+        if( x < 0 )
+        {
+            return false;
+        }
+        if( x >= buffer[y].size() )
+        {
+            TChar c;
+            expandLine( y, x-buffer[y].size(), & c );
+        }
+        for( int i=0; i<text.size(); i++ )
+        {
+            lineBuffer[y].insert( x, text.at( i ) );
+            TChar * pC = new TChar;
+            /*            pC->fgColor = fgColor;
+            pC->bgColor = bgColor;
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;*/
+            typedef std::deque<TChar *>::iterator IT;
+            IT it = buffer[y].begin();
+            buffer[y].insert( it+x, pC );
+        }   
+    }
+    return true;
 }
 
 void TBuffer::wrap( int startLine, int screenWidth, int indentSize )
@@ -186,6 +300,11 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize )
                 {
                     break;
                 }
+                if( lineBuffer[i][i2] == QChar('\n') )
+                {
+                    i2++;
+                    break;
+                }
                 newLine.push_back( buffer[i][i2] );
                 lineText.append( lineBuffer[i].at(i2) );
                 i2++;
@@ -221,7 +340,23 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize )
     }
 }
 
+bool TBuffer::moveCursor( QPoint & where )
+{
+    int x = where.x();
+    int y = where.y();
+    if( y < 0 ) return false;
+    if( y >= buffer.size() ) return false;
+    
+    if( buffer[y].size()-1 >  x )
+    {
+        TChar c;
+        expandLine( y, x-buffer[y].size()-1, & c );
+    }
+    return true;
+}
+
 QString badLineError = QString("ERROR: invalid line number");
+
 
 QString & TBuffer::line( int n )
 {
@@ -238,17 +373,37 @@ int TBuffer::find( int line, QString what, int pos=0 )
     return lineBuffer[line].indexOf( what, pos );
 }
 
+
 QStringList TBuffer::split( int line, QString splitter )
 {
     if( ( line >= buffer.size() ) || ( line < 0 ) ) return QStringList();   
     return lineBuffer[line].split( splitter );
 }
 
+
 QStringList TBuffer::split( int line, QRegExp splitter )
 {
     if( ( line >= buffer.size() ) || ( line < 0 ) ) return QStringList();   
     return lineBuffer[line].split( splitter );
 }
+
+
+void TBuffer::expandLine( int y, int count, TChar * pC )
+{
+    int size = buffer[y].size()-1;
+    for( int i=size; i<size+count; i++ )
+    {
+        if( ! pC ) pC = new TChar;
+        buffer[y].push_back( pC );
+        lineBuffer[y].append( " " );
+    }
+}
+
+bool TBuffer::replace( QPoint & start, QPoint & end, QString & with )
+{
+    
+}
+
 
 bool TBuffer::replace( int line, QString what, QString with )
 {
@@ -281,6 +436,13 @@ bool TBuffer::replace( int line, QString what, QString with )
     }
     return true;
 }
+
+
+bool TBuffer::deleteLine( int y )
+{ 
+    deleteLines( y, y ); 
+}
+
 
 bool TBuffer::deleteLines( int from, int to )
 {
@@ -323,6 +485,7 @@ bool TBuffer::deleteLines( int from, int to )
     else 
         return false;
 }
+
 
 bool TBuffer::applyFormat( int line, int from, int to, TChar & format )
 {

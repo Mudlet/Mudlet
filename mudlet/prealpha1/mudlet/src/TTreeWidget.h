@@ -47,8 +47,6 @@ public:
     void setIsAliasTree();
     void setIsActionTree();
     void setIsKeyTree();
-    void mousePressEvent ( QMouseEvent * event );
-    void setPoint(QWidget * p);
     
 private:
     
@@ -62,8 +60,6 @@ private:
     bool mIsTimerTree;
     bool mIsKeyTree;
     bool mIsActionTree;
-    QTreeWidgetItem * dragged_item;
-    QWidget * point;
     
     
 signals:

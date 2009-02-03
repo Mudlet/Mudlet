@@ -125,7 +125,7 @@ public:
       QStringList       getLines( int from, int to );
       int               getLineNumber();
       int               getLineCount();
-      void              deleteLine();
+      bool              deleteLine( int );
       int               getColumnNumber();
       void              setWrapAt( int pos ){ mWrapAt = pos; }
       void              setIndentCount( int count ){ mIndentCount = count; }
@@ -133,7 +133,7 @@ public:
       bool              moveCursor( int x, int y );
       int               select( QString, int numOfMatch = 1 );
       bool              selectSection( int, int );
-      
+      void              skipLine();
       void              setFgColor( int, int, int );
       void              setBgColor( int, int, int );
       void              changeColors();
@@ -145,50 +145,43 @@ public:
       void              printSystemMessage( QString & msg );
       void              printOnDisplay(QString  &);
       void              printCommand( QString & );
+      bool              hasSelection();
       
       TTextEdit *       console;
       TTextEdit *       console2;
-      int               mUserCursorX;
-      int               mUserCursorY;
+      Host *            mpHost;  
     
 private:
           
       //std::string       getCurrentTime();
-      void              toggleCurrentParagraphClosed(bool b)    { m_previousParagraphWasClosed = m_paragraphIsComplete; m_paragraphIsComplete = b; }
-      bool              previousParagraphWasClosed()            { return m_previousParagraphWasClosed; }
       void              translateToPlainText( QString & );
       QString           translate( QString & );
       void              set_text_properties( int formatPropertyCode );  
       QString           assemble_html_font_specs();
-          
-      Host *            mpHost;  
-    
-      bool              m_pageInitialized;
-      QString           mEchoBuffer;
-      bool              m_paragraphIsComplete;
-      bool              m_previousParagraphWasClosed;
-    
+      QString           mCurrentLine;
+      QPoint            mP_start;
+      QPoint            mP_end;
+      QPoint            mUserCursor;
       QColor            mCommandFgColor;
       QColor            mCommandBgColor;
       QColor            mSystemMessageFgColor;
       QColor            mSystemMessageBgColor;
-     
       bool              mWaitingForHighColorCode;
       bool              mHighColorModeForeground;
       bool              mHighColorModeBackground;
       bool              mIsHighColorMode;
-    
       bool              isUserScrollBack;
       TFontSpecs        m_fontSpecs;
       int               currentFgColorProperty;
       QString           mFormatSequenceRest;
-      int               mCursorHome;
       QFont             mDisplayFont;
       QColor            mFgColor;
       QColor            mBgColor;
       bool              mIsDebugConsole;
       int               mWrapAt;
       int               mIndentCount;
+      bool              mTriggerEngineMode;
+      static const QString     cmLuaLineVariable;
       TBuffer           buffer;
 
 signals:

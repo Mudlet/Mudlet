@@ -171,117 +171,39 @@ void TTreeWidget::dragMoveEvent(QDragMoveEvent *event)
     QTreeWidget::dragMoveEvent( event );
 }
 
-void TTreeWidget::setPoint(QWidget * p)
-{
-    point = p;
-}
-
-void TTreeWidget::mousePressEvent ( QMouseEvent * event )
-{
-    //qDebug() << ((dlgTriggerEditor*)point)->CurrentView();
-    //qDebug() << ((dlgTriggerEditor*)parentWidget())->CurrentView();
-    //qDebug() << ((dlgTriggerEditor*)parent())->CurrentView();
-
-    if (itemAt( event->pos() )) {
-        QTreeWidgetItem * pItem = itemAt( event->pos() );
-
-        if (mIsTriggerTree) {
-            if (((dlgTriggerEditor*)point)->slot_saveTriggerAfterEdit())
-                QTreeWidget::mousePressEvent( event );
-            else
-                event->ignore();
-        } else if (mIsAliasTree) {
-            if (((dlgTriggerEditor*)point)->slot_saveAliasAfterEdit())
-                QTreeWidget::mousePressEvent( event );
-            else
-                event->ignore();
-        } else if (mIsScriptTree) {
-            if (((dlgTriggerEditor*)point)->slot_saveScriptAfterEdit())
-                QTreeWidget::mousePressEvent( event );
-            else
-                event->ignore();
-        } else if (mIsTimerTree) {
-            if (((dlgTriggerEditor*)point)->slot_saveTimerAfterEdit())
-                QTreeWidget::mousePressEvent( event );
-            else
-                event->ignore();
-        } else if (mIsKeyTree) {
-            if (((dlgTriggerEditor*)point)->slot_saveKeyAfterEdit())
-                QTreeWidget::mousePressEvent( event );
-            else
-                event->ignore();
-        } else if (mIsActionTree) {
-            if (((dlgTriggerEditor*)point)->slot_saveActionAfterEdit())
-                QTreeWidget::mousePressEvent( event );
-            else
-                event->ignore();
-        } else {
-            QTreeWidget::mousePressEvent( event );
-        }
-    }
-}
-
 void TTreeWidget::dropEvent(QDropEvent *event)
 {
     qDebug()<<"dropEvent()";
-
-    if (!itemAt( event->pos() )) {
-        dragged_item->parent()->removeChild(dragged_item);
-        topLevelItem(0)->addChild(dragged_item);
-        setCurrentItem(dragged_item);
-        event->ignore();
-        return;    
-    }
-
     QTreeWidgetItem * pItem = itemAt( event->pos() );
-    if( pItem && pItem->parent() )
+    if( pItem )
     {
-        bool test_is_folder = false;
-        int ID = pItem->data(0,Qt::UserRole).toInt();
-
-        if( mIsTriggerTree )
+        /*if( ! pItem->parent() )
         {
-            if (!mpHost->getTriggerUnit()->getTrigger(ID)->isFolder())
-                mpHost->getTriggerUnit()->getTrigger(ID)->setIsFolder(true);
+            qDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";
+            event->ignore();
+            return;
         }
-        if( mIsAliasTree )
+        else
         {
-            if (!mpHost->getAliasUnit()->getAlias(ID)->isFolder())
-                mpHost->getAliasUnit()->getAlias(ID)->setIsFolder(true);
-        }
-        if( mIsTimerTree )
-        {
-            if (!mpHost->getTimerUnit()->getTimer(ID)->isFolder())
-                mpHost->getTimerUnit()->getTimer(ID)->setIsFolder(true);
-        }
-        if( mIsKeyTree )
-        {
-            if (!mpHost->getKeyUnit()->getKey(ID)->isFolder())
-                mpHost->getKeyUnit()->getKey(ID)->setIsFolder(true);
-        }
-        if( mIsActionTree )
-        {
-            if (!mpHost->getActionUnit()->getAction(ID)->isFolder())
-                mpHost->getActionUnit()->getAction(ID)->setIsFolder(true);
-        }
-        if( mIsScriptTree )
-        {
-            if (!mpHost->getScriptUnit()->getScript(ID)->isFolder())
-                mpHost->getScriptUnit()->getScript(ID)->setIsFolder(true);
-        }
+            qDebug()<<"DROP OK -> kein root item";
+        } */
     }
-
+    else
+    {
+        qDebug()<<"ERROR pItem im drop = 0";
+        event->ignore();
+        return;
+    }
     //event->accept();
     mIsDropAction = true;
     QTreeWidget::dropEvent( event );
-    expandItem(pItem);
-    setCurrentItem(dragged_item);
     return;
 }
 
+
 void TTreeWidget::startDrag( Qt::DropActions supportedActions )
 {
-    dragged_item = currentItem();
+    QTreeWidgetItem * item = currentItem();
     
     QTreeWidget::startDrag( supportedActions );
 }

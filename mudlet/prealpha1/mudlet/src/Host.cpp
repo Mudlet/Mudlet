@@ -1,7 +1,7 @@
 
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -68,10 +68,10 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mWhite             ( QColor(255,255,255) )
 , mFgColor           ( QColor(255,255,255) )
 , mBgColor           ( QColor(0,0,0) )
-, mDisplayFont       ( QFont("Courier New", 10, QFont::Courier) )
-, mCommandLineFont   ( QFont("Courier New", 10, QFont::Courier) )
+, mDisplayFont       ( QFont("Monospace", 10, QFont::Courier) )
+, mCommandLineFont   ( QFont("Monospace", 10, QFont::Courier) )
 , mCommandSeperator  ( QString(";") )
-, mWrapAt( 80 )    
+, mWrapAt( 90 )    
 , mWrapIndentCount( 5 )
 , mPrintCommand( true )
 , mAutoClearCommandLineAfterSend( false )
@@ -549,10 +549,13 @@ int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
     
     while( isRestorable )
     {
-        qDebug() << "loading history #"<< restorableProfileCount;
+        qDebug() << "analysing history #"<< restorableProfileCount;
         
+        // are we going to really load the profile or just analyse if it's restorable?
         if( restorableProfileCount == restoreProfileNumber )
+        {
             initMode = true;
+        }
         
         ifsHost >> mHostName;
         ifsHost >> mLogin;
@@ -565,7 +568,7 @@ int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
         
         qDebug()<<"----------> hostname="<<mHostName<<" url="<<mUrl<<" login="<<mLogin<<" pass="<<mPass<<" port="<<mPort;
         
-        isRestorableUnits = mTriggerUnit.restore( ifs_timerUnit, initMode );
+        isRestorableUnits = mTriggerUnit.restore( ifs_triggerUnit, initMode );
         isRestorableUnits = mTimerUnit.restore( ifs_timerUnit, initMode ); 
         isRestorableUnits = mAliasUnit.restore( ifs_aliasUnit, initMode ); 
         isRestorableUnits = mScriptUnit.restore( ifs_scriptUnit, initMode ); 
