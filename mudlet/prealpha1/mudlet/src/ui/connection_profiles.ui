@@ -616,7 +616,7 @@
                <string/>
               </property>
               <property name="pixmap" >
-               <pixmap>:/icons/icons/dialog-warning.png</pixmap>
+               <pixmap resource="../mudlet_alpha.qrc" >:/icons/dialog-warning.png</pixmap>
               </property>
               <property name="scaledContents" >
                <bool>false</bool>
@@ -1065,7 +1065,7 @@
                <string/>
               </property>
               <property name="pixmap" >
-               <pixmap>:/icons/icons/dialog-error.png</pixmap>
+               <pixmap resource="../mudlet_alpha.qrc" >:/icons/dialog-error.png</pixmap>
               </property>
               <property name="scaledContents" >
                <bool>false</bool>
@@ -1514,7 +1514,7 @@
                <string/>
               </property>
               <property name="pixmap" >
-               <pixmap>:/icons/icons/dialog-information.png</pixmap>
+               <pixmap resource="../mudlet_alpha.qrc" >:/icons/dialog-information.png</pixmap>
               </property>
               <property name="scaledContents" >
                <bool>false</bool>
