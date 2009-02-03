@@ -38,9 +38,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
     
     QAbstractButton * abort = dialog_buttonbox->button( QDialogButtonBox::Cancel );
-    abort->setIcon(QIcon(":/icons/icons/dialog-close.png"));
+    abort->setIcon(QIcon(":/icons/dialog-close.png"));
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    connect_button->setIcon(QIcon(":/icons/icons/dialog-ok-apply.png"));
+    connect_button->setIcon(QIcon(":/icons/dialog-ok-apply.png"));
     
     QStringList headerList;
     headerList << "MUD name" << "Language";
@@ -279,7 +279,7 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
                 mProfileList << name;
                 pItem->setText( 0, name );
                 
-                if( ! mOrigin.isEmpty() )
+                if( ( ! mOrigin.isEmpty() ) && ( ! mSavedNewName ) )
                 {
                     // special case of a new profile that has to be cloned from
                     // an existing profile

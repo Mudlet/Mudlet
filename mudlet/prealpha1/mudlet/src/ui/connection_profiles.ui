@@ -2112,8 +2112,8 @@
                <string>Remove</string>
               </property>
               <property name="icon" >
-               <iconset>
-                <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+               <iconset resource="../mudlet_alpha.qrc" >
+                <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png</iconset>
               </property>
              </widget>
             </item>
@@ -2141,8 +2141,8 @@
                <string>Copy</string>
               </property>
               <property name="icon" >
-               <iconset>
-                <normaloff>:/icons/icons/list-add_small.png</normaloff>:/icons/icons/list-add_small.png</iconset>
+               <iconset resource="../mudlet_alpha.qrc" >
+                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
               </property>
              </widget>
             </item>
@@ -2170,8 +2170,8 @@
                <string>New</string>
               </property>
               <property name="icon" >
-               <iconset>
-                <normaloff>:/icons/icons/list-add_small.png</normaloff>:/icons/icons/list-add_small.png</iconset>
+               <iconset resource="../mudlet_alpha.qrc" >
+                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
               </property>
              </widget>
             </item>
