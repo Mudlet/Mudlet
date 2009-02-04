@@ -184,9 +184,11 @@ private:
       int               mIndentCount;
       bool              mTriggerEngineMode;
       static const QString     cmLuaLineVariable;
-    QPoint            P_begin;
-    QPoint            P_end;
-    TChar             mCurrentFormat;
+      QPoint            P_begin;
+      QPoint            P_end;
+      TChar             mFormatCurrent;
+      TChar             mFormatBasic;
+      TChar             mFormatSystemMessage;
       TBuffer           buffer;
 
 signals:

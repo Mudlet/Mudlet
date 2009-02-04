@@ -460,7 +460,7 @@ int TLuaInterpreter::replace( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "argument 1 to replace must be a string containing the text that is to replace the selected text." );
         lua_error( L );
         return 1;
     }
@@ -1149,9 +1149,12 @@ bool TLuaInterpreter::compileScript( QString & code )
             e = "Lua error:";
             e+=lua_tostring( L, 1 );
         }
-        if( mudlet::debugMode ) qDebug()<<"LUA: code did not compile: ERROR:"<<e.c_str();
+        if( mudlet::debugMode ) TDebug()<<"\nLUA: code did not compile: ERROR:"<<e.c_str()>>0;
     }
-    else qDebug()<<"LUA: code compiled without errors. OK";
+    else 
+    {
+        if( mudlet::debugMode ) TDebug()<<"\nLUA: code compiled without errors. OK">>0;
+    }
     lua_pop( L, lua_gettop( L ) );
     
     if( error == 0 ) return true;
@@ -1195,11 +1198,11 @@ bool TLuaInterpreter::compile( QString & code )
             e = "Lua error:";
             e+=lua_tostring( L, 1 );
         }
-        if( mudlet::debugMode ) qDebug()<<"LUA: code did not compile: ERROR:"<<e.c_str();
+        if( mudlet::debugMode ) TDebug()<<"\nLUA: code did not compile: ERROR:"<<e.c_str()<<"\n">>0;
     }
     else
     {
-        if( mudlet::debugMode ) qDebug()<<"LUA: code compiled without errors. OK";
+        if( mudlet::debugMode ) TDebug()<<"\nLUA: code compiled without errors. OK\n" >> 0;
     }
     lua_pop( L, lua_gettop( L ) );
     

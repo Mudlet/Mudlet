@@ -231,7 +231,8 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
     return P;
 }
 
-bool TBuffer::insertInLine( QPoint & P, QString & text )
+
+bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
 {
     int x = P.x();
     int y = P.y();
@@ -250,11 +251,11 @@ bool TBuffer::insertInLine( QPoint & P, QString & text )
         {
             lineBuffer[y].insert( x+i, text.at( i ) );
             TChar * pC = new TChar;
-            /*            pC->fgColor = fgColor;
-            pC->bgColor = bgColor;
-            pC->italics = italics;
-            pC->bold = bold;
-            pC->underline = underline;*/
+            pC->fgColor = format.fgColor;
+            pC->bgColor = format.bgColor;
+            pC->italics = format.italics;
+            pC->bold = format.bold;
+            pC->underline = format.underline;
             typedef std::deque<TChar *>::iterator IT;
             IT it = buffer[y].begin();
             
@@ -264,7 +265,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text )
     return true;
 }
 
-void TBuffer::wrap( int startLine, int screenWidth, int indentSize )
+void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
 {
     if( buffer.size() <= startLine ) return;
     
@@ -283,11 +284,11 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize )
             for( unsigned int i3=0; i3<indentSize; i3++ )
             {
                 TChar * pSpace = new TChar;
-                /*pSpace->fgColor = mFgColor;
-                pSpace->bgColor = mBgColor;
-                pSpace->italics = false;
-                pSpace->bold = false;
-                pSpace->underline = false;*/
+                pSpace->fgColor = format.fgColor;
+                pSpace->bgColor = format.bgColor;
+                pSpace->italics = format.italics;
+                pSpace->bold = format.bold;
+                pSpace->underline = format.underline;
                 newLine.push_back( pSpace );
                 lineText.append( " " );
             }
@@ -400,9 +401,38 @@ void TBuffer::expandLine( int y, int count, TChar * pC )
     }
 }
 
-bool TBuffer::replace( QPoint & start, QPoint & end, QString & with )
+bool TBuffer::replaceInLine( QPoint & P_begin, QPoint & P_end, QString & with, TChar & format )
 {
+    if( ( P_begin.x() >= 0 ) 
+        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    {
+        // remove selection
+        int i = 0;
+        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        {
+            int x = 0;
+            if( y == P_begin.y() )
+            {
+                x = P_begin.x();
+            }
+            int x_end = buffer[y].size()-1;
+            if( y == P_end.y() )
+            {
+                x_end = P_end.x();
+            }
+            lineBuffer[y].remove( x, x_end-x );
+            typedef std::deque<TChar *>::iterator IT;
+            IT it = buffer[y].begin();
+            buffer[y].erase( it+x, it+x_end );
+        }
     
+        // insert replacement 
+        insertInLine( P_begin, with, format );
+        return true;
+    }
+    else 
+        return false;       
 }
 
 
@@ -488,16 +518,32 @@ bool TBuffer::deleteLines( int from, int to )
 }
 
 
-bool TBuffer::applyFormat( int line, int from, int to, TChar & format )
+bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
 {
-    if( ( from >= 0 ) 
-     && ( from <= buffer.size() )
-     && ( to >=0 )
-     && ( to <= buffer.size() ) ) 
+    if( ( P_begin.x() >= 0 ) 
+        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
     {
-        for( int i=from; i<to; i++ )
+        for( int y=P_begin.y(); y<=P_end.y(); y++ )
         {
-            *buffer[line][i] = format;
+            int x = 0;
+            if( y == P_begin.y() )
+            {
+                x = P_begin.x();
+            }
+            while( x < buffer[y].size() ) 
+            {
+                if( y >= P_end.y() )
+                {
+                    if( x >= P_end.x() )
+                    {
+                        return true;
+                    }
+                }
+            
+                *buffer[y][x] = format;
+                x++;
+            }
         }
         return true;
     }

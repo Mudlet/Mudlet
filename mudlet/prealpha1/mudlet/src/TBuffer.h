@@ -58,19 +58,19 @@ public:
     TBuffer( Host * pH );
     void append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
     QPoint insert( QPoint &, QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
-    bool insertInLine( QPoint & cursor, QString & what );
+    bool insertInLine( QPoint & cursor, QString & what, TChar & format );
     void expandLine( int y, int count, TChar * pC );
-    void wrap( int startLine, int screenWidth, int indentSize );
+    void wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int size(){ return buffer.size(); }    
     QString & line( int n );
     int find( int line, QString what, int pos );
     QStringList split( int line, QString splitter );
     QStringList split( int line, QRegExp splitter );
     bool replace( int line, QString what, QString with );
-    bool replace( QPoint & start, QPoint & end, QString & with );
+    bool replaceInLine( QPoint & start, QPoint & end, QString & with, TChar & format );
     bool deleteLine( int );
     bool deleteLines( int from, int to );
-    bool applyFormat( int line, int x1, int x2, TChar & format );
+    bool applyFormat( QPoint &, QPoint &, TChar & format );
     bool moveCursor( QPoint & where );
     QPoint & insertText( QString & what, QPoint & where );
     int getLastLineNumber();
