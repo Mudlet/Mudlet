@@ -34,15 +34,19 @@ bool HostPool::deleteHost(QString hostname)
 {
     QMutexLocker locker(& mPoolLock);
 	
+    cout << "---> trying to delete host <"<<hostname.toLatin1().data()<<"> from host pool."<<endl;
     // make sure this is really a new host
-    if( mHostPool.find( hostname ) == mHostPool.end() )
+    if( ! mHostPool.contains( hostname ) )
     {
+        cout << "[CRITICAL ERROR]: cannot delete host:"<<hostname.toLatin1().data()<<" it is not a member of host pool."<<endl;
         return false;
     }
     else
     {
-        delete mHostPool[hostname];
-        mHostPool.remove( hostname );
+        delete mHostPool.value( hostname );
+        int ret = mHostPool.remove( hostname );
+        cout << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret<<endl;
+        
     }
     return true;
 }

@@ -439,7 +439,8 @@ void Host::writeProfileData( QString profile, QString item, QString what )
 
 bool Host::restore( QString directory, int selectedHistoryVersion )
 {
-    int restorableProfileCount;
+    int restorableProfileCount = 0;
+    
     if( selectedHistoryVersion > 0 )
     {
         qDebug()<<"\n[ LOADING ] profile history version #"<<selectedHistoryVersion<<"\n";

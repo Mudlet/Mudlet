@@ -447,22 +447,22 @@ void mudlet::startAutoLogin()
         QString val = readProfileData( profile, item );
         if( val.toInt() == Qt::Checked )
         {
-            TDebug()<<"----> Host:"<<pH->getName()<<" URL:"<<pH->getUrl()<<"Login:"<<pH->getLogin();
+            qDebug()<<"----> Host:"<<pH->getName()<<" URL:"<<pH->getUrl()<<"Login:"<<pH->getLogin();
             addConsoleForNewHost( pH );
             pH->connectToServer();
         }
         else
         {
             // remove Hosts that don't have autologin defined from HostPool
-            TDebug() << "----> [ EXPIRED ] " << profile.toLatin1().data() << " Host ist no longer an autoloader. Due to user decision.";
+            qDebug() << "----> [ EXPIRED ] " << profile.toLatin1().data() << " Host ist no longer an autoloader. Due to user decision.";
             HostManager::self()->deleteHost( profile );    
         }
     }
     if( hostList.size() < 1 )
-        TDebug() << "----> [ OK ] nothing to be done (no autologin profiles defined)";
+        qDebug() << "----> [ OK ] nothing to be done (no autologin profiles defined)";
     else
-        TDebug() << "----> [ OK ] autologin finished";
-    TDebug()<<"[ AUTOLOGIN END ] currently loaded hosts after removal of non-autoloaders:"<<HostManager::self()->getHostList();
+        qDebug() << "----> [ OK ] autologin finished";
+    qDebug()<<"[ AUTOLOGIN END ] currently loaded hosts after removal of non-autoloaders:"<<HostManager::self()->getHostList();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -847,7 +847,7 @@ int TConsole::select( QString text, int numOfMatch )
     {
         begin = buffer.line( mUserCursor.y() ).indexOf( text, begin );
         
-        if( begin == -1 ) return -1;
+        if( begin == -1 ) return 0;
     }   
     int end = begin + text.size();
     P_begin.setX( begin );
@@ -866,7 +866,7 @@ bool TConsole::selectSection( int from, int to )
     if( mudlet::debugMode )
     {
         if( mudlet::debugMode ) 
-            TDebug() <<"\nline under current user cursor: " << buffer.line( mUserCursor.y() ) << "\n" >> 0;
+            TDebug() <<"\nselectSection("<<from<<","<<to<<"): line under current user cursor: " << buffer.line( mUserCursor.y() ) << "\n" >> 0;
     }
     if( from < 0 ) 
         return false;
@@ -883,7 +883,7 @@ bool TConsole::selectSection( int from, int to )
     P_end.setY( mUserCursor.y() );
     
     if( mudlet::debugMode ) 
-        TDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<" selectedText = " << buffer.line( mUserCursor.y() ).mid(from,to-from) >> 0;
+        TDebug()<<"\nP_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<" selectedText = " << buffer.line( mUserCursor.y() ).mid(from,to-from) >> 0;
     
     return true;
 }

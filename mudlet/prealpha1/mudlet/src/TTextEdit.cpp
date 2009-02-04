@@ -131,13 +131,13 @@ void TTextEdit::updateScreenView()
 
 void TTextEdit::showNewLines() 
 {   
-    if( ! mIsSplitScreen ) 
+    if( mIsSplitScreen ) 
     {
         if( ! isTailMode() ) 
         {
             return;
         }
-    }
+    } 
     
     mCursorY = mpBuffer->size()-1;
     
