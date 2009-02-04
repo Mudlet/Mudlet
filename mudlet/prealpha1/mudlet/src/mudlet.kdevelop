@@ -1,33 +1,41 @@
 <?xml version = '1.0'?>
 <kdevelop>
   <general>
-    <author/>
-    <email/>
+  <projectmanagement>KDevCustomProject</projectmanagement>
+  <projectdirectory>/home/heiko/mdev</projectdirectory>
+  <absoluteprojectpath>true</absoluteprojectpath>
+    <author>Heiko Koehn</author>
+    <email>KoehnHeiko@googlemail.com</email>
     <version>$VERSION$</version>
-    <projectmanagement>KDevCustomProject</projectmanagement>
     <primarylanguage>C++</primarylanguage>
     <ignoreparts/>
-    <projectdirectory>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src</projectdirectory>
-    <absoluteprojectpath>true</absoluteprojectpath>
     <secondaryLanguages>
       <language>C</language>
     </secondaryLanguages>
     <projectname>mudlet</projectname>
+    <description></description>
+    <defaultencoding></defaultencoding>
+    <versioncontrol></versioncontrol>
   </general>
   <kdevcustomproject>
-    <filelistdirectory>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src</filelistdirectory>
+    <filelistdirectory>/home/heiko/mdev</filelistdirectory>
     <run>
-      <mainprogram>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src/mudlet</mainprogram>
+      <mainprogram></mainprogram>
       <directoryradio>custom</directoryradio>
       <customdirectory>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src</customdirectory>
-      <programargs/>
+      <programargs></programargs>
       <terminal>false</terminal>
       <autocompile>true</autocompile>
       <envvars/>
+      <globaldebugarguments></globaldebugarguments>
+      <globalcwd></globalcwd>
+      <useglobalprogram>false</useglobalprogram>
+      <autoinstall>false</autoinstall>
+      <autokdesu>false</autokdesu>
     </run>
     <build>
       <buildtool>make</buildtool>
-      <builddir>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src</builddir>
+      <builddir>/home/heiko/mdev</builddir>
     </build>
     <make>
       <abortonerror>false</abortonerror>
@@ -40,6 +48,9 @@
           <envvar value="1" name="VERBOSE" />
         </default>
       </environments>
+      <prio>0</prio>
+      <defaulttarget></defaulttarget>
+      <makeoptions></makeoptions>
     </make>
     <blacklist/>
     <filetypes>
@@ -60,6 +71,16 @@
       <filetype>*.png</filetype>
       <filetype>*.ui</filetype>
     </filetypes>
+    <other>
+      <prio>0</prio>
+      <otherbin></otherbin>
+      <defaulttarget></defaulttarget>
+      <otheroptions></otheroptions>
+      <selectedenvironment>default</selectedenvironment>
+      <environments>
+        <default/>
+      </environments>
+    </other>
   </kdevcustomproject>
   <kdevfilecreate>
     <filetypes/>
@@ -114,17 +135,32 @@
       <alwaysIncludeNamespaces>false</alwaysIncludeNamespaces>
       <includePaths>.;</includePaths>
     </codecompletion>
-    <references/>
+    <references>
+      <pcs>Qt4</pcs>
+    </references>
     <qt>
       <used>false</used>
       <version>3</version>
       <includestyle>3</includestyle>
-      <root>/usr/lib/qt3</root>
+      <root>/usr/share/qt3</root>
       <designerintegration>EmbeddedKDevDesigner</designerintegration>
-      <qmake>/usr/lib/qt3/bin/qmake</qmake>
-      <designer>/usr/lib/qt3/bin/designer</designer>
+      <qmake>/usr/bin/qmake-qt3</qmake>
+      <designer>/usr/bin/designer-qt3</designer>
       <designerpluginpaths/>
     </qt>
+    <creategettersetter>
+      <prefixGet></prefixGet>
+      <prefixSet>set</prefixSet>
+      <prefixVariable>m_,_</prefixVariable>
+      <parameterName>theValue</parameterName>
+      <inlineGet>true</inlineGet>
+      <inlineSet>true</inlineSet>
+    </creategettersetter>
+    <splitheadersource>
+      <enabled>false</enabled>
+      <synchronize>true</synchronize>
+      <orientation>Vertical</orientation>
+    </splitheadersource>
   </kdevcppsupport>
   <kdevfileview>
     <groups>
@@ -140,4 +176,37 @@
       <hidenonprojectfiles>true</hidenonprojectfiles>
     </tree>
   </kdevfileview>
+  <kdevdebugger>
+    <general>
+  <projectmanagement>KDevCustomProject</projectmanagement>
+  <projectdirectory>/home/heiko/mdev</projectdirectory>
+  <absoluteprojectpath>true</absoluteprojectpath>
+      <gdbpath>gdb</gdbpath>
+      <dbgshell></dbgshell>
+      <configGdbScript></configGdbScript>
+      <runShellScript></runShellScript>
+      <runGdbScript></runGdbScript>
+      <breakonloadinglibs>true</breakonloadinglibs>
+      <separatetty>false</separatetty>
+      <floatingtoolbar>false</floatingtoolbar>
+      <raiseGDBOnStart>false</raiseGDBOnStart>
+    </general>
+    <display>
+      <staticmembers>true</staticmembers>
+      <demanglenames>true</demanglenames>
+      <outputradix>10</outputradix>
+    </display>
+  </kdevdebugger>
+  <kdevdocumentation>
+    <projectdoc>
+      <docsystem></docsystem>
+      <docurl></docurl>
+      <usermanualurl></usermanualurl>
+    </projectdoc>
+  </kdevdocumentation>
+  <ctagspart>
+    <customArguments></customArguments>
+    <customTagfilePath>/home/bruno/mudlet/mudlet/prealpha1/mudlet/src/tags</customTagfilePath>
+    <activeTagsFiles/>
+  </ctagspart>
 </kdevelop>

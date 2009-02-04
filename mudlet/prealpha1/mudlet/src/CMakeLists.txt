@@ -133,7 +133,7 @@ TBuffer.h)
 
 QT4_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT4_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-SET(mudlet_RCCS application.qrc)
+SET(mudlet_RCCS mudlet_alpha.qrc)
 QT4_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})

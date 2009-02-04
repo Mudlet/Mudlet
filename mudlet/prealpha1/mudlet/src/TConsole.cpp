@@ -837,10 +837,11 @@ int TConsole::select( QString text, int numOfMatch )
     if( mudlet::debugMode ) 
         TDebug() << "line under current user cursor: " << mCurrentLine >> 0;
     
-    int begin;
+    int begin = 0;
     for( int i=0;i<numOfMatch; i++ )
     {
-        begin = mCurrentLine.indexOf( text, i );
+        begin = mCurrentLine.indexOf( text,begin );
+        
         if( begin == -1 ) return -1;
     }   
     int end = text.size();
