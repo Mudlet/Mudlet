@@ -150,7 +150,7 @@ int TLuaInterpreter::select( lua_State * L )
     int luaNumOfMatch;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "argument 1 to select must be the session ID stored in SESSION" );
+        lua_pushstring( L, "argument 2 to select must be the number of match in case there is more than 1 match." );
         lua_error( L );
         return 1;
     }

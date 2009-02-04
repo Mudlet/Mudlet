@@ -37,6 +37,7 @@
 #include "TCommandLine.h"
 #include <QPlainTextEdit>
 #include <QTextDocumentFragment>
+#include <QPoint>
 #include "TBuffer.h"
 
 class Host;
@@ -117,6 +118,7 @@ public:
       void              replace( QString );
       void              insertHTML( QString );
       void              insertText( QString );
+      void              insertText( QString, QPoint );
       void              copy();
       void              cut();
       void              paste();
@@ -182,6 +184,9 @@ private:
       int               mIndentCount;
       bool              mTriggerEngineMode;
       static const QString     cmLuaLineVariable;
+    QPoint            P_begin;
+    QPoint            P_end;
+    TChar             mCurrentFormat;
       TBuffer           buffer;
 
 signals:

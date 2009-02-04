@@ -248,7 +248,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text )
         }
         for( int i=0; i<text.size(); i++ )
         {
-            lineBuffer[y].insert( x, text.at( i ) );
+            lineBuffer[y].insert( x+i, text.at( i ) );
             TChar * pC = new TChar;
             /*            pC->fgColor = fgColor;
             pC->bgColor = bgColor;
@@ -257,7 +257,8 @@ bool TBuffer::insertInLine( QPoint & P, QString & text )
             pC->underline = underline;*/
             typedef std::deque<TChar *>::iterator IT;
             IT it = buffer[y].begin();
-            buffer[y].insert( it+x, pC );
+            
+            buffer[y].insert( it+x+i, pC );
         }   
     }
     return true;

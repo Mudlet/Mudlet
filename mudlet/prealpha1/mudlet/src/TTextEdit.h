@@ -21,12 +21,12 @@
 #ifndef _T_TEXTEDIT_H
 #define _T_TEXTEDIT_H
 
-#include <sys/time.h>
+//#include <sys/time.h>
 #include <stdio.h>
 #include <iostream>
 #include <string>
 #include <iostream>
-#include <strstream>
+//#include <strstream>
 
 #include <QMap>
 #include <QString>

@@ -642,11 +642,11 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     for( int i=lineBeforeNewContent; i<buffer.getLastLineNumber()+1; i++ )
     {
         
-        QString line = buffer.line( i );
-        qDebug()<<"schiebe line#"<<i<<":"<<line;
-        mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, line );
-        if( mudlet::debugMode ) TDebug() << "new line = " << line;
-        mpHost->incomingStreamProcessor( line, prompt );
+        mCurrentLine = buffer.line( i );
+        qDebug()<<"schiebe line#"<<i<<":"<<mCurrentLine;
+        mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
+        if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
+        mpHost->incomingStreamProcessor( mCurrentLine, prompt );
         mUserCursor.setY( mUserCursor.y() + 1 );
         mUserCursor.setX( 0 );
         qDebug()<<"mUserCursorY="<<mUserCursor.y();
@@ -725,15 +725,20 @@ bool TConsole::hasSelection()
         return false;
 }
 
-void TConsole::insertText( QString text )
+void TConsole::insertText( QString msg )
+{
+    insertText( msg, mUserCursor );    
+}
+
+void TConsole::insertText( QString text, QPoint P )
 {
     if( mTriggerEngineMode )
     {
-        buffer.insertInLine( mUserCursor, text );
+        buffer.insertInLine( P, text );
         return;
     }
-    int x = mUserCursor.x();
-    int y = mUserCursor.y();
+    int x = P.x();
+    int y = P.y();
     int o = 0;//FIXME:mSelectedText.size();
     int r = text.size();
     if( hasSelection() )
@@ -755,8 +760,8 @@ void TConsole::insertText( QString text )
     }
     buffer.insert( mUserCursor, 
                    text, 
-                   mFgColor, 
-                   mBgColor, 
+                   mCurrentFormat.fgColor, 
+                   mCurrentFormat.bgColor, 
                    false, 
                    false, 
                    false );
@@ -829,64 +834,60 @@ void TConsole::setUserWindow()
 
 int TConsole::select( QString text, int numOfMatch )
 {
-    /*
-    cursor2.clearSelection();
-    cursor2.movePosition( QTextCursor::StartOfLine );
-    int pos = cursor2.position();
-    cursor2.select( QTextCursor::LineUnderCursor );
-    QString line = cursor2.selectedText();
-    if( mudlet::debugMode ) TDebug() <<"line under current user cursor: "<<line>>0;
-    cursor2.clearSelection();
+    if( mudlet::debugMode ) 
+        TDebug() << "line under current user cursor: " << mCurrentLine >> 0;
+    
     int begin;
     for( int i=0;i<numOfMatch; i++ )
     {
-        begin = line.indexOf( text, i );
+        begin = mCurrentLine.indexOf( text, i );
         if( begin == -1 ) return -1;
     }   
     int end = text.size();
-    cursor2.setPosition( pos + begin );
-    cursor2.movePosition( QTextCursor::NextCharacter, QTextCursor::KeepAnchor, end );
-    return begin;*/
+    P_begin.setX( begin );
+    P_begin.setY( mUserCursor.y() );
+    P_end.setX( end );
+    P_end.setY( mUserCursor.y() );
+    return begin;
 }
 
 bool TConsole::selectSection( int from, int to )
 {
-    /* if( mudlet::debugMode )
+    if( mudlet::debugMode )
     {
-        cursor2.select( QTextCursor::LineUnderCursor );
-        QString line = cursor2.selectedText();
-        if( mudlet::debugMode ) TDebug() <<"line under current user cursor: "<<line>>0;
+        if( mudlet::debugMode ) 
+            TDebug() <<"line under current user cursor: " << buffer.line( mUserCursor.y() ) >> 0;
     }
-    
-    cursor2.clearSelection();
-    cursor2.movePosition( QTextCursor::StartOfLine );
-    int pos = cursor2.position();
-    cursor2.setPosition( cursor2.position() + from );
-       
-    if( cursor2.movePosition( QTextCursor::NextCharacter, QTextCursor::KeepAnchor, to ) )
-    {
-        if( mudlet::debugMode ) TDebug()<<"selectedText = "<<cursor2.selectedText()>>0;
-        return true;
-    }
-    else
-    {
-        cursor2.setPosition( pos );
+    if( from < 0 ) 
         return false;
-    } */
+    
+    if( from >= buffer.size() ) 
+        return false;
+    
+    if( to <= from ) 
+        return false;
+    
+    P_begin.setX( from );
+    P_begin.setY( mUserCursor.y() );
+    P_end.setX( to );
+    P_end.setY( mUserCursor.y() );
+    
+    if( mudlet::debugMode ) 
+        TDebug()<<"selectedText = " << buffer.line( mUserCursor.y() ).mid(from,to-from) >> 0;
+    
+    return true;
 }
 
 void TConsole::setFgColor( int r, int g, int b )
 {
-    /* QTextCharFormat format;
-    format.setForeground( QBrush( QColor( r, g, b ) ) );
-    cursor2.mergeCharFormat( format );    */
+    mCurrentFormat.fgColor = QColor( r, g, b );
+    buffer.applyFormat( mUserCursor.y(), P_begin.x(), P_end.x(), mCurrentFormat );
 }
 
 void TConsole::setBgColor( int r, int g, int b )
 {
-    /*QTextCharFormat format;
-    format.setBackground( QBrush( QColor( r, g, b ) ) );
-    cursor2.mergeCharFormat( format );    */
+    mCurrentFormat.bgColor = QColor( r, g, b );
+    buffer.applyFormat( mUserCursor.y(), P_begin.x(), P_end.x(), mCurrentFormat );
 }
 
 void TConsole::printCommand( QString & msg )
@@ -898,17 +899,22 @@ void TConsole::printCommand( QString & msg )
 void TConsole::echo( QString & msg )
 {
     qDebug()<<"TConsole::echo("<<msg<<")";
-    insertText( msg );    
+    QPoint P = mUserCursor;
+    if( mTriggerEngineMode )
+    {
+        P.setX( mCurrentLine.size()-1 );
+    }
+    insertText( "\n"+msg, P );    
 }
 
 void TConsole::print( const char * msg )
 {
-    QColor fgColor = QColor(0,0,0);
-    QColor bgColor = QColor(255,255,255);
+    //QColor fgColor = QColor(0,0,0);
+    //QColor bgColor = QColor(255,255,255);
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.append( msg, 
-                   fgColor,
-                   bgColor, 
+                   mCurrentFormat.fgColor,
+                   mCurrentFormat.bgColor, 
                    false, 
                    false,
                    false );
@@ -918,12 +924,12 @@ void TConsole::print( const char * msg )
 
 void TConsole::print( QString & msg )
 {
-    QColor fgColor = QColor(0,0,0);
-    QColor bgColor = QColor(255,255,255);
+    //QColor fgColor = QColor(0,0,0);
+    //QColor bgColor = QColor(255,255,255);
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.append(  msg, 
-                    fgColor,
-                    bgColor, 
+                    mCurrentFormat.fgColor,
+                    mCurrentFormat.bgColor, 
                     false, 
                     false,
                     false );
