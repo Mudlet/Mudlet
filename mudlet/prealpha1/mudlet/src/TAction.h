@@ -52,18 +52,20 @@ public:
     virtual          ~TAction();
                      TAction( TAction * parent, Host * pHost ); 
                      TAction( QString name, Host * pHost ); 
-                     TAction& clone(const TAction& );
+                     TAction & clone(const TAction & );
     
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
     void             compile();
     void             execute(QStringList &);
+    QString          getIcon()                     { QMutexLocker locker(& mLock); return mIcon; }
+    void             setIcon( QString & icon )   { QMutexLocker locker(& mLock); mIcon = icon; }
     QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
     void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    QString          getRegexCode()                  { QMutexLocker locker(& mLock); return mRegexCode; }
-    void             setRegexCode( QString regex )   { QMutexLocker locker(& mLock); mRegexCode = regex; mRegex = QRegExp( regex ); }
-    void             setCommand( QString command )   { QMutexLocker locker(& mLock); mCommand = command; }
-    QString          getCommand()                    { QMutexLocker locker(& mLock); return mCommand; }
+    QString          getCommandButtonUp()                  { QMutexLocker locker(& mLock); return mCommandButtonUp; }
+    void             setCommandButtonUp( QString cmd )   { QMutexLocker locker(& mLock); mCommandButtonUp = cmd; }
+    void             setCommandButtonDown( QString command )   { QMutexLocker locker(& mLock); mCommandButtonDown = command; }
+    QString          getCommandButtonDown()                    { QMutexLocker locker(& mLock); return mCommandButtonDown; }
     bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
     bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
     bool             isPushDownButton()              { QMutexLocker locker(& mLock); return mIsPushDownButton; }
@@ -75,14 +77,14 @@ public:
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     void             insertActions( mudlet *, QToolBar *, QMenu * );
-    bool             isClone(TAction &b) const;
+    bool             isClone(TAction & ) const;
     
 private:
     
     TAction(){};
     QString          mName;
-    QString          mCommand;
-    QString          mRegexCode;
+    QString          mCommandButtonUp;
+    QString          mCommandButtonDown;
     QRegExp          mRegex;
     QString          mScript;
     bool             mIsPushDownButton;
@@ -92,6 +94,7 @@ private:
     bool             mNeedsToBeCompiled;
     QString          mIcon;
     QMutex           mLock;
+    QIcon            mIconPix;
 };
 
 #endif

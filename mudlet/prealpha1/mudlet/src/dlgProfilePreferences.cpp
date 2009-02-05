@@ -32,7 +32,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
 {
     // init generated dialog
     setupUi(this);
-    connect(closeButton, SIGNAL(clicked()), this, SLOT(slot_save_and_exit()));
+    connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
     connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
     connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
     connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
@@ -369,6 +369,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
     pHost->mCommandSeparator = command_separator_lineedit->text();
     pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
+    close();
 }
 
 

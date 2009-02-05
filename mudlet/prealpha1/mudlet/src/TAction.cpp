@@ -69,40 +69,6 @@ TAction::~TAction()
 
 bool TAction::match( QString & toMatch )
 {
-    if( mIsActive )
-    {
-        if( ! mIsFolder )
-        {
-            if( mRegex.indexIn( toMatch ) == -1 )
-            {
-                //qDebug()<<"text="<<toMatch;
-                //qDebug()<<"Alias("<<mRegexCode<<") did NOT match.";
-                //qDebug()<<"sub matches are:"<<mRegex.capturedTexts();
-                return false; // regex didn't match
-            }
-            else
-            {
-                qDebug()<<"text="<<toMatch;
-                qDebug()<<"Action("<<mRegexCode<<") *DID* match!";
-                QStringList captureList;
-                for( int i=1; i<=mRegex.numCaptures(); i++ )
-                {
-                    captureList << mRegex.cap(i);
-                    qDebug()<<"captured #"<<i<<":"<<mRegex.cap(i);
-                }
-                
-                // call lua alias function with number of matches and matches itselves as arguments
-                execute( captureList );    
-            }
-        }
-        
-        typedef list<TAction *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
-            TAction * pChild = *it;
-            pChild->match( toMatch );
-        }
-    }
 }
 
 
@@ -146,16 +112,25 @@ void TAction::execute(QStringList & list)
 void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
 {
     QMutexLocker locker(& mLock);
-        
-    const QIcon icon;
-    EAction * action = new EAction( pMainWindow, mName );
-    action->setIcon( icon ); //FIXME
+    const QIcon icon( mIcon ); 
+    
+    
+    //EAction * action = new EAction( pMainWindow, mName, icon );
+    EAction * action = new EAction( mudlet::self(), mName, icon );
+    action->setIcon( icon ); 
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;
     action->setStatusTip( mName );
-    action->setIconText( mName );
-    
+    qDebug()<<"mIcon="<<mIcon;
+    QWidget * pButton = pT->widgetForAction( action );
+    if( pButton )
+    {
+        qDebug()<<"######## pButton alaskdjfalskf#################";
+        ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
+        ((QToolButton*)pButton)->resize(30,30);
+        ((QToolButton*)pButton)->setIcon( icon );
+    }
     
     if( mpParent )
     {
@@ -200,6 +175,9 @@ bool TAction::serialize( QDataStream & ofs )
     ofs << mIsActive;
     ofs << mIsPushDownButton;
     ofs << mIsFolder;
+    ofs << mIcon;
+    ofs << mCommandButtonUp;
+    ofs << mCommandButtonDown;
     ofs << (qint64)mpMyChildrenList->size();
     bool ret = true;
     typedef list<TAction *>::const_iterator I;
@@ -219,7 +197,9 @@ bool TAction::restore( QDataStream & ifs, bool initMode )
     ifs >> mIsActive;
     ifs >> mIsPushDownButton;
     ifs >> mIsFolder;
-    
+    ifs >> mIcon;
+    ifs >> mCommandButtonUp;
+    ifs >> mCommandButtonDown;
     qint64 children;
     ifs >> children;
     
@@ -246,8 +226,8 @@ bool TAction::restore( QDataStream & ifs, bool initMode )
 TAction& TAction::clone(const TAction& b)
 {
     mName = b.mName;
-    mCommand = b.mCommand;
-    mRegexCode = b.mRegexCode;
+    mCommandButtonUp = b.mCommandButtonUp;
+    mCommandButtonDown = b.mCommandButtonDown;
     mRegex = b.mRegex;
     mScript = b.mScript;
     mIsPushDownButton = b.mIsPushDownButton;
@@ -259,7 +239,17 @@ TAction& TAction::clone(const TAction& b)
     return *this;
 }
 
-bool TAction::isClone(TAction &b) const {
-    return (mName == b.mName && mCommand == b.mCommand && mRegexCode == b.mRegexCode && mRegex == b.mRegex && mScript == b.mScript && mIsPushDownButton == b.mIsPushDownButton && \
-        mIsActive == b.mIsActive && mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled && mIcon == b.mIcon);
+bool TAction::isClone( TAction & b ) const 
+{
+    return ( mName == b.mName 
+             && mCommandButtonUp == b.mCommandButtonUp 
+             && mCommandButtonDown == b.mCommandButtonDown 
+             && mRegex == b.mRegex 
+             && mScript == b.mScript 
+             && mIsPushDownButton == b.mIsPushDownButton 
+             && mIsActive == b.mIsActive 
+             && mIsFolder == b.mIsFolder 
+             && mpHost == b.mpHost 
+             && mNeedsToBeCompiled == b.mNeedsToBeCompiled 
+             && mIcon == b.mIcon );
 }

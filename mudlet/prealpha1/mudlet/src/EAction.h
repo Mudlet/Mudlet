@@ -30,7 +30,7 @@ Q_OBJECT
       
 public:
         
-         EAction(QObject* parent, QString name);
+         EAction(QObject* parent, QString name, const QIcon & icon);
     void triggered();    
     
     

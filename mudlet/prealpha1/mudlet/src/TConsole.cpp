@@ -879,7 +879,7 @@ bool TConsole::selectSection( int from, int to )
     
     P_begin.setX( from );
     P_begin.setY( mUserCursor.y() );
-    P_end.setX( to );
+    P_end.setX( from + to );
     P_end.setY( mUserCursor.y() );
     
     if( mudlet::debugMode ) 

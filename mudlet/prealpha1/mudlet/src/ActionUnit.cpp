@@ -214,7 +214,6 @@ void ActionUnit::constructToolbar( mudlet * pMainWindow, QToolBar * pTB )
 
 void ActionUnit::updateToolbar()
 {
-    qDebug()<<"update toolbar called actionunit";    
     mpToolBar->clear();
     constructToolbar( mudlet::self(), mpToolBar );
 }

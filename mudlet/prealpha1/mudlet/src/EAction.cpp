@@ -21,10 +21,12 @@
 #include "EAction.h"
 #include <QDebug>
 
-EAction::EAction(QObject* parent, QString name)
+EAction::EAction(QObject* parent, QString name, const QIcon & icon)
 : QAction(parent)
 {
     setText(name);
+    setIcon(icon);
+    
     setObjectName(name);
     connect(this, SIGNAL(hovered()),this,SLOT(hover()));
 }

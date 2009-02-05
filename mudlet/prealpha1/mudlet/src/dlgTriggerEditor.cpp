@@ -54,6 +54,12 @@ const int dlgTriggerEditor::cmKeysView = 6;
 
 dlgTriggerEditor::dlgTriggerEditor( Host * pH ) 
 : mpHost( pH )
+, mpCurrentActionItem( 0 )
+, mpCurrentKeyItem( 0 )
+, mpCurrentTimerItem( 0 )
+, mpCurrentScriptItem( 0 )
+, mpCurrentTriggerItem( 0 )
+, mpCurrentAliasItem( 0 )
 {
     // init generated dialog
     setupUi(this);
@@ -92,7 +98,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpActionsMainArea = new dlgActionMainArea( mainArea );
     //QSizePolicy sizePolicy8(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpActionsMainArea->setSizePolicy( sizePolicy8 );
+    connect( mpActionsMainArea->pushButton_chose_icon, SIGNAL( pressed()), this, SLOT(slot_chose_action_icon()));
     pVB1->addWidget( mpActionsMainArea );
+    
     
     mpKeysMainArea = new dlgKeysMainArea( mainArea );
     mpKeysMainArea->setSizePolicy( sizePolicy8 );
@@ -1110,7 +1118,8 @@ void dlgTriggerEditor::addAction( bool isFolder )
     QString name;
     if( isFolder ) name = "New Action Button Group";
     else name = "New Action Button";
-    QString regex = "";
+    QString cmdButtonUp = "";
+    QString cmdButtonDown = "";
     QString script = "";
     QStringList nameL;
     nameL << name;
@@ -1131,13 +1140,14 @@ void dlgTriggerEditor::addAction( bool isFolder )
     else
     {
         pT = new TAction( name, mpHost );
-        pT->setRegexCode( regex );
+        pT->setCommandButtonUp( cmdButtonUp );
         pNewItem = new QTreeWidgetItem( mpActionBaseItem, nameL );
         treeWidget_actions->insertTopLevelItem( 0, pNewItem );    
     }
     
     pT->setName( name );
-    pT->setRegexCode( regex );
+    pT->setCommandButtonUp( cmdButtonUp );
+    pT->setCommandButtonDown( cmdButtonDown );
     pT->setScript( script );
     pT->setIsFolder( isFolder );
     pT->setIsActive( false );
@@ -1155,12 +1165,15 @@ void dlgTriggerEditor::addAction( bool isFolder )
     }
     pNewItem->setIcon( 0, icon );
     if( pParent ) pParent->setExpanded( true );
-    mpActionsMainArea->lineEdit_action_name->clear();
-    //mpActionsMainArea->pattern_textedit->clear();
-    //mpActionsMainArea->pattern_textedit_2->clear();
+    mpActionsMainArea->lineEdit_action_button_down->clear();
+    mpActionsMainArea->lineEdit_action_button_up->clear();
+    mpActionsMainArea->lineEdit_action_icon->clear();
+    mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
     mpSourceEditorArea->script_scintilla->clear();
-    mpHost->getActionUnit()->updateToolbar();
+    //mpHost->getActionUnit()->updateToolbar();
+    
     treeWidget_actions->setCurrentItem( pNewItem );
+    mpCurrentActionItem = pNewItem;
 }  
 
 
@@ -1424,8 +1437,10 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
 {
     
     QString name = mpActionsMainArea->lineEdit_action_name->text();
-    //QString regex = mpAliasMainArea->pattern_textedit->toPlainText();
-    //QString command = mpAliasMainArea->pattern_textedit_2->toPlainText();
+    
+    QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
+    QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
+    QString icon = mpActionsMainArea->lineEdit_action_icon->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     QTreeWidgetItem * pItem = treeWidget_actions->currentItem(); 
@@ -1436,8 +1451,9 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
         if( pT )
         {
             pT->setName( name );
-            //pT->setCommand( command );
-            //pT->setRegexCode( regex );
+            pT->setCommandButtonDown( cmdDown );
+            pT->setCommandButtonUp( cmdUp );
+            pT->setIcon( icon );
             pT->setScript( script );
             pT->setIsPushDownButton( isChecked );
             pT->setIsActive( true );
@@ -1691,23 +1707,18 @@ void dlgTriggerEditor::slot_key_clicked( QTreeWidgetItem *pItem, int column )
 void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
 {
     slot_show_actions();
-    mpActionsMainArea->lineEdit_action_name->setText(pItem->text(0));
+    mpCurrentActionItem = pItem; //remember what has been clicked to save it 
+    //mpActionsMainArea->lineEdit_action_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAction * pT = mpHost->getActionUnit()->getAction(ID);
     if( pT )
     {
-        //QString pattern = pT->getRegexCode();
-        //QString command = pT->getCommand();
-        QString name = pT->getName();
-        //mpActionsMainArea->pattern_textedit->clear();
-        //mpActionsMainArea->pattern_textedit_2->clear();
-        mpActionsMainArea->lineEdit_action_name->clear();
-        //mpActionsMainArea->pattern_textedit->insertPlainText( pattern );    
-        //mpActionsMainArea->pattern_textedit_2->insertPlainText( command );
-        mpActionsMainArea->lineEdit_action_name->setText( name );
-        mpActionsMainArea->checkBox_pushdownbutton->setEnabled( pT->isPushDownButton() );
-        QString script = pT->getScript();
-        mpSourceEditorArea->script_scintilla->setText( script );
+        mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
+        mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
+        mpActionsMainArea->lineEdit_action_button_down->setText( pT->getCommandButtonDown() );
+        mpActionsMainArea->lineEdit_action_button_up->setText( pT->getCommandButtonUp() );
+        mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
+        mpSourceEditorArea->script_scintilla->setText( pT->getScript() );
     }
 }
 
@@ -2906,5 +2917,11 @@ void dlgTriggerEditor::grab_key_callback( int key, int modifier )
     }
 }
 
-
+void dlgTriggerEditor::slot_chose_action_icon()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Seclect Icon"),
+        QDir::homePath(),
+        tr("Images (*.png *.xpm *.jpg)"));    
+    mpActionsMainArea->lineEdit_action_icon->setText( fileName );    
+}
 

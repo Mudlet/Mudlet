@@ -127,6 +127,7 @@ public slots:
     void                        slot_deleteAction();
     void                        slot_deleteKey();
     void                        slot_save_edit();
+    void                        slot_chose_action_icon();
     void                        slot_trigger_main_area_edit_regex(QListWidgetItem*);
     void                        slot_trigger_main_area_add_regex();
     void                        slot_show_search_area();
@@ -160,6 +161,13 @@ private:
     QTreeWidgetItem *           mpTimerBaseItem;
     QTreeWidgetItem *           mpActionBaseItem;
     QTreeWidgetItem *           mpKeyBaseItem;
+    
+    QTreeWidgetItem *           mpCurrentActionItem;
+    QTreeWidgetItem *           mpCurrentKeyItem;
+    QTreeWidgetItem *           mpCurrentTimerItem;
+    QTreeWidgetItem *           mpCurrentScriptItem;
+    QTreeWidgetItem *           mpCurrentTriggerItem;
+    QTreeWidgetItem *           mpCurrentAliasItem;
     
     int                         mCurrentView;
     static const int            cmTriggerView;

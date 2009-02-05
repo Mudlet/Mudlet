@@ -84,7 +84,7 @@ mudlet::mudlet() : Ui::MainWindow()
     toolBar->addAction( actionOptions );
     toolBar->addAction( actionAbout );
     
-    addToolBarBreak();
+    //FIXME:addToolBarBreak();
     
     connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
