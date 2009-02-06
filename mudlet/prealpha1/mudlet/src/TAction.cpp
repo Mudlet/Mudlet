@@ -112,12 +112,9 @@ void TAction::execute(QStringList & list)
 void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
 {
     QMutexLocker locker(& mLock);
-    const QIcon icon( mIcon ); 
-    
-    
-    //EAction * action = new EAction( pMainWindow, mName, icon );
-    EAction * action = new EAction( mudlet::self(), mName, icon );
-    action->setIcon( icon ); 
+       
+    EAction * action = new EAction( pMainWindow, mName );
+    action->setIcon( *mudlet::self()->testicon ); 
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;
@@ -126,10 +123,7 @@ void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
     QWidget * pButton = pT->widgetForAction( action );
     if( pButton )
     {
-        qDebug()<<"######## pButton alaskdjfalskf#################";
         ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
-        ((QToolButton*)pButton)->resize(30,30);
-        ((QToolButton*)pButton)->setIcon( icon );
     }
     
     if( mpParent )

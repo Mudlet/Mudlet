@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>698</width>
-    <height>634</height>
+    <height>564</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -63,14 +63,14 @@
           <height>0</height>
          </size>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3" >
-         <property name="spacing" >
-          <number>0</number>
-         </property>
+        <layout class="QGridLayout" name="gridLayout_5" >
          <property name="margin" >
           <number>0</number>
          </property>
-         <item>
+         <property name="spacing" >
+          <number>0</number>
+         </property>
+         <item row="0" column="0" >
           <widget class="QFrame" name="notificationArea" >
            <property name="sizePolicy" >
             <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
@@ -1988,7 +1988,7 @@
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="1" column="0" >
           <widget class="QTreeWidget" name="profiles_tree_widget" >
            <property name="sizePolicy" >
             <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
@@ -1998,7 +1998,7 @@
            </property>
            <property name="minimumSize" >
             <size>
-             <width>348</width>
+             <width>300</width>
              <height>120</height>
             </size>
            </property>
@@ -2054,7 +2054,7 @@
            </column>
           </widget>
          </item>
-         <item>
+         <item row="2" column="0" >
           <widget class="QWidget" native="1" name="profileAdminArea" >
            <property name="sizePolicy" >
             <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
@@ -2178,7 +2178,7 @@
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="3" column="0" >
           <widget class="QWidget" native="1" name="widget_8" >
            <property name="sizePolicy" >
             <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
@@ -2215,7 +2215,7 @@
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="4" column="0" >
           <widget class="QTreeWidget" name="mud_list_treewidget" >
            <property name="sizePolicy" >
             <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
@@ -2296,17 +2296,8 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout" >
-         <property name="topMargin" >
-          <number>0</number>
-         </property>
-         <property name="rightMargin" >
-          <number>0</number>
-         </property>
-         <property name="bottomMargin" >
-          <number>0</number>
-         </property>
-         <item>
+        <layout class="QGridLayout" name="gridLayout_3" >
+         <item row="0" column="0" >
           <widget class="QTextBrowser" name="welcome_message" >
            <property name="enabled" >
             <bool>true</bool>
@@ -2351,114 +2342,13 @@ p, li { white-space: pre-wrap; }
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QWidget" native="1" name="requiredArea" >
-           <property name="minimumSize" >
-            <size>
-             <width>348</width>
-             <height>140</height>
-            </size>
-           </property>
-           <property name="maximumSize" >
-            <size>
-             <width>348</width>
-             <height>140</height>
-            </size>
-           </property>
-           <property name="sizeIncrement" >
-            <size>
-             <width>2</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="palette" >
-            <palette>
-             <active>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>255</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>230</green>
-                 <blue>232</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </active>
-             <inactive>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>255</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>230</green>
-                 <blue>232</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </inactive>
-             <disabled>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>230</green>
-                 <blue>232</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>230</green>
-                 <blue>232</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </disabled>
-            </palette>
-           </property>
-           <property name="font" >
-            <font>
-             <kerning>true</kerning>
-            </font>
-           </property>
-           <property name="autoFillBackground" >
-            <bool>true</bool>
+         <item row="1" column="0" >
+          <widget class="QGroupBox" name="requiredArea" >
+           <property name="title" >
+            <string>Required</string>
            </property>
            <layout class="QGridLayout" name="gridLayout" >
             <item row="0" column="0" >
-             <widget class="QLabel" name="label_6" >
-              <property name="font" >
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-                <underline>false</underline>
-               </font>
-              </property>
-              <property name="text" >
-               <string>Required:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0" >
              <widget class="QLabel" name="label" >
               <property name="font" >
                <font>
@@ -2472,14 +2362,14 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="1" column="1" colspan="3" >
+            <item row="0" column="1" colspan="3" >
              <widget class="QLineEdit" name="profile_name_entry" >
               <property name="readOnly" >
                <bool>false</bool>
               </property>
              </widget>
             </item>
-            <item row="2" column="0" >
+            <item row="1" column="0" >
              <widget class="QLabel" name="label_2" >
               <property name="font" >
                <font>
@@ -2491,7 +2381,7 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="2" column="1" >
+            <item row="1" column="1" >
              <widget class="QLineEdit" name="host_name_entry" >
               <property name="minimumSize" >
                <size>
@@ -2501,14 +2391,14 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="2" column="2" >
+            <item row="1" column="2" >
              <widget class="QLabel" name="label_3" >
               <property name="text" >
                <string>Port:</string>
               </property>
              </widget>
             </item>
-            <item row="2" column="3" >
+            <item row="1" column="3" >
              <widget class="QLineEdit" name="port_entry" >
               <property name="minimumSize" >
                <size>
@@ -2537,27 +2427,13 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item row="3" column="0" >
-             <widget class="QLabel" name="label_8" >
-              <property name="font" >
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-                <underline>false</underline>
-               </font>
-              </property>
+             <widget class="QLabel" name="label_9" >
               <property name="text" >
                <string>Profile history:</string>
               </property>
              </widget>
             </item>
-            <item row="4" column="0" >
-             <widget class="QLabel" name="label_9" >
-              <property name="text" >
-               <string>Load profile:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1" colspan="3" >
+            <item row="3" column="1" colspan="3" >
              <widget class="QComboBox" name="profile_history" >
               <property name="minimumSize" >
                <size>
@@ -2580,142 +2456,13 @@ p, li { white-space: pre-wrap; }
            </layout>
           </widget>
          </item>
-         <item>
-          <widget class="QWidget" native="1" name="optionalArea" >
-           <property name="sizePolicy" >
-            <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+         <item row="2" column="0" >
+          <widget class="QGroupBox" name="optionalArea" >
+           <property name="title" >
+            <string>Optional</string>
            </property>
-           <property name="minimumSize" >
-            <size>
-             <width>348</width>
-             <height>120</height>
-            </size>
-           </property>
-           <property name="maximumSize" >
-            <size>
-             <width>348</width>
-             <height>120</height>
-            </size>
-           </property>
-           <property name="palette" >
-            <palette>
-             <active>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>255</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>220</red>
-                 <green>223</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </active>
-             <inactive>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>255</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>220</red>
-                 <green>223</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </inactive>
-             <disabled>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>220</red>
-                 <green>223</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>220</red>
-                 <green>223</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </disabled>
-            </palette>
-           </property>
-           <property name="toolTip" >
-            <string>If you'd like to enable auto-login, enter your character name and password here</string>
-           </property>
-           <property name="autoFillBackground" >
-            <bool>true</bool>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_5" >
-            <item row="0" column="0" >
-             <widget class="QLabel" name="label_10" >
-              <property name="font" >
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-                <underline>false</underline>
-               </font>
-              </property>
-              <property name="toolTip" >
-               <string>If you'd like to enable auto-login, enter your character name and password here</string>
-              </property>
-              <property name="text" >
-               <string>Optional:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1" >
-             <widget class="QLineEdit" name="login_entry" >
-              <property name="toolTip" >
-               <string>The characters name</string>
-              </property>
-              <property name="echoMode" >
-               <enum>QLineEdit::Normal</enum>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0" >
-             <widget class="QLabel" name="label_5" >
-              <property name="text" >
-               <string>Password:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1" >
-             <widget class="QLineEdit" name="character_password_entry" >
-              <property name="toolTip" >
-               <string>Characters password. Note that the password isn't encrypted in storage</string>
-              </property>
-              <property name="echoMode" >
-               <enum>QLineEdit::Password</enum>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0" colspan="2" >
+           <layout class="QGridLayout" name="gridLayout_2" >
+            <item row="2" column="0" colspan="2" >
              <widget class="QCheckBox" name="autologin_checkBox" >
               <property name="toolTip" >
                <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
@@ -2728,101 +2475,85 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="1" column="0" >
+            <item row="1" column="1" >
+             <widget class="QLineEdit" name="character_password_entry" >
+              <property name="toolTip" >
+               <string>Characters password. Note that the password isn't encrypted in storage</string>
+              </property>
+              <property name="echoMode" >
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0" >
              <widget class="QLabel" name="label_4" >
               <property name="text" >
                <string>Character name:</string>
               </property>
              </widget>
             </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QWidget" native="1" name="informationalArea" >
-           <property name="palette" >
-            <palette>
-             <active>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>255</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>218</red>
-                 <green>252</green>
-                 <blue>219</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </active>
-             <inactive>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>255</red>
-                 <green>255</green>
-                 <blue>255</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>218</red>
-                 <green>252</green>
-                 <blue>219</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </inactive>
-             <disabled>
-              <colorrole role="Base" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>218</red>
-                 <green>252</green>
-                 <blue>219</blue>
-                </color>
-               </brush>
-              </colorrole>
-              <colorrole role="Window" >
-               <brush brushstyle="SolidPattern" >
-                <color alpha="255" >
-                 <red>218</red>
-                 <green>252</green>
-                 <blue>219</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </disabled>
-            </palette>
-           </property>
-           <property name="autoFillBackground" >
-            <bool>true</bool>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_2" >
-            <item row="0" column="0" >
-             <widget class="QLabel" name="label_12" >
-              <property name="font" >
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-                <underline>false</underline>
-               </font>
-              </property>
+            <item row="1" column="0" >
+             <widget class="QLabel" name="label_5" >
               <property name="text" >
-               <string>Informational:</string>
+               <string>Password:</string>
               </property>
              </widget>
             </item>
-            <item row="1" column="0" >
+            <item row="0" column="1" >
+             <widget class="QLineEdit" name="login_entry" >
+              <property name="toolTip" >
+               <string>The characters name</string>
+              </property>
+              <property name="echoMode" >
+               <enum>QLineEdit::Normal</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="3" column="0" >
+          <widget class="QGroupBox" name="informationalArea" >
+           <property name="sizePolicy" >
+            <sizepolicy vsizetype="MinimumExpanding" hsizetype="Preferred" >
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize" >
+            <size>
+             <width>339</width>
+             <height>100</height>
+            </size>
+           </property>
+           <property name="title" >
+            <string>Informational</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_4" >
+            <property name="horizontalSpacing" >
+             <number>9</number>
+            </property>
+            <item rowspan="2" row="0" column="0" >
+             <widget class="QLabel" name="label_7" >
+              <property name="sizePolicy" >
+               <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text" >
+               <string>Website:</string>
+              </property>
+             </widget>
+            </item>
+            <item rowspan="2" row="0" column="1" colspan="2" >
+             <widget class="QLineEdit" name="website_entry" >
+              <property name="toolTip" >
+               <string>MUD website</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2" >
              <widget class="QWidget" native="1" name="widget_7" >
               <property name="minimumSize" >
                <size>
@@ -2830,35 +2561,13 @@ p, li { white-space: pre-wrap; }
                 <height>25</height>
                </size>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_4" >
-               <property name="spacing" >
-                <number>6</number>
-               </property>
-               <property name="margin" >
-                <number>0</number>
-               </property>
-               <item>
-                <widget class="QLabel" name="label_7" >
-                 <property name="text" >
-                  <string>Website:</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="website_entry" >
-                 <property name="toolTip" >
-                  <string>MUD website</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
              </widget>
             </item>
-            <item row="2" column="0" >
+            <item row="2" column="0" colspan="3" >
              <widget class="QPlainTextEdit" name="mud_description_textedit" >
               <property name="minimumSize" >
                <size>
-                <width>325</width>
+                <width>0</width>
                 <height>0</height>
                </size>
               </property>
@@ -2935,15 +2644,6 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <tabstops>
-  <tabstop>profile_name_entry</tabstop>
-  <tabstop>host_name_entry</tabstop>
-  <tabstop>port_entry</tabstop>
-  <tabstop>profile_history</tabstop>
-  <tabstop>login_entry</tabstop>
-  <tabstop>character_password_entry</tabstop>
-  <tabstop>autologin_checkBox</tabstop>
-  <tabstop>website_entry</tabstop>
-  <tabstop>mud_description_textedit</tabstop>
   <tabstop>profiles_tree_widget</tabstop>
   <tabstop>mud_list_treewidget</tabstop>
   <tabstop>dialog_buttonbox</tabstop>

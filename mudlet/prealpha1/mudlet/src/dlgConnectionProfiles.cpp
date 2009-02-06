@@ -62,7 +62,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     //connect( profiles_tree_widget, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
     connect( profiles_tree_widget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_item_clicked( QTreeWidgetItem * )));
-    //connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connectToServer() ) );
+    connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connectToServer() ) );
     //connect( mud_list_treewidget, SIGNAL( itemClicked(QTreeWidgetItem *, int) ), SLOT( slot_item_clicked(QTreeWidgetItem *) ) );
     //connect( mud_list_treewidget, SIGNAL( itemDoubleClicked( QTreeWidgetItem *, int ) ), this, SLOT ( slot_connection_dlg_finnished() ) );
     
@@ -518,6 +518,22 @@ QString dlgConnectionProfiles::readProfileData( QString profile, QString item )
     return ret;
 }
 
+QStringList dlgConnectionProfiles::readProfileHistory( QString profile, QString item )
+{
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    file.open( QIODevice::ReadOnly );
+    QDataStream ifs( & file ); 
+    QString ret;
+    QStringList historyList;
+    while( ifs.status() == QDataStream::Ok )
+    {
+        ifs >> ret;
+        historyList << ret;
+    }
+    file.close();
+    return historyList;
+}
+
 void dlgConnectionProfiles::writeProfileData( QString profile, QString item, QString what )
 {
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
@@ -615,12 +631,13 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
         
         profile_history->clear();
         item = "history_version";
-        val = readProfileData( profile, item );
+        QStringList historyList;
+        historyList = readProfileHistory( profile, item );
         QStringList versionList;
         versionList << "Newest Profile";
-        for( int i=val.toInt(); i>0; i-- )
+        for( int i=historyList.size()-1; i>-1; i-- )
         {
-            versionList << QString::number( i );
+            versionList << historyList[i];
         }
         versionList << "Oldest Profile";
         profile_history->insertItems( 1, versionList );

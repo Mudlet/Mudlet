@@ -72,6 +72,9 @@ public:
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
 
+    
+    QIcon *                     testicon; 
+    
 public slots:      
    void                          slot_show_about_dialog();
    void                          slot_userToolBar_triggered(QAction*);   
@@ -98,6 +101,7 @@ private slots:
    void                          show_key_dialog(); 
    void                          show_options_dialog();
     
+
     
 private:
     
@@ -125,6 +129,7 @@ private:
    QMap<QTimer *, TTimer *>      mTimerMap;
    QToolBar *                    mpUserToolBar;
    
+
     
     /*QString                       curFile;
 

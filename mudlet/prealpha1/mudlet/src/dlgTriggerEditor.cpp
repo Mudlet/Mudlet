@@ -44,6 +44,9 @@
 #include "dlgOptionsAreaTimers.h"
 #include "TTreeWidget.h"
 #include "mudlet.h"
+#include "XMLexport.h"
+#include "XMLimport.h"
+
 
 const int dlgTriggerEditor::cmTriggerView = 1;
 const int dlgTriggerEditor::cmTimerView = 2;
@@ -2852,28 +2855,107 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::debugMode = !mudlet::debugMode;    
 }
 
-
 void dlgTriggerEditor::slot_export()
 {
-    QString fileName = QFileDialog::getExistingDirectory(this, tr("Select Profile"),
+    /*   QString fileName = QFileDialog::getExistingDirectory(this, tr("Select Profile"),
         QDir::homePath(),
         QFileDialog::ShowDirsOnly
         | QFileDialog::DontResolveSymlinks);
     if( fileName.isEmpty() ) return;
     
     mpHost->exportHost( fileName );
-    return;
+    return;*/
+    
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"),
+                                     QDir::currentPath(),
+                                     tr("trigger files (*.trigger *.xml)"));
+    if(fileName.isEmpty()) return;
+    
+    QString name;
+    TTrigger * pT = 0;
+    QTreeWidgetItem * pItem = treeWidget->currentItem(); 
+    if( pItem )
+    {
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+        pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+        if( pT )
+        {
+            name = pT->getName();
+        }
+    }
+    QFile file(fileName);
+    if( ! file.open(QFile::WriteOnly | QFile::Text) ) 
+    {
+        QMessageBox::warning(this, tr("Export Trigger:")+name,
+                             tr("Cannot write file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(file.errorString()));
+        return;
+    }
+    
+    XMLexport writer( pT );
+    if( writer.exportTrigger( & file ) )
+    {
+        statusBar()->showMessage(tr("Trigger ")+name+tr(" saved"), 2000);
+    }
+    
 }
 
 void dlgTriggerEditor::slot_import()
 {
-    QString fileName = QFileDialog::getExistingDirectory(this, tr("Select Profile"),
+    //FIXME: important for users with old profiles! 
+    
+    /*QString fileName = QFileDialog::getExistingDirectory(this, tr("Select Profile"),
         QDir::homePath(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if( fileName.isEmpty() ) return;
     
     HostManager::self()->importHost( fileName );
-    return;
+    return;*/
+    
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
+        QDir::currentPath(),
+        tr("package files (*.xml)"));
+    if( fileName.isEmpty() ) return;
+    
+    QString name;
+    TTrigger * pT = 0;
+    QTreeWidgetItem * pItem = treeWidget->currentItem(); 
+    if( pItem )
+    {
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+        pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+        if( pT )
+        {
+            name = pT->getName();
+        }
+    }
+    QFile file(fileName);
+    if( ! file.open(QFile::ReadOnly | QFile::Text) ) 
+    {
+        QMessageBox::warning(this, tr("Import Trigger:")+name,
+                             tr("Cannot read file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(file.errorString()));
+        return;
+    }
+    
+    
+    treeWidget->clear();
+    treeWidget_alias->clear();
+    treeWidget_actions->clear();
+    treeWidget_timers->clear();
+    treeWidget_keys->clear();
+    treeWidget_scripts->clear();
+    
+    XMLimport reader( mpHost );
+    reader.importPackage( & file );
+    
+    qDebug()<<"OK reader.importPackage() returned!";
+    
+    fillout_form();
+    
 }
+
 
 bool dlgTriggerEditor::event( QEvent * event )
 {
@@ -2881,7 +2963,7 @@ bool dlgTriggerEditor::event( QEvent * event )
     {
         if( event->type() == QEvent::KeyPress ) 
         {
-            QKeyEvent *ke = static_cast<QKeyEvent *>( event );
+            QKeyEvent * ke = static_cast<QKeyEvent *>( event );
             grab_key_callback( ke->key(), ke->modifiers() );
             mIsGrabKey = false;
             ke->accept();

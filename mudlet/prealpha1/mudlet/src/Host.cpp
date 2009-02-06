@@ -408,6 +408,8 @@ bool Host::importHost( QString directory )
     return true;
 }
 
+
+
 // returns an empty string as error
 QString Host::readProfileData( QString profile, QString item )
 {
@@ -431,7 +433,16 @@ QString Host::readProfileData( QString profile, QString item )
 void Host::writeProfileData( QString profile, QString item, QString what )
 {
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
-    file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
+    file.open( QIODevice::WriteOnly );
+    QDataStream ofs( & file ); 
+    ofs << what;
+    file.close();
+}
+
+void Host::writeProfileHistory( QString profile, QString item, QString what )
+{
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    file.open( QIODevice::Append );
     QDataStream ofs( & file ); 
     ofs << what;
     file.close();
@@ -459,7 +470,7 @@ bool Host::restore( QString directory, int selectedHistoryVersion )
         if( load == restorableProfileCount-1 )
         {
             QString profile = mHostName;
-            writeProfileData( profile, "history_version", QString::number( restorableProfileCount-1 ) ); 
+            writeProfileHistory( profile, "history_version", QDateTime::currentDateTime().toString() ); 
             qDebug()<< "\n[ OK ] restored history #"<<restorableProfileCount<<" of profile: "<<directory<<"\n";
             mScriptUnit.compileAll();
             return true;

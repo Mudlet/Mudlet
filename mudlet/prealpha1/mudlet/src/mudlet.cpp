@@ -57,6 +57,8 @@ mudlet::mudlet() : Ui::MainWindow()
     setupUi(this);
     mudlet::debugMode = false;
     
+testicon = new QIcon("/home/heiko/mdev/icons/folder-brown.png");
+    
     //mdiArea->tileSubWindows();
     mdiArea->setViewMode( QMdiArea::TabbedView );
    

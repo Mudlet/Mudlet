@@ -687,6 +687,54 @@ TriggerUnit.cpp.s:
 	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/TriggerUnit.cpp.s
 .PHONY : TriggerUnit.cpp.s
 
+XMLexport.o: XMLexport.cpp.o
+.PHONY : XMLexport.o
+
+# target to build an object file
+XMLexport.cpp.o:
+	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/XMLexport.cpp.o
+.PHONY : XMLexport.cpp.o
+
+XMLexport.i: XMLexport.cpp.i
+.PHONY : XMLexport.i
+
+# target to preprocess a source file
+XMLexport.cpp.i:
+	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/XMLexport.cpp.i
+.PHONY : XMLexport.cpp.i
+
+XMLexport.s: XMLexport.cpp.s
+.PHONY : XMLexport.s
+
+# target to generate assembly for a file
+XMLexport.cpp.s:
+	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/XMLexport.cpp.s
+.PHONY : XMLexport.cpp.s
+
+XMLimport.o: XMLimport.cpp.o
+.PHONY : XMLimport.o
+
+# target to build an object file
+XMLimport.cpp.o:
+	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/XMLimport.cpp.o
+.PHONY : XMLimport.cpp.o
+
+XMLimport.i: XMLimport.cpp.i
+.PHONY : XMLimport.i
+
+# target to preprocess a source file
+XMLimport.cpp.i:
+	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/XMLimport.cpp.i
+.PHONY : XMLimport.cpp.i
+
+XMLimport.s: XMLimport.cpp.s
+.PHONY : XMLimport.s
+
+# target to generate assembly for a file
+XMLimport.cpp.s:
+	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/XMLimport.cpp.s
+.PHONY : XMLimport.cpp.s
+
 ctelnet.o: ctelnet.cpp.o
 .PHONY : ctelnet.o
 
@@ -1191,54 +1239,6 @@ main.cpp.s:
 	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/main.cpp.s
 .PHONY : main.cpp.s
 
-moc_ActionUnit.o: moc_ActionUnit.cxx.o
-.PHONY : moc_ActionUnit.o
-
-# target to build an object file
-moc_ActionUnit.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_ActionUnit.cxx.o
-.PHONY : moc_ActionUnit.cxx.o
-
-moc_ActionUnit.i: moc_ActionUnit.cxx.i
-.PHONY : moc_ActionUnit.i
-
-# target to preprocess a source file
-moc_ActionUnit.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_ActionUnit.cxx.i
-.PHONY : moc_ActionUnit.cxx.i
-
-moc_ActionUnit.s: moc_ActionUnit.cxx.s
-.PHONY : moc_ActionUnit.s
-
-# target to generate assembly for a file
-moc_ActionUnit.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_ActionUnit.cxx.s
-.PHONY : moc_ActionUnit.cxx.s
-
-moc_AliasUnit.o: moc_AliasUnit.cxx.o
-.PHONY : moc_AliasUnit.o
-
-# target to build an object file
-moc_AliasUnit.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_AliasUnit.cxx.o
-.PHONY : moc_AliasUnit.cxx.o
-
-moc_AliasUnit.i: moc_AliasUnit.cxx.i
-.PHONY : moc_AliasUnit.i
-
-# target to preprocess a source file
-moc_AliasUnit.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_AliasUnit.cxx.i
-.PHONY : moc_AliasUnit.cxx.i
-
-moc_AliasUnit.s: moc_AliasUnit.cxx.s
-.PHONY : moc_AliasUnit.s
-
-# target to generate assembly for a file
-moc_AliasUnit.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_AliasUnit.cxx.s
-.PHONY : moc_AliasUnit.cxx.s
-
 moc_EAction.o: moc_EAction.cxx.o
 .PHONY : moc_EAction.o
 
@@ -1262,198 +1262,6 @@ moc_EAction.s: moc_EAction.cxx.s
 moc_EAction.cxx.s:
 	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_EAction.cxx.s
 .PHONY : moc_EAction.cxx.s
-
-moc_Host.o: moc_Host.cxx.o
-.PHONY : moc_Host.o
-
-# target to build an object file
-moc_Host.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_Host.cxx.o
-.PHONY : moc_Host.cxx.o
-
-moc_Host.i: moc_Host.cxx.i
-.PHONY : moc_Host.i
-
-# target to preprocess a source file
-moc_Host.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_Host.cxx.i
-.PHONY : moc_Host.cxx.i
-
-moc_Host.s: moc_Host.cxx.s
-.PHONY : moc_Host.s
-
-# target to generate assembly for a file
-moc_Host.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_Host.cxx.s
-.PHONY : moc_Host.cxx.s
-
-moc_HostManager.o: moc_HostManager.cxx.o
-.PHONY : moc_HostManager.o
-
-# target to build an object file
-moc_HostManager.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_HostManager.cxx.o
-.PHONY : moc_HostManager.cxx.o
-
-moc_HostManager.i: moc_HostManager.cxx.i
-.PHONY : moc_HostManager.i
-
-# target to preprocess a source file
-moc_HostManager.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_HostManager.cxx.i
-.PHONY : moc_HostManager.cxx.i
-
-moc_HostManager.s: moc_HostManager.cxx.s
-.PHONY : moc_HostManager.s
-
-# target to generate assembly for a file
-moc_HostManager.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_HostManager.cxx.s
-.PHONY : moc_HostManager.cxx.s
-
-moc_HostPool.o: moc_HostPool.cxx.o
-.PHONY : moc_HostPool.o
-
-# target to build an object file
-moc_HostPool.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_HostPool.cxx.o
-.PHONY : moc_HostPool.cxx.o
-
-moc_HostPool.i: moc_HostPool.cxx.i
-.PHONY : moc_HostPool.i
-
-# target to preprocess a source file
-moc_HostPool.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_HostPool.cxx.i
-.PHONY : moc_HostPool.cxx.i
-
-moc_HostPool.s: moc_HostPool.cxx.s
-.PHONY : moc_HostPool.s
-
-# target to generate assembly for a file
-moc_HostPool.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_HostPool.cxx.s
-.PHONY : moc_HostPool.cxx.s
-
-moc_KeyUnit.o: moc_KeyUnit.cxx.o
-.PHONY : moc_KeyUnit.o
-
-# target to build an object file
-moc_KeyUnit.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_KeyUnit.cxx.o
-.PHONY : moc_KeyUnit.cxx.o
-
-moc_KeyUnit.i: moc_KeyUnit.cxx.i
-.PHONY : moc_KeyUnit.i
-
-# target to preprocess a source file
-moc_KeyUnit.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_KeyUnit.cxx.i
-.PHONY : moc_KeyUnit.cxx.i
-
-moc_KeyUnit.s: moc_KeyUnit.cxx.s
-.PHONY : moc_KeyUnit.s
-
-# target to generate assembly for a file
-moc_KeyUnit.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_KeyUnit.cxx.s
-.PHONY : moc_KeyUnit.cxx.s
-
-moc_ScriptUnit.o: moc_ScriptUnit.cxx.o
-.PHONY : moc_ScriptUnit.o
-
-# target to build an object file
-moc_ScriptUnit.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_ScriptUnit.cxx.o
-.PHONY : moc_ScriptUnit.cxx.o
-
-moc_ScriptUnit.i: moc_ScriptUnit.cxx.i
-.PHONY : moc_ScriptUnit.i
-
-# target to preprocess a source file
-moc_ScriptUnit.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_ScriptUnit.cxx.i
-.PHONY : moc_ScriptUnit.cxx.i
-
-moc_ScriptUnit.s: moc_ScriptUnit.cxx.s
-.PHONY : moc_ScriptUnit.s
-
-# target to generate assembly for a file
-moc_ScriptUnit.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_ScriptUnit.cxx.s
-.PHONY : moc_ScriptUnit.cxx.s
-
-moc_TAction.o: moc_TAction.cxx.o
-.PHONY : moc_TAction.o
-
-# target to build an object file
-moc_TAction.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TAction.cxx.o
-.PHONY : moc_TAction.cxx.o
-
-moc_TAction.i: moc_TAction.cxx.i
-.PHONY : moc_TAction.i
-
-# target to preprocess a source file
-moc_TAction.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TAction.cxx.i
-.PHONY : moc_TAction.cxx.i
-
-moc_TAction.s: moc_TAction.cxx.s
-.PHONY : moc_TAction.s
-
-# target to generate assembly for a file
-moc_TAction.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TAction.cxx.s
-.PHONY : moc_TAction.cxx.s
-
-moc_TAlias.o: moc_TAlias.cxx.o
-.PHONY : moc_TAlias.o
-
-# target to build an object file
-moc_TAlias.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TAlias.cxx.o
-.PHONY : moc_TAlias.cxx.o
-
-moc_TAlias.i: moc_TAlias.cxx.i
-.PHONY : moc_TAlias.i
-
-# target to preprocess a source file
-moc_TAlias.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TAlias.cxx.i
-.PHONY : moc_TAlias.cxx.i
-
-moc_TAlias.s: moc_TAlias.cxx.s
-.PHONY : moc_TAlias.s
-
-# target to generate assembly for a file
-moc_TAlias.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TAlias.cxx.s
-.PHONY : moc_TAlias.cxx.s
-
-moc_TBuffer.o: moc_TBuffer.cxx.o
-.PHONY : moc_TBuffer.o
-
-# target to build an object file
-moc_TBuffer.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TBuffer.cxx.o
-.PHONY : moc_TBuffer.cxx.o
-
-moc_TBuffer.i: moc_TBuffer.cxx.i
-.PHONY : moc_TBuffer.i
-
-# target to preprocess a source file
-moc_TBuffer.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TBuffer.cxx.i
-.PHONY : moc_TBuffer.cxx.i
-
-moc_TBuffer.s: moc_TBuffer.cxx.s
-.PHONY : moc_TBuffer.s
-
-# target to generate assembly for a file
-moc_TBuffer.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TBuffer.cxx.s
-.PHONY : moc_TBuffer.cxx.s
 
 moc_TCommandLine.o: moc_TCommandLine.cxx.o
 .PHONY : moc_TCommandLine.o
@@ -1503,78 +1311,6 @@ moc_TConsole.cxx.s:
 	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TConsole.cxx.s
 .PHONY : moc_TConsole.cxx.s
 
-moc_TDebug.o: moc_TDebug.cxx.o
-.PHONY : moc_TDebug.o
-
-# target to build an object file
-moc_TDebug.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TDebug.cxx.o
-.PHONY : moc_TDebug.cxx.o
-
-moc_TDebug.i: moc_TDebug.cxx.i
-.PHONY : moc_TDebug.i
-
-# target to preprocess a source file
-moc_TDebug.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TDebug.cxx.i
-.PHONY : moc_TDebug.cxx.i
-
-moc_TDebug.s: moc_TDebug.cxx.s
-.PHONY : moc_TDebug.s
-
-# target to generate assembly for a file
-moc_TDebug.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TDebug.cxx.s
-.PHONY : moc_TDebug.cxx.s
-
-moc_TEvent.o: moc_TEvent.cxx.o
-.PHONY : moc_TEvent.o
-
-# target to build an object file
-moc_TEvent.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TEvent.cxx.o
-.PHONY : moc_TEvent.cxx.o
-
-moc_TEvent.i: moc_TEvent.cxx.i
-.PHONY : moc_TEvent.i
-
-# target to preprocess a source file
-moc_TEvent.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TEvent.cxx.i
-.PHONY : moc_TEvent.cxx.i
-
-moc_TEvent.s: moc_TEvent.cxx.s
-.PHONY : moc_TEvent.s
-
-# target to generate assembly for a file
-moc_TEvent.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TEvent.cxx.s
-.PHONY : moc_TEvent.cxx.s
-
-moc_TKey.o: moc_TKey.cxx.o
-.PHONY : moc_TKey.o
-
-# target to build an object file
-moc_TKey.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TKey.cxx.o
-.PHONY : moc_TKey.cxx.o
-
-moc_TKey.i: moc_TKey.cxx.i
-.PHONY : moc_TKey.i
-
-# target to preprocess a source file
-moc_TKey.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TKey.cxx.i
-.PHONY : moc_TKey.cxx.i
-
-moc_TKey.s: moc_TKey.cxx.s
-.PHONY : moc_TKey.s
-
-# target to generate assembly for a file
-moc_TKey.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TKey.cxx.s
-.PHONY : moc_TKey.cxx.s
-
 moc_TLuaInterpreter.o: moc_TLuaInterpreter.cxx.o
 .PHONY : moc_TLuaInterpreter.o
 
@@ -1599,54 +1335,6 @@ moc_TLuaInterpreter.cxx.s:
 	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TLuaInterpreter.cxx.s
 .PHONY : moc_TLuaInterpreter.cxx.s
 
-moc_TMatchState.o: moc_TMatchState.cxx.o
-.PHONY : moc_TMatchState.o
-
-# target to build an object file
-moc_TMatchState.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TMatchState.cxx.o
-.PHONY : moc_TMatchState.cxx.o
-
-moc_TMatchState.i: moc_TMatchState.cxx.i
-.PHONY : moc_TMatchState.i
-
-# target to preprocess a source file
-moc_TMatchState.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TMatchState.cxx.i
-.PHONY : moc_TMatchState.cxx.i
-
-moc_TMatchState.s: moc_TMatchState.cxx.s
-.PHONY : moc_TMatchState.s
-
-# target to generate assembly for a file
-moc_TMatchState.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TMatchState.cxx.s
-.PHONY : moc_TMatchState.cxx.s
-
-moc_TScript.o: moc_TScript.cxx.o
-.PHONY : moc_TScript.o
-
-# target to build an object file
-moc_TScript.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TScript.cxx.o
-.PHONY : moc_TScript.cxx.o
-
-moc_TScript.i: moc_TScript.cxx.i
-.PHONY : moc_TScript.i
-
-# target to preprocess a source file
-moc_TScript.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TScript.cxx.i
-.PHONY : moc_TScript.cxx.i
-
-moc_TScript.s: moc_TScript.cxx.s
-.PHONY : moc_TScript.s
-
-# target to generate assembly for a file
-moc_TScript.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TScript.cxx.s
-.PHONY : moc_TScript.cxx.s
-
 moc_TTextEdit.o: moc_TTextEdit.cxx.o
 .PHONY : moc_TTextEdit.o
 
@@ -1670,30 +1358,6 @@ moc_TTextEdit.s: moc_TTextEdit.cxx.s
 moc_TTextEdit.cxx.s:
 	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTextEdit.cxx.s
 .PHONY : moc_TTextEdit.cxx.s
-
-moc_TTimer.o: moc_TTimer.cxx.o
-.PHONY : moc_TTimer.o
-
-# target to build an object file
-moc_TTimer.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTimer.cxx.o
-.PHONY : moc_TTimer.cxx.o
-
-moc_TTimer.i: moc_TTimer.cxx.i
-.PHONY : moc_TTimer.i
-
-# target to preprocess a source file
-moc_TTimer.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTimer.cxx.i
-.PHONY : moc_TTimer.cxx.i
-
-moc_TTimer.s: moc_TTimer.cxx.s
-.PHONY : moc_TTimer.s
-
-# target to generate assembly for a file
-moc_TTimer.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTimer.cxx.s
-.PHONY : moc_TTimer.cxx.s
 
 moc_TTreeWidget.o: moc_TTreeWidget.cxx.o
 .PHONY : moc_TTreeWidget.o
@@ -1742,54 +1406,6 @@ moc_TTreeWidgetItem.s: moc_TTreeWidgetItem.cxx.s
 moc_TTreeWidgetItem.cxx.s:
 	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTreeWidgetItem.cxx.s
 .PHONY : moc_TTreeWidgetItem.cxx.s
-
-moc_TTrigger.o: moc_TTrigger.cxx.o
-.PHONY : moc_TTrigger.o
-
-# target to build an object file
-moc_TTrigger.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTrigger.cxx.o
-.PHONY : moc_TTrigger.cxx.o
-
-moc_TTrigger.i: moc_TTrigger.cxx.i
-.PHONY : moc_TTrigger.i
-
-# target to preprocess a source file
-moc_TTrigger.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTrigger.cxx.i
-.PHONY : moc_TTrigger.cxx.i
-
-moc_TTrigger.s: moc_TTrigger.cxx.s
-.PHONY : moc_TTrigger.s
-
-# target to generate assembly for a file
-moc_TTrigger.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TTrigger.cxx.s
-.PHONY : moc_TTrigger.cxx.s
-
-moc_TimerUnit.o: moc_TimerUnit.cxx.o
-.PHONY : moc_TimerUnit.o
-
-# target to build an object file
-moc_TimerUnit.cxx.o:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TimerUnit.cxx.o
-.PHONY : moc_TimerUnit.cxx.o
-
-moc_TimerUnit.i: moc_TimerUnit.cxx.i
-.PHONY : moc_TimerUnit.i
-
-# target to preprocess a source file
-moc_TimerUnit.cxx.i:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TimerUnit.cxx.i
-.PHONY : moc_TimerUnit.cxx.i
-
-moc_TimerUnit.s: moc_TimerUnit.cxx.s
-.PHONY : moc_TimerUnit.s
-
-# target to generate assembly for a file
-moc_TimerUnit.cxx.s:
-	$(MAKE) -f CMakeFiles/mudlet.dir/build.make CMakeFiles/mudlet.dir/moc_TimerUnit.cxx.s
-.PHONY : moc_TimerUnit.cxx.s
 
 moc_ctelnet.o: moc_ctelnet.cxx.o
 .PHONY : moc_ctelnet.o
@@ -2424,6 +2040,12 @@ help:
 	@echo "... TriggerUnit.o"
 	@echo "... TriggerUnit.i"
 	@echo "... TriggerUnit.s"
+	@echo "... XMLexport.o"
+	@echo "... XMLexport.i"
+	@echo "... XMLexport.s"
+	@echo "... XMLimport.o"
+	@echo "... XMLimport.i"
+	@echo "... XMLimport.s"
 	@echo "... ctelnet.o"
 	@echo "... ctelnet.i"
 	@echo "... ctelnet.s"
@@ -2487,81 +2109,27 @@ help:
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
-	@echo "... moc_ActionUnit.o"
-	@echo "... moc_ActionUnit.i"
-	@echo "... moc_ActionUnit.s"
-	@echo "... moc_AliasUnit.o"
-	@echo "... moc_AliasUnit.i"
-	@echo "... moc_AliasUnit.s"
 	@echo "... moc_EAction.o"
 	@echo "... moc_EAction.i"
 	@echo "... moc_EAction.s"
-	@echo "... moc_Host.o"
-	@echo "... moc_Host.i"
-	@echo "... moc_Host.s"
-	@echo "... moc_HostManager.o"
-	@echo "... moc_HostManager.i"
-	@echo "... moc_HostManager.s"
-	@echo "... moc_HostPool.o"
-	@echo "... moc_HostPool.i"
-	@echo "... moc_HostPool.s"
-	@echo "... moc_KeyUnit.o"
-	@echo "... moc_KeyUnit.i"
-	@echo "... moc_KeyUnit.s"
-	@echo "... moc_ScriptUnit.o"
-	@echo "... moc_ScriptUnit.i"
-	@echo "... moc_ScriptUnit.s"
-	@echo "... moc_TAction.o"
-	@echo "... moc_TAction.i"
-	@echo "... moc_TAction.s"
-	@echo "... moc_TAlias.o"
-	@echo "... moc_TAlias.i"
-	@echo "... moc_TAlias.s"
-	@echo "... moc_TBuffer.o"
-	@echo "... moc_TBuffer.i"
-	@echo "... moc_TBuffer.s"
 	@echo "... moc_TCommandLine.o"
 	@echo "... moc_TCommandLine.i"
 	@echo "... moc_TCommandLine.s"
 	@echo "... moc_TConsole.o"
 	@echo "... moc_TConsole.i"
 	@echo "... moc_TConsole.s"
-	@echo "... moc_TDebug.o"
-	@echo "... moc_TDebug.i"
-	@echo "... moc_TDebug.s"
-	@echo "... moc_TEvent.o"
-	@echo "... moc_TEvent.i"
-	@echo "... moc_TEvent.s"
-	@echo "... moc_TKey.o"
-	@echo "... moc_TKey.i"
-	@echo "... moc_TKey.s"
 	@echo "... moc_TLuaInterpreter.o"
 	@echo "... moc_TLuaInterpreter.i"
 	@echo "... moc_TLuaInterpreter.s"
-	@echo "... moc_TMatchState.o"
-	@echo "... moc_TMatchState.i"
-	@echo "... moc_TMatchState.s"
-	@echo "... moc_TScript.o"
-	@echo "... moc_TScript.i"
-	@echo "... moc_TScript.s"
 	@echo "... moc_TTextEdit.o"
 	@echo "... moc_TTextEdit.i"
 	@echo "... moc_TTextEdit.s"
-	@echo "... moc_TTimer.o"
-	@echo "... moc_TTimer.i"
-	@echo "... moc_TTimer.s"
 	@echo "... moc_TTreeWidget.o"
 	@echo "... moc_TTreeWidget.i"
 	@echo "... moc_TTreeWidget.s"
 	@echo "... moc_TTreeWidgetItem.o"
 	@echo "... moc_TTreeWidgetItem.i"
 	@echo "... moc_TTreeWidgetItem.s"
-	@echo "... moc_TTrigger.o"
-	@echo "... moc_TTrigger.i"
-	@echo "... moc_TTrigger.s"
-	@echo "... moc_TimerUnit.o"
-	@echo "... moc_TimerUnit.i"
-	@echo "... moc_TimerUnit.s"
 	@echo "... moc_ctelnet.o"
 	@echo "... moc_ctelnet.i"
 	@echo "... moc_ctelnet.s"

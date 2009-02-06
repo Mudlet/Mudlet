@@ -35,6 +35,7 @@ class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
     void copy_profile( QString );
     void writeProfileData( QString, QString, QString );
     QString readProfileData( QString, QString );
+    QStringList readProfileHistory( QString, QString );
     
 signals:
     

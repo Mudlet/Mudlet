@@ -125,6 +125,7 @@ public:
     bool               isAutologin(){ return mIsAutologin; }
     QString            readProfileData( QString profile, QString item );
     void               writeProfileData( QString profile, QString item, QString what );
+    void               writeProfileHistory( QString profile, QString item, QString what );
     QStringList        getLastBuffer();  
     bool               exportHost( QString );
     bool               importHost( QString );

@@ -48,6 +48,10 @@ using namespace std;
 
 class TTrigger : public Tree<TTrigger>
 {
+    
+    friend class XMLexport;
+    friend class XMLimport;
+        
 public:
     
                       

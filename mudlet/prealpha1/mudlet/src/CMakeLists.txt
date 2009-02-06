@@ -58,6 +58,8 @@ TKey.cpp
 KeyUnit.cpp
 dlgProfilePreferences.cpp
 TTextEdit.cpp
+XMLexport.cpp
+XMLimport.cpp
 TBuffer.cpp)
 
 qt4_automoc(${mudlet_SRCS})
@@ -88,48 +90,30 @@ SET(mudlet_MOC_HDRS mudlet.h
 EAction.h
 TConsole.h
 ctelnet.h
-Host.h
-HostManager.h
-HostPool.h
 dlgConnectionProfiles.h
 dlgTriggerEditor.h
-TTrigger.h
 TLuaInterpreter.h
 dlgTriggers_main_area.h
 dlgOptionsAreaTriggers.h
 TCommandLine.h
 TTreeWidget.h
 TTreeWidgetItem.h
-TTimer.h
-TScript.h
-TAlias.h
 dlgTimersMainArea.h
 dlgSourceEditorArea.h
 dlgSystemMessageArea.h
-TimerUnit.h
-ScriptUnit.h
-AliasUnit.h
 dlgScriptsMainArea.h
 dlgAliasMainArea.h
 dlgOptionsAreaAlias.h
 dlgOptionsAreaScripts.h
 dlgOptionsAreaTimers.h
 dlgSearchArea.h
-TAction.h
-ActionUnit.h
 dlgActionMainArea.h
 dlgOptionsAreaAction.h
 dlgHelpDialog.h
 dlgAboutDialog.h
-TMatchState.h
-TEvent.h
-TDebug.h
 dlgKeysMainArea.h
-TKey.h
-KeyUnit.h
 dlgProfilePreferences.h
-TTextEdit.h
-TBuffer.h)
+TTextEdit.h)
 
 QT4_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT4_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
