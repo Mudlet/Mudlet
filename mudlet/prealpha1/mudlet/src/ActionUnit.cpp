@@ -233,7 +233,6 @@ bool ActionUnit::serialize( QDataStream & ofs )
     
 }
 
-
 bool ActionUnit::restore( QDataStream & ifs, bool initMode )
 {
     ifs >> mMaxID;

@@ -24,6 +24,8 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "mudlet.h"
+#include "XMLimport.h"
+#include <QFileDialog>
 
 #define _DEBUG_
 
@@ -46,6 +48,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     headerList << "MUD name" << "Language";
     mud_list_treewidget->setHeaderLabels( headerList );
     
+    connect( browseProfileHistoryButton, SIGNAL( pressed() ), this, SLOT(slot_chose_history()));
     connect( connect_button, SIGNAL(clicked()), this, SLOT(slot_connectToServer()));
     connect( abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
     connect( new_profile_button, SIGNAL( clicked() ), this, SLOT( slot_addProfile() ) );
@@ -294,9 +297,10 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
                         file.copy( where );
                     }
                     mOrigin.clear();
-                    mSavedNewName = true;
-                    mUnsavedProfileName = "";
+                    
                 }
+                mSavedNewName = true;
+                mUnsavedProfileName = "";
             }
             else     
             {
@@ -757,6 +761,22 @@ void dlgConnectionProfiles::slot_connectToServer()
         pHost = HostManager::self()->getHost( profile_name );
     }
     
+    
+    if( ! pHost ) return;
+    
+    QString folder = hostPath+"/current/";
+    QDir dir( folder );
+    QStringList entries = dir.entryList( QDir::Files, QDir::Time );
+    qDebug()<<"entries="<<entries;
+    if( entries.size() > 0 )
+    {
+        QFile file(entries[0]);
+        file.open(QFile::ReadOnly | QFile::Text);
+        XMLimport importer( pHost );
+        importer.importPackage( & file );
+    }
+    
+    // overwrite the generic profile with user supplied name, url and login information
     if( pHost )
     {
         pHost->setName( profile_name );
@@ -770,7 +790,7 @@ void dlgConnectionProfiles::slot_connectToServer()
             pHost->setPort( port_entry->text().trimmed().toInt() );
         else
             slot_update_port( QString::number( pHost->getPort() ) );
-            
+        
         if( character_password_entry->text().trimmed().size() > 0 )
             pHost->setPass( character_password_entry->text().trimmed() );
         else
@@ -781,12 +801,48 @@ void dlgConnectionProfiles::slot_connectToServer()
         else
             slot_update_login( pHost->getLogin() );
     }
+    
     emit signal_establish_connection( profile_name, historyVersion );
     QDialog::accept();
 }
 
+void dlgConnectionProfiles::slot_chose_history()
+{
+    QString profile_name = profile_name_entry->text().trimmed();
+    if( profile_name.size() < 1 ) 
+    {
+        QMessageBox::warning(this, tr("Browse Profile History:"),
+                             tr("You have not selected a profile yet.\nWhich profile history do you want to browse?\nPlease select a profile first."));
+        return;
+    }
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Chose Mudlet Profile"),
+        QDir::homePath()+"/.config/mudlet/profiles/"+profile_name,
+        tr("*.xml"));
+    
+    if( fileName.isEmpty() ) return;
+    
+    QFile file(fileName);
+    if( ! file.open(QFile::ReadOnly | QFile::Text) ) 
+    {
+        QMessageBox::warning(this, tr("Import Mudlet Package:"),
+                             tr("Cannot read file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(file.errorString()));
+        return;
+    }
+    
+    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+    Host * pHost = HostManager::self()->getHost( profile_name );
+    if( ! pHost ) return;    
+    XMLimport importer( pHost );
+    importer.importPackage( & file );
+    
+    emit signal_establish_connection( profile_name, -1 );
+    QDialog::accept();
+}
 
 void dlgConnectionProfiles::slot_update()
 {
     update();      
 }
+

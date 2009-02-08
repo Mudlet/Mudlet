@@ -45,7 +45,9 @@ using namespace std;
 
 class TAction : public Tree<TAction>, QObject
 {
-            
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     
     
@@ -78,6 +80,8 @@ public:
     bool             restore( QDataStream & fs, bool );
     void             insertActions( mudlet *, QToolBar *, QMenu * );
     bool             isClone(TAction & ) const;
+    
+    int              mButtonState;
     
 private:
     

@@ -70,7 +70,7 @@
     </widget>
    </item>
    <item rowspan="2" row="2" column="1" >
-    <widget class="QLineEdit" name="pattern_textedit2" >
+    <widget class="QLineEdit" name="substitution" >
      <property name="font" >
       <font>
        <pointsize>9</pointsize>
@@ -101,12 +101,6 @@
     </widget>
    </item>
   </layout>
-  <zorder>pattern_textedit</zorder>
-  <zorder>lineEdit_alias_name</zorder>
-  <zorder>label_2</zorder>
-  <zorder>label_3</zorder>
-  <zorder>pattern_textedit2</zorder>
-  <zorder>label</zorder>
  </widget>
  <resources>
   <include location="../mudlet_alpha.qrc" />

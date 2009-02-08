@@ -21,6 +21,8 @@
 #ifndef DLGTRIGGEREDITOR_H
 #define DLGTRIGGEREDITOR_H
 
+#include <QFile>
+
 #include "ui_trigger_editor.h"
 #include <QDialog>
 #include "TTrigger.h"
@@ -148,12 +150,20 @@ private:
     void                        addTrigger( bool isFolder );
     void                        addAction( bool isFolder );
     void                        addKey( bool );
+    
     void                        expand_child_triggers( TTrigger * pTriggerParent, QTreeWidgetItem * pItem );
     void                        expand_child_timers( TTimer * pTimerParent, QTreeWidgetItem * pWidgetItemParent );
     void                        expand_child_scripts( TScript * pTriggerParent, QTreeWidgetItem * pWidgetItemParent );
     void                        expand_child_alias( TAlias *, QTreeWidgetItem * );
     void                        expand_child_action( TAction *, QTreeWidgetItem * );
     void                        expand_child_key( TKey * pTriggerParent, QTreeWidgetItem * pWidgetItemParent );
+    
+    void                        exportTrigger( QFile & );
+    void                        exportTimer( QFile & );
+    void                        exportAlias( QFile & );
+    void                        exportAction( QFile & );
+    void                        exportScript( QFile & );
+    void                        exportKey( QFile & );
     
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;

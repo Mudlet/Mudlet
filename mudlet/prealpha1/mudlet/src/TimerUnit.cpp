@@ -34,6 +34,15 @@
 #include <QDebug>
 #include "TimerUnit.h"
 
+void TimerUnit::stopAllTriggers()
+{    
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    {
+        TTimer * pChild = *it;
+        pChild->setIsActive( false );
+    }
+}
 
 void TimerUnit::addTimerRootNode( TTimer * pT )
 {

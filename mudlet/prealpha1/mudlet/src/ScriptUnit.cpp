@@ -34,6 +34,15 @@
 #include <QDebug>
 #include "ScriptUnit.h"
 
+void ScriptUnit::stopAllTriggers()
+{    
+    typedef list<TScript *>::const_iterator I;
+    for( I it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
+    {
+        TScript * pChild = *it;
+        pChild->setIsActive( false );
+    }
+}
 
 void ScriptUnit::addScriptRootNode( TScript * pT )
 {

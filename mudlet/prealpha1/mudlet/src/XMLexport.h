@@ -24,23 +24,60 @@
 #include "Host.h"
 
 class TTrigger;
+class TTimer;
+class TAction;
+class TAlias;
+class TScript;
+class TKey;
+
 
 class XMLexport : public QXmlStreamWriter
 {
 public:
                     XMLexport( Host * );
                     XMLexport( TTrigger * );
-   
+                    XMLexport( TTimer * );
+                    XMLexport( TAlias * );
+                    XMLexport( TAction * );
+                    XMLexport( TScript * );
+                    XMLexport( TKey * );
     
     bool            writeHost( Host * );
-    bool            exportTrigger( QIODevice * );
-    bool            writeTrigger( TTrigger * );
-    bool            importTrigger( QIODevice * );
-    bool            importTrigger( TTrigger * );
     
+    bool            writeTrigger( TTrigger * );
+    bool            writeTimer( TTimer * );
+    bool            writeAlias( TAlias * );
+    bool            writeAction( TAction * );
+    bool            writeScript( TScript * );
+    bool            writeKey( TKey * );
+    
+    bool            exportHost( Host * );
+    
+    bool            exportHost( QIODevice * );
+    bool            exportTrigger( QIODevice * );
+    bool            exportTimer( QIODevice * );
+    bool            exportAlias( QIODevice * );
+    bool            exportAction( QIODevice * );
+    bool            exportScript( QIODevice * );
+    bool            exportKey( QIODevice * );
+    
+    bool            exportTrigger( TTrigger * );
+    bool            exportTimer( TTimer * );
+    bool            exportAlias( TAlias * );
+    bool            exportAction( TAction * );
+    bool            exportScript( TScript * );
+    bool            exportKey( TKey * );
+
 private: 
+    
     Host *          mpHost;
     TTrigger *      mpTrigger;
+    TTimer *        mpTimer;
+    TAlias *        mpAlias;
+    TAction *       mpAction;
+    TScript *       mpScript;
+    TKey *          mpKey;
+    
     QString         mType;
 };
 

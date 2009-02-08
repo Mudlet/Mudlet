@@ -79,7 +79,7 @@ bool TAction::registerAction()
         qDebug() << "ERROR: TAction::registerTrigger() pHost=0";
         return false;
     }
-    qDebug()<<"calling AliasUnit->registerAlias(this) ...";
+    qDebug()<<"calling ActionUnit->registerAlias(this) ...";
     return mpHost->getActionUnit()->registerAction( this );    
 }
 
@@ -89,6 +89,14 @@ void TAction::compile()
 
 void TAction::execute(QStringList & list)
 {
+    if( ( mCommandButtonUp.size() > 0 ) && ( mButtonState == 1 ) )
+    {
+        mpHost->send( mCommandButtonUp );
+    }
+    if( ( mCommandButtonDown.size() > 0 ) && ( mButtonState == 2 ) )
+    {
+        mpHost->send( mCommandButtonDown );
+    }
     if( mNeedsToBeCompiled )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
@@ -112,9 +120,10 @@ void TAction::execute(QStringList & list)
 void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
 {
     QMutexLocker locker(& mLock);
-       
-    EAction * action = new EAction( pMainWindow, mName );
-    action->setIcon( *mudlet::self()->testicon ); 
+    
+    QIcon icon( mIcon );
+    EAction * action = new EAction( icon, mName, pMainWindow );
+    //action->setIcon( *mudlet::self()->testicon );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;

@@ -26,7 +26,7 @@
 #include <QMainWindow>
 #include <QCloseEvent>
 #include "ui_console.h"
-#include "ui_main_window.h"
+//#include "ui_main_window.h"
 #include "TConsole.h"
 #include "mudlet.h"
 #include "ctelnet.h"
@@ -34,14 +34,15 @@
 #include <map>
 #include <QMap>
 #include "Host.h"
+#include <QMdiArea>
 
 class QAction;
 class QMenu;
 class QTextEdit;
+class EAction;
 
 
-
-class mudlet : public QMainWindow, private Ui::MainWindow
+class mudlet : public QMainWindow//, private Ui::MainWindow
 {
 Q_OBJECT
 
@@ -64,7 +65,7 @@ public:
    void                          pasteWindow( Host * pHost, QString name ); 
    void                          userWindowLineWrap( Host * pHost, QString & name, bool on );
    QString                       readProfileData( QString profile, QString item ); 
-    
+   EAction *                     generateAction( QString name, QString icon, QToolBar * );
     
     
    static TConsole *             mpDebugConsole; 
@@ -72,11 +73,13 @@ public:
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
 
-    
+    QToolBar *                    mpUserToolBar;
     QIcon *                     testicon; 
     
 public slots:      
    void                          slot_show_about_dialog();
+    void                          slot_multi_view();
+    void                          slot_stopAllTriggers();
    void                          slot_userToolBar_triggered(QAction*);   
    void                          slot_userToolBar_hovered( QAction* pA );
    void                          slot_connection_dlg_finnished( QString profile, int historyVersion );
@@ -105,7 +108,7 @@ private slots:
     
 private:
     
-    
+    QMdiArea *                     mdiArea;  
     
     /*void                          createActions();
    void                          createMenus();
@@ -127,7 +130,8 @@ private:
    QMap<QString, TConsole *>     dockWindowConsoleMap;
    QMap<Host *, QToolBar *>      mUserToolbarMap; 
    QMap<QTimer *, TTimer *>      mTimerMap;
-   QToolBar *                    mpUserToolBar;
+    QToolBar *                   mpMainToolBar;
+  
    
 
     

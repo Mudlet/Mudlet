@@ -6,7 +6,7 @@
     <x>0</x>
     <y>0</y>
     <width>698</width>
-    <height>564</height>
+    <height>575</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -2297,6 +2297,18 @@
          </sizepolicy>
         </property>
         <layout class="QGridLayout" name="gridLayout_3" >
+         <property name="topMargin" >
+          <number>0</number>
+         </property>
+         <property name="rightMargin" >
+          <number>0</number>
+         </property>
+         <property name="bottomMargin" >
+          <number>0</number>
+         </property>
+         <property name="verticalSpacing" >
+          <number>0</number>
+         </property>
          <item row="0" column="0" >
           <widget class="QTextBrowser" name="welcome_message" >
            <property name="enabled" >
@@ -2458,10 +2470,50 @@ p, li { white-space: pre-wrap; }
          </item>
          <item row="2" column="0" >
           <widget class="QGroupBox" name="optionalArea" >
+           <property name="minimumSize" >
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
            <property name="title" >
             <string>Optional</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2" >
+            <item row="0" column="0" >
+             <widget class="QLabel" name="label_4" >
+              <property name="text" >
+               <string>Character name:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1" colspan="3" >
+             <widget class="QLineEdit" name="login_entry" >
+              <property name="toolTip" >
+               <string>The characters name</string>
+              </property>
+              <property name="echoMode" >
+               <enum>QLineEdit::Normal</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0" >
+             <widget class="QLabel" name="label_5" >
+              <property name="text" >
+               <string>Password:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1" colspan="3" >
+             <widget class="QLineEdit" name="character_password_entry" >
+              <property name="toolTip" >
+               <string>Characters password. Note that the password isn't encrypted in storage</string>
+              </property>
+              <property name="echoMode" >
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
             <item row="2" column="0" colspan="2" >
              <widget class="QCheckBox" name="autologin_checkBox" >
               <property name="toolTip" >
@@ -2475,37 +2527,13 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="1" column="1" >
-             <widget class="QLineEdit" name="character_password_entry" >
-              <property name="toolTip" >
-               <string>Characters password. Note that the password isn't encrypted in storage</string>
-              </property>
-              <property name="echoMode" >
-               <enum>QLineEdit::Password</enum>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0" >
-             <widget class="QLabel" name="label_4" >
+            <item row="2" column="2" colspan="2" >
+             <widget class="QPushButton" name="browseProfileHistoryButton" >
               <property name="text" >
-               <string>Character name:</string>
+               <string>Browse Profile History</string>
               </property>
-             </widget>
-            </item>
-            <item row="1" column="0" >
-             <widget class="QLabel" name="label_5" >
-              <property name="text" >
-               <string>Password:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1" >
-             <widget class="QLineEdit" name="login_entry" >
-              <property name="toolTip" >
-               <string>The characters name</string>
-              </property>
-              <property name="echoMode" >
-               <enum>QLineEdit::Normal</enum>
+              <property name="flat" >
+               <bool>false</bool>
               </property>
              </widget>
             </item>

@@ -36,6 +36,9 @@ using namespace std;
 
 class ActionUnit
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
                           ActionUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     list<TAction *>       getActionRootNodeList()   { QMutexLocker locker(& mActionUnitLock); return mActionRootNodeList; }

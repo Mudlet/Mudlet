@@ -34,6 +34,9 @@ using namespace std;
 
 class AliasUnit
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     list<TAlias *>        getAliasRootNodeList()   { QMutexLocker locker(& mAliasUnitLock); return mAliasRootNodeList; }
@@ -45,6 +48,8 @@ public:
     void                  reParentAlias( int childID, int oldParentID, int newParentID );
     qint64                getNewID();
     bool                  processDataStream( QString & );
+    void                  stopAllTriggers();
+    
     QMutex                mAliasUnitLock;
     
 private: 

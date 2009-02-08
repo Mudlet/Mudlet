@@ -103,7 +103,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>750</width>
+     <width>4</width>
      <height>14</height>
     </rect>
    </property>
@@ -142,6 +142,557 @@
    </property>
    <property name="floatable" >
     <bool>false</bool>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_2" >
+   <property name="geometry" >
+    <rect>
+     <x>4</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_2</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_3" >
+   <property name="geometry" >
+    <rect>
+     <x>18</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_3</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_4" >
+   <property name="geometry" >
+    <rect>
+     <x>32</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_4</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_5" >
+   <property name="geometry" >
+    <rect>
+     <x>46</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_5</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_6" >
+   <property name="geometry" >
+    <rect>
+     <x>60</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_6</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_7" >
+   <property name="geometry" >
+    <rect>
+     <x>74</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_7</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_8" >
+   <property name="geometry" >
+    <rect>
+     <x>88</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_8</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_9" >
+   <property name="geometry" >
+    <rect>
+     <x>102</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_9</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_10" >
+   <property name="geometry" >
+    <rect>
+     <x>116</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_10</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_11" >
+   <property name="geometry" >
+    <rect>
+     <x>130</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_11</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_12" >
+   <property name="geometry" >
+    <rect>
+     <x>144</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_12</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_13" >
+   <property name="geometry" >
+    <rect>
+     <x>158</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_13</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_14" >
+   <property name="geometry" >
+    <rect>
+     <x>172</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_14</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_15" >
+   <property name="geometry" >
+    <rect>
+     <x>186</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_15</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_16" >
+   <property name="geometry" >
+    <rect>
+     <x>200</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_16</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_17" >
+   <property name="geometry" >
+    <rect>
+     <x>214</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_17</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_18" >
+   <property name="geometry" >
+    <rect>
+     <x>228</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_18</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_19" >
+   <property name="geometry" >
+    <rect>
+     <x>242</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_19</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_20" >
+   <property name="geometry" >
+    <rect>
+     <x>256</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_20</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_21" >
+   <property name="geometry" >
+    <rect>
+     <x>270</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_21</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_22" >
+   <property name="geometry" >
+    <rect>
+     <x>284</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_22</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_23" >
+   <property name="geometry" >
+    <rect>
+     <x>298</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_23</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_24" >
+   <property name="geometry" >
+    <rect>
+     <x>312</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_24</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_25" >
+   <property name="geometry" >
+    <rect>
+     <x>326</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_25</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_26" >
+   <property name="geometry" >
+    <rect>
+     <x>340</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_26</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_27" >
+   <property name="geometry" >
+    <rect>
+     <x>354</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_27</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_28" >
+   <property name="geometry" >
+    <rect>
+     <x>368</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_28</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_29" >
+   <property name="geometry" >
+    <rect>
+     <x>382</x>
+     <y>0</y>
+     <width>14</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_29</string>
+   </property>
+   <attribute name="toolBarArea" >
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_30" >
+   <property name="geometry" >
+    <rect>
+     <x>396</x>
+     <y>0</y>
+     <width>354</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="windowTitle" >
+    <string>toolBar_30</string>
    </property>
    <attribute name="toolBarArea" >
     <enum>TopToolBarArea</enum>

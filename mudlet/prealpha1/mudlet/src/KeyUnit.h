@@ -34,6 +34,9 @@ using namespace std;
 
 class KeyUnit
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     
                           KeyUnit( Host * pHost );

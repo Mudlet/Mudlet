@@ -122,6 +122,7 @@ public:
       void              copy();
       void              cut();
       void              paste();
+      void              closeEvent( QCloseEvent *event );
       void              pasteWindow( QTextDocumentFragment & );
       void              setUserWindow();
       QStringList       getLines( int from, int to );

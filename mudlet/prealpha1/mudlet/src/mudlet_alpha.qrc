@@ -1,5 +1,10 @@
 <RCC>
   <qresource>
+    <file>icons/edit-bomb.png</file>
+    <file>icons/view-restore.png</file>
+    <file>icons/view-split-left-right.png</file>
+    <file>icons/utilities-file-archiver.png</file>
+    <file>icons/badge.png</file>
     <file>Mudlet_splashscreen_main</file>
     <file>icons/accessories-text-editor.png</file>
     <file>icons/application-exit.png</file>

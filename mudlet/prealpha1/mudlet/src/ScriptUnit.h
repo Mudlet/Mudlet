@@ -34,6 +34,9 @@ using namespace std;
 
 class ScriptUnit
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     
     ScriptUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
@@ -45,6 +48,8 @@ public:
     bool                  serialize( QDataStream & );
     bool                  restore( QDataStream &, bool );
     void                  reParentScript( int childID, int oldParentID, int newParentID );
+    void                  stopAllTriggers();
+    
     qint64                getNewID();
     QMutex                mScriptUnitLock;
     

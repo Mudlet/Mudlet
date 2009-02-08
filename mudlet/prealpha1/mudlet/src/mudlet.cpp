@@ -36,6 +36,9 @@
 #include "dlgHelpDialog.h"
 #include "dlgProfilePreferences.h"
 #include "TDebug.h"
+#include "XMLimport.h"
+#include "EAction.h"
+
 
 TConsole *  mudlet::mpDebugConsole = 0;
 QMainWindow * mudlet::mpDebugArea = 0;
@@ -52,52 +55,123 @@ mudlet * mudlet::self()
     return _self;
 }
 
-mudlet::mudlet() : Ui::MainWindow()
+mudlet::mudlet() 
+: QMainWindow() //Ui::MainWindow()
 {
-    setupUi(this);
+    //setupUi(this);
     mudlet::debugMode = false;
+    QVBoxLayout * layout = new QVBoxLayout( this );
+    layout->setContentsMargins(0,0,0,0);
+    QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     
-testicon = new QIcon("/home/heiko/mdev/icons/folder-brown.png");
     
-    //mdiArea->tileSubWindows();
+    mpMainToolBar = new QToolBar( this );
+    mpMainToolBar->setIconSize(QSize(32,32));
+    mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+    mpUserToolBar = new QToolBar( this );
+    
+    addToolBar( mpMainToolBar );
+    mpMainToolBar->setMovable( false );
+    addToolBarBreak();
+    
+    addToolBar( mpUserToolBar );  
+    
+    mdiArea = new QMdiArea( this );
     mdiArea->setViewMode( QMdiArea::TabbedView );
-   
+    mdiArea->setSizePolicy( sizePolicy );
+    layout->addWidget(mdiArea);
+    setCentralWidget( mdiArea );
+    
+    QAction * actionConnect = new QAction(QIcon(":/icons/preferences-web-browser-cache.png"), tr("Connect"), this);
+    actionConnect->setStatusTip(tr("Connect To Server"));
+    mpMainToolBar->addAction( actionConnect );
+    
+    QAction * actionTriggers = new QAction(QIcon(":/icons/tools-wizard.png"), tr("Triggers"), this);
+    actionTriggers->setStatusTip(tr("Show Triggers"));
+    mpMainToolBar->addAction( actionTriggers );
+    
+    QAction * actionAlias = new QAction(QIcon(":/icons/system-users.png"), tr("Aliases"), this);
+    actionAlias->setStatusTip(tr("Show Aliases"));
+    actionAlias->setEnabled( true );
+    mpMainToolBar->addAction( actionAlias );    
+    
+    QAction * actionTimers = new QAction(QIcon(":/icons/chronometer.png"), tr("Timers"), this);
+    actionTimers->setStatusTip(tr("Show Timers"));
+    mpMainToolBar->addAction( actionTimers );    
+    
+    QAction * actionButtons = new QAction(QIcon(":/icons/bookmarks.png"), tr("Actions"), this);
+    actionButtons->setStatusTip(tr("Show Actions"));
+    mpMainToolBar->addAction( actionButtons );    
+    
+    QAction * actionScripts = new QAction(QIcon(":/icons/document-properties.png"), tr("Scripts"), this);
+    actionScripts->setEnabled( true );
+    actionScripts->setStatusTip(tr("Show Scripts"));
+    mpMainToolBar->addAction( actionScripts );
+    
+    
+    
+    QAction * actionKeys = new QAction(QIcon(":/icons/preferences-desktop-keyboard.png"), tr("Keys"), this);
+    actionKeys->setStatusTip(tr("Options"));
+    actionKeys->setEnabled( true );
+    mpMainToolBar->addAction( actionKeys );
+    
+    QAction * actionHelp = new QAction(QIcon(":/icons/help-hint.png"), tr("Manual"), this);
+    actionHelp->setStatusTip(tr("Browse Reference Material and Documentation"));
+    mpMainToolBar->addAction( actionHelp );
+    
+    QAction * actionOptions = new QAction(QIcon(":/icons/configure.png"), tr("Settings"), this);
+    actionOptions->setStatusTip(tr("Settings, Options and Preferences"));
+    mpMainToolBar->addAction( actionOptions );
+    
+    QAction * actionNotes = new QAction(QIcon(":/icons/view-pim-notes.png"), tr("Notepad"), this);
+    actionNotes->setStatusTip(tr("take notes"));
+    mpMainToolBar->addAction( actionNotes );
+    
+        
+    QAction * actionMultiView = new QAction(QIcon(":/icons/view-split-left-right.png"), tr("MultiView"), this);
+    actionMultiView->setStatusTip(tr("MultiView"));
+    mpMainToolBar->addAction( actionMultiView );
+    
+    QAction * actionStopAllTriggers = new QAction(QIcon(":/icons/edit-bomb.png"), tr("Stop All Triggers"), this);
+    actionStopAllTriggers->setStatusTip(tr("stop all triggers, alias, actions, timers and scripts"));
+    mpMainToolBar->addAction( actionStopAllTriggers );
+    
+    
+    /* QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
+    actionProfileBackup->setStatusTip(tr("Backup Profile"));
+    mpMainToolBar->addAction( actionProfileBackup );*/
+    
+    
+    QAction * actionAbout = new QAction(QIcon(":/icons/mudlet.png"), tr("About"), this);
+    actionAbout->setStatusTip(tr("About This Program"));
+    mpMainToolBar->addAction( actionAbout );
+    
     mpDebugArea = new QMainWindow(0);
     HostManager::self()->addHost("default_host", "", "","" );  
     mpDefaultHost = HostManager::self()->getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
-    QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
+    
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugArea->setCentralWidget( mpDebugConsole );
-    mpDebugArea->resize(800,600);
+    mpDebugArea->resize(750,550);
     mpDebugArea->hide();
     QFont font("Monospace", 10, QFont::Courier);
     mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
     
-    toolBar->addAction( actionConnect );
-    toolBar->addAction( actionTriggers );
-    toolBar->addAction( actionTimers );
-    toolBar->addAction( actionAliases );
-    toolBar->addAction( actionScripts );
-    toolBar->addAction( actionButtons );
-    toolBar->addAction( actionKeys );
-    toolBar->addAction( actionHelp );
-    toolBar->addAction( actionNotes );
-    toolBar->addAction( actionOptions );
-    toolBar->addAction( actionAbout );
     
-    //FIXME:addToolBarBreak();
     
     connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(actionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
-    connect(actionAliases, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
+    connect(actionAlias, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
     connect(actionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
     connect(actionKeys, SIGNAL(triggered()),this,SLOT(show_key_dialog()));
     connect(actionButtons, SIGNAL(triggered()), this, SLOT(show_action_dialog()));
     connect(actionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
+    connect(actionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
+    connect(actionStopAllTriggers, SIGNAL(triggered()), this, SLOT(slot_stopAllTriggers()));
     
     readSettings();
     
@@ -105,6 +179,12 @@ testicon = new QIcon("/home/heiko/mdev/icons/folder-brown.png");
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
+    
+   
+    
+    connect(mpUserToolBar,SIGNAL(actionTriggered( QAction * ) ), this, SLOT(slot_userToolBar_triggered(QAction*)));    
+    
+    
 }
 
 void mudlet::addConsoleForNewHost( Host * pH )
@@ -125,13 +205,8 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
     
-    QToolBar * pToolbar = new QToolBar( this );
-    addToolBar( pToolbar );
-    pH->getActionUnit()->constructToolbar( this, pToolbar );
+    pH->getActionUnit()->constructToolbar( this, mpUserToolBar );
     
-    pToolbar->show();
-    
-    connect(pToolbar,SIGNAL(actionTriggered( QAction * ) ), this, SLOT(slot_userToolBar_triggered(QAction*)));    
     //mdiArea->tileSubWindows();
 }
 
@@ -251,6 +326,14 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 void mudlet::slot_userToolBar_triggered( QAction* pA )
 {
+    if( pA->isChecked() )
+    {
+        ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 2;
+    }
+    else
+    {
+        ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 1;    
+    }
     QStringList sL;
     ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->execute(sL);
 }
@@ -278,12 +361,30 @@ void mudlet::addSubWindow( TConsole* pConsole )
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
 }
 
+EAction * mudlet::generateAction( QString name, QString icon, QToolBar * pT )
+{
+    /* action->setIcon( ic );
+    pT->addAction( action );
+    return new EAction( ic, name, this );*/
+}
+
 void mudlet::closeEvent(QCloseEvent *event)
 {
+    
     mpDebugConsole->close();
     
     foreach( TConsole * pC, mConsoleMap )
     {
+        if( QMessageBox::question( this, "Question", "Do you want to save the profile "+pC->mpHost->getName(), QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+        {
+            qDebug()<<"The user wants to save the profile.";
+            pC->mpHost->mSaveProfileOnExit = true;
+        }
+        else 
+        {
+            qDebug()<<"User doesn't like to save the profile.";
+            pC->mpHost->mSaveProfileOnExit = false;
+        }
         pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
         pC->mpHost->mpEditorDialog->close();    
     }
@@ -494,6 +595,7 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     Host * pHost = HostManager::self()->getHost( profile );
     if( ! pHost ) 
         return;
+    
     addConsoleForNewHost( pHost );
     
     //NOTE: this is a potential problem if users connect by hand quickly 
@@ -504,6 +606,19 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     tempHostQueue.enqueue( pHost );
     pHost->connectToServer();     
 }
+
+void mudlet::slot_multi_view()
+{
+    mdiArea->tileSubWindows();    
+}
+
+void mudlet::slot_stopAllTriggers()
+{
+    foreach( TConsole * pC, mConsoleMap )
+    {
+        pC->mpHost->stopAllTriggers();
+    }
+}   
 
 mudlet::~mudlet()
 {

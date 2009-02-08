@@ -45,6 +45,7 @@ signals:
     
 public slots:
     
+    void slot_chose_history();
     void slot_update_name( const QString ) ;  
     void slot_update_url( const QString ) ;
     void slot_update_port( const QString ) ;

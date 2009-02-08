@@ -44,6 +44,9 @@ using namespace std;
 
 class TScript : public Tree<TScript>
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     
     

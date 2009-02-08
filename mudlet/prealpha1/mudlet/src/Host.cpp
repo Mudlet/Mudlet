@@ -30,6 +30,9 @@
 #include <QDataStream>
 #include <QFile>
 #include <QDir>
+#include <QDateTime>
+#include "XMLexport.h"
+#include "XMLimport.h"
 #include "mudlet.h"
 #include "TEvent.h"
 
@@ -77,6 +80,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mAutoClearCommandLineAfterSend( false )
 , mCommandSeparator( ';' )
 , mDisableAutoCompletion( false )
+, mSaveProfileOnExit( false )
 {
 }
 
@@ -87,6 +91,14 @@ Host::~Host()
 void Host::setReplacementCommand( QString s )
 {
     mReplacementCommand = s;    
+}
+
+void Host::stopAllTriggers()
+{
+    mTriggerUnit.stopAllTriggers();
+    mAliasUnit.stopAllTriggers();
+    mTimerUnit.stopAllTriggers();
+    mScriptUnit.stopAllTriggers();
 }
 
 void Host::send( QString command )
@@ -275,6 +287,32 @@ void Host::connectToServer()
 
 bool Host::serialize()
 {
+    if( ! mSaveProfileOnExit )
+    {
+        qDebug()<< "User doesn't want to save the profile. Good Bye! <"<<mHostName<<">";
+        return true;
+    }
+    qDebug()<<"saving the profile:";
+    
+    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/current";
+    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh:mm:ss")+".xml";
+    QDir dir_xml;
+    if( ! dir_xml.exists( directory_xml ) )
+    {
+        qDebug()<<"making directory:"<<directory_xml;
+        dir_xml.mkpath( directory_xml );    
+    }
+    QFile file_xml( filename_xml );
+    file_xml.open( QIODevice::WriteOnly );
+    
+    qDebug()<<"[XML EXPORT] Host serialize starting:"<<filename_xml;
+    XMLexport writer( this );
+    writer.exportHost( & file_xml );
+    file_xml.close();
+    qDebug()<<"[XML EXPORT] Host is serialized";
+    
+    return true;
+    
     QString directory = QDir::homePath()+"/.config/mudlet/profiles/";
     directory.append( mHostName );
     QString filename = directory + "/Host.dat";
@@ -450,6 +488,8 @@ void Host::writeProfileHistory( QString profile, QString item, QString what )
 
 bool Host::restore( QString directory, int selectedHistoryVersion )
 {
+    return false;
+    
     int restorableProfileCount = 0;
     
     if( selectedHistoryVersion > 0 )
@@ -484,7 +524,8 @@ bool Host::restore( QString directory, int selectedHistoryVersion )
     qDebug()<<"\n---> [ RESTORE FAILED ] profile directory:"<<directory<<"\n";
     return 
         false; //this is a new profile
-}
+    
+ }
 
 int Host::loadProfileHistory( QString directory, int restoreProfileNumber )
 {

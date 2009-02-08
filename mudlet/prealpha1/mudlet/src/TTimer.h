@@ -44,7 +44,9 @@ using namespace std;
 
 class TTimer : public Tree<TTimer>
 {
-        
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     
     virtual         ~TTimer();

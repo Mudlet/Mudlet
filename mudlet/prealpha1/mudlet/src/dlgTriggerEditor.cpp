@@ -275,9 +275,13 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     importAction->setEnabled( true );
     connect( importAction, SIGNAL(triggered()), this, SLOT( slot_import()));
     
-    QAction * exportAction = new QAction(QIcon(":/icons/application-x-lha.png"), tr("Export"), this);
+    QAction * exportAction = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Export"), this);
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
+    
+    /*QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
+    actionProfileBackup->setStatusTip(tr("Backup Profile"));*/
+    
     
     QAction * showDebugAreaAction = new QAction(QIcon(":/icons/tools-report-bug.png"), tr("Debug"), this);
     showDebugAreaAction->setEnabled( true );
@@ -896,23 +900,56 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     nameL << name;
     
     QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget->currentItem();
+    QTreeWidgetItem * pNewItem = 0;
+    TTrigger * pT = 0;
     
-    QTreeWidgetItem * pNewItem;
-    TTrigger * pT;
     if( pParent )
     {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
+        
         TTrigger * pParentTrigger = mpHost->getTriggerUnit()->getTrigger( parentID );
-        pT = new TTrigger( pParentTrigger, mpHost );
-        pNewItem = new QTreeWidgetItem( pParent, nameL );
-        pParent->insertChild( 0, pNewItem );
+        if( pParentTrigger )
+        {
+            // insert new items as siblings unless the parent is a folder
+            if( ! pParentTrigger->isFolder() )
+            {
+                // handle root items
+                if( ! pParentTrigger->getParent() )
+                {
+                    goto ROOT_TRIGGER;
+                }
+                else
+                {                
+                    // insert new item as sibling of the clicked item
+                    if( pParent->parent() )
+                    {
+                        pT = new TTrigger( pParentTrigger->getParent(), mpHost );
+                        pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
+                        pParent->parent()->insertChild( 0, pNewItem );
+                    }
+                }
+            }
+            else
+            {
+                pT = new TTrigger( pParentTrigger, mpHost );
+                pNewItem = new QTreeWidgetItem( pParent, nameL );
+                pParent->insertChild( 0, pNewItem );
+            }
+        }
+        else
+            goto ROOT_TRIGGER;
     }
     else
     {
-        pT = new TTrigger( name, regexList, regexPropertyList, false, mpHost );
+        //insert a new root item
+    ROOT_TRIGGER:   
+        TTrigger( name, regexList, regexPropertyList, false, mpHost );
         pNewItem = new QTreeWidgetItem( mpTriggerBaseItem, nameL );
-        treeWidget->insertTopLevelItem( 0, pNewItem );    
+        treeWidget->insertTopLevelItem( 0, pNewItem );  
     }
+    
+    if( ! pT ) return;
+    
     
     pT->setName( name );
     pT->setRegexCodeList( regexList, regexPropertyList );
@@ -954,24 +991,56 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     nameL << name;
     
     QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_timers->currentItem();
+    QTreeWidgetItem * pNewItem = 0;
+    TTimer * pT = 0;
     
-    QTreeWidgetItem * pNewItem;
-    TTimer * pT;
     if( pParent )
     {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
-        TTimer * pParentTimer = mpHost->getTimerUnit()->getTimer( parentID );
-        pT = new TTimer( pParentTimer, mpHost );
-        pNewItem = new QTreeWidgetItem( pParent, nameL );
-        pParent->insertChild( 0, pNewItem );
-        pParent->setExpanded( true );
+        
+        TTimer * pParentTrigger = mpHost->getTimerUnit()->getTimer( parentID );
+        if( pParentTrigger )
+        {
+            // insert new items as siblings unless the parent is a folder
+            if( ! pParentTrigger->isFolder() )
+            {
+                // handle root items
+                if( ! pParentTrigger->getParent() )
+                {
+                    goto ROOT_TIMER;
+                }
+                else
+                {                
+                    // insert new item as sibling of the clicked item
+                    if( pParent->parent() )
+                    {
+                        pT = new TTimer( pParentTrigger->getParent(), mpHost );
+                        pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
+                        pParent->parent()->insertChild( 0, pNewItem );
+                    }
+                }
+            }
+            else
+            {
+                pT = new TTimer( pParentTrigger, mpHost );
+                pNewItem = new QTreeWidgetItem( pParent, nameL );
+                pParent->insertChild( 0, pNewItem );
+            }
+        }
+        else
+            goto ROOT_TIMER;
     }
     else
     {
+        //insert a new root item
+    ROOT_TIMER:   
         pT = new TTimer( name, time, mpHost );
         pNewItem = new QTreeWidgetItem( mpTimerBaseItem, nameL );
-        treeWidget->insertTopLevelItem( 0, pNewItem );    
+        treeWidget_timers->insertTopLevelItem( 0, pNewItem );    
     }
+    
+    if( ! pT ) return;
+    
     
     pT->setName( name );
     pT->setCommand( command );
@@ -1009,23 +1078,55 @@ void dlgTriggerEditor::addKey( bool isFolder )
     nameL << name;
     
     QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_keys->currentItem();
+    QTreeWidgetItem * pNewItem = 0;
+    TKey * pT = 0;
     
-    QTreeWidgetItem * pNewItem;
-    TKey * pT;
     if( pParent )
     {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
-        TKey * pParentKey = mpHost->getKeyUnit()->getKey( parentID );
-        pT = new TKey( pParentKey, mpHost );
-        pNewItem = new QTreeWidgetItem( pParent, nameL );
-        pParent->insertChild( 0, pNewItem );
+        
+        TKey * pParentTrigger = mpHost->getKeyUnit()->getKey( parentID );
+        if( pParentTrigger )
+        {
+            // insert new items as siblings unless the parent is a folder
+            if( ! pParentTrigger->isFolder() )
+            {
+                // handle root items
+                if( ! pParentTrigger->getParent() )
+                {
+                    goto ROOT_KEY;
+                }
+                else
+                {                
+                    // insert new item as sibling of the clicked item
+                    if( pParent->parent() )
+                    {
+                        pT = new TKey( pParentTrigger->getParent(), mpHost );
+                        pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
+                        pParent->parent()->insertChild( 0, pNewItem );
+                    }
+                }
+            }
+            else
+            {
+                pT = new TKey( pParentTrigger, mpHost );
+                pNewItem = new QTreeWidgetItem( pParent, nameL );
+                pParent->insertChild( 0, pNewItem );
+            }
+        }
+        else
+            goto ROOT_KEY;
     }
     else
     {
+        //insert a new root item
+    ROOT_KEY:   
         pT = new TKey( name, mpHost );
         pNewItem = new QTreeWidgetItem( mpKeyBaseItem, nameL );
-        treeWidget_keys->insertTopLevelItem( 0, pNewItem );    
+        treeWidget_keys->insertTopLevelItem( 0, pNewItem ); 
     }
+    
+    if( ! pT ) return;
     
     pT->setName( name );
     pT->setKeyCode( -1 );
@@ -1056,7 +1157,6 @@ void dlgTriggerEditor::addKey( bool isFolder )
 
 void dlgTriggerEditor::addAlias( bool isFolder )
 {
-    qDebug()<<"dlgTriggerEditor::addAlias()";
     QString name;
     if( isFolder ) name = "New Alias Group";
     else name = "New Alias";
@@ -1067,25 +1167,56 @@ void dlgTriggerEditor::addAlias( bool isFolder )
     nameL << name;
     
     QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_alias->currentItem();
+    QTreeWidgetItem * pNewItem = 0;
+    TAlias * pT = 0;
     
-    QTreeWidgetItem * pNewItem;
-    TAlias * pT;
     if( pParent )
     {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
         
         TAlias * pParentTrigger = mpHost->getAliasUnit()->getAlias( parentID );
-        pT = new TAlias( pParentTrigger, mpHost );
-        pNewItem = new QTreeWidgetItem( pParent, nameL );
-        pParent->insertChild( 0, pNewItem );
+        if( pParentTrigger )
+        {
+            // insert new items as siblings unless the parent is a folder
+            if( ! pParentTrigger->isFolder() )
+            {
+                // handle root items
+                if( ! pParentTrigger->getParent() )
+                {
+                    goto ROOT_ALIAS;
+                }
+                else
+                {                
+                    // insert new item as sibling of the clicked item
+                    if( pParent->parent() )
+                    {
+                        pT = new TAlias( pParentTrigger->getParent(), mpHost );
+                        pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
+                        pParent->parent()->insertChild( 0, pNewItem );
+                    }
+                }
+            }
+            else
+            {
+                pT = new TAlias( pParentTrigger, mpHost );
+                pNewItem = new QTreeWidgetItem( pParent, nameL );
+                pParent->insertChild( 0, pNewItem );
+            }
+        }
+        else
+            goto ROOT_ALIAS;
     }
     else
     {
+        //insert a new root item
+ROOT_ALIAS:   
         pT = new TAlias( name, mpHost );
         pT->setRegexCode( regex );
         pNewItem = new QTreeWidgetItem( mpAliasBaseItem, nameL );
         treeWidget_alias->insertTopLevelItem( 0, pNewItem );    
     }
+    
+    if( ! pT ) return;
     
     pT->setName( name );
     pT->setCommand( command );
@@ -1110,8 +1241,11 @@ void dlgTriggerEditor::addAlias( bool isFolder )
     
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
-    mpAliasMainArea->pattern_textedit2->clear();
+    mpAliasMainArea->substitution->clear();
     mpSourceEditorArea->script_scintilla->clear();
+    
+    mpAliasMainArea->lineEdit_alias_name->setText( name );
+    
     treeWidget_alias->setCurrentItem( pNewItem );
 }  
 
@@ -1128,25 +1262,57 @@ void dlgTriggerEditor::addAction( bool isFolder )
     nameL << name;
     
     QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_actions->currentItem();
+    QTreeWidgetItem * pNewItem = 0;
+    TAction * pT = 0;
     
-    QTreeWidgetItem * pNewItem;
-    TAction * pT;
     if( pParent )
     {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
         
         TAction * pParentTrigger = mpHost->getActionUnit()->getAction( parentID );
-        pT = new TAction( pParentTrigger, mpHost );
-        pNewItem = new QTreeWidgetItem( pParent, nameL );
-        pParent->insertChild( 0, pNewItem );
+        if( pParentTrigger )
+        {
+            // insert new items as siblings unless the parent is a folder
+            if( ! pParentTrigger->isFolder() )
+            {
+                // handle root items
+                if( ! pParentTrigger->getParent() )
+                {
+                    goto ROOT_ACTION;
+                }
+                else
+                {                
+                    // insert new item as sibling of the clicked item
+                    if( pParent->parent() )
+                    {
+                        pT = new TAction( pParentTrigger->getParent(), mpHost );
+                        pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
+                        pParent->parent()->insertChild( 0, pNewItem );
+                    }
+                }
+            }
+            else
+            {
+                pT = new TAction( pParentTrigger, mpHost );
+                pNewItem = new QTreeWidgetItem( pParent, nameL );
+                pParent->insertChild( 0, pNewItem );
+            }
+        }
+        else
+            goto ROOT_ACTION;
     }
     else
     {
+        //insert a new root item
+    ROOT_ACTION:   
         pT = new TAction( name, mpHost );
         pT->setCommandButtonUp( cmdButtonUp );
         pNewItem = new QTreeWidgetItem( mpActionBaseItem, nameL );
         treeWidget_actions->insertTopLevelItem( 0, pNewItem );    
     }
+    
+    if( ! pT ) return;
+    
     
     pT->setName( name );
     pT->setCommandButtonUp( cmdButtonUp );
@@ -1173,7 +1339,8 @@ void dlgTriggerEditor::addAction( bool isFolder )
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
     mpSourceEditorArea->script_scintilla->clear();
-    //mpHost->getActionUnit()->updateToolbar();
+    
+    mpHost->getActionUnit()->updateToolbar();
     
     treeWidget_actions->setCurrentItem( pNewItem );
     mpCurrentActionItem = pNewItem;
@@ -1186,39 +1353,66 @@ void dlgTriggerEditor::addScript( bool isFolder )
     if( isFolder ) name = "New Script Group";
     else name = "NewScript";
     QStringList mainFun; 
-    mainFun << "----------------------------------------------------------------------------------\n"
-            << "-- This is the main function of the script that gets called if an event is raised \n"
-            << "-- for which this script has registered an event handler. It must have the same   \n"
-            << "-- name as the script name.\n" 
-            << "--\n"
-            << "--      *** DON'T FORGET TO ADJUST THE FUNCTION NAME TO THE SCRIPT NAME! ***\n"
-            << "--\n"
-            << "-- You can define any functions you like in addition to this function, but you must \n"
-            << "-- not remove it if you want your script to be called by the event system.\n"
-            << "-----------------------------------------------------------------------------------\n"
-            << "function "<<name<<"()\n\nend\n\n";
+    mainFun << "-------------------------------------------------\n"
+            << "--         Put your Lua functions here.        --\n"
+            << "--                                             --\n"
+            << "-- Note that you can also use external Scripts --\n"
+            << "-------------------------------------------------\n";
     QString script = mainFun.join("");
     QStringList nameL;
     nameL << name;
     
     QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_scripts->currentItem();
+    QTreeWidgetItem * pNewItem = 0;
+    TScript * pT = 0;
     
-    QTreeWidgetItem * pNewItem;
-    TScript * pT;
     if( pParent )
     {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
+        
         TScript * pParentTrigger = mpHost->getScriptUnit()->getScript( parentID );
-        pT = new TScript( pParentTrigger, mpHost );
-        pNewItem = new QTreeWidgetItem( pParent, nameL );
-        pParent->insertChild( 0, pNewItem );
+        if( pParentTrigger )
+        {
+            // insert new items as siblings unless the parent is a folder
+            if( ! pParentTrigger->isFolder() )
+            {
+                // handle root items
+                if( ! pParentTrigger->getParent() )
+                {
+                    goto ROOT_SCRIPT;
+                }
+                else
+                {     
+                    // insert new item as sibling of the clicked item
+                    if( pParent->parent() )
+                    {
+                        pT = new TScript( pParentTrigger->getParent(), mpHost );
+                        pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
+                        pParent->parent()->insertChild( 0, pNewItem );
+                    }
+                }
+            }
+            else
+            {
+                pT = new TScript( pParentTrigger, mpHost );
+                pNewItem = new QTreeWidgetItem( pParent, nameL );
+                pParent->insertChild( 0, pNewItem );
+            }
+        }
+        else
+            goto ROOT_SCRIPT;
     }
     else
     {
+        //insert a new root item
+    ROOT_SCRIPT:   
         pT = new TScript( name, mpHost );
         pNewItem = new QTreeWidgetItem( mpScriptsBaseItem, nameL );
         treeWidget_scripts->insertTopLevelItem( 0, pNewItem );    
     }
+    
+    if( ! pT ) return;
+    
     
     pT->setName( name );
     pT->setScript( script );
@@ -1389,8 +1583,11 @@ void dlgTriggerEditor::slot_saveAliasAfterEdit()
     
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
     QString regex = mpAliasMainArea->pattern_textedit->text();
-    if( (name.size() < 1) || (name=="New Alias") ) name = regex;
-    QString command = mpAliasMainArea->pattern_textedit2->text();
+    if( (name.size() < 1) || (name=="New Alias") )
+    {
+        name = regex;
+    }
+    QString substitution = mpAliasMainArea->substitution->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     QTreeWidgetItem * pItem = treeWidget_alias->currentItem(); 
     if( pItem )
@@ -1400,7 +1597,7 @@ void dlgTriggerEditor::slot_saveAliasAfterEdit()
         if( pT )
         {
             pT->setName( name );
-            pT->setCommand( command );
+            pT->setCommand( substitution );
             pT->setRegexCode( regex );
             pT->setScript( script );
             
@@ -1676,12 +1873,15 @@ void dlgTriggerEditor::slot_alias_clicked( QTreeWidgetItem *pItem, int column )
         QString pattern = pT->getRegexCode();
         QString command = pT->getCommand();
         QString name = pT->getName();
+        
         mpAliasMainArea->pattern_textedit->clear();
-        mpAliasMainArea->pattern_textedit2->clear();
+        mpAliasMainArea->substitution->clear();
         mpAliasMainArea->lineEdit_alias_name->clear();
+        
         mpAliasMainArea->pattern_textedit->setText( pattern );    
-        mpAliasMainArea->pattern_textedit2->setText( command );
+        mpAliasMainArea->substitution->setText( command );
         mpAliasMainArea->lineEdit_alias_name->setText( name );
+        
         QString script = pT->getScript();
         mpSourceEditorArea->script_scintilla->setText( script );
     }
@@ -2855,22 +3055,8 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::debugMode = !mudlet::debugMode;    
 }
 
-void dlgTriggerEditor::slot_export()
+void dlgTriggerEditor::exportTrigger( QFile & file )
 {
-    /*   QString fileName = QFileDialog::getExistingDirectory(this, tr("Select Profile"),
-        QDir::homePath(),
-        QFileDialog::ShowDirsOnly
-        | QFileDialog::DontResolveSymlinks);
-    if( fileName.isEmpty() ) return;
-    
-    mpHost->exportHost( fileName );
-    return;*/
-    
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"),
-                                     QDir::currentPath(),
-                                     tr("trigger files (*.trigger *.xml)"));
-    if(fileName.isEmpty()) return;
-    
     QString name;
     TTrigger * pT = 0;
     QTreeWidgetItem * pItem = treeWidget->currentItem(); 
@@ -2883,25 +3069,161 @@ void dlgTriggerEditor::slot_export()
             name = pT->getName();
         }
     }
-    QFile file(fileName);
-    if( ! file.open(QFile::WriteOnly | QFile::Text) ) 
+    else
     {
-        QMessageBox::warning(this, tr("Export Trigger:")+name,
-                             tr("Cannot write file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
-        return;
+        QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;   
     }
-    
     XMLexport writer( pT );
     if( writer.exportTrigger( & file ) )
     {
-        statusBar()->showMessage(tr("Trigger ")+name+tr(" saved"), 2000);
+        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
     }
     
 }
 
-void dlgTriggerEditor::slot_import()
+void dlgTriggerEditor::exportTimer( QFile & file )
+{
+    QString name;
+    TTimer * pT = 0;
+    QTreeWidgetItem * pItem = treeWidget_timers->currentItem(); 
+    if( pItem )
+    {
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+        pT = mpHost->getTimerUnit()->getTimer( triggerID );
+        if( pT )
+        {
+            name = pT->getName();
+        }
+    }
+    else
+    {
+        QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;   
+    }
+    XMLexport writer( pT );
+    if( writer.exportTimer( & file ) )
+    {
+        statusBar()->showMessage(tr("Package")+name+tr(" saved"), 2000);
+    }
+    
+}
+
+void dlgTriggerEditor::exportAlias( QFile & file )
+{
+    QString name;
+    TAlias * pT = 0;
+    QTreeWidgetItem * pItem = treeWidget_alias->currentItem(); 
+    if( pItem )
+    {
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+        pT = mpHost->getAliasUnit()->getAlias( triggerID );
+        if( pT )
+        {
+            name = pT->getName();
+        }
+    }
+    else
+    {
+        QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;   
+    }
+    XMLexport writer( pT );
+    if( writer.exportAlias( & file ) )
+    {
+        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    }
+    
+}
+
+void dlgTriggerEditor::exportAction( QFile & file )
+{
+    QString name;
+    TAction * pT = 0;
+    QTreeWidgetItem * pItem = treeWidget_actions->currentItem(); 
+    if( pItem )
+    {
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+        pT = mpHost->getActionUnit()->getAction( triggerID );
+        if( pT )
+        {
+            name = pT->getName();
+        }
+    }
+    else
+    {
+        QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;   
+    }
+    XMLexport writer( pT );
+    if( writer.exportAction( & file ) )
+    {
+        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    }
+    
+}
+
+void dlgTriggerEditor::exportScript( QFile & file )
+{
+    QString name;
+    TScript * pT = 0;
+    QTreeWidgetItem * pItem = treeWidget_scripts->currentItem(); 
+    if( pItem )
+    {
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+        pT = mpHost->getScriptUnit()->getScript( triggerID );
+        if( pT )
+        {
+            name = pT->getName();
+        }
+    }
+    else
+    {
+        QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;   
+    }
+    XMLexport writer( pT );
+    if( writer.exportScript( & file ) )
+    {
+        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    }
+    
+}
+
+void dlgTriggerEditor::exportKey( QFile & file )
+{
+    QString name;
+    TKey * pT = 0;
+    QTreeWidgetItem * pItem = treeWidget_keys->currentItem(); 
+    if( pItem )
+    {
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+        pT = mpHost->getKeyUnit()->getKey( triggerID );
+        if( pT )
+        {
+            name = pT->getName();
+        }
+    }
+    else
+    {
+        QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;   
+    }
+    XMLexport writer( pT );
+    if( writer.exportKey( & file ) )
+    {
+        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    }
+    
+}
+
+void dlgTriggerEditor::slot_export()
 {
     //FIXME: important for users with old profiles! 
     
@@ -2912,33 +3234,61 @@ void dlgTriggerEditor::slot_import()
     HostManager::self()->importHost( fileName );
     return;*/
     
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"),
         QDir::currentPath(),
-        tr("package files (*.xml)"));
-    if( fileName.isEmpty() ) return;
+        tr("trigger files (*.trigger *.xml)"));
+    if(fileName.isEmpty()) return;
     
-    QString name;
-    TTrigger * pT = 0;
-    QTreeWidgetItem * pItem = treeWidget->currentItem(); 
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
-        if( pT )
-        {
-            name = pT->getName();
-        }
-    }
+   
     QFile file(fileName);
-    if( ! file.open(QFile::ReadOnly | QFile::Text) ) 
+    if( ! file.open(QFile::WriteOnly | QFile::Text) ) 
     {
-        QMessageBox::warning(this, tr("Import Trigger:")+name,
-                             tr("Cannot read file %1:\n%2.")
+        QMessageBox::warning(this, tr("Export Trigger:"),
+                             tr("Cannot write file %1:\n%2.")
                              .arg(fileName)
                              .arg(file.errorString()));
         return;
     }
     
+    switch( mCurrentView )
+    {
+    case cmTriggerView:
+        exportTrigger( file );
+        break;
+    case cmTimerView:
+        exportTimer( file );
+        break;
+    case cmAliasView:
+        exportAlias( file );
+        break;
+    case cmScriptView:
+        exportAction( file );
+        break;
+    case cmActionView:
+        exportScript( file );
+        break;
+    case cmKeysView:
+        exportKey( file );
+        break;
+    };        
+}
+
+void dlgTriggerEditor::slot_import()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
+        QDir::currentPath(),
+        tr("*.xml"));
+    if( fileName.isEmpty() ) return;
+    
+    QFile file(fileName);
+    if( ! file.open(QFile::ReadOnly | QFile::Text) ) 
+    {
+        QMessageBox::warning(this, tr("Import Mudlet Package:"),
+                             tr("Cannot read file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(file.errorString()));
+        return;
+    }
     
     treeWidget->clear();
     treeWidget_alias->clear();
@@ -3006,4 +3356,3 @@ void dlgTriggerEditor::slot_chose_action_icon()
         tr("Images (*.png *.xpm *.jpg)"));    
     mpActionsMainArea->lineEdit_action_icon->setText( fileName );    
 }
-

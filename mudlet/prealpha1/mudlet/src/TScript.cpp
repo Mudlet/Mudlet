@@ -64,6 +64,8 @@ TScript::~TScript()
     
 }
 
+
+
 bool TScript::registerScript()
 {
     if( ! mpHost )

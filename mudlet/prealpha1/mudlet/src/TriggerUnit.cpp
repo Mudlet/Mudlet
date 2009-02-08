@@ -192,6 +192,16 @@ void TriggerUnit::processDataStream( QString & data )
     }
 }
 
+void TriggerUnit::stopAllTriggers()
+{    
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        pChild->setIsActive( false );
+    }
+}
+
 
 bool TriggerUnit::serialize( QDataStream & ofs )
 {
@@ -278,6 +288,22 @@ void TriggerUnit::killTrigger( QString & name )
         }
     } 
 }
+
+
+void TriggerUnit::dump()
+{
+    bool ret = true;
+    
+    typedef list<TTrigger *>::const_iterator I;
+    cout << "TriggerUnit::dump() entries="<<mTriggerRootNodeList.size()<<endl;
+    
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        pChild->DumpFamily();
+    }
+}
+
 
 
 

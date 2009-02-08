@@ -42,6 +42,9 @@ using namespace std;
 
 class TKey : public Tree<TKey>
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     
     

@@ -30,7 +30,7 @@ Q_OBJECT
       
 public:
         
-         EAction(QObject* parent, QString name );
+         EAction(QIcon &, QString &, mudlet * );
     void triggered();    
     
     

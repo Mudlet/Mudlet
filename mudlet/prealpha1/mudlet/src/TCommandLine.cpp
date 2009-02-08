@@ -129,6 +129,7 @@ bool TCommandLine::event( QEvent * event )
             
         case Qt::Key_Escape:
             
+            selectAll();
             mAutoCompletion = false;
             mTabCompletion = false;
             mTabCompletionTyped = "";
@@ -161,7 +162,6 @@ bool TCommandLine::event( QEvent * event )
             {
                 mUserKeptOnTyping = true;
                 QLineEdit::event( event );
-                handleAutoCompletion();
                 return false;
             }
         }
@@ -247,7 +247,7 @@ void TCommandLine::handleTabCompletion( bool direction )
             propsalMap[filterList[i]]=i;
         }
         filterList = propsalMap.uniqueKeys();
-        setPalette( mTabCompletionPalette );
+        //setPalette( mTabCompletionPalette );
         
         if( filterList.size() > 0 )
         {
@@ -272,36 +272,27 @@ void TCommandLine::handleTabCompletion( bool direction )
 
 void TCommandLine::handleAutoCompletion()
 {
-    if( ! mAutoCompletion ) return; // enabled via cursor up
-    if( hasSelectedText() ) setText( text().remove( selectedText()) );
-    mAutoCompletionTyped = text();
-    if( mAutoCompletionCount >= mHistoryMap.size() ) mAutoCompletionCount = 0;    
-    if( mAutoCompletionCount < 0 )  
+    QString neu = text();
+    neu.chop(selectedText().size());
+    setText(neu);
+    qDebug()<<"after chop text=<"<<text()<<">";
+    int oldLength = text().size();
+    QStringList filterList;
+    for( int i=0; i<mHistoryList.size(); i++ )
     {
-        mUserKeptOnTyping = false;
-        mAutoCompletionCount = 0;
-        if( mAutoCompletionTyped.size() == 0 ) return;
-    }
-    mAutoCompletionCount++;
-    QStringList wordList = mHistoryMap.uniqueKeys();
-    if( wordList.size() > 0 )
-    {
-        QStringList filterList = wordList.filter( QRegExp( "^"+mAutoCompletionTyped ) );
-        QMap<QString, int> propsalMap;
-        for( int i=0; i<filterList.size(); i++ )
+        if( text() == mHistoryList[i].mid(0,text().size()) )    
         {
-            propsalMap[filterList[i]]=i;
-        }
-        filterList = propsalMap.uniqueKeys();
-        setPalette( mAutoCompletionPalette );
-        if( filterList.size() > 0 )
-        {
-            if( ( mAutoCompletionCount > (filterList.size() - 1 ) ) ) mAutoCompletionCount = 0;
-            QString proposal = filterList[mAutoCompletionCount].replace( mAutoCompletionTyped, 0 );
-            setText( mAutoCompletionTyped+proposal.trimmed() );
-            setCursorPosition( mAutoCompletionTyped.size() );
-            setSelection( text().size(), (-1*(proposal.size())) );
-            return;
+            if( mHistoryList[i].size() > text().size() )
+            {
+                if( mLastCompletion == mHistoryList[i] )
+                {
+                    continue;
+                }
+                mLastCompletion = mHistoryList[i];
+                setText( mHistoryList[i] );
+                setSelection( oldLength, text().size() );
+                return;
+            }
         }
     }
 }
@@ -320,10 +311,13 @@ void TCommandLine::historyDown(QKeyEvent *event)
     if( mHistoryBuffer < mHistoryList.size() )
     {
         setText( mHistoryList[mHistoryBuffer] );
+        selectAll();
     }
     else
     {
         mHistoryBuffer = 0;
+        setText( mHistoryList[mHistoryBuffer] );
+        selectAll();
     }
 }
 
@@ -333,9 +327,20 @@ void TCommandLine::historyDown(QKeyEvent *event)
 
 void TCommandLine::historyUp(QKeyEvent *event)
 {
-    if( text().size() > 0 )
+    cout<<"selectedText.size="<<(int)selectedText().size()<<" text.size="<<(int)text().size()<<endl;
+    if( selectedText().size() == text().size() )  
     {
-        mAutoCompletion = true;
+        mHistoryBuffer--;
+        if( mHistoryBuffer < 0 )
+        {
+            mHistoryBuffer = mHistoryList.size()-1;
+            if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
+        }
+        setText( mHistoryList[mHistoryBuffer]);
+        selectAll();
+    }
+    else
+    {
         handleAutoCompletion();
     }
 }

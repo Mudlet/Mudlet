@@ -33,6 +33,16 @@
 #include "AliasUnit.h"
 #include "mudlet.h"
 
+void AliasUnit::stopAllTriggers()
+{    
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        pChild->setIsActive( false );
+    }
+}
+
 bool AliasUnit::processDataStream( QString & data )
 {
     TLuaInterpreter * Lua = mpHost->getLuaInterpreter();

@@ -36,6 +36,9 @@ using namespace std;
 
 class TimerUnit
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     list<TTimer *>        getTimerRootNodeList()   { QMutexLocker locker(& mTimerUnitLock); return mTimerRootNodeList; }
@@ -48,6 +51,8 @@ public:
     bool                  serialize( QDataStream & );
     bool                  restore( QDataStream &, bool );
     void                  reParentTimer( int childID, int oldParentID, int newParentID );
+    void                  stopAllTriggers();
+    
     qint64                getNewID();
     QMutex                mTimerUnitLock;
     

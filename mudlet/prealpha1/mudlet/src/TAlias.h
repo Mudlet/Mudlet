@@ -43,6 +43,9 @@ using namespace std;
 
 class TAlias : public Tree<TAlias>
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
     
     

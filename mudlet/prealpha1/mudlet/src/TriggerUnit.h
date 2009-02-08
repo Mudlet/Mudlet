@@ -35,6 +35,9 @@ using namespace std;
 
 class TriggerUnit
 {
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:
                           TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     list<TTrigger *>      getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
@@ -48,6 +51,9 @@ public:
     bool                  restore( QDataStream &, bool );
     void                  reParentTrigger( int childID, int oldParentID, int newParentID );
     void                  processDataStream( QString & );
+    void                  dump();
+    void                  stopAllTriggers();
+    
     qint64                getNewID();
     QMutex                mTriggerUnitLock;
   

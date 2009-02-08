@@ -25,7 +25,12 @@
 #include "Host.h"
 
 class Host;
-class Trigger;
+class TTrigger;
+class TTimer;
+class TAlias;
+class TAction;
+class TScript;
+class TKey;
 
 class XMLimport : public QXmlStreamReader
 {
@@ -39,10 +44,32 @@ private:
     
     void      readPackage();
     void      readUnknownPackage();
-    void      readUnknownTriggerElement();
-    void      readTriggerPackage();
     
+    void      readHostPackage();
+    void      readTriggerPackage();
+    void      readTimerPackage();
+    void      readAliasPackage();
+    void      readActionPackage();
+    void      readScriptPackage();
+    void      readKeyPackage();
+    
+    void      readUnknownHostElement();
+    void      readUnknownTriggerElement();
+    void      readUnknownTimerElement();
+    void      readUnknownAliasElement();
+    void      readUnknownActionElement();
+    void      readUnknownScriptElement();
+    void      readUnknownKeyElement();
+    
+    void      readHostPackage( Host * );
     void      readTriggerGroup( TTrigger * pParent );
+    void      readTimerGroup( TTimer * pParent );
+    void      readAliasGroup( TAlias * pParent );
+    void      readActionGroup( TAction * pParent );
+    void      readScriptGroup( TScript * pParent );
+    void      readKeyGroup( TKey * pParent );
+    
+    
     void      readStringList( QStringList & );
     void      readIntegerList( QList<int> & );
 

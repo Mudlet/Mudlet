@@ -18,6 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
+#include <QMessageBox>
 #include <QDebug>
 #include "TConsole.h"
 #include "mudlet.h"
@@ -123,6 +125,20 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
        
     m_fontSpecs.init();
 }
+
+void TConsole::closeEvent( QCloseEvent *event )
+{
+    if( ! mpHost->mSaveProfileOnExit )
+    {
+        if( QMessageBox::question( this, "Question", "Do you want to save the profile data?", QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+        {
+            qDebug()<<"The user wants to save the profile.";
+            mpHost->mSaveProfileOnExit = true;
+        }
+    }
+    event->accept();
+}
+
 
 void TConsole::changeColors()
 {

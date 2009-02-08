@@ -53,7 +53,9 @@ using namespace std;
 
 class Host  : public QObject
 {
-        
+    friend class XMLexport;
+    friend class XMLimport;
+    
 public:    
             
                        Host( int port, QString mHostName, QString login, QString pass, int host_id );  
@@ -134,6 +136,7 @@ public:
     void               registerEventHandler( QString, TScript * );
     void               unregisterEventHandler( QString, TScript * );
     void               raiseEvent( TEvent * event );
+    void               stopAllTriggers();
     
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
@@ -164,7 +167,7 @@ public:
     int                mScreenWidth;
     QFont              mCommandLineFont;
     QString            mCommandSeperator;
-    
+    bool               mSaveProfileOnExit;    
     //////////////////////////////////////////
     // this is serialized into hostOptions_2
     int mWrapAt;    
@@ -211,7 +214,7 @@ private:
     QMap<QString, QList<TScript *> > mEventHandlerMap;
     QMap<QString, TEvent *> mEventMap;
     bool               mIsAutologin;
-    
+
         
     
 };

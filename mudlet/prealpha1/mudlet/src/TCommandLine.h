@@ -43,7 +43,7 @@ public:
     //void              keyPressEvent(QKeyEvent *event);
     
 private:
-    
+    QString           mLastCompletion;
     void              handleAutoCompletion();  
     void              handleTabCompletion( bool direction );
     void              historyUp(QKeyEvent *event);
