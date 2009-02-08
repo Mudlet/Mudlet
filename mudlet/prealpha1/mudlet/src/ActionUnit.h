@@ -62,7 +62,7 @@ private:
     void                  removeActionRootNode( TAction * pT );
     void                  removeAction( TAction *);
     Host *                mpHost;
-    map<int, TAction *>   mActionMap;
+    QMap<int, TAction *>   mActionMap;
     list<TAction *>       mActionRootNodeList;
     qint64                mMaxID;
     QToolBar *            mpToolBar;

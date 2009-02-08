@@ -72,34 +72,24 @@ bool TAlias::match( QString & toMatch )
         {
             if( mRegex.indexIn( toMatch ) == -1 )
             {
-                //qDebug()<<"text="<<toMatch;
-                //qDebug()<<"Alias("<<mRegexCode<<") did NOT match.";
-                //qDebug()<<"mCommand="<<mCommand<<" mRegexCode="<<mRegexCode;
                 return false; // regex didn't match
             }
             else
             {
-                //qDebug()<<"text="<<toMatch;
-                //qDebug()<<"Alias("<<mRegexCode<<") *DID* match!"<<" mCommand="<<mCommand;
                 if( mCommand.size() > 0 )
                 {
-                    //qDebug()<<"sending command="<<mCommand;
                     // when a command is specified we use it instead of the script
-                    mpHost->sendRaw( mCommand );
-                    return true;
+                    mpHost->send( mCommand );
                 }
-                else
+                QStringList captureList;
+                for( int i=1; i<=mRegex.numCaptures(); i++ )
                 {
-                    QStringList captureList;
-                    for( int i=1; i<=mRegex.numCaptures(); i++ )
-                    {
-                        captureList << mRegex.cap(i);
-                        //qDebug()<<"captured #"<<i<<":"<<mRegex.cap(i);
-                    }
-                    // call lua alias function with number of matches and matches itselves as arguments
-                    execute( captureList );    
-                    return true;
+                    captureList << mRegex.cap(i);
+                    //qDebug()<<"captured #"<<i<<":"<<mRegex.cap(i);
                 }
+                // call lua alias function with number of matches and matches itselves as arguments
+                execute( captureList );    
+                return true;
             }
         }
         

@@ -461,6 +461,10 @@ void TTrigger::execute( QStringList & matches )
         pL->compileAndExecuteScript( mScript );
         return;
     }
+    if( mCommand.size() > 0 )
+    {
+        mpHost->send( mCommand );
+    }
     if( mNeedsToBeCompiled )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    

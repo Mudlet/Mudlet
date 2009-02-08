@@ -62,7 +62,8 @@ public:
                      TTrigger & clone( const TTrigger & );
                       //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
                       //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
-     
+    QString          getCommand()                    { QMutexLocker locker(& mLock); return mCommand; } 
+    void             setCommand( QString b )           { QMutexLocker locker(& mLock); mCommand = b; }
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
     QStringList &    getRegexCodeList()              { QMutexLocker locker(& mLock); return mRegexCodeList; }
@@ -122,6 +123,7 @@ private:
     int              mLineDelta;
     bool             mIsMultiline;
     int              mConditionLineDelta;
+    QString          mCommand;
     std::map<int,TMatchState*> mConditionMap;
     
     QMutex           mLock;

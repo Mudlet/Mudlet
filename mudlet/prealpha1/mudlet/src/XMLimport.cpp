@@ -563,6 +563,12 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
+            else if( name() == "mCommand" )
+            {
+                pT->mCommand = readElementText();
+                continue;
+            }
+            
             else if( name() == "TriggerGroup" )
             {
                 readTriggerGroup( pT );

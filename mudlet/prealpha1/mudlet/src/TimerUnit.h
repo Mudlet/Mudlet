@@ -64,7 +64,7 @@ private:
     void                  removeTimerRootNode( TTimer * pT );
     void                  removeTimer( TTimer *);
     Host *                mpHost;
-    map<int, TTimer *>    mTimerMap;
+    QMap<int, TTimer *>    mTimerMap;
     list<TTimer *>        mTimerRootNodeList;
     qint64                mMaxID;
   

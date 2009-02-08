@@ -60,7 +60,7 @@ private:
     void                  removeAliasRootNode( TAlias * pT );
     void                  removeAlias( TAlias *);
     Host *                mpHost;
-    map<int, TAlias *>    mAliasMap;
+    QMap<int, TAlias *>    mAliasMap;
     list<TAlias *>        mAliasRootNodeList;
     qint64                mMaxID;
     

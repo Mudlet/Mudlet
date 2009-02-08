@@ -44,18 +44,7 @@ void TriggerUnit::addTriggerRootNode( TTrigger * pT )
     }
     
     mTriggerRootNodeList.push_back( pT );
-    if( mTriggerMap.find( pT->getID() ) == mTriggerMap.end() )
-    {
-        mTriggerMap[pT->getID()] = pT;
-    }
-    /*else
-    {
-        map<int,TTrigger*>::iterator it;
-        for( it=mTriggerMap.begin(); it!=mTriggerMap.end(); it++  ) 
-        {
-            int id = it->first;
-        }
-    } */
+    mTriggerMap.insert( pT->getID(), pT );
 }
 
 void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID )
@@ -101,7 +90,7 @@ TTrigger * TriggerUnit::getTrigger( int id )
     QMutexLocker locker(& mTriggerUnitLock); 
     if( mTriggerMap.find( id ) != mTriggerMap.end() )
     {
-        return mTriggerMap[id];
+        return mTriggerMap.value( id );
     }
     else
     {
@@ -113,7 +102,7 @@ TTrigger * TriggerUnit::getTriggerPrivate( int id )
 { 
     if( mTriggerMap.find( id ) != mTriggerMap.end() )
     {
-        return mTriggerMap[id];
+        return mTriggerMap.value( id );
     }
     else
     {
@@ -164,16 +153,14 @@ void TriggerUnit::addTrigger( TTrigger * pT )
         pT->setID( getNewID() );
     }
     
-    mTriggerMap[pT->getID()] = pT;
+    mTriggerMap.insert( pT->getID(), pT );
 }
 
 void TriggerUnit::removeTrigger( TTrigger * pT )
 {
     if( ! pT ) return;
     
-    //FIXME: warning: race condition
-    //QMutexLocker locker(& mTriggerUnitLock); 
-    mTriggerMap.erase(pT->getID());    
+    mTriggerMap.remove(pT->getID());    
 }
 
 

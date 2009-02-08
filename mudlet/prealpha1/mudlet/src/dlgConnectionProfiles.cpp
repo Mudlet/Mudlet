@@ -735,44 +735,24 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( profile_name.size() < 1 ) 
         return;
     
-    QStringList loadedProfiles = HostManager::self()->getHostList();
-    if( loadedProfiles.contains( profile_name ) )
-    {
-        // copy profile as the same profile is already loaded
-        // show information that he has to select a new name for this copy
-        copy_profile( profile_name );
-        qDebug()<<"slot_connectToServer() mOrigin="<<profile_name;
-        mOrigin = profile_name;
-        return;
-    }
-    
     // load an old profile if there is any
-    int historyVersion = profile_history->currentIndex();
-    if( historyVersion == -1 )
-        historyVersion = 0;
-    QString hostPath = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name;
-    Host * pHost = HostManager::self()->loadHostProfile( hostPath, historyVersion );
-    
-    // the user *might* have changed some data
-    
-    if( ! pHost )
-    {
-        bool ok = HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
-        pHost = HostManager::self()->getHost( profile_name );
-    }
-    
+    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+    Host * pHost = HostManager::self()->getHost( profile_name );
     
     if( ! pHost ) return;
     
-    QString folder = hostPath+"/current/";
+    QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
     QDir dir( folder );
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
-    qDebug()<<"entries="<<entries;
+    entries.sort();
+    for( int i=0;i<entries.size(); i++ )
+        qDebug()<<i<<"#"<<entries[i];
     if( entries.size() > 0 )
     {
-        QFile file(entries[0]);
+        QFile file(folder+"/"+entries[entries.size()-1]);
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
+        qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
         importer.importPackage( & file );
     }
     
@@ -802,7 +782,7 @@ void dlgConnectionProfiles::slot_connectToServer()
             slot_update_login( pHost->getLogin() );
     }
     
-    emit signal_establish_connection( profile_name, historyVersion );
+    emit signal_establish_connection( profile_name, 0 );
     QDialog::accept();
 }
 

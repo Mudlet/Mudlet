@@ -142,8 +142,8 @@ mudlet::mudlet()
     mpMainToolBar->addAction( actionProfileBackup );*/
     
     
-    QAction * actionAbout = new QAction(QIcon(":/icons/mudlet.png"), tr("About"), this);
-    actionAbout->setStatusTip(tr("About This Program"));
+    QAction * actionAbout = new QAction(QIcon(":/icons/mudlet_main_32px.png"), tr("About"), this);
+    actionAbout->setStatusTip(tr("About"));
     mpMainToolBar->addAction( actionAbout );
     
     mpDebugArea = new QMainWindow(0);
@@ -375,18 +375,22 @@ void mudlet::closeEvent(QCloseEvent *event)
     
     foreach( TConsole * pC, mConsoleMap )
     {
-        if( QMessageBox::question( this, "Question", "Do you want to save the profile "+pC->mpHost->getName(), QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+        qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
+        if( pC->mpHost->getName() != "Default Host" )
         {
-            qDebug()<<"The user wants to save the profile.";
-            pC->mpHost->mSaveProfileOnExit = true;
+            if( QMessageBox::question( this, "Question", "Do you want to save the profile "+pC->mpHost->getName(), QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+            {
+                qDebug()<<"The user wants to save the profile.";
+                pC->mpHost->mSaveProfileOnExit = true;
+            }
+            else 
+            {
+                qDebug()<<"User doesn't like to save the profile.";
+                pC->mpHost->mSaveProfileOnExit = false;
+            }
+            pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
+            pC->mpHost->mpEditorDialog->close();    
         }
-        else 
-        {
-            qDebug()<<"User doesn't like to save the profile.";
-            pC->mpHost->mSaveProfileOnExit = false;
-        }
-        pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
-        pC->mpHost->mpEditorDialog->close();    
     }
     
     writeSettings();

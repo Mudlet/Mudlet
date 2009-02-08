@@ -50,33 +50,20 @@ void ActionUnit::processDataStream( QString & data )
 
 void ActionUnit::addActionRootNode( TAction * pT )
 {
-    qDebug()<<"ActionUnit::addActionRootNode()";
     if( ! pT ) return;
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );    
     }
-    qDebug()<<"new Action ID="<<pT->getID();
     mActionRootNodeList.push_back( pT );
-    if( mActionMap.find( pT->getID() ) == mActionMap.end() )
-    {
-        mActionMap[pT->getID()] = pT;
-    }
-    else
-    {
-        map<int,TAction*>::iterator it;
-        for( it=mActionMap.begin(); it!=mActionMap.end(); it++  ) 
-        {
-            int id = it->first;
-        }
-    }
+        
+    mActionMap.insert( pT->getID(), pT );
 }
 
 void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID )
 {
     QMutexLocker locker(& mActionUnitLock);
     
-    qDebug()<<"ActionUnit::reParentAlias()";
     TAction * pOldParent = getActionPrivate( oldParentID );
     TAction * pNewParent = getActionPrivate( newParentID );
     TAction * pChild = getActionPrivate( childID );
@@ -128,7 +115,7 @@ TAction * ActionUnit::getActionPrivate( int id )
 { 
     if( mActionMap.find( id ) != mActionMap.end() )
     {
-        return mActionMap[id];
+        return mActionMap.value( id );
     }
     else
     {
@@ -138,7 +125,6 @@ TAction * ActionUnit::getActionPrivate( int id )
 
 bool ActionUnit::registerAction( TAction * pT )
 {
-    qDebug()<<"ActionUnit::registerAction()";
     if( ! pT ) return false;
     
     if( pT->getParent() )
@@ -171,7 +157,6 @@ void ActionUnit::unregisterAction( TAction * pT )
 
 void ActionUnit::addAction( TAction * pT )
 {
-    qDebug()<<"adding action";
     if( ! pT ) return;
     
     QMutexLocker locker(& mActionUnitLock); 
@@ -182,16 +167,13 @@ void ActionUnit::addAction( TAction * pT )
     }
     
     mActionMap[pT->getID()] = pT;
-    qDebug()<<"mActionMap.size()="<<mActionMap.size();
 }
 
 void ActionUnit::removeAction( TAction * pT )
 {
     if( ! pT ) return;
     
-    //FIXME: warning: race condition
-    //QMutexLocker locker(& mTriggerUnitLock); 
-    mActionMap.erase(pT->getID());    
+    mActionMap.remove( pT->getID() );    
 }
 
 

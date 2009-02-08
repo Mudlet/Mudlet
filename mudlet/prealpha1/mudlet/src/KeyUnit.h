@@ -63,7 +63,7 @@ private:
     void                  removeKeyRootNode( TKey * pT );
     void                  removeKey( TKey *);
     Host *                mpHost;
-    map<int, TKey *>      mKeyMap;
+    QMap<int, TKey *>      mKeyMap;
     list<TKey *>          mKeyRootNodeList;
     qint64                mMaxID;
     QMap<int, QString>    mKeys;

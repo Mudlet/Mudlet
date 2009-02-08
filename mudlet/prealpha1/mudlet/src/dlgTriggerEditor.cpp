@@ -80,6 +80,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     // main areas   
     
     mpTriggersMainArea = new dlgTriggersMainArea( mainArea );
+    pVB1->setContentsMargins(0,0,0,0);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpTriggersMainArea->setSizePolicy( sizePolicy );
     pVB1->addWidget( mpTriggersMainArea );
@@ -943,7 +944,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     {
         //insert a new root item
     ROOT_TRIGGER:   
-        TTrigger( name, regexList, regexPropertyList, false, mpHost );
+        pT = new TTrigger( name, regexList, regexPropertyList, false, mpHost );
         pNewItem = new QTreeWidgetItem( mpTriggerBaseItem, nameL );
         treeWidget->insertTopLevelItem( 0, pNewItem );  
     }
@@ -974,6 +975,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->listWidget_regex_list->clear();
     mpSourceEditorArea->script_scintilla->clear();
+    mpTriggersMainArea->trigger_command->clear();
     treeWidget->setCurrentItem( pNewItem );
 }  
 
@@ -1443,6 +1445,7 @@ void dlgTriggerEditor::addScript( bool isFolder )
 void dlgTriggerEditor::slot_saveTriggerAfterEdit()
 {
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
+    QString command = mpTriggersMainArea->trigger_command->text();
     mpTriggersMainArea->lineEdit->clear();
     bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
     QList<QListWidgetItem*> itemList;
@@ -1487,6 +1490,7 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
         if( pT )
         {
             pT->setName( name );
+            pT->setCommand( command );
             pT->setRegexCodeList( regexList, regexPropertyList );
             pT->setTriggerType( mpTriggersMainArea->comboBox_regexstyle->currentIndex() );
             pT->setScript( script );
@@ -1813,6 +1817,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
 {
     slot_show_triggers();
     mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
+    
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger(ID);
     if( pT )
@@ -1852,7 +1857,8 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
             mpTriggersMainArea->listWidget_regex_list->addItem( pItem );
         }
         
-        
+        QString command = pT->getCommand();
+        mpTriggersMainArea->trigger_command->setText( command );
         mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex( REGEX_SUBSTRING );
         mpTriggersMainArea->checkBox_multlinetrigger->setChecked( pT->isMultiline() );
         mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );

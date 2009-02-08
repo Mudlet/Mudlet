@@ -53,18 +53,7 @@ void ScriptUnit::addScriptRootNode( TScript * pT )
     }
     
     mScriptRootNodeList.push_back( pT );
-    if( mScriptMap.find( pT->getID() ) == mScriptMap.end() )
-    {
-        mScriptMap[pT->getID()] = pT;
-    }
-    else
-    {
-        map<int,TScript*>::iterator it;
-        for( it=mScriptMap.begin(); it!=mScriptMap.end(); it++  ) 
-        {
-            int id = it->first;
-        }
-    }
+    mScriptMap.insert( pT->getID(), pT );
 }
 
 void ScriptUnit::reParentScript( int childID, int oldParentID, int newParentID )
@@ -110,7 +99,7 @@ TScript * ScriptUnit::getScript( int id )
     QMutexLocker locker(& mScriptUnitLock); 
     if( mScriptMap.find( id ) != mScriptMap.end() )
     {
-        return mScriptMap[id];
+        return mScriptMap.value( id );
     }
     else
     {
@@ -122,7 +111,7 @@ TScript * ScriptUnit::getScriptPrivate( int id )
 { 
     if( mScriptMap.find( id ) != mScriptMap.end() )
     {
-        return mScriptMap[id];
+        return mScriptMap.value( id );
     }
     else
     {
@@ -164,7 +153,6 @@ void ScriptUnit::unregisterScript( TScript * pT )
 
 void ScriptUnit::addScript( TScript * pT )
 {
-    qDebug()<<"adding script";
     if( ! pT ) return;
     
     QMutexLocker locker(& mScriptUnitLock); 
@@ -174,17 +162,14 @@ void ScriptUnit::addScript( TScript * pT )
         pT->setID( getNewID() );
     }
     
-    mScriptMap[pT->getID()] = pT;
-    qDebug()<<"mScriptMap.size()="<<mScriptMap.size();
+    mScriptMap.insert( pT->getID(), pT );
 }
 
 void ScriptUnit::removeScript( TScript * pT )
 {
     if( ! pT ) return;
     
-    //FIXME: warning: race condition
-    //QMutexLocker locker(& mTriggerUnitLock); 
-    mScriptMap.erase(pT->getID());    
+    mScriptMap.remove(pT->getID());    
 }
 
 

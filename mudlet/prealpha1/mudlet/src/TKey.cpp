@@ -129,11 +129,9 @@ void TKey::enableKey( QString & name )
 
 void TKey::disableKey( QString & name )
 {
-    qDebug()<<"disableKey() mName="<<mName<<" suche name="<<name;
     if( mName == name )
     {
         mIsActive = false;
-        qDebug()<<"disableKey(name) FOUND! key disabled";
     }
     typedef list<TKey *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -145,6 +143,10 @@ void TKey::disableKey( QString & name )
 
 void TKey::execute(QStringList & list)
 {
+    if( mCommand.size() > 0 )
+    {
+        mpHost->send( mCommand );
+    }
     if( mNeedsToBeCompiled )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    

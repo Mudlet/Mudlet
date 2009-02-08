@@ -66,7 +66,7 @@ private:
     void                  removeTrigger( TTrigger *);
     
     Host *                mpHost;
-    map<int, TTrigger *>  mTriggerMap;
+    QMap<int, TTrigger *>  mTriggerMap;
     list<TTrigger *>      mTriggerRootNodeList;
     qint64                mMaxID;
    

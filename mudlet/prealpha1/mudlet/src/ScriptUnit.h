@@ -62,7 +62,7 @@ private:
     void                  removeScriptRootNode( TScript * pT );
     void                  removeScript( TScript *);
     Host *                mpHost;
-    map<int, TScript *>   mScriptMap;
+    QMap<int, TScript *>   mScriptMap;
     list<TScript *>       mScriptRootNodeList;
     qint64                mMaxID;
    

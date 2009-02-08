@@ -110,7 +110,7 @@ TTimer * TimerUnit::getTimer( int id )
     QMutexLocker locker(& mTimerUnitLock); 
     if( mTimerMap.find( id ) != mTimerMap.end() )
     {
-        return mTimerMap[id];
+        return mTimerMap.value( id );
     }
     else
     {
@@ -122,7 +122,7 @@ TTimer * TimerUnit::getTimerPrivate( int id )
 { 
     if( mTimerMap.find( id ) != mTimerMap.end() )
     {
-        return mTimerMap[id];
+        return mTimerMap.value( id );
     }
     else
     {
@@ -185,7 +185,7 @@ void TimerUnit::removeTimer( TTimer * pT )
     
     //FIXME: warning: race condition
     //QMutexLocker locker(& mTriggerUnitLock); 
-    mTimerMap.erase(pT->getID());    
+    mTimerMap.remove( pT->getID() );    
 }
 
 void TimerUnit::enableTimer( QString & name )

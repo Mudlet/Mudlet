@@ -124,7 +124,7 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mLightWhite", pT->mLightWhite.name() );    
     writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );    
     writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() );    
-   
+    
     writeEndElement(); // end Host tag
     writeEndElement(); // end HostPackage tag
     
@@ -246,6 +246,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
         writeTrigger( pChild );
     }
     writeEndElement();
+    writeTextElement( "mCommand", pT->mCommand );
 }
 
 

@@ -66,33 +66,19 @@ bool AliasUnit::processDataStream( QString & data )
 
 void AliasUnit::addAliasRootNode( TAlias * pT )
 {
-    qDebug()<<"AliasUnit::addAliasRootNode()";
     if( ! pT ) return;
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );    
     }
-    qDebug()<<"new Alias ID="<<pT->getID();
     mAliasRootNodeList.push_back( pT );
-    if( mAliasMap.find( pT->getID() ) == mAliasMap.end() )
-    {
-        mAliasMap[pT->getID()] = pT;
-    }
-    else
-    {
-        map<int,TAlias*>::iterator it;
-        for( it=mAliasMap.begin(); it!=mAliasMap.end(); it++  ) 
-        {
-            int id = it->first;
-        }
-    }
+    mAliasMap.insert( pT->getID(), pT );
 }
 
 void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID )
 {
     QMutexLocker locker(& mAliasUnitLock);
     
-    qDebug()<<"AliasUnit::reParentAlias()";
     TAlias * pOldParent = getAliasPrivate( oldParentID );
     TAlias * pNewParent = getAliasPrivate( newParentID );
     TAlias * pChild = getAliasPrivate( childID );
@@ -132,7 +118,7 @@ TAlias * AliasUnit::getAlias( int id )
     QMutexLocker locker(& mAliasUnitLock); 
     if( mAliasMap.find( id ) != mAliasMap.end() )
     {
-        return mAliasMap[id];
+        return mAliasMap.value( id );
     }
     else
     {
@@ -144,7 +130,7 @@ TAlias * AliasUnit::getAliasPrivate( int id )
 { 
     if( mAliasMap.find( id ) != mAliasMap.end() )
     {
-        return mAliasMap[id];
+        return mAliasMap.value( id );
     }
     else
     {
@@ -154,7 +140,6 @@ TAlias * AliasUnit::getAliasPrivate( int id )
 
 bool AliasUnit::registerAlias( TAlias * pT )
 {
-    qDebug()<<"AliasUnit::registerAlias()";
     if( ! pT ) return false;
     
     if( pT->getParent() )
@@ -187,7 +172,6 @@ void AliasUnit::unregisterAlias( TAlias * pT )
 
 void AliasUnit::addAlias( TAlias * pT )
 {
-    qDebug()<<"adding alias";
     if( ! pT ) return;
     
     QMutexLocker locker(& mAliasUnitLock); 
@@ -197,8 +181,7 @@ void AliasUnit::addAlias( TAlias * pT )
         pT->setID( getNewID() );
     }
     
-    mAliasMap[pT->getID()] = pT;
-    qDebug()<<"mAliasMap.size()="<<mAliasMap.size();
+    mAliasMap.insert( pT->getID(), pT );
 }
 
 void AliasUnit::removeAlias( TAlias * pT )
@@ -207,7 +190,7 @@ void AliasUnit::removeAlias( TAlias * pT )
     
     //FIXME: warning: race condition
     //QMutexLocker locker(& mTriggerUnitLock); 
-    mAliasMap.erase(pT->getID());    
+    mAliasMap.remove(pT->getID());    
 }
 
 

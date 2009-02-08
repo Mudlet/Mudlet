@@ -83,18 +83,7 @@ void KeyUnit::addKeyRootNode( TKey * pT )
         pT->setID( getNewID() );    
     }
     mKeyRootNodeList.push_back( pT );
-    if( mKeyMap.find( pT->getID() ) == mKeyMap.end() )
-    {
-        mKeyMap[pT->getID()] = pT;
-    }
-    else
-    {
-        map<int,TKey *>::iterator it;
-        for( it=mKeyMap.begin(); it!=mKeyMap.end(); it++  ) 
-        {
-            int id = it->first;
-        }
-    }
+    mKeyMap.insert( pT->getID(), pT );
 }
 
 void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID )
@@ -140,7 +129,7 @@ TKey * KeyUnit::getKey( int id )
     QMutexLocker locker(& mKeyUnitLock); 
     if( mKeyMap.find( id ) != mKeyMap.end() )
     {
-        return mKeyMap[id];
+        return mKeyMap.value( id );
     }
     else
     {
@@ -154,7 +143,7 @@ TKey * KeyUnit::getKeyPrivate( int id )
 { 
     if( mKeyMap.find( id ) != mKeyMap.end() )
     {
-        return mKeyMap[id];
+        return mKeyMap.value( id );
     }
     else
     {
@@ -205,7 +194,7 @@ void KeyUnit::addKey( TKey * pT )
         pT->setID( getNewID() );
     }
     
-    mKeyMap[pT->getID()] = pT;
+    mKeyMap.insert( pT->getID(), pT );
 }
 
 void KeyUnit::removeKey( TKey * pT )
@@ -214,7 +203,7 @@ void KeyUnit::removeKey( TKey * pT )
     
     //FIXME: warning: race condition
     //QMutexLocker locker(& mTriggerUnitLock); 
-    mKeyMap.erase( pT->getID() );    
+    mKeyMap.remove( pT->getID() );    
 }
 
 
