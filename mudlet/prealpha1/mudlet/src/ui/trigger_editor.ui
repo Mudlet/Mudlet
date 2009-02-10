@@ -34,17 +34,11 @@
     </sizepolicy>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout" >
-    <property name="leftMargin" >
+    <property name="spacing" >
      <number>0</number>
     </property>
-    <property name="topMargin" >
+    <property name="margin" >
      <number>0</number>
-    </property>
-    <property name="rightMargin" >
-     <number>0</number>
-    </property>
-    <property name="bottomMargin" >
-     <number>5</number>
     </property>
     <item>
      <widget class="QWidget" native="1" name="widget" >
@@ -71,13 +65,13 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2" >
           <property name="spacing" >
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="leftMargin" >
            <number>3</number>
           </property>
           <property name="topMargin" >
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="rightMargin" >
            <number>3</number>
@@ -683,21 +677,30 @@
          <property name="minimumSize" >
           <size>
            <width>0</width>
-           <height>50</height>
+           <height>0</height>
           </size>
          </property>
          <property name="maximumSize" >
           <size>
            <width>16777215</width>
-           <height>35</height>
+           <height>50</height>
           </size>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_4" >
           <property name="spacing" >
            <number>0</number>
           </property>
-          <property name="margin" >
-           <number>0</number>
+          <property name="leftMargin" >
+           <number>4</number>
+          </property>
+          <property name="topMargin" >
+           <number>9</number>
+          </property>
+          <property name="rightMargin" >
+           <number>3</number>
+          </property>
+          <property name="bottomMargin" >
+           <number>9</number>
           </property>
           <item>
            <widget class="QWidget" native="1" name="widget_10" >
@@ -710,7 +713,7 @@
             <property name="minimumSize" >
              <size>
               <width>0</width>
-              <height>50</height>
+              <height>0</height>
              </size>
             </property>
             <property name="maximumSize" >
@@ -720,7 +723,10 @@
              </size>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout" >
-             <property name="topMargin" >
+             <property name="spacing" >
+              <number>0</number>
+             </property>
+             <property name="margin" >
               <number>0</number>
              </property>
              <item>

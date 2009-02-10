@@ -711,11 +711,22 @@ void dlgTriggerEditor::slot_timer_toggle_active()
     TTimer * pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;    
     
-    pT->setIsActive( ! pT->isActive() );
+    pT->setUserActiveState( ! pT->getUserActiveState() );
     
     if( pT->isFolder() )
     {
-        if( pT->isActive() )
+        // disable or enable all timers in the respective branch
+        // irrespective of the user defined state.
+        if( pT->getUserActiveState() )
+        {
+            pT->enableTimer( pT->getName() );
+        }
+        else
+        {
+            pT->disableTimer( pT->getName() );
+        }
+        
+        if( pT->getUserActiveState() )
         {
             icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);    
         }
@@ -726,13 +737,23 @@ void dlgTriggerEditor::slot_timer_toggle_active()
     }
     else
     {
-        if( pT->isActive() )
-        {
-            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        if( pT->isOffsetTimer() )
+        {   
+            // state of offset timers is managed by the trigger engine
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
         }
         else
         {
-            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+            if( pT->getUserActiveState() )
+            {
+                pT->enableTimer( pT->getName() );
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+            }
+            else
+            {
+                pT->disableTimer( pT->getName() );
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+            }
         }
     }
     
@@ -1043,12 +1064,12 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     
     if( ! pT ) return;
     
-    
     pT->setName( name );
     pT->setCommand( command );
     pT->setScript( script );
     pT->setIsFolder( isFolder );
     pT->setIsActive( false );
+    pT->setUserActiveState( false );
     pT->registerTimer();
     int childID = pT->getID();    
     pNewItem->setData( 0, Qt::UserRole, childID );
@@ -1531,6 +1552,7 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
 {
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
+    
     QTreeWidgetItem * pItem = treeWidget_timers->currentItem(); 
     if( pItem )
     {
@@ -1548,14 +1570,15 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
             QTime time(hours,minutes,secs,msecs);
             pT->setTime( time );
             pT->setCommand( command );
+            pT->setName( name );
             pT->setScript( script );
             
-            pT->setIsActive( false );
+            pT->setIsActive( true );
             
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( pT->isActive() )
+                if( pT->getUserActiveState() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);    
                 }
@@ -1566,13 +1589,20 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
             }
             else
             {
-                if( pT->isActive() )
+                if( pT->isOffsetTimer() )
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
                 }
                 else
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                    if( pT->getUserActiveState() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                    }
                 }
             }
             
@@ -1964,15 +1994,20 @@ void dlgTriggerEditor::slot_timer_clicked( QTreeWidgetItem *pItem, int column )
     TTimer * pT = mpHost->getTimerUnit()->getTimer(ID);
     if( pT )
     {
+        if( pT->getParent() )
+            qDebug()<<"[STATUS]: timer <"<<pT->getName()<<"> mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->getUserActiveState()<<" parent="<<pT->getParent()->getName();
+        else 
+            qDebug()<<"[STATUS]: timer <"<<pT->getName()<<"> mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->getUserActiveState()<<" parent=0";
         QString command = pT->getCommand();
+        QString name = pT->getName();
         mpTimersMainArea->lineEdit_command->clear();
         mpTimersMainArea->lineEdit_command->setText( command );    
+        mpTimersMainArea->lineEdit_timer_name->setText( name );
         QTime time = pT->getTime();
         int hours = time.hour();
         int minutes = time.minute();
         int secs = time.second();
         int msecs = time.msec();
-        qDebug()<<"slot_timer_clicked() TIME="<<hours<<":"<<minutes<<"'"<<secs<<"''"<<msecs;
         
         QTime t2(hours,0,0,0);
         mpTimersMainArea->timeEdit_hours->setTime(t2);
@@ -2017,6 +2052,9 @@ void dlgTriggerEditor::fillout_form()
         if( pT->hasChildren() )
         {
             expand_child_triggers( pT, (QTreeWidgetItem*)pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);    
@@ -2056,6 +2094,10 @@ void dlgTriggerEditor::fillout_form()
     {
         TTimer * pT = *it;
         QString s = pT->getName();
+        
+        qDebug()<<"init: name="<<pT->getName()<<" mUserActiveState="<<pT->getUserActiveState();
+        
+        
         //        TTimer * pTimer = *it;
         QStringList sList;
         sList << s;
@@ -2066,7 +2108,10 @@ void dlgTriggerEditor::fillout_form()
         if( pT->hasChildren() )
         {
             expand_child_timers( pT, (QTreeWidgetItem*)pItem );
-            if( pT->isActive() )
+        }
+        if( pT->isFolder() )
+        {
+            if( pT->getUserActiveState() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);    
             }
@@ -2077,14 +2122,22 @@ void dlgTriggerEditor::fillout_form()
         }
         else
         {
-            if( pT->isActive() )
+            if( pT->isOffsetTimer() )
             {
-                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
             }
             else
             {
-                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                if( pT->getUserActiveState() )
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                }
+                else
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                }
             }
+            
         }
         pItem->setIcon(0, icon);
     }
@@ -2105,7 +2158,7 @@ void dlgTriggerEditor::fillout_form()
     {
         TScript * pT = *it;
         QString s = pT->getName();
-        //        TTimer * pTimer = *it;
+        
         QStringList sList;
         sList << s;
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpScriptsBaseItem, sList);
@@ -2115,6 +2168,9 @@ void dlgTriggerEditor::fillout_form()
         if( pT->hasChildren() )
         {
             expand_child_scripts( pT, (QTreeWidgetItem*)pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);    
@@ -2165,6 +2221,9 @@ void dlgTriggerEditor::fillout_form()
         if( pT->hasChildren() )
         {
             expand_child_alias( pT, (QTreeWidgetItem*)pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);    
@@ -2213,6 +2272,9 @@ void dlgTriggerEditor::fillout_form()
         if( pT->hasChildren() )
         {
             expand_child_action( pT, (QTreeWidgetItem*)pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);    
@@ -2261,6 +2323,9 @@ void dlgTriggerEditor::fillout_form()
         if( pT->hasChildren() )
         {
             expand_child_key( pT, (QTreeWidgetItem*)pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);    
@@ -2302,9 +2367,12 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
         
         pWidgetItemParent->insertChild( 0, pItem );    
         QIcon icon;
-        if( pT->isFolder() )
+        if( pT->hasChildren() )
         {
             expand_child_triggers( pT, pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);    
@@ -2344,9 +2412,12 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
         
         pWidgetItemParent->insertChild( 0, pItem );    
         QIcon icon;
-        if( pT->isFolder() )
+        if( pT->hasChildren() )
         {
             expand_child_key( pT, pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);    
@@ -2387,9 +2458,12 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
         
         pWidgetItemParent->insertChild( 0, pItem );    
         QIcon icon;
-        if( pT->isFolder() )
+        if( pT->hasChildren() )
         {
             expand_child_scripts( pT, pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);    
@@ -2429,9 +2503,12 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
         
         pWidgetItemParent->insertChild( 0, pItem );    
         QIcon icon;
-        if( pT->isFolder() )
+        if( pT->hasChildren() )
         {
             expand_child_alias( pT, pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);    
@@ -2471,9 +2548,12 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
         
         pWidgetItemParent->insertChild( 0, pItem );    
         QIcon icon;
-        if( pT->isFolder() )
+        if( pT->hasChildren() )
         {
             expand_child_action( pT, pItem );
+        }
+        if( pT->isFolder() )
+        {
             if( pT->isActive() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);    
@@ -2507,6 +2587,10 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
     {
         TTimer * pT = *it;
         QString s = pT->getName();
+        
+        qDebug()<<"init: name="<<pT->getName()<<" mUserActiveState="<<pT->getUserActiveState();
+        
+        
         QStringList sList;
         sList << s;
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
@@ -2514,10 +2598,13 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
         
         pWidgetItemParent->insertChild( 0, pItem );    
         QIcon icon;
-        if( pT->isFolder() )
+        if( pT->hasChildren() )
         {
             expand_child_timers( pT, pItem );
-            if( pT->isActive() )
+        }
+        if( pT->isFolder() )
+        {
+            if( pT->getUserActiveState() )
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);    
             }
@@ -2528,16 +2615,31 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
         }
         else
         {
-            if( pT->isActive() )
+            if( pT->isOffsetTimer() )
             {
-                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
             }
             else
             {
-                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                if( pT->getUserActiveState() )
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                }
+                else
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                }
             }
         }
         pItem->setIcon(0, icon);
+        if( pT->isActive() )
+        {
+            pT->enableTimer( pT->getName() );
+        }
+        else
+        {
+            pT->disableTimer( pT->getName() );
+        }
     }
 }
 

@@ -40,7 +40,7 @@ void TimerUnit::stopAllTriggers()
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
-        pChild->setIsActive( false );
+        pChild->disableTimer( pChild->getName() );
     }
 }
 
@@ -55,7 +55,7 @@ void TimerUnit::addTimerRootNode( TTimer * pT )
     mTimerRootNodeList.push_back( pT );
     if( mTimerMap.find( pT->getID() ) == mTimerMap.end() )
     {
-        mTimerMap[pT->getID()] = pT;
+        mTimerMap.insert( pT->getID(), pT );
     }
     /*else
     {
@@ -137,11 +137,13 @@ bool TimerUnit::registerTimer( TTimer * pT )
     if( pT->getParent() )
     {
         addTimer( pT );
+        pT->setIsActive( false );
         return true;
     }
     else
     {
-        addTimerRootNode( pT );    
+        addTimerRootNode( pT );   
+        pT->setIsActive( false );
         return true;
     }
 }
@@ -165,7 +167,6 @@ void TimerUnit::unregisterTimer( TTimer * pT )
 
 void TimerUnit::addTimer( TTimer * pT )
 {
-    qDebug()<<"adding timer";
     if( ! pT ) return;
     
     QMutexLocker locker(& mTimerUnitLock); 
@@ -175,8 +176,7 @@ void TimerUnit::addTimer( TTimer * pT )
         pT->setID( getNewID() );
     }
     
-    mTimerMap[pT->getID()] = pT;
-    qDebug()<<"mTimerMap.size()="<<mTimerMap.size();
+    mTimerMap.insert( pT->getID(), pT );
 }
 
 void TimerUnit::removeTimer( TTimer * pT )
@@ -214,7 +214,6 @@ void TimerUnit::disableTimer( QString & name )
 void TimerUnit::killTimer( QString & name )
 {
     QMutexLocker locker(& mTimerUnitLock); 
-    qDebug()<<"timerList.size()="<<mTimerRootNodeList.size();
     RERUN: TTimer * ret = 0;
     typedef list<TTimer *>::const_iterator I;
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
@@ -283,7 +282,9 @@ bool TimerUnit::restore( QDataStream & ifs, bool initMode )
             delete pChild;
         }
         else 
+        {
             registerTimer( pChild );
+        }
     }
     
     return ret1 && ret2;

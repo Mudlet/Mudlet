@@ -386,7 +386,7 @@ bool XMLexport::writeTimer( TTimer * pT )
     
     writeStartElement( tag );
     
-    writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
+    writeAttribute( "isActive", pT->mUserActiveState ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isTempTimer", pT->mIsTempTimer ? "yes" : "no" );
     

@@ -131,13 +131,7 @@ void TTextEdit::updateScreenView()
 
 void TTextEdit::showNewLines() 
 {   
-    if( mIsSplitScreen ) 
-    {
-        if( ! isTailMode() ) 
-        {
-            return;
-        }
-    } 
+    if( ! isTailMode() ) return;
     
     mCursorY = mpBuffer->size()-1;
     
@@ -586,7 +580,8 @@ int TTextEdit::imageTopLine()
 bool TTextEdit::isTailMode()
 {
     if( ( mCursorY == (int) mpBuffer->size()-1 ) 
-        || ( mIsDebugConsole ) 
+         
+        //|| ( mIsDebugConsole ) 
         || ( mIsTailMode ) 
         || ( (int)mpBuffer->size() <= mScreenHeight) )
     {
@@ -602,6 +597,7 @@ int TTextEdit::bufferScrollUp( int lines )
     if( (mCursorY - lines) >= mScreenHeight  )
     {
         mCursorY -= lines;
+        mIsTailMode = false;
         return lines;
     }
     else

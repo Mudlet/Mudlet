@@ -271,14 +271,11 @@ void XMLimport::readUnknownKeyElement()
 
 void XMLimport::readTriggerPackage()
 {
-    qDebug()<<"***> enter readTriggerPackage()";    
     while( ! atEnd() ) 
     {
         readNext();
-        qDebug()<<"*** trigger package: name="<<name().toString()<<"text:"<<text().toString();    
         if( isEndElement() )
         {
-            qDebug()<<"<**** isEndElement() leaving readTriggerPackage()";
             break;
         }
         
@@ -286,12 +283,10 @@ void XMLimport::readTriggerPackage()
         {
             if( name() == "TriggerGroup" )
             {
-                qDebug()<<"....enter readTriggerGroup()";
                 readTriggerGroup( 0 );
             }
             else if( name() == "Trigger" )
             {
-                qDebug()<<"...enter readTriggerGroup()";
                 readTriggerGroup( 0 );
             }
             else
@@ -309,7 +304,6 @@ void XMLimport::readHostPackage()
         readNext();
         if( isEndElement() )
         {
-            qDebug()<<"...leaving readHostPackage() after isEndElement()";
             break;
         }
         
@@ -502,7 +496,6 @@ void XMLimport::readHostPackage( Host * pT )
 
 void XMLimport::readTriggerGroup( TTrigger * pParent )
 {
-    qDebug()<<"---> enter readTriggerGroup()";
     TTrigger * pT;
     if( pParent ) 
     {
@@ -629,7 +622,8 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         pT = new TTimer( 0, mpHost );
     }
     
-    pT->mIsActive = ( attributes().value("isActive") == "yes" );
+    pT->mUserActiveState = ( attributes().value("isActive") == "yes" );
+    pT->mIsActive = false;
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
     
@@ -660,8 +654,9 @@ void XMLimport::readTimerGroup( TTimer * pParent )
             }
             else if( name() == "time")
             {
-                QString time = readElementText();
-                pT->mTime = QTime::fromString( time, "hh:mm:ss.zzz" );
+                QString timeString = readElementText();
+                QTime time = QTime::fromString( timeString, "hh:mm:ss.zzz" );
+                pT->setTime( time );
                 qDebug()<<"time="<<pT->mTime.toString("hh:mm:ss.zzz" );
                 qDebug()<<"-----------------------------------------------------\n";
                 continue;
@@ -682,7 +677,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         }
     }
     qDebug()<<"[REGISTER] Timer:"<<pT->getName();
-    mpHost->getTimerUnit()->registerTimer( pT );
+    pT->registerTimer();
     
 }
 
@@ -1120,58 +1115,3 @@ void XMLimport::readIntegerList( QList<int> & list )
 }
 
 
-/*
- if( name() == "TriggerPackage" )
-            {
-                readTriggerPackage();
-            }
-            else if( name() == "Trigger" )
-            {
-                readTriggerGroup( 0 );
-            }            
-
-            if( name() == "TimerGroup" )
-            {
-                readTimerGroup( 0 );
-            }
-            else if( name() == "Timer" )
-            {
-                readTimerGroup( 0 );
-            }    
-
-            if( name() == "AliasGroup" )
-            {
-                readAliasGroup( 0 );
-            }
-            else if( name() == "Alias" )
-            {
-                readAliasGroup( 0 );
-            }    
-
-            if( name() == "ActionGroup" )
-            {
-                readActionGroup( 0 );
-            }
-            else if( name() == "Action" )
-            {
-                readActionGroup( 0 );
-            }    
-
-            if( name() == "ScriptGroup" )
-            {
-                readScriptGroup( 0 );
-            }
-            else if( name() == "Script" )
-            {
-                readScriptGroup( 0 );
-            }    
-
-            if( name() == "KeyGroup" )
-            {
-                readKeyGroup( 0 );
-            }
-            else if( name() == "Key" )
-            {
-                readKeyGroup( 0 );
-            }    
-*/

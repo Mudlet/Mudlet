@@ -44,6 +44,7 @@ using namespace std;
 
 class TTimer : public Tree<TTimer>
 {
+    friend class TimerUnit;
     friend class XMLexport;
     friend class XMLimport;
     
@@ -54,7 +55,9 @@ public:
                      TTimer( QString name, QTime time, Host * pHost ); 
                      TTimer& clone(const TTimer& );
     
-    QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
+    //QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
+    QString &        getName()                       { QMutexLocker locker(& mLock); return mName; }
+    
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
     QTime &          getTime()                       { QMutexLocker locker(& mLock); return mTime; }
     void             compile();
@@ -64,11 +67,13 @@ public:
     void             setCommand( QString & cmd )     { QMutexLocker locker(& mLock); mCommand = cmd; }
     QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
     void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
+    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }
+    bool             getUserActiveState()               { QMutexLocker locker(& mLock); return mUserActiveState; }  
+    bool             canBeUnlocked( TTimer * );
     bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
     void             setIsTempTimer( bool b )        { QMutexLocker locker(& mLock); mIsTempTimer = b; }    
     bool             isTempTimer()                   { QMutexLocker locker(& mLock); return mIsTempTimer; }
-    
+    void             setUserActiveState( bool b );
     void             setIsActive( bool b );           
     void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
     bool             registerTimer();
@@ -81,6 +86,9 @@ public:
     bool             restore( QDataStream & fs, bool );
     void             slot_timer_fires();
     bool             isClone(TTimer &b) const;
+    bool             isOffsetTimer();
+    
+    
     
 private:
     
@@ -88,14 +96,16 @@ private:
     QString          mName;
     QString          mScript;
     QTime            mTime;
-    QTimer           mTimer;
+
     QString          mCommand;
     bool             mIsActive;
+    bool             mUserActiveState; // temp state that holds user selected timer state during disabled parent timer periods
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
     bool             mIsTempTimer;
     QMutex           mLock;
+    QTimer           mTimer;
         
 };
 

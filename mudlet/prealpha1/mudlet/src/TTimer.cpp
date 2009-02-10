@@ -32,7 +32,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "mudlet.h"
-
+#include "TDebug.h"
 
 
 TTimer::TTimer( TTimer * parent, Host * pHost ) 
@@ -88,8 +88,23 @@ void TTimer::setTime( QTime time )
     mTimer.setInterval( mTime.msec()+(1000*mTime.second())+(1000*60*mTime.minute())+(1000*60*60*mTime.hour()));
 }       
 
+// children of folder = regular timers
+// children of timers = offset timers 
+//     offset timers: -> their time interval is interpreted as an offset to their parent timer
+bool TTimer::isOffsetTimer()
+{
+    if( mpParent )
+    {
+        return ! mpParent->isFolder();
+    }
+    else
+    {
+        return false;
+    }
+}
+
 void TTimer::setIsActive( bool b )
-{ 
+{
     QMutexLocker locker(& mLock); 
     mIsActive = b; 
     if( mIsActive )
@@ -104,7 +119,9 @@ void TTimer::setIsActive( bool b )
 
 void TTimer::slot_timer_fires()
 {
-    execute();    
+    qDebug()<<"[ *** CRITICAL ERROR *** ]: "<<mName<<" fired. and called wrong callback: Please file a bug report!";
+    // execute();    
+    exit(-1);
 }
 
 void TTimer::compile()
@@ -124,6 +141,8 @@ void TTimer::stop()
 
 void TTimer::execute()
 {
+    if( mudlet::debugMode ) TDebug() << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;
+    
     if( mIsTempTimer )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
@@ -131,10 +150,27 @@ void TTimer::execute()
         mTimer.stop();
         return;
     }
+    
+    if( isOffsetTimer() )
+    {
+        mIsActive = false;
+        
+        typedef list<TTimer *>::const_iterator I;
+        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        {
+            TTimer * pChild = *it;
+            if( pChild->isOffsetTimer() )
+            {
+                pChild->enableTimer( pChild->getName() );
+            }
+        }
+    }
+    
     if( mCommand.size() > 0 )
     {
         mpHost->send( mCommand );
     }
+    
     if( mNeedsToBeCompiled )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
@@ -157,19 +193,57 @@ void TTimer::execute()
     }
 }
 
+bool TTimer::canBeUnlocked( TTimer * pChild )
+{
+    if( mUserActiveState )
+    {
+        if( ! mpParent )
+        {
+            qDebug() << "Tree " << mName << " is *NOT* locked!" ;
+            return true;    
+        }
+        qDebug()<<"name="<<mName<<" NOT locked " << " checking parent="<<mpParent->getName();
+        return mpParent->canBeUnlocked( 0 );
+    }
+    else
+    {
+        qDebug() << "LOCKED, sorry " << mName << " is locked.";
+        DumpFamily();
+        return false;
+    }
+    
+}
 
 void TTimer::enableTimer( QString & name )
 {
+    qDebug()<<"trying enableTimer() name="<<mName;
     if( mName == name )
     {
-        mIsActive = true;
-        mTimer.start();
+        if( canBeUnlocked( 0 ) )
+        {
+            qDebug()<< "mUserActiveState="<<mUserActiveState;
+            mIsActive = mUserActiveState;
+            if( mIsActive ) 
+            {
+                qDebug()<<"OK "<<name<<" was unlocked";
+                mTimer.start();
+            }
+            else
+            {
+                qDebug()<<"SORRY: "<<name<<" must stay LOCKED";
+                mIsActive = false;
+            }
+        }
     }
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    
+    if( ! isOffsetTimer() )
     {
-        TTimer * pChild = *it;
-        pChild->enableTimer( name );
+        typedef list<TTimer *>::const_iterator I;
+        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        {
+            TTimer * pChild = *it;
+            pChild->enableTimer( pChild->getName() );
+        }
     }
 }
 
@@ -180,13 +254,25 @@ void TTimer::disableTimer( QString & name )
         mIsActive = false;
         mTimer.stop();
     }
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    
+    if( ! isOffsetTimer() )
     {
-        TTimer * pChild = *it;
-        pChild->disableTimer( name );
+        typedef list<TTimer *>::const_iterator I;
+        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        {
+            TTimer * pChild = *it;
+            pChild->disableTimer( pChild->getName() );
+        }
     }
 }
+
+void TTimer::setUserActiveState( bool state )
+{ 
+    QMutexLocker locker(& mLock); 
+    
+    mUserActiveState = state; 
+}
+
 
 TTimer * TTimer::killTimer( QString & name )
 {
