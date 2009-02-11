@@ -1,53 +1,83 @@
-Bugs:
 
-FIXED - drag and drop broken in keys: if parents had children once, but not anymore, they'll become a folder after restore();
-FIXED - alias: ^asdf$ doesnt work anyore
+Issues:
+-------------------------------------
+
+OPEN    offset triggers don't work properly
+OPEN    multiline triggers don't work under very specific conditions -> analysis
 
 OPEN    optional NO antialiasing
 OPEN    selectAll()
 OPEN    explode(), explode()
 OPEN    skipLine()
 OPEN    regex lookup table for efficient lua regex usage
-DONE    And Trigger Filters (child triggers)
-2.0     Timer timeline diagram
-FIXED   command line
 OPEN    user windows
+OPEN    Modifying a regex shouldn’t require pressing Enter to update it - it should auto-update as you’re working on it
+OPEN    “Actions” should really be called “buttons” everywhere
+OPEN    Doesn’t warn when there is data loss involved (deleting / moving away from an unsaved item) - Brunos patches address this, but were reverted because the script editor got broken a lot
+OPEN    Combobox connection dialog isn’t in (needs some fixing to compile)
+OPEN    Default font might render bad on Windows (need to test) [COMMENT HEIKO: we definitely need either: a good windows font, that is guaranteed to be on the computer or ship our own free font -> vadi wanted to do this]
+OPEN    remember last selected item in SE after tree switch
+OPEN    buffer format bei wrap nach user recoloring auf default setzen
+OPEN    button text scripting
+OPEN    multi toolbar support
+OPEN    compile buttons + message area
+OPEN    skipline
+OPEN    explode() + implode()
+OPEN    replaceAll()
+OPEN    regex table für regex von scripten aus für bessere lua performance bei user regex in scripten
+OPEN    autoconnection modul: neue profiletypen laden, anstatt alter
+
+
+
+FIXED   drag and drop broken in keys: if parents had children once, but not anymore, they'll become a folder after restore();
+FIXED   alias: ^asdf$ doesnt work anyore
 FIXED   bugs in script editor
 FIXED   profile loading final (needs more planning)
-DONE    child trigger/child timers
+FIXED   child trigger/child timers
+FIXED   command line
+FIXED   And Trigger Filters (child triggers)
 
 
-Script Editor:
+
+Doc:
+-----------------------------------------
+
+DOC     Line margin isn’t explained
+DOC     Alises - “substitution” field isn’t labelled as optional either nor explained
+DOC     Variables aren’t shown nor editable via GUI. At least one person thought Mudlet didn’t support variables because he didn’t see an item for them as aliases/triggers are.
+
+
+
+UI-Issues:
+------------------------------------------
+
+UI      “Add” button is missing a tooltip and is far away - while it should be on the same plane as the “Add to List” line, so the user can connect what is it for easier
+UI      Timer scaling / alignment is quite broken
+
+
+
+???-Listing:
+-------------------------------------------
 
 ???     Script names don’t clearly communicate that they’re optional
 ???     If you don’t get a script name, save - the script pattern gets set as the name. This shouldn’t be the case, because if the change the pattern after, the name does not change.
 ???     Instead of the person didn’t enter a script name (and there should be none by default), just display the script pattern in the listing treeview
 ???     Regex list isn’t intuitive
-UI      “Add” button is missing a tooltip and is far away - while it should be on the same plane as the “Add to List” line, so the user can connect what is it for easier
-
-OPEN    Modifying a regex shouldn’t require pressing Enter to update it - it should auto-update as you’re working on it
+???     No scrollbar in the script editor
+---     fixed about_dialog.ui is still not in the main sources [COMMENT HEIKO: about dialog will not be changed]
+???     Command is optional - should be labelled so, because everything else is required - so the user might think that command is required too [COMMENT HEIKO: SCRIPT IS OPTIONAL TOO ... MAKES NO SENSE]
 ---     Type of match combobox isn’t labelled [no room for this]
-
 ???     Better naming for the items could be used - need to think on what is better though
-DOC     Line margin isn’t explained
-DOC     Alises - “substitution” field isn’t labelled as optional either nor explained
 ???     Scripts - crap, we both call scripts inside aliases/triggers functions scripts, and stand-alone ones are called that too. Perhaps we should call those ‘functions’?
-DOC     Variables aren’t shown nor editable via GUI. At least one person thought Mudlet didn’t support variables because he didn’t see an item for them as aliases/triggers are.
-OPEN    “Actions” should really be called “buttons” everywhere
+
+
+
+Future Versions:
+---------------------------------------------
+
+2.0     Timer timeline diagram
 2.0     Making a new keybinding isn’t intuitive
 1.0     Instead of a line and a button to get a new combination, we should instead just have 1 button that when pressed on, allows the user to set a new combination. Otherwise, it displays the current key combination. This is similar to how the colors are set in the Preferences dialog
-UI      Timer scaling / alignment is quite broken
-???     Command is optional - should be labelled so, because everything else is required - so the user might think that command is required too [COMMENT HEIKO: SCRIPT IS OPTIONAL TOO ... MAKES NO SENSE]
-OPEN    Doesn’t warn when there is data loss involved (deleting / moving away from an unsaved item) - Brunos patches address this, but were reverted because the script editor got broken a lot
-
-
-Misc issues:
-
-???     No scrollbar in the script editor
-OPEN    Combobox connection dialog isn’t in (needs some fixing to compile)
-OPEN    Default font might render bad on Windows (need to test) [COMMENT HEIKO: we definitely need either: a good windows font, that is guaranteed to be on the computer or ship our own free font -> vadi wanted to do this]
----     fixed about_dialog.ui is still not in the main sources [COMMENT HEIKO: about dialog will not be changed]
 2.0     Preferences ‘Close’ button is not the standard os-provided bytton - instead it’s a our own with no icon and closes in the ‘pressed’ signal instead of ‘released’
-
 
 

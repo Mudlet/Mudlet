@@ -543,6 +543,11 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 qDebug()<<"conditonLineDelta="<<pT->mConditionLineDelta;
                 continue;
             }
+            else if( name() == "mCommand" )
+            {
+                pT->mCommand = readElementText();
+                continue;
+            }
             else if( name() == "regexCodeList")
             {
                 readStringList( pT->mRegexCodeList );
@@ -554,11 +559,6 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 readIntegerList( pT->mRegexCodePropertyList );
                 qDebug()<<"regexCodePropertyList="<<pT->mRegexCodePropertyList;
                 qDebug()<<"-----------------------------------------------------\n";
-                continue;
-            }
-            else if( name() == "mCommand" )
-            {
-                pT->mCommand = readElementText();
                 continue;
             }
             
@@ -623,7 +623,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     }
     
     pT->mUserActiveState = ( attributes().value("isActive") == "yes" );
-    pT->mIsActive = false;
+    pT->mIsActive = mUserActiveState;
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
     

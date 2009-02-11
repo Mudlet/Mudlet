@@ -226,6 +226,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeTextElement( "script", pT->mScript );
     writeTextElement( "triggerType", QString::number( pT->mTriggerType ) );
     writeTextElement( "conditonLineDelta", QString::number( pT->mConditionLineDelta ) );
+    writeTextElement( "mCommand", pT->mCommand );
     writeStartElement( "regexCodeList" );
     for( int i=0; i<pT->mRegexCodeList.size(); i++ )
     {
@@ -246,7 +247,6 @@ bool XMLexport::writeTrigger( TTrigger * pT )
         writeTrigger( pChild );
     }
     writeEndElement();
-    writeTextElement( "mCommand", pT->mCommand );
 }
 
 

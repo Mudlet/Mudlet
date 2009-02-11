@@ -5,7 +5,7 @@
 	<TITLE></TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 2.4  (Linux)">
 	<META NAME="CREATED" CONTENT="20081028;19075200">
-	<META NAME="CHANGED" CONTENT="20081205;21595200">
+	<META NAME="CHANGED" CONTENT="20090211;23394500">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { size: 21cm 29.7cm }
@@ -34,26 +34,23 @@
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Throughout
 this document a regular expression (regex) will be colored blue, Text
 examples will be colored red and Lua example code will be colored
-green. For detailed information on regular expressions have a look at
-this book: </FONT></FONT><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><U><A HREF="http://www.regex.info/">www.regex.info</A><A HREF="http://www.regex.info/">.</A></U></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><U><A HREF="http://www.regular-expressions.info/">or
-this very comprehensive website: </A><A HREF="http://www.regular-expressions.info/">http://www.regular-expressions.info/</A></U></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<BR>
+green. </FONT></FONT>
 </P>
+<H1>Exporting and Importing Profiles or Packages</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<BR>
-</P>
-<H1>Exporting and Importing profiles for backup</H1>
+Mudlet stores your profiles as XML files in your home directory under
+.config/mudlet/profiles/your_profile_name/current (note the leading
+dot).</P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-The dialog isnt obvious at this point. You have to select a
-directory, not a plain file. Mudlet stores profiles in directories
-containing the name of the current profile plus a date and timestamp
-to make systematic backups easier. For importing you do the same:
-Select the folder and import. After import you will see the imported
-profile in the profile list. Importing a profile has no effect on the
-current profile.</P>
+The file name consists of the date and time, the profile was written
+to disc.<BR>You can export packages of a trigger branch, alias
+branch, function key, scripts etc. by clicking on a folder in the
+tree of the particular item in question and then click on the export
+icon. You'll be asked to give a filename for your package. You can
+export arbitrarily complex structures by moving them into a folder.
+You cannot mix items at the moment. Importing packages is straight
+forward and fully automatic. <BR>You can also import entire profiles
+as they are basically packages.</P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
@@ -65,30 +62,141 @@ profile twice. Consequently, if you want to play three characters on
 the same MUD at the same time, you need to make 3 profiles with 3
 different names e.g. ernie@avalon.de, bert@avalon.de etc.</P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-This will be changed later.</P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<BR>
-</P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
 <H1>Split Screen</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-currently only works if you drag the slider with the mouse. Wheel
-doesnt work yet.</P>
+Mudlet has a split screen. If you scroll up in the old text, the
+screen will split in two parts. The lower part will follow the MUD
+output while the upper part will stay focused on your scrolling. This
+way you can read easier through old passages without missing what is
+going on at the moment.</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+Split screen can be activated via the page up / page down keys or
+with the mouse wheel. Scrolling back to the end will close the split
+screen automatically. A click on the middle mouse button will close
+the split screen immediately. The size of the 2 parts of the split
+screen can be modidfied when dragging the seperator bar with the
+mouse.</P>
 <H1>Command Line Auto-Completion, Tab-Completion and History Buffer</H1>
-<P CLASS="western">The command line has 3 modes. TAB key gets you
-into tab completion mode (red background). It will look up words you
-started to type in the history buffer of data sent by the MUD. This
-is handy if you want to look at things in a room description or talk
-to NPC s with difficult names. NOTE: tab completion as well as
-autocompletion are both case sensitive. The second mode (green) is
-auto completion. It automatically completes your commend on the basis
-of the command history buffer. The third mode (yellow) Is the
-standard mode where nothing is done. This mode is reached either with
-enter after sending a command or by hitten the ESC-key.</P>
-<P CLASS="western"><BR><BR>
+<P CLASS="western">The command line offers Tab Completion (TAB key)
+and Autocompletion (cursor up key). <BR>1. Tab completion searches
+the MUD output buffer for words matching the word that you are
+currently typing. This is useful if you have to type complicated long
+names. You only have to type the first letters and then press the tab
+key until the proposal is what you want.<BR>2. Autocompletion tries
+to match your current typing with your command history. Example: If
+you typed the same command a while ago, you only have to start typing
+the first couple of letters and then press the cursor up key until
+the proposal matches the command that you want to use.<BR>3. If you
+haven't started to type anything yet, you can browse through your
+command history with the cursur up and cursor down keys. However, if
+you have started typing pressing cursor up will result in
+autocompletion. <BR>4. To get out of autocompletion you can press the
+ESC key any time.</P>
+<H1>Mudlet's Trigger Engine</H1>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Simple
+Trigger Matching</FONT></FONT></FONT></P>
+<P CLASS="western">Type your trigger in the input line below the
+trigger conditions list box and then press add to add it to the list.
+You can edit an expression in the list by clicking on it and then
+edit it on the input line below. After your edit you have to press
+the return key to accept the changes.<BR>After editing is finished
+your changes will only become permanent if you press on the save icon
+on the upper left. This is the same throughout the entire program. If
+you forget to save your current changes or new additions, they will
+be lost once you select to edit some other item.<BR>Select the
+trigger type from the listbox below the expression line edit. Normal
+substring matching will do for most people and it is the fastest
+matching type available. Example: You want to trigger on the word
+&quot;pond&quot; in a line such as: &quot;The frog swims in the pond.
+Plop.&quot; All you need to do is enter &quot;pond&quot; in the
+trigger expression input line and add it to the expression list. Then
+enter the command you like to send to the MUD if the trigger matches
+e.g. &quot;drink water&quot; and then you are done. The more advanced
+trigger types are explained below.</P>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Simple
+Highlighter Triggers</FONT></FONT></FONT></P>
+<P CLASS="western">If you want to highlight the word &quot;pond&quot;
+in the above example you have to add the following little Lua script
+to the script editor on the lower right side of the Script Editor
+window:<BR><FONT COLOR="#00ae00"><FONT FACE="Andale Mono">selectString(
+&quot;pond&quot;, 1 )<BR>fgColorRed()<BR>bgColorBlue()</FONT></FONT><BR><BR><BR>
 </P>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>&quot;AND&quot;
+and &quot;OR&quot; Condition Triggers</FONT></FONT></FONT></P>
+<P CLASS="western">AND -Triggers execute their respective command or
+script only if all conditions in their respective conditions
+expression list are fullfilled.<BR>OR-Triggers execute when *any* one
+of their conditions is true.<BR>To make OR-Triggers you simply have
+to add a few conditions to the conditions list e.g. in our example:
+&quot;pond&quot;, &quot;frog&quot;, &quot;Plop&quot;. The trigger
+will now also execute on lines like this: &quot;A frog is green&quot;
+or &quot;You hear a loud Plop!&quot; However, it will not execute on
+&quot;With a loud plop the frog dived into the water.&quot; because
+&quot;plop&quot; in the line is in lower case letters and your
+condition specified a &quot;P&quot; in upper case. <BR>The simplest
+form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains,
+whatever you'd like to call it.</P>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Trigger
+Chains - Filter Chains</FONT></FONT></FONT></P>
+<P CLASS="western">Imagine the following scenario: You want to
+collect some berries. You know that the room contains some berries if
+the room description contains the words &quot;You see several sorts
+of berries.&quot; You make a new substring trigger for this line, but
+instead of chosing a regular trigger, you chose to add a new trigger
+group. Now you add &quot;You see several sorts of berries.&quot; to
+the expression list of the trigger group. When adding condions to a
+trigger group, the trigger group turns from an organizational unit
+into a filter unit. From now on this folder is a filter and will only
+let data through that matches it's condition. <BR>In our case this is
+exactly what we want, because we don't want to collect all sorts of
+berries, but we only want 2 particular kinds, namely, strawberries
+and blackberries. Now you add two regular triggers to our berry
+filter - one containing the condition: &quot;strawberries&quot; and
+the other one &quot;blackberries&quot;. Then we add the commands to
+pick the particular kind of berry to both triggers.<BR>Now what
+happens is that as soon as a room description reads &quot;You see
+several sorts of berries.&quot; the filter will let the line
+containing the room description pass through to our two berry
+triggers and they will issue commands to pick berries. However, in
+any other situation the words &quot;strawberries&quot; and
+&quot;blackberries&quot; will *NOT* trigger - only in the above
+scenario when the filter parent's condition is met. This is a very
+nice way to solve complicated problems with a few easy filter chains.
+This example is trivial, but using filter chains will rapidly show
+you how formerly complicated things that could only be solved with
+very complicated regular expressions can be solved easily now with a
+couple of filter chains.</P>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Multi
+Condition Triggers</FONT></FONT></FONT></P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-bottom: 0cm">
+Multi Condition Triggers are the most advanced feature of Mudlet's
+trigger engine. Like trigger chains or filter chains they are a form
+of AND-Triggers.<BR>All conditions in the list must have matched
+within the specified margin of lines (delta), in order to trigger the
+script. <BR>Normal triggers fire and run the script as soon as one of
+the conditions in the regex list is met i.e. if one of the
+regex/string matches match - or the Lua function condition return
+true, the trigger script is run. <BR>In multiline triggers, however,
+each single regex/string/Lua function condition in the list has to
+have matched within the specified margin of lines at least once to
+trigger the script. The sequence of the conditions is binding. This
+means if the 10th regex on the regex list would be matched on the
+eleventh line after the match of the first line happened, the trigger
+will *NOT* run unless the margin of lines is set to 11. If condition
+#3 is true but currently #2 is waiting to be true, condition #3 is
+ignored and must be true again after condidtion #2 has been
+true.<BR>Conditions can also be Lua Functions that return a boolean
+truth value. You can mix all types of condtions.</P>
+<P CLASS="western" ALIGN=CENTER STYLE="margin-right: 0cm; margin-bottom: 0cm">
+*** This article will be extended later ***</P>
+<H1></H1>
 <H1>Quick Lua syntax overview</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Lua
@@ -174,7 +282,7 @@ matches[3] is undefined.</FONT></FONT></P>
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">In your Lua
 script you may write following program in order to print the number
 and status of your weapons on the screen:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm"><CODE CLASS="regex-western">You
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm"><CODE CLASS="regex-western">You
 have (\d+) weapons and they are (?:(\b\w+\W+)+)</CODE></P>
 <P CLASS="western" STYLE="margin-left: 2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Times New Roman, serif">number_of_weapons
@@ -227,7 +335,7 @@ details </FONT></FONT>
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">The best
 way is to use selectCaptureGroup( number ) to select the proper
 capture group and then perform your actions on it e.g. replace(),
-colorize etc. NOTE: Both selectCaptureGroup() and  matches[n] start
+colorize etc. NOTE: Both selectCaptureGroup() and matches[n] start
 with group 1.</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 <BR>
@@ -257,28 +365,27 @@ and colorize them:</FONT></FONT></P>
 setBgColorAll( word, r, g, b ) </FONT></FONT>
 </P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">i =
-0</FONT></FONT></P>
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">i = 0</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">word_count
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">word_count
 = 1</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">while
-i &gt; -1 do</FONT></FONT></P>
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">while i &gt;
+-1 do</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">                <FONT FACE="Courier New, monospace">i
-= selectString(word, word_count)</FONT></FONT></P>
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">i =
+selectString(word, word_count)</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">                <FONT FACE="Courier New, monospace">if
-i == -1 then return end</FONT></FONT></P>
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">if i == -1
+then return end</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">                <FONT FACE="Courier New, monospace">word_count
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">word_count
 = word_count +1</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">                <FONT FACE="Courier New, monospace">setBgColor(
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setBgColor(
 r, g, b )</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<FONT COLOR="#008000">         <FONT FACE="Courier New, monospace">end</FONT></FONT></P>
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">end</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">end</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
@@ -316,12 +423,12 @@ variable command that you can change in the context of Alias scripts.</FONT></FO
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Alias take
 regular expressions, as well. As a result, you can use following
 regex and script to talk like Yoda:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm"><CODE CLASS="regex-western">say
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm"><CODE CLASS="regex-western">say
 (\w+).*(\w*).*(.*)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm; margin-top: 0cm; margin-bottom: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm">
 <CODE CLASS="code-western">send( &quot;say &quot; .. matches[3] ..&quot;
 &quot; .. matches[1] ..&quot; &quot;.. matches[2] )</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm; margin-top: 0cm; margin-bottom: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm">
 <BR>
 </P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
@@ -368,7 +475,7 @@ line and then issue commands to do actions on the selected data.</SPAN></FONT></
 the word “Tom” with “Betty” in the line: </SPAN></FONT></FONT><FONT COLOR="#ff0000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Jim,
 Tom and Lucy are learning a new spell</SPAN></FONT></FONT><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">.
 Could be done with following script:</SPAN></FONT></FONT></P>
-<P CLASS="code-western" STYLE="margin-left: 2cm"><CODE CLASS="code-western">selectString(“Tom”)<BR>replace(“Betty”)</CODE></P>
+<P CLASS="code-western" STYLE="margin-left: 2cm"><CODE CLASS="code-western">selectString(“Tom”,1)<BR>replace(“Betty”)</CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Things
 get more complicated if there are two or more occurrences of “Tom”
@@ -412,11 +519,11 @@ the script you write:</SPAN></FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<CODE CLASS="code-western">selectString(“ugly monster”)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<CODE CLASS="code-western">selectString(“ugly monster”,1)</CODE></P>
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western">setFgColor(255,0,0)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western">setBgColor(255,255,255)</CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
@@ -432,7 +539,7 @@ and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT></FO
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western">selectSection( 28, 3 )</CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
@@ -442,7 +549,7 @@ and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT></FO
 example would select the second Tom. The first argument to
 selectSection is the cursor position within the line and the second
 argument is the length of the selection.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 7.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">selectCaptureGroup(
 number )</SPAN></FONT></FONT></CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
@@ -525,32 +632,6 @@ possible.</P>
 <P CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<BR>
-</P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
-<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>MUD
-output buffer access functions</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<CODE CLASS="code-western"><FONT SIZE=3>string line = getBufferLine(
-number_from_back ) </FONT></CODE><FONT SIZE=3>0 = current line 1 =
-last, buffer size is 500 lines</FONT><BR><CODE CLASS="code-western"><FONT SIZE=3>luaTable
-= getBufferTable( int from, int to )</FONT></CODE><BR><FONT SIZE=3>also
-counts from the back; </FONT><CODE CLASS="code-western"><FONT SIZE=3>linesTable
-= getBufferTable( 0, 1)</FONT></CODE> <FONT SIZE=3>gives the current
-line and the one before</FONT></P>
-<P CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<FONT SIZE=3>These functions give access to an internal mudlet buffer
-<U><B>that is entirely unrelated to the text console buffe</B></U>r.
-It is the buffer of the lines free of format code that have been
-processed by the trigger system. This buffer comes very handy when we
-need to parse multiple lines of mud output – or simply want to know
-if a certain thing has happened a few lines before. If you want
-access to the console (= the text you see on the screen ) buffer then
-use getLines() &amp; Co. functions.</FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<BR>
-</P>
 <H1><FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>User
 defined dockable windows</FONT></FONT></FONT></H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
@@ -571,12 +652,6 @@ text ) </CODE>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<BR>
-</P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Times New Roman, serif">echoHTMLUserConsole(
-string html )</FONT></FONT></CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 <BR>
 </P>
@@ -616,31 +691,38 @@ Event Handlers and Raising Events</FONT></FONT></FONT></CODE></P>
 <P CLASS="western"><CODE CLASS="code-western"><FONT COLOR="#008000">raiseEvent(
 string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 </P>
-<H1>Function Index</H1>
+<H1>Function And Variable Index</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
-<TABLE WIDTH=943 BORDER=1 CELLPADDING=4 CELLSPACING=3 STYLE="page-break-before: auto; page-break-after: auto; page-break-inside: avoid">
-	<COL WIDTH=425>
-	<COL WIDTH=491>
+<TABLE WIDTH=943 BORDER=1 CELLPADDING=4 CELLSPACING=0 STYLE="page-break-before: auto; page-break-after: auto; page-break-inside: avoid">
+	<COL WIDTH=469>
+	<COL WIDTH=456>
+	<TR>
+		<TD COLSPAN=2 WIDTH=933 VALIGN=TOP>
+			<P CLASS="western" ALIGN=CENTER STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Andale Mono"><FONT SIZE=6 STYLE="font-size: 22pt">Mudlet
+			Functions</FONT></FONT></FONT></CODE></P>
+		</TD>
+	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>clearUserWindow(
 			window_name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Clears
 			the user window with the name given as argument.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>copy()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Copies
 			the current selection to the clipboard. This function operates on
@@ -649,11 +731,11 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>cut()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Cuts
 			the current selection and stores it in the clipboard. This text
@@ -663,23 +745,23 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>deleteLine()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>deletes
 			the current Line under the user cursor.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>disableTimer(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Use
 			timer name or the id returned by tempTimer() to identify the timer
@@ -687,12 +769,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>disableTrigger(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Use
 			trigger name or the id returned by tempTrigger() to identify the
@@ -700,24 +782,24 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>disableKey(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Uses
 			trigger name as id or the id returned by tempTrigger()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>echo(
 			text )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2><SPAN STYLE="background: transparent">NOTE:
 			This function should only be used from within triggers. Please use
@@ -739,71 +821,71 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>echoUserWindow(
 			window_name, text )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT SIZE=2>prints text to user dock window name</FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>enableTimer(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>use
 			timer name or the id returned by tempTimer()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>enableTrigger(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>use
 			trigger name or the id returned by tempTrigger()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>enableKey(
 			name )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>enable
 			key or key group &quot;name&quot;</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>expandAlias(
 			command )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>like
 			send(), but with alias expansion</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>getBufferLine(
 			relative_line_number )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>e.g.
 			getBufferLine(0) = returns the text line the trigger matched upon,
@@ -812,12 +894,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>getBufferTable(
 			from_relative_line, to_relative_line )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Returns
 			a Lua table containing the text of the lines from-to from the
@@ -830,127 +912,73 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>lineNumber
 			= getLineNumber()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>to
 			get the absolute line number of the current user cursor</FONT></FONT></FONT></CODE></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>number
 			= getColumnNumber()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>To
 			get the absolute column number of the current user cursor</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>number
 			= getLineCount()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>To
 			get the absolute amount of lines in the current console buffer</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
-		</TD>
-		<TD WIDTH=491>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
-		</TD>
-	</TR>
-	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>lua_table[relative_linenumber,
 			content] = <BR>getLines( from_line_number, to_line_number ) </FONT></FONT></FONT></CODE>
 			</P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>here
 			absolute line numbers are used NOT RELATIVE</FONT></FONT></FONT></CODE></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>number_of_last_line
 			= getLineCount()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>insertHTML(
-			</FONT></FONT></FONT></CODE><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2><SPAN STYLE="background: transparent">string</SPAN></FONT></FONT></FONT></CODE><CODE CLASS="code-western"><FONT COLOR="#008000">
-			</FONT></CODE><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>)</FONT></FONT></FONT></CODE></P>
-		</TD>
-		<TD WIDTH=491>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>e.g.
-			insertHTML(“&lt;b&gt;&lt;u&gt;HELP&lt;/b&gt;&lt;/u&lt;”)
-			Insertion takes place at the current position of the user cursor –
-			or it replaces the current selection. If you don't want this use
-			selectString(“”) to deselect the last selection.<FONT COLOR="#ff0000">
-			</FONT><SPAN STYLE="background: #ffcc99">//FIXME cursor position
-			after deselection?</SPAN></FONT></FONT></FONT></P>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2><SPAN STYLE="background: #ffff00">NOTE:
-			</SPAN><SPAN STYLE="background: transparent">To print simple
-			information it's recommended to use the echo() function.
-			InsertHTML() and insertText() functions cannot print newlines
-			“\n”. These get stripped out currently, to make life easier.
-			If this function is needed we can make an expert version of this
-			function and whoever uses it has to do cursor accounting himself –
-			I. e. position the user cursor on the correct line after he's
-			added multiple newline chars. Otherwise the select functions won't
-			work anymore as they depend on the user cursor being on the
-			correct line to find the text that they are supposed to replace.</SPAN></FONT></FONT></FONT></P>
-		</TD>
-	</TR>
-	<TR VALIGN=TOP>
-		<TD WIDTH=425>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>insertImage(
-			int cursor_position, string path_to_image )</FONT></FONT></FONT></CODE></P>
-		</TD>
-		<TD WIDTH=491>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
-		</TD>
-	</TR>
-	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>insertText(
 			string )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Insertion
 			takes place at the current position of the user cursor – <B>or</B>
@@ -960,12 +988,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>killTimer(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>NOTE:
 			killTimer() calls on timers you have created with the GUI isn't
@@ -974,24 +1002,24 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>killTrigger(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>See
 			killTimer()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>boolean
 			= moveCursor( x, y )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Moves
 			the user cursor (x,y) coordinates relative from its current
@@ -999,12 +1027,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>openUserWindow(
 			name )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Opens
 			a user dockable console window for user output e.g. statistics,
@@ -1014,11 +1042,11 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>paste()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>pastes
 			the previously copied or cut text including all format codes like
@@ -1029,12 +1057,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>pasteWindow(
 			name )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>pastes
 			the previously copied or cut rich text (including text formats
@@ -1044,12 +1072,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>raiseEvent(
 			event_name, arg-1, ... arg-n )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Raises
 			the event event_name. The event system will call the main function
@@ -1089,12 +1117,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>replace(
 			with )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>replaces
 			the selected text with &quot;with&quot;. To delete text use
@@ -1102,13 +1130,13 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>int
 			pos_begin_of_match_in_line = <BR>selectString( text,
 			number_of_match ) or -1 on error</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Selects
 			a substring from the line where the user cursor is currently
@@ -1130,25 +1158,25 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>boolean
 			= selectSection( from, length_of_string ) </FONT></FONT></FONT></CODE>
 			</P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>Absolute
 			column number for start of selection and length of selection</FONT></FONT></FONT></CODE></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>selectCaptureGroup(
 			groupNumber ) with first group = 0</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Selects
 			the content of the capture group number in your perl regular
@@ -1158,12 +1186,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>send(
 			command )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>This
 			sends data directly to the socket layer, bypassing the alias
@@ -1171,12 +1199,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setBgColor(
 			r,g,b )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Values
 			are RGB: red, green, blue ranging from 0-255 e.g. for red:
@@ -1184,12 +1212,12 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setFgColor(
 			r, g, b )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Values
 			are RGB: red, green, blue ranging from 0-255 e.g. for blue:
@@ -1197,84 +1225,84 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatBold(
 			boolean )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatFont(
 			string font_name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatFontSize(
 			int size )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatUnderlined(
 			boolean )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>timer_id
 			= tempTimer( seconds, lua_code )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>You
 			can use 2.3 seconds or 0.45 etc.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>trigger_id
 			= tempTrigger( string, lua_code )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>temporary
 			trigger using substring matching</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>trigger_id
 			= tempLineTrigger( from, howMany, LuaCode )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Temporary
 			trigger that will fire on n consecutive lines following the
@@ -1289,77 +1317,72 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>trigger_id
 			= tempRegexTrigger( regex, lua_code )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>temorary
 			trigger using perl regex pattern matching</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>userWindowLineWrap(
+			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">userWindowLineWrap(
 			window, boolean )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>turns
+			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=2>turns
 			line wrap mode on or off in user dock windows<BR>userWindowLineWrap(
 			&quot;chat&quot;, true ) turns on line wrap for window &quot;chat&quot;</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
-	<TR VALIGN=TOP>
-		<TD WIDTH=425>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
-		</TD>
-		<TD WIDTH=491>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
+	<TR>
+		<TD COLSPAN=2 WIDTH=933 VALIGN=TOP>
+			<P CLASS="western" ALIGN=CENTER STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#ff0000"><FONT FACE="Andale Mono"><FONT SIZE=6 STYLE="font-size: 22pt">Mudlet
+			Variables</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
+			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">command</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
+			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
+			variable that holds the last command issued by the user. This is
+			the command *before* alias expansion.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>line
+			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">line
 			</FONT></FONT></FONT>
 			</P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Lua
+			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
 			variable line holds the current content of the current line from
 			the MUD</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=425>
+		<TD WIDTH=469>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>matches[1]
+			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">matches[1]
 			... matches[n]</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=491>
+		<TD WIDTH=456>
 			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Lua
+			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
 			table that holds the text of the capture groups (only with perl
 			regular expressions)</FONT></FONT></FONT></P>
 		</TD>
@@ -1367,66 +1390,14 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 </TABLE>
 <P CLASS="code-western"><BR><BR>
 </P>
-<H1>CHANGELOG:</H1>
-<UL>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>save
-	button in the editor now save to hard disc. No need to exist Mudlet
-	to keep changes anymore.</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>auto
-	update of user buttons in toolbar withou needing to restart Mudlet.</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>profiles
-	are now declared stable. Any further changes to the profiles will
-	provide proper import of old profiles. Intensive script testing can
-	now begin.</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>added
-	multiline triggers</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>added
-	user and system events</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>added
-	copy, cut, paste, pasteWindow functions that operate on rich text</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>added
-	deleteLine()</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>added
-	userWindowLineWrap( window, bool )</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>simple
-	auto update of mudlet_documentation.html from the respective binary
-	or source package</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm"></P>
-</UL>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<BR>
-</P>
 <H1>Known Bugs:</H1>
 <UL>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-	<FONT SIZE=2>drag and drop in user action buttons and menus
-	sometimes doesnt delete the old button properly so it has to be
-	deleted by hand. This will only show after restart of Mudlet. <BR>(
-	priority: low )</FONT></P>
 	<LI><P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 	<FONT SIZE=2>VT-1xx clear screen and cursor home aren't yet
 	functional because this needs some trivial graphics code<BR>(priority:
 	low as not many servers use this kind of terminal commands)</FONT></P>
-	<LI><P CLASS="western" STYLE="margin-right: 0cm">NOTE: Always use
-	folders as top level items and stay away from using
-	triggers/actions/timers etc. directly in the root folders of
-	triggers/timers etc. Things may not work correctly otherwise. This
-	is a bug.</P>
 </UL>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<BR>
-</P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
-<BR>
+<P CLASS="western" STYLE="margin-right: 0cm"><BR><BR>
 </P>
 <H1>Planned:</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
@@ -1446,6 +1417,21 @@ string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 	triggers: tempColorTrigger() question is what is needed. list of all
 	substrings according to fg color? what do lua tables look like?</FONT></FONT></FONT></P>
 </UL>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
+<BR>
+</P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 <BR>
 </P>

@@ -176,13 +176,19 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     
     mHistoryList.push_front( text() );
     QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
-    if( commandList.size() == 0 ) 
-        mpHost->send( "" );
+    QMap<QString, int> tmpMap;
+    for( int i=0; i<commandList.size(); i++ )
+    {
+        tmpMap.insert( commandList[i], i );
+    }
+    commandList.clear();
+    commandList = tmpMap.uniqueKeys();
+    
+    if( commandList.size() == 0 ) mpHost->send( "" );
     
     for( int i=0; i<commandList.size(); i++ )
     {
         mHistoryMap[ commandList[i] ] = 0;
-        
         //qDebug()<<"TCommandLine:enterCommand() sending to Host:"<<mpHost<<" text="<<commandList[i];
         mpHost->send( commandList[i] );
     }
