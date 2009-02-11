@@ -42,6 +42,7 @@
 #include "TDebug.h"
 #include "TTextEdit.h"
 #include <QGraphicsSimpleTextItem>
+#include "XMLexport.h"
 
 using namespace std;
 
@@ -132,10 +133,24 @@ void TConsole::closeEvent( QCloseEvent *event )
     {
         if( QMessageBox::question( this, "Question", "Do you want to save the profile data?", QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
         {
-            qDebug()<<"The user wants to save the profile.";
+            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/current";
+            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh:mm:ss")+".xml";
+            QDir dir_xml;
+            if( ! dir_xml.exists( directory_xml ) )
+            {
+                dir_xml.mkpath( directory_xml );    
+            }
+            QFile file_xml( filename_xml );
+            file_xml.open( QIODevice::WriteOnly );
+            
+            XMLexport writer( mpHost );
+            writer.exportHost( & file_xml );
+            file_xml.close();
+            
+            /*qDebug()<<"The user wants to save the profile.";
             mpHost->mSaveProfileOnExit = true;
             mpHost->serialize();
-            mpHost->mSaveProfileOnExit = false;
+            mpHost->mSaveProfileOnExit = false;*/
         }
     }
     event->accept();
