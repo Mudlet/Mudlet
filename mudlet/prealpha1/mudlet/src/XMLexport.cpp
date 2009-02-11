@@ -289,7 +289,7 @@ bool XMLexport::writeAlias( TAlias * pT )
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
-    writeTextElement( "regexCode", pT->mRegexCode );    
+    writeTextElement( "regex", pT->mRegexCode );    
     
     typedef list<TAlias *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)

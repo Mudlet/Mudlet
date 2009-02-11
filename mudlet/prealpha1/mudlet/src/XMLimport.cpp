@@ -623,7 +623,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     }
     
     pT->mUserActiveState = ( attributes().value("isActive") == "yes" );
-    pT->mIsActive = mUserActiveState;
+    pT->mIsActive = pT->mUserActiveState;
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
     
