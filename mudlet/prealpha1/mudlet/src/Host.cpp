@@ -298,27 +298,21 @@ bool Host::serialize()
 {
     if( ! mSaveProfileOnExit )
     {
-        qDebug()<< "User doesn't want to save the profile. Good Bye! <"<<mHostName<<">";
         return true;
     }
-    qDebug()<<"saving the profile:";
-    
     QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/current";
     QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh:mm:ss")+".xml";
     QDir dir_xml;
     if( ! dir_xml.exists( directory_xml ) )
     {
-        qDebug()<<"making directory:"<<directory_xml;
         dir_xml.mkpath( directory_xml );    
     }
     QFile file_xml( filename_xml );
     file_xml.open( QIODevice::WriteOnly );
     
-    qDebug()<<"[XML EXPORT] Host serialize starting:"<<filename_xml;
     XMLexport writer( this );
     writer.exportHost( & file_xml );
     file_xml.close();
-    qDebug()<<"[XML EXPORT] Host is serialized";
     
     return true;
     
