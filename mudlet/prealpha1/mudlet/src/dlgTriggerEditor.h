@@ -140,7 +140,7 @@ public slots:
     void                        slot_grab_key();
     bool                        event( QEvent * event );
     void                        grab_key_callback( int key, int modifier );
- 
+    void                        slot_profileSaveAction();
     
 private:
     

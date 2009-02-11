@@ -75,7 +75,7 @@ bool TKey::match( int key, int modifier )
                 if( mCommand.size() > 0 )
                 {
                     // when a command is specified we use it instead of the script
-                    mpHost->sendRaw( mCommand );
+                    mpHost->send( mCommand );
                     return true;
                 }
                 else

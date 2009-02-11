@@ -378,18 +378,21 @@ void mudlet::closeEvent(QCloseEvent *event)
         qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
         if( pC->mpHost->getName() != "Default Host" )
         {
-            if( QMessageBox::question( this, "Question", "Do you want to save the profile "+pC->mpHost->getName(), QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+            if( ! pC->mpHost->mSaveProfileOnExit )
             {
-                qDebug()<<"The user wants to save the profile.";
-                pC->mpHost->mSaveProfileOnExit = true;
+                if( QMessageBox::question( this, "Question", "Do you want to save the profile "+pC->mpHost->getName(), QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+                {
+                    qDebug()<<"The user wants to save the profile.";
+                    pC->mpHost->mSaveProfileOnExit = true;
+                }
+                else 
+                {
+                    qDebug()<<"User doesn't like to save the profile.";
+                    pC->mpHost->mSaveProfileOnExit = false;
+                }
+                pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
+                pC->mpHost->mpEditorDialog->close();    
             }
-            else 
-            {
-                qDebug()<<"User doesn't like to save the profile.";
-                pC->mpHost->mSaveProfileOnExit = false;
-            }
-            pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
-            pC->mpHost->mpEditorDialog->close();    
         }
     }
     
@@ -428,6 +431,7 @@ void mudlet::show_trigger_dialog()
     dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
     if( ! pEditor ) return;
     pEditor->slot_show_triggers();
+    pEditor->raise();
     pEditor->show();
 }
 
@@ -438,6 +442,7 @@ void mudlet::show_alias_dialog()
     dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
     if( ! pEditor ) return;
     pEditor->slot_show_aliases();
+    pEditor->raise();
     pEditor->show();
 }
 
@@ -448,6 +453,7 @@ void mudlet::show_timer_dialog()
     dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
     if( ! pEditor ) return;
     pEditor->slot_show_timers();
+    pEditor->raise();
     pEditor->show();
 }
 
@@ -458,6 +464,7 @@ void mudlet::show_script_dialog()
     dlgTriggerEditor * pEditor = pHost->mpEditorDialog;  
     if( ! pEditor ) return;
     pEditor->slot_show_scripts();
+    pEditor->raise();
     pEditor->show();
 }
 
@@ -468,6 +475,7 @@ void mudlet::show_key_dialog()
     dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
     if( ! pEditor ) return;
     pEditor->slot_show_keys();
+    pEditor->raise();
     pEditor->show();
 }
 
@@ -478,6 +486,7 @@ void mudlet::show_action_dialog()
     dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
     if( ! pEditor ) return;
     pEditor->slot_show_actions();
+    pEditor->raise();
     pEditor->show();
 }
 
@@ -494,12 +503,14 @@ void mudlet::show_options_dialog()
 void mudlet::show_help_dialog()
 {
     dlgHelpDialog * pDlg = new dlgHelpDialog(this);
+    pDlg->raise();
     pDlg->show();
 }
 
 void mudlet::slot_show_about_dialog()
 {
     dlgAboutDialog * pDlg = new dlgAboutDialog(this);
+    pDlg->raise();
     pDlg->show();
 }
 

@@ -144,7 +144,10 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         
         if( mIsTriggerTree ) mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID );
         if( mIsAliasTree ) mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID );
-        if( mIsTimerTree ) mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID );
+        if( mIsTimerTree )
+        {
+            mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID );
+        } 
         if( mIsScriptTree ) mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID );
         
         mChildID = 0;
@@ -173,10 +176,45 @@ void TTreeWidget::dragMoveEvent(QDragMoveEvent *event)
 
 void TTreeWidget::dropEvent(QDropEvent *event)
 {
-    qDebug()<<"dropEvent()";
     QTreeWidgetItem * pItem = itemAt( event->pos() );
+    
     if( pItem )
     {
+        if( mIsTimerTree )
+        {
+            int childID = pItem->data(0, Qt::UserRole).toInt();
+            TTimer * pTChild = mpHost->getTimerUnit()->getTimer( childID );
+            TTimer * pToldParent = pTChild->getParent();
+            if( pToldParent )
+            {
+                int oldParentID = pToldParent->getID();
+                if( pItem->parent() )
+                {
+                    int newParentID = pItem->parent()->data(0, Qt::UserRole).toInt();
+                    qDebug()<<"REPARENT: id="<<childID<<" oldParentID="<<oldParentID<<" newParentID="<<newParentID;
+                    mpHost->getTimerUnit()->reParentTimer( childID, oldParentID, newParentID );
+                    if( pTChild )
+                    {
+                        if( pTChild->isOffsetTimer() )
+                        {
+                            qDebug()<<"OK item is offsettimer";
+                            QIcon icon;
+                            if( pTChild->getUserActiveState() )
+                            {
+                                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            }
+                            else
+                            {
+                                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
+                            }
+                            pItem->setIcon(0, icon); 
+                        }
+                    }
+                }
+                else qDebug()<<" ERROR: no reparent pItem->parent()==0";
+            }
+            else qDebug()<<"ERROR: pToldParent==0";
+        }
         /*if( ! pItem->parent() )
         {
             qDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";

@@ -1,23 +1,59 @@
-Compiling up pre-alpha Mudlet
------------------------------
+Compiling Mudlet
+-----------------
 
 On Windows:
-Use the qt-4.4 binary distribution that comes bundled with a ready made compiler (mingw) at ftp://ftp.trolltech.com/qt/source/qt-win-opensource-4.4.3-mingw.exe . Simply install this package. Then download lua-5.1 and qscintilla2 sources and unpack the archives into "c:\". Then make both packages (lua with make mingw) and qscintilla2 with cd qt4 and then qmake and then make.
-If all these packages are installed to c:\ the makefile of mudlet should work without adjustments. Compile mudlet by changeing into mudlet/src and then typing "qmake" and then "make release". You'll find the binary mudlet.exe in mudlet/src/release. To run mudlet you need to copy qscintilla2.dll and lua51.dll into the same directory that contains mudlet.exe.
-If the compiler finishes with a "make[1]" type of error, it cant find the include files of qscintilla2 and lua51. Make sure to use the latest source packages of both and put them into c:\. If the compiler fails with a make[2] type of error the compiler can't find lua51.dll or qscintilla.dll. In this case you will have forgotten to compile those two packages prior to compiling mudlet. Good Luck.
+-----------
+Use the qt-4.4 binary distribution that comes bundled with a ready made compiler (mingw) 
+at ftp://ftp.trolltech.com/qt/source/qt-win-opensource-4.4.3-mingw.exe . 
+Simply install this package. Then download lua-5.1 and qscintilla2 sources and unpack the 
+archives into "c:\". Then make both packages (lua with make mingw) and qscintilla2 with 
 
-Linux:
+cd qt4 
+qmake 
+make
 
-   1. install
-          * g++ and the company
-          * QT 4 development tools
-          * qscintilla version 2.2 or higher
-          * lua version 5.1 or higher
+If all these packages are installed to c:\ the makefile of mudlet should work without adjustments. 
+Compile mudlet by changeing into mudlet/src and then typing "qmake" and then "make release". 
+You'll find the binary mudlet.exe in mudlet/src/release. To run mudlet you need to copy 
+qscintilla2.dll and lua51.dll into the same directory that contains mudlet.exe.
+If the compiler finishes with a "make[1]" type of error, it cant find the include files of 
+qscintilla2 and lua51. Make sure to use the latest source packages of both and put them 
+into c:\. If the compiler fails with a make[2] type of error the compiler can't find 
+lua51.dll or qscintilla.dll. In this case you will have forgotten to compile those two 
+packages prior to compiling mudlet. 
 
-      Ubuntu users can do: sudo apt-get install build-essential libqscintilla2-dev lua5.1 liblua5.1-0-dev qt4-dev-tools
-      Others, see your distribution details for the said packages.
-   2. navigate to the Mudlet directory, through the terminal, and do: make clean && qmake-qt4 && make
-   3. wait until Mudlet compiles
-   4. run mudlet by entering: cd src && ./mudlet
-   5. Note: If you run into compiler problems then look at the file mudlet/src/src.pro and change the INCLUDE and/or LIBS part of the make file and set the correct path to the qscintilla2 include dir "Qsci" correctly. Note that each line in this file needs to end with a "\"
+Good Luck.
+
+
+GNU/Linux:
+----------
+Mudlet is developed on GNU/Linux (Debian Sid) 
+
+1. REQUIREMENTS:
+ * g++ (Ubuntu needs package build-essentials to be able to compile software 
+   on Linux ... I can't believe it, but it seems to be true )
+          
+ * lib Qt4.4 or higher *development package* + development tools 
+   (these usually ship in two different packages. If all fails download the sources of Qt4.5 or higher
+   from www.trolltech.com and compile them (very easy, but takes up to 90 minutes)
+          
+ * qscintilla version 2.3 or higher. 
+   NOTE: Ubuntu or Kubuntu 8.04 or 8.10 ship with 
+   broken qscintilla2 packages. These lead to crashes after pressing the Enter key after
+   deleting lines in the editor. Go and build qscintilla2 from source or use our Ubuntu ppa that 
+   contains a fixed package.
+
+ * lua version 5.1 or higher
+   Ubuntu users can do: sudo apt-get install build-essential libqscintilla2-dev lua5.1 liblua5.1-0-dev qt4-dev-tools
+   Others, see your distribution details for the said packages.
+
+2. navigate to the Mudlet directory, through the terminal, and do: 
+   make clean && qmake-qt4 && make
+
+3. wait until Mudlet compiles
+4. run mudlet by entering: cd src && ./mudlet
+5. Note: If you run into compiler problems then look at the file mudlet/src/src.pro and 
+   change the INCLUDE and/or LIBS part of the make file and set the correct path to the 
+   qscintilla2 include dir "Qsci" correctly. Note that each line in this file needs to end with a "\"
+
 

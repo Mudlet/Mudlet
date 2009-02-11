@@ -101,20 +101,28 @@ void Host::stopAllTriggers()
     mScriptUnit.stopAllTriggers();
 }
 
-void Host::send( QString command )
-{ 
-    mReplacementCommand = "";
-    mpConsole->printCommand( command ); // used to print the terminal <LF> that terminates a telnet command
-                                        // this is important to get the cursor position right
-    if( ! mAliasUnit.processDataStream( command ) )
+void Host::send( QString cmd )
+{   
+    QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
+    if( commandList.size() == 0 ) 
+        sendRaw( "" );
+    
+    for( int i=0; i<commandList.size(); i++ )
     {
-        if( mReplacementCommand.size() > 0 ) 
+        QString command = commandList[i].replace(QChar('\n'),"");
+        mReplacementCommand = "";
+        mpConsole->printCommand( command ); // used to print the terminal <LF> that terminates a telnet command
+                                            // this is important to get the cursor position right
+        if( ! mAliasUnit.processDataStream( command ) )
         {
-            mTelnet.sendData( mReplacementCommand );
-        }
-        else
-        {
-            mTelnet.sendData( command ); 
+            if( mReplacementCommand.size() > 0 ) 
+            {
+                mTelnet.sendData( mReplacementCommand );
+            }
+            else
+            {
+                mTelnet.sendData( command ); 
+            }
         }
     }
 }
@@ -130,7 +138,7 @@ QStringList Host::getBufferTable( int from, int to )
     QStringList bufList;
     if( (mTextBufferList.size()-1-to<0) || (mTextBufferList.size()-1-from<0) || (mTextBufferList.size()-1-from>=mTextBufferList.size()) || mTextBufferList.size()-1-to>=mTextBufferList.size() )
     {
-        return bufList<<QString("ERROR: buffer out of range");
+        return bufList << QString("ERROR: buffer out of range");
     }
     for( int i=mTextBufferList.size()-1-from; i>=0; i-- )
     {

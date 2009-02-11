@@ -73,7 +73,7 @@ public:
         italics_old = false;
         underline_old = false;
         fgColor = mpHost->mFgColor;
-        fgColorLight = mpHost->mFgColor;
+        fgColorLight = mpHost->mLightBlue;
         bgColor = mpHost->mBgColor;
     }
     void reset()

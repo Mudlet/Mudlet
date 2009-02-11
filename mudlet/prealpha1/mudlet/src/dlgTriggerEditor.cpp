@@ -280,6 +280,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
     
+    QAction * profileSaveAction = new QAction(QIcon(":/icons/document-save-all.png"), tr("Save Profile"), this);
+    profileSaveAction->setEnabled( true );
+    connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
+    
+    
     /*QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
     actionProfileBackup->setStatusTip(tr("Backup Profile"));*/
     
@@ -375,6 +380,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( deleteTriggerAction );    
     toolBar->addAction( importAction );
     toolBar->addAction( exportAction );
+    toolBar->addAction( profileSaveAction );
     toolBar->addAction( showDebugAreaAction );
     
       
@@ -740,8 +746,16 @@ void dlgTriggerEditor::slot_timer_toggle_active()
         if( pT->isOffsetTimer() )
         {   
             // state of offset timers is managed by the trigger engine
-            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
-        }
+            if( pT->getUserActiveState() )
+            {
+                pT->enableTimer( pT->getName() );
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+            }
+            else
+            {
+                pT->disableTimer( pT->getName() );
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
+            }        }
         else
         {
             if( pT->getUserActiveState() )
@@ -1566,14 +1580,21 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
             int minutes = mpTimersMainArea->timeEdit_minutes->time().minute();
             int secs = mpTimersMainArea->timeEdit_seconds->time().second();
             int msecs = mpTimersMainArea->timeEdit_msecs->time().msec();
-            //qDebug()<<"TIME="<<hours<<":"<<minutes<<"'"<<secs<<"''"<<msecs;
             QTime time(hours,minutes,secs,msecs);
             pT->setTime( time );
             pT->setCommand( command );
             pT->setName( name );
             pT->setScript( script );
-            
-            pT->setIsActive( true );
+            if( pT->isOffsetTimer() )
+            {
+                pT->setUserActiveState( false );
+                pT->setIsActive( false );
+            }
+            else
+            {
+                pT->setUserActiveState( true );
+                pT->setIsActive( true );
+            }    
             
             QIcon icon;
             if( pT->isFolder() )
@@ -1587,22 +1608,26 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);    
                 }
             }
-            else
+            if( pT->isOffsetTimer() )
             {
-                if( pT->isOffsetTimer() )
+                if( pT->getUserActiveState() )
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                 }
                 else
                 {
-                    if( pT->getUserActiveState() )
-                    {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    }
-                    else
-                    {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
-                    }
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
+                }
+            }
+            else
+            {
+                if( pT->getUserActiveState() )
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                }
+                else
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
                 }
             }
             
@@ -1995,9 +2020,9 @@ void dlgTriggerEditor::slot_timer_clicked( QTreeWidgetItem *pItem, int column )
     if( pT )
     {
         if( pT->getParent() )
-            qDebug()<<"[STATUS]: timer <"<<pT->getName()<<"> mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->getUserActiveState()<<" parent="<<pT->getParent()->getName();
+            qDebug()<<"[STATUS]: timer ID="<<pT->getID()<<" name="<<pT->getName()<<" mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->getUserActiveState()<<" parent="<<pT->getParent()->getName();
         else 
-            qDebug()<<"[STATUS]: timer <"<<pT->getName()<<"> mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->getUserActiveState()<<" parent=0";
+            qDebug()<<"[STATUS]: timer ID="<<pT->getID()<<" name="<<pT->getName()<<"> mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->getUserActiveState()<<" parent=0";
         QString command = pT->getCommand();
         QString name = pT->getName();
         mpTimersMainArea->lineEdit_command->clear();
@@ -2124,7 +2149,14 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isOffsetTimer() )
             {
-                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
+                if( pT->getUserActiveState() )
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                }
+                else
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
+                }
             }
             else
             {
@@ -2617,7 +2649,14 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
         {
             if( pT->isOffsetTimer() )
             {
-                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/list-add_small.png")), QIcon::Normal, QIcon::Off);                    
+                if( pT->getUserActiveState() )
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                }
+                else
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
+                }
             }
             else
             {
@@ -3398,6 +3437,10 @@ void dlgTriggerEditor::slot_import()
         return;
     }
     
+    QString profileName = mpHost->getName();
+    QString login = mpHost->getLogin();
+    QString pass = mpHost->getPass();
+    
     treeWidget->clear();
     treeWidget_alias->clear();
     treeWidget_actions->clear();
@@ -3410,8 +3453,18 @@ void dlgTriggerEditor::slot_import()
     
     qDebug()<<"OK reader.importPackage() returned!";
     
+    mpHost->setName( profileName );
+    mpHost->setLogin( login );
+    mpHost->setPass( pass );
+    
     fillout_form();
     
+}
+
+void dlgTriggerEditor::slot_profileSaveAction()
+{
+    mpHost->mSaveProfileOnExit = true;    
+    mpHost->serialize();
 }
 
 

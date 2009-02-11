@@ -1,5 +1,8 @@
 <RCC>
   <qresource>
+    <file>icons/document-save-all.png</file>
+    <file>icons/offsettimer-off.png</file>
+    <file>icons/offsettimer-on.png</file>
     <file>icons/edit-bomb.png</file>
     <file>icons/view-restore.png</file>
     <file>icons/view-split-left-right.png</file>

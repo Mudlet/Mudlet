@@ -78,6 +78,9 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID )
     {
         return;
     }
+    
+    pChild->disableTimer( childID );
+    
     if( pOldParent )
     {
         pOldParent->popChild( pChild );
@@ -97,11 +100,14 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID )
     {
         addTimerRootNode( pChild );
     }
+    
+    pChild->enableTimer( childID );
 }
 
 void TimerUnit::removeTimerRootNode( TTimer * pT )
 {
     if( ! pT ) return;
+    
     mTimerRootNodeList.remove( pT );
 }
 

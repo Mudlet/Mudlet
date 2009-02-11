@@ -81,6 +81,9 @@ public:
     void             start();
     void             enableTimer( QString & );
     void             disableTimer( QString & );
+    void             enableTimer( qint64 );
+    void             disableTimer( qint64 );
+    
     TTimer *         killTimer( QString & );
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );

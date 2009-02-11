@@ -95,6 +95,8 @@
    <header>QtWebKit/QWebView</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../../../../../mdev/mudlet_alpha.qrc" />
+ </resources>
  <connections/>
 </ui>

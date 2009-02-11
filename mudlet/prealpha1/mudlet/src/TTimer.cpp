@@ -199,20 +199,70 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
     {
         if( ! mpParent )
         {
-            qDebug() << "Tree " << mName << " is *NOT* locked!" ;
+            qDebug() << "Tree ID=" << mID<<" name="<<mName << " is *NOT* locked!" ;
             return true;    
         }
-        qDebug()<<"name="<<mName<<" NOT locked " << " checking parent="<<mpParent->getName();
+        qDebug()<<"id="<<mID<<" name="<<mName<<" NOT locked " << " checking parent="<<mpParent->getID();
         return mpParent->canBeUnlocked( 0 );
     }
     else
     {
-        qDebug() << "LOCKED, sorry " << mName << " is locked.";
+        qDebug() << "LOCKED, sorry ID="<<mID<<" name=" << mName << " is locked.";
         DumpFamily();
         return false;
     }
     
 }
+
+void TTimer::enableTimer( qint64 id )
+{
+    qDebug()<<"trying enableTimer() name="<<mName;
+    if( mID == id )
+    {
+        if( canBeUnlocked( 0 ) )
+        {
+            qDebug()<< "mUserActiveState="<<mUserActiveState;
+            mIsActive = mUserActiveState;
+            if( mIsActive ) 
+            {
+                qDebug()<<"OK ID="<<id<<" was unlocked";
+                mTimer.start();
+            }
+            else
+            {
+                qDebug()<<"SORRY: ID="<<id<<" must stay LOCKED";
+                mIsActive = false;
+            }
+        }
+    }
+    
+    if( ! isOffsetTimer() )
+    {
+        typedef list<TTimer *>::const_iterator I;
+        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        {
+            TTimer * pChild = *it;
+            pChild->enableTimer( pChild->getID() );
+        }
+    }
+}
+
+void TTimer::disableTimer( qint64 id )
+{
+    if( mID == id )
+    {
+        mIsActive = false;
+        mTimer.stop();
+    }
+    
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TTimer * pChild = *it;
+        pChild->disableTimer( pChild->getID() );
+    }
+}
+
 
 void TTimer::enableTimer( QString & name )
 {
@@ -255,21 +305,17 @@ void TTimer::disableTimer( QString & name )
         mTimer.stop();
     }
     
-    if( ! isOffsetTimer() )
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
-            TTimer * pChild = *it;
-            pChild->disableTimer( pChild->getName() );
-        }
+        TTimer * pChild = *it;
+        pChild->disableTimer( pChild->getName() );
     }
 }
 
 void TTimer::setUserActiveState( bool state )
 { 
     QMutexLocker locker(& mLock); 
-    
     mUserActiveState = state; 
 }
 
