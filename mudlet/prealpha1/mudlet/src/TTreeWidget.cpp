@@ -112,20 +112,38 @@ void TTreeWidget::setHost( Host * pH )
 
 void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end )
 {
-    mOldParentID = parent.data( Qt::UserRole ).toInt();
-    if( ! mOldParentID )
+    qDebug()<<"rowsAboutToBeRemoved";
+    if( parent.isValid() )
+    {
+        mOldParentID = parent.data( Qt::UserRole ).toInt();
+        qDebug()<<"mOldParentID="<<mOldParentID;
+    }
+    else 
+        mOldParentID = 0;
+    
+    if( mOldParentID == 0 )
     {
         mOldParentID = parent.sibling( start, 0 ).data( Qt::UserRole ).toInt();
     }
         
-    QModelIndex child = parent.child( start, 0 );
-    mChildID = child.data( Qt::UserRole ).toInt();
-    if( mChildID == 0 )
+    if( parent.isValid() )
     {
-        if( parent.isValid() )
-        child = parent.model()->index( start, 0, QModelIndex() );
-        if( child.isValid() )        
+        QModelIndex child = parent.child( start, 0 );
         mChildID = child.data( Qt::UserRole ).toInt();
+        qDebug()<<"mChildID="<<mChildID;
+        if( mChildID == 0 )
+        {
+            if( parent.isValid() )
+            {
+                child = parent.model()->index( start, 0, QModelIndex() );
+            }
+            if( child.isValid() )        
+            {
+                mChildID = child.data( Qt::UserRole ).toInt();
+            }
+            else
+                mChildID = 0;
+        }
     }
     QTreeWidget::rowsAboutToBeRemoved( parent, start, end );
 }
@@ -142,13 +160,56 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         }
         int newParentID = parent.data( Qt::UserRole ).toInt();
         
-        if( mIsTriggerTree ) mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID );
-        if( mIsAliasTree ) mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID );
+        if( mIsTriggerTree ) 
+            mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID );
+        if( mIsAliasTree ) 
+            mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID );
         if( mIsTimerTree )
         {
             mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID );
-        } 
-        if( mIsScriptTree ) mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID );
+            TTimer * pTChild = mpHost->getTimerUnit()->getTimer( mChildID );
+            TTimer * pTnewParent = mpHost->getTimerUnit()->getTimer( newParentID );
+            if( pTChild )
+            {
+                QIcon icon;
+                if( pTChild->isOffsetTimer() )
+                {
+                    if( pTChild->getUserActiveState() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
+                    }
+                }
+                else
+                {
+                    if( pTChild->getUserActiveState() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                    }
+                }   
+                QTreeWidgetItem * pParent = itemFromIndex( parent );
+                for( int i=0; i<pParent->childCount(); i++ )
+                {
+                    QTreeWidgetItem * pItem = pParent->child(i);
+                    int id = pItem->data(0, Qt::UserRole).toInt();
+                    if( id == mChildID )
+                    {
+                        pItem->setIcon(0, icon); 
+                    }
+                }
+            }
+        }
+        if( mIsScriptTree ) 
+            mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID );
+        if( mIsActionTree ) 
+            mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID );
         
         mChildID = 0;
         mOldParentID = 0;
@@ -182,38 +243,6 @@ void TTreeWidget::dropEvent(QDropEvent *event)
     {
         if( mIsTimerTree )
         {
-            int childID = pItem->data(0, Qt::UserRole).toInt();
-            TTimer * pTChild = mpHost->getTimerUnit()->getTimer( childID );
-            TTimer * pToldParent = pTChild->getParent();
-            if( pToldParent )
-            {
-                int oldParentID = pToldParent->getID();
-                if( pItem->parent() )
-                {
-                    int newParentID = pItem->parent()->data(0, Qt::UserRole).toInt();
-                    qDebug()<<"REPARENT: id="<<childID<<" oldParentID="<<oldParentID<<" newParentID="<<newParentID;
-                    mpHost->getTimerUnit()->reParentTimer( childID, oldParentID, newParentID );
-                    if( pTChild )
-                    {
-                        if( pTChild->isOffsetTimer() )
-                        {
-                            qDebug()<<"OK item is offsettimer";
-                            QIcon icon;
-                            if( pTChild->getUserActiveState() )
-                            {
-                                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
-                            }
-                            else
-                            {
-                                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
-                            }
-                            pItem->setIcon(0, icon); 
-                        }
-                    }
-                }
-                else qDebug()<<" ERROR: no reparent pItem->parent()==0";
-            }
-            else qDebug()<<"ERROR: pToldParent==0";
         }
         /*if( ! pItem->parent() )
         {

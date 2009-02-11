@@ -55,7 +55,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mBgColor( QColor( 255, 255, 255 ) )
-, mCommandFgColor( QColor( 0, 255, 255 ) )
+, mCommandFgColor( QColor( 0, 0, 255 ) )
 , mCommandBgColor( mBgColor )
 , mSystemMessageFgColor( QColor( 255,0,0 ) )
 , mSystemMessageBgColor( mBgColor )
@@ -948,6 +948,21 @@ void TConsole::print( const char * msg )
     console->showNewLines();
 }
 
+void TConsole::printDebug( QString & msg )
+{
+    QColor fgColor = QColor(0,0,0);
+    QColor bgColor = QColor(255,255,255);
+    int lineBeforeNewContent = buffer.getLastLineNumber();
+    buffer.append( msg, 
+                   fgColor,
+                   bgColor, 
+                   false, 
+                   false,
+                   false );
+    buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatCurrent );
+    console->showNewLines();
+}
+
 void TConsole::print( QString & msg )
 {
     //QColor fgColor = QColor(0,0,0);
@@ -985,6 +1000,7 @@ void TConsole::printSystemMessage( QString & msg )
     if( mIsDebugConsole ) 
     {
         bgColor = mBgColor;
+        fgColor = mFgColor;
     }
     else
     {

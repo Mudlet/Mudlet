@@ -77,7 +77,7 @@ void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID )
     }
     if( ! pOldParent )
     {
-        removeActionRootNode( pChild );    
+        removeActionRootNode( pChild );  
     }
     if( pNewParent ) 
     {
@@ -103,7 +103,7 @@ TAction * ActionUnit::getAction( int id )
     QMutexLocker locker(& mActionUnitLock); 
     if( mActionMap.find( id ) != mActionMap.end() )
     {
-        return mActionMap[id];
+        return mActionMap.value( id );
     }
     else
     {
@@ -166,7 +166,7 @@ void ActionUnit::addAction( TAction * pT )
         pT->setID( getNewID() );
     }
     
-    mActionMap[pT->getID()] = pT;
+    mActionMap.insert(pT->getID(), pT);
 }
 
 void ActionUnit::removeAction( TAction * pT )

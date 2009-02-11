@@ -32,7 +32,7 @@ TDebug::TDebug()
 
 TDebug & TDebug::operator>>( const int code) 
 { 
-    mudlet::mpDebugConsole->print( msg );
+    mudlet::mpDebugConsole->printDebug( msg );
 }
 
 TDebug::~TDebug()

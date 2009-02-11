@@ -145,6 +145,7 @@ public:
       void              print( QString &, QColor &, QColor & );
       void              print( QString & msg );
       void              print( const char * );
+      void              printDebug( QString & );
       void              printSystemMessage( QString & msg );
       void              printOnDisplay(QString  &);
       void              printCommand( QString & );
