@@ -55,7 +55,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mBgColor( QColor( 255, 255, 255 ) )
-, mCommandFgColor( QColor( 0, 0, 255 ) )
+, mCommandFgColor( QColor( 213, 195, 0 ) )
 , mCommandBgColor( mBgColor )
 , mSystemMessageFgColor( QColor( 255,0,0 ) )
 , mSystemMessageBgColor( mBgColor )
@@ -134,6 +134,8 @@ void TConsole::closeEvent( QCloseEvent *event )
         {
             qDebug()<<"The user wants to save the profile.";
             mpHost->mSaveProfileOnExit = true;
+            mpHost->serialize();
+            mpHost->mSaveProfileOnExit = false;
         }
     }
     event->accept();
@@ -924,13 +926,13 @@ void TConsole::printCommand( QString & msg )
 
 void TConsole::echo( QString & msg )
 {
-    qDebug()<<"TConsole::echo("<<msg<<")";
     QPoint P = mUserCursor;
     if( mTriggerEngineMode )
     {
         P.setX( mCurrentLine.size()-1 );
     }
     insertText( "\n"+msg, P );
+    console->showNewLines();
 }
 
 void TConsole::print( const char * msg )

@@ -133,7 +133,7 @@ void Host::sendRaw( QString command )
 }
 
 
-QStringList Host::getBufferTable( int from, int to )
+/*QStringList Host::getBufferTable( int from, int to )
 {
     QStringList bufList;
     if( (mTextBufferList.size()-1-to<0) || (mTextBufferList.size()-1-from<0) || (mTextBufferList.size()-1-from>=mTextBufferList.size()) || mTextBufferList.size()-1-to>=mTextBufferList.size() )
@@ -146,7 +146,7 @@ QStringList Host::getBufferTable( int from, int to )
         bufList << mTextBufferList[i];
     }
     return bufList;
-}
+} 
 
 QString Host::getBufferLine( int line )
 {
@@ -158,15 +158,16 @@ QString Host::getBufferLine( int line )
     }
     text = mTextBufferList[mTextBufferList.size()-1-line];
     return text;
-}
+} */
 
 void Host::incomingStreamProcessor( QString & data, QString & prompt )
 {
-    mTextBufferList.append( data );
+    /*mTextBufferList.append( data );
     if( mTextBufferList.size() > 500 )
     {
         mTextBufferList.pop_front();    
-    }
+    } */
+    
     mTriggerUnit.processDataStream( data );
     
     QList<QString> eventList = mEventMap.keys();
@@ -256,10 +257,10 @@ void Host::killTimer( QString & name )
     mTimerUnit.killTimer( name );    
 }
 
-QStringList Host::getLastBuffer()
+/*QStringList Host::getLastBuffer()
 {
     return mTextBufferList;    
-}
+} */
 
 void Host::enableKey( QString & name )
 {

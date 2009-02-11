@@ -209,7 +209,10 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         if( mIsScriptTree ) 
             mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID );
         if( mIsActionTree ) 
+        {
             mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID );
+            mpHost->getActionUnit()->updateToolbar();
+        }
         
         mChildID = 0;
         mOldParentID = 0;
@@ -241,9 +244,6 @@ void TTreeWidget::dropEvent(QDropEvent *event)
     
     if( pItem )
     {
-        if( mIsTimerTree )
-        {
-        }
         /*if( ! pItem->parent() )
         {
             qDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";

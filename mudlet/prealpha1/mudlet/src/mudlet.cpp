@@ -370,7 +370,6 @@ EAction * mudlet::generateAction( QString name, QString icon, QToolBar * pT )
 
 void mudlet::closeEvent(QCloseEvent *event)
 {
-    
     mpDebugConsole->close();
     
     foreach( TConsole * pC, mConsoleMap )
@@ -378,27 +377,17 @@ void mudlet::closeEvent(QCloseEvent *event)
         qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
         if( pC->mpHost->getName() != "Default Host" )
         {
-            if( ! pC->mpHost->mSaveProfileOnExit )
-            {
-                if( QMessageBox::question( this, "Question", "Do you want to save the profile "+pC->mpHost->getName(), QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
-                {
-                    qDebug()<<"The user wants to save the profile.";
-                    pC->mpHost->mSaveProfileOnExit = true;
-                }
-                else 
-                {
-                    qDebug()<<"User doesn't like to save the profile.";
-                    pC->mpHost->mSaveProfileOnExit = false;
-                }
-                pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
-                pC->mpHost->mpEditorDialog->close();    
-            }
+            pC->mpHost->mSaveProfileOnExit = true;
+            pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
+            pC->mpHost->mpEditorDialog->close();    
         }
     }
     
     writeSettings();
     event->accept();
 }
+
+
 
 void mudlet::readSettings()
 {

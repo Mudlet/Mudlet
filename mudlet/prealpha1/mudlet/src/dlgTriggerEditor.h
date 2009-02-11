@@ -62,7 +62,7 @@ public:
         
                                 dlgTriggerEditor( Host * );
     void                        fillout_form();
-        
+    void                        closeEvent(QCloseEvent *event);    
     QsciLexerLua *              mpLuaLexer;
 
 signals:
@@ -144,6 +144,8 @@ public slots:
     
 private:
     
+    void                        readSettings();
+    void                        writeSettings();
     void                        addScript( bool );
     void                        addAlias( bool );
     void                        addTimer( bool isFolder );

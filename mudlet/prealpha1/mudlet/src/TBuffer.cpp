@@ -551,7 +551,15 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
         return false;            
 }
 
-
+QStringList TBuffer::getEndLines( int n )
+{
+    QStringList linesList;
+    for( int i=getLastLineNumber()-n; i<getLastLineNumber(); i++ )
+    {
+        linesList << line( i );
+    }
+    return linesList;
+}
 
 
 

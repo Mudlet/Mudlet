@@ -141,12 +141,12 @@ bool TCommandLine::event( QEvent * event )
             return true;
             
         case Qt::Key_PageUp:
-            mpConsole->scrollUp( 40 );
+            mpConsole->scrollUp( mpHost->mScreenHeight );
             ke->accept();
             return true;
             
         case Qt::Key_PageDown:
-            mpConsole->scrollDown( 40 );
+            mpConsole->scrollDown( mpHost->mScreenHeight );
             ke->accept();
             return true;
             
@@ -174,6 +174,7 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     mHistoryBuffer = 0;
     setPalette( mRegularPalette );
     
+    mHistoryList.push_front( text() );
     QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
     if( commandList.size() == 0 ) 
         mpHost->send( "" );
@@ -181,9 +182,9 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     for( int i=0; i<commandList.size(); i++ )
     {
         mHistoryMap[ commandList[i] ] = 0;
-        mHistoryList.push_front( commandList[i].append("\n" ) );
+        
         //qDebug()<<"TCommandLine:enterCommand() sending to Host:"<<mpHost<<" text="<<commandList[i];
-        mpHost->send( commandList[i].replace(QChar('\n'),"") );
+        mpHost->send( commandList[i] );
     }
     mAutoCompletionTyped = "";
     mAutoCompletion = false;
@@ -214,7 +215,7 @@ void TCommandLine::handleTabCompletion( bool direction )
         mUserKeptOnTyping = false;
         mTabCompletionCount = 0;
     }
-    QStringList bufferList = mpHost->getLastBuffer();
+    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( 50 );
     QString buffer = bufferList.join("");
     buffer.replace(QChar('\n'), "" );
     QStringList wordList = buffer.split( QRegExp( "\\W+" ), QString::SkipEmptyParts );
@@ -240,7 +241,7 @@ void TCommandLine::handleTabCompletion( bool direction )
             lastWord = mTabCompletionTyped;
         }
         //TODO: speed optimization
-        QStringList filterList = wordList.filter( QRegExp( "\\b"+lastWord+".*" ) );
+        QStringList filterList = wordList.filter( QRegExp( "\\b"+lastWord+".*",Qt::CaseInsensitive  ) );
         QMap<QString, int> propsalMap;
         for( int i=0; i<filterList.size(); i++ )
         {
@@ -301,6 +302,32 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyDown(QKeyEvent *event)
 {
+     //cout<<"selectedText.size="<<(int)selectedText().size()<<" text.size="<<(int)text().size()<<endl;
+    if( selectedText().size() == text().size() )  
+    {
+        mHistoryBuffer--;
+        if( mHistoryBuffer < 0 )
+        {
+            mHistoryBuffer = mHistoryList.size()-1;
+            if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
+        }
+        setText( mHistoryList[mHistoryBuffer]);
+        selectAll();
+    }
+    else
+    {
+        handleAutoCompletion();
+    }
+    
+    
+}
+
+// cursor up: turns on autocompletion mode and cycles through all possible matches
+// In case nothing has been typed it cycles through the command history in 
+// reverse order compared to cursor down.
+
+void TCommandLine::historyUp(QKeyEvent *event)
+{
     if( mAutoCompletion )
     {
         mAutoCompletionCount -= 2;
@@ -319,29 +346,6 @@ void TCommandLine::historyDown(QKeyEvent *event)
         setText( mHistoryList[mHistoryBuffer] );
         selectAll();
     }
-}
-
-// cursor up: turns on autocompletion mode and cycles through all possible matches
-// In case nothing has been typed it cycles through the command history in 
-// reverse order compared to cursor down.
-
-void TCommandLine::historyUp(QKeyEvent *event)
-{
-    cout<<"selectedText.size="<<(int)selectedText().size()<<" text.size="<<(int)text().size()<<endl;
-    if( selectedText().size() == text().size() )  
-    {
-        mHistoryBuffer--;
-        if( mHistoryBuffer < 0 )
-        {
-            mHistoryBuffer = mHistoryList.size()-1;
-            if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
-        }
-        setText( mHistoryList[mHistoryBuffer]);
-        selectAll();
-    }
-    else
-    {
-        handleAutoCompletion();
-    }
+    
 }
 

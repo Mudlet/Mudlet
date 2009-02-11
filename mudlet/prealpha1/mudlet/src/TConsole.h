@@ -153,7 +153,8 @@ public:
       
       TTextEdit *       console;
       TTextEdit *       console2;
-      Host *            mpHost;  
+      Host *            mpHost; 
+      TBuffer           buffer;
     
 private:
           
@@ -191,7 +192,7 @@ private:
       TChar             mFormatCurrent;
       TChar             mFormatBasic;
       TChar             mFormatSystemMessage;
-      TBuffer           buffer;
+      
 
 signals:
     

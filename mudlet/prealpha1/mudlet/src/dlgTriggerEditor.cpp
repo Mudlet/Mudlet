@@ -430,8 +430,33 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     popupArea->hide();
     frame_4->hide();
     mpSearchArea->hide();
+    
+    readSettings();
 }
     
+void dlgTriggerEditor::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+    event->accept();
+}
+
+
+void dlgTriggerEditor::readSettings()
+{
+    QSettings settings("Mudlet", "Mudlet 1.0");
+    QPoint pos = settings.value("script_editor_pos", QPoint(0, 0)).toPoint();
+    QSize size = settings.value("script_editor_size", QSize(750, 550)).toSize();
+    resize( size );
+    move( pos );
+}
+
+void dlgTriggerEditor::writeSettings()
+{
+    QSettings settings("Mudlet", "Mudlet 1.0");
+    settings.setValue("script_editor_pos", pos());
+    settings.setValue("script_editor_size", size());
+}
+
 
 void dlgTriggerEditor::slot_switchToExpertMonde()
 {
@@ -1532,7 +1557,18 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
             pT->setIsMultiline( isMultiline );
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
             QIcon icon;
-            if( pT->isFolder() )
+            if( pT->isFilterChain() )
+            {
+                if( pT->isActive() )
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter.png")), QIcon::Normal, QIcon::Off);    
+                }
+                else
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);    
+                } 
+            }        
+            else if( pT->isFolder() )
             {
                 if( pT->isActive() )
                 {
@@ -1541,7 +1577,7 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
                 else
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);    
-                }
+                } 
             }
             else
             {
@@ -2078,7 +2114,18 @@ void dlgTriggerEditor::fillout_form()
         {
             expand_child_triggers( pT, (QTreeWidgetItem*)pItem );
         }
-        if( pT->isFolder() )
+        if( pT->isFilterChain() )
+        {
+            if( pT->isActive() )
+            {
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter.png")), QIcon::Normal, QIcon::Off);    
+            }
+            else
+            {
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);    
+            } 
+        }        
+        else if( pT->isFolder() )
         {
             if( pT->isActive() )
             {
@@ -2087,7 +2134,7 @@ void dlgTriggerEditor::fillout_form()
             else
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);    
-            }
+            } 
         }
         else
         {
@@ -2403,7 +2450,18 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
         {
             expand_child_triggers( pT, pItem );
         }
-        if( pT->isFolder() )
+        if( pT->isFilterChain() )
+        {
+            if( pT->isActive() )
+            {
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter.png")), QIcon::Normal, QIcon::Off);    
+            }
+            else
+            {
+                icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);    
+            } 
+        }        
+        else if( pT->isFolder() )
         {
             if( pT->isActive() )
             {
@@ -2412,7 +2470,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
             else
             {
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);    
-            }
+            } 
         }
         else
         {

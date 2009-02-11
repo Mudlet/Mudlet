@@ -102,8 +102,8 @@ public:
     void               disableKey( QString & );
     void               killTimer( QString & );
     void               killTrigger( QString & );
-    QStringList        getBufferTable( int, int );
-    QString            getBufferLine( int );
+    //QStringList        getBufferTable( int, int );
+    //QString            getBufferLine( int );
     bool               serialize();
     void               serialize_options2( QString );
     void               restore_options2( QString );
@@ -128,7 +128,7 @@ public:
     QString            readProfileData( QString profile, QString item );
     void               writeProfileData( QString profile, QString item, QString what );
     void               writeProfileHistory( QString profile, QString item, QString what );
-    QStringList        getLastBuffer();  
+    // QStringList        getLastBuffer();  
     bool               exportHost( QString );
     bool               importHost( QString );
     bool               loadHostProfile( QString );

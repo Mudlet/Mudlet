@@ -1,5 +1,8 @@
 <RCC>
   <qresource>
+    <file>icons/filter-locked.png</file>
+    <file>icons/filter.png</file>
+    <file>icons/view-filter.png</file>
     <file>icons/document-save-all.png</file>
     <file>icons/offsettimer-off.png</file>
     <file>icons/offsettimer-on.png</file>

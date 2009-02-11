@@ -240,7 +240,6 @@ int TLuaInterpreter::getLines( lua_State * L )
 // luaTable result[line_number, content] = getLines( from_cursorPos, to_cursorPos )
 int TLuaInterpreter::getBufferTable( lua_State * L )
 {
-    qDebug()<<"TLuaInterpreter::getBufferTable() enter ..";
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) ) 
     {
@@ -264,7 +263,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     { 
         luaTo=lua_tonumber( L, 2 );
     }      
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
+    /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QStringList strList = pHost->getBufferTable( luaFrom, luaTo );
     if( mudlet::debugMode ) qDebug()<<"TLuaInterpreter::getBufferTable() strList="<<strList;
     lua_newtable(L);
@@ -273,8 +272,8 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
         lua_pushnumber( L, i+1 );
         lua_pushstring( L, strList[i].toLatin1().data() );
         lua_settable(L, -3);
-    }
-    return 1;
+    } */
+    return 0;
 }
 
 // returns current y position of the user cursor
@@ -447,11 +446,11 @@ int TLuaInterpreter::getBufferLine( lua_State * L )
         luaLine = lua_tonumber( L, 1 );
     }
     
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
+    /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString line = pHost->getBufferLine( luaLine );
     if( mudlet::debugMode ) qDebug()<<"TLuaInterpreter::getBufferLine() line="<<line;
-    lua_pushstring( L, line.toLatin1().data() );
-    return 1;
+    lua_pushstring( L, line.toLatin1().data() );*/
+    return 0;
 }
 
 // replace( sessionID, replace_with )
@@ -1466,8 +1465,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger );
     lua_register( pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount );
     lua_register( pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber );
-    lua_register( pGlobalLua, "getBufferTable", TLuaInterpreter::getBufferTable );
-    lua_register( pGlobalLua, "getBufferLine", TLuaInterpreter::getBufferLine );
+    //lua_register( pGlobalLua, "getBufferTable", TLuaInterpreter::getBufferTable );
+    //lua_register( pGlobalLua, "getBufferLine", TLuaInterpreter::getBufferLine );
     lua_register( pGlobalLua, "send", TLuaInterpreter::sendRaw );
     lua_register( pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup );
     lua_register( pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger );

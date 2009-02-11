@@ -70,6 +70,7 @@ public:
     QList<int>       getRegexCodePropertyList()      { QMutexLocker locker(& mLock); return mRegexCodePropertyList; }
     void             compile();
     void             execute( QStringList & matches );
+    bool             isFilterChain();
     void             setRegexCodeList( QStringList regex, QList<int> regexPorpertyList );        
     QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
     void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }

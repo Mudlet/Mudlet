@@ -443,6 +443,18 @@ bool TTrigger::match( QString & toMatch )
     return false;
 }
 
+bool TTrigger::isFilterChain()
+{
+    if( ( mRegexCodeList.size() > 0 ) && ( hasChildren() ) )
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 bool TTrigger::registerTrigger()
 {
     if( ! mpHost )

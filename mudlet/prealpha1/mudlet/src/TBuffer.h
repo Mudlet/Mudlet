@@ -74,6 +74,7 @@ public:
     bool moveCursor( QPoint & where );
     QPoint & insertText( QString & what, QPoint & where );
     int getLastLineNumber();
+    QStringList getEndLines( int );
     
     std::deque<TChar *> bufferLine;
     std::deque< std::deque<TChar*> > buffer; 
