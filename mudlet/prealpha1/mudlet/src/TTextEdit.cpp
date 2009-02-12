@@ -31,6 +31,7 @@
 #include "TTextEdit.h"
 #include <math.h>
 
+#ifdef WIN32
 struct tm * localtime_r (const time_t *timer, struct tm *result)
 {
     struct tm *local_result;
@@ -42,6 +43,7 @@ struct tm * localtime_r (const time_t *timer, struct tm *result)
     memcpy (result, local_result, sizeof (result));
     return result;
 }
+#ifdef WIN32
 
 TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole ) 
 : QWidget( pW )
