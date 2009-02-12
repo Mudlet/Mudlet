@@ -95,7 +95,7 @@ void TTextEdit::setScroll(int cursor, int lines)
 }
 */
 
-std::string TTextEdit::getCurrentTime()
+/*std::string TTextEdit::getCurrentTime()
 {
     time_t t;
     time(&t);
@@ -109,7 +109,7 @@ std::string TTextEdit::getCurrentTime()
     s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
     string time = s.str();
     return time;
-} 
+} */
 
 void TTextEdit::updateScreenView()
 {
