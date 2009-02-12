@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     
     mudlet::debugMode = false;
     HostManager::self();
-    HostManager::self()->restore();  
+    //HostManager::self()->restore();  
     mudlet::self()->show();
     
     splash.showMessage("All data has been loaded successfully.\n\nHave fun!");
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     while( t.elapsed() < 1500 ){}
     splash.finish( mudlet::self() );
     app.exec();
-    HostManager::self()->serialize();
+    //HostManager::self()->serialize();
 }
 
 

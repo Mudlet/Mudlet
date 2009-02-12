@@ -296,6 +296,7 @@ void Host::connectToServer()
 
 bool Host::serialize()
 {
+    return false;
     if( ! mSaveProfileOnExit )
     {
         return true;

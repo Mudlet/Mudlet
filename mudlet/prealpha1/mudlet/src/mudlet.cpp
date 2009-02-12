@@ -375,11 +375,14 @@ void mudlet::closeEvent(QCloseEvent *event)
     foreach( TConsole * pC, mConsoleMap )
     {
         qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
-        if( pC->mpHost->getName() != "Default Host" )
+        if( pC->mpHost->getName() != "default_host" )
         {
-            pC->mpHost->mSaveProfileOnExit = true;
-            pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
-            pC->mpHost->mpEditorDialog->close();    
+            pC->close();
+            if( pC->mpHost->mpEditorDialog )
+            {
+                pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
+                pC->mpHost->mpEditorDialog->close();    
+            }
         }
     }
     

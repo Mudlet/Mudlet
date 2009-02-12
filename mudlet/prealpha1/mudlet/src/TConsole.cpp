@@ -65,6 +65,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mTriggerEngineMode( false )
 {
     
+    profile_name = mpHost->getName();
     mFormatSystemMessage.bgColor = mBgColor;
     mFormatSystemMessage.fgColor = QColor( 255, 0, 0 );
         
@@ -129,11 +130,12 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 
 void TConsole::closeEvent( QCloseEvent *event )
 {
-    if( ! mpHost->mSaveProfileOnExit )
+    qDebug()<<"EXITING::TConsole::"<<profile_name;
+    if( profile_name != "default_host" )
     {
-        if( QMessageBox::question( this, "Question", "Do you want to save the profile data?", QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+        if( QMessageBox::question( this, "Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
         {
-            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/current";
+            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
             QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh:mm:ss")+".xml";
             QDir dir_xml;
             if( ! dir_xml.exists( directory_xml ) )

@@ -157,7 +157,7 @@ public:
       TBuffer           buffer;
     
 private:
-          
+    QString           profile_name;   
       //std::string       getCurrentTime();
       void              translateToPlainText( QString & );
       QString           translate( QString & );
