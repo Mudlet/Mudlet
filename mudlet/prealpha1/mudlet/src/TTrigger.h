@@ -125,7 +125,7 @@ private:
     bool             mIsMultiline;
     int              mConditionLineDelta;
     QString          mCommand;
-    std::map<int,TMatchState*> mConditionMap;
+    std::map<TMatchState*, TMatchState*> mConditionMap;
     
     QMutex           mLock;
 };

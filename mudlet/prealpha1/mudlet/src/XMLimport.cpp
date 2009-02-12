@@ -577,6 +577,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             }
         }
     }
+    pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
     qDebug()<<"[REGISTER] Trigger:"<<pT->getName();
     mpHost->getTriggerUnit()->registerTrigger( pT );
     
