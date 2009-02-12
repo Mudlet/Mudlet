@@ -115,6 +115,8 @@ void TTextEdit::updateScreenView()
 {
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     mScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    mpHost->mScreenHeight = mScreenHeight;
+    mpHost->mScreenWidth = mScreenWidth;
     if( ! mIsDebugConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();

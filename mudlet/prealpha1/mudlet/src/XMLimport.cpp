@@ -679,6 +679,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     }
     qDebug()<<"[REGISTER] Timer:"<<pT->getName();
     pT->registerTimer();
+    pT->mIsActive = pT->mUserActiveState;
     
 }
 

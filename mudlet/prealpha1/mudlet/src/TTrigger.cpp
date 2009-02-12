@@ -192,6 +192,33 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
                 posList.append( mRegexMap[regexNumber].pos(ii) );
             }
         }
+        // collect all possible matches
+        int pos = posList.size()-1;
+        if( mudlet::debugMode ) TDebug()<<"#2.teil-1# pos="<<pos>>0;
+        if( pos > -1 )
+        {
+            pos = posList[ posList.size()-1 ]+1;
+            if( mudlet::debugMode ) TDebug()<<"#2.teil-2# pos="<<pos>>0;            
+            while( mRegexMap[regexNumber].indexIn( toMatch, pos ) > -1 )
+            {
+                
+                for( int ii=1; ii<=mRegexMap.value(regexNumber).numCaptures(); ii++ )
+                {
+                    if( mudlet::debugMode ) TDebug()<<"#2.teil-3#pos="<<pos>>0;
+                    if( mRegexMap.contains( regexNumber ) )
+                    {
+                        captureList << mRegexMap[regexNumber].cap(ii);
+                        if( mudlet::debugMode ) TDebug()<<"#2.teil#capture group #"<<QString::number(ii)<<" = <"<<mRegexMap[regexNumber].cap(ii)<<">">>0;
+                        posList.append( mRegexMap[regexNumber].pos(ii) );
+                    }
+                } 
+                pos += mRegexMap[regexNumber].matchedLength();
+                //pos = posList[posList.size()-1]+1;
+            }
+            if( mudlet::debugMode ) TDebug()<<"#2.teil *ENDE*# no more pos="<<pos>>0;
+        }
+                
+                
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups( captureList, posList );
         // call lua trigger function with number of matches and matches itselves as arguments
@@ -401,7 +428,7 @@ bool TTrigger::match( QString & toMatch )
             {
                 k++;
                 if( mudlet::debugMode ) TDebug()<<"---> multiline conditons: condition total="<<mConditionMap.size()<<" checking conditon #"<<k>>0;
-                qDebug()<<"TMatchState #"<<k<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
+                //qDebug()<<"TMatchState #"<<k<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
                 if( (*it).second->isComplete() )
                 {
                     if( mudlet::debugMode ) TDebug()<<"multiline trigger name="<<mName<<" *FIRES* all conditons are fullfilled! executing script">>0;
@@ -422,8 +449,6 @@ bool TTrigger::match( QString & toMatch )
                     if( mudlet::debugMode ) TDebug()<< "removing condition from conditon table.";
                     mConditionMap.erase( *it );
                 }
-                else
-                    qDebug()<<"mConditionMap key not in map (doublicate) id="<<*it;
             }
             if( triggerFires )
             {

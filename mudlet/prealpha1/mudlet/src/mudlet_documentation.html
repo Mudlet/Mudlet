@@ -5,7 +5,7 @@
 	<TITLE></TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 2.4  (Linux)">
 	<META NAME="CREATED" CONTENT="20081028;19075200">
-	<META NAME="CHANGED" CONTENT="20090211;23394500">
+	<META NAME="CHANGED" CONTENT="20090212;19315800">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { size: 21cm 29.7cm }
@@ -35,24 +35,6 @@
 this document a regular expression (regex) will be colored blue, Text
 examples will be colored red and Lua example code will be colored
 green. </FONT></FONT>
-</P>
-<H1>Exporting and Importing Profiles or Packages</H1>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-Mudlet stores your profiles as XML files in your home directory under
-.config/mudlet/profiles/your_profile_name/current (note the leading
-dot).</P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-The file name consists of the date and time, the profile was written
-to disc.<BR>You can export packages of a trigger branch, alias
-branch, function key, scripts etc. by clicking on a folder in the
-tree of the particular item in question and then click on the export
-icon. You'll be asked to give a filename for your package. You can
-export arbitrarily complex structures by moving them into a folder.
-You cannot mix items at the moment. Importing packages is straight
-forward and fully automatic. <BR>You can also import entire profiles
-as they are basically packages.</P>
-<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-<BR>
 </P>
 <H1>Multi Session Gameing</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
@@ -95,7 +77,7 @@ you have started typing pressing cursor up will result in
 autocompletion. <BR>4. To get out of autocompletion you can press the
 ESC key any time.</P>
 <H1>Mudlet's Trigger Engine</H1>
-<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Simple
 Trigger Matching</FONT></FONT></FONT></P>
 <P CLASS="western">Type your trigger in the input line below the
@@ -116,7 +98,7 @@ trigger expression input line and add it to the expression list. Then
 enter the command you like to send to the MUD if the trigger matches
 e.g. &quot;drink water&quot; and then you are done. The more advanced
 trigger types are explained below.</P>
-<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Simple
 Highlighter Triggers</FONT></FONT></FONT></P>
 <P CLASS="western">If you want to highlight the word &quot;pond&quot;
@@ -125,7 +107,7 @@ to the script editor on the lower right side of the Script Editor
 window:<BR><FONT COLOR="#00ae00"><FONT FACE="Andale Mono">selectString(
 &quot;pond&quot;, 1 )<BR>fgColorRed()<BR>bgColorBlue()</FONT></FONT><BR><BR><BR>
 </P>
-<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>&quot;AND&quot;
 and &quot;OR&quot; Condition Triggers</FONT></FONT></FONT></P>
 <P CLASS="western">AND -Triggers execute their respective command or
@@ -141,7 +123,7 @@ or &quot;You hear a loud Plop!&quot; However, it will not execute on
 condition specified a &quot;P&quot; in upper case. <BR>The simplest
 form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains,
 whatever you'd like to call it.</P>
-<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Trigger
 Chains - Filter Chains</FONT></FONT></FONT></P>
 <P CLASS="western">Imagine the following scenario: You want to
@@ -172,7 +154,7 @@ This example is trivial, but using filter chains will rapidly show
 you how formerly complicated things that could only be solved with
 very complicated regular expressions can be solved easily now with a
 couple of filter chains.</P>
-<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Multi
 Condition Triggers</FONT></FONT></FONT></P>
 <P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-bottom: 0cm">
@@ -194,9 +176,129 @@ will *NOT* run unless the margin of lines is set to 11. If condition
 ignored and must be true again after condidtion #2 has been
 true.<BR>Conditions can also be Lua Functions that return a boolean
 truth value. You can mix all types of condtions.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+Example: Let's go back to our pond &amp; frog example. We have
+explained the difference between AND-triggers and OR-triggers. If you
+have a room description consisting of 3 lines: 
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+1. You see a pond</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+2. You see a frog.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+3. The frog sits on a stone.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+<BR>
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+Every single one of these 3 lines will be fed into the trigger engine
+one after another. If we define an OR-trigger with a condition list
+consisting of 3 conditions (Remember that the multi condition switch
+must be turned off to get an OR-trigger):</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+condition #1: pond</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+condition #2: frog</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+condition #3: stone</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 100%">
+<BR>
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+The trigger will fire the command or script 3 times i. e. the trigger
+will execute on each line it is matched against because in every line
+at least one condition evaluates to true.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+in line #1 we get: pond = true. In line #2 we get frog = true and in
+line #3 two conditions are true i.e. frog=true and stone = true;
+Because an OR-trigger fires on the first condition that is true and
+ignores the rest the trigger will only execute 3 times on these 3
+lines although 4 conditions are true.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+<BR>
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+To complicate matters, however, you don't want your trigger to fire 3
+commands, because you want to use this room description as a whole to
+fire your trigger e. g. this pond is the only kind of ponds in the
+entire world that doesn't have poisoned water. So you want to make
+sure that you only drink water from a pond of this kind and from no
+other pond. Your solution is to use Multi Conditon Triggers. If you
+check the MCT checkbox this trigger will fire only once from now on -
+and only if all conditions are met i e. you can guarantee that you
+only drink water from a good pond because your drinking trigger is
+matching on the entire room description.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+<BR>
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+Sadly, there are many unfriendly people in this world and somebody
+goes around and poisons your good ponds. Consequently, you would want
+to examine the frog and find out if it is poisoned before drinking
+water from the pond. 
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+<BR>
+</P>
 <P CLASS="western" ALIGN=CENTER STYLE="margin-right: 0cm; margin-bottom: 0cm">
 *** This article will be extended later ***</P>
-<H1></H1>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Temporary
+Triggers (scripting only)</FONT></FONT></FONT></P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-bottom: 0cm">
+Temporary triggers are lightweight triggers that are tailored for
+typical scripting needs. These are only available via Lua scripting.
+They are not stored in profiles, but stay in memory as long as the
+program runs or until they are deleted (killTimer()).</P>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Line
+Triggers (scripting only)</FONT></FONT></FONT></P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-bottom: 0cm">
+Line triggers trigger on a specified line in the future - or a
+sequence of lines - irrespective of the content of the line. This
+type of triggers can be very handy in scripting if you know what is
+coming e.g. you want to parse a table from the MUD, maps etc.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="margin-right: 0cm; margin-bottom: 0cm">
+<BR>
+</P>
+<H1>The Timer Engine</H1>
+<P CLASS="western">Mudlet supports 3 different sort of timers:</P>
+<OL>
+	<LI><P CLASS="western">Timers that fire repeatedly in a certain
+	interval specified by the user.</P>
+	<LI><P CLASS="western">Offset Timers are child timers of a parent
+	timer and fire a single shot after a specified timeout after their
+	parent firied its respective timeout. This interval is an offset to
+	the interval of its parent timer. Example: parent timer fires every
+	30 seconds and by doing so kicks off 3 offset timers with an offset
+	of 5 seconds each. Consequently, the 3 children fire 5 seconds after
+	each time the parent timer fired. Offset timers differ visually from
+	regular timers and are represented with a + icon for offset. Offset
+	timers can be turned on and off by the user just like any other
+	timer.</P>
+	<LI><P CLASS="western">Temporary Timers that very useful for
+	scripting. They behave like regular timers, but they are one shot
+	only timers. Temporary timers can not be accessed from the GUI and
+	are not saved in profiles.</P>
+</OL>
+<H1>Exporting and Importing Profiles or Packages</H1>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+Mudlet stores your profiles as XML files in your home directory under
+.config/mudlet/profiles/your_profile_name/current (note the leading
+dot).</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+The file name consists of the date and time, the profile was written
+to disc.<BR>You can export packages of a trigger branch, alias
+branch, function key, scripts etc. by clicking on a folder in the
+tree of the particular item in question and then click on the export
+icon. You'll be asked to give a filename for your package. You can
+export arbitrarily complex structures by moving them into a folder.
+You cannot mix items at the moment. Importing packages is straight
+forward and fully automatic. <BR>You can also import entire profiles
+as they are basically packages.</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<BR>
+</P>
 <H1>Quick Lua syntax overview</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Lua
@@ -255,6 +357,15 @@ matches[1]</FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">c = a .. b
 and e will equal “TomBetty”</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">To output a
+table you can use a conveniance function printTable( name ). This
+function is defined in LuaGlobal.lua and can be found in your home
+directory under ./mudlet (note the leading dot ) Profiles and
+mudlet_documentation.html are stored in this directory as well.</FONT></FONT></P>
 <H1>Lua interface functions to Mudlet – or how do I access
 triggers, timers etc. from Lua scripts</H1>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; page-break-after: avoid">
@@ -282,7 +393,7 @@ matches[3] is undefined.</FONT></FONT></P>
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">In your Lua
 script you may write following program in order to print the number
 and status of your weapons on the screen:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm"><CODE CLASS="regex-western">You
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm"><CODE CLASS="regex-western">You
 have (\d+) weapons and they are (?:(\b\w+\W+)+)</CODE></P>
 <P CLASS="western" STYLE="margin-left: 2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; line-height: 100%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Times New Roman, serif">number_of_weapons
@@ -423,12 +534,12 @@ variable command that you can change in the context of Alias scripts.</FONT></FO
 <FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Alias take
 regular expressions, as well. As a result, you can use following
 regex and script to talk like Yoda:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm"><CODE CLASS="regex-western">say
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm"><CODE CLASS="regex-western">say
 (\w+).*(\w*).*(.*)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm; margin-top: 0cm; margin-bottom: 0cm">
 <CODE CLASS="code-western">send( &quot;say &quot; .. matches[3] ..&quot;
 &quot; .. matches[1] ..&quot; &quot;.. matches[2] )</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm; margin-top: 0cm; margin-bottom: 0cm">
 <BR>
 </P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
@@ -519,11 +630,11 @@ the script you write:</SPAN></FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western">selectString(“ugly monster”,1)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western">setFgColor(255,0,0)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western">setBgColor(255,255,255)</CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
@@ -539,7 +650,7 @@ and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT></FO
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western">selectSection( 28, 3 )</CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
@@ -549,7 +660,7 @@ and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT></FO
 example would select the second Tom. The first argument to
 selectSection is the cursor position within the line and the second
 argument is the length of the selection.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.2cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 8.7cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">selectCaptureGroup(
 number )</SPAN></FONT></FONT></CODE></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
@@ -691,7 +802,17 @@ Event Handlers and Raising Events</FONT></FONT></FONT></CODE></P>
 <P CLASS="western"><CODE CLASS="code-western"><FONT COLOR="#008000">raiseEvent(
 string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR><BR>
 </P>
-<H1>Function And Variable Index</H1>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4><CODE CLASS="western">Handling
+Tables in Lua</CODE></FONT></FONT></FONT></P>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4><CODE CLASS="western">Nick
+Gammon has written a very nice overview on how to deal with Lua
+tables. You can find it here:
+<A HREF="http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036">http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036</A>.</CODE></FONT></FONT></FONT></P>
+<P STYLE="margin-right: 0cm; margin-top: 0.42cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Function
+And Variable Index</FONT></FONT></FONT></P>
 <P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
 <BR>
 </P>
