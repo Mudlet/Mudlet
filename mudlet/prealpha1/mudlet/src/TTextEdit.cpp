@@ -43,7 +43,7 @@ struct tm * localtime_r (const time_t *timer, struct tm *result)
     memcpy (result, local_result, sizeof (result));
     return result;
 }
-#ifdef WIN32
+#endif
 
 TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole ) 
 : QWidget( pW )
