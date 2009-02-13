@@ -100,7 +100,14 @@ int main(int argc, char *argv[])
         }
         file_lua.copy( directory+"/LuaGlobal.lua" );
     }
-    
+    QString fonts = directory+"/fonts/ttf-bitstream-vera-1.10";
+    QDir fontDir( "fonts/ttf-bitstream-vera-1.10/" );
+    fontDir.mkpath( fonts );
+    QStringList fontDirList = fontDir.entryList(QDir::Files);
+    for( int i=0; i<fontDirList.size();i++ )
+    {
+        QFile::copy( "fonts/ttf-bitstream-vera-1.10/"+fontDirList[i], fonts+"/"+fontDirList[i] );    
+    }        
     
     mudlet::self();
     
