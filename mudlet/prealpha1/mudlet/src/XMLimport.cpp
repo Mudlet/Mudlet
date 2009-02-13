@@ -577,6 +577,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             }
         }
     }
+    pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
     qDebug()<<"[REGISTER] Trigger:"<<pT->getName();
     mpHost->getTriggerUnit()->registerTrigger( pT );
     
@@ -678,6 +679,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     }
     qDebug()<<"[REGISTER] Timer:"<<pT->getName();
     pT->registerTimer();
+    pT->mIsActive = pT->mUserActiveState;
     
 }
 

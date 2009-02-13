@@ -107,10 +107,10 @@ bool TCommandLine::event( QEvent * event )
         //case Qt::Key_Insert:
         //break;
             
-        case Qt::Key_Enter:
+            /*  case Qt::Key_Enter:
             enterCommand(ke);
             ke->accept();
-            return true;
+            return true;*/
             
         case Qt::Key_Return:
             enterCommand(ke);

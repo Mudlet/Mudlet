@@ -1230,7 +1230,7 @@ void TLuaInterpreter::adjustCaptureGroups( int x, int a )
     // adjust all capture group positions in line if data has been inserted by the user
     for( int i=0; i<mCaptureGroupList.size(); i++ )
     {
-        if( mCaptureGroupPosList[i] > x )
+        if( mCaptureGroupPosList[i] >= x )
         {
             mCaptureGroupPosList[i] += a;
         }
@@ -1256,7 +1256,8 @@ bool TLuaInterpreter::call( QString & function, int numMatches, QStringList & ma
         lua_pushstring( L, matches[i].toLatin1().data() );
         lua_settable( L, -3 );
     }
-    lua_setglobal( L, "matches" ); 
+    lua_setglobal( L, "matches" );
+    
     lua_getglobal( L, function.toLatin1().data() );
     lua_getfield( L, LUA_GLOBALSINDEX, function.toLatin1().data() );
     int error = lua_pcall( L, 0, LUA_MULTRET, 0 );     

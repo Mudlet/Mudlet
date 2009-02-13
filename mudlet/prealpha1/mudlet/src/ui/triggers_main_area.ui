@@ -5,7 +5,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>728</width>
+    <width>745</width>
     <height>230</height>
    </rect>
   </property>
@@ -238,10 +238,16 @@ p, li { white-space: pre-wrap; }
    <item row="2" column="6" >
     <widget class="QWidget" native="1" name="widget" >
      <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="minimumSize" >
+      <size>
+       <width>5</width>
+       <height>5</height>
+      </size>
      </property>
     </widget>
    </item>
@@ -301,9 +307,12 @@ p, li { white-space: pre-wrap; }
      <property name="orientation" >
       <enum>Qt::Horizontal</enum>
      </property>
+     <property name="sizeType" >
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
      <property name="sizeHint" stdset="0" >
       <size>
-       <width>146</width>
+       <width>5</width>
        <height>20</height>
       </size>
      </property>
@@ -407,9 +416,12 @@ p, li { white-space: pre-wrap; }
      <property name="orientation" >
       <enum>Qt::Horizontal</enum>
      </property>
+     <property name="sizeType" >
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
      <property name="sizeHint" stdset="0" >
       <size>
-       <width>146</width>
+       <width>5</width>
        <height>20</height>
       </size>
      </property>

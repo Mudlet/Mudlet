@@ -72,7 +72,7 @@ public:
         }
     }
 
-private:
+    //private:
 
     int mNumberOfConditions;    
     int mNextCondition;

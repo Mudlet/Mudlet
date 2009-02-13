@@ -60,6 +60,7 @@ dlgProfilePreferences.cpp
 TTextEdit.cpp
 XMLexport.cpp
 XMLimport.cpp
+FontManager.cpp
 TBuffer.cpp)
 
 qt4_automoc(${mudlet_SRCS})
