@@ -63,6 +63,7 @@ TTextEdit.cpp \
 XMLexport.cpp \
 XMLimport.cpp \
 TBuffer.cpp \
+FontManager.cpp \
 mudlet.cpp
 
 

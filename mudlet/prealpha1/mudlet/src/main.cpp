@@ -20,10 +20,13 @@
 
 #undef QT_NO_DEBUG_OUTPUT
 
+#include <QFontDatabase>
 #include <QApplication>
 #include "mudlet.h"
 #include "TConsole.h"
+#include "FontManager.h"
 #include <QSplashScreen>
+#include <QFontDatabase>
 
 TConsole *  spDebugConsole = 0;
 
@@ -74,16 +77,22 @@ int main(int argc, char *argv[])
     QDir dir;
     if( ! dir.exists( directory ) )
     {
-        dir.mkpath( directory );    
+        dir.mkpath( directory ); 
+    }
     
-        QFile file_doc( "mudlet_documentation.html" );
-        QFile file_doc_old( directory+"/mudlet_documentation.html" );
+    QFile file_doc( "mudlet_documentation.html" );
+    QFile file_doc_old( directory+"/mudlet_documentation.html" );
+    if( file_doc.exists() )
+    {
         if( file_doc_old.exists() )
         {
             file_doc_old.remove();
         }
         file_doc.copy( directory+"/mudlet_documentation.html" );
-        QFile file_lua( "LuaGlobal.lua" );
+    }
+    QFile file_lua( "LuaGlobal.lua" );
+    if( file_lua.exists() )
+    {
         QFile file_lua_old( directory+"/LuaGlobal.lua" );
         if( file_lua_old.exists() )
         {
@@ -92,11 +101,14 @@ int main(int argc, char *argv[])
         file_lua.copy( directory+"/LuaGlobal.lua" );
     }
     
+    
     mudlet::self();
     
     mudlet::debugMode = false;
     HostManager::self();
     //HostManager::self()->restore();  
+    FontManager fm;
+    fm.addFonts();
     mudlet::self()->show();
     
     splash.showMessage("All data has been loaded successfully.\n\nHave fun!");

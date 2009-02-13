@@ -53,7 +53,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , m_fontSpecs( pH )
 , buffer( pH )
 , mIsDebugConsole( isDebugConsole )
-, mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
+, mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mBgColor( QColor( 255, 255, 255 ) )
 , mCommandFgColor( QColor( 213, 195, 0 ) )
@@ -765,19 +765,13 @@ bool TConsole::hasSelection()
 void TConsole::insertText( QString msg )
 {
     insertText( msg, mUserCursor );    
-    console->showNewLines();
 }
 
 void TConsole::insertText( QString text, QPoint P )
 {
-    if( mTriggerEngineMode )
-    {
-        buffer.insertInLine( P, text, mFormatCurrent );
-        return;
-    }
     int x = P.x();
     int y = P.y();
-    int o = 0;//FIXME:mSelectedText.size();
+    int o = 0;//FIXME: das ist ein fehler bei mehrzeiliger selection
     int r = text.size();
     if( hasSelection() )
     {
@@ -794,7 +788,13 @@ void TConsole::insertText( QString text, QPoint P )
     }
     else
     {
+        qDebug()<<"inserting at x="<<x<<" r="<<r<<" chars";
         mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
+    }
+    if( mTriggerEngineMode )
+    {
+        buffer.insertInLine( P, text, mFormatCurrent );
+        return;
     }
     buffer.insert( mUserCursor, 
                    text, 
@@ -809,7 +809,6 @@ void TConsole::insertText( QString text, QPoint P )
 void TConsole::insertHTML( QString text )
 {
     insertText( text );
-    console->showNewLines();
 }
 
 int TConsole::getLineNumber()
@@ -855,11 +854,11 @@ QStringList TConsole::getLines( int from, int to )
 
 bool TConsole::moveCursor( int x, int y )
 {
-    QPoint P(x,y);
+    QPoint P(mUserCursor.x()+x,mUserCursor.y()+y);
     if( buffer.moveCursor( P ) )
     {
-        mUserCursor.setX( x );
-        mUserCursor.setY( y );
+        mUserCursor.setX( mUserCursor.x()+x );
+        mUserCursor.setY( mUserCursor.y()+y );
         return true;
     }
     else
@@ -909,9 +908,7 @@ bool TConsole::selectSection( int from, int to )
     if( from >= buffer.size() ) 
         return false;
     
-    if( to <= from ) 
-        return false;
-    
+ 
     P_begin.setX( from );
     P_begin.setY( mUserCursor.y() );
     P_end.setX( from + to );

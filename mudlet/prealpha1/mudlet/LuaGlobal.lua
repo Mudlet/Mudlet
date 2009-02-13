@@ -62,3 +62,29 @@ function replaceLine(what)
 	insertHTML(what)
 end
 
+
+-----------------------------------
+-- some functions from Heiko
+----------------------------------
+
+-- Function shows the content of a Lua table on the screen
+function printTable( map )
+    table.foreach( matches, __printTable )
+end
+
+function __printTable( k, v )
+  insertText ("\nkey = " .. tostring (k) .. " value = " .. tostring( v )  )
+end 
+
+-- Function colorizes all matched regex capture groups on the screen 
+function showCaptureGroups()
+    for k, v in pairs ( matches ) do
+        selectCaptureGroup( tonumber(k) )
+        setFgColor( math.random(0,255), math.random(0,255), math.random(0,255) )
+        setBgColor( math.random(0,255), math.random(0,255), math.random(0,255) )
+    end
+end
+
+
+
+

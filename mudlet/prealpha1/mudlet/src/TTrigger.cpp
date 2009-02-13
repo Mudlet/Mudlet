@@ -151,7 +151,8 @@ bool TTrigger::isClone(TTrigger &b) const {
 bool TTrigger::match_perl( QString & toMatch, int regexNumber )
 {
     if( ! mRegexMap.contains(regexNumber ) ) return false;
-    if( mRegexMap[regexNumber].indexIn( toMatch ) > -1 )
+    int pos = 0;    
+    if( ( pos = mRegexMap[regexNumber].indexIn( toMatch ) ) != -1 )
     {
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
         
@@ -183,41 +184,16 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
         }
         QStringList captureList;
         QList<int> posList;
-        for( int ii=1; ii<=mRegexMap.value(regexNumber).numCaptures(); ii++ )
+        while( (pos = mRegexMap[regexNumber].indexIn( toMatch, pos )) != -1 )
         {
-            if( mRegexMap.contains( regexNumber ) )
+            for( int i=0; i<mRegexMap[regexNumber].numCaptures(); i++ )
             {
-                captureList << mRegexMap[regexNumber].cap(ii);
-                if( mudlet::debugMode ) TDebug()<<"capture group #"<<QString::number(ii)<<" = <"<<mRegexMap[regexNumber].cap(ii)<<">">>0;
-                posList.append( mRegexMap[regexNumber].pos(ii) );
+                captureList << mRegexMap[regexNumber].cap( i );
+                if( mudlet::debugMode ) TDebug()<<"capture group 2#"<<QString::number(posList.size()+1)<<" = <"<<mRegexMap[regexNumber].cap( i )<<">">>0;
+                posList.append( mRegexMap[regexNumber].pos( i ) );
             }
+            pos += mRegexMap[regexNumber].matchedLength();
         }
-        // collect all possible matches
-        int pos = posList.size()-1;
-        if( mudlet::debugMode ) TDebug()<<"#2.teil-1# pos="<<pos>>0;
-        if( pos > -1 )
-        {
-            pos = posList[ posList.size()-1 ]+1;
-            if( mudlet::debugMode ) TDebug()<<"#2.teil-2# pos="<<pos>>0;            
-            while( mRegexMap[regexNumber].indexIn( toMatch, pos ) > -1 )
-            {
-                
-                for( int ii=1; ii<=mRegexMap.value(regexNumber).numCaptures(); ii++ )
-                {
-                    if( mudlet::debugMode ) TDebug()<<"#2.teil-3#pos="<<pos>>0;
-                    if( mRegexMap.contains( regexNumber ) )
-                    {
-                        captureList << mRegexMap[regexNumber].cap(ii);
-                        if( mudlet::debugMode ) TDebug()<<"#2.teil#capture group #"<<QString::number(ii)<<" = <"<<mRegexMap[regexNumber].cap(ii)<<">">>0;
-                        posList.append( mRegexMap[regexNumber].pos(ii) );
-                    }
-                } 
-                pos += mRegexMap[regexNumber].matchedLength();
-                //pos = posList[posList.size()-1]+1;
-            }
-            if( mudlet::debugMode ) TDebug()<<"#2.teil *ENDE*# no more pos="<<pos>>0;
-        }
-                
                 
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups( captureList, posList );
