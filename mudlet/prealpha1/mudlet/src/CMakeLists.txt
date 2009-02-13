@@ -3,6 +3,7 @@ project (mudlet)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
+set(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
 FIND_PACKAGE(Qt4 REQUIRED)
 FIND_PACKAGE(Lua51 REQUIRED)
 FIND_PACKAGE(QScintilla REQUIRED)
