@@ -60,5 +60,4 @@ public slots:
     
     void slot_save_and_exit();
 };
-
 #endif
