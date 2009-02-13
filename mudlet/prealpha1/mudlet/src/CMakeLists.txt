@@ -98,7 +98,6 @@ dlgTriggers_main_area.h
 dlgOptionsAreaTriggers.h
 TCommandLine.h
 TTreeWidget.h
-TTreeWidgetItem.h
 dlgTimersMainArea.h
 dlgSourceEditorArea.h
 dlgSystemMessageArea.h
