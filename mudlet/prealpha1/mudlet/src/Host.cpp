@@ -102,15 +102,19 @@ void Host::stopAllTriggers()
 }
 
 void Host::send( QString cmd )
-{   
+{  
+    qDebug()<<"Host::send() cmd="<<cmd;
     QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
     if( commandList.size() == 0 ) 
+    {
         sendRaw( "" );
-    
+        return;
+    }
     for( int i=0; i<commandList.size(); i++ )
     {
         QString command = commandList[i].replace(QChar('\n'),"");
         mReplacementCommand = "";
+qDebug()<<"printing command="<<command;
         mpConsole->printCommand( command ); // used to print the terminal <LF> that terminates a telnet command
                                             // this is important to get the cursor position right
         if( ! mAliasUnit.processDataStream( command ) )

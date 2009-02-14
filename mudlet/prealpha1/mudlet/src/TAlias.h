@@ -61,7 +61,7 @@ public:
     QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
     void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
     QString          getRegexCode()                  { QMutexLocker locker(& mLock); return mRegexCode; }
-    void             setRegexCode( QString regex )   { QMutexLocker locker(& mLock); mRegexCode = regex; mRegex = QRegExp( regex ); mRegex.setMinimal( false ); }
+    void             setRegexCode( QString );   
     void             setCommand( QString command )   { QMutexLocker locker(& mLock); mCommand = command; }
     QString          getCommand()                    { QMutexLocker locker(& mLock); return mCommand; }
     bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  

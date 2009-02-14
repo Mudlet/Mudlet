@@ -370,7 +370,11 @@ EAction * mudlet::generateAction( QString name, QString icon, QToolBar * pT )
 
 void mudlet::closeEvent(QCloseEvent *event)
 {
-    mpDebugConsole->close();
+    if( mpDebugConsole )
+    {
+        mpDebugConsole->setAttribute( Qt::WA_DeleteOnClose );
+        mpDebugConsole->close();
+    }
     
     foreach( TConsole * pC, mConsoleMap )
     {

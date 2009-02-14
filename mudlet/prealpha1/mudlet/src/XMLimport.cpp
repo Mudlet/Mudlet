@@ -753,7 +753,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
             }
             else if( name() == "regex")
             {
-                pT->mRegexCode = readElementText();
+                pT->setRegexCode( readElementText() );
                 qDebug()<<"regex="<<pT->mRegexCode;
                 qDebug()<<"-----------------------------------------------------\n";
                 continue;
@@ -966,6 +966,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
     }
     qDebug()<<"[REGISTER] Script:"<<pT->getName();
     mpHost->getScriptUnit()->registerScript( pT );
+    pT->compile();
     
 }
 

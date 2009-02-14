@@ -41,6 +41,8 @@ public:
         
                       TCommandLine( Host *, TConsole * );
     //void              keyPressEvent(QKeyEvent *event);
+    void              focusInEvent ( QFocusEvent * );
+    void              focusOutEvent ( QFocusEvent * );
     
 private:
     QString           mLastCompletion;
@@ -67,6 +69,8 @@ private:
     QPalette          mAutoCompletionPalette;
     KeyUnit *         mpKeyUnit;
     TConsole *        mpConsole;
+    QString           mSelectedText;
+    int               mSelectionStart;
     
 signals:
     void              textChanged ( const QString & ); 

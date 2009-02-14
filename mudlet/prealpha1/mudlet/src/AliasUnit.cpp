@@ -52,10 +52,9 @@ bool AliasUnit::processDataStream( QString & data )
     for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
-        QString cmd = data.replace( "\n", "" );
-        if( pChild->match( cmd ) )
+        // = data.replace( "\n", "" );
+        if( pChild->match( data ) )
         {
-            //TODO: mudlet::self()->mConsoleMap[mpHost]->scrollDown();
             return true;
         }
     }

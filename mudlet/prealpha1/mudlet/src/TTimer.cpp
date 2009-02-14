@@ -153,6 +153,7 @@ void TTimer::execute()
     
     if( isOffsetTimer() )
     {
+        disableTimer( mID );
         mIsActive = false;
         
         typedef list<TTimer *>::const_iterator I;
@@ -161,7 +162,7 @@ void TTimer::execute()
             TTimer * pChild = *it;
             if( pChild->isOffsetTimer() )
             {
-                pChild->enableTimer( pChild->getName() );
+                pChild->enableTimer( pChild->getID() );
             }
         }
     }

@@ -711,27 +711,77 @@ void TConsole::scrollUp( int lines )
     console->scrollUp( lines );    
 }
 
+void TConsole::insertText( QString text, QPoint P )
+{
+    int x = P.x();
+    int y = P.y();
+    int o = 0;//FIXME: das ist ein fehler bei mehrzeiliger selection
+    int r = text.size();
+    if( mTriggerEngineMode )
+    {
+        if( hasSelection() )
+        {
+            if( r < o )
+            {
+                int a = -1*(o-r);
+                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
+            }
+            if( r > o )
+            {
+                int a = r-o;
+                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
+            }
+        }
+        else
+        {
+            qDebug()<<"inserting at x="<<x<<" r="<<r<<" chars";
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
+        }
+    }
+    if( mTriggerEngineMode )
+    {
+        buffer.insertInLine( P, text, mFormatCurrent );
+        return;
+    }
+    else
+    {
+        buffer.insert( mUserCursor, 
+                   text, 
+                   mFormatCurrent.fgColor, 
+                   mFormatCurrent.bgColor, 
+                   false, 
+                   false, 
+                   false );
+        console->showNewLines();
+    }
+}
+
+
 void TConsole::replace( QString text )
 {
     int x = P_begin.x();
     int o = P_end.x() - P_begin.x();
     int r = text.size();
-    if( hasSelection() )
+    
+    if( mTriggerEngineMode )
     {
-        if( r < o )
+        if( hasSelection() )
         {
-            int a = -1*(o-r);
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
+            if( r < o )
+            {
+                int a = -1*(o-r);
+                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
+            }
+            if( r > o )
+            {
+                int a = r-o;
+                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
+            }
         }
-        if( r > o )
+        else
         {
-            int a = r-o;
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
         }
-    }
-    else
-    {
-        mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
     }
 
     buffer.replaceInLine( P_begin, P_end, text, mFormatCurrent );
@@ -767,44 +817,6 @@ void TConsole::insertText( QString msg )
     insertText( msg, mUserCursor );    
 }
 
-void TConsole::insertText( QString text, QPoint P )
-{
-    int x = P.x();
-    int y = P.y();
-    int o = 0;//FIXME: das ist ein fehler bei mehrzeiliger selection
-    int r = text.size();
-    if( hasSelection() )
-    {
-        if( r < o )
-        {
-            int a = -1*(o-r);
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
-        }
-        if( r > o )
-        {
-            int a = r-o;
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
-        }
-    }
-    else
-    {
-        qDebug()<<"inserting at x="<<x<<" r="<<r<<" chars";
-        mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
-    }
-    if( mTriggerEngineMode )
-    {
-        buffer.insertInLine( P, text, mFormatCurrent );
-        return;
-    }
-    buffer.insert( mUserCursor, 
-                   text, 
-                   mFormatCurrent.fgColor, 
-                   mFormatCurrent.bgColor, 
-                   false, 
-                   false, 
-                   false );
-    console->showNewLines();
-}
 
 void TConsole::insertHTML( QString text )
 {
@@ -923,13 +935,19 @@ bool TConsole::selectSection( int from, int to )
 void TConsole::setFgColor( int r, int g, int b )
 {
     mFormatCurrent.fgColor = QColor( r, g, b );
-    buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    if( hasSelection() )
+    {
+        buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    }
 }
 
 void TConsole::setBgColor( int r, int g, int b )
 {
     mFormatCurrent.bgColor = QColor( r, g, b );
-    buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    if( hasSelection() )
+    {
+        buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    }
 }
 
 void TConsole::printCommand( QString & msg )
@@ -944,9 +962,11 @@ void TConsole::echo( QString & msg )
     if( mTriggerEngineMode )
     {
         P.setX( mCurrentLine.size()-1 );
+        insertText( "\n"+msg, P );
+        console->showNewLines();
     }
-    insertText( "\n"+msg, P );
-    console->showNewLines();
+    else
+        print( msg );
 }
 
 void TConsole::print( const char * msg )

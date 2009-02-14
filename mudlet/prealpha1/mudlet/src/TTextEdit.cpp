@@ -63,9 +63,10 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     mScreenWidth = 100;//width() / mFontWidth; //TODO: user defined value is much faster than dynamically calculated values 
                                                    //      because we can cut away large side rectangles this way that doent have
                                                    //      to be painted. performance gain is substantial
+    setMaximumHeight(100*mFontHeight);
     setMouseTracking( true );
     setFocusPolicy( Qt::WheelFocus );
-    setAutoFillBackground( false ); //experimental
+    setAutoFillBackground( true ); //experimental
     setAttribute( Qt::WA_InputMethodEnabled, true );
     setAttribute( Qt::WA_OpaquePaintEvent );
     setAttribute( Qt::WA_DeleteOnClose );
@@ -445,6 +446,8 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
     if( event->button() == Qt::MidButton )
     {
+        mpConsole->console->mCursorY = mpBuffer->size()-1;
+        mpConsole->console->mIsTailMode = true;
         mpConsole->console2->mCursorY = mpBuffer->size()-1;
         mpConsole->console2->hide();    
         event->accept();

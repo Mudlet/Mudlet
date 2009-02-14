@@ -31,8 +31,8 @@
 #include "TAlias.h"
 #include "Host.h"
 #include "HostManager.h"
-
-
+#include "mudlet.h"
+#include "TDebug.h"
 
 
 TAlias::TAlias( TAlias * parent, Host * pHost ) 
@@ -66,30 +66,40 @@ TAlias::~TAlias()
 
 bool TAlias::match( QString & toMatch )
 {
+    bool matchCondition = false;
     if( mIsActive )
     {
-        if( ( ! mIsFolder ) && ( mRegexCode.size() > 0 ) )
+        if( ( mRegexCode.size() > 0 ) && ( mRegex.isValid() ) )
         {
             if( mRegex.indexIn( toMatch ) == -1 )
             {
+qDebug()<<"alias::match() no match for:<"<<toMatch<<">";
                 return false; // regex didn't match
             }
             else
             {
                 if( mCommand.size() > 0 )
                 {
-                    // when a command is specified we use it instead of the script
-                    mpHost->send( mCommand );
+                    mpHost->sendRaw( mCommand );
                 }
                 QStringList captureList;
-                for( int i=1; i<=mRegex.numCaptures(); i++ )
+                
+                int pos = 0;
+                while( (pos = mRegex.indexIn( toMatch, pos )) != -1 )
                 {
-                    captureList << mRegex.cap(i);
-                    //qDebug()<<"captured #"<<i<<":"<<mRegex.cap(i);
+qDebug()<<"alias::match(): regex matched txt="<<toMatch;
+                     for( int i=1; i<=mRegex.numCaptures(); i++ )
+                     {
+                         qDebug()<<"capture#"<<i;
+                        captureList << mRegex.cap( i );
+                        //if( mudlet::debugMode ) TDebug()<<"Alias capture group #"<<QString::number(captureList.size()+1)<<" = <"<<mRegex.cap( i )<<">">>0;
+                     }
+                     pos += mRegex.matchedLength();
                 }
+qDebug()<<"alias::match() captureList:"<<captureList;
                 // call lua alias function with number of matches and matches itselves as arguments
                 execute( captureList );    
-                return true;
+                matchCondition = true;
             }
         }
         
@@ -97,10 +107,20 @@ bool TAlias::match( QString & toMatch )
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TAlias * pChild = *it;
-            if( pChild->match( toMatch ) ) return true;
+            if( pChild->match( toMatch ) ) matchCondition = true;
         }
     }
-    return false;
+    return matchCondition;
+}
+
+void TAlias::setRegexCode( QString code )
+{
+    QMutexLocker locker(& mLock); 
+    mRegexCode = code; 
+    mRegex = QRegExp( code ); 
+    qDebug()<<"regex code für alias:"<<mName<<"="<<code;
+    mRegex.setMinimal( false );
+    mRegex.setPatternSyntax( QRegExp::RegExp2 );
 }
 
 TAlias& TAlias::clone(const TAlias& b)

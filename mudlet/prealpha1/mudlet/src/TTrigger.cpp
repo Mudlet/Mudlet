@@ -108,10 +108,9 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         }
         if( propertyList[i] == REGEX_PERL )
         {
-            QRegExp regex = QRegExp( regexList[i] );
-            regex.setMinimal( false ); // greedy matching
-            regex.setPatternSyntax( QRegExp::RegExp );
-            mRegexMap[i] = regex;
+            mRegexMap[i] = QRegExp( regexList[i] );
+            mRegexMap[i].setMinimal( false ); // greedy matching
+            mRegexMap[i].setPatternSyntax( QRegExp::RegExp2 );
             mTriggerContainsPerlRegex = true;
         }
         mRegexCodeList.append( regexList[i] );
@@ -186,7 +185,8 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
         QList<int> posList;
         while( (pos = mRegexMap[regexNumber].indexIn( toMatch, pos )) != -1 )
         {
-            for( int i=0; i<mRegexMap[regexNumber].numCaptures(); i++ )
+            // skip capture #1 as it contains the whole string
+            for( int i=1; i<mRegexMap[regexNumber].numCaptures(); i++ )
             {
                 captureList << mRegexMap[regexNumber].cap( i );
                 if( mudlet::debugMode ) TDebug()<<"capture group 2#"<<QString::number(posList.size()+1)<<" = <"<<mRegexMap[regexNumber].cap( i )<<">">>0;

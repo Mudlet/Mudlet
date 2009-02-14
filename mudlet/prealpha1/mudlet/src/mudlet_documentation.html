@@ -5,11 +5,11 @@
 	<TITLE></TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 2.4  (Linux)">
 	<META NAME="CREATED" CONTENT="20081028;19075200">
-	<META NAME="CHANGED" CONTENT="20090213;7590700">
+	<META NAME="CHANGED" CONTENT="20090213;9593800">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { size: 21cm 29.7cm }
-		TD P { margin-right: 0.5cm; margin-top: 0.5cm; border: none; padding: 0cm; color: #000000; line-height: 150% }
+		TD P { margin-right: 0.5cm; margin-top: 0.5cm; margin-bottom: 0cm; border: none; padding: 0cm; color: #000000; line-height: 150% }
 		TD P.western { font-family: "Arial", sans-serif; font-size: 10pt }
 		H1.western { font-family: "Arial Black"; font-size: 18pt; font-weight: medium }
 		P { margin-bottom: 0cm; border: none; padding: 0cm; color: #000000; line-height: 150% }
@@ -32,134 +32,151 @@
 <H1 CLASS="western" ALIGN=CENTER STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5><U>Mudlet
 Manual</U><SPAN STYLE="text-decoration: none"> </SPAN><SPAN STYLE="text-decoration: none"><SPAN STYLE="background: #ff950e">(updated:
 02-12-2009)</SPAN></SPAN></FONT></FONT></H1>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Introduction</FONT></FONT></H1>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Throughout
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+</H1>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Introduction</FONT></FONT></H1>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Throughout
 this document a regular expression (regex) will be colored blue, Text
 examples will be colored red and Lua example code will be colored
 green. </FONT></FONT>
 </P>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Multi
-Session Gameing</FONT></FONT></H1>
-<P CLASS="western">Mudlet lets you play several simultaneous MUD
-sessions. However, currently we have the restriction that you cannot
-use the same profile twice. Consequently, if you want to play three
-characters on the same MUD at the same time, you need to make 3
-profiles with 3 different names e.g. ernie@avalon.de, bert@avalon.de
-etc.</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Multi Session Gameing</FONT></FONT></H1>
+<P CLASS="western" STYLE="line-height: 150%">Mudlet lets you play
+several simultaneous MUD sessions. However, currently we have the
+restriction that you cannot use the same profile twice. Consequently,
+if you want to play three characters on the same MUD at the same
+time, you need to make 3 profiles with 3 different names e.g.
+ernie@avalon.de, bert@avalon.de etc.</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Split
-Screen</FONT></FONT></H1>
-<P CLASS="western" STYLE="border: none; padding: 0cm">Mudlet has a
-split screen. If you scroll up in the old text, the screen will split
-in two parts. The lower part will follow the MUD output while the
-upper part will stay focused on your scrolling. This way you can read
-easier through old passages without missing what is going on at the
-moment.</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm">Split screen
-can be activated via the page up / page down keys or with the mouse
-wheel. Scrolling back to the end will close the split screen
-automatically. A click on the middle mouse button will close the
-split screen immediately. The size of the 2 parts of the split screen
-can be modidfied when dragging the seperator bar with the mouse.</P>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Command
-Line Auto-Completion, Tab-Completion and History</FONT></FONT></H1>
-<P CLASS="western">The command line offers Tab Completion (TAB key)
-and Autocompletion (cursor up key). <BR>1. Tab completion searches
-the MUD output buffer for words matching the word that you are
-currently typing. This is useful if you have to type complicated long
-names. You only have to type the first letters and then press the tab
-key until the proposal is what you want.<BR>2. Autocompletion tries
-to match your current typing with your command history. Example: If
-you typed the same command a while ago, you only have to start typing
-the first couple of letters and then press the cursor up key until
-the proposal matches the command that you want to use.<BR>3. If you
-haven't started to type anything yet, you can browse through your
-command history with the cursur up and cursor down keys. However, if
-you have started typing pressing cursor up will result in
-autocompletion. <BR>4. To get out of autocompletion you can press the
-ESC key any time.</P>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Split Screen</FONT></FONT></H1>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+Mudlet has a split screen. If you scroll up in the old text, the
+screen will split in two parts. The lower part will follow the MUD
+output while the upper part will stay focused on your scrolling. This
+way you can read easier through old passages without missing what is
+going on at the moment.</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+Split screen can be activated via the page up / page down keys or
+with the mouse wheel. Scrolling back to the end will close the split
+screen automatically. A click on the middle mouse button will close
+the split screen immediately. The size of the 2 parts of the split
+screen can be modidfied when dragging the seperator bar with the
+mouse.</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
+</P>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Command Line Auto-Completion,
+Tab-Completion and History</FONT></FONT></H1>
+<P CLASS="western" STYLE="line-height: 150%">The command line offers
+Tab Completion (TAB key) and Autocompletion (cursor up key). <BR>1.
+Tab completion searches the MUD output buffer for words matching the
+word that you are currently typing. This is useful if you have to
+type complicated long names. You only have to type the first letters
+and then press the tab key until the proposal is what you want.<BR>2.
+Autocompletion tries to match your current typing with your command
+history. Example: If you typed the same command a while ago, you only
+have to start typing the first couple of letters and then press the
+cursor up key until the proposal matches the command that you want to
+use.<BR>3. If you haven't started to type anything yet, you can
+browse through your command history with the cursur up and cursor
+down keys. However, if you have started typing pressing cursor up
+will result in autocompletion. <BR>4. To get out of autocompletion
+you can press the ESC key any time.</P>
 <H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Mudlet's
 Trigger Engine</FONT></FONT></H1>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Simple Trigger Matching</B></FONT></FONT></P>
-<P CLASS="western">Type your trigger in the input line below the
-trigger conditions list box and then press add to add it to the list.
-You can edit an expression in the list by clicking on it and then
-edit it on the input line below. After your edit you have to press
-the return key to accept the changes.<BR>After editing is finished
-your changes will only become permanent if you press on the save icon
-on the upper left. This is the same throughout the entire program. If
-you forget to save your current changes or new additions, they will
-be lost once you select to edit some other item.<BR>Select the
-trigger type from the listbox below the expression line edit. Normal
-substring matching will do for most people and it is the fastest
-matching type available. Example: You want to trigger on the word
-&quot;pond&quot; in a line such as: &quot;The frog swims in the pond.
-Plop.&quot; All you need to do is enter &quot;pond&quot; in the
-trigger expression input line and add it to the expression list. Then
-enter the command you like to send to the MUD if the trigger matches
-e.g. &quot;drink water&quot; and then you are done. The more advanced
-trigger types are explained below.</P>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-bottom: 0.5cm">Type your trigger in
+the input line below the trigger conditions list box and then press
+add to add it to the list. You can edit an expression in the list by
+clicking on it and then edit it on the input line below. After your
+edit you have to press the return key to accept the changes.<BR>After
+editing is finished your changes will only become permanent if you
+press on the save icon on the upper left. This is the same throughout
+the entire program. If you forget to save your current changes or new
+additions, they will be lost once you select to edit some other
+item.<BR>Select the trigger type from the listbox below the
+expression line edit. Normal substring matching will do for most
+people and it is the fastest matching type available. Example: You
+want to trigger on the word &quot;pond&quot; in a line such as: &quot;The
+frog swims in the pond. Plop.&quot; All you need to do is enter
+&quot;pond&quot; in the trigger expression input line and add it to
+the expression list. Then enter the command you like to send to the
+MUD if the trigger matches e.g. &quot;drink water&quot; and then you
+are done. The more advanced trigger types are explained below.</P>
+<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Simple Highlighter Triggers</B></FONT></FONT></P>
-<P CLASS="western">If you want to highlight the word &quot;pond&quot;
-in the above example you have to add the following little Lua script
-to the script editor on the lower right side of the Script Editor
-window:</P>
-<P CLASS="western"><BR><FONT COLOR="#00ae00"><FONT FACE="Andale Mono">selectString(
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+If you want to highlight the word &quot;pond&quot; in the above
+example you have to add the following little Lua script to the script
+editor on the lower right side of the Script Editor window:</P>
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<BR><FONT COLOR="#00ae00"><FONT FACE="Andale Mono">selectString(
 &quot;pond&quot;, 1 )<BR>fg( &quot;red &quot; )<BR>bg( &quot;blue&quot;
 )</FONT></FONT></P>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
-<FONT COLOR="#000000"><FONT SIZE=4><B><BR><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4>&quot;AND&quot;
-and &quot;OR&quot; Condition Triggers</FONT></FONT></FONT></B></FONT></FONT></P>
-<P CLASS="western">AND -Triggers execute their respective command or
-script only if all conditions in their respective conditions
-expression list are fullfilled.<BR>OR-Triggers execute when *any* one
-of their conditions is true.<BR>To make OR-Triggers you simply have
-to add a few conditions to the conditions list e.g. in our example:
-&quot;pond&quot;, &quot;frog&quot;, &quot;Plop&quot;. The trigger
-will now also execute on lines like this: &quot;A frog is green&quot;
-or &quot;You hear a loud Plop!&quot; However, it will not execute on
-&quot;With a loud plop the frog dived into the water.&quot; because
-&quot;plop&quot; in the line is in lower case letters and your
-condition specified a &quot;P&quot; in upper case. <BR>The simplest
-form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains,
-whatever you'd like to call it.</P>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<FONT COLOR="#000000"><FONT SIZE=4><B><BR><FONT FACE="Arial, sans-serif">&quot;AND&quot;
+and &quot;OR&quot; Condition Triggers</FONT></B></FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+AND -Triggers execute their respective command or script only if all
+conditions in their respective conditions expression list are
+fullfilled.<BR>OR-Triggers execute when *any* one of their conditions
+is true.<BR>To make OR-Triggers you simply have to add a few
+conditions to the conditions list e.g. in our example: &quot;pond&quot;,
+&quot;frog&quot;, &quot;Plop&quot;. The trigger will now also execute
+on lines like this: &quot;A frog is green&quot; or &quot;You hear a
+loud Plop!&quot; However, it will not execute on &quot;With a loud
+plop the frog dived into the water.&quot; because &quot;plop&quot; in
+the line is in lower case letters and your condition specified a &quot;P&quot;
+in upper case. <BR>The simplest form of AND-Triggers in Mudlet are
+Trigger Chains or Filter Chains, whatever you'd like to call it.</P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Trigger Chains - Filter Chains</B></FONT></FONT></P>
-<P CLASS="western">Imagine the following scenario: You want to
-collect some berries. You know that the room contains some berries if
-the room description contains the words &quot;You see several sorts
-of berries.&quot; You make a new substring trigger for this line, but
-instead of chosing a regular trigger, you chose to add a new trigger
-group. Now you add &quot;You see several sorts of berries.&quot; to
-the expression list of the trigger group. When adding condions to a
-trigger group, the trigger group turns from an organizational unit
-into a filter unit. From now on this folder is a filter and will only
-let data through that matches it's condition. <BR>In our case this is
-exactly what we want, because we don't want to collect all sorts of
-berries, but we only want 2 particular kinds, namely, strawberries
-and blackberries. Now you add two regular triggers to our berry
-filter - one containing the condition: &quot;strawberries&quot; and
-the other one &quot;blackberries&quot;. Then we add the commands to
-pick the particular kind of berry to both triggers.<BR>Now what
-happens is that as soon as a room description reads &quot;You see
-several sorts of berries.&quot; the filter will let the line
-containing the room description pass through to our two berry
-triggers and they will issue commands to pick berries. However, in
-any other situation the words &quot;strawberries&quot; and
-&quot;blackberries&quot; will *NOT* trigger - only in the above
-scenario when the filter parent's condition is met. This is a very
-nice way to solve complicated problems with a few easy filter chains.
-This example is trivial, but using filter chains will rapidly show
-you how formerly complicated things that could only be solved with
-very complicated regular expressions can be solved easily now with a
-couple of filter chains.</P>
-<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+Imagine the following scenario: You want to collect some berries. You
+know that the room contains some berries if the room description
+contains the words &quot;You see several sorts of berries.&quot; You
+make a new substring trigger for this line, but instead of chosing a
+regular trigger, you chose to add a new trigger group. Now you add
+&quot;You see several sorts of berries.&quot; to the expression list
+of the trigger group. When adding condions to a trigger group, the
+trigger group turns from an organizational unit into a filter unit.
+From now on this folder is a filter and will only let data through
+that matches it's condition. <BR>In our case this is exactly what we
+want, because we don't want to collect all sorts of berries, but we
+only want 2 particular kinds, namely, strawberries and blackberries.
+Now you add two regular triggers to our berry filter - one containing
+the condition: &quot;strawberries&quot; and the other one
+&quot;blackberries&quot;. Then we add the commands to pick the
+particular kind of berry to both triggers.<BR>Now what happens is
+that as soon as a room description reads &quot;You see several sorts
+of berries.&quot; the filter will let the line containing the room
+description pass through to our two berry triggers and they will
+issue commands to pick berries. However, in any other situation the
+words &quot;strawberries&quot; and &quot;blackberries&quot; will
+*NOT* trigger - only in the above scenario when the filter parent's
+condition is met. This is a very nice way to solve complicated
+problems with a few easy filter chains. This example is trivial, but
+using filter chains will rapidly show you how formerly complicated
+things that could only be solved with very complicated regular
+expressions can be solved easily now with a couple of filter chains.</P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<BR>
+</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Arial Black"><FONT SIZE=4>Multi
 Condition Triggers</FONT></FONT></FONT></P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-top: 0.5cm">Multi
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">Multi
 Condition Triggers are the most advanced feature of Mudlet's trigger
 engine. Like trigger chains or filter chains they are a form of
 AND-Triggers.<BR>All conditions in the list must have matched within
@@ -185,29 +202,23 @@ description consisting of 3 lines:
 </P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-1. You see a pond</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-2. You see a frog.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-3. The frog sits on a stone.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-<BR>
-</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">1. You see a
+pond</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">2. You see a
+frog.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">3. The frog
+sits on a stone.</P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>Every
 single one of these 3 lines will be fed into the trigger engine one
 after another. If we define an OR-trigger with a condition list
 consisting of 3 conditions (Remember that the multi condition switch
 must be turned off to get an OR-trigger):</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-<BR>condition #1: pond</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-condition #2: frog</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-condition #3: stone</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-left: 2cm; margin-right: 0.5cm; line-height: 100%">
-<BR>
-</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>condition
+#1: pond</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #2:
+frog</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #3:
+stone</P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>The
 trigger will fire the command or script 3 times i. e. the trigger
 will execute on each line it is matched against because in every line
@@ -255,210 +266,242 @@ each other thus enabling non-programmer users to solve problems that
 would need a profound programming background in other MUD clients.</P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=CENTER STYLE="margin-top: 0.5cm"><SPAN STYLE="background: #ff950e">***
+<P CLASS="western" ALIGN=CENTER STYLE="line-height: 150%"><SPAN STYLE="background: #ff950e">***
 This article will be extended later ***</SPAN></P>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Temporary Triggers (scripting
 only)</B></FONT></FONT></P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-top: 0.5cm">Temporary
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">Temporary
 triggers are lightweight triggers that are tailored for typical
 scripting needs. These are only available via Lua scripting. They are
 not stored in profiles, but stay in memory as long as the program
 runs or until they are deleted (killTimer()).</P>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<BR>
+</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Line Triggers (scripting only)</B></FONT></FONT></P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-top: 0.5cm">Line triggers
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">Line triggers
 trigger on a specified line in the future - or a sequence of lines -
 irrespective of the content of the line. This type of triggers can be
 very handy in scripting if you know what is coming e.g. you want to
 parse a table from the MUD, maps etc.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-top: 0.5cm"><BR>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>The
-Timer Engine</FONT></FONT></H1>
-<P CLASS="western">Mudlet supports 3 different sort of timers:</P>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>The Timer Engine</FONT></FONT></H1>
+<P CLASS="western" STYLE="line-height: 150%">Mudlet supports 3
+different sort of timers:</P>
 <OL>
-	<LI><P CLASS="western">Timers that fire repeatedly in a certain
-	interval specified by the user.</P>
-	<LI><P CLASS="western">Offset Timers are child timers of a parent
-	timer and fire a single shot after a specified timeout after their
-	parent firied its respective timeout. This interval is an offset to
-	the interval of its parent timer. Example: parent timer fires every
-	30 seconds and by doing so kicks off 3 offset timers with an offset
-	of 5 seconds each. Consequently, the 3 children fire 5 seconds after
-	each time the parent timer fired. Offset timers differ visually from
-	regular timers and are represented with a + icon for offset. Offset
-	timers can be turned on and off by the user just like any other
-	timer.</P>
-	<LI><P CLASS="western">Temporary Timers that very useful for
-	scripting. They behave like regular timers, but they are one shot
-	only timers. Temporary timers can not be accessed from the GUI and
-	are not saved in profiles.</P>
+	<LI><P CLASS="western" STYLE="line-height: 150%">Timers that fire
+	repeatedly in a certain interval specified by the user.</P>
+	<LI><P CLASS="western" STYLE="line-height: 150%">Offset Timers are
+	child timers of a parent timer and fire a single shot after a
+	specified timeout after their parent firied its respective timeout.
+	This interval is an offset to the interval of its parent timer.
+	Example: parent timer fires every 30 seconds and by doing so kicks
+	off 3 offset timers with an offset of 5 seconds each. Consequently,
+	the 3 children fire 5 seconds after each time the parent timer
+	fired. Offset timers differ visually from regular timers and are
+	represented with a + icon for offset. Offset timers can be turned on
+	and off by the user just like any other timer.</P>
+	<LI><P CLASS="western" STYLE="line-height: 150%">Temporary Timers
+	that very useful for scripting. They behave like regular timers, but
+	they are one shot only timers. Temporary timers can not be accessed
+	from the GUI and are not saved in profiles.</P>
 </OL>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Exporting
-and Importing Profiles or Packages</FONT></FONT></H1>
-<P CLASS="western" STYLE="border: none; padding: 0cm">Mudlet stores
-your profiles as XML files in your home directory under
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+</H1>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Exporting and Importing
+Profiles or Packages</FONT></FONT></H1>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+Mudlet stores your profiles as XML files in your home directory under
 .config/mudlet/profiles/your_profile_name/current (note the leading
 dot).</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm">The file name
-consists of the date and time, the profile was written to disc.<BR>You
-can export packages of a trigger branch, alias branch, function key,
-scripts etc. by clicking on a folder in the tree of the particular
-item in question and then click on the export icon. You'll be asked
-to give a filename for your package. You can export arbitrarily
-complex structures by moving them into a folder. You cannot mix items
-at the moment. Importing packages is straight forward and fully
-automatic. <BR>You can also import entire profiles as they are
-basically packages.</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+The file name consists of the date and time, the profile was written
+to disc.<BR>You can export packages of a trigger branch, alias
+branch, function key, scripts etc. by clicking on a folder in the
+tree of the particular item in question and then click on the export
+icon. You'll be asked to give a filename for your package. You can
+export arbitrarily complex structures by moving them into a folder.
+You cannot mix items at the moment. Importing packages is straight
+forward and fully automatic. <BR>You can also import entire profiles
+as they are basically packages.</P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Quick
-Lua syntax overview</FONT></FONT></H1>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Lua
-variables can be either a string or a number. They are whatever there
-were initially initialized with.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Examples:</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<H1 CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Quick Lua syntax overview</FONT></FONT></H1>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Lua variables
+can be either a string or a number. They are whatever there were
+initially initialized with.</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Examples:</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">a = “Jim”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">b = “Tom”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">c = 350</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">d = 1</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Then
-you can write:</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Then you can
+write:</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">e = c + d
 and e will equal 351</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">e = a .. b
 and e will equal “JimTom” note that you cant use a+b to
 concatenate string values. For this you must use ..</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">e = a .. c
 and e will equal “Jim350”</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Lua
-tables can basically be considered multidimensional arrays.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">If
-we have the table matches, matches[1] is the first element,
-matches[n] the n-th element.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Lua tables can
+basically be considered multidimensional arrays.</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">If we have the
+table matches, matches[1] is the first element, matches[n] the n-th
+element.</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">a = “Tom”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">matches[1]
 = “Betty”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">b =
 matches[1]</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">c = a .. b
 and e will equal “TomBetty”</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To
-output a table you can use a conveniance function printTable( name ).
-This function is defined in LuaGlobal.lua and can be found in your
-home directory under ./mudlet (note the leading dot ) Profiles and
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To output a
+table you can use a conveniance function printTable( name ). This
+function is defined in LuaGlobal.lua and can be found in your home
+directory under ./mudlet (note the leading dot ) Profiles and
 mudlet_documentation.html are stored in this directory as well.</FONT></FONT></P>
-<H1 CLASS="western" STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Lua
-interface functions to Mudlet <BR>– or how do I access triggers,
-timers etc. from Lua scripts</FONT></FONT></H1>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; font-weight: medium; line-height: 100%; page-break-after: avoid">
+<H1 CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 100%">
+</H1>
+<H1 CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 100%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Lua interface functions to
+Mudlet <BR>– or how do I access triggers, timers etc. from Lua
+scripts</FONT></FONT></H1>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; font-weight: medium; line-height: 100%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; font-weight: medium; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4>How to get data from regex capture
 groups?</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Regular
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Regular
 expression capture groups (e.g. „(\d+)“ ) are passed on to Lua
 scripts as a Lua table matches.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To
-make use of this information inside Lua scripts, you need to specify
-the number of the capture group within the regex.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Example:
-</FONT></FONT><CODE CLASS="regex-western"><FONT COLOR="#0000ff"><FONT FACE="Arial, sans-serif">You
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To make use of
+this information inside Lua scripts, you need to specify the number
+of the capture group within the regex.</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Example: </FONT></FONT><CODE CLASS="regex-western"><FONT COLOR="#0000ff"><FONT FACE="Arial, sans-serif">You
 have (\d+) weapons and they are (?:(\b\w+\W+)+)</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">This
-regex contains 3 capture groups, but only the 2 green colored ones
-contain data as the red capture group is a non-capturing group.
-Consequently, your Lua script gets passed only 2 instead of 3 capture
-groups and matches[3] is undefined.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">In
-your Lua script you may write following program in order to print the
-number and status of your weapons on the screen:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm"><CODE CLASS="regex-western">You
-have (\d+) weapons and they are (?:(\b\w+\W+)+)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">This regex
+contains 3 capture groups, but only the 2 green colored ones contain
+data as the red capture group is a non-capturing group. Consequently,
+your Lua script gets passed only 2 instead of 3 capture groups and
+matches[3] is undefined.</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">In your Lua
+script you may write following program in order to print the number
+and status of your weapons on the screen:</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="regex-western">You have (\d+) weapons and they are
+(?:(\b\w+\W+)+)</CODE></P>
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">number_of_weapons
 = matches[1]</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">status_of_weapons
 = matches[2]</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">notice
 = number_of_weapons .. status_of_weapons</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">echo(
 notice ) </FONT></FONT></CODE>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">send(
 „put weapons in backpack“ )</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">-- the
 following 2 lines color the first capture </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">-- group
 red and the second group blue</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">-- see
-</FONT></FONT><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">below</FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">
-for details </FONT></FONT>
+</FONT></FONT><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">below</FONT></FONT></CODE><FONT COLOR="#008000">
+</FONT><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">for
+details </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">selectCaptureGroup</FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">(
 1 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setFgColor</FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">(
 255,0,0 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">selectCaptureGroup(
 2 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setFgColor(
 0,0,255 )</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">The best way is
 to use selectCaptureGroup( number ) to select the proper capture
 group and then perform your actions on it e.g. replace(), colorize
 etc. <SPAN STYLE="text-decoration: none"><I><B>Note</B></I></SPAN><SPAN STYLE="text-decoration: none"><B>:</B></SPAN>
 Both selectCaptureGroup() and matches[n] start with group 1.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">How to select
 all occurrences of &quot;Tom&quot; and colorize them?</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">You add a
 functon like this to a script conataining you main function
 definitions. Note that script items differ from all other &quot;scripts&quot;
@@ -468,111 +511,124 @@ trigger-scripts, timer-scripts etc. via normal function calls.
 Trigger-scripts, timer-scripts etc. cannot contain any function
 definitions because they are automatically generated functions
 themself because this makes usage a lot easier.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To come back to
 our question how to select all occurrences of &quot;Tom&quot; and
 colorize them:</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">function
 setBgColorAll( word, r, g, b ) </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">    <FONT FACE="Courier New, monospace">i = 0</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">    <FONT FACE="Courier New, monospace">word_count
 = 1</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">    <FONT FACE="Courier New, monospace">while i
 &gt; -1 do</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">i =
 selectString(word, word_count)</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">if
 i == -1 then </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">            <FONT FACE="Courier New, monospace">return
 </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">end</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">word_count
 = word_count +1</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">        <FONT FACE="Courier New, monospace">setBgColor(
 r, g, b )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000">    <FONT FACE="Courier New, monospace">end</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">end</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Then you simply
 define a substring matching trigger on the word &quot;Tom&quot; and
 in the trigger script you call above function:</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setBgColorAll(&quot;Tom&quot;,
 255,50,50)</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Sending
 commands to the MUD or printing information messages on the screen</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To
-print information messages on the session screen you can use the
-echo( message ) function, or insertText( text). Currently, it only
-takes one string as argument. </FONT></FONT>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To print
+information messages on the session screen you can use the echo(
+message ) function, or insertText( text). Currently, it only takes
+one string as argument. </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To
-send a command to the MUD, you can use the send( command ) function.
-Note: everything you send via send() will be processed by the alias
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To send a
+command to the MUD, you can use the send( command ) function. Note:
+everything you send via send() will be processed by the alias
 processing unit.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">In
-Alias scripts the command that is being sent to the MUD is contained
-in the variable command that you can change in the context of Alias
-scripts.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Alias
-take regular expressions, as well. As a result, you can use following
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">In Alias scripts
+the command that is being sent to the MUD is contained in the
+variable command that you can change in the context of Alias scripts.</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Alias take
+regular expressions, as well. As a result, you can use following
 regex and script to talk like Yoda:</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm"><CODE CLASS="regex-western">say
-(\w+).*(\w*).*(.*)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm"><CODE CLASS="code-western">send(
-&quot;say &quot; .. matches[3] ..&quot; &quot; .. matches[1] ..&quot;
-&quot;.. matches[2] )</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm"><BR>
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="regex-western">say (\w+).*(\w*).*(.*)</CODE></P>
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="code-western">send( &quot;say &quot; .. matches[3] ..&quot;
+&quot; .. matches[1] ..&quot; &quot;.. matches[2] )</CODE></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Note:
-The variable “command” contains what was entered in the command
-line or issued via the expandAlias( ) function. If you use
-expandAlias( command ) inside an alias script the command would be
-doubled. You have to use send( ) inside an alias script to prevent
-recursion. This will send the data directly and bypass the alias
-expansion.</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Note: The
+variable “command” contains what was entered in the command line
+or issued via the expandAlias( ) function. If you use expandAlias(
+command ) inside an alias script the command would be doubled. You
+have to use send( ) inside an alias script to prevent recursion. This
+will send the data directly and bypass the alias expansion.</FONT></FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Changing
 text from the MUD or reformatting text (colorize, make bold etc.)</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">When
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">When
 sending commands to the MUD – from now on referred to as output
 stream - alias scripts find the command that whas issued by the user
 stored in the variable “command”.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">By
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">By
 manipulating the value, the command can easily be changed before it
 is being sent to the MUD.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">However,
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">However,
 things get much more complicated with the data received from the MUD
 – from now on referred to as input stream. Before triggers can be
 run on the MUD data Mudlet has to strip all format codes from the
@@ -582,267 +638,316 @@ processing unit is a small subset of the data received from the MUD.
 If you want to edit, replace, delete or reformat text from within
 your trigger scripts you have to keep this in mind if you don't want
 to lose all text format information as colors etc.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">As
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">As
 the text is linked with data structures containing the format of the
 text, the cursor position inside the line is important if data is
 being changed. You select a word or a sequence of characters from the
 line and then issue commands to do actions on the selected data.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT FACE="Arial, sans-serif"><FONT COLOR="#000000"><SPAN STYLE="background: transparent">Replacing
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT FACE="Arial, sans-serif"><FONT COLOR="#000000"><SPAN STYLE="background: transparent">Replacing
 the word “Tom” with “Betty” in the line: </SPAN></FONT><FONT COLOR="#ff0000"><SPAN STYLE="background: transparent">Jim,
 Tom and Lucy are learning a new spell</SPAN></FONT><FONT COLOR="#000000"><SPAN STYLE="background: transparent">.
 Could be done with following script:</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="code-western" STYLE="margin-left: 2cm; margin-right: 0.5cm">
+<P CLASS="code-western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
 <CODE CLASS="code-western">selectString(“Tom”,1)<BR>replace(“Betty”)</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Things
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Things
 get more complicated if there are two or more occurrences of “Tom”
 in the line e. g. </SPAN><FONT COLOR="#ff0000"><SPAN STYLE="background: transparent">Jim
 and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT><SPAN STYLE="background: transparent">.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">The
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">The
 above example code would select the first occurrence of “Tom” in
 this line and ignore the second.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">If
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">If
 you want to work on the the second occurrence of “Tom” you have
 to specify the occurrence number in the call to select().</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="code-western" STYLE="margin-left: 2cm; margin-right: 0.5cm">
+<P CLASS="code-western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
 <CODE CLASS="code-western">selectString(“Tom”,2)<BR>replace(“Betty”)</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
 code would change the second “Tom” and leave the first “Tom”
 alone. The function call</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">replaceAll(“Betty”) </CODE>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT FACE="Arial, sans-serif">will
-replace all occurrences of “Tom” with “Betty” in the line if
-“Tom” has been selected before. ReplaceAll() is a conveniance
-function defined in LuaGlobal.lua.</FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT FACE="Arial, sans-serif">will replace all occurrences of “Tom”
+with “Betty” in the line if “Tom” has been selected before.
+ReplaceAll() is a conveniance function defined in LuaGlobal.lua.</FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Colorization
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Colorization
 example: You want to change to color of the words “ugly monster”
 to red on a white background. </SPAN></FONT></FONT>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">You
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">You
 add a new trigger and define the regex: </SPAN></FONT></FONT><CODE CLASS="regex-western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">ugly
 monster</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">In
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">In
 the script you write:</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">selectString(“ugly monster”,1)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">setFgColor(255,0,0)</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">setBgColor(255,255,255)</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Another
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Another
 means to select text is to select a range of characters by specifying
 cursor positions.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">If
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">If
 we have following line: </SPAN><FONT COLOR="#ff0000"><SPAN STYLE="background: transparent">Jim
 and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT><SPAN STYLE="background: transparent">.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 9.2cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">selectSection( 28, 3 )</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
 example would select the second Tom. The first argument to
 selectSection is the cursor position within the line and the second
 argument is the length of the selection.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm"><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">selectCaptureGroup(
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">selectCaptureGroup(
 number )</SPAN></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
+</P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
 function selects the captureGroup number if you use Perl regular
 expressions containing capture groups. The first capture group starts
 with index 1.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">deleteLine() </CODE>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT FACE="Arial, sans-serif">This
-function deletes the current line. </FONT>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT FACE="Arial, sans-serif">This function deletes the current
+line. </FONT>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Cursor Movement and Cursor
 Placement</B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: 2cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">moveCursor( x, y )</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT FACE="Arial, sans-serif">This
-will move the user cursor x and y coordinates relative to its current
-position in the text.</FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT FACE="Arial, sans-serif">This will move the user cursor x and y
+coordinates relative to its current position in the text.</FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">moveCursor( 3, -2 ) </CODE>will move the
 cursor 3 characters to the right and 2 lines up.</P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">number_of_last_line_in_text =
 getLineCount()</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT FACE="Arial, sans-serif">returns
-the number of the last line of the text in the console buffer. This
-number will change as soon as a new '\n' is printed either by the
-user or</FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT FACE="Arial, sans-serif">when
-a new line arrives from the MUD. All lines from the MUD are
-terminated with '\n' which is called line feed or the new line
-character. This control character ends the current line and move the
-cursor to the beginning of the next line, thus creating a new, empty
-line below the line that contains the '\n'.</FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT FACE="Arial, sans-serif">returns the number of the last line of
+the text in the console buffer. This number will change as soon as a
+new '\n' is printed either by the user or</FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT FACE="Arial, sans-serif">when a new line arrives from the MUD.
+All lines from the MUD are terminated with '\n' which is called line
+feed or the new line character. This control character ends the
+current line and move the cursor to the beginning of the next line,
+thus creating a new, empty line below the line that contains the
+'\n'.</FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">line_number_of_the_current_cursor_position
 = getLineNumber()</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">column_number_of_the_current_cursor_position
 = getColumnNumber()</CODE></P>
-<P CLASS="western" STYLE="margin-left: 2cm; margin-right: 0.5cm; border: none; padding: 0cm">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 l<CODE CLASS="code-western">uaTable_containing_textlines = getLines(
 absolute_line_number_from, absolute_line_number_to )</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm">t<FONT FACE="Arial, sans-serif">his
-will return a Lua table containing all lines between the absolute
-positions from and to. NOTE: This function uses absolute line
-numbers, not relative ones like in moveCursor(). This little demo
-script shows you how to use cursor functions: </FONT>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+t<FONT FACE="Arial, sans-serif">his will return a Lua table
+containing all lines between the absolute positions from and to.
+NOTE: This function uses absolute line numbers, not relative ones
+like in moveCursor(). This little demo script shows you how to use
+cursor functions: </FONT>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><FONT FACE="Arial, sans-serif">moveCursor()
-return true or false depending on wheather the move was possible.</FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<FONT FACE="Arial, sans-serif">moveCursor() return true or false
+depending on wheather the move was possible.</FONT></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<H1 CLASS="western">User defined dockable windows</H1>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<H1 CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+User defined dockable windows</H1>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">You
 may want to use dock windows to display information you gathered in
 your scripts, or you may want to use them as chat windows etc.
 <BR>Adding a user defined window: </FONT></FONT></CODE>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">openUserWindow( string window_name )</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">echoUserWindow( string window_name, string
 text ) </CODE>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Times New Roman, serif">setWindowSize(
 int x, int y )</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">clearWindow( string window_name )</CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<H1 CLASS="western"><CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Dynamic
+<H1 CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+<CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Dynamic
 Timers</B></FONT></FONT></FONT></CODE></H1>
-<P CLASS="western"><CODE CLASS="code-western">tempTimer( double
-timout, string lua_code_to_execute, string/float/int timer_name
-)<BR>disableTimer( name )<BR>enableTimer( name )</CODE></P>
-<P CLASS="western"><CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Dynamic
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="code-western">tempTimer( double timout, string
+lua_code_to_execute, string/float/int timer_name )<BR>disableTimer(
+name )<BR>enableTimer( name )</CODE></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Dynamic
 Triggers</B></FONT></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">triggerID
 = tempTrigger( regex, code ) </FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">creates
 a fast substring matching trigger</FONT></FONT><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><BR>triggerID
 = tempRegexTrigger( regex, code ) </FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">creates
 a regular expression matching trigger</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western"><CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Registering
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Registering
 Event Handlers and Raising Events</B></FONT></FONT></FONT></CODE></P>
-<P CLASS="western"><CODE CLASS="code-western"><FONT COLOR="#008000">raiseEvent(
-string name, args )</FONT></CODE><CODE CLASS="western"><BR></CODE><BR>
-</P>
-<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<CODE CLASS="code-western"><FONT COLOR="#008000">raiseEvent( string
+name, args )</FONT></CODE></P>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Handling
 Tables in Lua</FONT></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Nick
 Gammon has written a very nice overview on how to deal with Lua
 tables. You can find it here:
 <A HREF="http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036">http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036</A>.</FONT></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-top: 0.42cm; margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Function
 And Variable Index</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<TABLE WIDTH=943 BORDER=1 CELLPADDING=4 CELLSPACING=0 STYLE="page-break-before: auto; page-break-after: auto; page-break-inside: avoid">
-	<COL WIDTH=469>
-	<COL WIDTH=456>
+<TABLE WIDTH=943 BORDER=1 BORDERCOLOR="#000000" CELLPADDING=4 CELLSPACING=0 RULES=NONE STYLE="page-break-before: auto; page-break-after: auto; page-break-inside: avoid">
+	<COL WIDTH=396>
+	<COL WIDTH=529>
 	<TR>
 		<TD COLSPAN=2 WIDTH=933 VALIGN=TOP>
-			<P CLASS="western" ALIGN=CENTER STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+			<P CLASS="western" ALIGN=CENTER STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Andale Mono"><FONT SIZE=6 STYLE="font-size: 22pt">Mudlet
 			Functions</FONT></FONT></FONT></CODE></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>clearUserWindow(
 			window_name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Clears
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Clears
 			the user window with the name given as argument.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>copy()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Copies
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Copies
 			the current selection to the clipboard. This function operates on
 			rich text, i. e. the selected text including all its format codes
 			like colors, fonts etc.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>cut()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Cuts
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Cuts
 			the current selection and stores it in the clipboard. This text
 			remains available in the clipboard until it gets overwritten by
 			another cut or copy operation. This function works on rich text (
@@ -850,63 +955,63 @@ And Variable Index</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>deleteLine()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>deletes
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">deletes
 			the current Line under the user cursor.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>disableTimer(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Use
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Use
 			timer name or the id returned by tempTimer() to identify the timer
 			that you want to disable.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>disableTrigger(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Use
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Use
 			trigger name or the id returned by tempTrigger() to identify the
 			timer that you want to disable.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>disableKey(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Uses
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Uses
 			trigger name as id or the id returned by tempTrigger()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>echo(
 			text )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2><SPAN STYLE="background: transparent">NOTE:
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt"><SPAN STYLE="background: transparent">NOTE:
 			This function should only be used from within triggers. Please use
 			insertText() and insertHTML() as general print functions. The
 			echo() function will be given a more appropriate name soon. It
@@ -914,8 +1019,8 @@ And Variable Index</FONT></FONT></FONT></P>
 			contains linefeed characters \n i.e. it manages the user cursor
 			handling and makes sure that it is place correctly after printing.
 			See the documentation for details.</SPAN></FONT></FONT></FONT></P>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2><SPAN STYLE="background: transparent">This
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt"><SPAN STYLE="background: transparent">This
 			will print after the current set of lines received from the MUD –
 			this must not necessarily be the end of the real paragraph as
 			Mudlet cannot possibly know when the textblock ends semantically.
@@ -926,159 +1031,159 @@ And Variable Index</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>echoUserWindow(
 			window_name, text )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT SIZE=2>prints text to user dock window
-			name</FONT></FONT></P>
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">prints
+			text to user dock window name</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>enableTimer(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>use
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">use
 			timer name or the id returned by tempTimer()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>enableTrigger(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>use
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">use
 			trigger name or the id returned by tempTrigger()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>enableKey(
 			name )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>enable
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">enable
 			key or key group &quot;name&quot;</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>expandAlias(
 			command )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>like
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">like
 			send(), but with alias expansion</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
-		</TD>
-	</TR>
-	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<BR>
-			</P>
-		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<BR>
+			</P>
+		</TD>
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<BR>
+			</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>lineNumber
 			= getLineNumber()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>to
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">to
 			get the absolute line number of the current user cursor</FONT></FONT></FONT></CODE></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>number
 			= getColumnNumber()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>To
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">To
 			get the absolute column number of the current user cursor</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>number
 			= getLineCount()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>To
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">To
 			get the absolute amount of lines in the current console buffer</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>lua_table[relative_linenumber,
 			content] = <BR>getLines( from_line_number, to_line_number ) </FONT></FONT></FONT></CODE>
 			</P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>here
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">here
 			absolute line numbers are used NOT RELATIVE</FONT></FONT></FONT></CODE></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>number_of_last_line
 			= getLineCount()</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>insertText(
 			string )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Insertion
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Insertion
 			takes place at the current position of the user cursor – <B>or</B>
 			replaces the current selection. If you don't want this use
 			selectString(“”) to deselect the last selection<SPAN STYLE="background: #ffcc99">.
@@ -1086,53 +1191,53 @@ And Variable Index</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>killTimer(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>NOTE:
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">NOTE:
 			killTimer() calls on timers you have created with the GUI isn't
 			safe at this point. If you'll click on a deleted Timer Mudlet will
 			crash. Only use this on tempTimer() created timers. <SPAN STYLE="background: #ffcc99">//FIXME</SPAN></FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>killTrigger(
 			name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>See
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">See
 			killTimer()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>boolean
 			= moveCursor( x, y )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Moves
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Moves
 			the user cursor (x,y) coordinates relative from its current
 			position. Returns false if such a move is impossible.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>openUserWindow(
 			name )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Opens
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Opens
 			a user dockable console window for user output e.g. statistics,
 			chat etc. If a window of such a name already exists, nothing
 			happens. You can move these windows, dock them, make them into
@@ -1140,44 +1245,44 @@ And Variable Index</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>paste()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>pastes
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">pastes
 			the previously copied or cut text including all format codes like
 			color, font etc. at the current user cursor position. This example
 			cuts out the current line and thus deletes it and inserts it 3
-			lines above:<BR><FONT FACE="Courier New, monospace">selectString(
-			line, 1 )<BR>cut()<BR>moveCursor( 0, -3 )<BR>paste()</FONT></FONT></FONT></FONT></P>
+			lines above:<BR>selectString( line, 1 )<BR>cut()<BR>moveCursor( 0,
+			-3 )<BR>paste()</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>pasteWindow(
 			name )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>pastes
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">pastes
 			the previously copied or cut rich text (including text formats
 			like color etc.) into user window (dock window)
-			name.<BR><FONT FACE="Courier New, monospace">selectString( line, 1
-			)<BR>cut()<BR>pasteWindow( &quot;chat&quot; )</FONT></FONT></FONT></FONT></P>
+			name.<BR>selectString( line, 1 )<BR>cut()<BR>pasteWindow( &quot;chat&quot;
+			)</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>raiseEvent(
 			event_name, arg-1, ... arg-n )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Raises
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Raises
 			the event event_name. The event system will call the main function
 			(the one that is called exactly like the script name) of all such
 			scripts that have registered event handlers. If an event is
@@ -1195,8 +1300,8 @@ And Variable Index</FONT></FONT></FONT></P>
 			instead of events, however, the more complicated your system will
 			get, the more important events will become because they help
 			reduce complexity very much.</FONT></FONT></FONT></P>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>The
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">The
 			corresponding event handlers that listen to the events raised with
 			raiseEvent() need to use the script name as function name and take
 			the correct number of arguments. NOTE: If you raise an event with
@@ -1215,28 +1320,28 @@ And Variable Index</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>replace(
 			with )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>replaces
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">replaces
 			the selected text with &quot;with&quot;. To delete text use
 			replace(&quot;&quot;)</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>int
 			pos_begin_of_match_in_line = <BR>selectString( text,
 			number_of_match ) or -1 on error</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Selects
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Selects
 			a substring from the line where the user cursor is currently
 			positioned. You can move the user cursor with moveCursor(). When a
 			new line arrives from the MUD, the user cursor is positioned at
@@ -1245,209 +1350,208 @@ And Variable Index</FONT></FONT></FONT></P>
 			position yourself and make sure that the cursor is in the correct
 			line if you want to call one of the select functions. </FONT></FONT></FONT>
 			</P>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>NOTE:
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">NOTE:
 			to prevent selection of random data use the error return if not
 			found like this:</FONT></FONT></FONT></P>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Courier New, monospace"><FONT SIZE=2><SPAN STYLE="background: transparent">if
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt"><SPAN STYLE="background: transparent">if
 			selectString( “big monster”,1) &gt; -1 then setFgColor(
 			255,0,0) end</SPAN></FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>boolean
 			= selectSection( from, length_of_string ) </FONT></FONT></FONT></CODE>
 			</P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>Absolute
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<CODE CLASS="code-western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Absolute
 			column number for start of selection and length of selection</FONT></FONT></FONT></CODE></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>selectCaptureGroup(
 			groupNumber ) with first group = 0</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Selects
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Selects
 			the content of the capture group number in your perl regular
 			expression e.g. “you have (\d+) Euro”. If you want to color
-			the amount of money you have green you do: <FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">selectCaptureGroup(1);
-			setFgColor(0,255,0)</SPAN></FONT></FONT></FONT></FONT></P>
+			the amount of money you have green you do: <SPAN STYLE="background: transparent">selectCaptureGroup(1);
+			setFgColor(0,255,0)</SPAN></FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>send(
 			command )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>This
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">This
 			sends data directly to the socket layer, bypassing the alias
 			expansion unit</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setBgColor(
 			r,g,b )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Values
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Values
 			are RGB: red, green, blue ranging from 0-255 e.g. for red:
-			<FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">setFgColor(255,0,0)</SPAN></FONT></FONT></FONT></FONT></P>
+			<SPAN STYLE="background: transparent">setFgColor(255,0,0)</SPAN></FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setFgColor(
 			r, g, b )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Values
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Values
 			are RGB: red, green, blue ranging from 0-255 e.g. for blue:
-			<FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">setBgColor(0,0,255)</SPAN></FONT></FONT></FONT></FONT></P>
+			<SPAN STYLE="background: transparent">setBgColor(0,0,255)</SPAN></FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatBold(
 			boolean )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatFont(
 			string font_name )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatFontSize(
 			int size )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>setTextFormatUnderlined(
 			boolean )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<BR>
 			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>timer_id
 			= tempTimer( seconds, lua_code )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>You
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">You
 			can use 2.3 seconds or 0.45 etc.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>trigger_id
 			= tempTrigger( string, lua_code )</FONT></FONT></FONT></CODE></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>temporary
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">temporary
 			trigger using substring matching</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>trigger_id
 			= tempLineTrigger( from, howMany, LuaCode )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>Temporary
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Temporary
 			trigger that will fire on n consecutive lines following the
 			current line. This is useful to parse output that is known to
 			arrive in a certain line margin or to delete unwanted output from
-			the MUD. Example: <FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">tempLineTrigger(
-			1, 3, [[send(“shout Help”)]] )</SPAN></FONT> will fire 3 times
-			starting with the line from the MUD.<BR><FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">tempLineTrigger(
-			20, 2, [[send(“shout Help”)]] )</SPAN></FONT> <BR>will fire 20
-			lines after the current line and fire twice on 2 consecutive
-			lines.</FONT></FONT></FONT></P>
+			the MUD. Example: <SPAN STYLE="background: transparent">tempLineTrigger(
+			1, 3, [[send(“shout Help”)]] )</SPAN> will fire 3 times
+			starting with the line from the MUD.<BR><SPAN STYLE="background: transparent">tempLineTrigger(
+			20, 2, [[send(“shout Help”)]] )</SPAN> <BR>will fire 20 lines
+			after the current line and fire twice on 2 consecutive lines.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>trigger_id
 			= tempRegexTrigger( regex, lua_code )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>temorary
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">temorary
 			trigger using perl regex pattern matching</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">userWindowLineWrap(
 			window, boolean )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=2>turns
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">turns
 			line wrap mode on or off in user dock windows<BR>userWindowLineWrap(
 			&quot;chat&quot;, true ) turns on line wrap for window &quot;chat&quot;</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">printTable(
 			table_name )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=2>Lua
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
 			debug function that prints the content of a Lua table on the
 			screen, split up in keys and values. Useful if you want to see
 			what the capture groups contain i. e. the lua table &quot;matches&quot;.
@@ -1455,13 +1559,13 @@ And Variable Index</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">showCaptureGroups()</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=2>Lua
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
 			debug function that highlights all capture groups in your trigger
 			regex on the screen. This is very handy if you make complex regex
 			and want to see what really matches in the text. example: make a
@@ -1471,123 +1575,128 @@ And Variable Index</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">fg(
 			&quot;red&quot; )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=2>Sets
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Sets
 			the current foreground color to red. Check the luaglobal.lua file
 			for the defined color names ( about 255) e.g. fg(&quot;green&quot;)
 			will set the foreground color to green.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">bg(
 			&quot;blue&quot; )</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=2>same
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">same
 			as fg( color_name ) just for the background color.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR>
 		<TD COLSPAN=2 WIDTH=933 VALIGN=TOP>
-			<P CLASS="western" ALIGN=CENTER STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+			<P CLASS="western" ALIGN=CENTER STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#ff0000"><FONT FACE="Andale Mono"><FONT SIZE=6 STYLE="font-size: 22pt">Mudlet
 			Variables</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">command</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
 			variable that holds the last command issued by the user. This is
 			the command *before* alias expansion.</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">line
 			</FONT></FONT></FONT>
 			</P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
 			variable line holds the current content of the current line from
 			the MUD</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>
-		<TD WIDTH=469>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
+		<TD WIDTH=396>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
 			<FONT COLOR="#00ae00"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">matches[1]
 			... matches[n]</FONT></FONT></FONT></P>
 		</TD>
-		<TD WIDTH=456>
-			<P CLASS="western" STYLE="margin-right: 0cm; margin-top: 0cm; border: none; padding: 0cm">
-			<FONT COLOR="#000000"><FONT FACE="Andale Mono"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
+		<TD WIDTH=529>
+			<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">Lua
 			table that holds the text of the capture groups (only with perl
 			regular expressions)</FONT></FONT></FONT></P>
 		</TD>
 	</TR>
 </TABLE>
-<P CLASS="code-western"><BR>
+<P CLASS="code-western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<BR>
 </P>
-<H1 CLASS="western">Known Bugs:</H1>
+<H1 CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+Known Bugs:</H1>
 <UL>
-	<LI><P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+	<LI><P CLASS="western" STYLE="margin-right: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 	<FONT SIZE=2>VT-1xx clear screen and cursor home aren't yet
 	functional because this needs some trivial graphics code<BR>(priority:
 	low as not many servers use this kind of terminal commands)</FONT></P>
 </UL>
-<P CLASS="western"><BR>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; line-height: 150%">
+<BR>
 </P>
-<H1 CLASS="western">Planned:</H1>
-<P CLASS="western" STYLE="border: none; padding: 0cm"><BR>
+<H1 CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+Planned:</H1>
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
 <UL>
-	<LI><P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+	<LI><P CLASS="western" STYLE="margin-right: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>add
 	a Lua serialize and restore function to LuaGlobal.lua and ask Nick
 	Gammon if we can use his version which can be found here:
 	<A HREF="http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=4960">http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=4960</A></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+	<LI><P CLASS="western" STYLE="margin-right: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>store
 	all capture groups of all matched conditions in multiline triggers</FONT></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+	<LI><P CLASS="western" STYLE="margin-right: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 	<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=2>color
 	triggers: tempColorTrigger() question is what is needed. list of all
 	substrings according to fg color? what do lua tables look like?</FONT></FONT></FONT></P>
 </UL>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
+<P CLASS="western" STYLE="margin-left: -0.1cm; margin-right: -0.1cm; text-indent: -0.1cm; border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
-<BR>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<BR><BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
-<BR>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<BR><BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
-<BR>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<BR><BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
-<BR>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<BR><BR>
 </P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 100%">
-<BR>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 100%">
+<BR><BR>
 </P>
 </BODY>
 </HTML>

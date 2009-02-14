@@ -104,13 +104,13 @@ bool TCommandLine::event( QEvent * event )
             }
             break;
             
-        //case Qt::Key_Insert:
+            //case Qt::Key_Insert:
         //break;
             
-            /*  case Qt::Key_Enter:
+        case Qt::Key_Enter:
             enterCommand(ke);
             ke->accept();
-            return true;*/
+            return true;
             
         case Qt::Key_Return:
             enterCommand(ke);
@@ -169,13 +169,31 @@ bool TCommandLine::event( QEvent * event )
     return QLineEdit::event( event );
 }
 
+void TCommandLine::focusInEvent( QFocusEvent * event )
+{
+    setSelection( mSelectionStart, mSelectedText.length() );
+    QLineEdit::focusInEvent( event );
+}
+
+void TCommandLine::focusOutEvent( QFocusEvent * event )
+{
+    if( hasSelectedText() )
+    {
+        mSelectionStart = selectionStart();
+        mSelectedText = selectedText();
+    }
+    QLineEdit::focusOutEvent( event );
+}
+
 void TCommandLine::enterCommand( QKeyEvent * event )
 {
+    mpHost->send( text() );
     mHistoryBuffer = 0;
     setPalette( mRegularPalette );
     
     mHistoryList.push_front( text() );
     QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
+    
     QMap<QString, int> tmpMap;
     for( int i=0; i<commandList.size(); i++ )
     {
@@ -183,14 +201,10 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     }
     commandList.clear();
     commandList = tmpMap.uniqueKeys();
-    
     if( commandList.size() == 0 ) mpHost->send( "" );
-    
     for( int i=0; i<commandList.size(); i++ )
     {
         mHistoryMap[ commandList[i] ] = 0;
-        //qDebug()<<"TCommandLine:enterCommand() sending to Host:"<<mpHost<<" text="<<commandList[i];
-        mpHost->send( commandList[i] );
     }
     mAutoCompletionTyped = "";
     mAutoCompletion = false;

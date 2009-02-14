@@ -284,6 +284,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     profileSaveAction->setEnabled( true );
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
     
+    QAction * saveProfileAsAction = new QAction(QIcon(":/icons/document-save-as.png"), tr("Save Profile As"), this);
+    profileSaveAction->setEnabled( true );
+    connect( saveProfileAsAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAsAction()));
+    
+    QMenu * saveProfileMenu = new QMenu( this );
+    saveProfileMenu->addAction( profileSaveAction );
+    saveProfileMenu->addAction( saveProfileAsAction );
+    profileSaveAction->setMenu( saveProfileMenu );    
     
     /*QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
     actionProfileBackup->setStatusTip(tr("Backup Profile"));*/
@@ -3521,10 +3529,43 @@ void dlgTriggerEditor::slot_import()
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
-    mpHost->mSaveProfileOnExit = true;    
-    mpHost->serialize();
+    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/current";
+    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh:mm:ss")+".xml";
+    QDir dir_xml;
+    if( ! dir_xml.exists( directory_xml ) )
+    {
+        dir_xml.mkpath( directory_xml );    
+    }
+    QFile file_xml( filename_xml );
+    file_xml.open( QIODevice::WriteOnly );
+        
+    XMLexport writer( mpHost );
+    writer.exportHost( & file_xml );
+    file_xml.close();
 }
 
+void dlgTriggerEditor::slot_profileSaveAsAction()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Backup Profile"),
+                                                    QDir::homePath(),
+                                                    tr("trigger files (*.trigger *.xml)"));
+    
+    if(fileName.isEmpty()) return; 
+        
+    QFile file(fileName);
+    if( ! file.open(QFile::WriteOnly | QFile::Text) ) 
+    {
+       QMessageBox::warning(this, tr("Backup Profile:"),
+                            tr("Cannot write file %1:\n%2.")
+                            .arg(fileName)
+                            .arg(file.errorString()));
+       return;
+    }
+        
+    XMLexport writer( mpHost );
+    writer.exportHost( & file );
+    file.close();
+}
 
 bool dlgTriggerEditor::event( QEvent * event )
 {
