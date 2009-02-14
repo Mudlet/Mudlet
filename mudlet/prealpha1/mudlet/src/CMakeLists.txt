@@ -1,17 +1,14 @@
-cmake_minimum_required (VERSION 2.6)
 project (mudlet)
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 
-FIND_PACKAGE(Qt4 REQUIRED)
-FIND_PACKAGE(Lua51 REQUIRED)
-FIND_PACKAGE(QScintilla REQUIRED)
-FIND_PACKAGE(ZLIB REQUIRED)
-
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+SET(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
 SET(QT_USE_QTNETWORK 1)
 SET(QT_USE_QTWEBKIT 1)
-INCLUDE(${QT_USE_FILE})
-INCLUDE_DIRECTORIES(${QSCINTILLA_INCLUDE_DIR} ${LUA_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR})
+SET(CMAKE_CONFIGURATION_TYPES "Debug;Release")
+
+SET(mudlet_RCCS mudlet_alpha.qrc)
 
 SET( mudlet_SRCS mudlet.cpp
 TConsole.cpp
@@ -63,8 +60,6 @@ XMLimport.cpp
 FontManager.cpp
 TBuffer.cpp)
 
-qt4_automoc(${mudlet_SRCS})
-
 SET(mudlet_UIS ui/connection_profiles.ui
 ui/console.ui
 ui/main_window.ui
@@ -98,7 +93,6 @@ dlgTriggers_main_area.h
 dlgOptionsAreaTriggers.h
 TCommandLine.h
 TTreeWidget.h
-TTreeWidgetItem.h
 dlgTimersMainArea.h
 dlgSourceEditorArea.h
 dlgSystemMessageArea.h
@@ -116,10 +110,20 @@ dlgKeysMainArea.h
 dlgProfilePreferences.h
 TTextEdit.h)
 
+FIND_PACKAGE(Qt4 REQUIRED)
+FIND_PACKAGE(Lua51 REQUIRED)
+FIND_PACKAGE(QScintilla REQUIRED)
+FIND_PACKAGE(ZLIB REQUIRED)
+
+INCLUDE(MudletCPack.cmake) # Use CPack
+INCLUDE(${QT_USE_FILE})
+INCLUDE_DIRECTORIES(${QSCINTILLA_INCLUDE_DIR} ${LUA_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR})
+
+QT4_AUTOMOC(${mudlet_SRCS})
 QT4_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT4_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-SET(mudlet_RCCS mudlet_alpha.qrc)
 QT4_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
+add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
+
 TARGET_LINK_LIBRARIES(mudlet ${QT_LIBRARIES} ${QSCINTILLA_LIBRARIES} ${LUA_LIBRARIES} ${ZLIB_LIBRARIES})

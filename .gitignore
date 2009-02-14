@@ -1,7 +1,9 @@
 *.o
 moc_*.cpp
 *.cxx
+*.cxx_parameters
 ui_*.h
+*.exe
 *~
 mudlet/prealpha1/mudlet/src/mudlet
 mudlet/prealpha1/mudlet/Makefile
@@ -13,3 +15,7 @@ mudlet.kdevses
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_CPack_Packages
+install_manifest.txt
