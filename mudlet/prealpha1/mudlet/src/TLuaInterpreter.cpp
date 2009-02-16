@@ -1240,6 +1240,21 @@ void TLuaInterpreter::clearCaptureGroups()
 {
     mCaptureGroupList.clear();
     mCaptureGroupPosList.clear();
+    
+    lua_State * L = pGlobalLua;
+    if( ! L )
+    {
+        qDebug()<< "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+    }
+    
+    lua_newtable( L );      
+    
+    // only pass matches - the first element of matches is the entire text -> skip
+    //lua_pushnumber( L, 1 ); 
+    //lua_pushstring( L, "" );
+    //lua_settable( L, -3 );
+    lua_setglobal( L, "matches" );
+    lua_pop( L, lua_gettop( L ) );
 }
 
 void TLuaInterpreter::adjustCaptureGroups( int x, int a )

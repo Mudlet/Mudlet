@@ -322,24 +322,30 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyDown(QKeyEvent *event)
 {
-     //cout<<"selectedText.size="<<(int)selectedText().size()<<" text.size="<<(int)text().size()<<endl;
     if( selectedText().size() == text().size() )  
     {
         mHistoryBuffer--;
         if( mHistoryBuffer < 0 )
         {
             mHistoryBuffer = mHistoryList.size()-1;
-            if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
+            if( mHistoryBuffer < mHistoryList.size() )
+            {
+                setText( mHistoryList[mHistoryBuffer] );
+            }
         }
-        setText( mHistoryList[mHistoryBuffer]);
+        else
+        {
+            if( mHistoryBuffer < mHistoryList.size() )
+            { 
+                setText( mHistoryList[mHistoryBuffer] );
+            }
+        }
         selectAll();
     }
     else
     {
         handleAutoCompletion();
     }
-    
-    
 }
 
 // cursor up: turns on autocompletion mode and cycles through all possible matches
@@ -348,24 +354,27 @@ void TCommandLine::historyDown(QKeyEvent *event)
 
 void TCommandLine::historyUp(QKeyEvent *event)
 {
-    if( mAutoCompletion )
+    if( selectedText().size() == text().size() )  
     {
-        mAutoCompletionCount -= 2;
-        handleAutoCompletion();
-        return;
-    }
-    mHistoryBuffer++;
-    if( mHistoryBuffer < mHistoryList.size() )
-    {
-        setText( mHistoryList[mHistoryBuffer] );
-        selectAll();
+        mHistoryBuffer++;
+        if( mHistoryBuffer < mHistoryList.size() )
+        {
+            setText( mHistoryList[mHistoryBuffer] );
+            selectAll();
+        }
+        else
+        {
+            mHistoryBuffer = 0;
+            if( mHistoryList.size() > 0 )
+            {
+                setText( mHistoryList[mHistoryBuffer]);
+            }
+            selectAll();
+        }
     }
     else
     {
-        mHistoryBuffer = 0;
-        setText( mHistoryList[mHistoryBuffer] );
-        selectAll();
+        handleAutoCompletion();
     }
-    
 }
 

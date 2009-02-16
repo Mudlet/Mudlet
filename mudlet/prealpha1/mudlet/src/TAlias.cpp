@@ -66,50 +66,181 @@ TAlias::~TAlias()
 
 bool TAlias::match( QString & toMatch )
 {
+    if( ! mIsActive ) return false;
+    
     bool matchCondition = false;
-    if( mIsActive )
+    bool ret = false;
+    bool conditionMet = false;
+    pcre * re = mpRegex;
+    if( re == NULL ) return false; //regex compile error
+    
+    const char *error;
+    char * subject = (char *) malloc(strlen(toMatch.toLatin1().data())+20);
+    strcpy( subject, toMatch.toLatin1().data() );
+    unsigned char *name_table;
+    int erroffset;
+    int find_all;
+    int namecount;
+    int name_entry_size;
+    
+    int subject_length = strlen( subject );
+    int rc, i;
+    std::list<std::string> captureList;
+    std::list<int> posList;
+    int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
+    
+    //cout <<" LINE="<<subject<<endl;
+    
+    rc = pcre_exec( re,                    
+                    0,                                                                      
+                    subject,                                              
+                    subject_length,                                       
+                    0,                                                               
+                    0,                     
+                    ovector,                                                               
+                    100 );            
+    
+    if( rc < 0 )
     {
-        if( ( mRegexCode.size() > 0 ) && ( mRegex.isValid() ) )
+        switch(rc)
         {
-            if( mRegex.indexIn( toMatch ) == -1 )
-            {
-qDebug()<<"alias::match() no match for:<"<<toMatch<<">";
-                return false; // regex didn't match
-            }
-            else
-            {
-                if( mCommand.size() > 0 )
-                {
-                    mpHost->sendRaw( mCommand );
-                }
-                QStringList captureList;
-                
-                int pos = 0;
-                while( (pos = mRegex.indexIn( toMatch, pos )) != -1 )
-                {
-qDebug()<<"alias::match(): regex matched txt="<<toMatch;
-                     for( int i=1; i<=mRegex.numCaptures(); i++ )
-                     {
-                         qDebug()<<"capture#"<<i;
-                        captureList << mRegex.cap( i );
-                        //if( mudlet::debugMode ) TDebug()<<"Alias capture group #"<<QString::number(captureList.size()+1)<<" = <"<<mRegex.cap( i )<<">">>0;
-                     }
-                     pos += mRegex.matchedLength();
-                }
-qDebug()<<"alias::match() captureList:"<<captureList;
-                // call lua alias function with number of matches and matches itselves as arguments
-                execute( captureList );    
-                matchCondition = true;
-            }
-        }
-        
-        typedef list<TAlias *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
-            TAlias * pChild = *it;
-            if( pChild->match( toMatch ) ) matchCondition = true;
+        case PCRE_ERROR_NOMATCH: 
+            goto ERROR;
+            
+        default: 
+            goto ERROR;
         }
     }
+    if( rc > 0 )
+    {
+        if( mudlet::debugMode ) TDebug()<<"Alias name="<<mName<<"("<<mRegexCode<<") matched!">>0;    
+    }
+    
+    if( rc == 0 )
+    {
+        qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+    }
+    
+    if( rc < 0 )
+    {
+        goto ERROR;
+    }
+    
+    matchCondition = true; // alias has matched
+    
+    for( i=0; i < rc; i++ )
+    {
+        char * substring_start = subject + ovector[2*i];
+        int substring_length = ovector[2*i+1] - ovector[2*i];
+        if( substring_length < 1 ) continue;
+        std::string match;
+        match.append( substring_start, substring_length );
+        captureList.push_back( match );
+        posList.push_back( ovector[2*i] );
+        if( mudlet::debugMode ) TDebug()<<"Alias: capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
+    }
+    (void)pcre_fullinfo( re,                                              
+                            NULL,                 
+                            PCRE_INFO_NAMECOUNT,  
+                            &namecount);                                          
+    
+    if (namecount <= 0) 
+    {
+    //cout << "no named substrings detected" << endl; 
+    }
+    else
+    {
+        unsigned char *tabptr;
+        (void)pcre_fullinfo( re,
+                                NULL,                     
+                                PCRE_INFO_NAMETABLE,      
+                                &name_table);             
+        
+        (void)pcre_fullinfo(
+                                re,                       
+                                NULL,                     
+                                PCRE_INFO_NAMEENTRYSIZE,  
+                                &name_entry_size);      
+        
+        tabptr = name_table;
+        for (i = 0; i < namecount; i++)
+        {
+            int n = (tabptr[0] << 8) | tabptr[1];
+        //printf("GOT:(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2, ovector[2*n+1] - ovector[2*n], subject + ovector[2*n]);
+            tabptr += name_entry_size;
+        }
+    } 
+    //TODO: add named groups seperately later as Lua::namedGroups
+    for(;;)
+    {
+        int options = 0;                
+        int start_offset = ovector[1];  
+        
+        if (ovector[0] == ovector[1])
+        {
+            if (ovector[0] >= subject_length)
+            {
+                goto END;
+            }
+            options = PCRE_NOTEMPTY | PCRE_ANCHORED;
+        }
+        
+        rc = pcre_exec( re,                                            
+                        NULL,                                                                  
+                        subject,              
+                        subject_length,                                       
+                        start_offset,         
+                        options,                             
+                        ovector,                                                           
+                        30 ); 
+        
+        if (rc == PCRE_ERROR_NOMATCH)
+        {
+            if (options == 0) break;
+            ovector[1] = start_offset + 1;
+            continue; 
+        }
+        
+        if (rc < 0)
+        {
+            goto END;
+        }
+        
+        if( rc == 0 )
+        {
+            qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+        }
+        for (i = 0; i < rc; i++)
+        {
+            char * substring_start = subject + ovector[2*i];
+            int substring_length = ovector[2*i+1] - ovector[2*i];
+            if( substring_length < 1 ) continue;
+            std::string match;
+            match.append( substring_start, substring_length );
+            captureList.push_back( match );
+            posList.push_back( ovector[2*i] );
+            if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
+        }
+    }      
+    
+END:
+    {
+        TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups( captureList, posList );
+        // call lua trigger function with number of matches and matches itselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+    }
+    
+ERROR:
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TAlias * pChild = *it;
+        if( pChild->match( toMatch ) ) matchCondition = true;
+    }
+
+    free( subject );
     return matchCondition;
 }
 
@@ -117,10 +248,33 @@ void TAlias::setRegexCode( QString code )
 {
     QMutexLocker locker(& mLock); 
     mRegexCode = code; 
-    mRegex = QRegExp( code ); 
+    
+    const char *error;
+    char * pattern = code.toLatin1().data();
+    int erroffset;
+    
+    pcre * re;
+    re = pcre_compile( pattern,              
+                       0,                    
+                       &error,               
+                       &erroffset,           
+                       NULL);                
+    
+    if (re == NULL)
+    {
+        qDebug()<<"REGEX_COMPILE_ERROR:"<<pattern;
+        re = pcre_compile( "MUDLET ERROR: regex doesnt compile",        
+                           0,                    
+                           &error,               
+                           &erroffset,           
+                           NULL);                
+        
+    }
+    else
+        qDebug()<<"[OK]: REGEX_COMPILE OK";
+    
+    mpRegex = re; 
     qDebug()<<"regex code für alias:"<<mName<<"="<<code;
-    mRegex.setMinimal( false );
-    mRegex.setPatternSyntax( QRegExp::RegExp2 );
 }
 
 TAlias& TAlias::clone(const TAlias& b)
@@ -128,7 +282,7 @@ TAlias& TAlias::clone(const TAlias& b)
     mName = b.mName;
     mCommand = b.mCommand;
     mRegexCode = b.mRegexCode;
-    mRegex = b.mRegex;
+    mpRegex = b.mpRegex;
     mScript = b.mScript;
     mIsActive = b.mIsActive;
     mIsFolder = b.mIsFolder;
@@ -138,8 +292,15 @@ TAlias& TAlias::clone(const TAlias& b)
 }
 
 bool TAlias::isClone(TAlias &b) const {
-    return (mName == b.mName && mCommand == b.mCommand && mRegexCode == b.mRegexCode && mRegex == b.mRegex && mScript == b.mScript && mIsActive == b.mIsActive && \
-        mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled);
+    return (mName == b.mName 
+            && mCommand == b.mCommand 
+            && mRegexCode == b.mRegexCode 
+            && mpRegex == b.mpRegex 
+            && mScript == b.mScript 
+            && mIsActive == b.mIsActive 
+            && mIsFolder == b.mIsFolder 
+            && mpHost == b.mpHost 
+            && mNeedsToBeCompiled == b.mNeedsToBeCompiled );
 }
 
 bool TAlias::registerAlias()
@@ -156,7 +317,7 @@ void TAlias::compile()
 {
 }
 
-void TAlias::execute(QStringList & list)
+void TAlias::execute()
 {
     if( mNeedsToBeCompiled )
     {
@@ -209,8 +370,7 @@ bool TAlias::restore( QDataStream & ifs, bool initMode )
     ifs >> mID;
     ifs >> mCommand;
     ifs >> mRegexCode;
-    mRegex = QRegExp( mRegexCode );
-    mRegex.setMinimal( false );
+    setRegexCode( mRegexCode );
     ifs >> mIsActive;
     ifs >> mIsFolder;
     qint64 children;

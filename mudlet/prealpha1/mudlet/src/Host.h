@@ -85,7 +85,7 @@ public:
     KeyUnit *          getKeyUnit()                     { return & mKeyUnit; }
     ScriptUnit *       getScriptUnit()                  { return & mScriptUnit; }
     void               connectToServer();
-    void               send( QString s );
+    void               send( QString cmd, bool dontExpandAliases = false );
     void               sendRaw( QString s );
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }

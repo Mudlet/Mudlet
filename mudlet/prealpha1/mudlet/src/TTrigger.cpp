@@ -208,6 +208,8 @@ bool TTrigger::isClone( TTrigger & b ) const
 
 bool TTrigger::match_perl( QString & toMatch, int regexNumber )
 {
+    if( ! mIsActive ) return false;
+    
     if( ! mRegexMap.contains(regexNumber ) ) return false;
     
     pcre * re = mRegexMap[regexNumber];
@@ -265,6 +267,7 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
     {
         goto ERROR;
     }
+    
     for( i=0; i < rc; i++ )
     {
         char * substring_start = subject + ovector[2*i];

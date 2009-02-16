@@ -35,7 +35,7 @@
 #include "Tree.h"
 #include <QDataStream>
 #include "Host.h"
-#include <QTextBlock>
+#include <pcre.h>
 
 using namespace std;
 
@@ -57,7 +57,7 @@ public:
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
     void             compile();
-    void             execute(QStringList &);
+    void             execute();
     QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
     void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
     QString          getRegexCode()                  { QMutexLocker locker(& mLock); return mRegexCode; }
@@ -80,7 +80,7 @@ private:
     QString          mName;
     QString          mCommand;
     QString          mRegexCode;
-    QRegExp          mRegex;
+    pcre *           mpRegex;
     QString          mScript;
     bool             mIsActive;
     bool             mIsFolder;
