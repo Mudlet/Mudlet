@@ -4,7 +4,7 @@ QT += webkit \
 
 
 unix : LIBS += -lqscintilla2 \
-	-llua5.1
+ -llua5.1 -lpcre
 
 win32 : LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release -lqscintilla2 \
  -Lc:\lua-5.1.4\src -llua51 

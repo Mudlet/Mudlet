@@ -404,11 +404,6 @@ p, li { white-space: pre-wrap; }
        <string>Exact Match [true if string=line]</string>
       </property>
      </item>
-     <item>
-      <property name="text" >
-       <string>Lua Function Condition (return type must be bool)</string>
-      </property>
-     </item>
     </widget>
    </item>
    <item row="4" column="6" >

@@ -935,19 +935,13 @@ bool TConsole::selectSection( int from, int to )
 void TConsole::setFgColor( int r, int g, int b )
 {
     mFormatCurrent.fgColor = QColor( r, g, b );
-    if( hasSelection() )
-    {
-        buffer.applyFormat( P_begin, P_end, mFormatCurrent );
-    }
+    buffer.applyFormat( P_begin, P_end, mFormatCurrent );
 }
 
 void TConsole::setBgColor( int r, int g, int b )
 {
     mFormatCurrent.bgColor = QColor( r, g, b );
-    if( hasSelection() )
-    {
-        buffer.applyFormat( P_begin, P_end, mFormatCurrent );
-    }
+    buffer.applyFormat( P_begin, P_end, mFormatCurrent );
 }
 
 void TConsole::printCommand( QString & msg )
@@ -1001,8 +995,6 @@ void TConsole::printDebug( QString & msg )
 
 void TConsole::print( QString & msg )
 {
-    //QColor fgColor = QColor(0,0,0);
-    //QColor bgColor = QColor(255,255,255);
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.append(  msg, 
                     mFormatCurrent.fgColor,

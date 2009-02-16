@@ -36,11 +36,14 @@
 #include "Host.h"
 #include <QTextBlock>
 #include "TMatchState.h"
+#include <pcre.h>
 
 #define REGEX_SUBSTRING 0
 #define REGEX_PERL 1
 #define REGEX_WILDCARD 2
 #define REGEX_EXACT_MATCH 3
+
+#define OVECCOUNT 30    // should be a multiple of 3 
 
 using namespace std;
 
@@ -111,7 +114,7 @@ private:
     QString          mName;
     QStringList      mRegexCodeList;
     QList<int>       mRegexCodePropertyList;
-    QMap<int, QRegExp>   mRegexMap;
+    QMap<int, pcre *> mRegexMap;
     Host *           mpHost;
     QString          mScript;
     bool             mIsActive;
