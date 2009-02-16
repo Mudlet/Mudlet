@@ -107,13 +107,13 @@ void TAction::execute(QStringList & list)
             mNeedsToBeCompiled = false;
         }
         funcName = QString("Action") + QString::number( mID ); 
-        pL->call( funcName, 0, list, mName );
+        pL->call( funcName, mName );
     }
     else
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
         QString funcName = QString("Action") + QString::number( mID ); 
-        pL->call( funcName, 0, list, mName );
+        pL->call( funcName, mName );
     }
 }
 

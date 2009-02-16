@@ -39,6 +39,7 @@ extern "C"
 #include <queue>
 #include <string>
 #include <iostream>
+#include <list>
 //#include "TTrigger.h"
 //#include "Host.h"
 
@@ -65,7 +66,7 @@ public:
     TLuaInterpreter( Host * mpHost, int id );      
     void startLuaExecThread();
     void threadLuaInterpreterExec( string code );
-    bool call( QString & function, int, QStringList & , QString & mName);
+    bool call( QString & function, QString & mName);
     bool compile( QString & );
     bool compileScript( QString & );
     bool compileAndExecuteScript( QString & );
@@ -73,7 +74,7 @@ public:
     QString get_lua_string( QString & stringName );
     void set_lua_string( const QString & varName, QString & varValue );
     void set_lua_table( QString & tableName, QStringList & variableList );
-    void setCaptureGroups( QStringList, QList<int> );
+    void setCaptureGroups( const std::list<std::string> &, const std::list<int> & );
     void startLuaSessionInterpreter();
     void adjustCaptureGroups( int x, int a );
     void clearCaptureGroups();
@@ -129,6 +130,9 @@ public:
     static int disableKey( lua_State * );
     static int debug( lua_State * L );
 
+    std::list<std::string> mCaptureGroupList;
+    std::list<int> mCaptureGroupPosList;
+    
     
     static map<lua_State *, Host *> luaInterpreterMap;
 
@@ -166,7 +170,7 @@ public slots:
     void slotNewCommand( int, QString );
     void slotTempTimer( int hostID, double timeout, QString function, QString timerName );
         
-    //void slotNewEcho(int,QString);
+        //void slotNewEcho(int,QString);
 
     //public:
 private:
@@ -177,9 +181,8 @@ private:
     
     Host * mpHost;
     int mHostID;
-    QStringList mCaptureList;
-    QStringList mCaptureGroupList;
-    QList<int> mCaptureGroupPosList;
+    //std::list<std::string> mCaptureList;
+    
     
     
     lua_State * pGlobalLuaAliasExecutionUnit;

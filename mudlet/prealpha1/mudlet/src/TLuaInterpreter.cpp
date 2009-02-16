@@ -28,6 +28,9 @@
 #include "HostManager.h"
 #include "mudlet.h"
 #include "TDebug.h"
+#include <list>
+#include <string>
+
 
 extern "C" 
 {
@@ -184,11 +187,28 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
         lua_pushnumber( L, -1 );
         return 1;
     }
-    luaNumOfMatch--; //we want capture groups to start with #1 instead of #0
+    luaNumOfMatch--; //we want capture groups to start with 1 instead of 0
     if( luaNumOfMatch < pHost->getLuaInterpreter()->mCaptureGroupList.size() )
     {
-        if( mudlet::debugMode ) qDebug()<<"selectCaptureGroup("<<pHost->getLuaInterpreter()->mCaptureGroupPosList[luaNumOfMatch]<<", "<< pHost->getLuaInterpreter()->mCaptureGroupList[luaNumOfMatch].size()<<")";
-        int pos = pHost->mpConsole->selectSection( pHost->getLuaInterpreter()->mCaptureGroupPosList[luaNumOfMatch], pHost->getLuaInterpreter()->mCaptureGroupList[luaNumOfMatch].size()  );
+        TLuaInterpreter * pL = pHost->getLuaInterpreter();
+        std::list<std::string>::iterator its = pL->mCaptureGroupList.begin();
+        std::list<int>::iterator iti = pL->mCaptureGroupPosList.begin();
+        
+        for( int i=0; iti!=pL->mCaptureGroupPosList.end(); iti++,i++ )
+        {
+            if( i >= luaNumOfMatch ) break;
+        }
+        for( int i=0; its!=pL->mCaptureGroupList.end(); its++,i++)
+        {
+            if( i >= luaNumOfMatch ) break;
+        }
+        
+        int begin = *iti;
+        std::string & s = *its;
+        int length = s.size();
+        //cout << "selectSection("<<begin<<", "<<length<<")"<<endl;
+        if( mudlet::debugMode ) TDebug()<<"selectCaptureGroup("<<begin<<", "<<length<<")">>0;
+        int pos = pHost->mpConsole->selectSection( begin, length ); 
         lua_pushnumber( L, pos );
     }
     else
@@ -379,15 +399,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
         luaTo=lua_tonumber( L, 2 );
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    bool ret = false;
-    if( (ret = pHost->mpConsole->selectSection( luaFrom, luaTo ) ) )
-    {
-        ret = true;
-    }
-    else
-    {
-        ret = false;
-    }
+    bool ret = pHost->mpConsole->selectSection( luaFrom, luaTo );
     lua_pushboolean( L, ret );
     return 1;
 }
@@ -1209,13 +1221,18 @@ bool TLuaInterpreter::compile( QString & code )
     else return false;
 }
 
-void TLuaInterpreter::setCaptureGroups( QStringList captureList, QList<int> posList )
+void TLuaInterpreter::setCaptureGroups( const std::list<std::string> & captureList, const std::list<int> & posList )
 {
     mCaptureGroupList = captureList;
-    for( int i=0; i<mCaptureGroupList.size(); i++ )
+    mCaptureGroupPosList = posList;
+    
+    /*std::list<string>::iterator it2 = mCaptureGroupList.begin();
+    std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
+    int i=0;
+    for( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++ )
     {
-        mCaptureGroupPosList.append( posList[i] );
-    }
+        cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;    
+    } */
 }
 
 
@@ -1228,16 +1245,18 @@ void TLuaInterpreter::clearCaptureGroups()
 void TLuaInterpreter::adjustCaptureGroups( int x, int a )
 {
     // adjust all capture group positions in line if data has been inserted by the user
-    for( int i=0; i<mCaptureGroupList.size(); i++ )
+    typedef std::list<int>::iterator I;
+    int i=0;
+    for( I it=mCaptureGroupPosList.begin(); it!=mCaptureGroupPosList.end(); it++ )
     {
-        if( mCaptureGroupPosList[i] >= x )
+        if( *it >= x )
         {
-            mCaptureGroupPosList[i] += a;
+            *it += a;
         }
     }
 }
 
-bool TLuaInterpreter::call( QString & function, int numMatches, QStringList & matches, QString & mName )
+bool TLuaInterpreter::call( QString & function, QString & mName )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -1246,17 +1265,22 @@ bool TLuaInterpreter::call( QString & function, int numMatches, QStringList & ma
         return false;
     }
         
-    lua_newtable( L );      
-       
-    // set values
-    for( int i=0; i<matches.size(); i++ )
+    if( mCaptureGroupList.size() > 0 )
     {
-        // only pass matches - the first element of matches is the entire text -> skip
-        lua_pushnumber( L, i+1 ); // Lua indexes start with 1
-        lua_pushstring( L, matches[i].toLatin1().data() );
-        lua_settable( L, -3 );
+        lua_newtable( L );      
+        
+        // set values
+        int i=1; // Lua indexes start with 1 as a general convention
+        std::list<std::string>::iterator it = mCaptureGroupList.begin();
+        for( ; it!=mCaptureGroupList.end(); it++, i++ )
+        {
+            // only pass matches - the first element of matches is the entire text -> skip
+            lua_pushnumber( L, i ); 
+            lua_pushstring( L, (*it).c_str() );
+            lua_settable( L, -3 );
+        }
+        lua_setglobal( L, "matches" );
     }
-    lua_setglobal( L, "matches" );
     
     lua_getglobal( L, function.toLatin1().data() );
     lua_getfield( L, LUA_GLOBALSINDEX, function.toLatin1().data() );

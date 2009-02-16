@@ -135,13 +135,13 @@ void TScript::execute()
             mNeedsToBeCompiled = false;
         }
         QStringList list; 
-        pL->call( mName, 0, list, mName );
+        pL->call( mName, mName );
     }
     else
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
         QStringList list;
-        pL->call( mName, 0, list, mName );
+        pL->call( mName, mName );
     }
 }
 

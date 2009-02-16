@@ -183,14 +183,14 @@ void TTimer::execute()
             mNeedsToBeCompiled = false;
         }
         funcName = QString("Timer") + QString::number( mID ); 
-        pL->call( funcName, 0, list, mName );
+        pL->call( funcName, mName );
     }
     else
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
         QString funcName = QString("Timer") + QString::number( mID ); 
         QStringList list;
-        pL->call( funcName, 0, list, mName );
+        pL->call( funcName, mName );
     }
 }
 

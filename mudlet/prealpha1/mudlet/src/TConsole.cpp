@@ -917,7 +917,7 @@ bool TConsole::selectSection( int from, int to )
     if( from < 0 ) 
         return false;
     
-    if( from >= buffer.size() ) 
+    if( from >= buffer.buffer[mUserCursor.y()].size() ) 
         return false;
     
  
@@ -927,7 +927,7 @@ bool TConsole::selectSection( int from, int to )
     P_end.setY( mUserCursor.y() );
     
     if( mudlet::debugMode ) 
-        TDebug()<<"\nP_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<" selectedText = " << buffer.line( mUserCursor.y() ).mid(from,to-from) >> 0;
+        TDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
     
     return true;
 }

@@ -157,13 +157,13 @@ void TKey::execute(QStringList & list)
             mNeedsToBeCompiled = false;
         }
         funcName = QString("Key") + QString::number( mID ); 
-        pL->call( funcName, 0, list, mName );
+        pL->call( funcName, mName );
     }
     else
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
         QString funcName = QString("Key") + QString::number( mID ); 
-        pL->call( funcName, 0, list, mName );
+        pL->call( funcName, mName );
     }
 }
 
