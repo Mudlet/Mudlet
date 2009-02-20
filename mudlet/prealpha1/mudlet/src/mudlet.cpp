@@ -55,6 +55,7 @@ mudlet * mudlet::self()
     return _self;
 }
 
+
 mudlet::mudlet() 
 : QMainWindow() //Ui::MainWindow()
 {
@@ -68,13 +69,10 @@ mudlet::mudlet()
     mpMainToolBar = new QToolBar( this );
     mpMainToolBar->setIconSize(QSize(32,32));
     mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
-    mpUserToolBar = new QToolBar( this );
     
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
-    
-    addToolBar( mpUserToolBar );  
     
     mdiArea = new QMdiArea( this );
     mdiArea->setViewMode( QMdiArea::TabbedView );
@@ -153,7 +151,9 @@ mudlet::mudlet()
     
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugArea->setCentralWidget( mpDebugConsole );
-    mpDebugArea->resize(750,550);
+    QSize generalRule( qApp->desktop()->size() );
+    generalRule -= QSize( 30, 30 );
+    mpDebugArea->resize( QSize( 1200, 1000 ).boundedTo( generalRule ) );
     mpDebugArea->hide();
     QFont font("Monospace", 10, QFont::Courier);
     mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
@@ -182,8 +182,7 @@ mudlet::mudlet()
     
    
     
-    connect(mpUserToolBar,SIGNAL(actionTriggered( QAction * ) ), this, SLOT(slot_userToolBar_triggered(QAction*)));    
-    
+        
     
 }
 
@@ -205,8 +204,27 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
     
-    pH->getActionUnit()->constructToolbar( this, mpUserToolBar );
-    
+    std::list<QToolBar *> toolBarList = pH->getActionUnit()->getToolBarList();
+    typedef std::list<QToolBar *>::iterator I;
+    for( I it=toolBarList.begin(); it!=toolBarList.end(); it++ )
+    {
+        TAction * head = pH->getActionUnit()->getHeadAction( *it );        
+        if( head->mOrientation == 0 )
+            (*it)->setOrientation( Qt::Vertical );
+        else
+            (*it)->setOrientation( Qt::Vertical ); 
+        
+        switch( head->mLocation )
+        {
+            case 0: addToolBar( Qt::TopToolBarArea, *it ); break;
+            case 1: addToolBar( Qt::BottomToolBarArea, *it ); break;
+            case 2: addToolBar( Qt::LeftToolBarArea, *it ); break;    
+            case 3: addToolBar( Qt::RightToolBarArea, *it ); break;    
+            default: addToolBar( Qt::TopToolBarArea, *it ); 
+        }
+        
+        connect(*it,SIGNAL(actionTriggered( QAction * ) ), this, SLOT(slot_userToolBar_triggered(QAction*)));    
+    }
     //mdiArea->tileSubWindows();
 }
 
@@ -336,6 +354,31 @@ void mudlet::slot_userToolBar_triggered( QAction* pA )
     }
     QStringList sL;
     ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->execute(sL);
+}
+
+void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
+{
+    qDebug()<<"###########1----------";
+    EAction * pEA = (EAction *) sender();
+    if( ! pEA ) return;
+    TAction * pA = ((EAction*)pEA)->mpHost->getActionUnit()->getAction(((EAction*)pEA)->mID );
+    qDebug()<<"------#2";
+    if( ! pA )
+    {
+        qDebug()<< "pA == 0";
+        return;
+    }
+    if( pA->mOrientation == 1 )
+    {
+        qDebug()<<"---->#3";
+        if( pA->mpToolBar )
+            pA->mpToolBar->setOrientation( Qt::Vertical );
+    else
+        if( pA->mpToolBar )
+            pA->mpToolBar->setOrientation( Qt::Horizontal );
+
+    }
+    qDebug()<<"-------- wow ueberlebt :)";
 }
 
 Host * mudlet::getActiveHost()

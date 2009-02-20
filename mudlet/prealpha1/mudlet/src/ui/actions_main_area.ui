@@ -31,69 +31,114 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout" >
-   <property name="topMargin" >
+   <property name="margin" >
     <number>0</number>
    </property>
-   <property name="bottomMargin" >
-    <number>0</number>
-   </property>
-   <property name="spacing" >
-    <number>3</number>
-   </property>
-   <item row="0" column="0" >
+   <item row="0" column="0" colspan="2" >
     <widget class="QLabel" name="label_action_name" >
      <property name="text" >
       <string>Action name:</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="1" >
+   <item row="0" column="2" colspan="2" >
     <widget class="QLineEdit" name="lineEdit_action_name" />
    </item>
-   <item row="1" column="0" >
+   <item row="1" column="0" colspan="2" >
     <widget class="QLabel" name="label" >
      <property name="text" >
       <string>Command on Button Down</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1" >
+   <item row="1" column="2" colspan="2" >
     <widget class="QLineEdit" name="lineEdit_action_button_down" />
    </item>
-   <item row="2" column="0" >
+   <item row="2" column="0" colspan="2" >
     <widget class="QLabel" name="label_2" >
      <property name="text" >
       <string>Command on Button Up:</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1" >
+   <item row="2" column="2" colspan="2" >
     <widget class="QLineEdit" name="lineEdit_action_button_up" />
    </item>
-   <item row="3" column="1" >
+   <item row="3" column="0" >
+    <widget class="QLabel" name="label_3" >
+     <property name="text" >
+      <string>Push Down Button</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3" >
     <widget class="QPushButton" name="pushButton_chose_icon" >
      <property name="text" >
       <string>Choose Icon</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0" >
+   <item row="4" column="0" colspan="2" >
     <widget class="QLabel" name="label_action_name_2" >
      <property name="text" >
-      <string>Icon:</string>
+      <string>Icon File Path:</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="1" >
+   <item row="4" column="2" colspan="2" >
     <widget class="QLineEdit" name="lineEdit_action_icon" />
    </item>
-   <item row="5" column="0" colspan="2" >
+   <item row="5" column="2" >
+    <widget class="QComboBox" name="comboBox_orientation" >
+     <item>
+      <property name="text" >
+       <string>Orientation Horizontal</string>
+      </property>
+     </item>
+     <item>
+      <property name="text" >
+       <string>Orientation Vertical</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="5" column="3" >
+    <widget class="QComboBox" name="comboBox_location" >
+     <item>
+      <property name="text" >
+       <string>Dock Area Top</string>
+      </property>
+     </item>
+     <item>
+      <property name="text" >
+       <string>Dock Area Bottom</string>
+      </property>
+     </item>
+     <item>
+      <property name="text" >
+       <string>Dock Area Left</string>
+      </property>
+     </item>
+     <item>
+      <property name="text" >
+       <string>Dock Area Right</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="3" column="1" >
     <widget class="QCheckBox" name="checkBox_pushdownbutton" >
+     <property name="sizePolicy" >
+      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="layoutDirection" >
       <enum>Qt::RightToLeft</enum>
      </property>
      <property name="text" >
-      <string>2 State Button</string>
+      <string/>
      </property>
     </widget>
    </item>

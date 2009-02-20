@@ -853,6 +853,26 @@ void XMLimport::readActionGroup( TAction * pParent )
                 qDebug()<<"commandButtonDown="<<pT->mCommandButtonDown;
                 continue;
             }
+            else if( name() == "orientation")
+            {
+                pT->mOrientation = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "location")
+            {
+                pT->mLocation = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "posX")
+            {
+                pT->mPosX = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "posY")
+            {
+                pT->mPosY = readElementText().toInt();
+                continue;
+            }
             else if( name() == "icon")
             {
                 pT->mIcon = readElementText();

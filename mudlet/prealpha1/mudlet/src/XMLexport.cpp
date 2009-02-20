@@ -341,7 +341,11 @@ bool XMLexport::writeAction( TAction * pT )
     writeTextElement( "script", pT->mScript );
     writeTextElement( "commandButtonUp", pT->mCommandButtonUp );
     writeTextElement( "commandButtonDown", pT->mCommandButtonDown );    
-    writeTextElement( "icon", pT->mIcon );    
+    writeTextElement( "icon", pT->mIcon ); 
+    writeTextElement( "orientation", QString::number(pT->mOrientation) );
+    writeTextElement( "location", QString::number(pT->mLocation) );
+    writeTextElement( "posX", QString::number(pT->mPosX) );
+    writeTextElement( "posY", QString::number(pT->mPosY) );
     
     typedef list<TAction *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)

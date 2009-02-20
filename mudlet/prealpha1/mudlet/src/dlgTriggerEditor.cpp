@@ -1387,6 +1387,9 @@ void dlgTriggerEditor::addAction( bool isFolder )
     pT->setName( name );
     pT->setCommandButtonUp( cmdButtonUp );
     pT->setCommandButtonDown( cmdButtonDown );
+    pT->setIsPushDownButton( false );
+    pT->mLocation = 1;
+    pT->mOrientation = 1;
     pT->setScript( script );
     pT->setIsFolder( isFolder );
     pT->setIsActive( false );
@@ -1746,6 +1749,8 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
+    int location = mpActionsMainArea->comboBox_location->currentIndex();
+    int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();    
     QTreeWidgetItem * pItem = treeWidget_actions->currentItem(); 
     if( pItem )
     {
@@ -1759,6 +1764,8 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
             pT->setIcon( icon );
             pT->setScript( script );
             pT->setIsPushDownButton( isChecked );
+            pT->mLocation = location;
+            pT->mOrientation = orientation;
             pT->setIsActive( true );
             
             QIcon icon;
@@ -2027,6 +2034,8 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpActionsMainArea->lineEdit_action_button_up->setText( pT->getCommandButtonUp() );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
         mpSourceEditorArea->script_scintilla->setText( pT->getScript() );
+        mpActionsMainArea->comboBox_location->setCurrentIndex( pT->mLocation );
+        mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
     }
 }
 

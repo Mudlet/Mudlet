@@ -268,7 +268,6 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
 void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
 {
     if( buffer.size() <= startLine ) return;
-    
     std::queue<std::deque<TChar *> > queue;
     QStringList tempList;
     int lineCount = 0;

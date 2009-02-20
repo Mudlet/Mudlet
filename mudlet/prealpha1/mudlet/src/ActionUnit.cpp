@@ -100,8 +100,7 @@ void ActionUnit::removeActionRootNode( TAction * pT )
 
 TAction * ActionUnit::getAction( int id )
 { 
-    QMutexLocker locker(& mActionUnitLock); 
-    if( mActionMap.find( id ) != mActionMap.end() )
+    if( mActionMap.contains( id ) )
     {
         return mActionMap.value( id );
     }
@@ -182,22 +181,73 @@ qint64 ActionUnit::getNewID()
     return ++mMaxID;
 }
 
-void ActionUnit::constructToolbar( mudlet * pMainWindow, QToolBar * pTB )
+std::list<QToolBar *> ActionUnit::getToolBarList()
 {
-    mpToolBar = pTB;
-    typedef list<TAction *>::const_iterator I;
+    typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        TAction * pChild = *it;
-        pChild->insertActions( pMainWindow, pTB, 0 );
+        bool found = false;
+        QToolBar * pTB;
+        typedef list<QToolBar *>::iterator I2;
+        for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
+        {
+            if( *it2 == (*it)->mpToolBar )
+            {
+                found = true;
+                pTB = *it2;
+            }
+        }
+        if( ! found )
+        {
+            pTB = new QToolBar( (*it)->getName(), mudlet::self() );
+            mToolBarList.push_back( pTB );
+        }
         
-    } 
+        //pTB->setOrientation( Qt::Vertical );
+        constructToolbar( *it, mudlet::self(), pTB );
+        
+        (*it)->mpToolBar = pTB;
+    }    
+    
+    return mToolBarList;
+}
+
+TAction * ActionUnit::getHeadAction( QToolBar * pT )
+{
+    typedef list<TAction *>::iterator I;
+    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
+    {
+        bool found = false;
+        typedef list<QToolBar *>::iterator I2;
+        for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
+        {
+            if( pT == (*it)->mpToolBar )
+            {
+                found = true;
+                return *it;
+            }
+        }
+    }
+    return 0;
+}
+    
+void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, QToolBar * pTB )
+{
+    pTB->clear();
+    pA->expandToolbar( pMainWindow, pTB, 0 );
 }
 
 void ActionUnit::updateToolbar()
 {
-    mpToolBar->clear();
-    constructToolbar( mudlet::self(), mpToolBar );
+    getToolBarList();
+    /*typedef list<TAction *>::const_iterator I;
+    I it = mActionRootNodeList.begin();
+    for( ; it != mActionRootNodeList.end(); it++ )
+    {
+        //constructToolbar( *it, mudlet::self(), (*it)->mpToolBar );
+        
+    } */        
+    
 }
 
 bool ActionUnit::serialize( QDataStream & ofs )

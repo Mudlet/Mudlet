@@ -112,7 +112,7 @@ TKey.h \
 KeyUnit.h \
 dlgProfilePreferences.h \
 TTextEdit.h \
-TBuffer.h
+TBuffer.h 
 
 
 FORMS += ui/connection_profiles.ui \

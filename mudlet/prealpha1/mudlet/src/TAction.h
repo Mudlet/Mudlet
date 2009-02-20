@@ -79,11 +79,17 @@ public:
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     void             insertActions( mudlet *, QToolBar *, QMenu * );
+    void             expandToolbar( mudlet * pMainWindow, QToolBar * pT, QMenu * menu );
     bool             isClone(TAction & ) const;
-    
+    QToolBar *       mpToolBar;
     int              mButtonState;
     
-private:
+    int              mPosX;
+    int              mPosY;
+    int              mOrientation;
+    int              mLocation;
+    
+//private:
     
     TAction(){};
     QString          mName;
@@ -99,6 +105,7 @@ private:
     QString          mIcon;
     QMutex           mLock;
     QIcon            mIconPix;
+    
 };
 
 #endif

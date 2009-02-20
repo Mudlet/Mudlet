@@ -72,14 +72,13 @@ public:
    static QMainWindow *        mpDebugArea; 
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
-
-    QToolBar *                    mpUserToolBar;
-    QIcon *                     testicon; 
+   QIcon *                     testicon; 
     
 public slots:      
+    void                          slot_userToolBar_orientation_changed(Qt::Orientation); 
    void                          slot_show_about_dialog();
-    void                          slot_multi_view();
-    void                          slot_stopAllTriggers();
+   void                          slot_multi_view();
+   void                          slot_stopAllTriggers();
    void                          slot_userToolBar_triggered(QAction*);   
    void                          slot_userToolBar_hovered( QAction* pA );
    void                          slot_connection_dlg_finnished( QString profile, int historyVersion );

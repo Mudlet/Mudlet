@@ -50,8 +50,10 @@ public:
     void                  reParentAction( int childID, int oldParentID, int newParentID );
     qint64                getNewID();
     void                  updateToolbar();
+    std::list<QToolBar *> getToolBarList();
+    TAction *             getHeadAction( QToolBar * );
     void                  processDataStream( QString & );
-    void                  constructToolbar( mudlet * pMainWindow, QToolBar * pTB );
+    void                  constructToolbar( TAction *, mudlet * pMainWindow, QToolBar * pTB );
     QMutex                mActionUnitLock;
     
 private: 
@@ -66,6 +68,7 @@ private:
     list<TAction *>       mActionRootNodeList;
     qint64                mMaxID;
     QToolBar *            mpToolBar;
+    std::list<QToolBar *> mToolBarList;
     
 };
 

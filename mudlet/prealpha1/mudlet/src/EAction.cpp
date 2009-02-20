@@ -19,24 +19,29 @@
  ***************************************************************************/
 
 #include "EAction.h"
+#include "TFlipButton.h"
 #include <QDebug>
 
 EAction::EAction( QIcon & icon, QString & name, mudlet * parent )
 : QAction( icon, name, parent )
+//: QWidgetAction( parent )
+//, mpWidget( 0 )
 {
-    setText(name);
-    setObjectName(name);
+    
+    setText( name );
+    setObjectName( name );
     setIcon( icon );
     connect(this, SIGNAL(hovered()),this,SLOT(hover()));
 }
 
+/*QWidget * EAction::createWidget( QWidget * parent )
+{
+    mpWidget = new TFlipButton( parent );
+    return mpWidget;    
+} */
+
 void EAction::hover()
 {
-    /*
-    if( ( menu() ) && ( ! mOpen ) )
-    {
-        menu()->exec(QCursor::pos());
-        mOpen = true;*/
 } 
 
 /*

@@ -20,26 +20,28 @@
 
 #ifndef _eaction_h
 #define _eaction_h
-#include <QAction>
+#include <QWidgetAction>
 #include "mudlet.h"
 #include "Host.h"
+#include "TFlipButton.h"
 
-class EAction : public QAction
+class EAction : public QAction //QWidgetAction
 {
 Q_OBJECT
       
 public:
         
-         EAction(QIcon &, QString &, mudlet * );
-    void triggered();    
+                    EAction(QIcon &, QString &, mudlet * );
+    void            triggered();    
+    QWidget *       createWidget( QWidget * );
     
-    
-    int    mID;
-    Host * mpHost;
+    int             mID;
+    Host *          mpHost;
+    //TFlipButton *   mpWidget;
     
 public slots:
     
-    void hover();
+    void            hover();
     //    void trigger();//{QAction::trigger();}
 
     

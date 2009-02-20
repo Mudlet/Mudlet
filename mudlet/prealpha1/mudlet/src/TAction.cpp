@@ -42,6 +42,7 @@ TAction::TAction( TAction * parent, Host * pHost )
 : Tree<TAction>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
+, mpToolBar( 0 )
 {
 } 
 
@@ -50,6 +51,7 @@ TAction::TAction( QString name, Host * pHost )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
+, mpToolBar( 0 )
 {
 }
 
@@ -117,22 +119,82 @@ void TAction::execute(QStringList & list)
     }
 }
 
+void TAction::expandToolbar( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
+{
+    if( mOrientation == 1 )
+    {
+        pT->setOrientation( Qt::Vertical );
+    }
+    else
+    {
+        pT->setOrientation( Qt::Horizontal );
+    }
+    
+    if( ( mLocation == 0 ) || ( mLocation == 1 ) )
+    {
+        pT->setAllowedAreas(  Qt::RightToolBarArea | Qt::LeftToolBarArea );
+    }
+    else
+    {
+        pT->setAllowedAreas(  Qt::TopToolBarArea | Qt::BottomToolBarArea );        
+    }
+    pT->setFloatable( true );
+    
+   typedef list<TAction *>::const_iterator I;
+   for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   {
+       
+       TAction * pChild = *it;
+       
+       QIcon icon( pChild->mIcon );
+       QString name = pChild->getName();
+       EAction * action = new EAction( icon, name, pMainWindow );
+       action->setCheckable( pChild->mIsPushDownButton );
+       action->mID = pChild->mID;
+       action->mpHost = mpHost;
+       action->setStatusTip( pChild->mName );
+       QWidget * pButton = pT->widgetForAction( action );
+       if( pButton )
+       {
+           ((QToolButton * )pButton)->setPopupMode( QToolButton::InstantPopup );
+       }
+       pT->addAction( action );
+       if( mIsFolder )
+       {
+           QMenu * newMenu = new QMenu( pMainWindow );
+           action->setMenu( newMenu );
+           QWidget * pButton = pT->widgetForAction( action );
+           if( pButton )
+           {
+               ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
+           }
+           
+           typedef list<TAction *>::const_iterator I;
+           for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+           {
+               TAction * pChild = *it;
+               pChild->insertActions( pMainWindow, pT, newMenu );
+           }
+       }
+    }
+}
+
+
 void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
 {
     QMutexLocker locker(& mLock);
+    mpToolBar = pT;
     
     QIcon icon( mIcon );
     EAction * action = new EAction( icon, mName, pMainWindow );
-    //action->setIcon( *mudlet::self()->testicon );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;
     action->setStatusTip( mName );
-    qDebug()<<"mIcon="<<mIcon;
     QWidget * pButton = pT->widgetForAction( action );
     if( pButton )
     {
-        ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
+        ((QToolButton * )pButton)->setPopupMode( QToolButton::InstantPopup );
     }
     
     if( mpParent )
@@ -156,7 +218,7 @@ void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
         {
             ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
         }
-        //mudlet::connectActionMenu( this );
+   
         typedef list<TAction *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
@@ -239,6 +301,7 @@ TAction& TAction::clone(const TAction& b)
     mpHost = b.mpHost;
     mNeedsToBeCompiled = b.mNeedsToBeCompiled;
     mIcon = b.mIcon;
+    mpToolBar = b.mpToolBar;
     return *this;
 }
 
@@ -254,5 +317,7 @@ bool TAction::isClone( TAction & b ) const
              && mIsFolder == b.mIsFolder 
              && mpHost == b.mpHost 
              && mNeedsToBeCompiled == b.mNeedsToBeCompiled 
+             && mpToolBar == b.mpToolBar
              && mIcon == b.mIcon );
 }
+
