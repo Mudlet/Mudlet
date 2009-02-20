@@ -124,6 +124,11 @@
        <string>Dock Area Right</string>
       </property>
      </item>
+     <item>
+      <property name="text" >
+       <string>Floating Toolbar</string>
+      </property>
+     </item>
     </widget>
    </item>
    <item row="3" column="1" >

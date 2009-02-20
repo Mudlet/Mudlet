@@ -220,12 +220,17 @@ void mudlet::addConsoleForNewHost( Host * pH )
             case 1: addToolBar( Qt::BottomToolBarArea, *it ); break;
             case 2: addToolBar( Qt::LeftToolBarArea, *it ); break;    
             case 3: addToolBar( Qt::RightToolBarArea, *it ); break;    
-            default: addToolBar( Qt::TopToolBarArea, *it ); 
+        default: addToolBar( Qt::NoToolBarArea, *it ); //float toolbar
         }
-        
+        (*it)->setFloatable( true );
+        (*it)->setMovable( true );
+        QPoint pos = QPoint( head->mPosX, head->mPosY );
+        (*it)->move( mapFromParent( pos ) );
+        (*it)->resize(200,200);
+        (*it)->show();
+        qDebug()<<"moving TB to pos: x="<<head->mPosX<<" y="<<head->mPosY;
         connect(*it,SIGNAL(actionTriggered( QAction * ) ), this, SLOT(slot_userToolBar_triggered(QAction*)));    
     }
-    //mdiArea->tileSubWindows();
 }
 
 /*void mudlet::connectActionMenu( QAction * pA )
@@ -424,12 +429,25 @@ void mudlet::closeEvent(QCloseEvent *event)
         qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
         if( pC->mpHost->getName() != "default_host" )
         {
-            pC->close();
+            // save tool bar positions
+            std::list<QToolBar *> toolBarList = pC->mpHost->getActionUnit()->getToolBarList();
+            typedef std::list<QToolBar *>::iterator I;
+            for( I it=toolBarList.begin(); it!=toolBarList.end(); it++ )
+            {
+                TAction * head = pC->mpHost->getActionUnit()->getHeadAction( *it );        
+                QPoint pos( (*it)->pos().x(), (*it)->pos().y() );
+                pos = mapToParent( pos );
+            }
+            
+            // close script-editor
             if( pC->mpHost->mpEditorDialog )
             {
                 pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpEditorDialog->close();    
             }
+            
+            // close console
+            pC->close();
         }
     }
     
