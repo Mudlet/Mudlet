@@ -43,8 +43,9 @@ end
 
 -- Gag the whole line
 function gagLine()
-	selectString(line, 1)
-	replace("")
+	--selectString(line, 1)
+	--replace("")
+ deleteLine()
 end
 
 

@@ -121,25 +121,6 @@ void TAction::execute(QStringList & list)
 
 void TAction::expandToolbar( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
 {
-    if( mOrientation == 1 )
-    {
-        pT->setOrientation( Qt::Vertical );
-    }
-    else
-    {
-        pT->setOrientation( Qt::Horizontal );
-    }
-    
-    if( ( mLocation == 0 ) || ( mLocation == 1 ) )
-    {
-        pT->setAllowedAreas(  Qt::RightToolBarArea | Qt::LeftToolBarArea );
-    }
-    else
-    {
-        pT->setAllowedAreas(  Qt::TopToolBarArea | Qt::BottomToolBarArea );        
-    }
-    pT->setFloatable( true );
-    
    typedef list<TAction *>::const_iterator I;
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
