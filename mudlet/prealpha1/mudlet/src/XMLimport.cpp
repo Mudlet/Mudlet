@@ -328,6 +328,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mAutoClearCommandLineAfterSend = ( attributes().value("autoClearCommandLineAfterSend") == "yes" );
     pT->mDisableAutoCompletion = ( attributes().value("disableAutoCompletion") == "yes" );
     pT->mPrintCommand = ( attributes().value("printCommand") == "yes" );
+    pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
     
     while( ! atEnd() ) 
     {

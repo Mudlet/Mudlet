@@ -38,7 +38,13 @@ using namespace std;
 cTelnet::cTelnet( Host * pH ) 
 : mpHost(pH)
 , mpPostingTimer( new QTimer( this ) )
+, mUSE_IRE_DRIVER_BUGFIX( false )
 {
+    if( mpHost )
+    {
+        qDebug()<<"hostName="<<mpHost->getName()<<" bugfix="<<mpHost->mUSE_IRE_DRIVER_BUGFIX;
+        mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+    }
     mIsTimerPosting = false;
     mNeedDecompression = false;
     mWaitingForCompressedStreamToStart = false;
@@ -606,6 +612,49 @@ void cTelnet::gotPrompt( string & mud_data )
     //qDebug()<<"GA posting";
     mpPostingTimer->stop();
     mMudData += mud_data;
+    
+    if( mUSE_IRE_DRIVER_BUGFIX )
+    {
+        //////////////////////////////////////////////////////////////////////
+        //
+        // BUGFIX for broken driver in IRE_MUDS part#2 (part#1 -> line 885 
+        // make this a user option
+        //
+     
+        int j = 0;
+        int s = mMudData.size();
+        bool ok = true;
+        while( j < s )
+        {
+            // liegt das zeichen innerhalb einer ANSI farb-sequence?
+            // wenn nein, dann ist <LF> nicht am Anfang der Zeile -> nicht loeschen
+            if( mMudData[j] == 0x1B )
+            {
+                while( j < s )
+                {
+                    if( mMudData[j] == 'm' )
+                    {
+                        goto NEXT;
+                        break;
+                    }
+                    j++;
+                }
+            }
+            if( mMudData[j] == '\n' )
+            {
+                mMudData.erase( j, 1 );
+                break;
+            }
+            else
+            {
+                break;
+            }
+            NEXT: j++;
+        }
+        //
+        ////////////////////////////   
+    }
+    
     postData();
     mMudData = "";
     mIsTimerPosting = false;
@@ -622,6 +671,7 @@ void cTelnet::gotRest( string & mud_data )
         //qDebug()<<"LF-posting";
         mpPostingTimer->stop();
         mMudData += mud_data;
+        
         postData();
         mMudData = "";
         mIsTimerPosting = false;
@@ -859,17 +909,21 @@ void cTelnet::handle_socket_signal_readyRead()
             if( ch != '\r' ) 
                 cleandata += ch;
         }
-        MAIN_LOOP_END: ;
+MAIN_LOOP_END: ;
+        if(recvdGA)
+        {
+            //cout << " GOT telnet command TN_GA" << "cleandata="<<cleandata<<endl;
+            //we got a prompt
+            if( mUSE_IRE_DRIVER_BUGFIX )
+            {
+                cleandata.push_back('\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
+            }
+            gotPrompt( cleandata );
+            cleandata = "";
+            recvdGA = false;
+        }
     }//for
-    if(recvdGA)
-    {
-        //cout << getCurrentTime() << " GOT telnet command TN_GA" <<endl;
-        //we got a prompt
-        //cleandata.push_back('\n');
-        gotPrompt( cleandata );
-        cleandata = "";
-        recvdGA = false;
-    }
+  
     if( cleandata.size() > 0 ) 
     {
         gotRest( cleandata );

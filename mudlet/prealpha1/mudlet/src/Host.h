@@ -137,6 +137,7 @@ public:
     void               unregisterEventHandler( QString, TScript * );
     void               raiseEvent( TEvent * event );
     void               stopAllTriggers();
+    void               set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX = b; mTelnet.set_USE_IRE_DRIVER_BUGFIX( b ); }
     
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
@@ -177,10 +178,10 @@ public:
     QString mCommandSeparator;
     bool mDisableAutoCompletion;
     //////////////////////////////////////////
+    bool               mUSE_IRE_DRIVER_BUGFIX;
     
     
-    
-private:
+    //private:
    
     QStringList        mTextBufferList;
     QString            mRest; 

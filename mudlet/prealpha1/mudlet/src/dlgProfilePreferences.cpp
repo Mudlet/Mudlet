@@ -139,6 +139,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
         command_separator_lineedit->setText( pHost->mCommandSeparator);
         disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
         
+        checkBox_USE_IRE_DRIVER_BUGFIX->setChecked( pHost->mUSE_IRE_DRIVER_BUGFIX );
     }
 }
 
@@ -369,6 +370,8 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
     pHost->mCommandSeparator = command_separator_lineedit->text();
     pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
+    pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
+    pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );
     close();
 }
 

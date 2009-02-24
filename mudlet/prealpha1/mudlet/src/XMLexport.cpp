@@ -95,6 +95,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "autoClearCommandLineAfterSend", pT->mAutoClearCommandLineAfterSend ? "yes" : "no" );
     writeAttribute( "disableAutoCompletion", pT->mDisableAutoCompletion ? "yes" : "no" );
     writeAttribute( "printCommand", pT->mPrintCommand ? "yes" : "no" );
+    writeAttribute( "USE_IRE_DRIVER_BUGFIX", pT->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no" );
     
     writeTextElement( "name", pT->mHostName );
     writeTextElement( "login", pT->mLogin );
@@ -123,7 +124,7 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mWhite", pT->mWhite.name() );    
     writeTextElement( "mLightWhite", pT->mLightWhite.name() );    
     writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );    
-    writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() );    
+    writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() ); 
     
     writeEndElement(); // end Host tag
     writeEndElement(); // end HostPackage tag

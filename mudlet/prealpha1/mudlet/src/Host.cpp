@@ -81,6 +81,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mCommandSeparator( ';' )
 , mDisableAutoCompletion( false )
 , mSaveProfileOnExit( false )
+, mUSE_IRE_DRIVER_BUGFIX( false )
 {
 }
 
@@ -103,6 +104,9 @@ void Host::stopAllTriggers()
 
 void Host::send( QString cmd, bool dontExpandAliases )
 {  
+    mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
+                                        // this is important to get the cursor position right
+    
     QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
     if( ! dontExpandAliases )
     {
@@ -116,8 +120,6 @@ void Host::send( QString cmd, bool dontExpandAliases )
     {
         QString command = commandList[i].replace(QChar('\n'),"");
         mReplacementCommand = "";
-        mpConsole->printCommand( command ); // used to print the terminal <LF> that terminates a telnet command
-                                            // this is important to get the cursor position right
         if( dontExpandAliases )
         {
             mTelnet.sendData( command );

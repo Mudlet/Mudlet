@@ -461,21 +461,13 @@ void TConsole::translateToPlainText( QString & s )
     sequence_begin = s.indexOf(QString("\033["), 0);
     if( ( sequence_begin == -1 ) || ( sequence_begin > 0 ) ) 
     {
-        //if( m_fontSpecs.bold ) charFormat.setFontWeight(QFont::Bold);
-        //else charFormat.setFontWeight(QFont::Normal);
-        //charFormat.setForeground( m_fontSpecs.fgColor );
-        //charFormat.setBackground( m_fontSpecs.bgColor );
-        //cursor.setCharFormat( charFormat );
-        //cursor.mergeCharFormat( charFormat );
         if( sequence_begin == -1 )
         {
-            //cursor.insertText( s );
             buffer.append( s, m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
             return;
         }
         else
         {
-            //cursor.insertText( s.mid( 0, sequence_begin ) );
             buffer.append( s.mid( 0, sequence_begin ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
         }
     }
@@ -670,10 +662,10 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
 // time.start();
     
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    qDebug()<<"LastLine vor translate:"<<lineBeforeNewContent;
+    //qDebug()<<"LastLine vor translate:"<<lineBeforeNewContent;
     translateToPlainText( incomingSocketData );
     
-    qDebug()<<"buffer.size-1 after translate:"<<buffer.getLastLineNumber();    
+    //qDebug()<<"buffer.size-1 after translate:"<<buffer.getLastLineNumber();    
 //t1=time.elapsed();
     
     mTriggerEngineMode = true;
@@ -682,13 +674,13 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         mUserCursor.setY( i );
         mUserCursor.setX( 0 );
         mCurrentLine = buffer.line( i );
-        qDebug()<<"schiebe line#"<<i<<":"<<mCurrentLine;
+        //qDebug()<<"schiebe line#"<<i<<":"<<mCurrentLine;
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
         mpHost->incomingStreamProcessor( mCurrentLine, prompt );
         mUserCursor.setY( mUserCursor.y() + 1 );
         mUserCursor.setX( 0 );
-        qDebug()<<"mUserCursorY="<<mUserCursor.y();
+        //qDebug()<<"mUserCursorY="<<mUserCursor.y();
     }
     mTriggerEngineMode = false;    
 //t2=time.elapsed()-t1;

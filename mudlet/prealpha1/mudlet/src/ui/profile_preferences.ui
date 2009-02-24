@@ -31,7 +31,7 @@
     <enum>QTabWidget::Rounded</enum>
    </property>
    <property name="currentIndex" >
-    <number>0</number>
+    <number>3</number>
    </property>
    <widget class="QWidget" name="input_line_tab" >
     <property name="geometry" >
@@ -723,6 +723,24 @@
       </widget>
      </item>
     </layout>
+   </widget>
+   <widget class="QWidget" name="Seite" >
+    <attribute name="title" >
+     <string>Server Options</string>
+    </attribute>
+    <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX" >
+     <property name="geometry" >
+      <rect>
+       <x>38</x>
+       <y>22</y>
+       <width>251</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text" >
+      <string>use IRE driver bugfix</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QPushButton" name="closeButton" >

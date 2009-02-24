@@ -64,6 +64,8 @@ XMLexport.cpp \
 XMLimport.cpp \
 TBuffer.cpp \
 FontManager.cpp \
+TFlipButton.cpp \
+TToolBar.cpp \
 mudlet.cpp
 
 
@@ -112,6 +114,8 @@ TKey.h \
 KeyUnit.h \
 dlgProfilePreferences.h \
 TTextEdit.h \
+TFlipButton.h \
+TToolBar.h \
 TBuffer.h 
 
 

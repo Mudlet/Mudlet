@@ -82,7 +82,8 @@ public:
   void                setNegotiateOnStartup( bool startupneg );
   void                setDisplayDimensions();
   void                encodingChanged(QString encoding);
-
+  void                set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
+    
 protected slots:
   
   void                handle_socket_signal_hostFound(QHostInfo);
@@ -91,8 +92,8 @@ protected slots:
   void                handle_socket_signal_readyRead();
   void                handle_socket_signal_error();
   void                slot_timerPosting();
-    void                slot_send_login();
-    void                slot_send_pass();
+  void                slot_send_login();
+  void                slot_send_pass();
 
 private:
                       cTelnet(){;}    
@@ -110,7 +111,7 @@ private:
   void                gotPrompt( string & );
   void                postData();  
     
-
+  bool                mUSE_IRE_DRIVER_BUGFIX;
   Host *              mpHost;  
   QTcpSocket          socket;
   QHostAddress        mHostAddress;
