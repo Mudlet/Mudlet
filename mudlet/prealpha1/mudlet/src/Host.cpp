@@ -314,7 +314,7 @@ bool Host::serialize()
         return true;
     }
     QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/current";
-    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh:mm:ss")+".xml";
+    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
     QDir dir_xml;
     if( ! dir_xml.exists( directory_xml ) )
     {

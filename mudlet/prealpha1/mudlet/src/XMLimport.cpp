@@ -515,7 +515,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     while( ! atEnd() ) 
     {
         readNext();
-        qDebug()<<"[INFO] element:"<<name().toString()<<" text:"<<text().toString();        
+        //qDebug()<<"[INFO] element:"<<name().toString()<<" text:"<<text().toString();        
         if( isEndElement() ) break;
         
         if( isStartElement() ) 
@@ -578,10 +578,10 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             }
         }
     }
-    pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
+    
     qDebug()<<"[REGISTER] Trigger:"<<pT->getName();
     mpHost->getTriggerUnit()->registerTrigger( pT );
-    
+    pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
 }
 
 void XMLimport::readTimerPackage()

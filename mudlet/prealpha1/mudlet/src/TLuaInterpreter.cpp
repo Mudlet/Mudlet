@@ -1625,6 +1625,9 @@ int TLuaInterpreter::startTempTimer( double timeout, QString function )
     pT->registerTimer();    
     int id = pT->getID();
     pT->setName( QString::number( id ) );
+    pT->setUserActiveState( true );
+    pT->setIsActive( true );
+    pT->enableTimer( id );
     return id;                  
 }
 

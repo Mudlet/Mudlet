@@ -725,6 +725,14 @@
     </layout>
    </widget>
    <widget class="QWidget" name="Seite" >
+    <property name="geometry" >
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>549</width>
+      <height>476</height>
+     </rect>
+    </property>
     <attribute name="title" >
      <string>Server Options</string>
     </attribute>
@@ -738,7 +746,7 @@
       </rect>
      </property>
      <property name="text" >
-      <string>use IRE driver bugfix</string>
+      <string>Use GA/EOR for prompt</string>
      </property>
     </widget>
    </widget>

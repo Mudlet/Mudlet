@@ -136,7 +136,7 @@ void TConsole::closeEvent( QCloseEvent *event )
         if( QMessageBox::question( this, "Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
         {
             QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
-            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh:mm:ss")+".xml";
+            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
             QDir dir_xml;
             if( ! dir_xml.exists( directory_xml ) )
             {
@@ -779,15 +779,13 @@ void TConsole::replace( QString text )
     buffer.replaceInLine( P_begin, P_end, text, mFormatCurrent );
 }
 
-// skips the current Line in the trigger unit
-// resulting in aborting further triggering on this line
-// and skips transfer of this line to the display buffer
+
 void TConsole::skipLine()
 {
-    if( mTriggerEngineMode )
-    {
-        mCurrentLine.clear();
-    }
+    cout << "DELETING LINE="<<mUserCursor.y() << endl;
+    qDebug()<<"delline="<<buffer.line( mUserCursor.y() );
+    deleteLine( mUserCursor.y() );
+    qDebug()<<"after deletion line=<"<<buffer.line( mUserCursor.y() )<<">" ;    
 }
 
 bool TConsole::deleteLine( int y )

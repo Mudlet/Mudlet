@@ -617,8 +617,7 @@ void cTelnet::gotPrompt( string & mud_data )
     {
         //////////////////////////////////////////////////////////////////////
         //
-        // BUGFIX for broken driver in IRE_MUDS part#2 (part#1 -> line 885 
-        // make this a user option
+        // Patch for servers that need GA/EOR for prompt fixups
         //
      
         int j = 0;
@@ -626,8 +625,7 @@ void cTelnet::gotPrompt( string & mud_data )
         bool ok = true;
         while( j < s )
         {
-            // liegt das zeichen innerhalb einer ANSI farb-sequence?
-            // wenn nein, dann ist <LF> nicht am Anfang der Zeile -> nicht loeschen
+            // search for leading <LF> but skip leading ANSI control sequences
             if( mMudData[j] == 0x1B )
             {
                 while( j < s )

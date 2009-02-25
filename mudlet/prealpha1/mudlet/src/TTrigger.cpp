@@ -128,6 +128,7 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                                    NULL);                /* use default character tables */
             }
             mRegexMap[i] = re; 
+            mTriggerContainsPerlRegex = true;
         }
         if( propertyList[i] == REGEX_PERL )
         {

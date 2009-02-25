@@ -277,10 +277,12 @@ void mudlet::openUserWindow( Host * pHost, QString & name )
     if( ! dockWindowMap.contains( name ) )
     {
         QDockWidget * pD = new QDockWidget;
+        pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
         TConsole * pC = new TConsole( pHost, false );
+        pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
         pC->mpCommandLine->hide();
@@ -294,10 +296,9 @@ void mudlet::clearUserWindow( Host * pHost, QString & name )
 {
     if( dockWindowMap.contains( name ) )
     { 
-        //FIXME
-        //dockWindowConsoleMap[name]->textEdit->clear();    
+        dockWindowConsoleMap[name]->buffer.clear();    
     }
-    else qDebug()<<"ERROR: window doesnt exit";
+    else TDebug()<<"ERROR: window doesnt exit" >> 0;
 }
 
 void mudlet::userWindowLineWrap( Host * pHost, QString & name, bool on )

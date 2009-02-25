@@ -98,6 +98,13 @@ int TBuffer::getLastLineNumber()
     return buffer.size()-1;
 }
 
+void TBuffer::clear()
+{
+    while( buffer.size() > -1 )    
+    {
+        deleteLines( 0, 1 );
+    }
+}
 
 void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
@@ -478,15 +485,15 @@ bool TBuffer::deleteLines( int from, int to )
 {
     if( ( from >= 0 ) 
      && ( from <= buffer.size() )
-     && ( from < to )   
+     && ( from <= to )   
      && ( to >=0 )
      && ( to <= buffer.size() ) )
     {
-        int delta = to - from;
+        int delta = to - from + 1;
         
         for( int i=from; i<from+delta; i++ )
         {
-            lineBuffer.removeAt( i );
+            lineBuffer.removeAt( i ); 
             for( int k=0; k<buffer[i].size(); k++ )
             {
                 delete buffer[i][k];    

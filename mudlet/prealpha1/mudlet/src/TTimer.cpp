@@ -70,6 +70,7 @@ TTimer::~TTimer()
 
 bool TTimer::registerTimer()
 {
+    qDebug()<<"registerTimer:"<<mID;
     if( ! mpHost )
     {
         qDebug() << "ERROR: TTrigger::registerTrigger() pHost=0";
