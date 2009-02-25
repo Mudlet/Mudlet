@@ -5,7 +5,7 @@
 	<TITLE></TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 2.4  (Linux)">
 	<META NAME="CREATED" CONTENT="20081028;19075200">
-	<META NAME="CHANGED" CONTENT="20090221;19432000">
+	<META NAME="CHANGED" CONTENT="20090225;11193700">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { size: 21cm 29.7cm }
@@ -29,100 +29,102 @@
 	</STYLE>
 </HEAD>
 <BODY LANG="en-US" DIR="LTR">
-<H1 CLASS="western" ALIGN=LEFT STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=4><SPAN STYLE="text-decoration: none"><SPAN STYLE="background: #ff950e">manual
-(updated: 02-20-2009)</SPAN></SPAN></FONT></FONT></H1>
-<P CLASS="western" ALIGN=CENTER STYLE="margin-bottom: 0.5cm"><FONT COLOR="#008000"><FONT SIZE=6 STYLE="font-size: 26pt"><SPAN STYLE="background: #cccccc">***
+<H1 CLASS="western" ALIGN=LEFT STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+<FONT FACE="Arial Black"><FONT SIZE=4><SPAN STYLE="background: #ff950e">manual
+(updated: 02-25-2009)</SPAN></FONT></FONT></H1>
+<P CLASS="western" ALIGN=CENTER STYLE="line-height: 150%"><FONT COLOR="#008000"><FONT SIZE=6 STYLE="font-size: 26pt"><SPAN STYLE="background: #cccccc">***
 NEWS *** </SPAN></FONT></FONT>
 </P>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">changed
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="border: none; padding: 0cm; line-height: 150%">
+	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">user
+	dock windows are back again.</SPAN></FONT></P>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="border: none; padding: 0cm; line-height: 150%">
+	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">replace(&quot;&quot;)
+	issue fixed</SPAN></FONT></FONT></P>
+</UL>
+<UL>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">changed
 	our regex engine to PCRE 7.8 This will give us much more options and
 	improved capabilities</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">all
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">all
 	input masks are working now and do what they are supposed to. If you
 	happen to find something that doesnt work as described in this
 	manual please let us know via email or via our forum.</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">you
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">you
 	can now use as many toolbars as you like instead of a single user
 	toolbar. Each root folder action item will be an individual toolbar.
 	<BR>toolbars now remember their state and placement (not fully
 	implemented though)</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">alias
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">alias
 	improved</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">added
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">added
 	Lua functions to save Lua tables to hard disc to enable you to build
 	your own little database of relevant script parameters<BR>Mudlet can
 	autosave and autrestore the entire former session on request.</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">defined
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">defined
 	a huge color table with lots of color names that can be used to
 	colorize your output via Lua scripts without having to use rgb
 	values.<BR>a simple fg(&quot;red&quot;) echo(&quot;great!&quot;)
 	will do</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm"><FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">improved
-	command line autocompletion substantially</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-bottom: 0.5cm"></P>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><SPAN STYLE="background: transparent"><FONT SIZE=2>improved
+	command line autocompletion substantially</FONT></SPAN></FONT></P>
+	<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"></P>
 </UL>
-<H1 CLASS="western" ALIGN=CENTER STYLE="text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+<H1 CLASS="western" ALIGN=CENTER STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
 <FONT COLOR="#c5000b"><FONT SIZE=6 STYLE="font-size: 22pt"><SPAN STYLE="background: #cccccc">Current
 Issues / Still Missing: </SPAN></FONT></FONT>
 </H1>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">Multiline
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><SPAN STYLE="background: transparent">Multiline
 	triggers cannot yet pass all capture groups on to the script.
 	Currently, only the last condition will pass on capturegroups. This
 	issue will be resolved soon though. In the future Mudlet will pass
 	the 2-dimensional table multimatches[ conditionNumber ] [ matches[ ]
 	].</SPAN></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">user
-	dock windows are currently disabled. They'll be back again quickly.</SPAN></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">some
-	issues with replace: replace(&quot;&quot;) doesn't work correctly.
-	replace() itself works correctly, but deleting text completely via
-	this function is currently broken.<BR>However, replace(&quot;wood&quot;)
-	works.</SPAN></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-bottom: 0.5cm">offset timers
+	<LI><P CLASS="western" STYLE="line-height: 150%">offset timers
 	aren't finished and don't yet work as they are supposed to</P>
+	<P CLASS="western" STYLE="line-height: 150%"></P>
 </UL>
-<H1 CLASS="western" ALIGN=CENTER STYLE="text-indent: -0.1cm; margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+<H1 CLASS="western" ALIGN=CENTER STYLE="margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 <FONT COLOR="#4700b8"><FONT FACE="Arial Black"><FONT SIZE=6 STYLE="font-size: 22pt"><SPAN STYLE="background: #cccccc">Current
 Development: </SPAN></FONT></FONT></FONT>
 </H1>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">currently
 	adding more features to actions and improving the user toolbars
 	significantly</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">reenable
 	user dock windows</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">add
 	several functions to the C++-side Lua API.</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">setText()
 	to manipulate user button text via scripting</SPAN></FONT></FONT></FONT></P>
 </UL>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">Multiline
 	triggers cannot yet pass all capture groups on to the script.
 	Currently, only the last condition will pass on capturegroups. This
 	issue will be resolved soon though. In the future Mudlet will pass
 	the 2-dimensional table multimatches[ conditionNumber ] [ matches[ ]
 	].</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">fix
 	a few small issues and then release Mudlet beta asap</SPAN></FONT></FONT></FONT></P>
 </UL>
 <H1 CLASS="western" ALIGN=CENTER STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+</H1>
+<H1 CLASS="western" ALIGN=CENTER STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5 STYLE="font-size: 20pt"><U>Mudlet
 Manual</U><SPAN STYLE="text-decoration: none"> </SPAN></FONT></FONT>
 </H1>
-<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
-<FONT SIZE=5><SPAN STYLE="font-weight: medium"><FONT FACE="Arial Black">Introduction</FONT></SPAN></FONT></H1>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Introduction</FONT></FONT></H1>
 <P CLASS="western" STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Throughout
 this document a regular expression (regex) will be colored blue, Text
 examples will be colored red and Lua example code will be colored
@@ -130,9 +132,8 @@ green. </FONT></FONT>
 </P>
 <P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
-<SPAN STYLE="font-weight: medium"><FONT FACE="Arial Black"><FONT SIZE=5>Multi
-Session Gameing</FONT></FONT></SPAN></H1>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Multi Session Gameing</FONT></FONT></H1>
 <P CLASS="western" STYLE="line-height: 150%">Mudlet lets you play
 several simultaneous MUD sessions. However, currently we have the
 restriction that you cannot use the same profile twice. Consequently,
@@ -142,9 +143,8 @@ ernie@avalon.de, bert@avalon.de etc.</P>
 <P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
-<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
-<FONT SIZE=5><FONT FACE="Arial Black"><SPAN STYLE="font-weight: medium">Split
-Screen</SPAN></FONT></FONT></H1>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
+<FONT FACE="Arial Black"><FONT SIZE=5>Split Screen</FONT></FONT></H1>
 <P CLASS="western" STYLE="line-height: 150%">Mudlet has a split
 screen. If you scroll up in the old text, the screen will split in
 two parts. The lower part will follow the MUD output while the upper
@@ -181,85 +181,71 @@ will result in autocompletion. <BR>4. To get out of autocompletion
 you can press the ESC key any time.</P>
 <P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
-<FONT FACE="Arial Black"><FONT SIZE=5>Mudlet's Trigger Engine</FONT></FONT></H1>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
-<BR>
-</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<FONT COLOR="#000000"><FONT SIZE=4><B>Simple Trigger Matching</B></FONT></FONT></P>
-<P CLASS="western" STYLE="line-height: 150%"><BR>
-</P>
-<P CLASS="western" STYLE="line-height: 150%">Type your trigger in the
-input line below the trigger conditions list box and then press add
-to add it to the list. You can edit an expression in the list by
-clicking on it and then edit it on the input line below. After your
-edit you have to press the return key to accept the changes.<BR>After
-editing is finished your changes will only become permanent if you
-press on the save icon on the upper left. This is the same throughout
-the entire program. If you forget to save your current changes or new
-additions, they will be lost once you select to edit some other
-item.<BR>Select the trigger type from the listbox below the
-expression line edit. Normal substring matching will do for most
-people and it is the fastest matching type available. Example: You
-want to trigger on the word &quot;pond&quot; in a line such as: &quot;The
-frog swims in the pond. Plop.&quot; All you need to do is enter
-&quot;pond&quot; in the trigger expression input line and add it to
-the expression list. Then enter the command you like to send to the
-MUD if the trigger matches e.g. &quot;drink water&quot; and then you
-are done. The more advanced trigger types are explained below.</P>
-<P CLASS="western" STYLE="line-height: 150%"><BR>
-</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<FONT COLOR="#000000"><FONT SIZE=4><B>Simple Highlighter Triggers</B></FONT></FONT></P>
-<P CLASS="western" STYLE="line-height: 150%"><BR>
-</P>
-<P CLASS="western" STYLE="line-height: 150%">If you want to highlight
-the word &quot;pond&quot; in the above example you have to add the
-following little Lua script to the script editor on the lower right
-side of the Script Editor window:</P>
-<P CLASS="western" STYLE="line-height: 150%"><BR><FONT COLOR="#00ae00"><FONT FACE="Andale Mono">selectString(
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+<FONT SIZE=5><FONT FACE="Arial Black"><SPAN STYLE="font-weight: medium">Mudlet's
+Trigger Engine</SPAN></FONT></FONT></H1>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<B><FONT COLOR="#000000"><FONT SIZE=4>Simple Trigger Matching</FONT></FONT></B></P>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">Type
+your trigger in the input line below the trigger conditions list box
+and then press add to add it to the list. You can edit an expression
+in the list by clicking on it and then edit it on the input line
+below. After your edit you have to press the return key to accept the
+changes.<BR>After editing is finished your changes will only become
+permanent if you press on the save icon on the upper left. This is
+the same throughout the entire program. If you forget to save your
+current changes or new additions, they will be lost once you select
+to edit some other item.<BR>Select the trigger type from the listbox
+below the expression line edit. Normal substring matching will do for
+most people and it is the fastest matching type available. Example:
+You want to trigger on the word &quot;pond&quot; in a line such as:
+&quot;The frog swims in the pond. Plop.&quot; All you need to do is
+enter &quot;pond&quot; in the trigger expression input line and add
+it to the expression list. Then enter the command you like to send to
+the MUD if the trigger matches e.g. &quot;drink water&quot; and then
+you are done. The more advanced trigger types are explained below.</P>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><B><FONT SIZE=4>Simple Highlighter Triggers</FONT></B></FONT></P>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+If you want to highlight the word &quot;pond&quot; in the above
+example you have to add the following little Lua script to the script
+editor on the lower right side of the Script Editor
+window:<BR><FONT COLOR="#00ae00"><FONT FACE="Andale Mono">selectString(
 &quot;pond&quot;, 1 )<BR>fg( &quot;red &quot; )<BR>bg( &quot;blue&quot;
 )</FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT SIZE=4><B><BR><FONT FACE="Arial, sans-serif">&quot;AND&quot;
 and &quot;OR&quot; Condition Triggers</FONT></B></FONT></FONT></P>
-<P CLASS="western" STYLE="line-height: 150%"><BR>
-</P>
-<P CLASS="western" STYLE="line-height: 150%">AND -Triggers execute
-their respective command or script only if all conditions in their
-respective conditions expression list are fullfilled.<BR>OR-Triggers
-execute when *any* one of their conditions is true.<BR>To make
-OR-Triggers you simply have to add a few conditions to the conditions
-list e.g. in our example: &quot;pond&quot;, &quot;frog&quot;, &quot;Plop&quot;.
-The trigger will now also execute on lines like this: &quot;A frog is
-green&quot; or &quot;You hear a loud Plop!&quot; However, it will not
-execute on &quot;With a loud plop the frog dived into the water.&quot;
-because &quot;plop&quot; in the line is in lower case letters and
-your condition specified a &quot;P&quot; in upper case. <BR>The
-simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter
-Chains, whatever you'd like to call it.</P>
-<P CLASS="western" STYLE="line-height: 150%"><BR>
-</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<FONT COLOR="#000000"><FONT SIZE=4><B>Trigger Chains - Filter Chains</B></FONT></FONT></P>
-<P CLASS="western" STYLE="line-height: 150%"><BR>
-</P>
-<P CLASS="western" STYLE="line-height: 150%">Imagine the following
-scenario: You want to collect some berries. You know that the room
-contains some berries if the room description contains the words &quot;You
-see several sorts of berries.&quot; You make a new substring trigger
-for this line, but instead of chosing a regular trigger, you chose to
-add a new trigger group. Now you add &quot;You see several sorts of
-berries.&quot; to the expression list of the trigger group. When
-adding condions to a trigger group, the trigger group turns from an
-organizational unit into a filter unit. From now on this folder is a
-filter and will only let data through that matches it's condition.
-<BR>In our case this is exactly what we want, because we don't want
-to collect all sorts of berries, but we only want 2 particular kinds,
-namely, strawberries and blackberries. Now you add two regular
-triggers to our berry filter - one containing the condition:
-&quot;strawberries&quot; and the other one &quot;blackberries&quot;.
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">AND
+-Triggers execute their respective command or script only if all
+conditions in their respective conditions expression list are
+fullfilled.<BR>OR-Triggers execute when *any* one of their conditions
+is true.<BR>To make OR-Triggers you simply have to add a few
+conditions to the conditions list e.g. in our example: &quot;pond&quot;,
+&quot;frog&quot;, &quot;Plop&quot;. The trigger will now also execute
+on lines like this: &quot;A frog is green&quot; or &quot;You hear a
+loud Plop!&quot; However, it will not execute on &quot;With a loud
+plop the frog dived into the water.&quot; because &quot;plop&quot; in
+the line is in lower case letters and your condition specified a &quot;P&quot;
+in upper case. <BR>The simplest form of AND-Triggers in Mudlet are
+Trigger Chains or Filter Chains, whatever you'd like to call it.</P>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<FONT COLOR="#000000"><B><FONT SIZE=4>Trigger Chains - Filter Chains</FONT></B></FONT></P>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">Imagine
+the following scenario: You want to collect some berries. You know
+that the room contains some berries if the room description contains
+the words &quot;You see several sorts of berries.&quot; You make a
+new substring trigger for this line, but instead of chosing a regular
+trigger, you chose to add a new trigger group. Now you add &quot;You
+see several sorts of berries.&quot; to the expression list of the
+trigger group. When adding condions to a trigger group, the trigger
+group turns from an organizational unit into a filter unit. From now
+on this folder is a filter and will only let data through that
+matches it's condition. <BR>In our case this is exactly what we want,
+because we don't want to collect all sorts of berries, but we only
+want 2 particular kinds, namely, strawberries and blackberries. Now
+you add two regular triggers to our berry filter - one containing the
+condition: &quot;strawberries&quot; and the other one &quot;blackberries&quot;.
 Then we add the commands to pick the particular kind of berry to both
 triggers.<BR>Now what happens is that as soon as a room description
 reads &quot;You see several sorts of berries.&quot; the filter will
@@ -273,15 +259,10 @@ This example is trivial, but using filter chains will rapidly show
 you how formerly complicated things that could only be solved with
 very complicated regular expressions can be solved easily now with a
 couple of filter chains.</P>
-<P CLASS="western" STYLE="line-height: 150%"><BR>
-</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
-<FONT COLOR="#000000"><FONT FACE="Arial Black"><FONT SIZE=4>Multi-Line
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<FONT SIZE=4><FONT COLOR="#000000"><FONT FACE="Arial Black">Multi-Line
 Triggers and Multi-Condition Triggers</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<BR>
-</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
 Multi Condition Triggers are the most advanced feature of Mudlet's
 trigger engine. Like trigger chains or filter chains they are a form
 of AND-Triggers.<BR>All conditions in the list must have matched
@@ -316,10 +297,12 @@ sits on a stone.</P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>Every
 single one of these 3 lines will be fed into the trigger engine one
 after another. If we define an OR-trigger with a condition list
-consisting of 3 conditions (Remember that the multi condition switch
-must be turned off to get an OR-trigger):</P>
-<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>condition
-#1: pond</P>
+consisting of 3 conditions 
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
+</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #1:
+pond</P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #2:
 frog</P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #3:
@@ -334,8 +317,8 @@ conditions are true i.e. frog=true and stone = true; Because an
 OR-trigger fires on the first condition that is true and ignores the
 rest the trigger will only execute 3 times on these 3 lines although
 4 conditions are true.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
-</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">the multi
+condition switch must be turned off to get an OR-trigger):<BR>conditi</P>
 <P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">To complicate
 matters, however, you don't want your trigger to fire 3 commands,
 because you want to use this room description as a whole to fire your
@@ -464,7 +447,7 @@ as they are basically packages.</P>
 can be either a string or a number. They are whatever there were
 initially initialized with.</FONT></FONT></P>
 <P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<FONT FACE="Arial, sans-serif"><FONT COLOR="#000000">Examples:</FONT></FONT></P>
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Examples:</FONT></FONT></P>
 <P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <BR>
 </P>
@@ -493,7 +476,7 @@ and e will equal 351</FONT></FONT></P>
 and e will equal “JimTom” note that you cant use a+b to
 concatenate string values. For this you must use ..</FONT></FONT></P>
 <P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<FONT FACE="Courier New, monospace"><FONT COLOR="#008000">e = a .. c
+<FONT COLOR="#008000"><FONT FACE="Courier New, monospace">e = a .. c
 and e will equal “Jim350”</FONT></FONT></P>
 <P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <BR>
@@ -502,7 +485,7 @@ and e will equal “Jim350”</FONT></FONT></P>
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Lua tables can
 basically be considered multidimensional arrays.</FONT></FONT></P>
 <P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<FONT FACE="Arial, sans-serif"><FONT COLOR="#000000">If we have the
+<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">If we have the
 table matches, matches[1] is the first element, matches[n] the n-th
 element.</FONT></FONT></P>
 <P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
@@ -1077,8 +1060,8 @@ There are functions to load and save specific Lua tables e.g. if you
 want to build your own little database of parameters that are
 relevant for your scripts. (-&gt;table.load( ... ) &amp; table.save(
 ...) check below.)</P>
-<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
-<BR>
+<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<BR><BR>
 </P>
 <TABLE WIDTH=891 BORDER=1 BORDERCOLOR="#000000" CELLPADDING=11 CELLSPACING=0 STYLE="page-break-before: auto; page-break-after: auto; page-break-inside: avoid">
 	<COL WIDTH=360>
@@ -1505,6 +1488,19 @@ relevant for your scripts. (-&gt;table.load( ... ) &amp; table.save(
 			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">replaces
 			the selected text with &quot;with&quot;. To delete text use
 			replace(&quot;&quot;)</FONT></FONT></FONT></P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=360>
+			<P CLASS="western" STYLE="margin-right: 0cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><FONT SIZE=2>replaceAll(
+			what, with )</FONT></FONT></FONT></P>
+		</TD>
+		<TD WIDTH=485>
+			<P CLASS="western" STYLE="margin-right: 0cm; text-indent: -0.1cm; margin-top: 0cm; border: none; padding: 0cm">
+			<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">replaces
+			all occurrences of <I>what </I>in the current line with <I>with </I></FONT></FONT></FONT>
+			</P>
 		</TD>
 	</TR>
 	<TR VALIGN=TOP>

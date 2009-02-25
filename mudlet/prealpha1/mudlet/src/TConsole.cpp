@@ -787,10 +787,7 @@ void TConsole::replace( QString text )
 
 void TConsole::skipLine()
 {
-    cout << "DELETING LINE="<<mUserCursor.y() << endl;
-    qDebug()<<"delline="<<buffer.line( mUserCursor.y() );
     deleteLine( mUserCursor.y() );
-    qDebug()<<"after deletion line=<"<<buffer.line( mUserCursor.y() )<<">" ;    
 }
 
 bool TConsole::deleteLine( int y )
@@ -1043,17 +1040,8 @@ void TConsole::printSystemMessage( QString & msg )
 
 void TConsole::echoUserWindow( QString & msg )
 {
-    /* cursor.insertText(msg);
-    if( ! isUserScrollBack )
-    {
-        int max = textEdit->verticalScrollBar()->maximum();
-        int delta = max - textEdit->verticalScrollBar()->value();
-        textEdit->verticalScrollBar()->setPageStep( delta );
-        textEdit->verticalScrollBar()->setValue( max );    
-        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
-    }
-    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
-    return;*/
+    qDebug()<<"TConsole::echoUserWindow()="<<msg;
+    print( msg );
 }
 
 void TConsole::copy()

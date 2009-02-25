@@ -98,19 +98,26 @@ int TBuffer::getLastLineNumber()
     return buffer.size()-1;
 }
 
-void TBuffer::clear()
-{
-    while( buffer.size() > -1 )    
-    {
-        deleteLines( 0, 1 );
-    }
-}
 
 void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
     for( int i=0; i<text.size(); i++ )
     {
         int last = buffer.size()-1;
+        if( last < 0 )
+        {
+            std::deque<TChar *> newLine;
+            TChar * pC = new TChar;
+            pC->fgColor = bgColor;    // make the <LF>-marker invisible
+            pC->bgColor = bgColor;
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;
+            newLine.push_back( pC );
+            buffer.push_back( newLine );
+            lineBuffer << QChar( 0x21af );
+            last = 0;
+        }
         if( mCursorMoved ) 
         {
             if(lineBuffer[last].size() == 1) // <LF> at beginning of new line marker
@@ -474,6 +481,13 @@ bool TBuffer::replace( int line, QString what, QString with )
     return true;
 }
 
+void TBuffer::clear()
+{
+    while( (getLastLineNumber() > -1 ) )   
+    {
+        deleteLines( 0, 0 );
+    }
+}
 
 bool TBuffer::deleteLine( int y )
 { 
@@ -484,10 +498,10 @@ bool TBuffer::deleteLine( int y )
 bool TBuffer::deleteLines( int from, int to )
 {
     if( ( from >= 0 ) 
-     && ( from <= buffer.size() )
+     && ( from < buffer.size() )
      && ( from <= to )   
      && ( to >=0 )
-     && ( to <= buffer.size() ) )
+     && ( to < buffer.size() ) )
     {
         int delta = to - from + 1;
         
@@ -501,17 +515,18 @@ bool TBuffer::deleteLines( int from, int to )
         }
         
         int i = (int)buffer.size();
-        
         // we do reverse lookup as the wanted lines are usually at the end of the buffer
-        // std::revers_iterator is not defined for usage in erase()
+        // std::reverse_iterator is not defined for usage in erase()
         
         typedef std::deque<std::deque<TChar *> >::iterator IT;
-        for( IT it=buffer.end(); it!=buffer.begin(); it-- )
+        for( IT it=buffer.end(); it!=buffer.begin(); )
         {
-            if( --i >= to ) 
+            it--;
+            i--;
+            if( i > to ) 
                 continue;
             
-            if( --delta >= 0 ) 
+            if( --delta >= 0 )
                 buffer.erase( it );
             else
                 break;

@@ -38,6 +38,7 @@
 #include "TDebug.h"
 #include "XMLimport.h"
 #include "EAction.h"
+#include "TTextEdit.h"
 
 
 TConsole *  mudlet::mpDebugConsole = 0;
@@ -296,7 +297,8 @@ void mudlet::clearUserWindow( Host * pHost, QString & name )
 {
     if( dockWindowMap.contains( name ) )
     { 
-        dockWindowConsoleMap[name]->buffer.clear();    
+        dockWindowConsoleMap[name]->buffer.clear(); 
+        dockWindowConsoleMap[name]->console->repaint();
     }
     else TDebug()<<"ERROR: window doesnt exit" >> 0;
 }
@@ -315,15 +317,13 @@ void mudlet::userWindowLineWrap( Host * pHost, QString & name, bool on )
 
 void mudlet::echoUserWindow( Host * pHost, QString & name, QString & text )
 {
-    //FIXME
-    /*
     QString wn = name;
     QString t=text;
     if( dockWindowMap.contains( name ) )
     { 
         dockWindowConsoleMap[wn]->echoUserWindow( t );    
     }
-    else qDebug()<<"ERROR: window doesnt exit";*/
+    else qDebug()<<"ERROR: window doesnt exit";
 }
 
 void mudlet::pasteWindow( Host * pHost, QString name )
