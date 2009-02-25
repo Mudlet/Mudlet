@@ -3546,11 +3546,16 @@ void dlgTriggerEditor::slot_profileSaveAction()
         dir_xml.mkpath( directory_xml );    
     }
     QFile file_xml( filename_xml );
-    file_xml.open( QIODevice::WriteOnly );
-        
-    XMLexport writer( mpHost );
-    writer.exportHost( & file_xml );
-    file_xml.close();
+    if ( file_xml.open( QIODevice::WriteOnly ) )
+	{
+		XMLexport writer( mpHost );
+		writer.exportHost( & file_xml );
+		file_xml.close();
+	}
+	else
+	{
+		QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+mpHost->getName()+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+	}
 }
 
 void dlgTriggerEditor::slot_profileSaveAsAction()

@@ -143,11 +143,16 @@ void TConsole::closeEvent( QCloseEvent *event )
                 dir_xml.mkpath( directory_xml );    
             }
             QFile file_xml( filename_xml );
-            file_xml.open( QIODevice::WriteOnly );
-            
-            XMLexport writer( mpHost );
-            writer.exportHost( & file_xml );
-            file_xml.close();
+            if ( file_xml.open( QIODevice::WriteOnly ) )
+			{
+				XMLexport writer( mpHost );
+				writer.exportHost( & file_xml );
+				file_xml.close();
+			}
+			else
+			{
+				QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+			}
             
             /*qDebug()<<"The user wants to save the profile.";
             mpHost->mSaveProfileOnExit = true;

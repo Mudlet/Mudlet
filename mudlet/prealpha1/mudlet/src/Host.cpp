@@ -321,11 +321,17 @@ bool Host::serialize()
         dir_xml.mkpath( directory_xml );    
     }
     QFile file_xml( filename_xml );
-    file_xml.open( QIODevice::WriteOnly );
+    if ( file_xml.open( QIODevice::WriteOnly ) )
+	{
+		XMLexport writer( this );
+		writer.exportHost( & file_xml );
+		file_xml.close();
+	}
+	else
+	{
+		// FIXME: Report error
+	}
     
-    XMLexport writer( this );
-    writer.exportHost( & file_xml );
-    file_xml.close();
     
     return true;
     
