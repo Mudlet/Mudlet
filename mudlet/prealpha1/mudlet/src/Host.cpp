@@ -329,7 +329,7 @@ bool Host::serialize()
 	}
 	else
 	{
-		// FIXME: Report error
+		QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
 	}
     
     
