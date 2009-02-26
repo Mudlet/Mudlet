@@ -650,7 +650,6 @@ int TTextEdit::bufferScrollDown( int lines )
             mCursorY += lines;
         }
         mIsTailMode = false;
-        qDebug()<<"mCursorY="<<mCursorY;
         return lines;
     }
     else

@@ -279,6 +279,70 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
     return true;
 }
 
+TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
+{
+    TBuffer slice( mpHost );
+    slice.clear();
+    int y = P1.y();
+    int x = P1.x();
+    if( y < 0 || y >= buffer.size() )
+        return slice;
+    
+    if( ( x < 0 ) 
+        || ( x >= buffer[y].size() )
+        || ( P2.x() < 0 ) 
+        || ( P2.x() > buffer[y].size() ) )
+    x=0;
+    for( ; x<P2.x(); x++ )
+    {
+        if( lineBuffer[y][x] == QChar( 0x21af ) )
+        {
+            continue;
+        }
+        slice.append(QString(lineBuffer[y][x]), 
+                     buffer[y][x]->fgColor, 
+                     buffer[y][x]->bgColor, 
+                     (buffer[y][x]->bold == true), 
+                     (buffer[y][x]->italics == true), 
+                     (buffer[y][x]->underline == true) );
+    }
+    return slice;
+}
+
+TBuffer TBuffer::cut( QPoint & P1, QPoint & P2 )
+{
+    TBuffer slice = copy( P1, P2 );
+    QString nothing = "";
+    TChar format;
+    replaceInLine( P1, P2, nothing, format );
+    return slice;
+}
+
+void TBuffer::paste( QPoint & P, TBuffer chunk )
+{
+    int y = P.y();
+    int x = P.x();
+    if( y < 0 || y >= buffer.size() )
+        y=getLastLineNumber();
+    if( x < 0 || x >= buffer[y].size() )
+        return;
+    for( int cy=0; cy<chunk.size(); cy++ )
+    {
+        y = getLastLineNumber();//TODO: implement paste in position atm it's only paste at end
+        for( int cx=0; cx<chunk.buffer[cy].size(); cx++ )
+        {
+            append(QString(chunk.lineBuffer[cy][cx]), 
+                   chunk.buffer[cy][cx]->fgColor, 
+                   chunk.buffer[cy][cx]->bgColor, 
+                   (chunk.buffer[cy][cx]->bold == true), 
+                   (chunk.buffer[cy][cx]->italics == true), 
+                   (chunk.buffer[cy][cx]->underline == true) );
+        } 
+        TChar format;
+        wrap( y, 40, 5, format );
+    }
+}
+
 void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
 {
     if( buffer.size() <= startLine ) return;

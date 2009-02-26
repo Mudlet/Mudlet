@@ -308,8 +308,10 @@ int TLuaInterpreter::getLineNumber( lua_State * L )
 
 int TLuaInterpreter::copy( lua_State * L )
 {
+    qDebug()<<"TLua::copy() enter";
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     pHost->mpConsole->copy();
+    qDebug()<<"TLua::copy() leaving...";
     return 0;
 }
 int TLuaInterpreter::cut( lua_State * L )
@@ -320,8 +322,10 @@ int TLuaInterpreter::cut( lua_State * L )
 }
 int TLuaInterpreter::paste( lua_State * L )
 {
+    qDebug()<<"TLua::paste() enter";
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     pHost->mpConsole->paste();
+    qDebug()<<"TLua::paste leaving";
     return 0;
 }
 

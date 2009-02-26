@@ -507,6 +507,9 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
         pT = new TTrigger( 0, mpHost );
     }
     
+    qDebug()<<"[REGISTER] Trigger:"<<pT->getName();
+    mpHost->getTriggerUnit()->registerTrigger( pT );
+    
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTrigger = ( attributes().value("isTempTrigger") == "yes" );
@@ -559,6 +562,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             {
                 readIntegerList( pT->mRegexCodePropertyList );
                 qDebug()<<"regexCodePropertyList="<<pT->mRegexCodePropertyList;
+                pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
                 qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
@@ -578,10 +582,6 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             }
         }
     }
-    
-    qDebug()<<"[REGISTER] Trigger:"<<pT->getName();
-    mpHost->getTriggerUnit()->registerTrigger( pT );
-    pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
 }
 
 void XMLimport::readTimerPackage()

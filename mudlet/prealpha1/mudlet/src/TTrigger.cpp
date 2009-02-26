@@ -232,7 +232,7 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
     //int numOfCaptureGroups = pcre_info( re, 0, 0 )*3;
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
     
-    //cout <<" LINE="<<subject<<endl;
+    //cout <<"TTrigger::match_perl() LINE="<<subject<<endl;
     
     rc = pcre_exec( re,                    
                     0,                                                                      
@@ -279,6 +279,7 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
         captureList.push_back( match );
         posList.push_back( ovector[2*i] );
         if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
+        //qDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">";
     }
     (void)pcre_fullinfo( re,                                              
                          NULL,                 
@@ -361,6 +362,7 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
             captureList.push_back( match );
             posList.push_back( ovector[2*i] );
             if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
+            //qDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">";
         }
     }      
 
@@ -396,6 +398,7 @@ END:
     TLuaInterpreter * pL = mpHost->getLuaInterpreter();
     pL->setCaptureGroups( captureList, posList );
     // call lua trigger function with number of matches and matches itselves as arguments
+    qDebug()<<"TTrigger::match_perl() calling execute()";
     execute();
     pL->clearCaptureGroups();
 }
@@ -511,6 +514,12 @@ bool TTrigger::match( QString & toMatch )
             return false;
         }
       
+        toMatch.replace( QChar( 0x21af ), "" );
+        if( toMatch.size() < 1 )
+        {
+            return false;
+        }
+        
         bool conditionMet = false;
         
         if( mRegexCodeList.size() != mRegexCodePropertyList.size() )
@@ -674,6 +683,7 @@ void TTrigger::compile()
 
 void TTrigger::execute()
 {
+qDebug()<<"TTrigger::execute():mName="<<mName<<" executing trigger script";
     if( mIsTempTrigger )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    

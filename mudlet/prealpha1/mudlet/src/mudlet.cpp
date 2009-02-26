@@ -328,13 +328,11 @@ void mudlet::echoUserWindow( Host * pHost, QString & name, QString & text )
 
 void mudlet::pasteWindow( Host * pHost, QString name )
 {
-    //FIXME
-    /*
     if( dockWindowMap.contains( name ) )
     { 
-        dockWindowConsoleMap[name]->pasteWindow( mConsoleMap[pHost]->getCurrentFragment() );    
+        dockWindowConsoleMap[name]->pasteWindow( mConsoleMap[pHost]->mClipboard );    
     }
-    else qDebug()<<"ERROR: window doesnt exit";*/
+    else qDebug()<<"ERROR: window doesnt exit";
 }
 
 void mudlet::slot_userToolBar_hovered( QAction* pA )

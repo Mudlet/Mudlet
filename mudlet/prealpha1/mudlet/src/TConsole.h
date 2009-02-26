@@ -123,7 +123,7 @@ public:
       void              cut();
       void              paste();
       void              closeEvent( QCloseEvent *event );
-      void              pasteWindow( QTextDocumentFragment & );
+      void              pasteWindow( TBuffer );
       void              setUserWindow();
       QStringList       getLines( int from, int to );
       int               getLineNumber();
@@ -155,6 +155,7 @@ public:
       TTextEdit *       console2;
       Host *            mpHost; 
       TBuffer           buffer;
+      TBuffer           mClipboard;
     
 private:
     QString           profile_name;   
@@ -192,6 +193,7 @@ private:
       TChar             mFormatCurrent;
       TChar             mFormatBasic;
       TChar             mFormatSystemMessage;
+  
       
 
 signals:

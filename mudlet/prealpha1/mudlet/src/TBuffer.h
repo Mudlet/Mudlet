@@ -76,6 +76,9 @@ public:
     int getLastLineNumber();
     QStringList getEndLines( int );
     void clear();
+    TBuffer copy( QPoint &, QPoint & );
+    TBuffer cut( QPoint &, QPoint & );
+    void paste( QPoint &, TBuffer );
     std::deque<TChar *> bufferLine;
     std::deque< std::deque<TChar*> > buffer; 
     

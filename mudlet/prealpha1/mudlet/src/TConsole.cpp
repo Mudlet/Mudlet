@@ -63,6 +63,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mWrapAt( 100 )
 , mIndentCount( 0 )
 , mTriggerEngineMode( false )
+, mClipboard( mpHost )
 {
     
     profile_name = mpHost->getName();
@@ -144,20 +145,16 @@ void TConsole::closeEvent( QCloseEvent *event )
             }
             QFile file_xml( filename_xml );
             if ( file_xml.open( QIODevice::WriteOnly ) )
-			{
-				XMLexport writer( mpHost );
-				writer.exportHost( & file_xml );
-				file_xml.close();
-			}
-			else
-			{
-				QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-			}
+         			{
+	            			XMLexport writer( mpHost );
+				            writer.exportHost( & file_xml );
+                file_xml.close();
+			         }
+			         else
+			         {
+				            QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+			         }
             
-            /*qDebug()<<"The user wants to save the profile.";
-            mpHost->mSaveProfileOnExit = true;
-            mpHost->serialize();
-            mpHost->mSaveProfileOnExit = false;*/
         }
     }
     event->accept();
@@ -667,10 +664,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
 // time.start();
     
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    //qDebug()<<"LastLine vor translate:"<<lineBeforeNewContent;
     translateToPlainText( incomingSocketData );
-    
-    //qDebug()<<"buffer.size-1 after translate:"<<buffer.getLastLineNumber();    
 //t1=time.elapsed();
     
     mTriggerEngineMode = true;
@@ -731,7 +725,7 @@ void TConsole::insertText( QString text, QPoint P )
         }
         else
         {
-            qDebug()<<"inserting at x="<<x<<" r="<<r<<" chars";
+            //qDebug()<<"inserting at x="<<x<<" r="<<r<<" chars";
             mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
         }
     }
@@ -832,28 +826,14 @@ int TConsole::getLineCount()
 
 QStringList TConsole::getLines( int from, int to )
 {
-    /*
     QStringList ret;
-    int pos = cursor2.position();
-    int y = abs( from - to );
-    cursor2.movePosition( QTextCursor::Start );
-    if( to <= getLineCount() )
+    int pos = mUserCursor.y();
+    int delta = abs( from - to );
+    for( int i=0; i<delta; i++ )
     {
-        for( int i=0; i<from; i++ ) cursor2.movePosition( QTextCursor::Down );
-    
-        cursor2.movePosition( QTextCursor::StartOfLine );
-        for( int i=0; i<y; i++ )
-        {
-            cursor2.movePosition( QTextCursor::Down, QTextCursor::KeepAnchor );
-        }
-        cursor2.movePosition( QTextCursor::EndOfLine, QTextCursor::KeepAnchor );
-        QString text = cursor2.selectedText();
-        text.replace( QChar('\n'), "" );
-        text.replace( QChar(0x2029), QChar('\n') );
-        ret = text.split(QChar('\n'));
+        ret << buffer.line( from + i );
     }
-    cursor2.setPosition( pos );
-    return ret;*/
+    return ret;
 }
 
 bool TConsole::moveCursor( int x, int y )
@@ -872,7 +852,6 @@ bool TConsole::moveCursor( int x, int y )
 
 void TConsole::setUserWindow()
 {
-    //cursor2 = QTextCursor( cursor );
 }
 
 int TConsole::select( QString text, int numOfMatch )
@@ -885,7 +864,14 @@ int TConsole::select( QString text, int numOfMatch )
     {
         begin = buffer.line( mUserCursor.y() ).indexOf( text, begin );
         
-        if( begin == -1 ) return 0;
+        if( begin == -1 )
+        {
+            P_begin.setX( 0 );
+            P_begin.setY( 0 );
+            P_end.setX( 0 );
+            P_end.setY( 0 );
+            return -1;
+        }
     }   
     int end = begin + text.size();
     P_begin.setX( begin );
@@ -895,7 +881,7 @@ int TConsole::select( QString text, int numOfMatch )
     
     if( mudlet::debugMode ) 
         TDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
-    
+    qDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() );       
     return begin;
 }
 
@@ -1040,39 +1026,30 @@ void TConsole::printSystemMessage( QString & msg )
 
 void TConsole::echoUserWindow( QString & msg )
 {
-    qDebug()<<"TConsole::echoUserWindow()="<<msg;
     print( msg );
 }
 
 void TConsole::copy()
 {
-    //mCurrentFragment = cursor2.selection();    
+    mClipboard = buffer.copy( P_begin, P_end );    
 }
 
 void TConsole::cut()
 {
-    /*mCurrentFragment = cursor2.selection();
-    cursor2.removeSelectedText();*/
+    mClipboard = buffer.cut( P_begin, P_end );
 }
 
 void TConsole::paste()
 {
-    //cursor2.insertFragment( mCurrentFragment );
+    QPoint P = P_begin;
+    buffer.paste( P_begin, mClipboard );     //TODO: P_begin & P_end to replace selection
+    console->showNewLines();
 }
 
-void TConsole::pasteWindow( QTextDocumentFragment & fragment )
+void TConsole::pasteWindow( TBuffer bufferSlice )
 {
-    /*cursor2.insertFragment( fragment );
-    if( ! isUserScrollBack )
-    {
-        int max = textEdit->verticalScrollBar()->maximum();
-        int delta = max - textEdit->verticalScrollBar()->value();
-        textEdit->verticalScrollBar()->setPageStep( delta );
-        textEdit->verticalScrollBar()->setValue( max );    
-        //textEdit->verticalScrollBar()->setValue( textEdit->verticalScrollBar()->maximum() );
-    }
-    //textEdit2->verticalScrollBar()->setValue( textEdit2->verticalScrollBar()->maximum() );    
-    return;*/
+    mClipboard = bufferSlice;
+    paste();
 }
 
 void TConsole::slot_user_scrolling( int action )
