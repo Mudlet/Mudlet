@@ -314,6 +314,25 @@ void mudlet::userWindowLineWrap( Host * pHost, QString & name, bool on )
     else qDebug()<<"ERROR: window doesnt exit";*/
 }
 
+void mudlet::setWindowWrap( Host * pHost, QString & name, int & wrap )
+{
+    QString wn = name;
+    if( dockWindowMap.contains( name ) )
+    { 
+        dockWindowConsoleMap[wn]->setWrapAt( wrap );    
+    }
+    else TDebug()<<"ERROR: user window '"<<name<<"' doesnt exit">>0;
+}
+
+void mudlet::setWindowWrapIndent( Host * pHost, QString & name, int & wrap )
+{
+    QString wn = name;
+    if( dockWindowMap.contains( name ) )
+    { 
+        dockWindowConsoleMap[wn]->setIndentCount( wrap );    
+    }
+    else TDebug()<<"ERROR: user window '"<<name<<"' doesnt exit">>0;
+}
 
 void mudlet::echoUserWindow( Host * pHost, QString & name, QString & text )
 {
@@ -323,7 +342,7 @@ void mudlet::echoUserWindow( Host * pHost, QString & name, QString & text )
     { 
         dockWindowConsoleMap[wn]->echoUserWindow( t );    
     }
-    else qDebug()<<"ERROR: window doesnt exit";
+    else TDebug()<<"ERROR: user window '"<<name<<"' doesnt exit">>0;
 }
 
 void mudlet::pasteWindow( Host * pHost, QString name )

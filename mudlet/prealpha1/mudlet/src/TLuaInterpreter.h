@@ -129,6 +129,8 @@ public:
     static int enableKey( lua_State * );
     static int disableKey( lua_State * );
     static int debug( lua_State * L );
+    static int setWindowWrap( lua_State * );
+    static int setWindowWrapIndent( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

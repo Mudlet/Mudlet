@@ -75,6 +75,8 @@ TChar::TChar( TChar const & copy )
 TBuffer::TBuffer( Host * pH )
 : mpHost( pH )
 , mCursorMoved( false )
+, mWrapAt( 100 )
+, mWrapIndent( 5 )
 {   
     // FIXME: check if this is set somewhere else
     //mpHost->mScreenHeight = 40;
@@ -86,7 +88,7 @@ TBuffer::TBuffer( Host * pH )
     TChar * pC = new TChar;
     newLine.push_back( pC );
     buffer.push_back( newLine );
-    lineBuffer << QChar( 0x21af );
+    //lineBuffer << QChar( 0x21af );
 
     newLines = 0;
     mLastLine = buffer.size()-1;
@@ -339,7 +341,7 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
                    (chunk.buffer[cy][cx]->underline == true) );
         } 
         TChar format;
-        wrap( y, 40, 5, format );
+        wrap( y, mWrapAt, mWrapIndent, format );
     }
 }
 

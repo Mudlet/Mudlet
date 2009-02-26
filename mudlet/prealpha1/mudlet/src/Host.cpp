@@ -35,7 +35,7 @@
 #include "XMLimport.h"
 #include "mudlet.h"
 #include "TEvent.h"
-
+#include <QMessageBox>
 
 Host::Host( int port, QString hostname, QString login, QString pass, int id ) 
 : mHostName          ( hostname )
@@ -322,16 +322,15 @@ bool Host::serialize()
     }
     QFile file_xml( filename_xml );
     if ( file_xml.open( QIODevice::WriteOnly ) )
-	{
-		XMLexport writer( this );
-		writer.exportHost( & file_xml );
-		file_xml.close();
-	}
-	else
-	{
-		QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-	}
-    
+	   {
+		      XMLexport writer( this );
+		      writer.exportHost( & file_xml );
+		      file_xml.close();
+	   }
+	   else
+	   {
+		      QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+	   }
     
     return true;
     

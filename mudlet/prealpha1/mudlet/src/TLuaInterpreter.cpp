@@ -93,7 +93,7 @@ int TLuaInterpreter::Wait( lua_State *L )
   int n = lua_gettop( L );
   if(n!=1)
   {
-      lua_pushstring( L, "wrong number of arguments to Wait(msec)" );
+      lua_pushstring( L, "wrong number of arguments" );
       lua_error( L );
       return 1;
   }
@@ -101,7 +101,7 @@ int TLuaInterpreter::Wait( lua_State *L )
   int luaSleepMsec;
   if( ! lua_isnumber( L, 1 ) ) 
   {
-      lua_pushstring( L, "argument 1 to Wait(msec) must be milliseconds" );
+      lua_pushstring( L, "wrong argument type" );
       lua_error( L );
       return 1;
   }
@@ -142,7 +142,7 @@ int TLuaInterpreter::select( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to select must be a string containing the text to select from the current line." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -153,7 +153,7 @@ int TLuaInterpreter::select( lua_State * L )
     int luaNumOfMatch;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "argument 2 to select must be the number of match in case there is more than 1 match." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -173,7 +173,7 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
     int luaNumOfMatch;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to select must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -224,7 +224,7 @@ int TLuaInterpreter::getLines( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -236,7 +236,7 @@ int TLuaInterpreter::getLines( lua_State * L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -263,7 +263,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "wrong argument" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -275,7 +275,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -308,10 +308,8 @@ int TLuaInterpreter::getLineNumber( lua_State * L )
 
 int TLuaInterpreter::copy( lua_State * L )
 {
-    qDebug()<<"TLua::copy() enter";
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     pHost->mpConsole->copy();
-    qDebug()<<"TLua::copy() leaving...";
     return 0;
 }
 int TLuaInterpreter::cut( lua_State * L )
@@ -322,10 +320,70 @@ int TLuaInterpreter::cut( lua_State * L )
 }
 int TLuaInterpreter::paste( lua_State * L )
 {
-    qDebug()<<"TLua::paste() enter";
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     pHost->mpConsole->paste();
-    qDebug()<<"TLua::paste leaving";
+    return 0;
+}
+
+int TLuaInterpreter::setWindowWrap( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    { 
+        luaSendText = lua_tostring( L, 1 );
+    }
+    int luaFrom;
+    if( ! lua_isnumber( L, 2 ) ) 
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    { 
+        luaFrom = lua_tonumber( L, 2 );
+    }      
+    
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
+    QString name = luaSendText.c_str();
+    mudlet::self()->setWindowWrap( pHost, name, luaFrom );
+    return 0;
+}
+
+int TLuaInterpreter::setWindowWrapIndent( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    { 
+        luaSendText = lua_tostring( L, 1 );
+    }
+    int luaFrom;
+    if( ! lua_isnumber( L, 2 ) ) 
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    { 
+        luaFrom = lua_tonumber( L, 2 );
+    }      
+    
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
+    QString name = luaSendText.c_str();
+    mudlet::self()->setWindowWrapIndent( pHost, name, luaFrom );
     return 0;
 }
 
@@ -350,7 +408,7 @@ int TLuaInterpreter::userWindowLineWrap( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -362,7 +420,7 @@ int TLuaInterpreter::userWindowLineWrap( lua_State * L )
     bool luaBool;
     if( ! lua_isboolean( L, 2 ) ) 
     {    
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -382,7 +440,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -394,7 +452,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -414,7 +472,7 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -453,7 +511,7 @@ int TLuaInterpreter::getBufferLine( lua_State * L )
     int luaLine;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "bad argument" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -475,7 +533,7 @@ int TLuaInterpreter::replace( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 1 to replace must be a string containing the text that is to replace the selected text." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -502,7 +560,7 @@ int TLuaInterpreter::enableTimer( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -522,7 +580,7 @@ int TLuaInterpreter::disableTimer( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -541,7 +599,7 @@ int TLuaInterpreter::enableKey( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -561,7 +619,7 @@ int TLuaInterpreter::disableKey( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -583,7 +641,7 @@ int TLuaInterpreter::enableTrigger( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -603,7 +661,7 @@ int TLuaInterpreter::disableTrigger( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -623,7 +681,7 @@ int TLuaInterpreter::killTimer( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -643,7 +701,7 @@ int TLuaInterpreter::killTrigger( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -664,7 +722,7 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -684,7 +742,7 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -704,7 +762,7 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     string luaWindowName="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -716,7 +774,7 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -739,7 +797,7 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     double luaTimeout;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -751,7 +809,7 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -773,7 +831,7 @@ int TLuaInterpreter::tempTrigger( lua_State *L )
     string luaRegex;
     if( ! lua_isstring( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -785,7 +843,7 @@ int TLuaInterpreter::tempTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -807,7 +865,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "error" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -818,7 +876,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "error" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -830,7 +888,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -853,7 +911,7 @@ int TLuaInterpreter::tempRegexTrigger( lua_State *L )
     string luaRegex;
     if( ! lua_isstring( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -865,7 +923,7 @@ int TLuaInterpreter::tempRegexTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -887,7 +945,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     int luaRed;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -899,7 +957,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     int luaGreen;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -911,7 +969,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     int luaBlue;
     if( ! lua_isnumber( L, 3 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -929,7 +987,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     int luaRed;
     if( ! lua_isnumber( L, 1 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -941,7 +999,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     int luaGreen;
     if( ! lua_isnumber( L, 2 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -953,7 +1011,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     int luaBlue;
     if( ! lua_isnumber( L, 3 ) ) 
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -983,7 +1041,7 @@ int TLuaInterpreter::insertText( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1001,7 +1059,7 @@ int TLuaInterpreter::insertHTML( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1019,7 +1077,7 @@ int TLuaInterpreter::Echo( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1029,7 +1087,7 @@ int TLuaInterpreter::Echo( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString txt(luaSendText.c_str());
-    qDebug()<<"TLua::Echo() calling console::echo("<<txt<<")";
+    //qDebug()<<"TLua::Echo() calling console::echo("<<txt<<")";
     pHost->mpConsole->echo( txt );    
     return 0;
 }
@@ -1039,7 +1097,7 @@ int TLuaInterpreter::pasteWindow( lua_State *L )
     string luaName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud." );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1059,7 +1117,7 @@ int TLuaInterpreter::Send( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud.");
+        lua_pushstring( L, "wrong argument type" );
 		      lua_error( L );
         return 1;
 		  }
@@ -1077,7 +1135,7 @@ int TLuaInterpreter::sendRaw( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud.");
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1522,7 +1580,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow );
     lua_register( pGlobalLua, "userWindowLineWrap", TLuaInterpreter::userWindowLineWrap );
     lua_register( pGlobalLua, "debug", TLuaInterpreter::debug );
-
+    lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
+    lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
  
     
     QString n;

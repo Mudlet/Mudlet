@@ -76,6 +76,8 @@ public:
     int getLastLineNumber();
     QStringList getEndLines( int );
     void clear();
+    void setWrapAt( int i ){ mWrapAt = i; }
+    void setWrapIndent( int i ){ mWrapIndent = i; }
     TBuffer copy( QPoint &, QPoint & );
     TBuffer cut( QPoint &, QPoint & );
     void paste( QPoint &, TBuffer );
@@ -97,6 +99,8 @@ private:
     bool hadLF;
     int mLastLine;
     bool mCursorMoved;
+    int mWrapAt;
+    int mWrapIndent;
     
     
 };

@@ -3,25 +3,23 @@ Issues:
 -------------------------------------
 
 OPEN    offset timers don't work properly
-OPEN    enable user windows again
 OPEN    explode() + implode()
-OPEN    skipLine()
 OPEN    regex lookup table for efficient lua regex usage
 OPEN    buffer format bei wrap nach user recoloring auf default setzen
-
-
 OPEN    optional NO antialiasing
 OPEN    Modifying a regex shouldn’t require pressing Enter to update it - it should auto-update as you’re working on it
 OPEN    “Actions” should really be called “buttons” everywhere
 OPEN    Doesn’t warn when there is data loss involved (deleting / moving away from an unsaved item) - Brunos patches address this, but were reverted because the script editor got broken a lot
 OPEN    Combobox connection dialog isn’t in (needs some fixing to compile)
-OPEN    remember last selected item in SE after tree switch
 OPEN    button text scripting
-OPEN    multi toolbar support
 OPEN    compile buttons + message area
 OPEN    autoconnection modul: neue profiletypen laden, anstatt alter
 
 
+FIXED   remember last selected item in SE after tree switch
+FIXED   multi toolbar support
+FIXED   deleteLine()
+FIXED   enable user windows again
 FIXED   Default font might render bad on Windows (need to test) [COMMENT HEIKO: we definitely need either: a good windows font, that is guaranteed to be on the computer or ship our own free font -> vadi wanted to do this]
 FIXED   replaceAll()
 FIXED   drag and drop broken in keys: if parents had children once, but not anymore, they'll become a folder after restore();

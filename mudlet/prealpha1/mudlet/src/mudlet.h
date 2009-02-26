@@ -66,16 +66,18 @@ public:
    void                          userWindowLineWrap( Host * pHost, QString & name, bool on );
    QString                       readProfileData( QString profile, QString item ); 
    EAction *                     generateAction( QString name, QString icon, QToolBar * );
-    
+   void                          setWindowWrap( Host * pHost, QString & name, int & wrap );
+   void                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
     
    static TConsole *             mpDebugConsole; 
-   static QMainWindow *        mpDebugArea; 
+   static QMainWindow *          mpDebugArea; 
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
-   QIcon *                     testicon; 
+   QIcon *                       testicon; 
     
 public slots:      
-    void                          slot_userToolBar_orientation_changed(Qt::Orientation); 
+    
+   void                          slot_userToolBar_orientation_changed(Qt::Orientation); 
    void                          slot_show_about_dialog();
    void                          slot_multi_view();
    void                          slot_stopAllTriggers();
@@ -103,55 +105,21 @@ private slots:
    void                          show_key_dialog(); 
    void                          show_options_dialog();
     
-
-    
 private:
     
-    QMdiArea *                     mdiArea;  
-    
-    /*void                          createActions();
-   void                          createMenus();
-   void                          createToolBars();
-   void                          createStatusBar();*/
+   QMdiArea *                     mdiArea;  
    void                          readSettings();
    void                          writeSettings();
-    
-    Host * mpDefaultHost; 
-    
-    QQueue<QString> tempLoginQueue;
-    QQueue<QString> tempPassQueue;
-    QQueue<Host *>  tempHostQueue;
-    
-    
+   Host *                        mpDefaultHost; 
+   QQueue<QString> tempLoginQueue;
+   QQueue<QString> tempPassQueue;
+   QQueue<Host *>  tempHostQueue;
    static                        mudlet * _self;
-  
    QMap<QString, QDockWidget *>  dockWindowMap;
    QMap<QString, TConsole *>     dockWindowConsoleMap;
    QMap<Host *, QToolBar *>      mUserToolbarMap; 
    QMap<QTimer *, TTimer *>      mTimerMap;
-    QToolBar *                   mpMainToolBar;
-  
-   
-
-    
-    /*QString                       curFile;
-
-   QMenu *                       fileMenu;
-   QMenu *                       editMenu;
-   QMenu *                       helpMenu;
-   QToolBar *                    fileToolBar;
-   
-   QToolBar *                    editToolBar;
-   QAction *                     newAct;
-   QAction *                     openAct;
-   QAction *                     saveAct;
-   QAction *                     saveAsAct;
-   QAction *                     exitAct;
-   QAction *                     cutAct;
-   QAction *                     copyAct;
-   QAction *                     pasteAct;
-   QAction *                     aboutAct;
-   QAction *                     aboutQtAct;*/
+   QToolBar *                   mpMainToolBar;
 };
 
 #endif

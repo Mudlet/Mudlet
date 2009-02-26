@@ -130,8 +130,8 @@ public:
       int               getLineCount();
       bool              deleteLine( int );
       int               getColumnNumber();
-      void              setWrapAt( int pos ){ mWrapAt = pos; }
-      void              setIndentCount( int count ){ mIndentCount = count; }
+      void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
+      void              setIndentCount( int count ){ mIndentCount = count; buffer.setWrapIndent( count ); }
       void              echo( QString & );
       bool              moveCursor( int x, int y );
       int               select( QString, int numOfMatch = 1 );
