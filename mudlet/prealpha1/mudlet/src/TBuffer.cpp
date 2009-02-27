@@ -88,7 +88,7 @@ TBuffer::TBuffer( Host * pH )
     TChar * pC = new TChar;
     newLine.push_back( pC );
     buffer.push_back( newLine );
-    //lineBuffer << QChar( 0x21af );
+    lineBuffer << QChar( 0x21af );
 
     newLines = 0;
     mLastLine = buffer.size()-1;

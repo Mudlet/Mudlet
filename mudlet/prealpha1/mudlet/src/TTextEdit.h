@@ -60,7 +60,7 @@ public:
                                       bool isItalics,
                                       QColor & fgColor,
                                       QColor & bgColor );
-    //std::string       getCurrentTime();
+    std::string       getCurrentTime();
     void              setSplitScreen(){ mIsSplitScreen = true; }
     void              showNewLines();
     
@@ -122,6 +122,7 @@ private:
     QPoint            mPA;
     QPoint            mPB;
     QRegion           mSelectedRegion;
+    qreal             mScrollVector;
 };
 
 #endif

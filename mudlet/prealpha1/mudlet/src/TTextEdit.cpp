@@ -170,7 +170,7 @@ void TTextEdit::showNewLines()
     if( scrollRect.height() < widgetRect.height() )
     {
         scroll( 0, -1 * (scrollRect.height()), scrollRect );// mFontHeight * ( -1 * ( mpBuffer->newLines ) );
-    }
+    } 
     update( drawRect );
     mpBuffer->newLines = 0;
 }
@@ -208,7 +208,7 @@ void TTextEdit::scrollDown( int lines )
     if( lines == 0 ) return;
         
     if( ( lines < 0 ) || ( imageTopLine() == 0 ) )
-    {
+    { 
         // lines < 0 => skip scrolling and paint frame directly,
         //              as scrollRect covers the entire area of the screen
         lines = lines * -1;
