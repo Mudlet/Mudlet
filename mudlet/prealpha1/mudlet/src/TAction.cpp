@@ -45,6 +45,7 @@ TAction::TAction( TAction * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
+, mButtonColumns( 0 )
 {
 } 
 
@@ -54,6 +55,7 @@ TAction::TAction( QString name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
+, mButtonColumns( 0 )
 {
 }
 
@@ -131,19 +133,25 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
-       pT->addButton( button );
-       QSizePolicy sizePolicy( QSizePolicy::Minimum, QSizePolicy::Minimum);
-       button->setSizePolicy( sizePolicy );
+       
+       //QSizePolicy sizePolicy( QSizePolicy::Minimum, QSizePolicy::Minimum);
+       //button->setSizePolicy( sizePolicy );
        button->setIcon( icon );
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
+      
+       pT->addButton( button );
+       QPalette palette;
+       palette.setColor( QPalette::Button, button->mpTAction->mButtonColor );
+       button->setPalette( palette );
+       
        if( pChild->mIsFolder )
        {
            QMenu * newMenu = new QMenu( pT );
            button->setMenu( newMenu );
            pChild->insertActions( pMainWindow, pT, newMenu );
        }
-    }
+   }
 }
 
 

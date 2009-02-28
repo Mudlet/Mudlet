@@ -34,8 +34,8 @@ public:
     QStyleOptionButton getStyleOption() const;
     void init();
     
-    Qt::Orientation orientation_;
-    bool mirrored_;
+    Qt::Orientation mOrientation;
+    bool mMirrored;
     TAction * mpTAction;
     int mID;
     Host * mpHost;

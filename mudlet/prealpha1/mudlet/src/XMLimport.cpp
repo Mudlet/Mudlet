@@ -822,6 +822,7 @@ void XMLimport::readActionGroup( TAction * pParent )
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
+    pT->mButtonFlat = ( attributes().value("isFlatButton") == "yes" );
     
     while( ! atEnd() ) 
     {
@@ -870,6 +871,33 @@ void XMLimport::readActionGroup( TAction * pParent )
                 pT->mLocation = readElementText().toInt();
                 continue;
             }
+            
+            else if( name() == "buttonRotation")
+            {
+                pT->mButtonRotation = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "sizeX")
+            {
+                pT->mSizeX = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "sizeY")
+            {
+                pT->mSizeY = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "buttonColor")
+            {
+                pT->mButtonColor.setNamedColor( readElementText() );
+                continue;
+            } 
+            else if( name() == "buttonColumn")
+            {
+                pT->mButtonColumns = readElementText().toInt();
+                continue;
+            }
+            
             else if( name() == "posX")
             {
                 pT->mPosX = readElementText().toInt();

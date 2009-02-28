@@ -337,6 +337,7 @@ bool XMLexport::writeAction( TAction * pT )
     writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isPushButton", pT->mIsPushDownButton ? "yes" : "no" );
+    writeAttribute( "isFlatButton", pT->mButtonFlat ? "yes" : "no" );
     
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
@@ -347,6 +348,11 @@ bool XMLexport::writeAction( TAction * pT )
     writeTextElement( "location", QString::number(pT->mLocation) );
     writeTextElement( "posX", QString::number(pT->mPosX) );
     writeTextElement( "posY", QString::number(pT->mPosY) );
+    writeTextElement( "sizeX", QString::number(pT->mSizeX) );
+    writeTextElement( "sizeY", QString::number(pT->mSizeY) );
+    writeTextElement( "buttonColumn", QString::number(pT->mButtonColumns) );
+    writeTextElement( "buttonRotation", QString::number(pT->mButtonRotation) );
+    writeTextElement( "buttonColor", pT->mButtonColor.name() );     
     
     typedef list<TAction *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)

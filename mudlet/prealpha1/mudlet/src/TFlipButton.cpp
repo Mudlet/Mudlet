@@ -1,17 +1,19 @@
 
+
+#include <QPushButton>
 #include "TFlipButton.h"
 #include <QStylePainter>
 #include <QMenu>
 
 TFlipButton::TFlipButton( TToolBar * parent, TAction * pTAction, int id, Host * pHost )
-: QPushButton( parent )
+: QPushButton( 0 )
 , mpTAction( pTAction )
 , mID( id )
 , mpHost( pHost )
 {
     init();
 }
-
+/*
 TFlipButton::TFlipButton( const QString & text, QWidget * parent )
 : QPushButton( text, parent )
 {
@@ -23,21 +25,22 @@ TFlipButton::TFlipButton( const QIcon & icon, const QString & text, QWidget * pa
 {
     init();
 }
+*/
 
 void TFlipButton::init()
 {
-    orientation_ = Qt::Horizontal;
-    mirrored_ = false;
+    mOrientation = Qt::Horizontal;
+    mMirrored = false;
 }
 
 Qt::Orientation TFlipButton::orientation() const
 {
-    return orientation_;
+    return mOrientation;
 }
 
 void TFlipButton::setOrientation( Qt::Orientation orientation )
 {
-    orientation_ = orientation;
+    mOrientation = orientation;
     switch( orientation )
     {
     case Qt::Horizontal:
@@ -52,18 +55,18 @@ void TFlipButton::setOrientation( Qt::Orientation orientation )
 
 bool TFlipButton::mirrored() const
 {
-    return mirrored_;
+    return mMirrored;
 }
 
 void TFlipButton::setMirrored( bool mirrored )
 {
-    mirrored_ = mirrored;
+    mMirrored = mirrored;
 }
 
 QSize TFlipButton::sizeHint() const
 {
     QSize size = QPushButton::sizeHint();
-    if( orientation_ == Qt::Vertical )
+    if( mOrientation == Qt::Vertical )
     {
         size.transpose();
     }
@@ -73,7 +76,7 @@ QSize TFlipButton::sizeHint() const
 QSize TFlipButton::minimumSizeHint() const
 {
     QSize size = QPushButton::minimumSizeHint();
-    if( orientation_ == Qt::Vertical )
+    if( mOrientation == Qt::Vertical )
     {
         size.transpose();
     }
@@ -85,10 +88,10 @@ void TFlipButton::paintEvent( QPaintEvent * event )
     Q_UNUSED( event );
     QStylePainter p( this );
     
-    switch( orientation_ )
+    switch( mOrientation )
     {
     case Qt::Horizontal:
-        if( mirrored_ )
+        if( mMirrored )
         {
             p.rotate( 180 );
             p.translate( -width(), -height() );
@@ -96,7 +99,7 @@ void TFlipButton::paintEvent( QPaintEvent * event )
         break;
         
     case Qt::Vertical:
-        if( mirrored_ )
+        if( mMirrored )
         {
             p.rotate( -90 );
             p.translate( -height(), 0 );
@@ -116,7 +119,7 @@ QStyleOptionButton TFlipButton::getStyleOption() const
 {
     QStyleOptionButton opt;
     opt.initFrom( this );
-    if( orientation_ == Qt::Vertical )
+    if( mOrientation == Qt::Vertical )
     {
         QSize size = opt.rect.size();
         size.transpose();

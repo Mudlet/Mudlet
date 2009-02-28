@@ -29,4 +29,3 @@ dlgActionMainArea::dlgActionMainArea(QWidget * pF) : QWidget(pF)
     setupUi(this);
 }
 
-

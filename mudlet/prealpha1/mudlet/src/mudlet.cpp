@@ -78,7 +78,7 @@ mudlet::mudlet()
     
     mdiArea = new QMdiArea( this );
     mdiArea->setContentsMargins(0,0,0,0);
-    //mdiArea->setViewMode( QMdiArea::TabbedView );
+    mdiArea->setViewMode( QMdiArea::TabbedView );
     mdiArea->setSizePolicy( sizePolicy );
     layout->setContentsMargins(0,0,0,0);
     layout->addWidget(mdiArea);
@@ -186,7 +186,7 @@ mudlet::mudlet()
     timerAutologin->start( 1000 );
     
    
-    qApp->setStyleSheet("QMainWindow::separator{background: black; border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
+    qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
         
     
 }
@@ -385,7 +385,6 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 void mudlet::slot_userToolBar_triggered( QAction* pA )
 {
-    cout<<"mudlet::slot_userToolBar_triggered()"<<endl;
     if( pA->isChecked() )
     {
         ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 2;
@@ -440,7 +439,7 @@ void mudlet::closeEvent(QCloseEvent *event)
     foreach( TConsole * pC, mConsoleMap )
     {
         qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
-        /*
+        
         if( pC->mpHost->getName() != "default_host" )
         {
             // close script-editor
@@ -452,7 +451,7 @@ void mudlet::closeEvent(QCloseEvent *event)
             
             // close console
             pC->close();
-        } */
+        } 
     }
     
     writeSettings();

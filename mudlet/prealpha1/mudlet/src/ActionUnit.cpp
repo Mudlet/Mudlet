@@ -199,8 +199,8 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         }
         if( ! found )
         {
-            pTB = new TToolBar( (*it)->getName(), mudlet::self() );
-            pTB->mpTAction = *it;
+            pTB = new TToolBar( *it, (*it)->getName(), mudlet::self() );
+            //pTB->mpTAction = *it;
             mToolBarList.push_back( pTB );
         }
         if( (*it)->mOrientation == 1 )

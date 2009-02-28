@@ -29,6 +29,7 @@
 #include "TToolBar.h"
 #include <QMenu>
 
+class TToolBar;
 class TAction;
 class Host;
 

@@ -73,6 +73,7 @@ signals:
     
 public slots:
     
+    void                        slot_choseButtonColor();
     void                        slot_export();
     void                        slot_import();
     void                        slot_debug_mode();

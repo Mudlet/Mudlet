@@ -59,6 +59,21 @@ public:
     
     QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
     void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
+    void             setButtonColor( QColor c )      { QMutexLocker locker(& mLock); mButtonColor = c; }
+    QColor           getButtonColor()                { QMutexLocker locker(& mLock); return mButtonColor; }
+    void             setButtonRotation( int r )      { QMutexLocker locker(& mLock); mButtonRotation = r; }
+    int              getButtonRotation()             { QMutexLocker locker(& mLock); return mButtonRotation; }
+    void             setButtonColumns( int c )       { QMutexLocker locker(& mLock); mButtonColumns = c; }
+    int              getButtonColumns()              { QMutexLocker locker(& mLock); return mButtonColumns; }
+    bool             getButtonFlat()                 { QMutexLocker locker(& mLock); return mButtonFlat; }
+    void             setButtonFlat( bool flat )      { QMutexLocker locker(& mLock); mButtonFlat = flat; }
+    
+    void             setSizeX( int s )      { QMutexLocker locker(& mLock); mSizeX = s; }
+    int              getSizeX()             { QMutexLocker locker(& mLock); return mSizeX; }
+    void             setSizeY( int s )      { QMutexLocker locker(& mLock); mSizeY = s; }
+    int              getSizeY()             { QMutexLocker locker(& mLock); return mSizeY; }
+    
+    
     void             compile();
     void             execute(QStringList &);
     QString          getIcon()                     { QMutexLocker locker(& mLock); return mIcon; }
@@ -101,6 +116,12 @@ public:
     bool             mNeedsToBeCompiled;
     QString          mIcon;
     QIcon            mIconPix;
+    QColor           mButtonColor;
+    int              mButtonRotation;
+    int              mButtonColumns;
+    bool             mButtonFlat;
+    int              mSizeX;
+    int              mSizeY;
     
 private:
     

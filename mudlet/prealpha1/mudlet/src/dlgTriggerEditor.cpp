@@ -103,6 +103,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     //QSizePolicy sizePolicy8(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpActionsMainArea->setSizePolicy( sizePolicy8 );
     connect( mpActionsMainArea->pushButton_chose_icon, SIGNAL( pressed()), this, SLOT(slot_chose_action_icon()));
+    connect( mpActionsMainArea->pushButton_color, SIGNAL(pressed()), this, SLOT(slot_choseButtonColor()));
     pVB1->addWidget( mpActionsMainArea );
     
     
@@ -442,6 +443,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     readSettings();
 }
     
+void dlgTriggerEditor::slot_choseButtonColor()
+{
+     QColor color = QColorDialog::getColor();
+     QPalette palette;
+     palette.setColor( QPalette::Button, color );
+     mpActionsMainArea->pushButton_color->setPalette( palette );
+}
+
 void dlgTriggerEditor::closeEvent(QCloseEvent *event)
 {
     writeSettings();
@@ -1747,7 +1756,13 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
     QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
     QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
-    QString script = mpSourceEditorArea->script_scintilla->text();    
+    QString script = mpSourceEditorArea->script_scintilla->text(); 
+    QColor color = mpActionsMainArea->pushButton_color->palette().color(QPalette::Button);
+    int sizeX = mpActionsMainArea->buttonSizeX->text().toInt();
+    int sizeY = mpActionsMainArea->buttonSizeY->text().toInt();
+    int rotation = mpActionsMainArea->buttonRotation->currentIndex();
+    int columns = mpActionsMainArea->buttonColumns->text().toInt();
+    bool flatButton = mpActionsMainArea->buttonFlat->isChecked();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     int location = mpActionsMainArea->comboBox_location->currentIndex();
     int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();    
@@ -1767,6 +1782,10 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
             pT->mLocation = location;
             pT->mOrientation = orientation;
             pT->setIsActive( true );
+            pT->setButtonColor( color );
+            pT->setButtonRotation( rotation );
+            pT->setButtonColumns( columns );
+            pT->setButtonFlat( flatButton );
             
             QIcon icon;
             if( pT->isFolder() )
@@ -2036,6 +2055,15 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpSourceEditorArea->script_scintilla->setText( pT->getScript() );
         mpActionsMainArea->comboBox_location->setCurrentIndex( pT->mLocation );
         mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
+        QColor color = pT->getButtonColor();
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        mpActionsMainArea->pushButton_color->setPalette( palette );
+        mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
+        mpActionsMainArea->buttonColumns->setText( QString::number(pT->getButtonColumns()) );
+        mpActionsMainArea->buttonFlat->setChecked( pT->getButtonFlat() );
+        mpActionsMainArea->buttonSizeX->setText(QString::number(pT->getSizeX()) );
+        mpActionsMainArea->buttonSizeY->setText(QString::number(pT->getSizeY()) );
     }
 }
 
