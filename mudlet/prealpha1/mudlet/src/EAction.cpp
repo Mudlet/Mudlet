@@ -18,37 +18,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QAction>
 #include "EAction.h"
 #include "TFlipButton.h"
 #include <QDebug>
 
 EAction::EAction( QIcon & icon, QString & name, mudlet * parent )
 : QAction( icon, name, parent )
-//: QWidgetAction( parent )
-//, mpWidget( 0 )
 {
-    
     setText( name );
     setObjectName( name );
     setIcon( icon );
-    connect(this, SIGNAL(hovered()),this,SLOT(hover()));
 }
 
-/*QWidget * EAction::createWidget( QWidget * parent )
-{
-    mpWidget = new TFlipButton( parent );
-    return mpWidget;    
-} */
-
-void EAction::hover()
-{
-} 
-
-/*
-void EAction::triggered()
-{
-}
-void EAction::trigger()
-{
-} */
 

@@ -1,14 +1,18 @@
 #ifndef TFLIPBUTTON_H
 #define TFLIPBUTTON_H
 
-#include <QToolButton>
+#include "TToolBar.h"
 #include <QPushButton>
 #include <QStyleOptionButton>
 
-class TFlipButton : public QToolButton//QPushButton
+class TAction;
+class Host;
+class TToolBar;
+
+class TFlipButton : public QPushButton
 {
 public:
-    TFlipButton( QWidget* parent = 0 );
+    TFlipButton( TToolBar *, TAction *, int, Host * );
     TFlipButton( const QString & text, QWidget* parent = 0);
     TFlipButton( const QIcon & icon, const QString & text, QWidget * parent = 0 );
     
@@ -25,12 +29,16 @@ protected:
     
     void paintEvent( QPaintEvent * event );
     
-private:
+public:
+    
     QStyleOptionButton getStyleOption() const;
     void init();
     
     Qt::Orientation orientation_;
     bool mirrored_;
+    TAction * mpTAction;
+    int mID;
+    Host * mpHost;
 };
 
 #endif

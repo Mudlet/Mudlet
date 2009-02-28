@@ -36,7 +36,8 @@
 #include <QDataStream>
 #include "Host.h"
 #include <QTextBlock>
-#include <QToolBar>
+#include "TToolBar.h"
+#include "TFlipButton.h"
 #include <QMenu>
 
 using namespace std;
@@ -78,20 +79,16 @@ public:
     bool             registerAction();
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
-    void             insertActions( mudlet *, QToolBar *, QMenu * );
-    void             expandToolbar( mudlet * pMainWindow, QToolBar * pT, QMenu * menu );
+    void             insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu );
+    void             expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu );
     bool             isClone(TAction & ) const;
-    QToolBar *       mpToolBar;
+    TToolBar *       mpToolBar;
     int              mButtonState;
     
     int              mPosX;
     int              mPosY;
     int              mOrientation;
     int              mLocation;
-    
-//private:
-    
-    TAction(){};
     QString          mName;
     QString          mCommandButtonUp;
     QString          mCommandButtonDown;
@@ -103,9 +100,12 @@ public:
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
     QString          mIcon;
-    QMutex           mLock;
     QIcon            mIconPix;
     
+private:
+    
+    TAction(){};
+    QMutex           mLock;
 };
 
 #endif

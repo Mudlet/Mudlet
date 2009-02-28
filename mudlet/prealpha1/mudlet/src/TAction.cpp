@@ -35,6 +35,8 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "EAction.h"
+#include "TFlipButton.h"
+#include "TToolBar.h"
 
 
 
@@ -119,49 +121,33 @@ void TAction::execute(QStringList & list)
     }
 }
 
-void TAction::expandToolbar( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
+void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 {
    typedef list<TAction *>::const_iterator I;
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
-       
        TAction * pChild = *it;
        
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
-       EAction * action = new EAction( icon, name, pMainWindow );
-       action->setCheckable( pChild->mIsPushDownButton );
-       action->mID = pChild->mID;
-       action->mpHost = mpHost;
-       action->setStatusTip( pChild->mName );
-       QWidget * pButton = pT->widgetForAction( action );
-       if( pButton )
+       TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
+       pT->addButton( button );
+       QSizePolicy sizePolicy( QSizePolicy::Minimum, QSizePolicy::Minimum);
+       button->setSizePolicy( sizePolicy );
+       button->setIcon( icon );
+       button->setText( name );
+       button->setCheckable( pChild->mIsPushDownButton );
+       if( pChild->mIsFolder )
        {
-           ((QToolButton * )pButton)->setPopupMode( QToolButton::InstantPopup );
-       }
-       pT->addAction( action );
-       if( mIsFolder )
-       {
-           QMenu * newMenu = new QMenu( pMainWindow );
-           action->setMenu( newMenu );
-           QWidget * pButton = pT->widgetForAction( action );
-           if( pButton )
-           {
-               ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
-           }
-           
-           typedef list<TAction *>::const_iterator I;
-           for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-           {
-               TAction * pChild = *it;
-               pChild->insertActions( pMainWindow, pT, newMenu );
-           }
+           QMenu * newMenu = new QMenu( pT );
+           button->setMenu( newMenu );
+           pChild->insertActions( pMainWindow, pT, newMenu );
        }
     }
 }
 
 
-void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
+void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 {
     QMutexLocker locker(& mLock);
     mpToolBar = pT;
@@ -172,34 +158,19 @@ void TAction::insertActions( mudlet * pMainWindow, QToolBar * pT, QMenu * menu )
     action->mID = mID;
     action->mpHost = mpHost;
     action->setStatusTip( mName );
-    QWidget * pButton = pT->widgetForAction( action );
-    if( pButton )
-    {
-        ((QToolButton * )pButton)->setPopupMode( QToolButton::InstantPopup );
-    }
-    
-    if( mpParent )
-    {
-        if( menu)
-        {
-            menu->addAction( action );
-        }
-    }
-    else
-    {
-        pT->addAction( action );
-    }
+    menu->addAction( action );
+    mudlet::self()->bindMenu( menu, action );
     
     if( mIsFolder )
     {
         QMenu * newMenu = new QMenu( pMainWindow );
         action->setMenu( newMenu );
-        QWidget * pButton = pT->widgetForAction( action );
+        /*QWidget * pButton = pT->widgetForAction( action );
         if( pButton )
         {
             ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
-        }
-   
+        } */
+        
         typedef list<TAction *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {

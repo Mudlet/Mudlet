@@ -854,6 +854,12 @@ void XMLimport::readActionGroup( TAction * pParent )
                 qDebug()<<"commandButtonDown="<<pT->mCommandButtonDown;
                 continue;
             }
+            else if( name() == "icon")
+            {
+                pT->mIcon = readElementText();
+                qDebug()<<"icon="<<pT->mIcon;
+                continue;
+            }
             else if( name() == "orientation")
             {
                 pT->mOrientation = readElementText().toInt();
@@ -867,20 +873,17 @@ void XMLimport::readActionGroup( TAction * pParent )
             else if( name() == "posX")
             {
                 pT->mPosX = readElementText().toInt();
+                qDebug()<<"mPosX="<<pT->mPosX;
                 continue;
             }
             else if( name() == "posY")
             {
                 pT->mPosY = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "icon")
-            {
-                pT->mIcon = readElementText();
-                qDebug()<<"icon="<<pT->mIcon;
+                qDebug()<<"mPosY="<<pT->mPosY;
                 qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
+          
             else if( name() == "ActionGroup" )
             {
                 readActionGroup( pT );

@@ -26,7 +26,7 @@
 #include <map>
 #include <QMutex>
 #include <QDataStream>
-#include <QToolBar>
+#include "TToolBar.h"
 #include <QMenu>
 
 class TAction;
@@ -50,10 +50,10 @@ public:
     void                  reParentAction( int childID, int oldParentID, int newParentID );
     qint64                getNewID();
     void                  updateToolbar();
-    std::list<QToolBar *> getToolBarList();
-    TAction *             getHeadAction( QToolBar * );
+    std::list<TToolBar *> getToolBarList();
+    TAction *             getHeadAction( TToolBar * );
     void                  processDataStream( QString & );
-    void                  constructToolbar( TAction *, mudlet * pMainWindow, QToolBar * pTB );
+    void                  constructToolbar( TAction *, mudlet * pMainWindow, TToolBar * pTB );
     QMutex                mActionUnitLock;
     
 private: 
@@ -64,11 +64,11 @@ private:
     void                  removeActionRootNode( TAction * pT );
     void                  removeAction( TAction *);
     Host *                mpHost;
-    QMap<int, TAction *>   mActionMap;
+    QMap<int, TAction *>  mActionMap;
     list<TAction *>       mActionRootNodeList;
     qint64                mMaxID;
-    QToolBar *            mpToolBar;
-    std::list<QToolBar *> mToolBarList;
+    TToolBar *            mpToolBar;
+    std::list<TToolBar *> mToolBarList;
     
 };
 

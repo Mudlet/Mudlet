@@ -68,7 +68,7 @@ public:
    EAction *                     generateAction( QString name, QString icon, QToolBar * );
    void                          setWindowWrap( Host * pHost, QString & name, int & wrap );
    void                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
-    
+   void                          bindMenu( QMenu *, EAction * ); 
    static TConsole *             mpDebugConsole; 
    static QMainWindow *          mpDebugArea; 
    static bool                   debugMode; 

@@ -3,20 +3,23 @@
 #include <QStylePainter>
 #include <QMenu>
 
-TFlipButton::TFlipButton( QWidget * parent )
-:QToolButton( parent )//: QPushButton( parent )
+TFlipButton::TFlipButton( TToolBar * parent, TAction * pTAction, int id, Host * pHost )
+: QPushButton( parent )
+, mpTAction( pTAction )
+, mID( id )
+, mpHost( pHost )
 {
     init();
 }
 
 TFlipButton::TFlipButton( const QString & text, QWidget * parent )
-:QToolButton( parent )//: QPushButton( text, parent )
+: QPushButton( text, parent )
 {
     init();
 }
 
 TFlipButton::TFlipButton( const QIcon & icon, const QString & text, QWidget * parent )
-:QToolButton( parent )//: QPushButton( icon, text, parent )
+: QPushButton( icon, text, parent )
 {
     init();
 }
@@ -59,7 +62,7 @@ void TFlipButton::setMirrored( bool mirrored )
 
 QSize TFlipButton::sizeHint() const
 {
-    QSize size = QToolButton::sizeHint();//QPushButton::sizeHint();
+    QSize size = QPushButton::sizeHint();
     if( orientation_ == Qt::Vertical )
     {
         size.transpose();
@@ -69,7 +72,7 @@ QSize TFlipButton::sizeHint() const
 
 QSize TFlipButton::minimumSizeHint() const
 {
-    QSize size = QToolButton::minimumSizeHint();//QPushButton::minimumSizeHint();
+    QSize size = QPushButton::minimumSizeHint();
     if( orientation_ == Qt::Vertical )
     {
         size.transpose();

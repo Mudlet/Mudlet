@@ -60,6 +60,7 @@ mudlet * mudlet::self()
 mudlet::mudlet() 
 : QMainWindow() //Ui::MainWindow()
 {
+    setContentsMargins(0,0,0,0);
     //setupUi(this);
     mudlet::debugMode = false;
     QVBoxLayout * layout = new QVBoxLayout( this );
@@ -76,10 +77,13 @@ mudlet::mudlet()
     addToolBarBreak();
     
     mdiArea = new QMdiArea( this );
-    mdiArea->setViewMode( QMdiArea::TabbedView );
+    mdiArea->setContentsMargins(0,0,0,0);
+    //mdiArea->setViewMode( QMdiArea::TabbedView );
     mdiArea->setSizePolicy( sizePolicy );
+    layout->setContentsMargins(0,0,0,0);
     layout->addWidget(mdiArea);
     setCentralWidget( mdiArea );
+
     
     QAction * actionConnect = new QAction(QIcon(":/icons/preferences-web-browser-cache.png"), tr("Connect"), this);
     actionConnect->setStatusTip(tr("Connect To Server"));
@@ -182,7 +186,7 @@ mudlet::mudlet()
     timerAutologin->start( 1000 );
     
    
-    
+    qApp->setStyleSheet("QMainWindow::separator{background: black; border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
         
     
 }
@@ -205,39 +209,53 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
     
-    std::list<QToolBar *> toolBarList = pH->getActionUnit()->getToolBarList();
-    typedef std::list<QToolBar *>::iterator I;
+    std::list<TToolBar *> toolBarList = pH->getActionUnit()->getToolBarList();
+    typedef std::list<TToolBar *>::iterator I;
     for( I it=toolBarList.begin(); it!=toolBarList.end(); it++ )
     {
         TAction * head = pH->getActionUnit()->getHeadAction( *it );        
         if( head->mOrientation == 0 )
-            (*it)->setOrientation( Qt::Vertical );
+            (*it)->setHorizontalOrientation();
         else
-            (*it)->setOrientation( Qt::Vertical ); 
+            (*it)->setVerticalOrientation();
         
+        if( head->mLocation == 4 )
+        {
+            (*it)->setTitleBarWidget( 0 );
+        }
+        else
+        {
+            QWidget * noTitleBar = new QWidget;
+            (*it)->setTitleBarWidget( noTitleBar );
+        }
+        (*it)->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
         switch( head->mLocation )
         {
-            case 0: addToolBar( Qt::TopToolBarArea, *it ); break;
-            case 1: addToolBar( Qt::BottomToolBarArea, *it ); break;
-            case 2: addToolBar( Qt::LeftToolBarArea, *it ); break;    
-            case 3: addToolBar( Qt::RightToolBarArea, *it ); break;    
-        default: addToolBar( Qt::NoToolBarArea, *it ); //float toolbar
+            case 0: addDockWidget( Qt::TopDockWidgetArea, *it ); break;
+            case 1: addDockWidget( Qt::BottomDockWidgetArea, *it ); break;
+            case 2: addDockWidget( Qt::LeftDockWidgetArea, *it ); break;    
+            case 3: addDockWidget( Qt::RightDockWidgetArea, *it ); break;    
+        
         }
-        (*it)->setFloatable( true );
-        (*it)->setMovable( true );
-        QPoint pos = QPoint( head->mPosX, head->mPosY );
-        (*it)->move( mapFromParent( pos ) );
-        (*it)->resize(200,200);
-        (*it)->show();
-        qDebug()<<"moving TB to pos: x="<<head->mPosX<<" y="<<head->mPosY;
-        connect(*it,SIGNAL(actionTriggered( QAction * ) ), this, SLOT(slot_userToolBar_triggered(QAction*)));    
-    }
+        if( head->mLocation == 4 )
+        {
+            addDockWidget( Qt::LeftDockWidgetArea, *it ); //float toolbar
+            (*it)->setFloating( true );
+            QPoint pos = QPoint( head->mPosX, head->mPosY );
+            (*it)->show();
+            (*it)->move( pos );
+            (*it)->mpTAction = head;
+            (*it)->recordMove();
+        }
+        else
+            (*it)->show();
+    } 
 }
 
-/*void mudlet::connectActionMenu( QAction * pA )
+void mudlet::bindMenu( QMenu * menu, EAction * action )
 {
-    connect(pToolbar,SIGNAL(hovered()), this, SLOT(slot_userToolBar_hovered(QAction*)));    
-} */
+    connect( menu, SIGNAL( triggered( QAction * ) ), this, SLOT( slot_userToolBar_triggered( QAction * ) ) );        
+}
 
 void mudlet::slot_timer_fires()
 {
@@ -367,6 +385,7 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 void mudlet::slot_userToolBar_triggered( QAction* pA )
 {
+    cout<<"mudlet::slot_userToolBar_triggered()"<<endl;
     if( pA->isChecked() )
     {
         ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 2;
@@ -381,27 +400,6 @@ void mudlet::slot_userToolBar_triggered( QAction* pA )
 
 void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
 {
-    qDebug()<<"###########1----------";
-    EAction * pEA = (EAction *) sender();
-    if( ! pEA ) return;
-    TAction * pA = ((EAction*)pEA)->mpHost->getActionUnit()->getAction(((EAction*)pEA)->mID );
-    qDebug()<<"------#2";
-    if( ! pA )
-    {
-        qDebug()<< "pA == 0";
-        return;
-    }
-    if( pA->mOrientation == 1 )
-    {
-        qDebug()<<"---->#3";
-        if( pA->mpToolBar )
-            pA->mpToolBar->setOrientation( Qt::Vertical );
-    else
-        if( pA->mpToolBar )
-            pA->mpToolBar->setOrientation( Qt::Horizontal );
-
-    }
-    qDebug()<<"-------- wow ueberlebt :)";
 }
 
 Host * mudlet::getActiveHost()
@@ -429,9 +427,6 @@ void mudlet::addSubWindow( TConsole* pConsole )
 
 EAction * mudlet::generateAction( QString name, QString icon, QToolBar * pT )
 {
-    /* action->setIcon( ic );
-    pT->addAction( action );
-    return new EAction( ic, name, this );*/
 }
 
 void mudlet::closeEvent(QCloseEvent *event)
@@ -445,18 +440,9 @@ void mudlet::closeEvent(QCloseEvent *event)
     foreach( TConsole * pC, mConsoleMap )
     {
         qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
+        /*
         if( pC->mpHost->getName() != "default_host" )
         {
-            // save tool bar positions
-            std::list<QToolBar *> toolBarList = pC->mpHost->getActionUnit()->getToolBarList();
-            typedef std::list<QToolBar *>::iterator I;
-            for( I it=toolBarList.begin(); it!=toolBarList.end(); it++ )
-            {
-                TAction * head = pC->mpHost->getActionUnit()->getHeadAction( *it );        
-                QPoint pos( (*it)->pos().x(), (*it)->pos().y() );
-                pos = mapToParent( pos );
-            }
-            
             // close script-editor
             if( pC->mpHost->mpEditorDialog )
             {
@@ -466,7 +452,7 @@ void mudlet::closeEvent(QCloseEvent *event)
             
             // close console
             pC->close();
-        }
+        } */
     }
     
     writeSettings();

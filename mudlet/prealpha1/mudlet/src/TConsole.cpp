@@ -65,7 +65,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mTriggerEngineMode( false )
 , mClipboard( mpHost )
 {
-    
+    setContentsMargins(0,0,0,0);
     profile_name = mpHost->getName();
     mFormatSystemMessage.bgColor = mBgColor;
     mFormatSystemMessage.fgColor = QColor( 255, 0, 0 );
@@ -79,30 +79,38 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     
     QVBoxLayout * layout = new QVBoxLayout( this );
     layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(0);
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy3( QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy2( QSizePolicy::Expanding, QSizePolicy::Fixed);
     
     mpCommandLine = new TCommandLine( pH, this );
+    mpCommandLine->setContentsMargins(0,0,0,0);
     mpCommandLine->setSizePolicy( sizePolicy );
     mpCommandLine->setMaximumHeight( 30 );
     mpCommandLine->setFocusPolicy( Qt::StrongFocus );
     
     QWidget * layer = new QWidget( this );
+    layer->setContentsMargins(0,0,0,0);
     layer->setSizePolicy( sizePolicy );
     layer->setFocusPolicy( Qt::NoFocus );
     
     QSplitter * splitter = new QSplitter( Qt::Vertical, layer );
+    splitter->setContentsMargins(0,0,0,0);
     QVBoxLayout * layout2 = new QVBoxLayout( splitter );
+    layout2->setContentsMargins(0,0,0,0);
+    layout2->setSpacing(0);
     splitter->setHandleWidth( 3 );
     
     setFocusProxy( mpCommandLine );
     console = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole );
+    console->setContentsMargins(0,0,0,0);
     console->setSizePolicy( sizePolicy3 );
     console->setFocusPolicy( Qt::NoFocus );
     splitter->addWidget( console );
     
     console2 = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole );
+    console2->setContentsMargins(0,0,0,0);
     console2->setSizePolicy( sizePolicy3 );
     console2->setFocusPolicy( Qt::NoFocus );
     splitter->addWidget( console2 );
