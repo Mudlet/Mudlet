@@ -51,89 +51,18 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
     connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
     connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
     connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
+    connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
     connect(pushButton_display_font, SIGNAL(clicked()), this, SLOT(setDisplayFont()));
     connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
-    
+
     Host * pHost = mudlet::self()->getActiveHost();
     if( pHost )
     {
-        QPalette palette;
-        QColor color;
-        color = pHost->mFgColor;
-        palette.setColor( QPalette::Button, color );
-        pushButton_foreground_color->setPalette( palette );
-        
-        color = pHost->mBgColor;
-        palette.setColor( QPalette::Button, color );
-        pushButton_background_color->setPalette( palette );
-        
-        color = pHost->mBlack;
-        palette.setColor( QPalette::Button, color );
-        pushButton_black->setPalette( palette );
-        
-        color = pHost->mLightBlack;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lblack->setPalette( palette );
-        
-        color = pHost->mRed;
-        palette.setColor( QPalette::Button, color );
-        pushButton_red->setPalette( palette );
-        
-        color = pHost->mLightRed;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lred->setPalette( palette );
-        
-        color = pHost->mGreen;
-        palette.setColor( QPalette::Button, color );
-        pushButton_green->setPalette( palette );
-        
-        color = pHost->mLightGreen;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lgreen->setPalette( palette );
-        
-        color = pHost->mBlue;
-        palette.setColor( QPalette::Button, color );
-        pushButton_blue->setPalette( palette );
-        
-        color = pHost->mLightBlue;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lblue->setPalette( palette );
-          
-        color = pHost->mYellow;
-        palette.setColor( QPalette::Button, color );
-        pushButton_yellow->setPalette( palette );
-        
-        color = pHost->mLightYellow;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lyellow->setPalette( palette );
-        
-        color = pHost->mCyan;
-        palette.setColor( QPalette::Button, color );
-        pushButton_cyan->setPalette( palette );
-        
-        color = pHost->mLightCyan;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lcyan->setPalette( palette );
-        
-        color = pHost->mMagenta;
-        palette.setColor( QPalette::Button, color );
-        pushButton_magenta->setPalette( palette );
-        
-        color = pHost->mLightMagenta;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lmagenta->setPalette( palette );
-        
-        color = pHost->mWhite;
-        palette.setColor( QPalette::Button, color );
-        pushButton_white->setPalette( palette );
-        
-        color = pHost->mLightWhite;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lwhite->setPalette( palette );
-        
+        setColors();
+
         wrap_at_lineEdit->setText( QString::number(pHost->mWrapAt));    
         indent_wrapped_lineEdit->setText(QString::number(pHost->mWrapIndentCount));
-        
+
         show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
         auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
         command_separator_lineedit->setText( pHost->mCommandSeparator);
@@ -143,29 +72,140 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
     }
 }
 
+void dlgProfilePreferences::setColors()
+{
+    Host * pHost = mudlet::self()->getActiveHost();
+    if( ! pHost ) return;
+
+    QPalette palette;
+    QColor color;
+    color = pHost->mFgColor;
+    palette.setColor( QPalette::Button, color );
+    pushButton_foreground_color->setPalette( palette );
+
+    color = pHost->mBgColor;
+    palette.setColor( QPalette::Button, color );
+    pushButton_background_color->setPalette( palette );
+
+    color = pHost->mBlack;
+    palette.setColor( QPalette::Button, color );
+    pushButton_black->setPalette( palette );
+
+    color = pHost->mLightBlack;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lblack->setPalette( palette );
+
+    color = pHost->mRed;
+    palette.setColor( QPalette::Button, color );
+    pushButton_red->setPalette( palette );
+
+    color = pHost->mLightRed;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lred->setPalette( palette );
+
+    color = pHost->mGreen;
+    palette.setColor( QPalette::Button, color );
+    pushButton_green->setPalette( palette );
+
+    color = pHost->mLightGreen;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lgreen->setPalette( palette );
+
+    color = pHost->mBlue;
+    palette.setColor( QPalette::Button, color );
+    pushButton_blue->setPalette( palette );
+
+    color = pHost->mLightBlue;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lblue->setPalette( palette );
+
+    color = pHost->mYellow;
+    palette.setColor( QPalette::Button, color );
+    pushButton_yellow->setPalette( palette );
+
+    color = pHost->mLightYellow;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lyellow->setPalette( palette );
+
+    color = pHost->mCyan;
+    palette.setColor( QPalette::Button, color );
+    pushButton_cyan->setPalette( palette );
+
+    color = pHost->mLightCyan;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lcyan->setPalette( palette );
+
+    color = pHost->mMagenta;
+    palette.setColor( QPalette::Button, color );
+    pushButton_magenta->setPalette( palette );
+
+    color = pHost->mLightMagenta;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lmagenta->setPalette( palette );
+
+    color = pHost->mWhite;
+    palette.setColor( QPalette::Button, color );
+    pushButton_white->setPalette( palette );
+
+    color = pHost->mLightWhite;
+    palette.setColor( QPalette::Button, color );
+    pushButton_Lwhite->setPalette( palette );
+}
+
+void dlgProfilePreferences::resetColors()
+{
+    Host * pHost = mudlet::self()->getActiveHost();
+    if( ! pHost ) return;
+
+    pHost->mFgColor       = QColor(255,255,255);
+    pHost->mBgColor       = QColor(  0,  0,  0);
+    if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
+    pHost->mBlack         = QColor(  0,  0,  0);
+    pHost->mLightBlack    = QColor(128,128,128);
+    pHost->mRed           = QColor(128,  0,  0);
+    pHost->mLightRed      = QColor(255,  0,  0);
+    pHost->mGreen         = QColor(  0,179,  0);
+    pHost->mLightGreen    = QColor(  0,255  ,0);
+    pHost->mBlue          = QColor(  0,  0,128);
+    pHost->mLightBlue     = QColor(  0,  0,255);
+    pHost->mYellow        = QColor(128,128,  0);
+    pHost->mLightYellow   = QColor(255,255,  0);
+    pHost->mCyan          = QColor(  0,128,128);
+    pHost->mLightCyan     = QColor(  0,255,255);
+    pHost->mMagenta       = QColor(128,  0,128);
+    pHost->mLightMagenta  = QColor(255,  0,255);
+    pHost->mWhite         = QColor(192,192,192);
+    pHost->mLightWhite    = QColor(255,255,255);
+
+    setColors();
+}
 void dlgProfilePreferences::setFgColor()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_foreground_color->setPalette( palette );
-    pHost->mFgColor = color;
-    if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-    
+    QColor color = QColorDialog::getColor( pHost->mFgColor, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_foreground_color->setPalette( palette );
+        pHost->mFgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
+    }
 }
 void dlgProfilePreferences::setBgColor()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_background_color->setPalette( palette );
-    pHost->mBgColor = color;
-    if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-    
+    QColor color = QColorDialog::getColor( pHost->mBgColor, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_background_color->setPalette( palette );
+        pHost->mBgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
+    }
 }
 
 void dlgProfilePreferences::setDisplayFont()
@@ -193,170 +233,218 @@ void dlgProfilePreferences::setColorBlack()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_black->setPalette( palette );
-    pHost->mBlack = color;
+    QColor color = QColorDialog::getColor( pHost->mBlack, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_black->setPalette( palette );
+        pHost->mBlack = color;
+    }
 }
 
 void dlgProfilePreferences::setColorLightBlack()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lblack->setPalette( palette );
-    pHost->mLightBlack = color;
+    QColor color = QColorDialog::getColor( pHost->mLightBlack, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lblack->setPalette( palette );
+        pHost->mLightBlack = color;
+    }
 }
 
 void dlgProfilePreferences::setColorRed()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_red->setPalette( palette );
-    pHost->mRed = color;
+    QColor color = QColorDialog::getColor( pHost->mRed, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_red->setPalette( palette );
+        pHost->mRed = color;
+    }
 }
 
 void dlgProfilePreferences::setColorLightRed()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lred->setPalette( palette );
-    pHost->mLightRed = color;
+    QColor color = QColorDialog::getColor( pHost->mLightRed, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lred->setPalette( palette );
+        pHost->mLightRed = color;
+    }
 }
 
 void dlgProfilePreferences::setColorGreen()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_green->setPalette( palette );
-    pHost->mGreen = color;
+    QColor color = QColorDialog::getColor( pHost->mGreen, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_green->setPalette( palette );
+        pHost->mGreen = color;
+    }
 }
 void dlgProfilePreferences::setColorLightGreen()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lgreen->setPalette( palette );
-    pHost->mLightGreen = color;
+    QColor color = QColorDialog::getColor( pHost->mLightGreen, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lgreen->setPalette( palette );
+        pHost->mLightGreen = color;
+    }
 }
 
 void dlgProfilePreferences::setColorBlue()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_blue->setPalette( palette );
-    pHost->mBlue = color;
+    QColor color = QColorDialog::getColor( pHost->mBlue, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_blue->setPalette( palette );
+        pHost->mBlue = color;
+    }
 }
 void dlgProfilePreferences::setColorLightBlue()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lblue->setPalette( palette );
-    pHost->mLightBlue = color;
+    QColor color = QColorDialog::getColor( pHost->mLightBlue, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lblue->setPalette( palette );
+        pHost->mLightBlue = color;
+    }
 }
 
 void dlgProfilePreferences::setColorYellow()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_yellow->setPalette( palette );
-    pHost->mYellow = color;
+    QColor color = QColorDialog::getColor( pHost->mYellow, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_yellow->setPalette( palette );
+        pHost->mYellow = color;
+    }
 }
 void dlgProfilePreferences::setColorLightYellow()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lyellow->setPalette( palette );
-    pHost->mLightYellow = color;
+    QColor color = QColorDialog::getColor( pHost->mLightYellow, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lyellow->setPalette( palette );
+        pHost->mLightYellow = color;
+    }
 }
 
 void dlgProfilePreferences::setColorCyan()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_cyan->setPalette( palette );
-    pHost->mCyan = color;
+    QColor color = QColorDialog::getColor( pHost->mCyan, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_cyan->setPalette( palette );
+        pHost->mCyan = color;
+    }
 }
 void dlgProfilePreferences::setColorLightCyan()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lcyan->setPalette( palette );
-    pHost->mLightCyan = color;
+    QColor color = QColorDialog::getColor( pHost->mLightCyan, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lcyan->setPalette( palette );
+        pHost->mLightCyan = color;
+    }
 }
 
 void dlgProfilePreferences::setColorMagenta()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_magenta->setPalette( palette );
-    pHost->mMagenta = color;
+    QColor color = QColorDialog::getColor( pHost->mMagenta, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_magenta->setPalette( palette );
+        pHost->mMagenta = color;
+    }
 }
 void dlgProfilePreferences::setColorLightMagenta()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lmagenta->setPalette( palette );
-    pHost->mLightMagenta = color;
+    QColor color = QColorDialog::getColor( pHost->mLightMagenta, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lmagenta->setPalette( palette );
+        pHost->mLightMagenta = color;
+    }
 }
 
 void dlgProfilePreferences::setColorWhite()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_white->setPalette( palette );
-    pHost->mWhite = color;
+    QColor color = QColorDialog::getColor( pHost->mWhite, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_white->setPalette( palette );
+        pHost->mWhite = color;
+    }
 }
 void dlgProfilePreferences::setColorLightWhite()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;    
-    QColor color = QColorDialog::getColor();
-    QPalette palette;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lwhite->setPalette( palette );
-    pHost->mLightWhite = color;
+    QColor color = QColorDialog::getColor( pHost->mLightWhite, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_Lwhite->setPalette( palette );
+        pHost->mLightWhite = color;
+    }
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
