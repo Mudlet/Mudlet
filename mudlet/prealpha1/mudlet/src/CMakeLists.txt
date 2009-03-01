@@ -60,6 +60,8 @@ TTextEdit.cpp
 XMLexport.cpp
 XMLimport.cpp
 FontManager.cpp
+TToolBar.cpp
+TFlipButton.cpp
 TBuffer.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
@@ -111,6 +113,8 @@ dlgHelpDialog.h
 dlgAboutDialog.h
 dlgKeysMainArea.h
 dlgProfilePreferences.h
+TToolBar.h
+TFlipButton.h
 TTextEdit.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)
