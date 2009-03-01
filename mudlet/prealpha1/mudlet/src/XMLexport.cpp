@@ -1,7 +1,6 @@
-
 /***************************************************************************
  *   Copyright (C) 2008 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
- *                                                                         *                                                                         *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -17,6 +16,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 
 #include "XMLexport.h"
 
@@ -72,17 +72,17 @@ XMLexport::XMLexport( TKey * pT )
 bool XMLexport::exportHost( QIODevice * device )
 {
     setDevice(device);
-    
+
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
-    
+
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    
+
     writeStartElement( "HostPackage" );
     writeHost( mpHost );
     writeEndElement();
-    
+
     writeEndElement();//MudletPackage
     writeEndDocument();
     return true;
@@ -91,12 +91,12 @@ bool XMLexport::exportHost( QIODevice * device )
 bool XMLexport::writeHost( Host * pT )
 {
     writeStartElement( "Host" );
-    
+
     writeAttribute( "autoClearCommandLineAfterSend", pT->mAutoClearCommandLineAfterSend ? "yes" : "no" );
     writeAttribute( "disableAutoCompletion", pT->mDisableAutoCompletion ? "yes" : "no" );
     writeAttribute( "printCommand", pT->mPrintCommand ? "yes" : "no" );
     writeAttribute( "USE_IRE_DRIVER_BUGFIX", pT->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no" );
-    
+
     writeTextElement( "name", pT->mHostName );
     writeTextElement( "login", pT->mLogin );
     writeTextElement( "pass", pT->mPass );
@@ -125,10 +125,10 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mLightWhite", pT->mLightWhite.name() );    
     writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );    
     writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() ); 
-    
+
     writeEndElement(); // end Host tag
     writeEndElement(); // end HostPackage tag
-    
+
     writeStartElement( "TriggerPackage" );
     bool ret = true;   
     typedef list<TTrigger *>::const_iterator ItTriggerUnit;
@@ -138,7 +138,7 @@ bool XMLexport::writeHost( Host * pT )
         ret = writeTrigger( pChildTrigger );
     }
     writeEndElement(); //end trigger package tag
-    
+
     writeStartElement("TimerPackage");
     typedef list<TTimer *>::const_iterator ItTimerUnit;
     for( ItTimerUnit it2 = pT->mTimerUnit.mTimerRootNodeList.begin(); it2 != pT->mTimerUnit.mTimerRootNodeList.end(); it2++)
@@ -147,7 +147,7 @@ bool XMLexport::writeHost( Host * pT )
         ret = writeTimer( pChildTimer );
     }
     writeEndElement();
-    
+
     writeStartElement("AliasPackage");
     typedef list<TAlias *>::const_iterator ItAliasUnit;
     for( ItAliasUnit it3 = pT->mAliasUnit.mAliasRootNodeList.begin(); it3 != pT->mAliasUnit.mAliasRootNodeList.end(); it3++)
@@ -156,7 +156,7 @@ bool XMLexport::writeHost( Host * pT )
         ret = writeAlias( pChildAlias );
     }
     writeEndElement();
-    
+
     writeStartElement("ActionPackage");
     typedef list<TAction *>::const_iterator ItActionUnit;
     for( ItActionUnit it4 = pT->mActionUnit.mActionRootNodeList.begin(); it4 != pT->mActionUnit.mActionRootNodeList.end(); it4++)
@@ -165,7 +165,7 @@ bool XMLexport::writeHost( Host * pT )
         ret = writeAction( pChildAction );
     }
     writeEndElement();
-    
+
     writeStartElement("ScriptPackage");
     typedef list<TScript *>::const_iterator ItScriptUnit;
     for( ItScriptUnit it5 = pT->mScriptUnit.mScriptRootNodeList.begin(); it5 != pT->mScriptUnit.mScriptRootNodeList.end(); it5++)
@@ -174,7 +174,7 @@ bool XMLexport::writeHost( Host * pT )
         ret = writeScript( pChildScript );
     }
     writeEndElement();
-    
+
     writeStartElement("KeyPackage");
     typedef list<TKey *>::const_iterator ItKeyUnit;
     for( ItKeyUnit it6 = pT->mKeyUnit.mKeyRootNodeList.begin(); it6 != pT->mKeyUnit.mKeyRootNodeList.end(); it6++)
@@ -183,6 +183,8 @@ bool XMLexport::writeHost( Host * pT )
         ret = writeKey( pChildKey );
     }
     writeEndElement();
+
+    return ret;
 }
 
 
@@ -190,17 +192,17 @@ bool XMLexport::writeHost( Host * pT )
 bool XMLexport::exportTrigger( QIODevice * device )
 {
     setDevice(device);
-    
+
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
-    
+
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    
+
     writeStartElement( "TriggerPackage" );
     writeTrigger( mpTrigger );
     writeEndElement();//TriggerPackage
-    
+
     writeEndElement();//MudletPackage
     writeEndDocument();
     return true;
@@ -234,7 +236,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
         writeTextElement( "string", pT->mRegexCodeList[i] );
     }
     writeEndElement();
-    
+
     writeStartElement( "regexCodePropertyList" );
     for( int i=0; i<pT->mRegexCodePropertyList.size(); i++ )
     {
@@ -248,23 +250,25 @@ bool XMLexport::writeTrigger( TTrigger * pT )
         writeTrigger( pChild );
     }
     writeEndElement();
+
+    return true;
 }
 
 
 bool XMLexport::exportAlias( QIODevice * device )
 {
     setDevice(device);
-    
+
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
-    
+
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    
+
     writeStartElement( "AliasPackage" );
     writeAlias( mpAlias );
     writeEndElement();
-    
+
     writeEndElement();//MudletPackage
     writeEndDocument();
     return true;
@@ -281,17 +285,17 @@ bool XMLexport::writeAlias( TAlias * pT )
     {
         tag = "Alias";
     }
-    
+
     writeStartElement( tag );
-    
+
     writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
-    
+
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
     writeTextElement( "regex", pT->mRegexCode );    
-    
+
     typedef list<TAlias *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
     {
@@ -299,22 +303,24 @@ bool XMLexport::writeAlias( TAlias * pT )
         writeAlias( pChild );
     }
     writeEndElement();
+
+    return true;
 }
 
 bool XMLexport::exportAction( QIODevice * device )
 {
     setDevice(device);
-    
+
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
-    
+
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    
+
     writeStartElement( "ActionPackage" );
     writeAction( mpAction );
     writeEndElement();
-    
+
     writeEndElement();//MudletPackage
     writeEndDocument();
     return true;
@@ -331,14 +337,14 @@ bool XMLexport::writeAction( TAction * pT )
     {
         tag = "Action";
     }
-    
+
     writeStartElement( tag );
-    
+
     writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isPushButton", pT->mIsPushDownButton ? "yes" : "no" );
     writeAttribute( "isFlatButton", pT->mButtonFlat ? "yes" : "no" );
-    
+
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "commandButtonUp", pT->mCommandButtonUp );
@@ -353,7 +359,7 @@ bool XMLexport::writeAction( TAction * pT )
     writeTextElement( "buttonColumn", QString::number(pT->mButtonColumns) );
     writeTextElement( "buttonRotation", QString::number(pT->mButtonRotation) );
     writeTextElement( "buttonColor", pT->mButtonColor.name() );     
-    
+
     typedef list<TAction *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
     {
@@ -361,23 +367,25 @@ bool XMLexport::writeAction( TAction * pT )
         writeAction( pChild );
     }
     writeEndElement();
+
+    return true;
 }
 
 bool XMLexport::exportTimer( QIODevice * device )
 {
-  
+
     setDevice(device);
-    
+
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
-    
+
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    
+
     writeStartElement( "TimerPackage" );
     writeTimer( mpTimer );
     writeEndElement();
-    
+
     writeEndElement();//MudletPackage
     writeEndDocument();
     return true;
@@ -394,18 +402,18 @@ bool XMLexport::writeTimer( TTimer * pT )
     {
         tag = "Timer";
     }
-    
+
     writeStartElement( tag );
-    
+
     writeAttribute( "isActive", pT->mUserActiveState ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isTempTimer", pT->mIsTempTimer ? "yes" : "no" );
-    
+
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
     writeTextElement( "time", pT->mTime.toString( "hh:mm:ss.zzz" ) );    
-    
+
     typedef list<TTimer *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
     {
@@ -413,23 +421,25 @@ bool XMLexport::writeTimer( TTimer * pT )
         writeTimer( pChild );
     }
     writeEndElement();
+
+    return true;
 }
 
 
 bool XMLexport::exportScript( QIODevice * device )
 {
     setDevice(device);
-    
+
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
-    
+
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    
+
     writeStartElement( "ScriptPackage" );
     writeScript( mpScript );
     writeEndElement();
-    
+
     writeEndElement();//MudletPackage
     writeEndDocument();
     return true;
@@ -446,22 +456,22 @@ bool XMLexport::writeScript( TScript * pT )
     {
         tag = "Script";
     }
-    
+
     writeStartElement( tag );
-    
+
     writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
-    
+
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
-    
+
     writeStartElement( "eventHandlerList" );
     for( int i=0; i<pT->mEventHandlerList.size(); i++ )
     {
         writeTextElement( "string", pT->mEventHandlerList[i] );
     }
     writeEndElement();
-    
+
     typedef list<TScript *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
     {
@@ -469,23 +479,25 @@ bool XMLexport::writeScript( TScript * pT )
         writeScript( pChild );
     }
     writeEndElement();
+
+    return true;
 }
 
 
 bool XMLexport::exportKey( QIODevice * device )
 {
     setDevice(device);
-    
+
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
-    
+
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    
+
     writeStartElement( "KeyPackage" );
     writeKey( mpKey );
     writeEndElement();
-    
+
     writeEndElement();//MudletPackage
     writeEndDocument();
     return true;
@@ -502,18 +514,18 @@ bool XMLexport::writeKey( TKey * pT )
     {
         tag = "Key";
     }
-    
+
     writeStartElement( tag );
-    
+
     writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
-    
+
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
     writeTextElement( "keyCode", QString::number( pT->mKeyCode ) );
     writeTextElement( "keyModifier", QString::number( pT->mKeyModifier ) );    
-    
+
     typedef list<TKey *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
     {
@@ -521,10 +533,6 @@ bool XMLexport::writeKey( TKey * pT )
         writeKey( pChild );
     }
     writeEndElement();
+
+    return true;
 }
-
-
-
-
-
-

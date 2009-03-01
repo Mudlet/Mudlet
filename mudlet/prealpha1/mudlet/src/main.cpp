@@ -28,6 +28,8 @@
 #include <QSplashScreen>
 #include <QFontDatabase>
 
+#define MUDLET_HOME "/usr/local/share/mudlet/"
+
 TConsole *  spDebugConsole = 0;
 
 void debugOutput(QtMsgType type, const char *msg)
@@ -80,7 +82,7 @@ int main(int argc, char *argv[])
         dir.mkpath( directory ); 
     }
     
-    QFile file_doc( "mudlet_documentation.html" );
+    QFile file_doc( "/usr/local/share/mudlet/mudlet_documentation.html" );
     QFile file_doc_old( directory+"/mudlet_documentation.html" );
     if( file_doc.exists() )
     {
@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
         }
         file_doc.copy( directory+"/mudlet_documentation.html" );
     }
-    QFile file_lua( "LuaGlobal.lua" );
+    QFile file_lua( "/usr/local/share/mudlet/LuaGlobal.lua" );
     if( file_lua.exists() )
     {
         QFile file_lua_old( directory+"/LuaGlobal.lua" );
@@ -101,7 +103,7 @@ int main(int argc, char *argv[])
         file_lua.copy( directory+"/LuaGlobal.lua" );
     }
     QString fonts = directory+"/fonts/ttf-bitstream-vera-1.10";
-    QDir fontDir( "fonts/ttf-bitstream-vera-1.10/" );
+    QDir fontDir( "/usr/local/share/mudlet/fonts/ttf-bitstream-vera-1.10/" );
     fontDir.mkpath( fonts );
     QStringList fontDirList = fontDir.entryList(QDir::Files);
     for( int i=0; i<fontDirList.size();i++ )

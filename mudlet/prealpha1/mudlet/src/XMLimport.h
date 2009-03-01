@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
- *                                                                         *                                                                         *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -22,6 +22,7 @@
 #define XMLIMPORT_H
 
 #include <QXmlStreamReader>
+
 #include "Host.h"
 
 class Host;
@@ -37,14 +38,14 @@ class XMLimport : public QXmlStreamReader
 
 public:
               XMLimport( Host * );
-    
+
     bool      importPackage( QIODevice *device );
-    
+
 private:
-    
+
     void      readPackage();
     void      readUnknownPackage();
-    
+
     void      readHostPackage();
     void      readTriggerPackage();
     void      readTimerPackage();
@@ -52,7 +53,7 @@ private:
     void      readActionPackage();
     void      readScriptPackage();
     void      readKeyPackage();
-    
+
     void      readUnknownHostElement();
     void      readUnknownTriggerElement();
     void      readUnknownTimerElement();
@@ -60,7 +61,7 @@ private:
     void      readUnknownActionElement();
     void      readUnknownScriptElement();
     void      readUnknownKeyElement();
-    
+
     void      readHostPackage( Host * );
     void      readTriggerGroup( TTrigger * pParent );
     void      readTimerGroup( TTimer * pParent );
@@ -68,12 +69,12 @@ private:
     void      readActionGroup( TAction * pParent );
     void      readScriptGroup( TScript * pParent );
     void      readKeyGroup( TKey * pParent );
-    
-    
+
+
     void      readStringList( QStringList & );
     void      readIntegerList( QList<int> & );
 
     Host *    mpHost;
 };
 
-#endif
+#endif // XMLIMPORT_H
