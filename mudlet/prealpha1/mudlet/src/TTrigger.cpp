@@ -398,7 +398,7 @@ END:
     TLuaInterpreter * pL = mpHost->getLuaInterpreter();
     pL->setCaptureGroups( captureList, posList );
     // call lua trigger function with number of matches and matches itselves as arguments
-    qDebug()<<"TTrigger::match_perl() calling execute()";
+    //qDebug()<<"TTrigger::match_perl() calling execute()";
     execute();
     pL->clearCaptureGroups();
 }
@@ -683,7 +683,6 @@ void TTrigger::compile()
 
 void TTrigger::execute()
 {
-qDebug()<<"TTrigger::execute():mName="<<mName<<" executing trigger script";
     if( mIsTempTrigger )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
