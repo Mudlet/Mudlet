@@ -77,6 +77,7 @@ public:
     
 public slots:      
     
+   void                          toggleFullScreenView(); 
    void                          slot_userToolBar_orientation_changed(Qt::Orientation); 
    void                          slot_show_about_dialog();
    void                          slot_multi_view();

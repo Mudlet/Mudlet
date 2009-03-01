@@ -69,8 +69,15 @@ mudlet::mudlet()
     
     
     mpMainToolBar = new QToolBar( this );
-    mpMainToolBar->setIconSize(QSize(32,32));
-    mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+    
+    QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
+    if( file_use_smallscreen.exists() )
+        mpMainToolBar->setIconSize(QSize(8,8));
+    else
+    {
+        mpMainToolBar->setIconSize(QSize(32,32));
+        mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+    }
     
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
@@ -160,7 +167,21 @@ mudlet::mudlet()
     generalRule -= QSize( 30, 30 );
     mpDebugArea->resize( QSize( 1200, 1000 ).boundedTo( generalRule ) );
     mpDebugArea->hide();
-    QFont font("Monospace", 10, QFont::Courier);
+    QFont mainFont;
+    if( file_use_smallscreen.exists() )
+    {
+        mainFont = QFont("Monospace", 1, QFont::Courier);   
+        showFullScreen();   
+        QAction * actionFullScreeniew = new QAction(QIcon(":/icons/emblem-important.png"), tr("Toggle Full Screen View"), this);
+        actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
+        mpMainToolBar->addAction( actionFullScreeniew );
+        connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
+    }
+    else
+    {
+        mainFont = QFont("Monospace", 6, QFont::Courier);        
+    }
+    setFont(mainFont);
     mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
     
     
@@ -698,6 +719,16 @@ void mudlet::slot_stopAllTriggers()
 mudlet::~mudlet()
 {
 }
+
+void mudlet::toggleFullScreenView()
+{
+    if( isFullScreen() )
+        showNormal();
+    else
+        showFullScreen();
+}
+
+
 
 
 

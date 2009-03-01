@@ -69,6 +69,12 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
         disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
         
         checkBox_USE_IRE_DRIVER_BUGFIX->setChecked( pHost->mUSE_IRE_DRIVER_BUGFIX );
+        
+        QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
+        if( file_use_smallscreen.exists() )
+            checkBox_USE_SMALL_SCREEN->setChecked( true );
+        else 
+            checkBox_USE_SMALL_SCREEN->setChecked( false );
     }
 }
 
@@ -460,6 +466,15 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
     pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
     pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );
+    if( checkBox_USE_SMALL_SCREEN->isChecked() )
+    {
+        cout << "SMALL_SCREEN"<<endl;
+        QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
+        file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
+        QTextStream out(&file_use_smallscreen);
+        out << "use_small_screen";
+        file_use_smallscreen.close();
+    }
     close();
 }
 

@@ -25,7 +25,7 @@ dlgHelpDialog::dlgHelpDialog(QWidget * parent) : QMainWindow(parent)
 {
     setupUi(this);
     QString home = QDir::homePath();
-    webView->load(QUrl(QString("file:///"+home+"/.config/mudlet/mudlet_documentation.html")));
+    webView->load(QUrl(QString("file:///usr/local/share/mudlet/mudlet_documentation.html")));
    
     
 }
