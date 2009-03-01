@@ -30,6 +30,8 @@ TCommandLine.cpp
 TTreeWidget.cpp
 TTreeWidgetItem.cpp
 TTimer.cpp
+TToolBar.cpp
+TFlipButton.cpp
 TScript.cpp
 TAlias.cpp
 dlgTimersMainArea.cpp
@@ -85,6 +87,7 @@ ui/profile_preferences.ui)
 SET(mudlet_MOC_HDRS mudlet.h
 EAction.h
 TConsole.h
+TToolBar.h
 ctelnet.h
 dlgConnectionProfiles.h
 dlgTriggerEditor.h
