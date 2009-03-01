@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
- *                                                                         *                                                                         *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -17,18 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #ifndef XML_EXPORT_H
 #define XML_EXPORT_H
 
-#include <QXmlStreamWriter>
-#include "Host.h"
 
-class TTrigger;
-class TTimer;
-class TAction;
-class TAlias;
-class TScript;
-class TKey;
+#include <QXmlStreamWriter>
+
+#include "Host.h"
 
 
 class XMLexport : public QXmlStreamWriter
@@ -41,18 +37,18 @@ public:
                     XMLexport( TAction * );
                     XMLexport( TScript * );
                     XMLexport( TKey * );
-    
+
     bool            writeHost( Host * );
-    
+
     bool            writeTrigger( TTrigger * );
     bool            writeTimer( TTimer * );
     bool            writeAlias( TAlias * );
     bool            writeAction( TAction * );
     bool            writeScript( TScript * );
     bool            writeKey( TKey * );
-    
+
     bool            exportHost( Host * );
-    
+
     bool            exportHost( QIODevice * );
     bool            exportTrigger( QIODevice * );
     bool            exportTimer( QIODevice * );
@@ -60,7 +56,7 @@ public:
     bool            exportAction( QIODevice * );
     bool            exportScript( QIODevice * );
     bool            exportKey( QIODevice * );
-    
+
     bool            exportTrigger( TTrigger * );
     bool            exportTimer( TTimer * );
     bool            exportAlias( TAlias * );
@@ -68,8 +64,7 @@ public:
     bool            exportScript( TScript * );
     bool            exportKey( TKey * );
 
-private: 
-    
+private:
     Host *          mpHost;
     TTrigger *      mpTrigger;
     TTimer *        mpTimer;
@@ -77,8 +72,7 @@ private:
     TAction *       mpAction;
     TScript *       mpScript;
     TKey *          mpKey;
-    
     QString         mType;
 };
 
-#endif
+#endif // XML_EXPORT_H

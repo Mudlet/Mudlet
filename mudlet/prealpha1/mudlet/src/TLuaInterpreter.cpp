@@ -107,7 +107,7 @@ int TLuaInterpreter::Wait( lua_State *L )
   }
   else
   {
-      luaSleepMsec=lua_tonumber( L, 1 );
+      luaSleepMsec = lua_tointeger( L, 1 );
   }
   msleep( luaSleepMsec );//FIXME thread::sleep()
   return 0;
@@ -159,7 +159,7 @@ int TLuaInterpreter::select( lua_State * L )
     }
     else
     { 
-        luaNumOfMatch = lua_tonumber( L, 2 );
+        luaNumOfMatch = lua_tointeger( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     int pos = pHost->mpConsole->select( QString( luaSendText.c_str() ), luaNumOfMatch );
@@ -179,7 +179,7 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
     }
     else
     { 
-        luaNumOfMatch = lua_tonumber( L, 1 );
+        luaNumOfMatch = lua_tointeger( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     if( luaNumOfMatch < 1 )
@@ -194,11 +194,11 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
         std::list<std::string>::iterator its = pL->mCaptureGroupList.begin();
         std::list<int>::iterator iti = pL->mCaptureGroupPosList.begin();
         
-        for( int i=0; iti!=pL->mCaptureGroupPosList.end(); iti++,i++ )
+        for( int i=0; iti!=pL->mCaptureGroupPosList.end(); ++iti,++i )
         {
             if( i >= luaNumOfMatch ) break;
         }
-        for( int i=0; its!=pL->mCaptureGroupList.end(); its++,i++)
+        for( int i=0; its!=pL->mCaptureGroupList.end(); ++its,++i)
         {
             if( i >= luaNumOfMatch ) break;
         }
@@ -230,7 +230,7 @@ int TLuaInterpreter::getLines( lua_State * L )
     }
     else
     { 
-        luaFrom = lua_tonumber( L, 1 );
+        luaFrom = lua_tointeger( L, 1 );
     }      
     
     int luaTo;
@@ -242,7 +242,7 @@ int TLuaInterpreter::getLines( lua_State * L )
     }
     else
     { 
-        luaTo=lua_tonumber( L, 2 );
+        luaTo=lua_tointeger( L, 2 );
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QStringList strList = pHost->mpConsole->getLines( luaFrom, luaTo );
@@ -269,7 +269,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     }
     else
     { 
-        luaFrom = lua_tonumber( L, 1 );
+        luaFrom = lua_tointeger( L, 1 );
     }      
     
     int luaTo;
@@ -281,7 +281,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     }
     else
     { 
-        luaTo=lua_tonumber( L, 2 );
+        luaTo=lua_tointeger( L, 2 );
     }      
     /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QStringList strList = pHost->getBufferTable( luaFrom, luaTo );
@@ -347,7 +347,7 @@ int TLuaInterpreter::setWindowWrap( lua_State * L )
     }
     else
     { 
-        luaFrom = lua_tonumber( L, 2 );
+        luaFrom = lua_tointeger( L, 2 );
     }      
     
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
@@ -378,7 +378,7 @@ int TLuaInterpreter::setWindowWrapIndent( lua_State * L )
     }
     else
     { 
-        luaFrom = lua_tonumber( L, 2 );
+        luaFrom = lua_tointeger( L, 2 );
     }      
     
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
@@ -426,7 +426,7 @@ int TLuaInterpreter::userWindowLineWrap( lua_State * L )
     }
     else
     { 
-        luaBool = lua_toboolean( L, 2 );
+        luaBool = static_cast<bool>(lua_toboolean( L, 2 ));
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString name( luaSendText.c_str() );
@@ -446,7 +446,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
     }
     else
     { 
-        luaFrom = lua_tonumber( L, 1 );
+        luaFrom = lua_tointeger( L, 1 );
     }      
     
     int luaTo;
@@ -458,7 +458,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
     }
     else
     { 
-        luaTo=lua_tonumber( L, 2 );
+        luaTo=lua_tointeger( L, 2 );
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     bool ret = pHost->mpConsole->selectSection( luaFrom, luaTo );
@@ -478,7 +478,7 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     }
     else
     { 
-        luaFrom = lua_tonumber( L, 1 );
+        luaFrom = lua_tointeger( L, 1 );
     }      
     
     int luaTo;
@@ -490,19 +490,10 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     }
     else
     { 
-        luaTo=lua_tonumber( L, 2 );
+        luaTo=lua_tointeger( L, 2 );
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    bool ret = false;
-    if( ( ret = pHost->mpConsole->moveCursor( luaFrom, luaTo ) ) )
-    {
-        ret = true;
-    }
-    else
-    {
-        ret = false;
-    }
-    lua_pushboolean( L, ret );
+    lua_pushboolean( L, pHost->mpConsole->moveCursor( luaFrom, luaTo ) );
     return 1;
 }
 
@@ -517,7 +508,7 @@ int TLuaInterpreter::getBufferLine( lua_State * L )
     }
     else
     { 
-        luaLine = lua_tonumber( L, 1 );
+        luaLine = lua_tointeger( L, 1 );
     }
     
     /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
@@ -871,7 +862,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     }
     else
     { 
-        luaFrom = lua_tonumber( L, 1 );
+        luaFrom = lua_tointeger( L, 1 );
     }      
     int luaTo;
     if( ! lua_isnumber( L, 2 ) ) 
@@ -882,7 +873,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     }
     else
     { 
-        luaTo = lua_tonumber( L, 2 );
+        luaTo = lua_tointeger( L, 2 );
     }      
     
     string luaFunction;
@@ -951,7 +942,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     }
     else
     { 
-        luaRed=lua_tonumber( L, 1 );
+        luaRed=lua_tointeger( L, 1 );
     }      
     
     int luaGreen;
@@ -963,7 +954,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     }
     else
     { 
-        luaGreen=lua_tonumber( L, 2 );
+        luaGreen=lua_tointeger( L, 2 );
     }      
     
     int luaBlue;
@@ -975,7 +966,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     }
     else
     { 
-        luaBlue = lua_tonumber( L, 3 );
+        luaBlue = lua_tointeger( L, 3 );
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     pHost->mpConsole->setFgColor( luaRed, luaGreen, luaBlue ); 
@@ -993,7 +984,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     }
     else
     { 
-        luaRed=lua_tonumber( L, 1 );
+        luaRed=lua_tointeger( L, 1 );
     }      
     
     int luaGreen;
@@ -1005,7 +996,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     }
     else
     { 
-        luaGreen=lua_tonumber( L, 2 );
+        luaGreen=lua_tointeger( L, 2 );
     }      
     
     int luaBlue;
@@ -1017,7 +1008,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     }
     else
     { 
-        luaBlue = lua_tonumber( L, 3 );
+        luaBlue = lua_tointeger( L, 3 );
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     pHost->mpConsole->setBgColor( luaRed, luaGreen, luaBlue );    
@@ -1323,7 +1314,6 @@ void TLuaInterpreter::adjustCaptureGroups( int x, int a )
 {
     // adjust all capture group positions in line if data has been inserted by the user
     typedef std::list<int>::iterator I;
-    int i=0;
     for( I it=mCaptureGroupPosList.begin(); it!=mCaptureGroupPosList.end(); it++ )
     {
         if( *it >= x )
@@ -1659,7 +1649,7 @@ void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString functio
 {
     Host * pHost = HostManager::self()->getHostFromHostID( hostID );
     QTime time(0,0,0,0);
-    int msec = timeout * 1000;
+    int msec = static_cast<int>(timeout * 1000);
     QTime time2 = time.addMSecs( msec );
     TTimer * pT;
     pT = new TTimer( timerName, time2, pHost );
@@ -1676,7 +1666,7 @@ void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString functio
 int TLuaInterpreter::startTempTimer( double timeout, QString function )
 {
     QTime time( 0, 0, 0, 0 );
-    int msec = timeout * 1000;
+    int msec = static_cast<int>(timeout * 1000);
     QTime time2 = time.addMSecs( msec );
     TTimer * pT;
     pT = new TTimer( "a", time2, mpHost );

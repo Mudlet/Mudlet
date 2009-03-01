@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
- *                                                                         *                                                                         *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -17,9 +17,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "XMLimport.h"
+
 #include <QStringList>
 #include <QDebug>
+
 
 XMLimport::XMLimport( Host * pH )
 : mpHost( pH )
@@ -29,11 +32,11 @@ XMLimport::XMLimport( Host * pH )
 bool XMLimport::importPackage( QIODevice * device )
 {
     setDevice( device );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
-        
+
         if( isStartElement() ) 
         {
             qDebug()<<"FOUND package HEADER";
@@ -61,7 +64,7 @@ void XMLimport::readPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "HostPackage" )
@@ -111,14 +114,14 @@ void XMLimport::readUnknownPackage()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN readUnknownPackage() Package Element:"<<name().toString()<<"text:"<<text().toString();        
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readPackage();
@@ -130,15 +133,15 @@ void XMLimport::readUnknownHostElement()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN Host Package Element:name="<<name().toString()<<"text:"<<text().toString();
-        
+
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readHostPackage( mpHost );
@@ -151,15 +154,15 @@ void XMLimport::readUnknownTriggerElement()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN Trigger Package Element:name="<<name().toString()<<"text:"<<text().toString();
-        
+
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readTriggerPackage();
@@ -171,15 +174,15 @@ void XMLimport::readUnknownTimerElement()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN Timer Package Element:name="<<name().toString()<<"text:"<<text().toString();
-        
+
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readTimerPackage();
@@ -191,15 +194,15 @@ void XMLimport::readUnknownAliasElement()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN Alias Package Element:name="<<name().toString()<<"text:"<<text().toString();
-        
+
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readAliasPackage();
@@ -211,15 +214,15 @@ void XMLimport::readUnknownActionElement()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN Action Package Element:name="<<name().toString()<<"text:"<<text().toString();
-        
+
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readActionPackage();
@@ -231,15 +234,15 @@ void XMLimport::readUnknownScriptElement()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN Script Package Element:name="<<name().toString()<<"text:"<<text().toString();
-        
+
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readScriptPackage();
@@ -251,15 +254,15 @@ void XMLimport::readUnknownKeyElement()
 {
     while( ! atEnd() ) 
     {
-        
+
         readNext();
         qDebug()<<"[ERROR]: UNKNOWN Key Package Element:name="<<name().toString()<<"text:"<<text().toString();
-        
+
         if( isEndElement() )
         {
             break;
         }
-        
+
         if( isStartElement() )
         {
             readKeyPackage();
@@ -278,7 +281,7 @@ void XMLimport::readTriggerPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "TriggerGroup" )
@@ -306,14 +309,14 @@ void XMLimport::readHostPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "Host" )
             {
                 readHostPackage( mpHost );
             }
-           
+
             else
             {
                 qDebug()<<"[INFO] unknown Host element (readHostPackage())";
@@ -329,12 +332,12 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mDisableAutoCompletion = ( attributes().value("disableAutoCompletion") == "yes" );
     pT->mPrintCommand = ( attributes().value("printCommand") == "yes" );
     pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "name" )
@@ -361,7 +364,7 @@ void XMLimport::readHostPackage( Host * pT )
                 qDebug()<<"url="<<pT->mUrl;
                 continue;
             }       
-                
+
             else if( name() == "port")
             {
                 pT->mPort = readElementText().toInt();
@@ -506,21 +509,21 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     {
         pT = new TTrigger( 0, mpHost );
     }
-    
+
     qDebug()<<"[REGISTER] Trigger:"<<pT->getName();
     mpHost->getTriggerUnit()->registerTrigger( pT );
-    
+
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTrigger = ( attributes().value("isTempTrigger") == "yes" );
     pT->mIsMultiline = ( attributes().value("isMultiline") == "yes" );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
         //qDebug()<<"[INFO] element:"<<name().toString()<<" text:"<<text().toString();        
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "name" )
@@ -566,7 +569,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
-            
+
             else if( name() == "TriggerGroup" )
             {
                 readTriggerGroup( pT );
@@ -593,7 +596,7 @@ void XMLimport::readTimerPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "TimerGroup" )
@@ -623,17 +626,17 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     {
         pT = new TTimer( 0, mpHost );
     }
-    
+
     pT->mUserActiveState = ( attributes().value("isActive") == "yes" );
     pT->mIsActive = pT->mUserActiveState;
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "name" )
@@ -681,7 +684,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     qDebug()<<"[REGISTER] Timer:"<<pT->getName();
     pT->registerTimer();
     pT->mIsActive = pT->mUserActiveState;
-    
+
 }
 
 void XMLimport::readAliasPackage()
@@ -693,7 +696,7 @@ void XMLimport::readAliasPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "AliasGroup" )
@@ -723,15 +726,15 @@ void XMLimport::readAliasGroup( TAlias * pParent )
     {
         pT = new TAlias( 0, mpHost );
     }
-    
+
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "name" )
@@ -776,7 +779,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
     }
     qDebug()<<"[REGISTER] Alias:"<<pT->getName();
     mpHost->getAliasUnit()->registerAlias( pT );
-    
+
 }
 
 void XMLimport::readActionPackage()
@@ -788,7 +791,7 @@ void XMLimport::readActionPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "ActionGroup" )
@@ -818,17 +821,17 @@ void XMLimport::readActionGroup( TAction * pParent )
     {
         pT = new TAction( 0, mpHost );
     }
-    
+
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
     pT->mButtonFlat = ( attributes().value("isFlatButton") == "yes" );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "name" )
@@ -929,7 +932,7 @@ void XMLimport::readActionGroup( TAction * pParent )
     }
     qDebug()<<"[REGISTER] Action:"<<pT->getName();
     mpHost->getActionUnit()->registerAction( pT );
-    
+
 }
 
 void XMLimport::readScriptPackage()
@@ -941,7 +944,7 @@ void XMLimport::readScriptPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "ScriptGroup" )
@@ -971,15 +974,15 @@ void XMLimport::readScriptGroup( TScript * pParent )
     {
         pT = new TScript( 0, mpHost );
     }
-    
+
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "name" )
@@ -1019,7 +1022,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
     qDebug()<<"[REGISTER] Script:"<<pT->getName();
     mpHost->getScriptUnit()->registerScript( pT );
     pT->compile();
-    
+
 }
 
 void XMLimport::readKeyPackage()
@@ -1031,7 +1034,7 @@ void XMLimport::readKeyPackage()
         {
             break;
         }
-        
+
         if( isStartElement() ) 
         {
             if( name() == "KeyGroup" )
@@ -1061,15 +1064,15 @@ void XMLimport::readKeyGroup( TKey * pParent )
     {
         pT = new TKey( 0, mpHost );
     }
-    
+
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    
+
     while( ! atEnd() ) 
     {
         readNext();
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "name" )
@@ -1121,7 +1124,7 @@ void XMLimport::readKeyGroup( TKey * pParent )
     }
     qDebug()<<"[REGISTER] Key:"<<pT->getName();
     mpHost->getKeyUnit()->registerKey( pT );
-    
+
 }
 
 
@@ -1130,9 +1133,9 @@ void XMLimport::readStringList( QStringList & list )
     while( ! atEnd() ) 
     {
         readNext();
-        
+
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "string")
@@ -1152,9 +1155,9 @@ void XMLimport::readIntegerList( QList<int> & list )
     while( ! atEnd() ) 
     {
         readNext();
-        
+
         if( isEndElement() ) break;
-        
+
         if( isStartElement() ) 
         {
             if( name() == "integer")
@@ -1168,5 +1171,3 @@ void XMLimport::readIntegerList( QList<int> & list )
         }
     }
 }
-
-

@@ -125,7 +125,7 @@ FIND_PACKAGE(PCRE REQUIRED)
 
 INCLUDE(../MudletCPack.cmake) # Use CPack
 INCLUDE(${QT_USE_FILE})
-INCLUDE_DIRECTORIES(${QSCINTILLA_INCLUDE_DIR} ${LUA_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR} ${PCRE_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR} ${QSCINTILLA_INCLUDE_DIR} ${LUA_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR} ${PCRE_INCLUDE_DIR})
 
 QT4_AUTOMOC(${mudlet_SRCS})
 QT4_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
@@ -135,3 +135,9 @@ QT4_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
 
 TARGET_LINK_LIBRARIES(mudlet ${QT_LIBRARIES} ${QSCINTILLA_LIBRARIES} ${LUA_LIBRARIES} ${ZLIB_LIBRARIES} ${PCRE_LIBRARIES})
+
+install( PROGRAMS mudlet DESTINATION "/usr/local/bin" )
+install( FILES LuaGlobal.lua mudlet_documentation.html fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT fonts/ttf-bitstream-vera-1.10/local.conf fonts/ttf-bitstream-vera-1.10/README.TXT fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT fonts/ttf-bitstream-vera-1.10/VeraBd.ttf fonts/ttf-bitstream-vera-1.10/VeraBI.ttf fonts/ttf-bitstream-vera-1.10/VeraIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMono.ttf fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf fonts/ttf-bitstream-vera-1.10/VeraSe.ttf fonts/ttf-bitstream-vera-1.10/Vera.ttf DESTINATION "/usr/local/share/mudlet" )
+
+
+
