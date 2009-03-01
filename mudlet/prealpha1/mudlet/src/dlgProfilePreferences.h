@@ -28,14 +28,14 @@
 class dlgProfilePreferences : public QDialog , public Ui::profile_preferences
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgProfilePreferences( QWidget * );
-    
+
+public:
+
+    dlgProfilePreferences( QWidget * );
+
 signals:
-    
-    
+
+
 public slots:
     void setColorBlack(); 
     void setColorLightBlack();
@@ -57,7 +57,11 @@ public slots:
     void setCommandLineFont();
     void setFgColor();
     void setBgColor();
+    void resetColors();
     
     void slot_save_and_exit();
+
+private:
+    void setColors();
 };
 #endif
