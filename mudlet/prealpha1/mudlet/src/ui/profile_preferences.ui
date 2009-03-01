@@ -25,9 +25,17 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex" >
-      <number>2</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="input_line_tab" >
+      <property name="geometry" >
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>549</width>
+        <height>476</height>
+       </rect>
+      </property>
       <attribute name="title" >
        <string>Input line</string>
       </attribute>
@@ -226,130 +234,171 @@
       </layout>
      </widget>
      <widget class="QWidget" name="tab" >
+      <property name="geometry" >
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>549</width>
+        <height>476</height>
+       </rect>
+      </property>
       <attribute name="title" >
        <string>Main display</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_12" >
-       <item row="0" column="0" >
-        <widget class="QGroupBox" name="groupBox_6" >
-         <property name="title" >
-          <string>Font</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_15" >
-          <item row="0" column="0" >
-           <widget class="QPushButton" name="pushButton_display_font" >
-            <property name="text" >
-             <string>Chose Display Font</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0" >
-        <widget class="QGroupBox" name="groupBox_10" >
-         <property name="title" >
-          <string>Word wrapping</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_10" >
-          <item row="0" column="0" >
-           <widget class="QLabel" name="label_20" >
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="maximumSize" >
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text" >
-             <string>Wrap lines at:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2" >
-           <widget class="QLabel" name="label_23" >
-            <property name="text" >
-             <string>characters</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" >
-           <widget class="QLabel" name="label_24" >
-            <property name="sizePolicy" >
-             <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="maximumSize" >
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text" >
-             <string>Indent wrapped lines by:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1" >
-           <widget class="QLineEdit" name="indent_wrapped_lineEdit" />
-          </item>
-          <item row="1" column="2" >
-           <widget class="QLabel" name="label_25" >
-            <property name="text" >
-             <string>characters</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" >
-           <widget class="QLineEdit" name="wrap_at_lineEdit" />
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0" >
-        <widget class="QGroupBox" name="groupBox_8" >
-         <property name="title" >
-          <string>Display workarounds</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout" >
-          <item row="0" column="0" >
-           <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX" >
-            <property name="toolTip" >
-             <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
+      <widget class="QGroupBox" name="groupBox_6" >
+       <property name="geometry" >
+        <rect>
+         <x>9</x>
+         <y>9</y>
+         <width>531</width>
+         <height>66</height>
+        </rect>
+       </property>
+       <property name="title" >
+        <string>Font</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_15" >
+        <item row="0" column="0" >
+         <widget class="QPushButton" name="pushButton_display_font" >
+          <property name="text" >
+           <string>Chose Display Font</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_10" >
+       <property name="geometry" >
+        <rect>
+         <x>9</x>
+         <y>81</y>
+         <width>531</width>
+         <height>88</height>
+        </rect>
+       </property>
+       <property name="title" >
+        <string>Word wrapping</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_10" >
+        <item row="0" column="0" >
+         <widget class="QLabel" name="label_20" >
+          <property name="sizePolicy" >
+           <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize" >
+           <size>
+            <width>200</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text" >
+           <string>Wrap lines at:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2" >
+         <widget class="QLabel" name="label_23" >
+          <property name="text" >
+           <string>characters</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" >
+         <widget class="QLabel" name="label_24" >
+          <property name="sizePolicy" >
+           <sizepolicy vsizetype="Preferred" hsizetype="Expanding" >
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize" >
+           <size>
+            <width>200</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text" >
+           <string>Indent wrapped lines by:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1" >
+         <widget class="QLineEdit" name="indent_wrapped_lineEdit" />
+        </item>
+        <item row="1" column="2" >
+         <widget class="QLabel" name="label_25" >
+          <property name="text" >
+           <string>characters</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" >
+         <widget class="QLineEdit" name="wrap_at_lineEdit" />
+        </item>
+       </layout>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_8" >
+       <property name="geometry" >
+        <rect>
+         <x>9</x>
+         <y>175</y>
+         <width>531</width>
+         <height>147</height>
+        </rect>
+       </property>
+       <property name="title" >
+        <string>Display workarounds</string>
+       </property>
+       <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX" >
+        <property name="geometry" >
+         <rect>
+          <x>12</x>
+          <y>22</y>
+          <width>509</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip" >
+         <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
 communicate with the client on where a newline should be. Enable this to fix text
 from getting appended to the previous prompt line</string>
-            </property>
-            <property name="text" >
-             <string>Fix new new text to be on its own line</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0" >
-        <spacer name="verticalSpacer_4" >
-         <property name="orientation" >
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0" >
-          <size>
-           <width>20</width>
-           <height>269</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
+        </property>
+        <property name="text" >
+         <string>Fix new new text to be on its own line</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN" >
+        <property name="geometry" >
+         <rect>
+          <x>12</x>
+          <y>46</y>
+          <width>509</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip" >
+         <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
+communicate with the client on where a newline should be. Enable this to fix text
+from getting appended to the previous prompt line</string>
+        </property>
+        <property name="text" >
+         <string>Use Mudlet on a netbook with a small screen</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
      <widget class="QWidget" name="color_view_tab" >
+      <property name="geometry" >
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>549</width>
+        <height>476</height>
+       </rect>
+      </property>
       <attribute name="title" >
        <string>Color view</string>
       </attribute>
