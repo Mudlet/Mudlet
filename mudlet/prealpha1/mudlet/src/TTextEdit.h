@@ -92,7 +92,7 @@ public slots:
 private:
     
     void              initDefaultSettings();
-    
+    bool              mScrollUp;
     QColor            mFgColor;
     QColor            mBgColor;
     QFont             mDisplayFont;
@@ -123,6 +123,8 @@ private:
     QPoint            mPB;
     QRegion           mSelectedRegion;
     qreal             mScrollVector;
+    bool              mPainterInit;
+    QPixmap           mScreenMap;
 };
 
 #endif

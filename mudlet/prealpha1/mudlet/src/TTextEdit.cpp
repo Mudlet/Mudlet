@@ -58,6 +58,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mMouseTracking( false )
 , mIsSplitScreen( false )
 , mInversOn( false )
+, mPainterInit( false )
 {
     if( ! isDebugConsole )
     {
@@ -91,8 +92,8 @@ void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(255,255,255);
     mBgColor = QColor(0,0,0);
-    mDisplayFont = QFont("Monospace", 10, QFont::Courier);
-    mCommandLineFont = QFont("Monospace", 10, QFont::Courier);
+    mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
+    mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
     mCommandSeperator = QString(";");
     mWrapAt = 100;    
     mWrapIndentCount = 5;
@@ -169,9 +170,13 @@ void TTextEdit::showNewLines()
     drawRect.setHeight( lines * mFontHeight );
     if( scrollRect.height() < widgetRect.height() )
     {
-        scroll( 0, -1 * (scrollRect.height()), scrollRect );// mFontHeight * ( -1 * ( mpBuffer->newLines ) );
+        if( mCursorY > mScreenHeight )
+        {
+            mScrollVector = lines;//scroll( 0, -1 * (scrollRect.height()), scrollRect );// mFontHeight * ( -1 * ( mpBuffer->newLines ) );
+            mScrollUp = true;
+        }
     } 
-    update( drawRect );
+    repaint();// drawRect );
     mpBuffer->newLines = 0;
 }
 
@@ -183,8 +188,9 @@ void TTextEdit::scrollUp( int lines )
     
     if( lines > 0 )
     {
-        scroll( 0, mFontHeight * lines );        
-        return;
+        mScrollVector = mFontHeight * lines;//scroll( 0, mFontHeight * lines );        
+        mScrollUp = true;
+        update();
     }
     else
     {
@@ -197,8 +203,8 @@ void TTextEdit::scrollUp( int lines )
         drawRect.setRight( mScreenWidth * mFontWidth );
         drawRect.setTop( abs(mScreenHeight - lines ) * mFontHeight );
         drawRect.setHeight( mScreenHeight * mFontHeight );
-    
-        update( drawRect );
+        mScrollVector = 0;    
+        update();
     }
 }
 
@@ -217,13 +223,14 @@ void TTextEdit::scrollDown( int lines )
         drawRect.setRight( mScreenWidth * mFontWidth );
         drawRect.setBottom( mScreenHeight*mFontHeight );
         drawRect.setHeight( lines*mFontHeight );
-    
-        update( drawRect );
+        mScrollVector = 0;
+        update();
     }
     else
     {
-        scroll( 0, mFontHeight * ( -1 * lines ) );        
-        return;
+        mScrollVector = mFontHeight * lines;//scroll( 0, mFontHeight * ( -1 * lines ) );        
+        mScrollUp = false;
+        update();
     }    
 }
 
@@ -247,6 +254,12 @@ void TTextEdit::drawCharacters( QPainter & painter,
                                 QColor & bgColor )
 {
     QFont font = painter.font();
+    if( ! mPainterInit )
+    {
+        painter.setFont( mpHost->mDisplayFont );
+        //mPainterInit = true;
+    }
+    
     if( ( font.bold() != isBold ) || ( font.underline() != isUnderline ) )
     {
         font.setBold( isBold );
@@ -260,12 +273,19 @@ void TTextEdit::drawCharacters( QPainter & painter,
         pen.setColor( fgColor );
         painter.setPen( fgColor );
     }
-    
+    //qDebug()<<"drawText: x1="<<rect.x()<<" y1="<<rect.top()<<" y2="<<rect.bottom()-5;
     painter.drawText( rect.x(), rect.bottom()-5, text );
 }
 
 void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 {
+    QPixmap screenPixmap;
+    QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
+    pixmap.fill( palette().base().color() );
+    
+    QPainter p( &pixmap );
+    p.setCompositionMode( QPainter::CompositionMode_Source );
+    
     QPoint P_topLeft  = rect.topLeft();
     QPoint P_bottomRight = rect.bottomRight();
     int x_topLeft = P_topLeft.x();
@@ -288,7 +308,27 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
         invers = true;
     }
     
-    for( int i=0; i<mScreenHeight; i++ )
+    if( mScrollVector > 0 )
+    {
+        if( mScrollUp )
+        {
+            screenPixmap = mScreenMap.copy( 0, mScrollVector*mFontHeight, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
+            p.drawPixmap( 0, 0, screenPixmap );    
+        }
+        else
+        {
+            screenPixmap = mScreenMap.copy( 0, 0, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
+            p.drawPixmap( 0, mScrollVector*mFontHeight, screenPixmap );
+        }
+    }
+    
+    int from = 0;
+    if( mScrollVector > 0 )
+    {
+        from = mScreenHeight-mScrollVector;
+    }
+    
+    for( int i=from; i<mScreenHeight; i++ )
     {
         if( mpBuffer->buffer.size() <= i+lineOffset ) 
         {
@@ -341,28 +381,35 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                     bgColor = fgColor;
                     fgColor = tmpColor;
                 }
-                drawBackground( painter, textRect, bgColor );
+                drawBackground( p, textRect, bgColor );
             }
             if( text[0] != cLF )
             {
-                drawCharacters( painter, textRect, text, isBold, isUnderline, isItalics, fgColor, bgColor );  
+                drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, fgColor, bgColor );  
             }
             
             i2+=delta;
         }
     }
+    p.end();
+    painter.setCompositionMode( QPainter::CompositionMode_Source );
+    painter.drawPixmap( 0, 0, pixmap );        
+    mScreenMap = pixmap.copy();
+    mScrollVector = 0;
 }
 
 void TTextEdit::paintEvent( QPaintEvent* e )
 {
-    //cout << "Time before render = " << getCurrentTime() <<endl;
+    QTime time;
+    time.start();
+    
     QPainter painter( this );
     
     const QRect & rect = e->rect();
-    drawBackground( painter, rect, palette().base().color() );
+    //    drawBackground( painter, rect, palette().base().color() );
     drawForeground( painter, rect );
     
-    //cout << " Time after render = " << getCurrentTime()<<endl;
+    cout << " Time after render = " << time.elapsed() <<endl;
 }
 
 void TTextEdit::highlight()
