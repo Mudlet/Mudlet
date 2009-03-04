@@ -88,6 +88,7 @@ signals:
 public slots:
     
     void              slot_copySelectionToClipboard();
+    void              slot_scrollBarMoved( int );
     
 private:
     
@@ -125,6 +126,7 @@ private:
     qreal             mScrollVector;
     bool              mPainterInit;
     QPixmap           mScreenMap;
+    QScrollBar *      mpScrollBar;
 };
 
 #endif

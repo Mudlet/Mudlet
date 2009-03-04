@@ -90,24 +90,41 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     mpCommandLine->setMaximumHeight( 30 );
     mpCommandLine->setFocusPolicy( Qt::StrongFocus );
     
-    QWidget * layer = new QWidget( this );
+    layer = new QWidget( this );
     layer->setContentsMargins(0,0,0,0);
     layer->setSizePolicy( sizePolicy );
     layer->setFocusPolicy( Qt::NoFocus );
     
     QSplitter * splitter = new QSplitter( Qt::Vertical, layer );
     splitter->setContentsMargins(0,0,0,0);
+    splitter->setSizePolicy( sizePolicy );
     QVBoxLayout * layout2 = new QVBoxLayout( splitter );
     layout2->setContentsMargins(0,0,0,0);
     layout2->setSpacing(0);
     splitter->setHandleWidth( 3 );
-    
     setFocusProxy( mpCommandLine );
-    console = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole );
+    
+    layerEdit = new QWidget;
+    QHBoxLayout * layoutLayer = new QHBoxLayout( layerEdit );
+    layoutLayer->setMargin(0);
+    QSizePolicy sizePolicyLayer(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    layerEdit->setSizePolicy( sizePolicyLayer );
+    //layerEdit->setAutoFillBackground( true );
+    
+    //layerEdit->setPalette(palette);
+    mpScrollBar = new QScrollBar;
+    mpScrollBar->setFixedWidth( 35 );
+    console = new TTextEdit( this, layerEdit, &buffer, mpHost, isDebugConsole );
     console->setContentsMargins(0,0,0,0);
     console->setSizePolicy( sizePolicy3 );
     console->setFocusPolicy( Qt::NoFocus );
-    splitter->addWidget( console );
+    
+    layoutLayer->addWidget( console );
+    layoutLayer->addWidget( mpScrollBar );
+    //console->setPalette( palette );
+    connect( mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
+    layout2->addWidget(layerEdit);
+    splitter->addWidget( layerEdit );
     
     console2 = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole );
     console2->setContentsMargins(0,0,0,0);
@@ -124,7 +141,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layout->addWidget( mpCommandLine );
     
     changeColors();
-    
+     
+    layerEdit->show();
     console2->setSplitScreen();
     console->show();
     console2->hide();
@@ -181,6 +199,8 @@ void TConsole::changeColors()
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
         palette.setColor( QPalette::Base, mBgColor );
         console->setPalette( palette );
+        layerEdit->setPalette( palette );
+        layerEdit->setFont( mDisplayFont );
         console2->setPalette( palette );    
     }
     else
@@ -192,6 +212,9 @@ void TConsole::changeColors()
         palette.setColor( QPalette::Text, mpHost->mFgColor );
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
         palette.setColor( QPalette::Base, mpHost->mBgColor );
+        setPalette( palette );
+        layer->setPalette( palette );
+        layerEdit->setPalette( palette );
         console->setPalette( palette );
         console2->setPalette( palette );
     }

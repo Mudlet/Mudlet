@@ -59,12 +59,21 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mIsSplitScreen( false )
 , mInversOn( false )
 , mPainterInit( false )
+, mpScrollBar( 0 )
 {
+    qDebug()<<"WIDTH()="<<width();
+    
     if( ! isDebugConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );    
         mIsDebugConsole = false;
+        mScreenWidth = 100;
+        if( (width()/mFontWidth ) < mScreenWidth )
+        {
+            
+            mScreenWidth = 100;//width()/mFontWidth;
+        }
     }
     else
     {
@@ -72,20 +81,29 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         mIsDebugConsole = true;
         mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );    
+        mScreenWidth = 100;
     }
     mScreenHeight = height() / mFontHeight;
-    //FIXME
-    mScreenWidth = 100;//width() / mFontWidth; //TODO: user defined value is much faster than dynamically calculated values 
-                                                   //      because we can cut away large side rectangles this way that doent have
-                                                   //      to be painted. performance gain is substantial
-    setMaximumHeight(100*mFontHeight);
+    mScreenWidth = 100;
+    
     setMouseTracking( true );
     setFocusPolicy( Qt::WheelFocus );
     setAutoFillBackground( true ); //experimental
     setAttribute( Qt::WA_InputMethodEnabled, true );
     setAttribute( Qt::WA_OpaquePaintEvent );
     setAttribute( Qt::WA_DeleteOnClose );
+    
+    QPalette palette;
+    palette.setColor( QPalette::Text, mFgColor );
+    palette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    palette.setColor( QPalette::Base, mBgColor );
+    setPalette(palette);
     showNewLines();
+}
+
+void TTextEdit::slot_scrollBarMoved( int c )
+{
+    ;    
 }
 
 void TTextEdit::initDefaultSettings()
@@ -130,9 +148,15 @@ void TTextEdit::setScroll(int cursor, int lines)
 void TTextEdit::updateScreenView()
 {
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
-    mScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    if( mpHost->mScreenWidth > currentScreenWidth )
+    {
+        mScreenWidth = currentScreenWidth;
+        mpHost->mScreenWidth = mScreenWidth;
+    }
+    
     mpHost->mScreenHeight = mScreenHeight;
-    mpHost->mScreenWidth = mScreenWidth;
+    
     if( ! mIsDebugConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
@@ -143,8 +167,6 @@ void TTextEdit::updateScreenView()
         mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
     }
-    
-    //update( visibleRegion().boundingRect() );    
 }
 
 void TTextEdit::showNewLines() 
@@ -172,11 +194,11 @@ void TTextEdit::showNewLines()
     {
         if( mCursorY > mScreenHeight )
         {
-            mScrollVector = lines;//scroll( 0, -1 * (scrollRect.height()), scrollRect );// mFontHeight * ( -1 * ( mpBuffer->newLines ) );
+            mScrollVector += lines;//scroll( 0, -1 * (scrollRect.height()), scrollRect );// mFontHeight * ( -1 * ( mpBuffer->newLines ) );
             mScrollUp = true;
         }
     } 
-    repaint();// drawRect );
+    update();
     mpBuffer->newLines = 0;
 }
 
@@ -188,7 +210,7 @@ void TTextEdit::scrollUp( int lines )
     
     if( lines > 0 )
     {
-        mScrollVector = mFontHeight * lines;//scroll( 0, mFontHeight * lines );        
+        mScrollVector += mFontHeight * lines;//scroll( 0, mFontHeight * lines );        
         mScrollUp = true;
         update();
     }
@@ -228,7 +250,7 @@ void TTextEdit::scrollDown( int lines )
     }
     else
     {
-        mScrollVector = mFontHeight * lines;//scroll( 0, mFontHeight * ( -1 * lines ) );        
+        mScrollVector += mFontHeight * lines;//scroll( 0, mFontHeight * ( -1 * lines ) );        
         mScrollUp = false;
         update();
     }    
@@ -279,6 +301,9 @@ void TTextEdit::drawCharacters( QPainter & painter,
 
 void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 {
+    if( mScrollVector >= mScreenHeight )
+        mScrollVector = 0;
+    
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
     pixmap.fill( palette().base().color() );
@@ -325,7 +350,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     int from = 0;
     if( mScrollVector > 0 )
     {
-        from = mScreenHeight-mScrollVector;
+        from = mScreenHeight-mScrollVector-1;
     }
     
     for( int i=from; i<mScreenHeight; i++ )
