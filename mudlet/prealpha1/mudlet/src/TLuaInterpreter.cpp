@@ -1575,7 +1575,7 @@ void TLuaInterpreter::initLuaGlobals()
  
     
     QString n;
-    QString path = QDir::homePath()+"/usr/local/share/mudlet/LuaGlobal.lua";
+    QString path = "/usr/local/share/mudlet/LuaGlobal.lua";
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
     if( error != 0 )
     {
