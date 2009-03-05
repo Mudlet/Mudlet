@@ -67,6 +67,12 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mpScrollBar( new QScrollBar )
 , emergencyStop( new QPushButton )
 {
+    mStandardFormat.bgColor = mBgColor;
+    mStandardFormat.fgColor = mFgColor;
+    mStandardFormat.bold = false;
+    mStandardFormat.italics = false;
+    mStandardFormat.underline = false;
+    
     setContentsMargins(0,0,0,0);
     profile_name = mpHost->getName();
     mFormatSystemMessage.bgColor = mBgColor;
@@ -702,21 +708,12 @@ void TConsole::translateToPlainText( QString & s )
     }//while
 }
 
-//const QString TConsole::cmLuaLineVariable = "line";
-
 void TConsole::printOnDisplay( QString & incomingSocketData )  
 {   
-    /*QTime time; 
-    int t1, t2, t3, t4, t5, t6;
-    t1=0;t2=0;t3=0;t4=0;t5=0;t6=0;*/
-    
     QString prompt ="";//FIXME
-   
-// time.start();
     
     int lineBeforeNewContent = buffer.getLastLineNumber();
     translateToPlainText( incomingSocketData );
-//t1=time.elapsed();
     
     mTriggerEngineMode = true;
     for( int i=lineBeforeNewContent; i<buffer.getLastLineNumber()+1; i++ )
@@ -724,19 +721,14 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         mUserCursor.setY( i );
         mUserCursor.setX( 0 );
         mCurrentLine = buffer.line( i );
-        //qDebug()<<"schiebe line#"<<i<<":"<<mCurrentLine;
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
         mpHost->incomingStreamProcessor( mCurrentLine, prompt );
         mUserCursor.setY( mUserCursor.y() + 1 );
         mUserCursor.setX( 0 );
-        //qDebug()<<"mUserCursorY="<<mUserCursor.y();
     }
     mTriggerEngineMode = false;    
-//t2=time.elapsed()-t1;
-    
-    buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mFormatCurrent );
-    
+    buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mStandardFormat );
     console->showNewLines();
     console2->showNewLines();
 }

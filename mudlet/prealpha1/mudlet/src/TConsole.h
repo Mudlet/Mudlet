@@ -162,7 +162,8 @@ public:
       QPushButton *     emergencyStop;
     
 private:
-    QString           profile_name;   
+      QString           profile_name; 
+      TChar             mStandardFormat;
       //std::string       getCurrentTime();
       void              translateToPlainText( QString & );
       QString           translate( QString & );

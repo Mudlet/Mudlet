@@ -309,7 +309,10 @@ void TTextEdit::drawCharacters( QPainter & painter,
     QFont font = painter.font();
     if( ! mPainterInit )
     {
-        painter.setFont( mpHost->mDisplayFont );
+        if( ! mIsDebugConsole )
+            painter.setFont( mpHost->mDisplayFont );
+        else
+            painter.setFont( mDisplayFont );
         //mPainterInit = true;
     }
     
