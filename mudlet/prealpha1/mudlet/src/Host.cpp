@@ -89,6 +89,11 @@ Host::~Host()
 {
 }
 
+void Host::adjustNAWS()
+{
+    mTelnet.setDisplayDimensions();    
+}
+
 void Host::setReplacementCommand( QString s )
 {
     mReplacementCommand = s;    

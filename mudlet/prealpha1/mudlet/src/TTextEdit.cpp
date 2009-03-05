@@ -176,6 +176,8 @@ void TTextEdit::updateScreenView()
             mpHost->mScreenWidth = mScreenWidth;
         }
     }
+    else
+        mpHost->mScreenWidth = currentScreenWidth;
     
     mpHost->mScreenHeight = mScreenHeight;
     if( ! mIsDebugConsole )
@@ -687,7 +689,11 @@ void TTextEdit::showEvent( QShowEvent * event )
 
 void TTextEdit::resizeEvent( QResizeEvent * event ) 
 {
-    updateScreenView();    
+    updateScreenView();  
+    if( ! mIsSplitScreen  && ! mIsDebugConsole )
+    {
+        mpHost->adjustNAWS();
+    }
     QWidget::resizeEvent( event );
 }
 

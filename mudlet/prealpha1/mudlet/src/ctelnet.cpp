@@ -262,39 +262,38 @@ bool cTelnet::socketOutRaw(string & data)
 
 void cTelnet::setDisplayDimensions()
 {
-    //qDebug()<<"TELNET: enter NAWS setDisplayDimensions()";
-  int x = 80;
-  int y = 25;
-  if(myOptionState[OPT_NAWS])
-  {
-      //      qDebug()<<"TELNET: sending NAWS 80x25";
-    string s;
-    s = (char) TN_IAC;
-    s += (char) TN_SB;
-    s += (char) OPT_NAWS;
-    char x1, x2, y1, y2;
-    x1 = (char) x / 256;
-    x2 = (char) x % 256;
-    y1 = (char) y / 256;
-    y2 = (char) y % 256;
-    //IAC must be doubled
-    s += (char) x1;
-    if (x1 == (char)TN_IAC)
-      s += (char) TN_IAC;
-    s += (char) x2; 
-    if (x2 == (char)TN_IAC)
-      s += (char) TN_IAC;
-    s += (char) y1;
-    if (y1 == (char)TN_IAC)
-      s += (char) TN_IAC;
-    s += (char) y2;
-    if (y2 == (char)TN_IAC)
-      s += (char) TN_IAC;
-    
-    s += (char) TN_IAC;
-    s += (char) TN_SE;
-    socketOutRaw(s);
-  }
+    int x = mpHost->mScreenWidth;
+    int y = mpHost->mScreenHeight;
+    if(myOptionState[OPT_NAWS])
+    {
+        cout<<"TELNET: sending NAWS:"<<x<<"x"<<y<<endl;
+        string s;
+        s = (char) TN_IAC;
+        s += (char) TN_SB;
+        s += (char) OPT_NAWS;
+        char x1, x2, y1, y2;
+        x1 = (char) x / 256;
+        x2 = (char) x % 256;
+        y1 = (char) y / 256;
+        y2 = (char) y % 256;
+        //IAC must be doubled
+        s += (char) x1;
+        if (x1 == (char)TN_IAC)
+        s += (char) TN_IAC;
+        s += (char) x2; 
+        if (x2 == (char)TN_IAC)
+        s += (char) TN_IAC;
+        s += (char) y1;
+        if (y1 == (char)TN_IAC)
+        s += (char) TN_IAC;
+        s += (char) y2;
+        if (y2 == (char)TN_IAC)
+        s += (char) TN_IAC;
+        
+        s += (char) TN_IAC;
+        s += (char) TN_SE;
+        socketOutRaw(s);
+    }
 }
 
 void cTelnet::sendTelnetOption (unsigned char type, unsigned char option)

@@ -328,7 +328,8 @@ void mudlet::openUserWindow( Host * pHost, QString & name )
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
-        pC->mpCommandLine->hide();
+        pC->layerCommandLine->hide();
+        pC->mpScrollBar->hide();
         pC->setUserWindow();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);

@@ -66,13 +66,24 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mClipboard( mpHost )
 , mpScrollBar( new QScrollBar )
 , emergencyStop( new QPushButton )
+, layerCommandLine( 0 )
 {
-    mStandardFormat.bgColor = mBgColor;
-    mStandardFormat.fgColor = mFgColor;
-    mStandardFormat.bold = false;
-    mStandardFormat.italics = false;
-    mStandardFormat.underline = false;
-    
+    if( mIsDebugConsole )
+    {
+        mStandardFormat.bgColor = mBgColor;
+        mStandardFormat.fgColor = mFgColor;
+        mStandardFormat.bold = false;
+        mStandardFormat.italics = false;
+        mStandardFormat.underline = false;
+    }
+    else
+    {
+        mStandardFormat.bgColor = mpHost->mBgColor;
+        mStandardFormat.fgColor = mpHost->mFgColor;
+        mStandardFormat.bold = false;
+        mStandardFormat.italics = false;
+        mStandardFormat.underline = false;
+    }
     setContentsMargins(0,0,0,0);
     profile_name = mpHost->getName();
     mFormatSystemMessage.bgColor = mBgColor;
@@ -111,9 +122,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     splitter->setContentsMargins(0,0,0,0);
     splitter->setSizePolicy( sizePolicy );
     splitter->setOrientation( Qt::Vertical );
-    /*  QVBoxLayout * layout2 = new QVBoxLayout( splitter );
-    layout2->setContentsMargins(0,0,0,0);
-    layout2->setSpacing(0);*/
     splitter->setHandleWidth( 3 );
     setFocusProxy( mpCommandLine );
     
@@ -127,7 +135,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     console2->setSizePolicy( sizePolicy3 );
     console2->setFocusPolicy( Qt::NoFocus );
     
-    
     splitter->addWidget( console );
     splitter->addWidget( console2 );
     
@@ -139,11 +146,11 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layoutLayer->addWidget( splitter );
     layoutLayer->addWidget( mpScrollBar );
     
-    QWidget * layer2 = new QWidget( layer );
-    layer2->setContentsMargins(0,0,0,0);
-    layer2->setSizePolicy( sizePolicy2 );
-    layer2->setMaximumHeight(31);
-    QHBoxLayout * layoutLayer2 = new QHBoxLayout( layer2 );
+    layerCommandLine = new QWidget( layer );
+    layerCommandLine->setContentsMargins(0,0,0,0);
+    layerCommandLine->setSizePolicy( sizePolicy2 );
+    layerCommandLine->setMaximumHeight(31);
+    QHBoxLayout * layoutLayer2 = new QHBoxLayout( layerCommandLine );
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
     
@@ -159,13 +166,12 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     emergencyStop->setCheckable( true );
     emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
     
-    
     layoutLayer2->addWidget( mpCommandLine );
     layoutLayer2->addWidget( timeStampButton );
     layoutLayer2->addWidget( emergencyStop );
     
     layout->addWidget( layer );
-    layout->addWidget( layer2 );
+    layout->addWidget( layerCommandLine );
           
     QList<int> sizeList;
     sizeList << 6 << 2;

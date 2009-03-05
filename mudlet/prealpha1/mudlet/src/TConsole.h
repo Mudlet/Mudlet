@@ -159,6 +159,7 @@ public:
       QScrollBar *      mpScrollBar;
       QWidget *         layerEdit;
       QWidget *         layer;
+      QWidget *         layerCommandLine;  
       QPushButton *     emergencyStop;
     
 private:

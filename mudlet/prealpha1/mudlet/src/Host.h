@@ -136,7 +136,7 @@ public:
     void               raiseEvent( TEvent * event );
     void               stopAllTriggers();
     void               set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX = b; mTelnet.set_USE_IRE_DRIVER_BUGFIX( b ); }
-    
+    void               adjustNAWS();
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
     TConsole *         mpConsole;
