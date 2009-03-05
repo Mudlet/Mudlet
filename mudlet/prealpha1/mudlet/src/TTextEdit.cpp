@@ -458,7 +458,7 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     drawBackground( painter, rect, palette().base().color() );
     drawForeground( painter, rect );
     
-    cout << " Time after render = " << time.elapsed() <<endl;
+    cout << "frame render time: " << time.elapsed()<<" milliseconds"<<endl;
 }
 
 void TTextEdit::highlight()
@@ -644,7 +644,8 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
 void TTextEdit::showEvent( QShowEvent * event ) 
 {
     updateScreenView();
-    update();
+    mScrollVector=0;
+    repaint();
     QWidget::showEvent( event );
 }
 
