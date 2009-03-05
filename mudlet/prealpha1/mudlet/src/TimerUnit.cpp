@@ -34,6 +34,8 @@
 #include <QDebug>
 #include "TimerUnit.h"
 
+using namespace std;
+
 void TimerUnit::stopAllTriggers()
 {    
     typedef list<TTimer *>::const_iterator I;

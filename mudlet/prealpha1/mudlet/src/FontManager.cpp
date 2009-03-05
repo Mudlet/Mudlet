@@ -55,10 +55,10 @@ void FontManager::loadFonts(QString folder)
 
     foreach(QString fontfile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
         if (QFontDatabase::addApplicationFont(dir.absolutePath() + "/" + fontfile) == -1)
-            cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().
-                data() << "/" << fontfile.toUtf8().data() << endl;
+            std::cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().
+                data() << "/" << fontfile.toUtf8().data() << std::endl;
         else
-            cout << "Loaded the font the file " << fontfile.toUtf8().data() << endl;
+            std::cout << "Loaded the font the file " << fontfile.toUtf8().data() << std::endl;
     }
 
 }

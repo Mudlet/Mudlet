@@ -36,8 +36,6 @@
 #include "Host.h"
 #include <QTextBlock>
 
-using namespace std;
-
 
 
 class TKey : public Tree<TKey>

@@ -64,8 +64,6 @@ copyright (c) 2008 by Heiko Koehn (koehnheiko@googlemail.com)
 class mudlet;
 class Host;
 
-using namespace std;
-
 
 class cTelnet : public QObject
 {
@@ -102,13 +100,13 @@ private:
   void                postMessage( QString msg );  
   void                reset();
   void                connectionFailed();
-  bool                socketOutRaw(string & data);
-  void                processTelnetCommand (const string &command);
+  bool                socketOutRaw(std::string & data);
+  void                processTelnetCommand (const std::string &command);
   void                sendTelnetOption(unsigned char type, unsigned char option);
   //string getCurrentTime(); //NOTE: not w32 compatible
-  void                gotRest( string & );
-  void                gotLine( string & );
-  void                gotPrompt( string & );
+  void                gotRest( std::string & );
+  void                gotLine( std::string & );
+  void                gotPrompt( std::string & );
   void                postData();  
     
   bool                mUSE_IRE_DRIVER_BUGFIX;
@@ -126,7 +124,7 @@ private:
   bool                mMCCP_version_2;
   bool                mNeedDecompression; 
   bool                mWaitingForCompressedStreamToStart;
-  string              command;
+  std::string         command;
   bool                iac, iac2, insb;
   bool                myOptionState[256], hisOptionState[256];
   bool                announcedState[256];

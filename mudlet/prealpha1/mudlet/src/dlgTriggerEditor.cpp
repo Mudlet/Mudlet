@@ -47,6 +47,7 @@
 #include "XMLexport.h"
 #include "XMLimport.h"
 
+using namespace std;
 
 const int dlgTriggerEditor::cmTriggerView = 1;
 const int dlgTriggerEditor::cmTimerView = 2;

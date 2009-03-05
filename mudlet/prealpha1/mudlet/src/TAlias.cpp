@@ -34,6 +34,7 @@
 #include "mudlet.h"
 #include "TDebug.h"
 
+using namespace std;
 
 TAlias::TAlias( TAlias * parent, Host * pHost ) 
 : Tree<TAlias>( parent ),

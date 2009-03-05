@@ -97,7 +97,7 @@ void TToolBar::addButton( TFlipButton * pB )
     }
     else
     {
-        cout << "TToolBar::addButton() columns bei toolbar=0"<<endl;
+        std::cout << "TToolBar::addButton() columns bei toolbar=0"<<std::endl;
         //TODO: use row / col defined by the button -> need to define row in buttons    
     }
     connect( pB, SIGNAL(pressed()), this, SLOT(slot_pressed()) );

@@ -473,7 +473,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {
-        cout << "SMALL_SCREEN"<<endl;
+        std::cout << "SMALL_SCREEN"<<std::endl;
         QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
         file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file_use_smallscreen);

@@ -20,6 +20,8 @@
 
 #include "XMLexport.h"
 
+using namespace std;
+
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
 , mType( "Host" )

@@ -28,8 +28,6 @@
 #include "HostPool.h"
 #include "Host.h"
 
-using namespace std;
-
 
 class HostManager
 {
@@ -37,7 +35,7 @@ public:
     
     static             HostManager * self();
     Host *             getHost( QString hostname );
-    Host *             getHost( string hostname );
+    Host *             getHost( std::string hostname );
     QStringList        getHostList() { return mHostPool.getHostList(); }
     QList<QString>     getHostNameList() { return mHostPool.getHostNameList(); }
     Host *             getFirstHost(){ return mHostPool.getFirstHost(); }
@@ -47,7 +45,7 @@ public:
     bool               renameHost( QString );
     Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
     bool               serialize();
-	   bool               restore();
+    bool               restore();
     Host *             loadHostProfile( QString path, int profileHistory );
     Host *             importHost( QString path );
     
@@ -58,7 +56,7 @@ private:
     
     
     static HostManager * _self;
-	   HostPool            mHostPool;
+    HostPool            mHostPool;
     QMutex              mLock;
     Host *              mpActiveHost;
      

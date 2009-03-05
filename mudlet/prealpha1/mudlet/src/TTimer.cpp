@@ -34,6 +34,7 @@
 #include "mudlet.h"
 #include "TDebug.h"
 
+using namespace std;
 
 TTimer::TTimer( TTimer * parent, Host * pHost ) 
 : Tree<TTimer>( parent ),

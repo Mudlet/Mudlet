@@ -33,6 +33,8 @@
 #include "ActionUnit.h"
 #include "mudlet.h"
 
+using namespace std;
+
 void ActionUnit::processDataStream( QString & data )
 {
     TLuaInterpreter * Lua = mpHost->getLuaInterpreter();

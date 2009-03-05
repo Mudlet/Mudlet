@@ -31,8 +31,6 @@
 class TTrigger;
 class Host;
 
-using namespace std;
-
 class TriggerUnit
 {
     friend class XMLexport;
@@ -40,7 +38,7 @@ class TriggerUnit
     
 public:
                           TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    list<TTrigger *>      getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
+    std::list<TTrigger *> getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
     TTrigger *            getTrigger( int id );
     void                  enableTrigger( QString & );
     void                  disableTrigger( QString & );
@@ -66,8 +64,8 @@ private:
     void                  removeTrigger( TTrigger *);
     
     Host *                mpHost;
-    QMap<int, TTrigger *>  mTriggerMap;
-    list<TTrigger *>      mTriggerRootNodeList;
+    QMap<int, TTrigger *> mTriggerMap;
+    std::list<TTrigger *> mTriggerRootNodeList;
     qint64                mMaxID;
    
    

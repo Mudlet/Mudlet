@@ -33,7 +33,7 @@
 #include "HostManager.h"
 #include <iostream>
 
-
+using namespace std;
 
 TKey::TKey( TKey * parent, Host * pHost ) 
 : Tree<TKey>( parent )

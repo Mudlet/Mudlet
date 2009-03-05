@@ -36,6 +36,7 @@
 #include "TDebug.h"
 #include <pcre.h>
 
+using namespace std;
 
 TTrigger::TTrigger( TTrigger * parent, Host * pHost ) 
 : Tree<TTrigger>( parent )

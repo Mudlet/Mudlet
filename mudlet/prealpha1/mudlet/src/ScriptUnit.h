@@ -30,8 +30,6 @@
 class TScript;
 class Host;
 
-using namespace std;
-
 class ScriptUnit
 {
     friend class XMLexport;
@@ -40,7 +38,7 @@ class ScriptUnit
 public:
     
     ScriptUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    list<TScript *>       getScriptRootNodeList()   { QMutexLocker locker(& mScriptUnitLock); return mScriptRootNodeList; }
+    std::list<TScript *>  getScriptRootNodeList()   { QMutexLocker locker(& mScriptUnitLock); return mScriptRootNodeList; }
     TScript *             getScript( int id );
     void                  compileAll();
     bool                  registerScript( TScript * pT );
@@ -62,8 +60,8 @@ private:
     void                  removeScriptRootNode( TScript * pT );
     void                  removeScript( TScript *);
     Host *                mpHost;
-    QMap<int, TScript *>   mScriptMap;
-    list<TScript *>       mScriptRootNodeList;
+    QMap<int, TScript *>  mScriptMap;
+    std::list<TScript *>  mScriptRootNodeList;
     qint64                mMaxID;
    
     

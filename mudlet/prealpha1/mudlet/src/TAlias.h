@@ -37,8 +37,6 @@
 #include "Host.h"
 #include <pcre.h>
 
-using namespace std;
-
 
 
 class TAlias : public Tree<TAlias>

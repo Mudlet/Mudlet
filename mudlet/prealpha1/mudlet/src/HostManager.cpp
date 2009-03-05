@@ -87,12 +87,12 @@ bool HostManager::serialize()
         dir.mkpath( directory );    
     }
     
-    cout << "Mudlet is exiting now." << endl << "ordering all Hosts to shut down" << endl;
+    std::cout << "Mudlet is exiting now." << std::endl << "ordering all Hosts to shut down" << std::endl;
     
     mHostPool.orderShutDown();
     mHostPool.serialize( directory );
     
-    cout << "mudlet: DONE" << endl << "Have a nice day :-)" << endl;
+    std::cout << "mudlet: DONE" << std::endl << "Have a nice day :-)" << std::endl;
     return true;
 }
 

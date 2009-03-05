@@ -33,6 +33,8 @@
 #include "AliasUnit.h"
 #include "mudlet.h"
 
+using namespace std;
+
 void AliasUnit::stopAllTriggers()
 {    
     typedef list<TAlias *>::const_iterator I;

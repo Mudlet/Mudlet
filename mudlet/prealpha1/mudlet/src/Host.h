@@ -47,8 +47,6 @@ class TLuaInterpreter;
 class dlgTriggerEditor;
 class TConsole;
 
-using namespace std;
-
 
 
 class Host  : public QObject

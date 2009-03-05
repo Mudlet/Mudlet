@@ -33,8 +33,6 @@ class TToolBar;
 class TAction;
 class Host;
 
-using namespace std;
-
 class ActionUnit
 {
     friend class XMLexport;
@@ -42,7 +40,7 @@ class ActionUnit
     
 public:
                           ActionUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    list<TAction *>       getActionRootNodeList()   { QMutexLocker locker(& mActionUnitLock); return mActionRootNodeList; }
+    std::list<TAction *>  getActionRootNodeList()   { QMutexLocker locker(& mActionUnitLock); return mActionRootNodeList; }
     TAction *             getAction( int id );
     bool                  registerAction( TAction * pT );
     void                  unregisterAction( TAction * pT );
@@ -66,7 +64,7 @@ private:
     void                  removeAction( TAction *);
     Host *                mpHost;
     QMap<int, TAction *>  mActionMap;
-    list<TAction *>       mActionRootNodeList;
+    std::list<TAction *>  mActionRootNodeList;
     qint64                mMaxID;
     TToolBar *            mpToolBar;
     std::list<TToolBar *> mToolBarList;

@@ -49,9 +49,6 @@ class TGatekeeperThread;
 #define PROMPT 3
 #define RAWDATA 4
 
-
-using namespace std;
-
 class cRunningScript : public QThread  {
    Q_OBJECT
 

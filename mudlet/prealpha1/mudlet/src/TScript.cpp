@@ -32,7 +32,7 @@
 #include "Host.h"
 #include "HostManager.h"
 
-
+using namespace std;
 
 
 TScript::TScript( TScript * parent, Host * pHost ) 

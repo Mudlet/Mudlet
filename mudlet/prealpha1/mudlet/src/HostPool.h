@@ -27,8 +27,6 @@
 #include <QString>
 #include "Host.h"
 
-using namespace std;
-
 class mudlet;
 
 

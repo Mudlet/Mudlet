@@ -30,8 +30,6 @@
 class TAlias;
 class Host;
 
-using namespace std;
-
 class AliasUnit
 {
     friend class XMLexport;
@@ -39,7 +37,7 @@ class AliasUnit
     
 public:
     AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    list<TAlias *>        getAliasRootNodeList()   { QMutexLocker locker(& mAliasUnitLock); return mAliasRootNodeList; }
+    std::list<TAlias *>   getAliasRootNodeList()   { QMutexLocker locker(& mAliasUnitLock); return mAliasRootNodeList; }
     TAlias *              getAlias( int id );
     bool                  registerAlias( TAlias * pT );
     void                  unregisterAlias( TAlias * pT );
@@ -60,8 +58,8 @@ private:
     void                  removeAliasRootNode( TAlias * pT );
     void                  removeAlias( TAlias *);
     Host *                mpHost;
-    QMap<int, TAlias *>    mAliasMap;
-    list<TAlias *>        mAliasRootNodeList;
+    QMap<int, TAlias *>   mAliasMap;
+    std::list<TAlias *>   mAliasRootNodeList;
     qint64                mMaxID;
     
     

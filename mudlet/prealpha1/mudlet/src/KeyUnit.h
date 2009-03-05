@@ -30,8 +30,6 @@
 class TKey;
 class Host;
 
-using namespace std;
-
 class KeyUnit
 {
     friend class XMLexport;
@@ -40,7 +38,7 @@ class KeyUnit
 public:
     
                           KeyUnit( Host * pHost );
-    list<TKey *>          getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
+    std::list<TKey *>     getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
     TKey *                getKey( int id );
     void                  enableKey( QString & name );
     void                  disableKey( QString & name );
@@ -63,8 +61,8 @@ private:
     void                  removeKeyRootNode( TKey * pT );
     void                  removeKey( TKey *);
     Host *                mpHost;
-    QMap<int, TKey *>      mKeyMap;
-    list<TKey *>          mKeyRootNodeList;
+    QMap<int, TKey *>     mKeyMap;
+    std::list<TKey *>     mKeyRootNodeList;
     qint64                mMaxID;
     QMap<int, QString>    mKeys;
     

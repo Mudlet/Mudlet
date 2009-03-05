@@ -38,8 +38,6 @@
 #include <QTextBlock>
 #include <QTime>
 
-using namespace std;
-
 
 
 class TTimer : public Tree<TTimer>

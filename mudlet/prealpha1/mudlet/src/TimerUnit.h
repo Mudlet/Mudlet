@@ -32,8 +32,6 @@
 class TTimer;
 class Host;
 
-using namespace std;
-
 class TimerUnit
 {
     friend class XMLexport;
@@ -41,7 +39,7 @@ class TimerUnit
     
 public:
     TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    list<TTimer *>        getTimerRootNodeList()   { QMutexLocker locker(& mTimerUnitLock); return mTimerRootNodeList; }
+    std::list<TTimer *>   getTimerRootNodeList()   { QMutexLocker locker(& mTimerUnitLock); return mTimerRootNodeList; }
     TTimer *              getTimer( int id );
     void                  enableTimer( QString & );
     void                  disableTimer( QString & );
@@ -64,8 +62,8 @@ private:
     void                  removeTimerRootNode( TTimer * pT );
     void                  removeTimer( TTimer *);
     Host *                mpHost;
-    QMap<int, TTimer *>    mTimerMap;
-    list<TTimer *>        mTimerRootNodeList;
+    QMap<int, TTimer *>   mTimerMap;
+    std::list<TTimer *>   mTimerRootNodeList;
     qint64                mMaxID;
   
     

@@ -55,8 +55,6 @@ class TGatekeeperThread;
 class Host;
 class TTrigger;
 
-using namespace std;
-
 class TLuaInterpreter : public QThread  {
    
 Q_OBJECT
@@ -65,7 +63,7 @@ public:
   
     TLuaInterpreter( Host * mpHost, int id );      
     void startLuaExecThread();
-    void threadLuaInterpreterExec( string code );
+    void threadLuaInterpreterExec( std::string code );
     bool call( QString & function, QString & mName);
     bool compile( QString & );
     bool compileScript( QString & );
@@ -136,7 +134,7 @@ public:
     std::list<int> mCaptureGroupPosList;
     
     
-    static map<lua_State *, Host *> luaInterpreterMap;
+    static std::map<lua_State *, Host *> luaInterpreterMap;
 
 signals:
   
@@ -216,7 +214,7 @@ public:
   TLuaMainThread( TLuaInterpreter * pL ){ pLuaInterpreter = pL;  }
   void run()
   {  
-     cout << "TLuaMainThread::run() called. Initializing Gatekeeper..."<<endl;
+     std::cout << "TLuaMainThread::run() called. Initializing Gatekeeper..."<<std::endl;
       //pLuaInterpreter->initLuaGlobals();
      exit=false;
      while( ! exit )
@@ -230,13 +228,13 @@ public:
              msleep(100);
          }
      }
-     cout << "TLuaMainThread::run() done exit." << endl;
+     std::cout << "TLuaMainThread::run() done exit." << std::endl;
   }
   
-  string getJob()
+  std::string getJob()
   {
       mutex.lock();
-      string job = mJobQueue.front(); 
+      std::string job = mJobQueue.front(); 
       mJobQueue.pop();
       mutex.unlock();
       return job;
@@ -244,12 +242,12 @@ public:
   
   void postJob(QString code)
   {
-     cout << "posting new job <"<<code.toLatin1().data()<<">"<<endl;
-     string job = code.toLatin1().data();
+     std::cout << "posting new job <"<<code.toLatin1().data()<<">"<<std::endl;
+     std::string job = code.toLatin1().data();
      mutex.lock();
      mJobQueue.push(job);
      mutex.unlock();
-     cout << "DONE posting new job"<<endl;
+     std::cout << "DONE posting new job"<<std::endl;
   }
 
   void callExit(){ exit = true; } 
@@ -259,7 +257,7 @@ private:
   TLuaInterpreter * pLuaInterpreter;
   QString code;
   QMutex mutex;
-  queue<string> mJobQueue;
+  std::queue<std::string> mJobQueue;
   
   bool exit;
 };

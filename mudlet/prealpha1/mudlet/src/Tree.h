@@ -36,8 +36,6 @@
 
 #include <QDebug>
 
-using namespace std;
-
 template<class T>
 class Tree
 {
@@ -46,7 +44,7 @@ public:
                        Tree( T * parent );		     
     virtual            ~Tree(); 
                        T * getParent()      { return mpParent; }
-    list<T *> *        getChildrenList();
+    std::list<T *> *   getChildrenList();
     bool               hasChildren()   { return (mpMyChildrenList->size() > 0); }
     int                getChildCount()  { return mpMyChildrenList->size(); }
     void               DumpFamily();
@@ -60,7 +58,7 @@ public:
     void               setParent( T * parent );
     
     T *                mpParent;
-    list<T *> *        mpMyChildrenList;
+    std::list<T *> *   mpMyChildrenList;
     qint64             mID;
     
     
@@ -72,7 +70,7 @@ public:
 template<class T>
 Tree<T>::Tree() 
 : mpParent( 0 )
-, mpMyChildrenList( new list<T *> )
+, mpMyChildrenList( new std::list<T *> )
 , mID( 0 ) 
 {
 }
@@ -80,7 +78,7 @@ Tree<T>::Tree()
 template<class T>
 Tree<T>::Tree( T *  pParent ) 
 : mpParent( pParent )
-, mpMyChildrenList( new list<T *> )
+, mpMyChildrenList( new std::list<T *> )
 , mID( 0 )
 {
     if( pParent ) 
@@ -103,9 +101,9 @@ Tree<T>::~Tree()
     if( mpParent != 0 )
     {
         mpParent->popChild( (T*)this ); // tell parent about my death
-        if( uncaught_exception() )
+        if( std::uncaught_exception() )
         {
-            cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << endl;
+            std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
     }               
 }
@@ -128,7 +126,7 @@ template<class T>
 bool Tree<T>::popChild( T * pChild )
 {
     QMutexLocker locker(& mLock);
-    typedef typename list<T *>::const_iterator IT;
+    typedef typename std::list<T *>::const_iterator IT;
     for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {
         if( *it == pChild )
@@ -141,7 +139,7 @@ bool Tree<T>::popChild( T * pChild )
 }
 
 template<class T>
-list<T *> * Tree<T>::getChildrenList()
+std::list<T *> * Tree<T>::getChildrenList()
 {
     return mpMyChildrenList;
 }
@@ -150,7 +148,7 @@ template<class T>
 void Tree<T>::DumpFamily()
 {
     Dump();
-    typedef typename list<T *>::const_iterator I;
+    typedef typename std::list<T *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {
         T * pChild = *it;
@@ -161,16 +159,16 @@ void Tree<T>::DumpFamily()
 template<class T>
 void Tree<T>::Dump()
 {
-    cout << "My ID=" << mID << " my parent="<< mpParent << endl;
-    cout << " my children are:";
-    typedef typename list<T *>::const_iterator IT;
+    std::cout << "My ID=" << mID << " my parent="<< mpParent << std::endl;
+    std::cout << " my children are:";
+    typedef typename std::list<T *>::const_iterator IT;
     for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {
-        cout << " dumping:"<<endl;
+        std::cout << " dumping:"<<std::endl;
         T* pChild = *it;
-        if( pChild ) cout << pChild->mID << ", ";
+        if( pChild ) std::cout << pChild->mID << ", ";
     }
-    cout << "ende dump()"<< endl;
+    std::cout << "ende dump()"<< std::endl;
 }
 
 #endif

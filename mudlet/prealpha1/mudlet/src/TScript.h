@@ -38,8 +38,6 @@
 #include <QTextBlock>
 
 class TEvent;
-using namespace std;
-
 
 
 class TScript : public Tree<TScript>

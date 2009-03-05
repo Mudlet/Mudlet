@@ -38,7 +38,7 @@
 #include "TFlipButton.h"
 #include "TToolBar.h"
 
-
+using namespace std;
 
 TAction::TAction( TAction * parent, Host * pHost ) 
 : Tree<TAction>( parent )

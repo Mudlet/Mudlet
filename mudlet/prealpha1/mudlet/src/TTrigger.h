@@ -45,8 +45,6 @@
 
 #define OVECCOUNT 30    // should be a multiple of 3 
 
-using namespace std;
-
 
 
 class TTrigger : public Tree<TTrigger>

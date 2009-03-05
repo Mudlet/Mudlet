@@ -34,6 +34,8 @@
 #include <QDebug>
 #include "ScriptUnit.h"
 
+using namespace std;
+
 void ScriptUnit::stopAllTriggers()
 {    
     typedef list<TScript *>::const_iterator I;

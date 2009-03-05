@@ -40,8 +40,6 @@
 #include "TFlipButton.h"
 #include <QMenu>
 
-using namespace std;
-
 
 
 class TAction : public Tree<TAction>, QObject

@@ -34,6 +34,7 @@
 #include <QDebug>
 #include "TriggerUnit.h"
 
+using namespace std;
 
 void TriggerUnit::addTriggerRootNode( TTrigger * pT )
 {

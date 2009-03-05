@@ -37,7 +37,7 @@ void debugOutput(QtMsgType type, const char *msg)
     switch (type) 
     {
     case QtDebugMsg:
-        cout << msg << endl;
+        std::cout << msg << std::endl;
         if( mudlet::mpDebugConsole )
         {
             //mudlet::mpDebugConsole->print( msg );
