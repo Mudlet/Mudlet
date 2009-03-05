@@ -45,7 +45,7 @@ struct tm * localtime_r (const time_t *timer, struct tm *result)
 }
 #endif
 
-TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole ) 
+TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen ) 
 : QWidget( pW )
 , mpBuffer( pB )
 , mpHost( pH )
@@ -56,18 +56,17 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mHighlightingBegin( false )
 , mHighlightingEnd( false )
 , mMouseTracking( false )
-, mIsSplitScreen( false )
+, mIsSplitScreen( isSplitScreen )
+, mIsDebugConsole( isDebugConsole )
 , mInversOn( false )
 , mPainterInit( false )
 , mpScrollBar( 0 )
-{
-    qDebug()<<"WIDTH()="<<width();
-    
-    if( ! isDebugConsole )
+, mInit_OK( false )
+{    
+    if( ! mIsDebugConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );    
-        mIsDebugConsole = false;
         mScreenWidth = 100;
         if( (width()/mFontWidth ) < mScreenWidth )
         {
@@ -101,9 +100,18 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     showNewLines();
 }
 
-void TTextEdit::slot_scrollBarMoved( int c )
+void TTextEdit::slot_scrollBarMoved( int line )
 {
-    ;    
+    if( mpConsole->mpScrollBar )
+    {
+        disconnect( mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
+        mpConsole->mpScrollBar->setRange( 0, mpBuffer->getLastLineNumber() );
+        mpConsole->mpScrollBar->setSingleStep( 1 );
+        mpConsole->mpScrollBar->setPageStep( mScreenHeight );
+        mpConsole->mpScrollBar->setValue( line );
+        scrollTo( line );
+        connect( mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), this, SLOT(slot_scrollBarMoved(int)));
+    }
 }
 
 void TTextEdit::initDefaultSettings()
@@ -151,12 +159,18 @@ void TTextEdit::updateScreenView()
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
     if( mpHost->mScreenWidth > currentScreenWidth )
     {
-        mScreenWidth = currentScreenWidth;
-        mpHost->mScreenWidth = mScreenWidth;
+        if( currentScreenWidth < 100 )
+        {
+            mScreenWidth = 100;
+        }
+        else
+        {
+            mScreenWidth = currentScreenWidth;
+            mpHost->mScreenWidth = mScreenWidth;
+        }
     }
     
     mpHost->mScreenHeight = mScreenHeight;
-    
     if( ! mIsDebugConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
@@ -171,53 +185,69 @@ void TTextEdit::updateScreenView()
 
 void TTextEdit::showNewLines() 
 {   
-    if( ! isTailMode() ) return;
+    if( ! mIsSplitScreen )
+        if( ! isTailMode() ) 
+            return;
     
-    mCursorY = mpBuffer->size()-1;
-    
-    QRect widgetRect = visibleRegion().boundingRect();
-    
-    QRect scrollRect;
-    scrollRect.setLeft( 0 );
-    scrollRect.setRight( mScreenWidth * mFontWidth );
-    scrollRect.setTop( widgetRect.top() ); 
-    scrollRect.setHeight( mScreenHeight * mFontHeight );
-    
-    QRect drawRect;
-    drawRect.setLeft( 0 );
-    drawRect.setRight( mScreenWidth * mFontWidth );
     int lines = mpBuffer->newLines;
-           
-    drawRect.setTop( abs(mScreenHeight - lines ) * mFontHeight );  //old:abs(mScreenHeight - lines -1 )
-    drawRect.setHeight( lines * mFontHeight );
-    if( scrollRect.height() < widgetRect.height() )
+    if( ! mIsSplitScreen )
+        if( lines == 0 ) 
+            return;
+    mCursorY = mpBuffer->size()-1;
+    if( mCursorY > mScreenHeight )
     {
-        if( mCursorY > mScreenHeight )
-        {
-            mScrollVector += lines;//scroll( 0, -1 * (scrollRect.height()), scrollRect );// mFontHeight * ( -1 * ( mpBuffer->newLines ) );
-            mScrollUp = true;
-        }
+        mScrollVector += lines;
+        mScrollUp = true;
     } 
+    mOldScrollPos = mpBuffer->getLastLineNumber();
+    if( mIsSplitScreen )
+    {
+        if( mpConsole->mpScrollBar )
+        {
+            disconnect( mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
+            mpConsole->mpScrollBar->setRange( 0, mpBuffer->getLastLineNumber() );
+            mpConsole->mpScrollBar->setSingleStep( 1 );
+            mpConsole->mpScrollBar->setPageStep( mScreenHeight );
+            if( mpConsole->console->isTailMode() )
+                mpConsole->mpScrollBar->setValue( mCursorY );
+            connect( mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
+        }
+    }
     update();
-    mpBuffer->newLines = 0;
+    mpBuffer->newLines = 0;    
+}
+
+void TTextEdit::scrollTo( int line )
+{
+    if( (line > -1) && (line < mpBuffer->size()) )
+    {
+        if( (line < (mpBuffer->getLastLineNumber()-mScreenHeight) && mIsTailMode ) )
+        {
+            mIsTailMode = false;
+            mpConsole->console2->show();
+        }
+        else if( (line > (mpBuffer->getLastLineNumber()-mScreenHeight)) && !mIsTailMode )
+        {
+            mCursorY = mpBuffer->getLastLineNumber();
+            mIsTailMode = true;
+            mpConsole->console2->hide();
+        }
+        mCursorY = line;
+        mScrollVector = 0;
+        update();
+    }
 }
 
 void TTextEdit::scrollUp( int lines )
 {
+    if( mIsSplitScreen ) 
+        return;
     lines = bufferScrollUp( lines );
     if( lines == 0 ) 
         return;
-    
-    if( lines > 0 )
-    {
-        mScrollVector += mFontHeight * lines;//scroll( 0, mFontHeight * lines );        
-        mScrollUp = true;
-        update();
-    }
     else
     {
-        // lines < 0 => skip scrolling and paint frame directly,
-        //              as scrollRect covers the entire area of the screen
+        mIsTailMode = false;
         lines = mScreenHeight;
         
         QRect drawRect;
@@ -232,11 +262,13 @@ void TTextEdit::scrollUp( int lines )
 
 void TTextEdit::scrollDown( int lines )
 {
+    if( mIsSplitScreen ) 
+        return;
     lines = bufferScrollDown( lines );
-    if( lines == 0 ) return;
-        
-    if( ( lines < 0 ) || ( imageTopLine() == 0 ) )
-    { 
+    if( lines == 0 ) 
+        return;
+    else
+    {
         // lines < 0 => skip scrolling and paint frame directly,
         //              as scrollRect covers the entire area of the screen
         lines = lines * -1;
@@ -244,16 +276,10 @@ void TTextEdit::scrollDown( int lines )
         drawRect.setLeft( 0 );
         drawRect.setRight( mScreenWidth * mFontWidth );
         drawRect.setBottom( mScreenHeight*mFontHeight );
-        drawRect.setHeight( lines*mFontHeight );
+        drawRect.setHeight( abs(lines*mFontHeight) );
         mScrollVector = 0;
         update();
     }
-    else
-    {
-        mScrollVector += mFontHeight * lines;//scroll( 0, mFontHeight * ( -1 * lines ) );        
-        mScrollUp = false;
-        update();
-    }    
 }
 
 void TTextEdit::drawBackground( QPainter & painter, 
@@ -261,9 +287,7 @@ void TTextEdit::drawBackground( QPainter & painter,
                                const QColor & bgColor )
 {
     QRect bR = rect;
-    if( rect.width() > mScreenWidth * mFontWidth ) bR.setWidth( mScreenWidth * mFontWidth );
-    
-    painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor );//, QColor(rand()%255,rand()%255,rand()%255));//bgColor);
+    painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor );//QColor(rand()%255,rand()%255,rand()%255));//bgColor);
 }
 
 void TTextEdit::drawCharacters( QPainter & painter,
@@ -431,7 +455,7 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     QPainter painter( this );
     
     const QRect & rect = e->rect();
-    //    drawBackground( painter, rect, palette().base().color() );
+    drawBackground( painter, rect, palette().base().color() );
     drawForeground( painter, rect );
     
     cout << " Time after render = " << time.elapsed() <<endl;
@@ -619,13 +643,8 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
 
 void TTextEdit::showEvent( QShowEvent * event ) 
 {
-    if( mIsSplitScreen ) 
-    {
-        mIsSplitScreen = false;
-        resize( width(), mpConsole->height()/4 );
-    }
     updateScreenView();
-    repaint( contentsRect() );
+    update();
     QWidget::showEvent( event );
 }
 
@@ -671,7 +690,6 @@ int TTextEdit::imageTopLine()
 bool TTextEdit::isTailMode()
 {
     if( ( mCursorY == (int) mpBuffer->size()-1 ) 
-         
         //|| ( mIsDebugConsole ) 
         || ( mIsTailMode ) 
         || ( (int)mpBuffer->size() <= mScreenHeight) )
@@ -688,7 +706,7 @@ int TTextEdit::bufferScrollUp( int lines )
     if( (mCursorY - lines) >= mScreenHeight  )
     {
         mCursorY -= lines;
-        mIsTailMode = false;
+        mIsTailMode = true;
         return lines;
     }
     else

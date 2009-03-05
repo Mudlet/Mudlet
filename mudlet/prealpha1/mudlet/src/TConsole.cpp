@@ -64,14 +64,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mIndentCount( 0 )
 , mTriggerEngineMode( false )
 , mClipboard( mpHost )
+, mpScrollBar( new QScrollBar )
 {
     setContentsMargins(0,0,0,0);
     profile_name = mpHost->getName();
     mFormatSystemMessage.bgColor = mBgColor;
     mFormatSystemMessage.fgColor = QColor( 255, 0, 0 );
-        
     setAttribute( Qt::WA_DeleteOnClose );
-    
     mWaitingForHighColorCode = false;
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
@@ -94,65 +93,63 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layer->setContentsMargins(0,0,0,0);
     layer->setSizePolicy( sizePolicy );
     layer->setFocusPolicy( Qt::NoFocus );
+        
+    QHBoxLayout * layoutLayer = new QHBoxLayout( layer );
+    layoutLayer->setMargin(0);
+    QSizePolicy sizePolicyLayer(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    
+    mpScrollBar->setFixedWidth( 15 );
     
     QSplitter * splitter = new QSplitter( Qt::Vertical, layer );
     splitter->setContentsMargins(0,0,0,0);
     splitter->setSizePolicy( sizePolicy );
-    QVBoxLayout * layout2 = new QVBoxLayout( splitter );
+    splitter->setOrientation( Qt::Vertical );
+    /*  QVBoxLayout * layout2 = new QVBoxLayout( splitter );
     layout2->setContentsMargins(0,0,0,0);
-    layout2->setSpacing(0);
+    layout2->setSpacing(0);*/
     splitter->setHandleWidth( 3 );
     setFocusProxy( mpCommandLine );
     
-    layerEdit = new QWidget;
-    QHBoxLayout * layoutLayer = new QHBoxLayout( layerEdit );
-    layoutLayer->setMargin(0);
-    QSizePolicy sizePolicyLayer(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    layerEdit->setSizePolicy( sizePolicyLayer );
-    //layerEdit->setAutoFillBackground( true );
-    
-    //layerEdit->setPalette(palette);
-    mpScrollBar = new QScrollBar;
-    mpScrollBar->setFixedWidth( 35 );
-    console = new TTextEdit( this, layerEdit, &buffer, mpHost, isDebugConsole );
+    console = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole, false );
     console->setContentsMargins(0,0,0,0);
     console->setSizePolicy( sizePolicy3 );
     console->setFocusPolicy( Qt::NoFocus );
     
-    layoutLayer->addWidget( console );
-    layoutLayer->addWidget( mpScrollBar );
-    //console->setPalette( palette );
-    connect( mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
-    layout2->addWidget(layerEdit);
-    splitter->addWidget( layerEdit );
-    
-    console2 = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole );
+    console2 = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole, true );
     console2->setContentsMargins(0,0,0,0);
     console2->setSizePolicy( sizePolicy3 );
     console2->setFocusPolicy( Qt::NoFocus );
+    
+    
+    splitter->addWidget( console );
     splitter->addWidget( console2 );
-   
+    
     splitter->setCollapsible( 1, false );
     splitter->setCollapsible( 0, false );
-    splitter->setStretchFactor(0,5);
+    splitter->setStretchFactor(0,6);
     splitter->setStretchFactor(1,1);
     
-    layout->addWidget( splitter );
+    layoutLayer->addWidget( splitter );
+    layoutLayer->addWidget( mpScrollBar );
+    
+    layout->addWidget( layer );
     layout->addWidget( mpCommandLine );
+      
+    QList<int> sizeList;
+    sizeList << 6 << 2;
+    splitter->setSizes( sizeList );
     
-    changeColors();
-     
-    layerEdit->show();
-    console2->setSplitScreen();
     console->show();
+    console2->show();
     console2->hide();
-    
     if( mIsDebugConsole )
         mpCommandLine->hide();
   
     isUserScrollBack = false;
        
     m_fontSpecs.init();
+    connect( mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
+    changeColors();
 }
 
 void TConsole::closeEvent( QCloseEvent *event )
@@ -199,8 +196,6 @@ void TConsole::changeColors()
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
         palette.setColor( QPalette::Base, mBgColor );
         console->setPalette( palette );
-        layerEdit->setPalette( palette );
-        layerEdit->setFont( mDisplayFont );
         console2->setPalette( palette );    
     }
     else
@@ -214,7 +209,6 @@ void TConsole::changeColors()
         palette.setColor( QPalette::Base, mpHost->mBgColor );
         setPalette( palette );
         layer->setPalette( palette );
-        layerEdit->setPalette( palette );
         console->setPalette( palette );
         console2->setPalette( palette );
     }
