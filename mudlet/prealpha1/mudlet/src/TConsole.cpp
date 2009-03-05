@@ -97,7 +97,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     QHBoxLayout * layoutLayer = new QHBoxLayout( layer );
     layoutLayer->setMargin(0);
     QSizePolicy sizePolicyLayer(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    
+        
     mpScrollBar->setFixedWidth( 15 );
     
     QSplitter * splitter = new QSplitter( Qt::Vertical, layer );
@@ -132,9 +132,32 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layoutLayer->addWidget( splitter );
     layoutLayer->addWidget( mpScrollBar );
     
+    QWidget * layer2 = new QWidget( layer );
+    layer2->setContentsMargins(0,0,0,0);
+    layer2->setSizePolicy( sizePolicy2 );
+    layer2->setMaximumHeight(31);
+    QHBoxLayout * layoutLayer2 = new QHBoxLayout( layer2 );
+    layoutLayer2->setMargin(0);
+    
+    QPushButton * timeStampButton = new QPushButton;
+    timeStampButton->setToolTip("Show Time Stamps");
+    QIcon icon(":/icons/dialog-information.png");
+    timeStampButton->setIcon( icon );
+    connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
+    
+    QPushButton * emergencyStop = new QPushButton;
+    QIcon icon2(":/icons/edit-bomb.png");
+    emergencyStop->setIcon( icon2 );
+    emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
+    // connect( emergencyStop, SIGNAL(pressed()), mudlet::self() , SLOT(slot_stopAllTriggers()));*/
+    
+    layoutLayer2->addWidget( mpCommandLine );
+    layoutLayer2->addWidget( timeStampButton );
+    layoutLayer2->addWidget( emergencyStop );
+    
     layout->addWidget( layer );
-    layout->addWidget( mpCommandLine );
-      
+    layout->addWidget( layer2 );
+          
     QList<int> sizeList;
     sizeList << 6 << 2;
     splitter->setSizes( sizeList );

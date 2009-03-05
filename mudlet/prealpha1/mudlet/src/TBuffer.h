@@ -83,7 +83,7 @@ public:
     void paste( QPoint &, TBuffer );
     std::deque<TChar *> bufferLine;
     std::deque< std::deque<TChar*> > buffer; 
-    
+    QStringList timeBuffer;
     QStringList lineBuffer;
     
     int newLines;

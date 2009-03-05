@@ -82,11 +82,13 @@ public:
     int               bufferScrollDown( int lines );
     bool              isTailMode();
     void              copySelectionToClipboard();
+    bool              mShowTimeStamps;
     
 signals:
     
 public slots:
     
+    void              slot_toggleTimeStamps();
     void              slot_copySelectionToClipboard();
     void              slot_scrollBarMoved( int );
     

@@ -62,6 +62,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mPainterInit( false )
 , mpScrollBar( 0 )
 , mInit_OK( false )
+, mShowTimeStamps( false )
 {    
     if( ! mIsDebugConsole )
     {
@@ -98,6 +99,12 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     palette.setColor( QPalette::Base, mBgColor );
     setPalette(palette);
     showNewLines();
+}
+
+void TTextEdit::slot_toggleTimeStamps()
+{
+    mShowTimeStamps = !mShowTimeStamps;   
+    update();
 }
 
 void TTextEdit::slot_scrollBarMoved( int line )
@@ -383,61 +390,87 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
         {
             break;
         }
-        
-        int lineLength = mpBuffer->buffer[i+lineOffset].size();
+        int timeOffset = 0;
+        if( mShowTimeStamps )
+        {
+            if( mpBuffer->timeBuffer.size() > i+lineOffset )
+            {
+                timeOffset = mpBuffer->timeBuffer[i+lineOffset].size()-1;
+            }
+        }
+        int lineLength = mpBuffer->buffer[i+lineOffset].size() + timeOffset;
         for( int i2=x1; i2<lineLength; )
         {
-            if( i2 >= x2 )
+            QString text;
+            if( i2 < timeOffset )
             {
-                break;
+                text = mpBuffer->timeBuffer[i+lineOffset];
+                bool isBold = false;
+                bool isUnderline = false;
+                bool isItalics = false;
+                QColor fgColor = mpHost->mFgColor;
+                QColor bgColor = mpHost->mBgColor;
+                QRect textRect = QRect( mFontWidth * i2, 
+                                        mFontHeight * i, 
+                                        mFontWidth * timeOffset, 
+                                        mFontHeight );
+                
+                drawBackground( p, textRect, bgColor );
+                drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, fgColor, bgColor );  
+                i2+=timeOffset;
             }
-            QString text = mpBuffer->lineBuffer[i+lineOffset].at(i2);
-            bool isBold = mpBuffer->buffer[i+lineOffset][i2]->bold;
-            bool isUnderline = mpBuffer->buffer[i+lineOffset][i2]->underline;
-            bool isItalics = mpBuffer->buffer[i+lineOffset][i2]->italics;
-            QColor fgColor = mpBuffer->buffer[i+lineOffset][i2]->fgColor;
-            QColor bgColor = mpBuffer->buffer[i+lineOffset][i2]->bgColor;
-            int delta = 1;
-            
-            while( i2+delta < lineLength )
+            else
             {
-                if( ( mpBuffer->buffer[i+lineOffset][i2+delta]->bold == isBold ) 
-                   && ( mpBuffer->buffer[i+lineOffset][i2+delta]->underline == isUnderline ) 
-                   && ( mpBuffer->buffer[i+lineOffset][i2+delta]->italics == isItalics ) 
-                   && ( mpBuffer->buffer[i+lineOffset][i2+delta]->fgColor == fgColor )     
-                   && ( mpBuffer->buffer[i+lineOffset][i2+delta]->bgColor == bgColor ) )
-                {
-                    text.append( mpBuffer->lineBuffer[i+lineOffset].at(i2+delta) );
-                    delta++;
-                }
-                else
+                if( i2 >= x2 )
                 {
                     break;
                 }
+                text = mpBuffer->lineBuffer[i+lineOffset].at(i2-timeOffset);
+                bool isBold = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bold;
+                bool isUnderline = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->underline;
+                bool isItalics = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->italics;
+                QColor fgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->fgColor;
+                QColor bgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bgColor;
+                int delta = 1;
                 
-            }
-            
-            QRect textRect = QRect( mFontWidth * i2, 
-                                    mFontHeight * i, 
-                                    mFontWidth * delta, 
-                                    mFontHeight );
-            
-            if( (bgColor != palette().base().color()) || invers )
-            {
-                if( invers )
+                while( i2+delta+timeOffset < lineLength )
                 {
-                    QColor tmpColor = bgColor;
-                    bgColor = fgColor;
-                    fgColor = tmpColor;
+                    if( ( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset]->bold == isBold ) 
+                        && ( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset]->underline == isUnderline ) 
+                        && ( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset]->italics == isItalics ) 
+                        && ( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset]->fgColor == fgColor )     
+                        && ( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset]->bgColor == bgColor ) )
+                    {
+                        text.append( mpBuffer->lineBuffer[i+lineOffset].at(i2+delta-timeOffset) );
+                        delta++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                    
                 }
-                drawBackground( p, textRect, bgColor );
+                
+                QRect textRect = QRect( mFontWidth * i2, 
+                                        mFontHeight * i, 
+                                        mFontWidth * delta, 
+                                        mFontHeight );
+                if( (bgColor != palette().base().color()) || invers )
+                {
+                    if( invers )
+                    {
+                        QColor tmpColor = bgColor;
+                        bgColor = fgColor;
+                        fgColor = tmpColor;
+                    }
+                    drawBackground( p, textRect, bgColor );
+                }
+                if( text[0] != cLF )
+                {
+                    drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, fgColor, bgColor );  
+                }
+                i2+=delta;
             }
-            if( text[0] != cLF )
-            {
-                drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, fgColor, bgColor );  
-            }
-            
-            i2+=delta;
         }
     }
     p.end();

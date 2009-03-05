@@ -78,9 +78,6 @@ TBuffer::TBuffer( Host * pH )
 , mWrapAt( 100 )
 , mWrapIndent( 5 )
 {   
-    // FIXME: check if this is set somewhere else
-    //mpHost->mScreenHeight = 40;
-    //mpHost->mScreenWidth = 80; //TODO: make this a user option
     buffer.clear();
     lineBuffer.clear();
     
@@ -89,7 +86,7 @@ TBuffer::TBuffer( Host * pH )
     newLine.push_back( pC );
     buffer.push_back( newLine );
     lineBuffer << QChar( 0x21af );
-
+    timeBuffer << QTime::currentTime().toString() + "   ";
     newLines = 0;
     mLastLine = buffer.size()-1;
 }
@@ -118,6 +115,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             newLine.push_back( pC );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
+            timeBuffer << QTime::currentTime().toString() + "   ";
             last = 0;
         }
         if( mCursorMoved ) 
@@ -138,6 +136,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
                         pC->underline = underline;
                         buffer[last].push_back( pC );
                         buffer[last].pop_front();
+                        timeBuffer[last]=QTime::currentTime().toString()+"   ";
                         continue;
                     }
                 }
@@ -166,6 +165,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             newLine.push_back( pC );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
+            timeBuffer << QTime::currentTime().toString()+"   ";
             mLastLine++;
             newLines++;
             mCursorMoved = true;
@@ -235,6 +235,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
             newLine.push_back( pC );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
+            timeBuffer << QTime::currentTime().toString()+"   ";
             mLastLine++;
             newLines++;
             x = 0;
@@ -404,6 +405,7 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & form
     {
         buffer.pop_back();    
         lineBuffer.pop_back();
+        timeBuffer.pop_back();
     }
     
     newLines -= lineCount;
@@ -418,6 +420,7 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & form
     for( int i=0; i<tempList.size(); i++ )
     {
         lineBuffer.append( tempList[i] );
+        timeBuffer.append( QTime::currentTime().toString()+"   " );
     }
 }
 
@@ -574,6 +577,7 @@ bool TBuffer::deleteLines( int from, int to )
         for( int i=from; i<from+delta; i++ )
         {
             lineBuffer.removeAt( i ); 
+            timeBuffer.removeAt( i );
             for( int k=0; k<buffer[i].size(); k++ )
             {
                 delete buffer[i][k];    
