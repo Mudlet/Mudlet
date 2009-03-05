@@ -111,7 +111,6 @@ dlgAboutDialog.h
 dlgKeysMainArea.h
 dlgProfilePreferences.h
 TToolBar.h
-TFlipButton.h
 TTextEdit.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)
