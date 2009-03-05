@@ -47,7 +47,8 @@ public:
                                  QWidget *, 
                                  TBuffer * pB, 
                                  Host * pH, 
-                                 bool isDebugConsole );
+                                 bool isDebugConsole,
+                                 bool isSplitScreen );
     
     void              paintEvent( QPaintEvent* );
     void              drawForeground(QPainter &, const QRect & );
@@ -61,9 +62,8 @@ public:
                                       QColor & fgColor,
                                       QColor & bgColor );
     std::string       getCurrentTime();
-    void              setSplitScreen(){ mIsSplitScreen = true; }
     void              showNewLines();
-    
+    void              scrollTo( int );    
     void              scrollUp( int lines );
     void              scrollDown( int lines );
     void              wheelEvent( QWheelEvent * e ); 
@@ -88,11 +88,12 @@ signals:
 public slots:
     
     void              slot_copySelectionToClipboard();
+    void              slot_scrollBarMoved( int );
     
 private:
     
     void              initDefaultSettings();
-    
+    bool              mScrollUp;
     QColor            mFgColor;
     QColor            mBgColor;
     QFont             mDisplayFont;
@@ -123,6 +124,11 @@ private:
     QPoint            mPB;
     QRegion           mSelectedRegion;
     qreal             mScrollVector;
+    bool              mPainterInit;
+    QPixmap           mScreenMap;
+    QScrollBar *      mpScrollBar;
+    int               mOldScrollPos;
+    bool              mInit_OK;
 };
 
 #endif

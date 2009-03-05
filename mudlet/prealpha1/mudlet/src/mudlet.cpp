@@ -165,12 +165,12 @@ mudlet::mudlet()
     mpDebugArea->setCentralWidget( mpDebugConsole );
     QSize generalRule( qApp->desktop()->size() );
     generalRule -= QSize( 30, 30 );
-    mpDebugArea->resize( QSize( 1200, 1000 ).boundedTo( generalRule ) );
+    mpDebugArea->resize( QSize( 800, 600 ).boundedTo( generalRule ) );
     mpDebugArea->hide();
     QFont mainFont;
     if( file_use_smallscreen.exists() )
     {
-        mainFont = QFont("Monospace", 1, QFont::Courier);   
+        mainFont = QFont("Bitstream Vera Sans Mono", 1, QFont::Courier);   
         showFullScreen();   
         QAction * actionFullScreeniew = new QAction(QIcon(":/icons/emblem-important.png"), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
@@ -179,9 +179,11 @@ mudlet::mudlet()
     }
     else
     {
-        mainFont = QFont("Monospace", 6, QFont::Courier);        
+        mainFont = QFont("Bitstream Vera Sans Mono", 7, QFont::Courier);        
     }
-    setFont(mainFont);
+    QFont mdiFont = QFont("Bitstream Vera Sans Mono", 5, QFont::Courier);            
+    setFont( mainFont );
+    mdiArea->setFont( mdiFont );
     mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
     
     

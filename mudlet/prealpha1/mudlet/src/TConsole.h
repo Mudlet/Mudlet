@@ -156,6 +156,9 @@ public:
       Host *            mpHost; 
       TBuffer           buffer;
       TBuffer           mClipboard;
+      QScrollBar *      mpScrollBar;
+      QWidget *         layerEdit;
+    QWidget *         layer;
     
 private:
     QString           profile_name;   

@@ -221,7 +221,11 @@ void dlgProfilePreferences::setDisplayFont()
     bool ok;
     QFont font = QFontDialog::getFont(&ok, pHost->mDisplayFont, this);
     pHost->mDisplayFont = font;
-    if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
+    {
+        qDebug()<<"OK font changed";
+        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    }
 }
 void dlgProfilePreferences::setCommandLineFont()
 {
@@ -230,7 +234,8 @@ void dlgProfilePreferences::setCommandLineFont()
     bool ok;
     QFont font = QFontDialog::getFont( &ok, pHost->mCommandLineFont, this );
     pHost->mCommandLineFont = font;
-    if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
+        mudlet::self()->mConsoleMap[pHost]->changeColors();
     
 }
 

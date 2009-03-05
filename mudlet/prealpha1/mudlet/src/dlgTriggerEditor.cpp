@@ -281,6 +281,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
     
+    QAction * saveMenu = new QAction(QIcon(":/icons/document-save-all.png"), tr("Save Profile"), this);
+    saveMenu->setEnabled( true );
+    connect( saveMenu, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
+    
     QAction * profileSaveAction = new QAction(QIcon(":/icons/document-save-all.png"), tr("Save Profile"), this);
     profileSaveAction->setEnabled( true );
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
@@ -292,7 +296,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QMenu * saveProfileMenu = new QMenu( this );
     saveProfileMenu->addAction( profileSaveAction );
     saveProfileMenu->addAction( saveProfileAsAction );
-    profileSaveAction->setMenu( saveProfileMenu );    
+    saveMenu->setMenu( saveProfileMenu );    
     
     /*QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
     actionProfileBackup->setStatusTip(tr("Backup Profile"));*/
@@ -389,7 +393,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( deleteTriggerAction );    
     toolBar->addAction( importAction );
     toolBar->addAction( exportAction );
-    toolBar->addAction( profileSaveAction );
+    toolBar->addAction( saveMenu );
     toolBar->addAction( showDebugAreaAction );
     
       

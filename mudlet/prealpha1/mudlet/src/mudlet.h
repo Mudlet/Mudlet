@@ -42,7 +42,7 @@ class QTextEdit;
 class EAction;
 
 
-class mudlet : public QMainWindow//, private Ui::MainWindow
+class mudlet : public QMainWindow
 {
 Q_OBJECT
 
