@@ -158,7 +158,8 @@ public:
       TBuffer           mClipboard;
       QScrollBar *      mpScrollBar;
       QWidget *         layerEdit;
-    QWidget *         layer;
+      QWidget *         layer;
+      QPushButton *     emergencyStop;
     
 private:
     QString           profile_name;   

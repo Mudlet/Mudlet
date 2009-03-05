@@ -85,7 +85,7 @@ public:
     std::deque< std::deque<TChar*> > buffer; 
     QStringList timeBuffer;
     QStringList lineBuffer;
-    
+    int mLinesLimit;
     int newLines;
 
     

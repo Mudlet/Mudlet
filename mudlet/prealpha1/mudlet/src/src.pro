@@ -21,6 +21,16 @@ win32 : INCLUDEPATH += C:\Qscintilla-gpl-2.3.2\qt4 \
  c:\lua-5.1.4\src \
  c:\zlib-1.2.3
 
+unix: isEmpty( INSTALL_PREFIX ) {
+	INSTALL_PREFIX = /usr/local
+}
+
+unix: {
+ SHARE_DIR = /usr/local/share/mudlet
+ BIN_DIR = $$INSTALL_PREFIX/bin
+}
+
+
 SOURCES += TConsole.cpp \
 ctelnet.cpp \
 main.cpp \
@@ -154,4 +164,19 @@ TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc 
 
 DISTFILES += paragraph.css
+
+unix: {
+ luaglobal.path = $$SHARE_DIR
+ luaglobal.files = LuaGlobal.lua
+ documentation.path = $$SHARE_DIR
+ documentation.files = mudlet_documentation.html
+ fonts.path = $$SHARE_DIR
+ fonts.files = fonts/ttf-bitstream-vera-1.10/*
+ target.path = $$BIN_DIR
+}
+
+INSTALLS += fonts \
+luaglobal \
+documentation \
+target
 

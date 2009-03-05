@@ -65,6 +65,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mTriggerEngineMode( false )
 , mClipboard( mpHost )
 , mpScrollBar( new QScrollBar )
+, emergencyStop( new QPushButton )
 {
     setContentsMargins(0,0,0,0);
     profile_name = mpHost->getName();
@@ -140,16 +141,17 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layoutLayer2->setMargin(0);
     
     QPushButton * timeStampButton = new QPushButton;
+    timeStampButton->setCheckable( true );
     timeStampButton->setToolTip("Show Time Stamps");
     QIcon icon(":/icons/dialog-information.png");
     timeStampButton->setIcon( icon );
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
     
-    QPushButton * emergencyStop = new QPushButton;
     QIcon icon2(":/icons/edit-bomb.png");
     emergencyStop->setIcon( icon2 );
+    emergencyStop->setCheckable( true );
     emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
-    // connect( emergencyStop, SIGNAL(pressed()), mudlet::self() , SLOT(slot_stopAllTriggers()));*/
+    
     
     layoutLayer2->addWidget( mpCommandLine );
     layoutLayer2->addWidget( timeStampButton );

@@ -77,6 +77,7 @@ TBuffer::TBuffer( Host * pH )
 , mCursorMoved( false )
 , mWrapAt( 100 )
 , mWrapIndent( 5 )
+, mLinesLimit( 1000 )
 {   
     buffer.clear();
     lineBuffer.clear();
@@ -100,6 +101,13 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
+    if( buffer.size() > mLinesLimit )
+    {
+        while( buffer.size() > mLinesLimit )
+        {
+            deleteLine( 0 );
+        }
+    }
     for( int i=0; i<text.size(); i++ )
     {
         int last = buffer.size()-1;

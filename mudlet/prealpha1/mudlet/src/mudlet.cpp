@@ -226,6 +226,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
     mdiArea->addSubWindow( pConsole );
     
     pConsole->show();
+    connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
     mdiArea->show();
     
     dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH );
