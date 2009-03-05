@@ -482,8 +482,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 
 void TTextEdit::paintEvent( QPaintEvent* e )
 {
-    QTime time;
-    time.start();
+    //QTime time;
+    //time.start();
     
     QPainter painter( this );
     
@@ -491,7 +491,7 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     drawBackground( painter, rect, palette().base().color() );
     drawForeground( painter, rect );
     
-    cout << "frame render time: " << time.elapsed()<<" milliseconds"<<endl;
+    //cout << "frame render time: " << time.elapsed()<<" milliseconds"<<endl;
 }
 
 void TTextEdit::highlight()

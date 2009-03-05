@@ -77,7 +77,7 @@ TBuffer::TBuffer( Host * pH )
 , mCursorMoved( false )
 , mWrapAt( 100 )
 , mWrapIndent( 5 )
-, mLinesLimit( 1000 )
+, mLinesLimit( 100000 )
 {   
     buffer.clear();
     lineBuffer.clear();
@@ -103,7 +103,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
 {
     if( buffer.size() > mLinesLimit )
     {
-        while( buffer.size() > mLinesLimit )
+        while( buffer.size() > mLinesLimit-10000 )
         {
             deleteLine( 0 );
         }

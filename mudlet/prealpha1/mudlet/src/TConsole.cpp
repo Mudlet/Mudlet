@@ -139,6 +139,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layer2->setMaximumHeight(31);
     QHBoxLayout * layoutLayer2 = new QHBoxLayout( layer2 );
     layoutLayer2->setMargin(0);
+    layoutLayer2->setSpacing(0);
     
     QPushButton * timeStampButton = new QPushButton;
     timeStampButton->setCheckable( true );
