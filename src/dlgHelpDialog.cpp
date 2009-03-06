@@ -20,13 +20,13 @@
 
 #include "dlgHelpDialog.h"
 #include <QDir>
+#include "TDebug.h"
 
 dlgHelpDialog::dlgHelpDialog(QWidget * parent) : QMainWindow(parent)
 {
     setupUi(this);
-    QString home = QDir::homePath();
-    webView->load(QUrl(QString("file:///usr/local/share/mudlet/mudlet_documentation.html")));
-   
-    
+    QString home = QString("file:///")+QDir::homePath()+"/.config/mudlet/mudlet_documentation.html";
+
+    webView->load(QUrl(home));
 }
 
