@@ -61,23 +61,12 @@ mudlet::mudlet()
 : QMainWindow() //Ui::MainWindow()
 {
     setContentsMargins(0,0,0,0);
-    //setupUi(this);
     mudlet::debugMode = false;
     QVBoxLayout * layout = new QVBoxLayout( this );
     layout->setContentsMargins(0,0,0,0);
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     
-    
     mpMainToolBar = new QToolBar( this );
-    
-    QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
-    if( file_use_smallscreen.exists() )
-        mpMainToolBar->setIconSize(QSize(8,8));
-    else
-    {
-        mpMainToolBar->setIconSize(QSize(32,32));
-        mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
-    }
     
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
@@ -91,6 +80,18 @@ mudlet::mudlet()
     layout->addWidget(mdiArea);
     setCentralWidget( mdiArea );
 
+    QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
+    if( file_use_smallscreen.exists() )
+    {
+        mpMainToolBar->setIconSize(QSize(16,16));
+        mdiArea->setTabPosition( QTabWidget::East );
+        mdiArea->setTabShape( QTabWidget::Triangular );
+    }
+    else
+    {
+        mpMainToolBar->setIconSize(QSize(32,32));
+        mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+    }
     
     QAction * actionConnect = new QAction(QIcon(":/icons/preferences-web-browser-cache.png"), tr("Connect"), this);
     actionConnect->setStatusTip(tr("Connect To Server"));

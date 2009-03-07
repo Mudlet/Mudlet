@@ -120,6 +120,9 @@ public:
     bool             mButtonFlat;
     int              mSizeX;
     int              mSizeY;
+    bool             mIsLabel;
+    bool             mUseCustomLayout;
+
     
 private:
     

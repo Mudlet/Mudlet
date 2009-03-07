@@ -826,6 +826,7 @@ void XMLimport::readActionGroup( TAction * pParent )
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
     pT->mButtonFlat = ( attributes().value("isFlatButton") == "yes" );
+    pT->mUseCustomLayout = ( attributes().value("useCustomLayout") == "yes" );
 
     while( ! atEnd() ) 
     {

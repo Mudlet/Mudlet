@@ -45,7 +45,12 @@ TAction::TAction( TAction * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
-, mButtonColumns( 0 )
+, mButtonColumns( 1 )
+, mIsLabel( false )
+, mUseCustomLayout( false )
+, mPosX( 0 )
+, mPosY( 0 )
+, mButtonColor( QColor( 255,255,255) )
 {
 } 
 
@@ -55,7 +60,12 @@ TAction::TAction( QString name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
-, mButtonColumns( 0 )
+, mButtonColumns( 1 )
+, mIsLabel( false )
+, mUseCustomLayout( false )
+, mPosX( 0 )
+, mPosY( 0 )
+, mButtonColor( QColor( 255,255,255) )
 {
 }
 
@@ -136,16 +146,14 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
-       
-       //QSizePolicy sizePolicy( QSizePolicy::Minimum, QSizePolicy::Minimum);
-       //button->setSizePolicy( sizePolicy );
        button->setIcon( icon );
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
-      
+       button->setFlat( mButtonFlat );
        pT->addButton( button );
        QPalette palette;
        palette.setColor( QPalette::Button, button->mpTAction->mButtonColor );
+       palette.setColor( QPalette::Base, button->mpTAction->mButtonColor );
        button->setPalette( palette );
        
        if( pChild->mIsFolder )
@@ -176,11 +184,6 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
     {
         QMenu * newMenu = new QMenu( pMainWindow );
         action->setMenu( newMenu );
-        /*QWidget * pButton = pT->widgetForAction( action );
-        if( pButton )
-        {
-            ((QToolButton*)pButton)->setPopupMode( QToolButton::InstantPopup );
-        } */
         
         typedef list<TAction *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)

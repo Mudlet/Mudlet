@@ -1755,9 +1755,7 @@ void dlgTriggerEditor::slot_saveAliasAfterEdit()
 
 void dlgTriggerEditor::slot_saveActionAfterEdit()
 {
-    
     QString name = mpActionsMainArea->lineEdit_action_name->text();
-    
     QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
     QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
@@ -1765,12 +1763,15 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
     QColor color = mpActionsMainArea->pushButton_color->palette().color(QPalette::Button);
     int sizeX = mpActionsMainArea->buttonSizeX->text().toInt();
     int sizeY = mpActionsMainArea->buttonSizeY->text().toInt();
+    int posX = mpActionsMainArea->buttonPosX->text().toInt();
+    int posY = mpActionsMainArea->buttonPosY->text().toInt();
     int rotation = mpActionsMainArea->buttonRotation->currentIndex();
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
     bool flatButton = mpActionsMainArea->buttonFlat->isChecked();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     int location = mpActionsMainArea->comboBox_location->currentIndex();
     int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();    
+    bool useCustomLayout = mpActionsMainArea->useCustomLayout->isChecked();
     QTreeWidgetItem * pItem = treeWidget_actions->currentItem(); 
     if( pItem )
     {
@@ -1791,7 +1792,11 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
             pT->setButtonRotation( rotation );
             pT->setButtonColumns( columns );
             pT->setButtonFlat( flatButton );
-            
+            pT->mUseCustomLayout = useCustomLayout;
+            pT->mPosX = posX;
+            pT->mPosY = posY;
+            pT->mSizeX = sizeX;
+            pT->mSizeY = sizeY;
             QIcon icon;
             if( pT->isFolder() )
             {
@@ -2047,7 +2052,6 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
 {
     slot_show_actions();
     mpCurrentActionItem = pItem; //remember what has been clicked to save it 
-    //mpActionsMainArea->lineEdit_action_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAction * pT = mpHost->getActionUnit()->getAction(ID);
     if( pT )
@@ -2069,6 +2073,22 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpActionsMainArea->buttonFlat->setChecked( pT->getButtonFlat() );
         mpActionsMainArea->buttonSizeX->setText(QString::number(pT->getSizeX()) );
         mpActionsMainArea->buttonSizeY->setText(QString::number(pT->getSizeY()) );
+        mpActionsMainArea->isLabel->setChecked( pT->mIsLabel );
+        mpActionsMainArea->useCustomLayout->setChecked( pT->mUseCustomLayout );
+        mpActionsMainArea->buttonPosX->setText( QString::number(pT->mPosX) );
+        mpActionsMainArea->buttonPosY->setText( QString::number(pT->mPosY) );
+        mpActionsMainArea->buttonSizeX->setText( QString::number(pT->mSizeX) );
+        mpActionsMainArea->buttonSizeY->setText( QString::number(pT->mSizeY) );
+        if( ! pT->getParent() )
+        {
+            mpActionsMainArea->groupBox_toolBar->show();
+            mpActionsMainArea->groupBox_appearance->hide();
+        }
+        else
+        {
+            mpActionsMainArea->groupBox_toolBar->hide();
+            mpActionsMainArea->groupBox_appearance->show();
+        }
     }
 }
 

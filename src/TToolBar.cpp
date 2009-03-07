@@ -32,18 +32,29 @@ TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
 , mName( name )
 , mVerticalOrientation( false )
 , mRecordMove( false )
-, mpLayout( new QGridLayout( mpWidget ) )
+, mpLayout( 0 )
 , mItemCount( 0 )
 
 {
     setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
     setWidget( mpWidget );
-    setContentsMargins(0,0,0,0);
-   
-    mpLayout->setContentsMargins(0,0,0,0);
-    mpLayout->setSpacing(0);
-    QSizePolicy sizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred);
-    mpWidget->setSizePolicy( sizePolicy );
+    mpWidget->setAutoFillBackground(true);
+
+    QPalette palette;
+    palette.setColor( QPalette::Base, mpTAction->mButtonColor );
+    widget()->setPalette( palette );
+    setPalette( palette );
+    mpWidget->setBackgroundRole(QPalette::Base);
+
+    if( ! mpTAction->mUseCustomLayout )
+    {
+        mpLayout = new QGridLayout( mpWidget );
+        setContentsMargins(0,0,0,0);
+        mpLayout->setContentsMargins(0,0,0,0);
+        mpLayout->setSpacing(0);
+        QSizePolicy sizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred);
+        mpWidget->setSizePolicy( sizePolicy );
+    }
     QWidget * test = new QWidget;
     setTitleBarWidget(test);
 }
@@ -61,13 +72,25 @@ void TToolBar::moveEvent( QMoveEvent * e )
 
 void TToolBar::addButton( TFlipButton * pB )
 {
-    QSize size = pB->minimumSizeHint();
-    if( pB->mpTAction->getButtonRotation() > 0 )
+    if( ! mpTAction->mUseCustomLayout )
     {
-        size.transpose();
+        QSize size = pB->minimumSizeHint();
+        if( pB->mpTAction->getButtonRotation() > 0 )
+        {
+            size.transpose();
+        }
+        pB->setMaximumSize( size );
+        pB->setMinimumSize( size );
     }
-    pB->setMaximumSize( size );
-    pB->setMinimumSize( size );
+    else
+    {
+        QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY );
+        pB->setMaximumSize( size );
+        pB->setMinimumSize( size );
+        pB->setParent( mpWidget );
+        pB->setGeometry( pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->mSizeX, pB->mpTAction->mSizeY );
+    }
+
     pB->setFlat( pB->mpTAction->getButtonFlat() );
     int rotation = pB->mpTAction->getButtonRotation();
     switch( rotation )
@@ -77,34 +100,40 @@ void TToolBar::addButton( TFlipButton * pB )
         case 2: pB->setOrientation( Qt::Vertical ); pB->setMirrored( true ); break;
     }  
     
-    // tool bar mButtonColumns > 0 -> autolayout
-    // case == 0: use individual button placment for user defined layouts
-    int columns = mpTAction->getButtonColumns();
-    if( columns <= 0 ) columns = 1;
-    if( columns > 0 )
+    if( ! mpTAction->mUseCustomLayout )
     {
-        mItemCount++;
-        int row = mItemCount / columns;
-        int col = mItemCount % columns;
-        if( mVerticalOrientation ) 
+        // tool bar mButtonColumns > 0 -> autolayout
+        // case == 0: use individual button placment for user defined layouts
+        int columns = mpTAction->getButtonColumns();
+        if( columns <= 0 ) columns = 1;
+        if( columns > 0 )
         {
-            mpLayout->addWidget( pB, row, col );
-        }
-        else
-        {
-            mpLayout->addWidget( pB, col, row ); 
+            mItemCount++;
+            int row = mItemCount / columns;
+            int col = mItemCount % columns;
+            if( mVerticalOrientation )
+            {
+                mpLayout->addWidget( pB, row, col );
+            }
+            else
+            {
+                mpLayout->addWidget( pB, col, row );
+            }
         }
     }
     else
     {
-        std::cout << "TToolBar::addButton() columns bei toolbar=0"<<std::endl;
-        //TODO: use row / col defined by the button -> need to define row in buttons    
+        pB->move( pB->mpTAction->mPosX, pB->mpTAction->mPosY );
     }
     connect( pB, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
 }
 
 void TToolBar::finalize()
 {
+    if( mpTAction->mUseCustomLayout )
+    {
+        return;
+    }
     QWidget * fillerWidget = new QWidget;
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding );
     fillerWidget->setSizePolicy( sizePolicy );
@@ -145,14 +174,24 @@ void TToolBar::clear()
     mpWidget->deleteLater();
     mpWidget = pW;
    
-    mpLayout = new QGridLayout( mpWidget );
-    mpLayout->setContentsMargins(0,0,0,0);
-    mpLayout->setSpacing(0);
-    QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    mpWidget->setSizePolicy( sizePolicy );
-    
+    if( ! mpTAction->mUseCustomLayout )
+    {
+        mpLayout = new QGridLayout( mpWidget );
+        mpLayout->setContentsMargins(0,0,0,0);
+        mpLayout->setSpacing(0);
+        QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
+        mpWidget->setSizePolicy( sizePolicy );
+    }
+    else
+        mpLayout = 0;
+    mpWidget->setAutoFillBackground( true );
+    QPalette palette;
+    palette.setColor( QPalette::Base, mpTAction->mButtonColor );
+    mpWidget->setPalette( palette );
+    setPalette( palette );
+    mpWidget->setBackgroundRole( QPalette::Base );
     QWidget * test = new QWidget;
-    setTitleBarWidget(test);
+    setTitleBarWidget( test );
     
     mudlet::self()->removeDockWidget( this );
 }

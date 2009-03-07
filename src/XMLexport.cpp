@@ -346,6 +346,7 @@ bool XMLexport::writeAction( TAction * pT )
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isPushButton", pT->mIsPushDownButton ? "yes" : "no" );
     writeAttribute( "isFlatButton", pT->mButtonFlat ? "yes" : "no" );
+    writeAttribute( "useCustomLayout", pT->mUseCustomLayout ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
