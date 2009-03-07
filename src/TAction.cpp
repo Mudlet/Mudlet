@@ -121,6 +121,9 @@ void TAction::execute(QStringList & list)
         QString funcName = QString("Action") + QString::number( mID ); 
         pL->call( funcName, mName );
     }
+    // move focus back to the active console / command line
+    mpHost->mpConsole->activateWindow();
+    mpHost->mpConsole->setFocus();
 }
 
 void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )

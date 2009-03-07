@@ -466,3 +466,14 @@ function table.unpickle( t, tables, tcopy, pickled )
 end
 
 
+-- Replaces the given wildcard (as a number) with the given text.
+--
+-- -- Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
+function replaceWildcard(what, replacement)
+    if replacement == nil or what == nil then 
+        return 
+    end
+    selectCaptureGroup(what)
+    replace(replacement)
+end
+

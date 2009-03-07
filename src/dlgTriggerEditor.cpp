@@ -265,12 +265,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( addFolderAction, SIGNAL(triggered()), this, SLOT( slot_add_new_folder()));
     
     QAction * showSearchAreaAction = new QAction(QIcon(":/icons/edit-find-user.png"), tr("Search"), this);
-    showSearchAreaAction->setShortcut(tr("Ctrl+S"));
+    //showSearchAreaAction->setShortcut(tr("Ctrl+F"));
     showSearchAreaAction->setStatusTip(tr("Show Search Results List"));
     connect( showSearchAreaAction, SIGNAL(triggered()), this, SLOT( slot_show_search_area()));
     
     QAction * saveAction = new QAction(QIcon(":/icons/document-save-as.png"), tr("Save"), this);
-    saveAction->setShortcut(tr("Ctrl+A"));
+    saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setStatusTip(tr("Save Edited Trigger, Script, Alias etc. If information has been edited, it must be saved or the changes will be lost."));
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
     
