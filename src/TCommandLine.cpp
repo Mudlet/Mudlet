@@ -188,23 +188,26 @@ void TCommandLine::focusOutEvent( QFocusEvent * event )
 void TCommandLine::enterCommand( QKeyEvent * event )
 {
     mpHost->send( text() );
-    mHistoryBuffer = 0;
-    setPalette( mRegularPalette );
-    
-    mHistoryList.push_front( text() );
-    QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
-    
-    QMap<QString, int> tmpMap;
-    for( int i=0; i<commandList.size(); i++ )
+    if( text().size() > 0 )
     {
-        tmpMap.insert( commandList[i], i );
-    }
-    commandList.clear();
-    commandList = tmpMap.uniqueKeys();
-    if( commandList.size() == 0 ) mpHost->send( "" );
-    for( int i=0; i<commandList.size(); i++ )
-    {
-        mHistoryMap[ commandList[i] ] = 0;
+        mHistoryBuffer = 0;
+        setPalette( mRegularPalette );
+
+        mHistoryList.push_front( text() );
+        QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
+
+        QMap<QString, int> tmpMap;
+        for( int i=0; i<commandList.size(); i++ )
+        {
+            tmpMap.insert( commandList[i], i );
+        }
+        commandList.clear();
+        commandList = tmpMap.uniqueKeys();
+        if( commandList.size() == 0 ) mpHost->send( "" );
+        for( int i=0; i<commandList.size(); i++ )
+        {
+            mHistoryMap[ commandList[i] ] = 0;
+        }
     }
     mAutoCompletionTyped = "";
     mAutoCompletion = false;

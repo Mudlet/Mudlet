@@ -192,8 +192,8 @@ void cTelnet::handle_socket_signal_disconnected()
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
-				if(!hostInfo.addresses().isEmpty()) 
-				{
+    if(!hostInfo.addresses().isEmpty())
+    {
         mHostAddress = hostInfo.addresses().first();
         QString msg	= "\nThe IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
         postMessage( msg );
@@ -203,7 +203,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     }
     else
     {
-    				QString msg = "\nHost name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.";
+        QString msg = "\nHost name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.";
         postMessage( msg );
         return;
     }
@@ -211,9 +211,13 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 
 bool cTelnet::sendData( QString & data )
 {
-    data.replace(QChar('\n'),"");
+    while( data.indexOf("\n") != -1 )
+    {
+        data.replace(QChar('\n'),"");
+    }
     string outdata = (outgoingDataCodec->fromUnicode(data)).data();
     outdata += "\r\n";
+    cout<<"OUT:<"<<outdata<<">"<<endl;
     return socketOutRaw(outdata);
 }
 

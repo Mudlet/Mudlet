@@ -67,6 +67,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mpScrollBar( new QScrollBar )
 , emergencyStop( new QPushButton )
 , layerCommandLine( 0 )
+, mLogFileName(QString(""))
+, mLogToLogFile( false )
 {
     if( mIsDebugConsole )
     {
@@ -161,6 +163,14 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     timeStampButton->setIcon( icon );
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
     
+    QPushButton * logButton = new QPushButton;
+    logButton->setCheckable( true );
+    logButton->setToolTip("start logging MUD output to log file");
+    QIcon icon3(":/icons/folder-downloads.png");
+    logButton->setIcon( icon3 );
+    connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
+
+
     QIcon icon2(":/icons/edit-bomb.png");
     emergencyStop->setIcon( icon2 );
     emergencyStop->setCheckable( true );
@@ -168,6 +178,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     
     layoutLayer2->addWidget( mpCommandLine );
     layoutLayer2->addWidget( timeStampButton );
+    layoutLayer2->addWidget( logButton );
     layoutLayer2->addWidget( emergencyStop );
     
     layout->addWidget( layer );
@@ -206,21 +217,43 @@ void TConsole::closeEvent( QCloseEvent *event )
             }
             QFile file_xml( filename_xml );
             if ( file_xml.open( QIODevice::WriteOnly ) )
-         			{
-	            			XMLexport writer( mpHost );
-				            writer.exportHost( & file_xml );
+            {
+                XMLexport writer( mpHost );
+                writer.exportHost( & file_xml );
                 file_xml.close();
-			         }
-			         else
-			         {
-				            QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-			         }
-            
+            }
+            else
+            {
+                QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+            }
         }
     }
     event->accept();
 }
 
+void TConsole::slot_toggleLogging()
+{
+    mLogToLogFile = ! mLogToLogFile;
+    if( mLogToLogFile )
+    {
+        QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
+        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".html";
+        QDir dirLogFile;
+        if( ! dirLogFile.exists( directoryLogFile ) )
+        {
+            dirLogFile.mkpath( directoryLogFile );
+        }
+        mLogFile.setFileName( mLogFileName );
+        mLogFile.open( QIODevice::WriteOnly );
+        mLogStream.setDevice( &mLogFile );
+        mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
+    }
+    else
+    {
+        mLogStream << "</pre></body></html>";
+        mLogFile.close();
+    }
+}
 
 void TConsole::changeColors()
 {
@@ -717,7 +750,11 @@ void TConsole::translateToPlainText( QString & s )
 void TConsole::printOnDisplay( QString & incomingSocketData )  
 {   
     QString prompt ="";//FIXME
-    
+    if( mLogToLogFile )
+    {
+        QString log = incomingSocketData;
+        mLogStream << logger_translate( log );
+    }
     int lineBeforeNewContent = buffer.getLastLineNumber();
     translateToPlainText( incomingSocketData );
     
@@ -738,6 +775,230 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     console->showNewLines();
     console2->showNewLines();
 }
+
+QString TConsole::assemble_html_font_specs()
+{
+    QString s;
+    s = "</span><span style=\"";
+    if( m_LoggerfontSpecs.m_fgColorHasChanged )
+    {
+        s+="color: rgb("+
+            QString::number(m_LoggerfontSpecs.fgColor.red())+","+
+            QString::number(m_LoggerfontSpecs.fgColor.green())+","+
+            QString::number(m_LoggerfontSpecs.fgColor.blue()) + ");";
+    }
+    if( m_LoggerfontSpecs.m_bgColorHasChanged )
+    {
+        s += " background: rgb("+
+            QString::number(m_LoggerfontSpecs.bgColor.red())+","+
+            QString::number(m_LoggerfontSpecs.bgColor.green())+","+
+            QString::number(m_LoggerfontSpecs.bgColor.blue()) +");";
+    }
+    s += " font-weight: " + m_LoggerfontSpecs.getFontWeight() +
+        "; font-style: " + m_LoggerfontSpecs.getFontStyle() +
+        "; font-decoration: " + m_LoggerfontSpecs.getFontDecoration() +
+        "\">";
+    return s;
+}
+
+void TConsole::logger_set_text_properties( QString tags )
+{
+    switch( tags.toInt() )
+    {
+    case 0:
+        m_LoggerfontSpecs.reset();
+        break;
+    case 1:
+        m_LoggerfontSpecs.bold = true;
+        break;
+    case 2:
+        m_LoggerfontSpecs.bold = false;
+        break;
+    case 3:
+        m_LoggerfontSpecs.italics = true;
+        break;
+    case 4:
+        m_LoggerfontSpecs.underline = true;
+    case 5:
+        break; //FIXME support blinking
+    case 6:
+        break; //FIXME support fast blinking
+    case 7:
+        break; //FIXME support inverse
+    case 9:
+        break; //FIXME support strikethrough
+    case 22:
+        m_LoggerfontSpecs.bold = false;
+        break;
+    case 23:
+        m_LoggerfontSpecs.italics = false;
+        break;
+    case 24:
+        m_LoggerfontSpecs.underline = false;
+        break;
+    case 27:
+        break; //FIXME inverse off
+    case 29:
+        break; //FIXME
+    case 30:
+        m_LoggerfontSpecs.fgColor = mpHost->mBlack;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightBlack;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 31:
+        m_LoggerfontSpecs.fgColor = mpHost->mRed;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightRed;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 32:
+        m_LoggerfontSpecs.fgColor = mpHost->mGreen;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightGreen;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 33:
+        m_LoggerfontSpecs.fgColor = mpHost->mYellow;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightYellow;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 34:
+        m_LoggerfontSpecs.fgColor = mpHost->mBlue;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightBlue;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 35:
+        m_LoggerfontSpecs.fgColor = mpHost->mMagenta;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightMagenta;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 36:
+        m_LoggerfontSpecs.fgColor = mpHost->mCyan;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightCyan;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 37:
+        m_LoggerfontSpecs.fgColor = mpHost->mWhite;
+        m_LoggerfontSpecs.fgColorLight = mpHost->mLightWhite;
+        m_LoggerfontSpecs.fg_color_change();
+        break;
+    case 39:
+        m_LoggerfontSpecs.bgColor = mpHost->mBgColor;//mWhite
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 40:
+        m_LoggerfontSpecs.bgColor = mpHost->mBlack;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 41:
+        m_LoggerfontSpecs.bgColor = mpHost->mRed;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 42:
+        m_LoggerfontSpecs.bgColor = mpHost->mGreen;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 43:
+        m_LoggerfontSpecs.bgColor = mpHost->mYellow;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 44:
+        m_LoggerfontSpecs.bgColor = mpHost->mBlue;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 45:
+        m_LoggerfontSpecs.bgColor = mpHost->mMagenta;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 46:
+        m_LoggerfontSpecs.bgColor = mpHost->mCyan;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    case 47:
+        m_LoggerfontSpecs.bgColor = mpHost->mWhite;
+        m_LoggerfontSpecs.bg_color_change();
+        break;
+    };
+}
+
+
+QString TConsole::logger_translate( QString & s )
+{
+     /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
+      -----------------------------------------
+      0 reset
+      1 intensity bold on
+      2 intensity faint
+      3 italics on
+      4 underline on
+      5 blink slow
+      6 blink fast
+      7 inverse on
+      9 strikethrough
+      22 intensity normal (not bold, not faint)
+      23 italics off
+      24 underline off
+      27 inverse off
+      28 strikethrough off
+      30 fg black
+      31 fg red
+      32 fg green
+      33 fg yellow
+      34 fg blue
+      35 fg magenta
+      36 fg cyan
+      37 fg white
+      39 bg default white
+      40 bg black
+      41 bg red
+      42 bg green
+      43 bg yellow
+      44 bg blue
+      45 bg magenta
+      46 bg cyan
+      47 bg white
+      49 bg black     */
+
+
+    //s.replace(QChar('\\'), "\\\\");
+    s.replace(QChar('\n'), "<br />");
+    s.replace(QChar('\t'), "     ");
+    int sequence_begin = 0;
+    int sequence_end = 0;
+    QString sequence;
+    while( (sequence_begin = s.indexOf(QString("\033["),0) ) != -1 )
+    {
+        sequence_end = s.indexOf(QChar('m'),sequence_begin);
+        int sequence_length = abs(sequence_begin - sequence_end )+1;
+        if( sequence_end != -1 )
+        {
+            sequence = s.mid(sequence_begin+2,sequence_length-3); // weil 3 elemente ausgelassen werden
+            QStringList textPropertyList;
+            if( sequence.indexOf(QChar(';'),0) )
+            {
+                textPropertyList = sequence.split(QChar(';'),QString::SkipEmptyParts);
+            }
+            else
+            {
+                textPropertyList << sequence;
+            }
+            for( int i=0; i<textPropertyList.size(); i++ )
+            {
+                m_LoggerfontSpecs.m_fgColorHasChanged = false;
+                m_LoggerfontSpecs.m_bgColorHasChanged = false;
+                logger_set_text_properties(textPropertyList[i]);
+                //            qDebug()<<"set property:"<<textPropertyList[i];
+            }
+            QString html_tags = assemble_html_font_specs();
+            s.replace(sequence_begin,sequence_length,html_tags);
+        }
+        else
+        {
+            break; // sequenzende befindet sich im naechsten tcp/ip packet
+        }
+    }
+
+    return s;
+}
+
 
 void TConsole::scrollDown( int lines )
 {

@@ -102,7 +102,40 @@ public:
     Host * mpHost;
 };
 
+class TFontSpecsLogger
+{
+public:
+    TFontSpecsLogger(){ reset(); }
+    QString getFontWeight()
+    {
+        if(bold)
+        {
+            return QString("bold");
+        }
+        else return QString("normal");
+    }
+    QString getFontStyle(){ return (italics) ? QString("italics") : QString("normal");}
+    QString getFontDecoration(){ return (underline) ? QString("underline") : QString("normal");}
+    void reset()
+    {
+        bold = false;
+        italics = false;
+        underline = false;
+        m_bgColorHasChanged = false;
+        m_fgColorHasChanged = false;
+    }
+    void bg_color_change(){ m_bgColorHasChanged=true; }
+    void fg_color_change(){ m_fgColorHasChanged=true; }
+    QColor fgColor;
+    QColor fgColorLight;
+    QColor bgColor;
+    bool m_bgColorHasChanged;
+    bool m_fgColorHasChanged;
+    bool bold;
+    bool italics;
+    bool underline;
 
+};
 
 class TConsole : public QWidget 
 {
@@ -168,6 +201,8 @@ private:
       //std::string       getCurrentTime();
       void              translateToPlainText( QString & );
       QString           translate( QString & );
+      QString           logger_translate( QString & );
+      void              logger_set_text_properties( QString );
       void              set_text_properties( int formatPropertyCode );  
       QString           assemble_html_font_specs();
       QString           mCurrentLine;
@@ -184,6 +219,7 @@ private:
       bool              mIsHighColorMode;
       bool              isUserScrollBack;
       TFontSpecs        m_fontSpecs;
+      TFontSpecsLogger  m_LoggerfontSpecs;
       int               currentFgColorProperty;
       QString           mFormatSequenceRest;
       QFont             mDisplayFont;
@@ -199,7 +235,10 @@ private:
       TChar             mFormatCurrent;
       TChar             mFormatBasic;
       TChar             mFormatSystemMessage;
-  
+      QFile             mLogFile;
+      QTextStream       mLogStream;
+      bool              mLogToLogFile;
+      QString           mLogFileName;
       
 
 signals:
@@ -207,6 +246,7 @@ signals:
     
 public slots:    
       
+      void              slot_toggleLogging();
       void              slot_user_scrolling( int );
       
 };
