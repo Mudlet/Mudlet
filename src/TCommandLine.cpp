@@ -241,7 +241,7 @@ void TCommandLine::handleTabCompletion( bool direction )
     QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( 50 );
     QString buffer = bufferList.join("");
     buffer.replace(QChar('\n'), "" );
-    QStringList wordList = buffer.split( QRegExp( "\\W+" ), QString::SkipEmptyParts );
+    QStringList wordList = buffer.split( QRegExp( " " ), QString::SkipEmptyParts );
     if( direction )
     {
         mTabCompletionCount++;
@@ -253,7 +253,7 @@ void TCommandLine::handleTabCompletion( bool direction )
     if( wordList.size() > 0 )
     {
         if( mTabCompletionTyped.endsWith(" ") ) return;
-        QStringList typedList = mTabCompletionTyped.split( QRegExp( "\\W+" ), QString::SkipEmptyParts );
+        QStringList typedList = mTabCompletionTyped.split( QRegExp( " " ), QString::SkipEmptyParts );
         QString lastWord;
         if( typedList.size() > 1 )
         {
@@ -264,7 +264,7 @@ void TCommandLine::handleTabCompletion( bool direction )
             lastWord = mTabCompletionTyped;
         }
         //TODO: speed optimization
-        QStringList filterList = wordList.filter( QRegExp( "\\b"+lastWord+".*",Qt::CaseInsensitive  ) );
+        QStringList filterList = wordList.filter( QRegExp( "^"+lastWord+"\\w+",Qt::CaseInsensitive  ) );
         QMap<QString, int> propsalMap;
         for( int i=0; i<filterList.size(); i++ )
         {
@@ -283,6 +283,7 @@ void TCommandLine::handleTabCompletion( bool direction )
                 if( typedList.size() > 0 ) typedList.pop_back();
                 QString userWords = typedList.join(" ");
                 setText( QString( userWords + " " + proposal ).trimmed() );
+                //setSelection( text().size()-proposal.size()+lastWord.size(), text().size() );
             }
         }
     }
@@ -297,26 +298,24 @@ void TCommandLine::handleTabCompletion( bool direction )
 void TCommandLine::handleAutoCompletion()
 {
     QString neu = text();
-    neu.chop(selectedText().size());
-    setText(neu);
+    neu.chop( selectedText().size() );
+    setText( neu );
     qDebug()<<"after chop text=<"<<text()<<">";
     int oldLength = text().size();
-    QStringList filterList;
-    for( int i=0; i<mHistoryList.size(); i++ )
+    qDebug()<<"historyList="<<mHistoryList;
+    for( int i=mAutoCompletionCount+1; i<mHistoryList.size(); i++ )
     {
-        if( text() == mHistoryList[i].mid(0,text().size()) )    
+        if( text() == mHistoryList[i].mid( 0, text().size() ) )
         {
-            if( mHistoryList[i].size() > text().size() )
+            if( mLastCompletion == mHistoryList[i] )
             {
-                if( mLastCompletion == mHistoryList[i] )
-                {
-                    continue;
-                }
-                mLastCompletion = mHistoryList[i];
-                setText( mHistoryList[i] );
-                setSelection( oldLength, text().size() );
-                return;
+                continue;
             }
+            mAutoCompletionCount = i;
+            mLastCompletion = mHistoryList[i];
+            setText( mHistoryList[i] );
+            setSelection( oldLength, text().size() );
+            return;
         }
     }
 }

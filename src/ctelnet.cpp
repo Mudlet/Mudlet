@@ -217,7 +217,7 @@ bool cTelnet::sendData( QString & data )
     }
     string outdata = (outgoingDataCodec->fromUnicode(data)).data();
     outdata += "\r\n";
-    cout<<"OUT:<"<<outdata<<">"<<endl;
+    //cout<<"OUT:<"<<outdata<<">"<<endl;
     return socketOutRaw(outdata);
 }
 
