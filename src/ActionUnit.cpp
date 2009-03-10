@@ -216,9 +216,6 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
             pTB->setHorizontalOrientation();
         }
         constructToolbar( *it, mudlet::self(), pTB );
-        QPalette palette;
-        palette.setColor( QPalette::Base, (*it)->mButtonColor );
-        pTB->mpWidget->setPalette( palette );
         (*it)->mpToolBar = pTB;
     }    
     
@@ -295,11 +292,6 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
     }
     else
         pTB->show();
-    QPalette palette;
-    palette.setColor( QPalette::Base, pTB->mpTAction->mButtonColor );
-    palette.setColor( QPalette::Background, pTB->mpTAction->mButtonColor );
-    palette.setColor( QPalette::Button, pTB->mpTAction->mButtonColor );
-    pTB->mpWidget->setPalette( palette );
 }
 
 void ActionUnit::updateToolbar()

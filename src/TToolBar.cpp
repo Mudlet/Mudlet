@@ -38,13 +38,13 @@ TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
 {
     setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
     setWidget( mpWidget );
-    mpWidget->setAutoFillBackground(true);
+    /*mpWidget->setAutoFillBackground(true);
 
     QPalette palette;
     palette.setColor( QPalette::Base, mpTAction->mButtonColor );
     widget()->setPalette( palette );
     setPalette( palette );
-    mpWidget->setBackgroundRole(QPalette::Base);
+    mpWidget->setBackgroundRole(QPalette::Base);*/
 
     if( ! mpTAction->mUseCustomLayout )
     {
@@ -58,6 +58,7 @@ TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
     QWidget * test = new QWidget;
     setTitleBarWidget(test);
     setStyleSheet("background-color:transparent");
+    mpWidget->setStyleSheet("background-color:transparent");
 }
 
 void TToolBar::moveEvent( QMoveEvent * e )
@@ -185,13 +186,15 @@ void TToolBar::clear()
     }
     else
         mpLayout = 0;
-    mpWidget->setAutoFillBackground( true );
+   /* mpWidget->setAutoFillBackground( true );
     QPalette palette;
     palette.setColor( QPalette::Base, mpTAction->mButtonColor );
     mpWidget->setPalette( palette );
     setPalette( palette );
-    mpWidget->setBackgroundRole( QPalette::Base );
+    mpWidget->setBackgroundRole( QPalette::Base );*/
     QWidget * test = new QWidget;
+    setStyleSheet("background-color:transparent");
+    mpWidget->setStyleSheet("background-color:transparent");
     setTitleBarWidget( test );
     
     mudlet::self()->removeDockWidget( this );
