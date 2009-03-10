@@ -297,6 +297,8 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
         pTB->show();
     QPalette palette;
     palette.setColor( QPalette::Base, pTB->mpTAction->mButtonColor );
+    palette.setColor( QPalette::Background, pTB->mpTAction->mButtonColor );
+    palette.setColor( QPalette::Button, pTB->mpTAction->mButtonColor );
     pTB->mpWidget->setPalette( palette );
 }
 

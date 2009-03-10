@@ -24,10 +24,12 @@
 #include <QtGui>
 #include "Host.h"
 #include "HostManager.h"
+#include "TDebug.h"
 
 TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
 {
     setSelectionMode( QAbstractItemView::SingleSelection );
+    setSelectionBehavior( QAbstractItemView::SelectRows );
     setDragEnabled( true );
     setAcceptDrops( true );
     setDropIndicatorShown( true );
@@ -112,11 +114,11 @@ void TTreeWidget::setHost( Host * pH )
 
 void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end )
 {
-    qDebug()<<"rowsAboutToBeRemoved";
+    //TDebug()<<"rowsAboutToBeRemoved">>0;
     if( parent.isValid() )
     {
         mOldParentID = parent.data( Qt::UserRole ).toInt();
-        qDebug()<<"mOldParentID="<<mOldParentID;
+        //TDebug()<<"mOldParentID="<<mOldParentID>>0;
     }
     else 
         mOldParentID = 0;
@@ -130,7 +132,7 @@ void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, i
     {
         QModelIndex child = parent.child( start, 0 );
         mChildID = child.data( Qt::UserRole ).toInt();
-        qDebug()<<"mChildID="<<mChildID;
+        //TDebug()<<"mChildID="<<mChildID>>0;
         if( mChildID == 0 )
         {
             if( parent.isValid() )
@@ -145,7 +147,7 @@ void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, i
                 mChildID = 0;
         }
     }
-    QTreeWidget::rowsAboutToBeRemoved( parent, start, end );
+    //QTreeWidget::rowsAboutToBeRemoved( parent, start, end );
 }
 
 
@@ -159,7 +161,7 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
             mChildID = parent.model()->index( start, 0 ).data( Qt::UserRole ).toInt();
         }
         int newParentID = parent.data( Qt::UserRole ).toInt();
-        
+        //TDebug()<<"rowsInserted() newParentID="<<newParentID>>0;
         if( mIsTriggerTree ) 
             mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID );
         if( mIsAliasTree ) 
@@ -231,11 +233,13 @@ void TTreeWidget::dragEnterEvent(QDragEnterEvent *event)
 {
     mIsDropAction = true;
     QTreeWidget::dragEnterEvent( event );
+    //event->accept();
 }
 
 void TTreeWidget::dragMoveEvent(QDragMoveEvent *event)
 {
     QTreeWidget::dragMoveEvent( event );
+    //event->accept();
 }
 
 void TTreeWidget::dropEvent(QDropEvent *event)
@@ -246,24 +250,25 @@ void TTreeWidget::dropEvent(QDropEvent *event)
     {
         /*if( ! pItem->parent() )
         {
-            qDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";
+            TDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";
             event->ignore();
             return;
         }
         else
         {
-            qDebug()<<"DROP OK -> kein root item";
-        } */
+            TDebug()<<"DROP OK -> kein root item">>0;
+        }*/
     }
     else
     {
-        qDebug()<<"ERROR pItem im drop = 0";
+        TDebug()<<"ERROR pItem im drop = 0">>0;
         event->ignore();
         return;
     }
-    //event->accept();
+
     mIsDropAction = true;
     QTreeWidget::dropEvent( event );
+    //event->accept();
     return;
 }
 

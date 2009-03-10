@@ -57,6 +57,7 @@ TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
     }
     QWidget * test = new QWidget;
     setTitleBarWidget(test);
+    setStyleSheet("background-color:transparent");
 }
 
 void TToolBar::moveEvent( QMoveEvent * e )
