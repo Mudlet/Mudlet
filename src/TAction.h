@@ -122,7 +122,7 @@ public:
     int              mSizeY;
     bool             mIsLabel;
     bool             mUseCustomLayout;
-
+    QString          css;
     
 private:
     

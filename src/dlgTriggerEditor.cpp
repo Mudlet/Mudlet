@@ -1797,6 +1797,7 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
             pT->mPosY = posY;
             pT->mSizeX = sizeX;
             pT->mSizeY = sizeY;
+            pT->css = mpActionsMainArea->css->toPlainText();
             QIcon icon;
             if( pT->isFolder() )
             {
@@ -2079,6 +2080,8 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpActionsMainArea->buttonPosY->setText( QString::number(pT->mPosY) );
         mpActionsMainArea->buttonSizeX->setText( QString::number(pT->mSizeX) );
         mpActionsMainArea->buttonSizeY->setText( QString::number(pT->mSizeY) );
+        mpActionsMainArea->css->clear();
+        mpActionsMainArea->css->insertPlainText( pT->css );
         if( ! pT->getParent() )
         {
             mpActionsMainArea->groupBox_toolBar->show();

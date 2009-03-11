@@ -150,28 +150,15 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
        button->setFlat( mButtonFlat );
-       button->setStyleSheet(
-                        "QPushButton{background:qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-                        "stop: 0 black, stop: 0.4 gray, stop: 0.5 darkgray, stop: 1.0 black);"
-                        "color:yellow; font-size:24px;"
-                        "font-weight:bold; border-radius:10%;"
-                        "margin:0px; border:3px dashed green;}"
-                        "QPushButton:pressed{background-color: rgb(224, 100, 100);"
-                        "border-style: inset;}"
-                        "QPushButton:hover{background-color:rgb(250,250,100);"
-                        "border-style:inset;}"
-                        );
+       button->setStyleSheet( css );
 
        pT->addButton( button );
-       QPalette palette;
-       palette.setColor( QPalette::Button, button->mpTAction->mButtonColor );
-       palette.setColor( QPalette::Base, button->mpTAction->mButtonColor );
-       button->setPalette( palette );
-       
+
        if( pChild->mIsFolder )
        {
            QMenu * newMenu = new QMenu( pT );
            button->setMenu( newMenu );
+           newMenu->setStyleSheet( css );
            pChild->insertActions( pMainWindow, pT, newMenu );
        }
    }
@@ -195,6 +182,7 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
     if( mIsFolder )
     {
         QMenu * newMenu = new QMenu( pMainWindow );
+        newMenu->setStyleSheet( css );
         action->setMenu( newMenu );
         
         typedef list<TAction *>::const_iterator I;

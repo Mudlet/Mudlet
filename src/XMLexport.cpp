@@ -350,6 +350,7 @@ bool XMLexport::writeAction( TAction * pT )
 
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
+    writeTextElement( "css", pT->css );
     writeTextElement( "commandButtonUp", pT->mCommandButtonUp );
     writeTextElement( "commandButtonDown", pT->mCommandButtonDown );    
     writeTextElement( "icon", pT->mIcon ); 

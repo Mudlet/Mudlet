@@ -462,9 +462,8 @@ void dlgProfilePreferences::slot_save_and_exit()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;
-    if( wrap_at_lineEdit->text().toInt() != 0 ) pHost->mWrapAt = wrap_at_lineEdit->text().toInt();    
-    if( indent_wrapped_lineEdit->text().toInt() != 0 )pHost->mWrapIndentCount = indent_wrapped_lineEdit->text().toInt();
-
+    pHost->mWrapAt = wrap_at_lineEdit->text().toInt();
+    pHost->mWrapIndentCount = indent_wrapped_lineEdit->text().toInt();
     pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
     pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
     pHost->mCommandSeparator = command_separator_lineedit->text();
@@ -473,12 +472,15 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {
-        std::cout << "SMALL_SCREEN"<<std::endl;
         QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
-        file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
+        file_use_smallscreen.open( QIODevice::WriteOnly | QIODevice::Text );
         QTextStream out(&file_use_smallscreen);
-        out << "use_small_screen";
         file_use_smallscreen.close();
+    }
+    else
+    {
+       QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
+       file_use_smallscreen.remove();
     }
     close();
 }

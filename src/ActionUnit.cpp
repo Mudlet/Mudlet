@@ -217,6 +217,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         }
         constructToolbar( *it, mudlet::self(), pTB );
         (*it)->mpToolBar = pTB;
+        pTB->setStyleSheet( pTB->mpTAction->css );
     }    
     
     return mToolBarList;
@@ -292,6 +293,7 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
     }
     else
         pTB->show();
+    pTB->setStyleSheet( pTB->mpTAction->css );
 }
 
 void ActionUnit::updateToolbar()

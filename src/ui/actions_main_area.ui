@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>551</width>
-    <height>367</height>
+    <height>426</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,7 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>0</width>
-    <height>367</height>
+    <height>426</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -47,9 +47,9 @@
   <widget class="QLineEdit" name="lineEdit_action_name">
    <property name="geometry">
     <rect>
-     <x>206</x>
+     <x>160</x>
      <y>0</y>
-     <width>345</width>
+     <width>391</width>
      <height>20</height>
     </rect>
    </property>
@@ -70,9 +70,9 @@
   <widget class="QLineEdit" name="lineEdit_action_button_down">
    <property name="geometry">
     <rect>
-     <x>206</x>
+     <x>160</x>
      <y>26</y>
-     <width>345</width>
+     <width>391</width>
      <height>20</height>
     </rect>
    </property>
@@ -93,9 +93,9 @@
   <widget class="QLineEdit" name="lineEdit_action_button_up">
    <property name="geometry">
     <rect>
-     <x>206</x>
+     <x>160</x>
      <y>52</y>
-     <width>345</width>
+     <width>391</width>
      <height>20</height>
     </rect>
    </property>
@@ -103,9 +103,9 @@
   <widget class="QPushButton" name="pushButton_chose_icon">
    <property name="geometry">
     <rect>
-     <x>466</x>
+     <x>470</x>
      <y>80</y>
-     <width>83</width>
+     <width>71</width>
      <height>20</height>
     </rect>
    </property>
@@ -118,7 +118,7 @@
     <rect>
      <x>0</x>
      <y>80</y>
-     <width>200</width>
+     <width>131</width>
      <height>20</height>
     </rect>
    </property>
@@ -129,9 +129,9 @@
   <widget class="QLineEdit" name="lineEdit_action_icon">
    <property name="geometry">
     <rect>
-     <x>206</x>
+     <x>160</x>
      <y>80</y>
-     <width>255</width>
+     <width>301</width>
      <height>20</height>
     </rect>
    </property>
@@ -139,9 +139,9 @@
   <widget class="QPushButton" name="pushButton_color">
    <property name="geometry">
     <rect>
-     <x>210</x>
+     <x>470</x>
      <y>110</y>
-     <width>131</width>
+     <width>71</width>
      <height>20</height>
     </rect>
    </property>
@@ -149,24 +149,11 @@
     <string>Color</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_action_name_4">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>110</y>
-     <width>81</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Color:</string>
-   </property>
-  </widget>
   <widget class="QGroupBox" name="groupBox_toolBar">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>130</y>
+     <y>190</y>
      <width>521</width>
      <height>81</height>
     </rect>
@@ -292,7 +279,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>210</y>
+     <y>270</y>
      <width>521</width>
      <height>151</height>
     </rect>
@@ -563,6 +550,35 @@
      </property>
     </widget>
    </widget>
+  </widget>
+  <widget class="QPlainTextEdit" name="css">
+   <property name="geometry">
+    <rect>
+     <x>160</x>
+     <y>110</y>
+     <width>301</width>
+     <height>81</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Bitstream Vera Sans Mono</family>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_action_name_4">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>110</y>
+     <width>141</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Button CSS Style Sheet</string>
+   </property>
   </widget>
  </widget>
  <resources/>

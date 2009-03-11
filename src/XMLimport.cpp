@@ -847,6 +847,11 @@ void XMLimport::readActionGroup( TAction * pParent )
                 qDebug()<<"script="<<pT->mScript;
                 continue;
             }
+            else if( name() == "css")
+            {
+                pT->css = readElementText();
+                continue;
+            }
             else if( name() == "commandButtonUp")
             {
                 pT->mCommandButtonUp = readElementText();

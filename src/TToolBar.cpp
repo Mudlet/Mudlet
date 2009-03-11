@@ -38,13 +38,6 @@ TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
 {
     setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
     setWidget( mpWidget );
-    /*mpWidget->setAutoFillBackground(true);
-
-    QPalette palette;
-    palette.setColor( QPalette::Base, mpTAction->mButtonColor );
-    widget()->setPalette( palette );
-    setPalette( palette );
-    mpWidget->setBackgroundRole(QPalette::Base);*/
 
     if( ! mpTAction->mUseCustomLayout )
     {
@@ -57,8 +50,8 @@ TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
     }
     QWidget * test = new QWidget;
     setTitleBarWidget(test);
-    setStyleSheet("background-color:transparent");
-    mpWidget->setStyleSheet("background-color:transparent");
+    setStyleSheet( mpTAction->css );
+    mpWidget->setStyleSheet( mpTAction->css );
 }
 
 void TToolBar::moveEvent( QMoveEvent * e )
@@ -93,6 +86,7 @@ void TToolBar::addButton( TFlipButton * pB )
         pB->setGeometry( pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->mSizeX, pB->mpTAction->mSizeY );
     }
 
+    pB->setStyleSheet( pB->mpTAction->css );
     pB->setFlat( pB->mpTAction->getButtonFlat() );
     int rotation = pB->mpTAction->getButtonRotation();
     switch( rotation )
@@ -186,15 +180,9 @@ void TToolBar::clear()
     }
     else
         mpLayout = 0;
-   /* mpWidget->setAutoFillBackground( true );
-    QPalette palette;
-    palette.setColor( QPalette::Base, mpTAction->mButtonColor );
-    mpWidget->setPalette( palette );
-    setPalette( palette );
-    mpWidget->setBackgroundRole( QPalette::Base );*/
     QWidget * test = new QWidget;
-    setStyleSheet("background-color:transparent");
-    mpWidget->setStyleSheet("background-color:transparent");
+    setStyleSheet( mpTAction->css );
+    mpWidget->setStyleSheet( mpTAction->css );
     setTitleBarWidget( test );
     
     mudlet::self()->removeDockWidget( this );
