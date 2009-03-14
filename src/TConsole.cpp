@@ -1096,7 +1096,9 @@ void TConsole::skipLine()
 
 bool TConsole::deleteLine( int y )
 {
-    return buffer.deleteLine( y );    
+    bool ret = buffer.deleteLine( y );
+    update();
+    return ret;
 }
 
 
