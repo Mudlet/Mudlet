@@ -270,7 +270,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( showSearchAreaAction, SIGNAL(triggered()), this, SLOT( slot_show_search_area()));
     
     QAction * saveAction = new QAction(QIcon(":/icons/document-save-as.png"), tr("Save"), this);
-    saveAction->setShortcut(tr("Ctrl+S"));
+    //saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setStatusTip(tr("Save Edited Trigger, Script, Alias etc. If information has been edited, it must be saved or the changes will be lost."));
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
     
