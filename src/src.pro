@@ -12,14 +12,16 @@ unix : LIBS += -lqscintilla2 \
  -lpcre $$LIBLUA
 
 win32 : LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release -lqscintilla2 \
- -Lc:\lua-5.1.4\src -llua51 
+ -Lc:\lua-5.1.4\src -llua51 \
+ -Lc:\pcre-7.6\ -lpcre
 
 unix : INCLUDEPATH += /usr/include/Qsci \
  /usr/include/lua5.1
 
 win32 : INCLUDEPATH += C:\Qscintilla-gpl-2.3.2\qt4 \
  c:\lua-5.1.4\src \
- c:\zlib-1.2.3
+ c:\zlib-1.2.3 \
+ c:\pcre-7.6
 
 unix: isEmpty( INSTALL_PREFIX ) {
 	INSTALL_PREFIX = /usr/local

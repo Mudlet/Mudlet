@@ -324,6 +324,7 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyDown(QKeyEvent *event)
 {
+    if( mHistoryList.size() < 1 ) return;
     if( selectedText().size() == text().size() )  
     {
         mHistoryBuffer--;
@@ -356,6 +357,7 @@ void TCommandLine::historyDown(QKeyEvent *event)
 
 void TCommandLine::historyUp(QKeyEvent *event)
 {
+    if( mHistoryList.size() < 1 ) return;
     if( selectedText().size() == text().size() )  
     {
         mHistoryBuffer++;

@@ -120,7 +120,7 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             
             if (re == 0)
             {
-                qDebug()<<"REGEX_COMPILE_ERROR:"<<pattern;
+                TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
                 printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
                 re = pcre_compile( "regex doesnt compile",                   /* the pattern */
                                    0,                    /* default options */
@@ -146,7 +146,7 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             
             if (re == NULL)
             {
-                qDebug()<<"REGEX_COMPILE_ERROR:"<<pattern;
+                TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
                 printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
                 re = pcre_compile( "regex doesnt compile",                   /* the pattern */
                                    0,                    /* default options */
@@ -156,7 +156,7 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                 
             }
             else
-                qDebug()<<"[OK]: REGEX_COMPILE OK";
+                TDebug()<<"[OK]: REGEX_COMPILE OK">>0;
             
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
@@ -515,7 +515,7 @@ bool TTrigger::match( QString & toMatch )
             return false;
         }
       
-        toMatch.replace( QChar( 0x21af ), "" );
+        toMatch.replace( QChar( 0x21af ), "\n" );
         if( toMatch.size() < 1 )
         {
             return false;

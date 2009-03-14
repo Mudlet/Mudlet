@@ -5,7 +5,7 @@
 	<TITLE></TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 2.4  (Linux)">
 	<META NAME="CREATED" CONTENT="20081028;19075200">
-	<META NAME="CHANGED" CONTENT="20090307;1040200">
+	<META NAME="CHANGED" CONTENT="20090312;200400">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { size: 21cm 29.7cm }
@@ -31,226 +31,214 @@
 <BODY LANG="en-US" DIR="LTR">
 <H1 CLASS="western" ALIGN=LEFT STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 <FONT FACE="Arial Black"><FONT SIZE=4><SPAN STYLE="background: #ff950e">manual
-(updated: 02-25-2009)</SPAN></FONT></FONT></H1>
-<P CLASS="western" ALIGN=CENTER STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<FONT COLOR="#008000"><FONT SIZE=6 STYLE="font-size: 26pt"><SPAN STYLE="background: #cccccc">***
+(updated: 03-11-2009)</SPAN></FONT></FONT></H1>
+<P CLASS="western" ALIGN=CENTER STYLE="line-height: 150%"><FONT COLOR="#008000"><FONT SIZE=6 STYLE="font-size: 26pt"><SPAN STYLE="background: #cccccc">***
 NEWS *** </SPAN></FONT></FONT>
 </P>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">user
-	dock windows are back again.</SPAN></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">replace(&quot;&quot;)
-	issue fixed</SPAN></FONT></FONT></P>
-</UL>
-<UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">changed
-	our regex engine to PCRE 7.8 This will give us much more options and
-	improved capabilities</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">all
-	input masks are working now and do what they are supposed to. If you
-	happen to find something that doesnt work as described in this
-	manual please let us know via email or via our forum.</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">you
-	can now use as many toolbars as you like instead of a single user
-	toolbar. Each root folder action item will be an individual toolbar.
-	<BR>toolbars now remember their state and placement (not fully
-	implemented though)</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">alias
-	improved</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">added
-	Lua functions to save Lua tables to hard disc to enable you to build
-	your own little database of relevant script parameters<BR>Mudlet can
-	autosave and autrestore the entire former session on request.</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">defined
-	a huge color table with lots of color names that can be used to
-	colorize your output via Lua scripts without having to use rgb
-	values.<BR>a simple fg(&quot;red&quot;) echo(&quot;great!&quot;)
-	will do</SPAN></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><FONT SIZE=2><SPAN STYLE="background: transparent">improved
-	command line autocompletion substantially</SPAN></FONT></FONT></P>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="border: none; padding: 0cm; line-height: 150%">
+	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">new
+	stylable user buttons via CSS-style sheets</SPAN></FONT></P>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="border: none; padding: 0cm; line-height: 150%">
+	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">beta
+	release</SPAN></FONT></P>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="border: none; padding: 0cm; line-height: 150%">
+	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">new
+	HTML-Logging feature</SPAN></FONT></P>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="border: none; padding: 0cm; line-height: 150%">
+	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">time
+	stamps on click</SPAN></FONT></P>
 </UL>
 <H1 CLASS="western" ALIGN=CENTER STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
 <FONT COLOR="#c5000b"><FONT SIZE=6 STYLE="font-size: 22pt"><SPAN STYLE="background: #cccccc">Current
 Issues / Still Missing: </SPAN></FONT></FONT>
 </H1>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	<FONT COLOR="#000000"><SPAN STYLE="background: transparent">Multiline
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#000000"><SPAN STYLE="background: transparent">Multiline
 	triggers cannot yet pass all capture groups on to the script.
 	Currently, only the last condition will pass on capturegroups. This
 	issue will be resolved soon though. In the future Mudlet will pass
 	the 2-dimensional table multimatches[ conditionNumber ] [ matches[ ]
 	].</SPAN></FONT></P>
-	<LI><P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	offset timers aren't finished and don't yet work as they are
-	supposed to</P>
+	<LI><P CLASS="western" STYLE="line-height: 150%">offset timers
+	aren't finished and don't yet work as they are supposed to</P>
 </UL>
 <H1 CLASS="western" ALIGN=CENTER STYLE="margin-top: 0cm; margin-bottom: 0cm; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 <FONT COLOR="#4700b8"><FONT FACE="Arial Black"><FONT SIZE=6 STYLE="font-size: 22pt"><SPAN STYLE="background: #cccccc">Current
 Development: </SPAN></FONT></FONT></FONT>
 </H1>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">currently
 	adding more features to actions and improving the user toolbars
 	significantly</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
-	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">reenable
-	user dock windows</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">add
-	several functions to the C++-side Lua API.</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	several functions to the C++-side Lua API like implode() and
+	explode()</SPAN></FONT></FONT></FONT></P>
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">setText()
 	to manipulate user button text via scripting</SPAN></FONT></FONT></FONT></P>
 </UL>
 <UL>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+	<LI><P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
 	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">Multiline
 	triggers cannot yet pass all capture groups on to the script.
 	Currently, only the last condition will pass on capturegroups. This
 	issue will be resolved soon though. In the future Mudlet will pass
 	the 2-dimensional table multimatches[ conditionNumber ] [ matches[ ]
 	].</SPAN></FONT></FONT></FONT></P>
-	<LI><P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
-	<FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=2><SPAN STYLE="background: transparent">fix
-	a few small issues and then release Mudlet beta asap</SPAN></FONT></FONT></FONT></P>
 </UL>
+<P CLASS="western" ALIGN=LEFT STYLE="background: transparent; border: none; padding: 0cm; font-weight: medium; line-height: 150%; text-decoration: none">
+<BR>
+</P>
 <H1 CLASS="western" ALIGN=CENTER STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5 STYLE="font-size: 20pt"><U>Mudlet
 Manual</U><SPAN STYLE="text-decoration: none"> </SPAN></FONT></FONT>
 </H1>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Introduction</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Throughout
+<P CLASS="western" STYLE="line-height: 150%"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif">Throughout
 this document a regular expression (regex) will be colored blue, Text
 examples will be colored red and Lua example code will be colored
 green. </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Multi Session Gameing</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">Mudlet
-lets you play several simultaneous MUD sessions. However, currently
-we have the restriction that you cannot use the same profile twice.
-Consequently, if you want to play three characters on the same MUD at
-the same time, you need to make 3 profiles with 3 different names
-e.g. ernie@avalon.de, bert@avalon.de etc.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
-</P>
+<P CLASS="western" STYLE="line-height: 150%">Mudlet lets you play
+several simultaneous MUD sessions. However, currently we have the
+restriction that you cannot use the same profile twice. Consequently,
+if you want to play three characters on the same MUD at the same
+time, you need to make 3 profiles with 3 different names e.g.
+ernie@avalon.de, bert@avalon.de etc.</P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Split Screen</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">Mudlet
-has a split screen. If you scroll up in the old text, the screen will
-split in two parts. The lower part will follow the MUD output while
-the upper part will stay focused on your scrolling. This way you can
-read easier through old passages without missing what is going on at
-the moment.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="line-height: 150%">Mudlet has a split
+screen. If you scroll up in the old text, the screen will split in
+two parts. The lower part will follow the MUD output while the upper
+part will stay focused on your scrolling. This way you can read
+easier through old passages without missing what is going on at the
+moment.</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 Split screen can be activated via the page up / page down keys or
 with the mouse wheel. Scrolling back to the end will close the split
 screen automatically. A click on the middle mouse button will close
 the split screen immediately. The size of the 2 parts of the split
 screen can be modidfied when dragging the seperator bar with the
 mouse.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
-</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; font-weight: medium; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Command Line Auto-Completion,
 Tab-Completion and History</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">The
-command line offers Tab Completion (TAB key) and Autocompletion
-(cursor up key). <BR>1. Tab completion searches the MUD output buffer
-for words matching the word that you are currently typing. This is
-useful if you have to type complicated long names. You only have to
-type the first letters and then press the tab key until the proposal
-is what you want.<BR>2. Autocompletion tries to match your current
-typing with your command history. Example: If you typed the same
-command a while ago, you only have to start typing the first couple
-of letters and then press the cursor up key until the proposal
-matches the command that you want to use.<BR>3. If you haven't
-started to type anything yet, you can browse through your command
-history with the cursur up and cursor down keys. However, if you have
-started typing pressing cursor up will result in autocompletion. <BR>4.
-To get out of autocompletion you can press the ESC key any time.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%">The command line offers
+Tab Completion (TAB key) and Autocompletion (cursor up key). <BR>1.
+Tab completion searches the MUD output buffer for words matching the
+word that you are currently typing. This is useful if you have to
+type complicated long names. You only have to type the first letters
+and then press the tab key until the proposal is what you want.<BR>2.
+Autocompletion tries to match your current typing with your command
+history. Example: If you typed the same command a while ago, you only
+have to start typing the first couple of letters and then press the
+cursor up key until the proposal matches the command that you want to
+use.<BR>3. If you haven't started to type anything yet, you can
+browse through your command history with the cursur up and cursor
+down keys. However, if you have started typing pressing cursor up
+will result in autocompletion. <BR>4. To get out of autocompletion
+you can press the ESC key any time.</P>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+Logging Output to HTML Log Files</H1>
+<P CLASS="western" STYLE="line-height: 150%">Press on the little
+button with the blue folder with the green arrow icon on the lower
+right side of the screen next to the command line.</P>
+<P CLASS="western" STYLE="line-height: 150%">When you press on it
+again logging stops. Log files can be found at the mudlet home
+directory in your profile directory. The path is &lt;path to mudlet
+home&gt;/.config/mudlet/profiles/&lt;name&gt;/logs On Linux this
+would be: /home/username/.config/mudlet/profiles/profilename/logs</P>
+<P CLASS="western" STYLE="line-height: 150%">On Windows the path
+prefix depends on your windows version and your language settings: On
+my system it's c:\Dokumente und
+Einstellungen\heiko\.config\mudlet\profiles\&lt;name&gt;\logs. Log
+files have a file name similar to the autosaved profiles:
+date#time.html</P>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
+</P>
+<H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
+Buttons and Custom User Toolbars</H1>
+<P CLASS="western" STYLE="line-height: 150%">Buttons are co</P>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
+</P>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Mudlet's Trigger Engine</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Simple Trigger Matching</B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">Type
-your trigger in the input line below the trigger conditions list box
-and then press add to add it to the list. You can edit an expression
-in the list by clicking on it and then edit it on the input line
-below. After your edit you have to press the return key to accept the
-changes.<BR>After editing is finished your changes will only become
-permanent if you press on the save icon on the upper left. This is
-the same throughout the entire program. If you forget to save your
-current changes or new additions, they will be lost once you select
-to edit some other item.<BR>Select the trigger type from the listbox
-below the expression line edit. Normal substring matching will do for
-most people and it is the fastest matching type available. Example:
-You want to trigger on the word &quot;pond&quot; in a line such as:
-&quot;The frog swims in the pond. Plop.&quot; All you need to do is
-enter &quot;pond&quot; in the trigger expression input line and add
-it to the expression list. Then enter the command you like to send to
-the MUD if the trigger matches e.g. &quot;drink water&quot; and then
-you are done. The more advanced trigger types are explained below.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="line-height: 150%">Type your trigger in the
+input line below the trigger conditions list box and then press add
+to add it to the list. You can edit an expression in the list by
+clicking on it and then edit it on the input line below. After your
+edit you have to press the return key to accept the changes.<BR>After
+editing is finished your changes will only become permanent if you
+press on the save icon on the upper left. This is the same throughout
+the entire program. If you forget to save your current changes or new
+additions, they will be lost once you select to edit some other
+item.<BR>Select the trigger type from the listbox below the
+expression line edit. Normal substring matching will do for most
+people and it is the fastest matching type available. Example: You
+want to trigger on the word &quot;pond&quot; in a line such as: &quot;The
+frog swims in the pond. Plop.&quot; All you need to do is enter
+&quot;pond&quot; in the trigger expression input line and add it to
+the expression list. Then enter the command you like to send to the
+MUD if the trigger matches e.g. &quot;drink water&quot; and then you
+are done. The more advanced trigger types are explained below.</P>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
+</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Simple Highlighter Triggers</B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 If you want to highlight the word &quot;pond&quot; in the above
 example you have to add the following little Lua script to the script
 editor on the lower right side of the Script Editor
 window:<BR><FONT COLOR="#00ae00"><FONT FACE="Andale Mono">selectString(
 &quot;pond&quot;, 1 )<BR>fg( &quot;red &quot; )<BR>bg( &quot;blue&quot;
 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT SIZE=4><B><BR><FONT FACE="Arial, sans-serif">&quot;AND&quot;
 and &quot;OR&quot; Condition Triggers</FONT></B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">AND
--Triggers execute their respective command or script only if all
-conditions in their respective conditions expression list are
-fullfilled.<BR>OR-Triggers execute when *any* one of their conditions
-is true.<BR>To make OR-Triggers you simply have to add a few
-conditions to the conditions list e.g. in our example: &quot;pond&quot;,
-&quot;frog&quot;, &quot;Plop&quot;. The trigger will now also execute
-on lines like this: &quot;A frog is green&quot; or &quot;You hear a
-loud Plop!&quot; However, it will not execute on &quot;With a loud
-plop the frog dived into the water.&quot; because &quot;plop&quot; in
-the line is in lower case letters and your condition specified a &quot;P&quot;
-in upper case. <BR>The simplest form of AND-Triggers in Mudlet are
-Trigger Chains or Filter Chains, whatever you'd like to call it.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="line-height: 150%">AND -Triggers execute
+their respective command or script only if all conditions in their
+respective conditions expression list are fullfilled.<BR>OR-Triggers
+execute when *any* one of their conditions is true.<BR>To make
+OR-Triggers you simply have to add a few conditions to the conditions
+list e.g. in our example: &quot;pond&quot;, &quot;frog&quot;, &quot;Plop&quot;.
+The trigger will now also execute on lines like this: &quot;A frog is
+green&quot; or &quot;You hear a loud Plop!&quot; However, it will not
+execute on &quot;With a loud plop the frog dived into the water.&quot;
+because &quot;plop&quot; in the line is in lower case letters and
+your condition specified a &quot;P&quot; in upper case. <BR>The
+simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter
+Chains, whatever you'd like to call it.</P>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
+</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Trigger Chains - Filter Chains</B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">Imagine
-the following scenario: You want to collect some berries. You know
-that the room contains some berries if the room description contains
-the words &quot;You see several sorts of berries.&quot; You make a
-new substring trigger for this line, but instead of chosing a regular
-trigger, you chose to add a new trigger group. Now you add &quot;You
-see several sorts of berries.&quot; to the expression list of the
-trigger group. When adding condions to a trigger group, the trigger
-group turns from an organizational unit into a filter unit. From now
-on this folder is a filter and will only let data through that
-matches it's condition. <BR>In our case this is exactly what we want,
-because we don't want to collect all sorts of berries, but we only
-want 2 particular kinds, namely, strawberries and blackberries. Now
-you add two regular triggers to our berry filter - one containing the
-condition: &quot;strawberries&quot; and the other one &quot;blackberries&quot;.
+<P CLASS="western" STYLE="line-height: 150%">Imagine the following
+scenario: You want to collect some berries. You know that the room
+contains some berries if the room description contains the words &quot;You
+see several sorts of berries.&quot; You make a new substring trigger
+for this line, but instead of chosing a regular trigger, you chose to
+add a new trigger group. Now you add &quot;You see several sorts of
+berries.&quot; to the expression list of the trigger group. When
+adding condions to a trigger group, the trigger group turns from an
+organizational unit into a filter unit. From now on this folder is a
+filter and will only let data through that matches it's condition.
+<BR>In our case this is exactly what we want, because we don't want
+to collect all sorts of berries, but we only want 2 particular kinds,
+namely, strawberries and blackberries. Now you add two regular
+triggers to our berry filter - one containing the condition:
+&quot;strawberries&quot; and the other one &quot;blackberries&quot;.
 Then we add the commands to pick the particular kind of berry to both
 triggers.<BR>Now what happens is that as soon as a room description
 reads &quot;You see several sorts of berries.&quot; the filter will
@@ -264,10 +252,12 @@ This example is trivial, but using filter chains will rapidly show
 you how formerly complicated things that could only be solved with
 very complicated regular expressions can be solved easily now with a
 couple of filter chains.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="line-height: 150%"><BR>
+</P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Arial Black"><FONT SIZE=4>Multi-Line
 Triggers and Multi-Condition Triggers</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 Multi Condition Triggers are the most advanced feature of Mudlet's
 trigger engine. Like trigger chains or filter chains they are a form
 of AND-Triggers.<BR>All conditions in the list must have matched
@@ -286,164 +276,146 @@ will *NOT* run unless the margin of lines is set to 11. If condition
 ignored and must be true again after condidtion #2 has been
 true.<BR>Conditions can also be Lua Functions that return a boolean
 truth value. You can mix all types of condtions.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-Example: Let's go back to our pond &amp; frog example. We have
-explained the difference between AND-triggers and OR-triggers. If you
-have a room description consisting of 3 lines: 
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">Example:
+Let's go back to our pond &amp; frog example. We have explained the
+difference between AND-triggers and OR-triggers. If you have a room
+description consisting of 3 lines: 
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-1. You see a pond</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-2. You see a frog.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-3. The frog sits on a stone.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR>Every single one of these 3 lines will be fed into the trigger
-engine one after another. If we define an OR-trigger with a condition
-list consisting of 3 conditions 
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">1. You see a
+pond</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">2. You see a
+frog.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">3. The frog
+sits on a stone.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>Every
+single one of these 3 lines will be fed into the trigger engine one
+after another. If we define an OR-trigger with a condition list
+consisting of 3 conditions 
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-condition #1: pond</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-condition #2: frog</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-condition #3: stone</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR>The trigger will fire the command or script 3 times i. e. the
-trigger will execute on each line it is matched against because in
-every line at least one condition evaluates to true.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-in line #1 we get: pond = true. In line #2 we get frog = true and in
-line #3 two conditions are true i.e. frog=true and stone = true;
-Because an OR-trigger fires on the first condition that is true and
-ignores the rest the trigger will only execute 3 times on these 3
-lines although 4 conditions are true.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-the multi condition switch must be turned off to get an
-OR-trigger):<BR>conditi</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-To complicate matters, however, you don't want your trigger to fire 3
-commands, because you want to use this room description as a whole to
-fire your trigger e. g. this pond is the only kind of ponds in the
-entire world that doesn't have poisoned water. So you want to make
-sure that you only drink water from a pond of this kind and from no
-other pond. Your solution is to use Multi Conditon Triggers. If you
-check the MCT checkbox this trigger will fire only once from now on -
-and only if all conditions are met i e. you can guarantee that you
-only drink water from a good pond because your drinking trigger is
-matching on the entire room description.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #1:
+pond</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #2:
+frog</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">condition #3:
+stone</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>The
+trigger will fire the command or script 3 times i. e. the trigger
+will execute on each line it is matched against because in every line
+at least one condition evaluates to true.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">in line #1 we
+get: pond = true. In line #2 we get frog = true and in line #3 two
+conditions are true i.e. frog=true and stone = true; Because an
+OR-trigger fires on the first condition that is true and ignores the
+rest the trigger will only execute 3 times on these 3 lines although
+4 conditions are true.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">the multi
+condition switch must be turned off to get an OR-trigger):<BR>conditi</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">To complicate
+matters, however, you don't want your trigger to fire 3 commands,
+because you want to use this room description as a whole to fire your
+trigger e. g. this pond is the only kind of ponds in the entire world
+that doesn't have poisoned water. So you want to make sure that you
+only drink water from a pond of this kind and from no other pond.
+Your solution is to use Multi Conditon Triggers. If you check the MCT
+checkbox this trigger will fire only once from now on - and only if
+all conditions are met i e. you can guarantee that you only drink
+water from a good pond because your drinking trigger is matching on
+the entire room description.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-Sadly, there are many unfriendly people in this world and somebody
-goes around and poisons your good ponds. Consequently, you would want
-to examine the frog and find out if it is poisoned before drinking
-water from the pond. This is difficult because the villain is a mean
-magician who used illusion spells to make everything look like the
-good pond. To solve the problem you can now resort to Lua function
-conditions in the trigger condition list that perform certain check
-ups to put the current room description into a wider context e. g.
-check if you have been here before etc. This adds yet another level
-of complexity to your problem but this is a very powerful means to
-use the full potential of Mudlet's MCTs. 
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">Sadly, there
+are many unfriendly people in this world and somebody goes around and
+poisons your good ponds. Consequently, you would want to examine the
+frog and find out if it is poisoned before drinking water from the
+pond. This is difficult because the villain is a mean magician who
+used illusion spells to make everything look like the good pond. To
+solve the problem you can now resort to Lua function conditions in
+the trigger condition list that perform certain check ups to put the
+current room description into a wider context e. g. check if you have
+been here before etc. This adds yet another level of complexity to
+your problem but this is a very powerful means to use the full
+potential of Mudlet's MCTs. 
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-You can combine all forms of conditions with trigger chains, filters
-and Lua functions. Mudlet gives you relatively easy to use tools that
-require no programming background. However, these tools can evolve
-into complex powerful problem solving mechanisms if they are combined
-with each other thus enabling non-programmer users to solve problems
-that would need a profound programming background in other MUD
-clients.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">You can
+combine all forms of conditions with trigger chains, filters and Lua
+functions. Mudlet gives you relatively easy to use tools that require
+no programming background. However, these tools can evolve into
+complex powerful problem solving mechanisms if they are combined with
+each other thus enabling non-programmer users to solve problems that
+would need a profound programming background in other MUD clients.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<FONT COLOR="#800000"><B>NOTE</B></FONT>: Multiline triggers cannot
-yet pass all capture groups on to the script. Currently, only the
-last condition will pass on capturegroups. This issue will be
-resolved soon though. In the future Mudlet will pass the
-2-dimensional table multimatches[ conditionNumber ] [ matches[ ] ].</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><FONT COLOR="#800000"><B>NOTE</B></FONT>:
+Multiline triggers cannot yet pass all capture groups on to the
+script. Currently, only the last condition will pass on
+capturegroups. This issue will be resolved soon though. In the future
+Mudlet will pass the 2-dimensional table multimatches[
+conditionNumber ] [ matches[ ] ].</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=CENTER STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<SPAN STYLE="background: #ff950e">*** This article will be extended
-later ***</SPAN></P>
-<P CLASS="western" ALIGN=CENTER STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" ALIGN=CENTER STYLE="line-height: 150%"><SPAN STYLE="background: #ff950e">***
+This article will be extended later ***</SPAN></P>
+<P CLASS="western" ALIGN=CENTER STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
-<FONT COLOR="#000000"><FONT SIZE=4><B>Temporary Triggers (scripting
-only)</B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<B><FONT SIZE=4><FONT COLOR="#000000">Temporary Triggers (scripting
+only)</FONT></FONT></B></P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">Temporary
+triggers are lightweight triggers that are tailored for typical
+scripting needs. These are only available via Lua scripting. They are
+not stored in profiles, but stay in memory as long as the program
+runs or until they are deleted (killTimer()).</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-Temporary triggers are lightweight triggers that are tailored for
-typical scripting needs. These are only available via Lua scripting.
-They are not stored in profiles, but stay in memory as long as the
-program runs or until they are deleted (killTimer()).</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
-<BR><BR>
-</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Line Triggers (scripting only)</B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
-</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-Line triggers trigger on a specified line in the future - or a
-sequence of lines - irrespective of the content of the line. This
-type of triggers can be very handy in scripting if you know what is
-coming e.g. you want to parse a table from the MUD, maps etc.</P>
-<P CLASS="western" ALIGN=LEFT STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%">Line triggers
+trigger on a specified line in the future - or a sequence of lines -
+irrespective of the content of the line. This type of triggers can be
+very handy in scripting if you know what is coming e.g. you want to
+parse a table from the MUD, maps etc.</P>
+<P CLASS="western" ALIGN=LEFT STYLE="line-height: 150%"><BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>The Timer Engine</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">Mudlet
-supports 3 different sort of timers:</P>
+<P CLASS="western" STYLE="line-height: 150%">Mudlet supports 3
+different sort of timers:</P>
 <OL>
-	<LI><P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	Timers that fire repeatedly in a certain interval specified by the
-	user.</P>
-	<LI><P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	Offset Timers are child timers of a parent timer and fire a single
-	shot after a specified timeout after their parent firied its
-	respective timeout. This interval is an offset to the interval of
-	its parent timer. Example: parent timer fires every 30 seconds and
-	by doing so kicks off 3 offset timers with an offset of 5 seconds
-	each. Consequently, the 3 children fire 5 seconds after each time
-	the parent timer fired. Offset timers differ visually from regular
-	timers and are represented with a + icon for offset. Offset timers
-	can be turned on and off by the user just like any other timer.</P>
-	<LI><P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%">
-	Temporary Timers that very useful for scripting. They behave like
-	regular timers, but they are one shot only timers. Temporary timers
-	can not be accessed from the GUI and are not saved in profiles.</P>
+	<LI><P CLASS="western" STYLE="line-height: 150%">Timers that fire
+	repeatedly in a certain interval specified by the user.</P>
+	<LI><P CLASS="western" STYLE="line-height: 150%">Offset Timers are
+	child timers of a parent timer and fire a single shot after a
+	specified timeout after their parent firied its respective timeout.
+	This interval is an offset to the interval of its parent timer.
+	Example: parent timer fires every 30 seconds and by doing so kicks
+	off 3 offset timers with an offset of 5 seconds each. Consequently,
+	the 3 children fire 5 seconds after each time the parent timer
+	fired. Offset timers differ visually from regular timers and are
+	represented with a + icon for offset. Offset timers can be turned on
+	and off by the user just like any other timer.</P>
+	<LI><P CLASS="western" STYLE="line-height: 150%">Temporary Timers
+	that very useful for scripting. They behave like regular timers, but
+	they are one shot only timers. Temporary timers can not be accessed
+	from the GUI and are not saved in profiles.</P>
 </OL>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Exporting and Importing
 Profiles or Packages</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 Mudlet stores your profiles as XML files in your home directory under
 .config/mudlet/profiles/your_profile_name/current (note the leading
 dot).</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 The file name consists of the date and time, the profile was written
 to disc.<BR>You can export packages of a trigger branch, alias
 branch, function key, scripts etc. by clicking on a folder in the
@@ -453,195 +425,195 @@ export arbitrarily complex structures by moving them into a folder.
 You cannot mix items at the moment. Importing packages is straight
 forward and fully automatic. <BR>You can also import entire profiles
 as they are basically packages.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Quick Lua syntax overview</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Lua variables
 can be either a string or a number. They are whatever there were
 initially initialized with.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Examples:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">a = “Jim”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">b = “Tom”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">c = 350</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">d = 1</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Then you can
 write:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">e = c + d
 and e will equal 351</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">e = a .. b
 and e will equal “JimTom” note that you cant use a+b to
 concatenate string values. For this you must use ..</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">e = a .. c
 and e will equal “Jim350”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Lua tables can
 basically be considered multidimensional arrays.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">If we have the
 table matches, matches[1] is the first element, matches[n] the n-th
 element.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">a = “Tom”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">matches[1]
 = “Betty”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">b =
 matches[1]</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">c = a .. b
 and e will equal “TomBetty”</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To output a
 table you can use a conveniance function printTable( name ). This
 function is defined in LuaGlobal.lua and can be found in your home
 directory under ./mudlet (note the leading dot ) Profiles and
 mudlet_documentation.html are stored in this directory as well.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; font-weight: medium; line-height: 150%">
 <FONT FACE="Arial Black"><FONT SIZE=5>Lua interface functions to
 Mudlet <BR>– or how do I access triggers, timers etc. from Lua
 scripts</FONT></FONT></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; font-weight: medium; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; font-weight: medium; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4>How to get data from regex capture
 groups?</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Regular
 expression capture groups (e.g. „(\d+)“ ) are passed on to Lua
 scripts as a Lua table matches.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To make use of
 this information inside Lua scripts, you need to specify the number
 of the capture group within the regex.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Example: </FONT></FONT><CODE CLASS="regex-western"><FONT COLOR="#0000ff"><FONT FACE="Arial, sans-serif">You
 have (\d+) weapons and they are (?:(\b\w+\W+)+)</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">This regex
 contains 3 capture groups, but only the 2 green colored ones contain
 data as the red capture group is a non-capturing group. Consequently,
 your Lua script gets passed only 2 instead of 3 capture groups and
 matches[3] is undefined.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">In your Lua
 script you may write following program in order to print the number
 and status of your weapons on the screen:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="regex-western">You
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="regex-western">You
 have (\d+) weapons and they are (?:(\b\w+\W+)+)</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">number_of_weapons
 = matches[1]</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">status_of_weapons
 = matches[2]</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">notice
 = number_of_weapons .. status_of_weapons</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">echo(
 notice ) </FONT></FONT></CODE>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">send(
 „put weapons in backpack“ )</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">-- the
 following 2 lines color the first capture </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">-- group
 red and the second group blue</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">-- see
 </FONT></FONT><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">below</FONT></FONT></CODE><FONT COLOR="#008000">
 </FONT><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">for
 details </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">selectCaptureGroup</FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">(
 1 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setFgColor</FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">(
 255,0,0 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">selectCaptureGroup(
 2 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setFgColor(
 0,0,255 )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">The best way is
 to use selectCaptureGroup( number ) to select the proper capture
 group and then perform your actions on it e.g. replace(), colorize
 etc. <SPAN STYLE="text-decoration: none"><I><B>Note</B></I></SPAN><SPAN STYLE="text-decoration: none"><B>:</B></SPAN>
 Both selectCaptureGroup() and matches[n] start with group 1.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">How to select
 all occurrences of &quot;Tom&quot; and colorize them?</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">You add a
 functon like this to a script conataining you main function
 definitions. Note that script items differ from all other &quot;scripts&quot;
@@ -651,129 +623,129 @@ trigger-scripts, timer-scripts etc. via normal function calls.
 Trigger-scripts, timer-scripts etc. cannot contain any function
 definitions because they are automatically generated functions
 themself because this makes usage a lot easier.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To come back to
 our question how to select all occurrences of &quot;Tom&quot; and
 colorize them:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">function
 setBgColorAll( word, r, g, b ) </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">i = 0</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">word_count
 = 1</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">while i &gt;
 -1 do</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">i =
 selectString(word, word_count)</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">if i == -1
 then </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">return </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">end</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">word_count
 = word_count +1</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setBgColor(
 r, g, b )</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">end</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">end</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Then you simply
 define a substring matching trigger on the word &quot;Tom&quot; and
 in the trigger script you call above function:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#008000"><FONT FACE="Courier New, monospace">setBgColorAll(&quot;Tom&quot;,
 255,50,50)</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Sending
 commands to the MUD or printing information messages on the screen</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To print
 information messages on the session screen you can use the echo(
 message ) function, or insertText( text). Currently, it only takes
 one string as argument. </FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">To send a
 command to the MUD, you can use the send( command ) function. Note:
 everything you send via send() will be processed by the alias
 processing unit.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">In Alias scripts
 the command that is being sent to the MUD is contained in the
 variable command that you can change in the context of Alias scripts.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Alias take
 regular expressions, as well. As a result, you can use following
 regex and script to talk like Yoda:</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="regex-western">say
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="regex-western">say
 (\w+).*(\w*).*(.*)</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="code-western">send(
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="code-western">send(
 &quot;say &quot; .. matches[3] ..&quot; &quot; .. matches[1] ..&quot;
 &quot;.. matches[2] )</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">Note: The
 variable “command” contains what was entered in the command line
 or issued via the expandAlias( ) function. If you use expandAlias(
 command ) inside an alias script the command would be doubled. You
 have to use send( ) inside an alias script to prevent recursion. This
 will send the data directly and bypass the alias expansion.</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Changing
 text from the MUD or reformatting text (colorize, make bold etc.)</FONT></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">When
 sending commands to the MUD – from now on referred to as output
 stream - alias scripts find the command that whas issued by the user
 stored in the variable “command”.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">By
 manipulating the value, the command can easily be changed before it
 is being sent to the MUD.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">However,
 things get much more complicated with the data received from the MUD
 – from now on referred to as input stream. Before triggers can be
@@ -784,282 +756,280 @@ processing unit is a small subset of the data received from the MUD.
 If you want to edit, replace, delete or reformat text from within
 your trigger scripts you have to keep this in mind if you don't want
 to lose all text format information as colors etc.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">As
 the text is linked with data structures containing the format of the
 text, the cursor position inside the line is important if data is
 being changed. You select a word or a sequence of characters from the
 line and then issue commands to do actions on the selected data.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT FACE="Arial, sans-serif"><FONT COLOR="#000000"><SPAN STYLE="background: transparent">Replacing
 the word “Tom” with “Betty” in the line: </SPAN></FONT><FONT COLOR="#ff0000"><SPAN STYLE="background: transparent">Jim,
 Tom and Lucy are learning a new spell</SPAN></FONT><FONT COLOR="#000000"><SPAN STYLE="background: transparent">.
 Could be done with following script:</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="code-western" STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<CODE CLASS="code-western">selectString(“Tom”,1)<BR>replace(“Betty”)</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="code-western" STYLE="line-height: 150%"><CODE CLASS="code-western">selectString(“Tom”,1)<BR>replace(“Betty”)</CODE></P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Things
 get more complicated if there are two or more occurrences of “Tom”
 in the line e. g. </SPAN><FONT COLOR="#ff0000"><SPAN STYLE="background: transparent">Jim
 and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT><SPAN STYLE="background: transparent">.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">The
 above example code would select the first occurrence of “Tom” in
 this line and ignore the second.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">If
 you want to work on the the second occurrence of “Tom” you have
 to specify the occurrence number in the call to select().</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="code-western" STYLE="margin-bottom: 0.5cm; line-height: 150%">
-<CODE CLASS="code-western">selectString(“Tom”,2)<BR>replace(“Betty”)</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="code-western" STYLE="line-height: 150%"><CODE CLASS="code-western">selectString(“Tom”,2)<BR>replace(“Betty”)</CODE></P>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
 code would change the second “Tom” and leave the first “Tom”
 alone. The function call</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">replaceAll(“Betty”) </CODE>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT FACE="Arial, sans-serif">will replace all occurrences of “Tom”
 with “Betty” in the line if “Tom” has been selected before.
 ReplaceAll() is a conveniance function defined in LuaGlobal.lua.</FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Colorization
 example: You want to change to color of the words “ugly monster”
 to red on a white background. </SPAN></FONT></FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">You
 add a new trigger and define the regex: </SPAN></FONT></FONT><CODE CLASS="regex-western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">ugly
 monster</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">In
 the script you write:</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">selectString(“ugly monster”,1)</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">setFgColor(255,0,0)</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">setBgColor(255,255,255)</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">Another
 means to select text is to select a range of characters by specifying
 cursor positions.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">If
 we have following line: </SPAN><FONT COLOR="#ff0000"><SPAN STYLE="background: transparent">Jim
 and Tom like magic. Jim, Tom and Lucy are learning a new spell</SPAN></FONT><SPAN STYLE="background: transparent">.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">selectSection( 28, 3 )</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
 example would select the second Tom. The first argument to
 selectSection is the cursor position within the line and the second
 argument is the length of the selection.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">selectCaptureGroup(
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><SPAN STYLE="background: transparent">selectCaptureGroup(
 number )</SPAN></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><SPAN STYLE="background: transparent">This
 function selects the captureGroup number if you use Perl regular
 expressions containing capture groups. The first capture group starts
 with index 1.</SPAN></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">deleteLine() </CODE>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT FACE="Arial, sans-serif">This function deletes the current
 line. </FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <FONT COLOR="#000000"><FONT SIZE=4><B>Cursor Movement and Cursor
 Placement</B></FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">moveCursor( x, y )</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT FACE="Arial, sans-serif">This will move the user cursor x and y
 coordinates relative to its current position in the text.</FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">moveCursor( 3, -2 ) </CODE>will move the
 cursor 3 characters to the right and 2 lines up.</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">number_of_last_line_in_text =
 getLineCount()</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT FACE="Arial, sans-serif">returns the number of the last line of
 the text in the console buffer. This number will change as soon as a
 new '\n' is printed either by the user or</FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT FACE="Arial, sans-serif">when a new line arrives from the MUD.
 All lines from the MUD are terminated with '\n' which is called line
 feed or the new line character. This control character ends the
 current line and move the cursor to the beginning of the next line,
 thus creating a new, empty line below the line that contains the
 '\n'.</FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">line_number_of_the_current_cursor_position
 = getLineNumber()</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">column_number_of_the_current_cursor_position
 = getColumnNumber()</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 l<CODE CLASS="code-western">uaTable_containing_textlines = getLines(
 absolute_line_number_from, absolute_line_number_to )</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 t<FONT FACE="Arial, sans-serif">his will return a Lua table
 containing all lines between the absolute positions from and to.
 NOTE: This function uses absolute line numbers, not relative ones
 like in moveCursor(). This little demo script shows you how to use
 cursor functions: </FONT>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <FONT FACE="Arial, sans-serif">moveCursor() return true or false
 depending on wheather the move was possible.</FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
 User defined dockable windows</H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif">You
 may want to use dock windows to display information you gathered in
 your scripts, or you may want to use them as chat windows etc.
 <BR>Adding a user defined window: </FONT></FONT></CODE>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">openUserWindow( string window_name )</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">echoUserWindow( string window_name, string
 text ) </CODE>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#ff0000"><FONT FACE="Times New Roman, serif">setWindowSize(
 int x, int y )</FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western">clearWindow( string window_name )</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
 <CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Dynamic
 Timers</B></FONT></FONT></FONT></CODE></H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="code-western">tempTimer(
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="code-western">tempTimer(
 double timout, string lua_code_to_execute, string/float/int
 timer_name )<BR>disableTimer( name )<BR>enableTimer( name )</CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Dynamic
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Dynamic
 Triggers</B></FONT></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 <CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">triggerID
 = tempTrigger( regex, code ) </FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">creates
 a fast substring matching trigger</FONT></FONT><CODE CLASS="code-western"><FONT COLOR="#008000"><FONT FACE="Courier New, monospace"><BR>triggerID
 = tempRegexTrigger( regex, code ) </FONT></FONT></CODE><FONT COLOR="#008000"><FONT FACE="Courier New, monospace">creates
 a regular expression matching trigger</FONT></FONT></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Registering
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Arial, sans-serif"><FONT SIZE=4><B>Registering
 Event Handlers and Raising Events</B></FONT></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><CODE CLASS="code-western"><FONT COLOR="#008000">raiseEvent(
+<P CLASS="western" STYLE="line-height: 150%"><CODE CLASS="code-western"><FONT COLOR="#008000">raiseEvent(
 string name, args )</FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; line-height: 150%"><BR><BR>
+<P CLASS="western" STYLE="line-height: 150%"><BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=4>Handling
 Tables in Lua</FONT></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%; page-break-after: avoid">
 <CODE CLASS="western"><FONT COLOR="#000000"><FONT FACE="Albany, sans-serif"><FONT SIZE=2>Nick
 Gammon has written a very nice overview on how to deal with Lua
 tables. You can find it here:
 <A HREF="http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036">http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036</A>.</FONT></FONT></FONT></CODE></P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
 <H1 CLASS="western" STYLE="margin-top: 0cm; margin-bottom: 0cm; line-height: 150%">
 Lua Function And Variable Index</H1>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 Green functions are implemented but some of them may be disabled at
 times. See the &quot;current issues&quot; section below for more
 information. Red functions are planned, but not yet available. Some
@@ -1070,7 +1040,7 @@ $HOME/.config/mudlet) However, this file will be updated with every
 other new version of Mudlet. The scripts items in Mudlet are a much
 better place for this. If you want to include external scripts you
 can load them from there via lua_dofile(&quot;filename&quot;)</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
 Mudlet uses variable autosaving. Each session is completely saved to
 harddisc and will be restored when the profile is loaded. As a
 result, the variables will be initialzed to their former values.
@@ -1078,8 +1048,8 @@ There are functions to load and save specific Lua tables e.g. if you
 want to build your own little database of parameters that are
 relevant for your scripts. (-&gt;table.load( ... ) &amp; table.save(
 ...) check below.)</P>
-<P CLASS="western" STYLE="margin-bottom: 0.5cm; border: none; padding: 0cm; line-height: 150%">
-<BR><BR>
+<P CLASS="western" STYLE="border: none; padding: 0cm; line-height: 150%">
+<BR>
 </P>
 <TABLE WIDTH=891 BORDER=1 BORDERCOLOR="#000000" CELLPADDING=11 CELLSPACING=0 STYLE="page-break-before: auto; page-break-after: auto; page-break-inside: avoid">
 	<COL WIDTH=360>
@@ -1870,16 +1840,16 @@ relevant for your scripts. (-&gt;table.load( ... ) &amp; table.save(
 	</TR>
 	<TR VALIGN=TOP>
 		<TD WIDTH=360>
-			<P CLASS="western" STYLE="text-indent: -0.1cm; border: none; padding: 0cm">
+			<P CLASS="western" STYLE="margin-right: 0cm; text-indent: -0.1cm; border: none; padding: 0cm">
 			<FONT COLOR="#008000"><FONT FACE="Bitstream Vera Sans Mono, sans-serif"><FONT SIZE=1 STYLE="font-size: 8pt">function
 			replaceWildcard(what, replacement) </FONT></FONT></FONT>
 			</P>
 		</TD>
 		<TD WIDTH=485>
-			<P CLASS="western" STYLE="text-indent: -0.1cm; border: none; padding: 0cm">
+			<P CLASS="western" STYLE="margin-right: 0cm; text-indent: -0.1cm; margin-bottom: 0.5cm; border: none; padding: 0cm">
 			<FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=1 STYLE="font-size: 8pt">Replaces
 			the given wildcard (as a number) with the given text.</FONT></FONT></FONT></P>
-			<P CLASS="western" STYLE="text-indent: -0.1cm; border: none; padding: 0cm">
+			<P CLASS="western" STYLE="margin-right: 0cm; text-indent: -0.1cm; border: none; padding: 0cm">
 			<FONT SIZE=1 STYLE="font-size: 8pt">Example: replaceWildcard(1,
 			&quot;hello&quot;) on a trigger of `^You wave (goodbye)\.$`</FONT></P>
 		</TD>
