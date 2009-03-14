@@ -1,7 +1,8 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>trigger_main_area</class>
- <widget class="QWidget" name="trigger_main_area" >
-  <property name="geometry" >
+ <widget class="QWidget" name="trigger_main_area">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
@@ -9,147 +10,164 @@
     <height>230</height>
    </rect>
   </property>
-  <property name="sizePolicy" >
-   <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="maximumSize" >
+  <property name="maximumSize">
    <size>
     <width>16777215</width>
     <height>230</height>
    </size>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" >
-   <property name="topMargin" >
-    <number>0</number>
-   </property>
-   <property name="bottomMargin" >
-    <number>0</number>
-   </property>
-   <property name="horizontalSpacing" >
-    <number>9</number>
-   </property>
-   <property name="verticalSpacing" >
-    <number>3</number>
-   </property>
-   <item row="0" column="0" >
-    <widget class="QLabel" name="label_4" >
-     <property name="text" >
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
       <string>Trigger name:</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="1" >
-    <widget class="QLineEdit" name="lineEdit_trigger_name" />
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="lineEdit_trigger_name"/>
    </item>
-   <item row="0" column="2" >
-    <widget class="QCheckBox" name="checkBox_multlinetrigger" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+   <item row="0" column="2">
+    <widget class="QCheckBox" name="checkBox_multlinetrigger">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="font" >
+     <property name="font">
       <font>
        <pointsize>8</pointsize>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
      </property>
-     <property name="toolTip" >
-      <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-&lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style>&lt;/head>&lt;body style=" font-family:'DejaVu Sans'; font-size:8pt; font-weight:400; font-style:normal;">
-&lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Multiline Triggers: All conditions in the list must have matched within the specified margin of lines, in order to trigger the script. Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition return true, the trigger script is run. In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. The sequence of the conditions is binding. This means if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after contidtion #2  has been true.&lt;/p>&lt;/body>&lt;/html></string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Multiline Triggers: All conditions in the list must have matched within the specified margin of lines, in order to trigger the script. Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition return true, the trigger script is run. In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. The sequence of the conditions is binding. This means if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after contidtion #2  has been true.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
-     <property name="layoutDirection" >
+     <property name="layoutDirection">
       <enum>Qt::RightToLeft</enum>
      </property>
-     <property name="text" >
+     <property name="text">
       <string>:Multi Condition Trigger</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="3" >
-    <widget class="QLabel" name="label_3" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+   <item row="0" column="3">
+    <widget class="QLabel" name="label_3">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="font" >
+     <property name="font">
       <font>
        <pointsize>8</pointsize>
       </font>
      </property>
-     <property name="text" >
+     <property name="text">
       <string>Condition Line Delta</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="4" colspan="3" >
-    <widget class="QSpinBox" name="spinBox_linemargin" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+   <item row="0" column="4" colspan="2">
+    <widget class="QSpinBox" name="spinBox_linemargin">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="toolTip" >
+     <property name="toolTip">
       <string>Within how many lines must all condition be true to fire the trigger?</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0" >
-    <widget class="QLabel" name="label_5" >
-     <property name="text" >
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
       <string>Command:</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1" colspan="5" >
-    <widget class="QLineEdit" name="trigger_command" />
+   <item row="1" column="1">
+    <widget class="QLineEdit" name="trigger_command"/>
    </item>
-   <item row="2" column="0" >
-    <widget class="QLabel" name="label" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+   <item row="1" column="2" colspan="4">
+    <widget class="QCheckBox" name="perlSlashGOption">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="text" >
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+       <stylestrategy>PreferAntialias</stylestrategy>
+      </font>
+     </property>
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Multiline Triggers: All conditions in the list must have matched within the specified margin of lines, in order to trigger the script. Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition return true, the trigger script is run. In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. The sequence of the conditions is binding. This means if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after contidtion #2  has been true.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::RightToLeft</enum>
+     </property>
+     <property name="text">
+      <string>enable perl /g option to match regex multiple times per line:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
       <string>Regex List:</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1" colspan="5" >
-    <widget class="QListWidget" name="listWidget_regex_list" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+   <item row="2" column="1" colspan="5">
+    <widget class="QListWidget" name="listWidget_regex_list">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="maximumSize" >
+     <property name="maximumSize">
       <size>
        <width>16777215</width>
        <height>120</height>
       </size>
      </property>
-     <property name="palette" >
+     <property name="palette">
       <palette>
        <active>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>255</red>
            <green>234</green>
            <blue>218</blue>
@@ -158,9 +176,9 @@ p, li { white-space: pre-wrap; }
         </colorrole>
        </active>
        <inactive>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>255</red>
            <green>234</green>
            <blue>218</blue>
@@ -169,9 +187,9 @@ p, li { white-space: pre-wrap; }
         </colorrole>
        </inactive>
        <disabled>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>244</red>
            <green>244</green>
            <blue>244</blue>
@@ -181,69 +199,69 @@ p, li { white-space: pre-wrap; }
        </disabled>
       </palette>
      </property>
-     <property name="font" >
+     <property name="font">
       <font>
        <pointsize>8</pointsize>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
      </property>
-     <property name="toolTip" >
-      <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-&lt;html>&lt;head>&lt;meta name="qrichtext" content="1" />&lt;style type="text/css">
+     <property name="toolTip">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style>&lt;/head>&lt;body style=" font-family:'DejaVu Sans'; font-size:8pt; font-weight:400; font-style:normal;">
-&lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">In &lt;span style=" font-weight:600; text-decoration: underline;">normal triggers&lt;/span> (= line triggers) each line from the MUD will be matched against all of the strings or regular expressions on this list. If &lt;span style=" font-weight:600; text-decoration: underline;">any one&lt;/span> of them matches, the trigger will fire and run the script. &lt;/p>
-&lt;p align="justify" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">&lt;/p>
-&lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#ff0000;">&lt;span style=" color:#000000;">However, if the trigger type &lt;/span>&lt;span style=" font-weight:600; text-decoration: underline; color:#000000;">multiline trigger&lt;/span>&lt;span style=" color:#000000;"> is chosen the behaviour is different. In case of a multiline trigger, &lt;/span>&lt;span style=" font-weight:600; text-decoration: underline; color:#000000;">all&lt;/span>&lt;span style=" color:#000000;"> strings / regex on the list have to match at least once within the specified amount of lines (-&amp;gt; Line Margin)&lt;/span>&lt;/p>
-&lt;p align="justify" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;">&lt;/p>
-&lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;">To add a new string or regex to the list use the green input line below and press enter or the add button.&lt;/p>
-&lt;p align="justify" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;">&lt;/p>
-&lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;">&lt;span style=" color:#ff0000;">NOTE:&lt;/span> You cannot yet mix regular expression and string matching within one trigger. It's either string matching or Perl style regular expressions, but not both.&lt;/p>
-&lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;">&lt;span style=" font-weight:600; text-decoration: underline;">String matching is much faster than regular expression matching. &lt;/span>So if speed is an issue for you, try to reduce the amount of regular expressions - especially those containing wild cards, because these can be very slow.&lt;/p>
-&lt;p align="justify" style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;">&lt;/p>
-&lt;p align="justify" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;">To change the order of strings/regex in the list please use drag and drop with the mouse.&lt;/p>&lt;/body>&lt;/html></string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;In &lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;normal triggers&lt;/span&gt; (= line triggers) each line from the MUD will be matched against all of the strings or regular expressions on this list. If &lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;any one&lt;/span&gt; of them matches, the trigger will fire and run the script. &lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#ff0000;&quot;&gt;&lt;span style=&quot; color:#000000;&quot;&gt;However, if the trigger type &lt;/span&gt;&lt;span style=&quot; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;multiline trigger&lt;/span&gt;&lt;span style=&quot; color:#000000;&quot;&gt; is chosen the behaviour is different. In case of a multiline trigger, &lt;/span&gt;&lt;span style=&quot; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;all&lt;/span&gt;&lt;span style=&quot; color:#000000;&quot;&gt; strings / regex on the list have to match at least once within the specified amount of lines (-&amp;gt; Line Margin)&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;&quot;&gt;To add a new string or regex to the list use the green input line below and press enter or the add button.&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;&quot;&gt;&lt;span style=&quot; color:#ff0000;&quot;&gt;NOTE:&lt;/span&gt; You cannot yet mix regular expression and string matching within one trigger. It's either string matching or Perl style regular expressions, but not both.&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;&quot;&gt;&lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;String matching is much faster than regular expression matching. &lt;/span&gt;So if speed is an issue for you, try to reduce the amount of regular expressions - especially those containing wild cards, because these can be very slow.&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;justify&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#000000;&quot;&gt;To change the order of strings/regex in the list please use drag and drop with the mouse.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
-     <property name="autoFillBackground" >
+     <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <property name="frameShape" >
+     <property name="frameShape">
       <enum>QFrame::Box</enum>
      </property>
-     <property name="frameShadow" >
+     <property name="frameShadow">
       <enum>QFrame::Plain</enum>
      </property>
-     <property name="editTriggers" >
+     <property name="editTriggers">
       <set>QAbstractItemView::AllEditTriggers</set>
      </property>
-     <property name="dragEnabled" >
+     <property name="dragEnabled">
       <bool>true</bool>
      </property>
-     <property name="dragDropMode" >
+     <property name="dragDropMode">
       <enum>QAbstractItemView::InternalMove</enum>
      </property>
-     <property name="alternatingRowColors" >
+     <property name="alternatingRowColors">
       <bool>false</bool>
      </property>
-     <property name="textElideMode" >
+     <property name="textElideMode">
       <enum>Qt::ElideNone</enum>
      </property>
-     <property name="verticalScrollMode" >
+     <property name="verticalScrollMode">
       <enum>QAbstractItemView::ScrollPerPixel</enum>
      </property>
-     <property name="horizontalScrollMode" >
+     <property name="horizontalScrollMode">
       <enum>QAbstractItemView::ScrollPerPixel</enum>
      </property>
     </widget>
    </item>
-   <item row="2" column="6" >
-    <widget class="QWidget" native="1" name="widget" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+   <item row="2" column="6">
+    <widget class="QWidget" name="widget" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="minimumSize" >
+     <property name="minimumSize">
       <size>
        <width>5</width>
        <height>5</height>
@@ -251,16 +269,16 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="3" column="0" >
-    <widget class="QLabel" name="label_2" >
-     <property name="text" >
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
       <string>Add to List:</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="1" colspan="3" >
-    <widget class="QLineEdit" name="lineEdit" >
-     <property name="font" >
+   <item row="3" column="1" colspan="3">
+    <widget class="QLineEdit" name="lineEdit">
+     <property name="font">
       <font>
        <pointsize>8</pointsize>
        <stylestrategy>PreferAntialias</stylestrategy>
@@ -268,49 +286,49 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="3" column="4" >
-    <widget class="QToolButton" name="toolButton_remove" >
-     <property name="minimumSize" >
+   <item row="3" column="4">
+    <widget class="QToolButton" name="toolButton_remove">
+     <property name="minimumSize">
       <size>
        <width>20</width>
        <height>20</height>
       </size>
      </property>
-     <property name="text" >
+     <property name="text">
       <string/>
      </property>
-     <property name="icon" >
-      <iconset resource="../mudlet_alpha.qrc" >
+     <property name="icon">
+      <iconset resource="../mudlet_alpha.qrc">
        <normaloff>:/icons/dialog-cancel.png</normaloff>:/icons/dialog-cancel.png</iconset>
      </property>
     </widget>
    </item>
-   <item row="3" column="5" >
-    <widget class="QToolButton" name="toolButton_add" >
-     <property name="minimumSize" >
+   <item row="3" column="5">
+    <widget class="QToolButton" name="toolButton_add">
+     <property name="minimumSize">
       <size>
        <width>20</width>
        <height>20</height>
       </size>
      </property>
-     <property name="text" >
+     <property name="text">
       <string/>
      </property>
-     <property name="icon" >
-      <iconset resource="../mudlet_alpha.qrc" >
+     <property name="icon">
+      <iconset resource="../mudlet_alpha.qrc">
        <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
      </property>
     </widget>
    </item>
-   <item row="3" column="6" >
-    <spacer name="horizontalSpacer_3" >
-     <property name="orientation" >
+   <item row="3" column="6">
+    <spacer name="horizontalSpacer_3">
+     <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="sizeType" >
+     <property name="sizeType">
       <enum>QSizePolicy::Fixed</enum>
      </property>
-     <property name="sizeHint" stdset="0" >
+     <property name="sizeHint" stdset="0">
       <size>
        <width>5</width>
        <height>20</height>
@@ -318,33 +336,33 @@ p, li { white-space: pre-wrap; }
      </property>
     </spacer>
    </item>
-   <item row="4" column="0" >
-    <widget class="QLabel" name="label_6" >
-     <property name="text" >
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_6">
+     <property name="text">
       <string>Type:</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="1" colspan="5" >
-    <widget class="QComboBox" name="comboBox_regexstyle" >
-     <property name="sizePolicy" >
-      <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+   <item row="4" column="1" colspan="2">
+    <widget class="QComboBox" name="comboBox_regexstyle">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="maximumSize" >
+     <property name="maximumSize">
       <size>
        <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>
-     <property name="palette" >
+     <property name="palette">
       <palette>
        <active>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>255</red>
            <green>230</green>
            <blue>232</blue>
@@ -353,9 +371,9 @@ p, li { white-space: pre-wrap; }
         </colorrole>
        </active>
        <inactive>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>255</red>
            <green>230</green>
            <blue>232</blue>
@@ -364,9 +382,9 @@ p, li { white-space: pre-wrap; }
         </colorrole>
        </inactive>
        <disabled>
-        <colorrole role="Base" >
-         <brush brushstyle="SolidPattern" >
-          <color alpha="255" >
+        <colorrole role="Base">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
            <red>244</red>
            <green>244</green>
            <blue>244</blue>
@@ -376,45 +394,45 @@ p, li { white-space: pre-wrap; }
        </disabled>
       </palette>
      </property>
-     <property name="font" >
+     <property name="font">
       <font>
        <pointsize>8</pointsize>
       </font>
      </property>
-     <property name="autoFillBackground" >
+     <property name="autoFillBackground">
       <bool>true</bool>
      </property>
      <item>
-      <property name="text" >
+      <property name="text">
        <string>Fast Substring [true if string in line]</string>
       </property>
      </item>
      <item>
-      <property name="text" >
+      <property name="text">
        <string>Perl Style Regular Expression</string>
       </property>
      </item>
      <item>
-      <property name="text" >
+      <property name="text">
        <string>Wildcards/Globbing</string>
       </property>
      </item>
      <item>
-      <property name="text" >
+      <property name="text">
        <string>Exact Match [true if string=line]</string>
       </property>
      </item>
     </widget>
    </item>
-   <item row="4" column="6" >
-    <spacer name="horizontalSpacer_2" >
-     <property name="orientation" >
+   <item row="4" column="6">
+    <spacer name="horizontalSpacer_2">
+     <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="sizeType" >
+     <property name="sizeType">
       <enum>QSizePolicy::Fixed</enum>
      </property>
-     <property name="sizeHint" stdset="0" >
+     <property name="sizeHint" stdset="0">
       <size>
        <width>5</width>
        <height>20</height>
@@ -425,7 +443,7 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <resources>
-  <include location="../mudlet_alpha.qrc" />
+  <include location="../mudlet_alpha.qrc"/>
  </resources>
  <connections/>
 </ui>

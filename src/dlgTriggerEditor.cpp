@@ -1055,6 +1055,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     pNewItem->setIcon( 0, icon );
     if( pParent ) pParent->setExpanded( true );
     mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->listWidget_regex_list->clear();
     mpSourceEditorArea->script_scintilla->clear();
     mpTriggersMainArea->trigger_command->clear();
@@ -1580,6 +1581,7 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
             pT->setTriggerType( mpTriggersMainArea->comboBox_regexstyle->currentIndex() );
             pT->setScript( script );
             pT->setIsMultiline( isMultiline );
+            pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
             QIcon icon;
             if( pT->isFilterChain() )
@@ -1997,6 +1999,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->trigger_command->setText( command );
         mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex( REGEX_SUBSTRING );
         mpTriggersMainArea->checkBox_multlinetrigger->setChecked( pT->isMultiline() );
+        mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
         mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );
         QString script = pT->getScript();
         mpSourceEditorArea->script_scintilla->setText( script );

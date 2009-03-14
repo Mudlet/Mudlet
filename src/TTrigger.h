@@ -104,6 +104,7 @@ public:
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     bool             mTriggerContainsPerlRegex;
+    bool             mPerlSlashGOption;
     bool             isClone( TTrigger & ) const;
     
 private:

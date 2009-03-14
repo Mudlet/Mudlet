@@ -227,6 +227,8 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isTempTrigger", pT->mIsTempTrigger ? "yes" : "no" ); 
     writeAttribute( "isMultiline", pT->mIsMultiline ? "yes" : "no" );
+    writeAttribute( "isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no" );
+
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "triggerType", QString::number( pT->mTriggerType ) );

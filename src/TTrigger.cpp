@@ -47,6 +47,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mStartOfLineDelta( 0 )
 , mLineDelta( 0 )
 , mIsMultiline( false )
+, mPerlSlashGOption( false )
 , mTriggerType( REGEX_SUBSTRING )
 , mTriggerContainsPerlRegex( false )
 {
@@ -64,6 +65,7 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 , mStartOfLineDelta( 0 )
 , mLineDelta( 0 )
 , mIsMultiline( isMultiline )
+, mPerlSlashGOption( false )
 , mTriggerType( REGEX_SUBSTRING )
 , mTriggerContainsPerlRegex( false )
 {
@@ -314,7 +316,7 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
         }
     } 
     //TODO: add named groups seperately later as Lua::namedGroups
-    for(;;)
+    for( ; mPerlSlashGOption ; )
     {
         int options = 0;                
         int start_offset = ovector[1];  

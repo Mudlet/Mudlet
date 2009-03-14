@@ -517,6 +517,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTrigger = ( attributes().value("isTempTrigger") == "yes" );
     pT->mIsMultiline = ( attributes().value("isMultiline") == "yes" );
+    pT->mPerlSlashGOption = ( attributes().value("isPerlSlashGOption") == "yes" );
 
     while( ! atEnd() ) 
     {
