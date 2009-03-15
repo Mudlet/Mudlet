@@ -593,10 +593,8 @@ void dlgTriggerEditor::slot_addTimer()
 void dlgTriggerEditor::slot_deleteAlias()
 {
     QTreeWidgetItem * pItem = treeWidget_alias->currentItem();    
-    QTreeWidgetItem * pParent = pItem->parent();
-    
     if( ! pItem ) return;
-    
+    QTreeWidgetItem * pParent = pItem->parent();
     TAlias * pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return; 
     
@@ -614,10 +612,8 @@ void dlgTriggerEditor::slot_deleteAlias()
 void dlgTriggerEditor::slot_deleteAction()
 {
     QTreeWidgetItem * pItem = treeWidget_actions->currentItem();    
-    QTreeWidgetItem * pParent = pItem->parent();
-    
     if( ! pItem ) return;
-    
+    QTreeWidgetItem * pParent = pItem->parent();
     TAction * pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return; 
     
@@ -636,10 +632,8 @@ void dlgTriggerEditor::slot_deleteAction()
 void dlgTriggerEditor::slot_deleteScript()
 {
     QTreeWidgetItem * pItem = treeWidget_scripts->currentItem();    
-    QTreeWidgetItem * pParent = pItem->parent();
-    
     if( ! pItem ) return;
-    
+    QTreeWidgetItem * pParent = pItem->parent();
     TScript * pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return; 
     
@@ -657,9 +651,8 @@ void dlgTriggerEditor::slot_deleteScript()
 void dlgTriggerEditor::slot_deleteKey()
 {
     QTreeWidgetItem * pItem = treeWidget_keys->currentItem();    
-    QTreeWidgetItem * pParent = pItem->parent();
-    
     if( ! pItem ) return;
+    QTreeWidgetItem * pParent = pItem->parent();
     
     TKey * pT = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return; 
@@ -677,10 +670,9 @@ void dlgTriggerEditor::slot_deleteKey()
 
 void dlgTriggerEditor::slot_deleteTrigger()
 {
-    QTreeWidgetItem * pItem = treeWidget->currentItem();    
-    QTreeWidgetItem * pParent = pItem->parent();
-    
+    QTreeWidgetItem * pItem = treeWidget->currentItem();
     if( ! pItem ) return;
+    QTreeWidgetItem * pParent = pItem->parent();
     
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return; 
@@ -972,7 +964,6 @@ void dlgTriggerEditor::slot_key_toggle_active()
 
 void dlgTriggerEditor::addTrigger( bool isFolder )
 {
-   
     QString name;
     if( isFolder ) name = "New Trigger Group";
     else name = "New Trigger";

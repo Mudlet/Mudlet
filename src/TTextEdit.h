@@ -76,7 +76,7 @@ public:
     void              highlight();
     void              unHighlight( QRegion & );
     void              swap( QPoint & p1, QPoint & p2 );
-    
+    void              focusInEvent( QFocusEvent * event );
     int               imageTopLine();
     int               bufferScrollUp( int lines );
     int               bufferScrollDown( int lines );

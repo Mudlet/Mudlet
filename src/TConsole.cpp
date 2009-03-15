@@ -1088,7 +1088,6 @@ void TConsole::replace( QString text )
     buffer.replaceInLine( P_begin, P_end, text, mFormatCurrent );
 }
 
-
 void TConsole::skipLine()
 {
     deleteLine( mUserCursor.y() );

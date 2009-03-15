@@ -101,6 +101,13 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     showNewLines();
 }
 
+void TTextEdit::focusInEvent ( QFocusEvent * event )
+{
+    update();
+    QWidget::focusInEvent( event );
+}
+
+
 void TTextEdit::slot_toggleTimeStamps()
 {
     mShowTimeStamps = !mShowTimeStamps;   
