@@ -85,26 +85,18 @@ int main(int argc, char *argv[])
     }
     
     QFile file_doc(":/mudlet_documentation.html");
-    QFile file_doc_old( directory+"/mudlet_documentation.html" );
-    if( file_doc.exists() )
-    {
-        if( file_doc_old.exists() )
-        {
-            file_doc_old.remove();
-        }
-        file_doc.copy( directory+"/mudlet_documentation.html" );
-    }
+    QFile file_doc_old;
+    file_doc_old.setFileName( directory+"/mudlet_documentation.html" );
+    qDebug()<<"deleting old manual<"<<directory+"/mudlet_documentation.html"<<">";
+    bool ok=file_doc_old.remove();
+    if( ok ) qDebug()<<"OK deleted file";
+    else qDebug()<<"ERROR: could not remove file";
+    file_doc.copy( directory+"/mudlet_documentation.html" );
 
     QFile file_lua(":/LuaGlobal.lua");
     QFile file_lua_old( directory+"/LuaGlobal.lua" );
-    if( file_lua.exists() )
-    {
-        if( file_lua_old.exists() )
-        {
-            file_lua_old.remove();
-        }
-        file_lua.copy( directory+"/LuaGlobal.lua" );
-    }
+    file_lua_old.remove();
+    file_lua.copy( directory+"/LuaGlobal.lua" );
 
     QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
     file_f1.copy( directory+"/COPYRIGHT.TXT" );
