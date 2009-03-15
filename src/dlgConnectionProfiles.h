@@ -68,7 +68,9 @@ public slots:
     
     
 private:
-    
+    void deleteDirectory( QString );
+    void deleteAllFiles( QString );
+
     QString            mOrigin;
     QString            mUnsavedProfileName;
     bool               mSavedNewName;

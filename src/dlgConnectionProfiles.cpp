@@ -188,7 +188,7 @@ void dlgConnectionProfiles::slot_update_autologin( int state )
 
 void dlgConnectionProfiles::slot_update_port( const QString port )
 {
-    const QString zahlen = "012345789";
+    const QString zahlen = "0123456789";
     if( ! zahlen.contains( port.right( 1 ) ) )
     {
         QString val = port;
@@ -483,7 +483,43 @@ void dlgConnectionProfiles::copy_profile( QString oldProfile )
     
 }
 
+void dlgConnectionProfiles::deleteAllFiles( QString path )
+{
+    QStringList filters;
+    QDir dir( path );
+    QStringList deleteList = dir.entryList();
+    for( int i=0; i<deleteList.size(); i++ )
+    {
+        dir.remove( deleteList[i] );
+        qDebug()<<"removing:"<<deleteList[i];
+    }
+    dir.rmpath( dir.path());
+}
 
+void dlgConnectionProfiles::deleteDirectory( QString path )
+{
+    qDebug()<<"deleteDirectory path="<<path;
+    QStringList filters;
+    QDir dir( path );
+    QStringList deleteList;
+    deleteList = dir.entryList( filters, QDir::Dirs | QDir::NoDotAndDotDot );
+
+    for( int i=0; i<deleteList.size(); i++ )
+    {
+        deleteAllFiles( path + QString("/") + deleteList[i] );
+        dir.remove( deleteList[i] );
+        qDebug()<<"removing:"<<deleteList[i];
+    }
+    deleteList = dir.entryList();
+    for( int i=0; i<deleteList.size(); i++ )
+    {
+        deleteAllFiles( path + QString("/") + deleteList[i] );
+        dir.remove( deleteList[i] );
+        qDebug()<<"removing:"<<deleteList[i];
+    }
+
+    dir.rmpath( dir.path());
+}
 
 void dlgConnectionProfiles::slot_deleteProfile()
 {
@@ -496,11 +532,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     
     profiles_tree_widget->takeTopLevelItem( profiles_tree_widget->currentIndex().row() );
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
-    QStringList deleteList = dir.entryList();
-    for( int i=0; i<deleteList.size(); i++ )
-    {
-        dir.remove( deleteList[i] );
-    }
+    deleteDirectory( dir.path() );
     dir.rmpath( dir.path());
     
     if( ! mProfileList.size() )
