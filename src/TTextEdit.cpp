@@ -207,7 +207,7 @@ void TTextEdit::showNewLines()
     
     int lines = mpBuffer->newLines;
     if( ! mIsSplitScreen )
-        if( lines == 0 ) 
+        if( lines <= 0 )
             return;
     mCursorY = mpBuffer->size()-1;
     if( mCursorY > mScreenHeight )
@@ -303,7 +303,7 @@ void TTextEdit::drawBackground( QPainter & painter,
                                const QColor & bgColor )
 {
     QRect bR = rect;
-    painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor );//QColor(rand()%255,rand()%255,rand()%255));//bgColor);
+    painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor);//QColor(rand()%255,rand()%255,rand()%255));//bgColor);
 }
 
 void TTextEdit::drawCharacters( QPainter & painter,

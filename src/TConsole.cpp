@@ -759,6 +759,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     translateToPlainText( incomingSocketData );
     
     mTriggerEngineMode = true;
+    mDeletedLines = 0;
     for( int i=lineBeforeNewContent; i<buffer.getLastLineNumber()+1; i++ )
     {
         mUserCursor.setY( i );
@@ -769,6 +770,13 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         mpHost->incomingStreamProcessor( mCurrentLine, prompt );
         mUserCursor.setY( mUserCursor.y() + 1 );
         mUserCursor.setX( 0 );
+
+        if( mDeletedLines > 0 )
+        {
+            i = i - mDeletedLines;
+            mDeletedLines = 0;
+            buffer.newLines--;
+        }
     }
     mTriggerEngineMode = false;    
     buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mStandardFormat );
@@ -1091,13 +1099,12 @@ void TConsole::replace( QString text )
 void TConsole::skipLine()
 {
     deleteLine( mUserCursor.y() );
+    mDeletedLines++;
 }
 
 bool TConsole::deleteLine( int y )
 {
-    bool ret = buffer.deleteLine( y );
-    update();
-    return ret;
+    return buffer.deleteLine( y );
 }
 
 

@@ -248,7 +248,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( viewKeysAction, SIGNAL(triggered()), this, SLOT( slot_show_keys()));
     
     QAction * toggleActiveAction = new QAction(QIcon(":/icons/document-encrypt.png"), tr("Activate"), this);
-    toggleActiveAction->setShortcut(tr("Ctrl+t"));
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
     connect( toggleActiveAction, SIGNAL(triggered()), this, SLOT( slot_toggle_active()));
     

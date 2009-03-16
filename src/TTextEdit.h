@@ -83,7 +83,9 @@ public:
     bool              isTailMode();
     void              copySelectionToClipboard();
     bool              mShowTimeStamps;
-    
+    int               mScrollVector;
+    int               mCursorY;
+
 signals:
     
 public slots:
@@ -91,7 +93,9 @@ public slots:
     void              slot_toggleTimeStamps();
     void              slot_copySelectionToClipboard();
     void              slot_scrollBarMoved( int );
-    
+
+
+
 private:
     
     void              initDefaultSettings();
@@ -114,7 +118,7 @@ private:
     Host *            mpHost;
     TBuffer *         mpBuffer;
     TConsole *        mpConsole;
-    int               mCursorY;
+
     bool              mIsTailMode;
     bool              mHighlight_on;
     bool              mHighlightingBegin;
@@ -125,7 +129,7 @@ private:
     QPoint            mPA;
     QPoint            mPB;
     QRegion           mSelectedRegion;
-    qreal             mScrollVector;
+
     bool              mPainterInit;
     QPixmap           mScreenMap;
     QScrollBar *      mpScrollBar;

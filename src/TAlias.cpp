@@ -68,7 +68,7 @@ TAlias::~TAlias()
 bool TAlias::match( QString & toMatch )
 {
     if( ! mIsActive ) return false;
-    
+
     bool matchCondition = false;
     bool ret = false;
     bool conditionMet = false;
@@ -91,16 +91,20 @@ bool TAlias::match( QString & toMatch )
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
     
     //cout <<" LINE="<<subject<<endl;
-    
-    rc = pcre_exec( re,                    
-                    0,                                                                      
-                    subject,                                              
-                    subject_length,                                       
-                    0,                                                               
-                    0,                     
-                    ovector,                                                               
-                    100 );            
-    
+    if( mRegexCode.size() > 0 )
+    {
+        rc = pcre_exec( re,
+                        0,
+                        subject,
+                        subject_length,
+                        0,
+                        0,
+                        ovector,
+                        100 );
+    }
+    else
+        goto ERROR;
+
     if( rc < 0 )
     {
         switch(rc)
@@ -223,7 +227,7 @@ bool TAlias::match( QString & toMatch )
             if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
         }
     }      
-    
+
 END:
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();
@@ -232,7 +236,7 @@ END:
         execute();
         pL->clearCaptureGroups();
     }
-    
+
 ERROR:
     typedef list<TAlias *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)

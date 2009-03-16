@@ -42,7 +42,7 @@ cTelnet::cTelnet( Host * pH )
 {
     if( mpHost )
     {
-        qDebug()<<"hostName="<<mpHost->getName()<<" bugfix="<<mpHost->mUSE_IRE_DRIVER_BUGFIX;
+        //qDebug()<<"hostName="<<mpHost->getName()<<" bugfix="<<mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
     }
     mIsTimerPosting = false;
@@ -690,9 +690,8 @@ void cTelnet::gotRest( string & mud_data )
 
 void cTelnet::slot_timerPosting()
 {
-    //qDebug()<<"TIMER-fired";
     if( ! mIsTimerPosting ) return;
-    qDebug()<<"TIMER->posting";
+    //qDebug()<<"TIMER->posting";
     postData();
     mMudData = "";
     mIsTimerPosting = false; 

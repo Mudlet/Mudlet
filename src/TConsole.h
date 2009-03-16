@@ -239,7 +239,7 @@ private:
       QTextStream       mLogStream;
       bool              mLogToLogFile;
       QString           mLogFileName;
-      
+      int               mDeletedLines;
 
 signals:
     
