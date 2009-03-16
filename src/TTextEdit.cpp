@@ -207,8 +207,13 @@ void TTextEdit::showNewLines()
     
     int lines = mpBuffer->newLines;
     if( ! mIsSplitScreen )
-        if( lines <= 0 )
+    {
+        if( ( lines <= 0 )
+         && ( mpBuffer->line( mpBuffer->getLastLineNumber() ).size() <= 1 ) )
+        {
             return;
+        }
+    }
     mCursorY = mpBuffer->size()-1;
     if( mCursorY > mScreenHeight )
     {
