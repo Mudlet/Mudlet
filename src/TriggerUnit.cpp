@@ -172,13 +172,24 @@ qint64 TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream( QString & data )
 {    
+    char * subject = (char *) malloc( strlen( data.toLatin1().data() ) + 2048 );
+    strcpy( subject, data.toLatin1().data() );
+
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
-        pChild->match( data );
+        pChild->match( subject, data );
     }
+    free( subject );
+
+    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++ )
+    {
+        delete *it;
+    }
+    mCleanupList.clear();
 }
+
 
 void TriggerUnit::stopAllTriggers()
 {    

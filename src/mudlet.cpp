@@ -347,6 +347,34 @@ void mudlet::clearUserWindow( Host * pHost, QString & name )
     else TDebug()<<"ERROR: window doesnt exit" >> 0;
 }
 
+int mudlet::getLastLineNumber( QString & name )
+{
+    if( dockWindowMap.contains( name ) )
+    {
+        return dockWindowConsoleMap[name]->getLastLineNumber();
+    }
+    else TDebug()<<"ERROR: window doesnt exit" >> 0;
+    return -1;
+}
+
+void mudlet::moveCursorEnd( QString & name )
+{
+    if( dockWindowMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->moveCursorEnd();
+    }
+    else TDebug()<<"ERROR: window doesnt exit" >> 0;
+}
+
+bool mudlet::moveCursor( QString & name, int x, int y )
+{
+    if( dockWindowMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->moveCursor( x, y );
+    }
+    else TDebug()<<"ERROR: window doesnt exit" >> 0;
+}
+
 void mudlet::userWindowLineWrap( Host * pHost, QString & name, bool on )
 {
     //FIXME

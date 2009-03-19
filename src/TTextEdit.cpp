@@ -202,8 +202,12 @@ void TTextEdit::updateScreenView()
 void TTextEdit::showNewLines() 
 {   
     if( ! mIsSplitScreen )
+    {
         if( ! isTailMode() ) 
+        {
             return;
+        }
+    }
     
     int lines = mpBuffer->newLines;
     if( ! mIsSplitScreen )
@@ -230,7 +234,9 @@ void TTextEdit::showNewLines()
             mpConsole->mpScrollBar->setSingleStep( 1 );
             mpConsole->mpScrollBar->setPageStep( mScreenHeight );
             if( mpConsole->console->isTailMode() )
+            {
                 mpConsole->mpScrollBar->setValue( mCursorY );
+            }
             connect( mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
         }
     }

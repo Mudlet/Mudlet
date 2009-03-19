@@ -549,7 +549,9 @@ void TConsole::translateToPlainText( QString & s )
     int cursorX=0, cursorY=0;
     if( mFormatSequenceRest.size() > 0 ) 
     {
+        qDebug()<<"PREPENDING:<"<<mFormatSequenceRest<<">";
         s.prepend( mFormatSequenceRest );
+        mFormatSequenceRest.clear();
     }
     mFormatSequenceRest="";
     int sequence_begin = 0;
@@ -732,10 +734,56 @@ void TConsole::translateToPlainText( QString & s )
             }
             pos = sequence_begin + sequence_length;
             sequence_begin = s.indexOf( QString( "\033[" ), pos );
+            int dangling_esc = -1;
+            // retrieve dangling <ESC> sequence headers in case of package splits
+            if( sequence_begin == -1 )
+            {
+                dangling_esc = s.indexOf( QChar('\033'), pos );
+            }
             if( (sequence_begin > pos + 1 ) || ( sequence_begin == -1 ) )
             {
-                if( ! m_fontSpecs.bold ) buffer.append( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline );
-                else buffer.append( s.mid( pos+1, sequence_begin-pos-1 ), m_fontSpecs.fgColorLight, m_fontSpecs.bgColor, false, m_fontSpecs.italics, m_fontSpecs.underline ); 
+                if( dangling_esc > -1 )
+                {
+                     // sequence_end is in next TCP/IPpacket keep translation state
+                     mFormatSequenceRest = QChar('\033');
+                     if( ! m_fontSpecs.bold )
+                     {
+                         buffer.append( s.mid( pos+1, dangling_esc ),
+                                        m_fontSpecs.fgColor,
+                                        m_fontSpecs.bgColor,
+                                        false,
+                                        m_fontSpecs.italics,
+                                        m_fontSpecs.underline );
+                     }
+                     else
+                     {
+                          buffer.append( s.mid( pos+1, dangling_esc ),
+                                         m_fontSpecs.fgColorLight,
+                                         m_fontSpecs.bgColor,
+                                         false,
+                                         m_fontSpecs.italics,
+                                         m_fontSpecs.underline );
+                     }
+                     return;
+                }
+                if( ! m_fontSpecs.bold )
+                {
+                    buffer.append( s.mid( pos+1, sequence_begin-pos-1 ),
+                                   m_fontSpecs.fgColor,
+                                   m_fontSpecs.bgColor,
+                                   false,
+                                   m_fontSpecs.italics,
+                                   m_fontSpecs.underline );
+                }
+                else
+                {
+                    buffer.append( s.mid( pos+1, sequence_begin-pos-1 ),
+                                   m_fontSpecs.fgColorLight,
+                                   m_fontSpecs.bgColor,
+                                   false,
+                                   m_fontSpecs.italics,
+                                   m_fontSpecs.underline );
+                }
             }
         }// is sequence_end included in this data packet?
         else
@@ -763,8 +811,10 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     for( int i=lineBeforeNewContent; i<buffer.getLastLineNumber()+1; i++ )
     {
         mUserCursor.setY( i );
+        mEngineCursor = i;
         mUserCursor.setX( 0 );
         mCurrentLine = buffer.line( i );
+        //qDebug()<<"line<"<<mCurrentLine<<">";
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
         mpHost->incomingStreamProcessor( mCurrentLine, prompt );
@@ -776,6 +826,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
             i = i - mDeletedLines;
             mDeletedLines = 0;
             buffer.newLines--;
+            continue;
         }
     }
     mTriggerEngineMode = false;    
@@ -1020,6 +1071,15 @@ void TConsole::scrollUp( int lines )
     console->scrollUp( lines );    
 }
 
+void TConsole::reset()
+{
+    mFormatCurrent.bgColor = mStandardFormat.bgColor;
+    mFormatCurrent.fgColor = mStandardFormat.fgColor;
+    mFormatCurrent.bold = false;
+    mFormatCurrent.italics = false;
+    mFormatCurrent.underline = false;
+}
+
 void TConsole::insertText( QString text, QPoint P )
 {
     int x = P.x();
@@ -1047,20 +1107,44 @@ void TConsole::insertText( QString text, QPoint P )
             mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
         }
     }
-    if( mTriggerEngineMode )
+    if( ( mTriggerEngineMode ) && ( y != mEngineCursor ) )
     {
-        buffer.insertInLine( P, text, mFormatCurrent );
+        if( y >= buffer.getLastLineNumber() )
+        {
+            buffer.append( text,
+                           mFormatCurrent.fgColor,
+                           mFormatCurrent.bgColor,
+                           false,
+                           false,
+                           false );
+        }
+        else
+        {
+            buffer.insertInLine( P, text, mFormatCurrent );
+        }
         return;
     }
     else
     {
-        buffer.insert( mUserCursor, 
-                   text, 
-                   mFormatCurrent.fgColor, 
-                   mFormatCurrent.bgColor, 
-                   false, 
-                   false, 
-                   false );
+        if( mUserCursor.y() >= buffer.getLastLineNumber() )
+        {
+            buffer.append( text,
+                           mFormatCurrent.fgColor,
+                           mFormatCurrent.bgColor,
+                           false,
+                           false,
+                           false );
+        }
+        else
+        {
+            buffer.insert( mUserCursor,
+                           text,
+                           mFormatCurrent.fgColor,
+                           mFormatCurrent.bgColor,
+                           false,
+                           false,
+                           false );
+        }
         console->showNewLines();
     }
 }
@@ -1154,17 +1238,32 @@ QStringList TConsole::getLines( int from, int to )
     return ret;
 }
 
+int TConsole::getLastLineNumber()
+{
+    return buffer.getLastLineNumber();
+}
+
+void TConsole::moveCursorEnd()
+{
+    if( ! moveCursor( 0, buffer.getLastLineNumber() ) )
+    {
+        qWarning("ERROR: cant move cursor to last line");
+    }
+}
+
 bool TConsole::moveCursor( int x, int y )
 {
-    QPoint P(mUserCursor.x()+x,mUserCursor.y()+y);
+    QPoint P( x, y );
     if( buffer.moveCursor( P ) )
     {
-        mUserCursor.setX( mUserCursor.x()+x );
-        mUserCursor.setY( mUserCursor.y()+y );
+        mUserCursor.setX( x );
+        mUserCursor.setY( y );
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 
@@ -1199,7 +1298,6 @@ int TConsole::select( QString text, int numOfMatch )
     
     if( mudlet::debugMode ) 
         TDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
-    qDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() );       
     return begin;
 }
 

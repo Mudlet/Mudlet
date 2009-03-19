@@ -466,11 +466,22 @@ int TLuaInterpreter::selectSection( lua_State * L )
     return 1;
 }
 
-// error = moveCursor( x, y ) x and y can be negative. if move is not possible error is returned
+
 int TLuaInterpreter::moveCursor( lua_State * L )
 {
+    string luaWindowName="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
     int luaFrom;
-    if( ! lua_isnumber( L, 1 ) ) 
+    if( ! lua_isnumber( L, 2 ) )
     {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
@@ -478,22 +489,26 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     }
     else
     { 
-        luaFrom = lua_tointeger( L, 1 );
+        luaFrom = lua_tointeger( L, 2 );
     }      
     
     int luaTo;
-    if( ! lua_isnumber( L, 2 ) ) 
+    if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION" );
+        lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
     else
     { 
-        luaTo=lua_tointeger( L, 2 );
+        luaTo=lua_tointeger( L, 3 );
     }      
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    lua_pushboolean( L, pHost->mpConsole->moveCursor( luaFrom, luaTo ) );
+    QString windowName = luaWindowName.c_str();
+    if( luaWindowName == "main" )
+        lua_pushboolean( L, pHost->mpConsole->moveCursor( luaFrom, luaTo ) );
+    else
+        lua_pushboolean( L, mudlet::self()->moveCursor( windowName, luaFrom, luaTo ) );
     return 1;
 }
 
@@ -748,6 +763,14 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::reset( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
+    pHost->mpConsole->reset();    
+    
+    return 0;
+}
+
 int TLuaInterpreter::echoUserWindow( lua_State *L )
 {
     string luaWindowName="";
@@ -780,6 +803,53 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::moveCursorEnd( lua_State *L )
+{
+    string luaWindowName="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString windowName(luaWindowName.c_str());
+    if( luaWindowName == "main" )
+        pHost->mpConsole->moveCursorEnd();
+    else
+       mudlet::self()->moveCursorEnd( windowName );
+    return 0;
+}
+
+int TLuaInterpreter::getLastLineNumber( lua_State *L )
+{
+    string luaWindowName="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString windowName(luaWindowName.c_str());
+    int number;
+    if( luaWindowName == "main" )
+        number = pHost->mpConsole->getLastLineNumber();
+    else
+        number = mudlet::self()->getLastLineNumber( windowName );
+    lua_pushnumber( L, number );
+    return 1;
+}
 
 
 // tempTimer(int session, float seconds, string function to call, string name) // one shot timer.
@@ -1288,7 +1358,6 @@ void TLuaInterpreter::setCaptureGroups( const std::list<std::string> & captureLi
     } */
 }
 
-
 void TLuaInterpreter::clearCaptureGroups()
 {
     mCaptureGroupList.clear();
@@ -1309,6 +1378,7 @@ void TLuaInterpreter::clearCaptureGroups()
     lua_setglobal( L, "matches" );
     lua_pop( L, lua_gettop( L ) );
 }
+
 
 void TLuaInterpreter::adjustCaptureGroups( int x, int a )
 {
@@ -1572,7 +1642,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "debug", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
- 
+    lua_register( pGlobalLua, "reset", TLuaInterpreter::reset );
+    lua_register( pGlobalLua, "moveCursorEnd", TLuaInterpreter::moveCursorEnd );
+    lua_register( pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber );
     
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
@@ -1705,10 +1777,11 @@ int TLuaInterpreter::startTempTrigger( QString regex, QString function )
 int TLuaInterpreter::startTempLineTrigger( int from, int howmany, QString function )
 {
     TTrigger * pT;
-    QStringList sList;
-    QList<int> propertyList;
-    propertyList << REGEX_SUBSTRING;// substring trigger is default
-    pT = new TTrigger("a", sList, propertyList, false, mpHost );
+//    QStringList sList;
+//    QList<int> propertyList;
+//    propertyList << REGEX_SUBSTRING;// substring trigger is default
+//    pT = new TTrigger("a", sList, propertyList, false, mpHost );
+    pT = new TTrigger( 0, mpHost );
     pT->setScript( function );
     pT->setIsFolder( false );
     pT->setIsActive( true );

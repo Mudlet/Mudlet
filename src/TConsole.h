@@ -144,7 +144,8 @@ Q_OBJECT
 public:
    
                         TConsole( Host *, bool isDebugConsole );
-      
+
+      void              reset();
       void              echoUserWindow( QString & );
       Host *            getHost() { return mpHost; }
       TCommandLine *    mpCommandLine;
@@ -183,6 +184,8 @@ public:
       void              printOnDisplay(QString  &);
       void              printCommand( QString & );
       bool              hasSelection();
+      void              moveCursorEnd();
+      int               getLastLineNumber();
       
       TTextEdit *       console;
       TTextEdit *       console2;
@@ -240,6 +243,7 @@ private:
       bool              mLogToLogFile;
       QString           mLogFileName;
       int               mDeletedLines;
+      int               mEngineCursor;
 
 signals:
     

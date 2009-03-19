@@ -129,6 +129,9 @@ public:
     static int debug( lua_State * L );
     static int setWindowWrap( lua_State * );
     static int setWindowWrapIndent( lua_State * );
+    static int reset( lua_State * );
+    static int moveCursorEnd( lua_State * );
+    static int getLastLineNumber( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

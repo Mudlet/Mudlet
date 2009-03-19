@@ -69,6 +69,9 @@ public:
    void                          setWindowWrap( Host * pHost, QString & name, int & wrap );
    void                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
    void                          bindMenu( QMenu *, EAction * ); 
+   void                          moveCursorEnd( QString & );
+   bool                          moveCursor( QString &, int, int );
+   int                           getLastLineNumber( QString & );
    static TConsole *             mpDebugConsole; 
    static QMainWindow *          mpDebugArea; 
    static bool                   debugMode; 

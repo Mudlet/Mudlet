@@ -60,7 +60,7 @@ public:
     QPoint insert( QPoint &, QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
     bool insertInLine( QPoint & cursor, QString & what, TChar & format );
     void expandLine( int y, int count, TChar * pC );
-    void wrap( int startLine, int screenWidth, int indentSize, TChar & format );
+    int wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int size(){ return buffer.size(); }    
     QString & line( int n );
     int find( int line, QString what, int pos );
@@ -91,6 +91,7 @@ public:
     
 private:  
     
+    inline int calcWrapPos( int line, int begin, int end );
     void handleNewLine();
     
     Host * mpHost;

@@ -50,7 +50,7 @@ public:
     bool                  restore( QDataStream &, bool );
     void                  reParentTimer( int childID, int oldParentID, int newParentID );
     void                  stopAllTriggers();
-    
+
     qint64                getNewID();
     QMutex                mTimerUnitLock;
     

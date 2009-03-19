@@ -75,7 +75,7 @@ public:
     void             setRegexCodeList( QStringList regex, QList<int> regexPorpertyList );        
     QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
     void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    bool             match( QString & );
+    bool             match( char *, QString & );
     bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
     bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
     bool             isMultiline()                   { QMutexLocker locker(& mLock); return mIsMultiline; }
@@ -94,7 +94,7 @@ public:
     void             disableTrigger( QString & );
     TTrigger *       killTrigger( QString & );
     bool             match_substring( QString &, QString &, int );
-    bool             match_perl( QString &, int );
+    bool             match_perl( char *, QString &, int );
     bool             match_wildcard( QString &, int );
     bool             match_exact_match( QString &, QString &, int );
     void             setConditionLineDelta( int delta )  { QMutexLocker locker(& mLock); mConditionLineDelta = delta; }

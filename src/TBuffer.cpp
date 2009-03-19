@@ -354,9 +354,29 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
     }
 }
 
-void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
+int TBuffer::calcWrapPos( int line, int begin, int end )
 {
-    if( buffer.size() <= startLine ) return;
+    const QString lineBreaks = ",.- ";
+    if( lineBuffer.size() < line ) return -1;
+    if( lineBuffer[line].size() < end )
+    {
+        end = lineBuffer[line].size()-1;
+    }
+    for( int i=end; i>=begin; i-- )
+    {
+        if( lineBreaks.indexOf(lineBuffer[line][i]) > -1 )
+        {
+            qDebug()<<"FOUND lineBreak at i="<<i;
+            return i;
+        }
+    }
+    return -1;
+}
+
+// returns how many new lines have been inserted by the wrapping action
+int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
+{
+    if( buffer.size() <= startLine ) return 0;
     std::queue<std::deque<TChar *> > queue;
     QStringList tempList;
     int lineCount = 0;
@@ -382,10 +402,39 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & form
             }
             indent = indentSize;
         }
+        int lastSpace = -1;
+        int wrapPos = -1;
+        int length = buffer[i].size();
         for( int i2=0; i2<buffer[i].size();  )
-        {  
+        {
+            if( length-i2 > screenWidth-indent )
+            {
+                qDebug()<<"line=<"<<(lineBuffer[i].mid(i2, screenWidth-indent))<<">";
+                wrapPos = calcWrapPos( i, i2, i2+screenWidth-indent );
+                if( wrapPos > -1 )
+                {
+                    lastSpace = wrapPos;
+                }
+                else
+                {
+                    lastSpace = -1;
+                }
+qDebug()<<"lastSpace="<<lastSpace;
+            }
+            else
+            {
+                lastSpace = -1;
+            }
             for( int i3=0; i3<screenWidth-indent; i3++ )
             {
+                if( lastSpace > 0 )
+                {
+                    if( i2 >= lastSpace )
+                    {
+                        i2++;
+                        break;
+                    }
+                }
                 if( i2 >= buffer[i].size() )
                 {
                     break;
@@ -418,6 +467,7 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & form
     
     newLines -= lineCount;
     newLines += queue.size();
+    int insertedLines = queue.size()-1;
     
     while( ! queue.empty() )
     {
@@ -430,6 +480,7 @@ void TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & form
         lineBuffer.append( tempList[i] );
         timeBuffer.append( QTime::currentTime().toString()+"   " );
     }
+    return insertedLines > 0 ? insertedLines : 0;
 }
 
 bool TBuffer::moveCursor( QPoint & where )

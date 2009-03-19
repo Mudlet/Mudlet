@@ -210,7 +210,7 @@ bool TTrigger::isClone( TTrigger & b ) const
              && mConditionMap == b.mConditionMap );
 }
 
-bool TTrigger::match_perl( QString & toMatch, int regexNumber )
+bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
 {
     if( ! mIsActive ) return false;
     
@@ -220,8 +220,6 @@ bool TTrigger::match_perl( QString & toMatch, int regexNumber )
     if( re == NULL ) return false; //regex compile error
     
     const char *error;
-    char * subject = (char *) malloc(strlen(toMatch.toLatin1().data())+20);
-    strcpy( subject, toMatch.toLatin1().data() );
     unsigned char *name_table;
     int erroffset;
     int find_all;
@@ -407,19 +405,19 @@ END:
 }
 
 EXIT_OK:    
-    free( subject );
+    //free( subject );
     return true;
    
     
 ERROR: 
-    free( subject );
+    //free( subject );
     return false;
     
 }
 
 bool TTrigger::match_wildcard( QString & toMatch, int regexNumber )
 {
-    return match_perl( toMatch, regexNumber); //FIXME
+    //return match_perl( toMatch, regexNumber); //FIXME
 }
 
 bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNumber )
@@ -497,23 +495,25 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
     return false;
 }
 
-bool TTrigger::match( QString & toMatch )
+bool TTrigger::match( char * subject, QString & toMatch )
 {
     bool ret = false;
     if( mIsActive )
     {
         if( mIsLineTrigger )
         {
-            if( mStartOfLineDelta > 0 )
-            {
-                mStartOfLineDelta--;
-            }
             if( (mStartOfLineDelta == 0) && (mLineDelta > 0) )
             {
                 mLineDelta--;
                 execute();
+                mpHost->getTriggerUnit()->mCleanupList.push_back( this );
                 return true;
             }
+            if( mStartOfLineDelta > 0 )
+            {
+                mStartOfLineDelta--;
+            }
+
             return false;
         }
       
@@ -525,10 +525,6 @@ bool TTrigger::match( QString & toMatch )
         
         bool conditionMet = false;
         
-        if( mRegexCodeList.size() != mRegexCodePropertyList.size() )
-        {
-            qWarning()<<"\nCRITICAL ERROR: TTrigger::match( )size of regex and property list are not equal.";
-        }
         if( mIsMultiline )
         {
             int matchStateCnt=0;
@@ -549,11 +545,11 @@ bool TTrigger::match( QString & toMatch )
                     break;
                 
                 case REGEX_PERL:
-                    ret = match_perl( toMatch, i );
+                    ret = match_perl( subject, toMatch, i );
                     break;
                 
                 case REGEX_WILDCARD:
-                    ret = match_wildcard( toMatch, i );
+                    ret = match_perl( subject, toMatch, i );
                     break;
                 
                 case REGEX_EXACT_MATCH:
@@ -629,7 +625,7 @@ bool TTrigger::match( QString & toMatch )
             for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
             {
                 TTrigger * pChild = *it;
-                ret = pChild->match( toMatch );
+                ret = pChild->match( subject, toMatch );
                 if( ret ) conditionMet = true;
             }
         }
