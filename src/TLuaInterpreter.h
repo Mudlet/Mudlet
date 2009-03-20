@@ -64,7 +64,8 @@ public:
     TLuaInterpreter( Host * mpHost, int id );      
     void startLuaExecThread();
     void threadLuaInterpreterExec( std::string code );
-    bool call( QString & function, QString & mName);
+    bool call( QString & function, QString & mName );
+    bool callMulti( QString & function, QString & mName );
     bool compile( QString & );
     bool compileScript( QString & );
     bool compileAndExecuteScript( QString & );
@@ -73,6 +74,9 @@ public:
     void set_lua_string( const QString & varName, QString & varValue );
     void set_lua_table( QString & tableName, QStringList & variableList );
     void setCaptureGroups( const std::list<std::string> &, const std::list<int> & );
+    void setMultiCaptureGroups( const std::list< std::list<std::string> > & captureList,
+                                const std::list< std::list<int> > & posList );
+
     void startLuaSessionInterpreter();
     void adjustCaptureGroups( int x, int a );
     void clearCaptureGroups();
@@ -135,7 +139,9 @@ public:
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
-    
+    std::list< std::list<std::string> > mMultiCaptureGroupList;
+    std::list< std::list<int> > mMultiCaptureGroupPosList;
+
     
     static std::map<lua_State *, Host *> luaInterpreterMap;
 

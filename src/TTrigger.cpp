@@ -78,7 +78,7 @@ TTrigger::~TTrigger()
     {
         if( ! mpHost )
         {
-            qDebug() << "ERROR: TTrigger::**UN**registerTrigger() pHost=0";
+            qDebug() << "ERROR: TTrigger::*UN*-registerTrigger() pHost=0";
             return;
         }
         mpHost->getTriggerUnit()->unregisterTrigger( this );     
@@ -114,21 +114,16 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             int erroffset;
             
             pcre * re;
-            re = pcre_compile( pattern,              /* the pattern */
-                               0,                    /* default options */
-                               &error,               /* for error message */
-                               &erroffset,           /* for error offset */
-                               NULL);                /* use default character tables */
+            re = pcre_compile( pattern,
+                               0,
+                               &error,
+                               &erroffset,
+                               0 );
             
             if (re == 0)
             {
-                TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
-                printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
-                re = pcre_compile( "regex doesnt compile",                   /* the pattern */
-                                   0,                    /* default options */
-                                   &error,               /* for error message */
-                                   &erroffset,           /* for error offset */
-                                   NULL);                /* use default character tables */
+                if( mudlet::debugMode ) TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
+                //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
@@ -140,25 +135,19 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             int erroffset;
             
             pcre * re;
-            re = pcre_compile( pattern,              /* the pattern */
-                               0,                    /* default options */
-                               &error,               /* for error message */
-                               &erroffset,           /* for error offset */
-                               NULL);                /* use default character tables */
+            re = pcre_compile( pattern,
+                               0,
+                               &error,
+                               &erroffset,
+                               0 );
             
-            if (re == NULL)
+            if (re == 0)
             {
-                TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
-                printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
-                re = pcre_compile( "regex doesnt compile",                   /* the pattern */
-                                   0,                    /* default options */
-                                   &error,               /* for error message */
-                                   &erroffset,           /* for error offset */
-                                   NULL);                /* use default character tables */
-                
+                if( mudlet::debugMode ) TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
+                //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
             else
-                TDebug()<<"[OK]: REGEX_COMPILE OK">>0;
+                if( mudlet::debugMode ) TDebug()<<"[OK]: REGEX_COMPILE OK">>0;
             
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
@@ -217,7 +206,12 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
     if( ! mRegexMap.contains(regexNumber ) ) return false;
     
     pcre * re = mRegexMap[regexNumber];
-    if( re == NULL ) return false; //regex compile error
+
+    if( re == 0 )
+    {
+        if( mudlet::debugMode ) TDebug()<<"ERROR: the regex of trigger "<<mName<<" does not compile. Please correct the expression. This trigger will never match until it is fixed.">>0;
+        return false; //regex compile error
+    }
     
     const char *error;
     unsigned char *name_table;
@@ -233,7 +227,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
     //int numOfCaptureGroups = pcre_info( re, 0, 0 )*3;
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
     
-    //cout <<"TTrigger::match_perl() LINE="<<subject<<endl;
+    //qDebug() <<"TTrigger::match_perl() regex="<<mRegexCodeList[regexNumber]<<" LINE="<<subject;
     
     rc = pcre_exec( re,                    
                     0,                                                                      
@@ -280,16 +274,15 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
         captureList.push_back( match );
         posList.push_back( ovector[2*i] );
         if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
-        //qDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">";
     }
     (void)pcre_fullinfo( re,                                              
                          NULL,                 
                          PCRE_INFO_NAMECOUNT,  
                          &namecount);                                          
     
-    if (namecount <= 0) 
+    if( namecount <= 0 )
     {
-        //cout << "no named substrings detected" << endl; 
+        ;//cout << "no named substrings detected" << endl;
     }
     else
     {
@@ -306,7 +299,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
                              &name_entry_size);      
         
         tabptr = name_table;
-        for (i = 0; i < namecount; i++)
+        for( i = 0; i < namecount; i++ )
         {
             int n = (tabptr[0] << 8) | tabptr[1];
             //printf("GOT:(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2, ovector[2*n+1] - ovector[2*n], subject + ovector[2*n]);
@@ -319,9 +312,9 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
         int options = 0;                
         int start_offset = ovector[1];  
         
-        if (ovector[0] == ovector[1])
+        if( ovector[0] == ovector[1] )
         {
-            if (ovector[0] >= subject_length)
+            if( ovector[0] >= subject_length )
             {
                 goto END;
             }
@@ -337,14 +330,14 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
                         ovector,                                                           
                         30 ); 
         
-        if (rc == PCRE_ERROR_NOMATCH)
+        if( rc == PCRE_ERROR_NOMATCH )
         {
-            if (options == 0) break;
+            if( options == 0 ) break;
             ovector[1] = start_offset + 1;
             continue; 
         }
         
-        if (rc < 0)
+        if( rc < 0 )
         {
             goto END;
         }
@@ -353,7 +346,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
         {
             qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
         }
-        for (i = 0; i < rc; i++)
+        for( i = 0; i < rc; i++ )
         {
             char * substring_start = subject + ovector[2*i];
             int substring_length = ovector[2*i+1] - ovector[2*i];
@@ -362,8 +355,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
             match.append( substring_start, substring_length );
             captureList.push_back( match );
             posList.push_back( ovector[2*i] );
-            if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
-            //qDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">";
+            if( mudlet::debugMode ) TDebug()<<"<Perl /g switch mode:> capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
         }
     }      
 
@@ -371,6 +363,8 @@ END:
 {
     if( mIsMultiline )
     {
+        mMultiCaptureGroupList.push_back( captureList );
+        mMultiCaptureGroupPosList.push_back( posList );
         if( regexNumber == 0 )
         {
             if( mudlet::debugMode ) TDebug()<<"Trigger is a multiline trigger condition #0=true -> creating new MatchState number of matchstates="<<mConditionMap.size()+1>>0;
@@ -382,10 +376,10 @@ END:
         else
         {
             int k=0;
-            for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
+            for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
             {
-                k++;//weg
-                if( mudlet::debugMode ) TDebug()<<"LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
+                k++;
+                if( mudlet::debugMode ) TDebug()<<"evaluating condition number "<<regexNumber<<" waiting for condition number "<< (*it).second->nextCondition()<<" to be met.">>0;
                 if( (*it).second->nextCondition() == regexNumber )
                 {
                     if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
@@ -395,22 +389,24 @@ END:
             goto EXIT_OK; //DON'T RUN SCRIPTS
         }                               
     }
-                
-    TLuaInterpreter * pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups( captureList, posList );
-    // call lua trigger function with number of matches and matches itselves as arguments
-    //qDebug()<<"TTrigger::match_perl() calling execute()";
-    execute();
-    pL->clearCaptureGroups();
+    else
+    {
+        TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups( captureList, posList );
+
+        // call lua trigger function with number of matches and matches itselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+    }
 }
 
 EXIT_OK:    
-    //free( subject );
+
     return true;
    
     
 ERROR: 
-    //free( subject );
+
     return false;
     
 }
@@ -477,7 +473,7 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
             else
             {
                 int k=0;
-                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
+                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
                 {
                     if( mudlet::debugMode ) TDebug() << "LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
                     if( (*it).second->nextCondition() == regexNumber )
@@ -516,8 +512,7 @@ bool TTrigger::match( char * subject, QString & toMatch )
 
             return false;
         }
-      
-        toMatch.replace( QChar( 0x21af ), "\n" );
+              
         if( toMatch.size() < 1 )
         {
             return false;
@@ -527,10 +522,10 @@ bool TTrigger::match( char * subject, QString & toMatch )
         
         if( mIsMultiline )
         {
-            int matchStateCnt=0;
+            int matchStateCnt = 0;
             for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
             {
-                //qDebug()<<"TMatchState #"<<++matchStateCnt<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
+                qDebug()<<"TMatchState #"<<++matchStateCnt<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
                 (*it).second->newLineArrived();
             }
         }
@@ -580,7 +575,7 @@ bool TTrigger::match( char * subject, QString & toMatch )
             {
                 k++;
                 if( mudlet::debugMode ) TDebug()<<"---> multiline conditons: condition total="<<mConditionMap.size()<<" checking conditon #"<<k>>0;
-                //qDebug()<<"TMatchState #"<<k<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
+                qDebug()<<"TMatchState #"<<k<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
                 if( (*it).second->isComplete() )
                 {
                     if( mudlet::debugMode ) TDebug()<<"multiline trigger name="<<mName<<" *FIRES* all conditons are fullfilled! executing script">>0;
@@ -605,10 +600,15 @@ bool TTrigger::match( char * subject, QString & toMatch )
             if( triggerFires )
             {
                 conditionMet = true;
-                QStringList captureList;
                 // FIXME: decision: do we want this: clear condition map after first match to prevent built-up mass triggering
                 //mConditionMap.clear();
+                TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+                pL->setMultiCaptureGroups( mMultiCaptureGroupList, mMultiCaptureGroupPosList );
+                cout << "multiline trigger: calling execute()"<<endl;
                 execute();
+                pL->clearCaptureGroups();
+                mMultiCaptureGroupList.clear();
+                mMultiCaptureGroupPosList.clear();
             }
         }
         
@@ -701,13 +701,18 @@ void TTrigger::execute()
         {
             mNeedsToBeCompiled = false;
         }
-        funcName = QString("Trigger") + QString::number( mID ); 
-        pL->call( funcName, mName );
+    }
+
+    TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+    QString funcName = QString("Trigger") + QString::number( mID );
+    funcName = QString("Trigger") + QString::number( mID );
+    if( mIsMultiline )
+    {
+        pL->callMulti( funcName, mName );
     }
     else
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("Trigger") + QString::number( mID ); 
+        qDebug()<<"pL->call("<<funcName<<","<<mName<<")";
         pL->call( funcName, mName );
     }
 }
