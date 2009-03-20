@@ -82,6 +82,8 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mDisableAutoCompletion( false )
 , mSaveProfileOnExit( false )
 , mUSE_IRE_DRIVER_BUGFIX( false )
+, mScreenWidth( 90 )
+, mScreenHeight( 25 )
 {
 }
 

@@ -366,7 +366,6 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
     {
         if( lineBreaks.indexOf(lineBuffer[line][i]) > -1 )
         {
-            qDebug()<<"FOUND lineBreak at i="<<i;
             return i;
         }
     }
@@ -409,7 +408,6 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         {
             if( length-i2 > screenWidth-indent )
             {
-                qDebug()<<"line=<"<<(lineBuffer[i].mid(i2, screenWidth-indent))<<">";
                 wrapPos = calcWrapPos( i, i2, i2+screenWidth-indent );
                 if( wrapPos > -1 )
                 {
@@ -419,7 +417,6 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
                 {
                     lastSpace = -1;
                 }
-qDebug()<<"lastSpace="<<lastSpace;
             }
             else
             {

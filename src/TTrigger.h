@@ -109,27 +109,28 @@ public:
     
 private:
     
-                     TTrigger(){};
-    QString          mName;
-    QStringList      mRegexCodeList;
-    QList<int>       mRegexCodePropertyList;
-    QMap<int, pcre *> mRegexMap;
-    Host *           mpHost;
-    QString          mScript;
-    bool             mIsActive;
-    bool             mIsTempTrigger;
-    bool             mIsFolder;
-    bool             mNeedsToBeCompiled;
-    int              mTriggerType;
-    bool             mIsLineTrigger;
-    int              mStartOfLineDelta;
-    int              mLineDelta;
-    bool             mIsMultiline;
-    int              mConditionLineDelta;
-    QString          mCommand;
-    std::map<TMatchState*, TMatchState*> mConditionMap;
-    
-    QMutex           mLock;
+                                           TTrigger(){};
+    QString                                mName;
+    QStringList                            mRegexCodeList;
+    QList<int>                             mRegexCodePropertyList;
+    QMap<int, pcre *>                      mRegexMap;
+    Host *                                 mpHost;
+    QString                                mScript;
+    bool                                   mIsActive;
+    bool                                   mIsTempTrigger;
+    bool                                   mIsFolder;
+    bool                                   mNeedsToBeCompiled;
+    int                                    mTriggerType;
+    bool                                   mIsLineTrigger;
+    int                                    mStartOfLineDelta;
+    int                                    mLineDelta;
+    bool                                   mIsMultiline;
+    int                                    mConditionLineDelta;
+    QString                                mCommand;
+    std::map<TMatchState*, TMatchState*>   mConditionMap;
+    std::list< std::list<std::string> >    mMultiCaptureGroupList;
+    std::list< std::list<int> >            mMultiCaptureGroupPosList;
+    QMutex                                 mLock;
 };
 
 #endif
