@@ -1344,27 +1344,6 @@ bool TLuaInterpreter::compile( QString & code )
     else return false;
 }
 
-void TLuaInterpreter::setMultiCaptureGroups( const std::list< std::list<std::string> > & captureList,
-                                             const std::list< std::list<int> > & posList )
-{
-    mMultiCaptureGroupList = captureList;
-    mMultiCaptureGroupPosList = posList;
-
-    /*std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
-
-    int k=1;
-    for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
-    {
-        cout << "regex#"<<k<<" got:"<<endl;
-        std::list<string>::const_iterator it = (*mit).begin();
-        for( int i=1; it!=(*mit).end(); it++, i++ )
-        {
-            cout << i<<"#"<<"<"<<*it<<">"<<endl;
-        }
-        cout << "-----------------------------"<<endl;
-    }*/
-}
-
 void TLuaInterpreter::setCaptureGroups( const std::list<std::string> & captureList, const std::list<int> & posList )
 {
     mCaptureGroupList = captureList;
@@ -1383,8 +1362,6 @@ void TLuaInterpreter::clearCaptureGroups()
 {
     mCaptureGroupList.clear();
     mCaptureGroupPosList.clear();
-    mMultiCaptureGroupList.clear();
-    mMultiCaptureGroupPosList.clear();
     
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -1393,10 +1370,12 @@ void TLuaInterpreter::clearCaptureGroups()
     }
     
     lua_newtable( L );      
+    
+    // only pass matches - the first element of matches is the entire text -> skip
+    //lua_pushnumber( L, 1 ); 
+    //lua_pushstring( L, "" );
+    //lua_settable( L, -3 );
     lua_setglobal( L, "matches" );
-    lua_newtable( L );
-    lua_setglobal( L, "multimatches" );
-
     lua_pop( L, lua_gettop( L ) );
 }
 
@@ -1432,7 +1411,8 @@ bool TLuaInterpreter::call( QString & function, QString & mName )
         std::list<std::string>::iterator it = mCaptureGroupList.begin();
         for( ; it!=mCaptureGroupList.end(); it++, i++ )
         {
-            lua_pushnumber( L, i );
+            // only pass matches - the first element of matches is the entire text -> skip
+            lua_pushnumber( L, i ); 
             lua_pushstring( L, (*it).c_str() );
             lua_settable( L, -3 );
         }
@@ -1465,66 +1445,6 @@ bool TLuaInterpreter::call( QString & function, QString & mName )
     if( error == 0 ) return true;
     else return false;
 }
-
-bool TLuaInterpreter::callMulti( QString & function, QString & mName )
-{
-    lua_State * L = pGlobalLua;
-    if( ! L )
-    {
-        qDebug()<< "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
-
-    if( mMultiCaptureGroupList.size() > 0 )
-    {
-        int k=1; // Lua indexes start with 1 as a general convention
-        std::list< std::list<std::string> >::iterator mit = mMultiCaptureGroupList.begin();
-        lua_newtable( L );//multimatches
-        for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
-        {
-            // multimatches{ trigger_idx{ table_matches{ ... } } }
-            lua_pushnumber( L, k );
-            lua_newtable( L );//regex-value => table matches
-            int i=1; // Lua indexes start with 1 as a general convention
-            std::list<std::string>::iterator it = (*mit).begin();
-            for( ; it!=(*mit).end(); it++, i++ )
-            {
-                lua_pushnumber( L, i );
-                lua_pushstring( L, (*it).c_str() );
-                lua_settable( L, -3 );//match in matches
-            }
-            lua_settable( L, -3 );//matches in regex
-        }
-        lua_setglobal( L, "multimatches" );
-    }
-
-    lua_getglobal( L, function.toLatin1().data() );
-    lua_getfield( L, LUA_GLOBALSINDEX, function.toLatin1().data() );
-    int error = lua_pcall( L, 0, LUA_MULTRET, 0 );
-    if( error != 0 )
-    {
-        int nbpossible_errors = lua_gettop(L);
-        for (int i=1; i<=nbpossible_errors; i++)
-        {
-            string e = "";
-            if(lua_isstring( L, i) )
-            {
-                e = "Lua error:";
-                e+=lua_tostring( L, i );
-
-                if( mudlet::debugMode ) TDebug()<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()>>0;
-            }
-        }
-    }
-    else
-    {
-        if( mudlet::debugMode ) TDebug()<<"LUA OK script "<<mName << " (" << function <<") ran without errors">>0;
-    }
-    lua_pop( L, lua_gettop( L ) );
-    if( error == 0 ) return true;
-    else return false;
-}
-
 
 bool TLuaInterpreter::callEventHandler( QString & function, QStringList & argList, QList<int> & typeList )
 {
@@ -1923,4 +1843,442 @@ void TLuaInterpreter::slotSetBgColor(int hostID, int r, int g, int b )
 
 
 
+
+/*void TLuaInterpreter::execLuaCode( QString code )
+{
+    mpLuaSessionThread->postJob( code );
+} */  
+
+/*
+void TLuaInterpreter::runLuaScript()
+{
+    //OLD EX:connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)));
+    //OLD EX:connect(this,SIGNAL(signalNewEcho(int,QString)), this,SLOT(slotNewEcho(int,QString)));
+
+
+    //connect(this,SIGNAL(signalOpenWindow(int,QString)), this,SLOT(slotOpenWindow(int,QString)));
+    //connect(this,SIGNAL(signalEchoWindow(int,QString,QString)), this,SLOT(slotEchoWindow(int,QString,QString)));
+    //connect(this,SIGNAL(signalClearWindow(int,QString)), this,SLOT(slotClearWindow(int,QString))); 
+    //connect(this,SIGNAL(signalNewTrigger(QString,QString, int, QString)), this,SLOT(slotNewTrigger(QString,QString, int, QString)));
+    //connect(this,SIGNAL(signalAddTimer(int,int,QString,QString)),this,SLOT(slotAddTimer(int,int,QString,QString)));
+    //connect(this,SIGNAL(signalDeleteTrigger(int,QString)), this,SLOT(slotDeleteTrigger(int,QString)));
+
+    connect(this,SIGNAL(signalEchoMessage(QString,int,QString)), this,SLOT(slotEchoMessage(QString,int,QString)),Qt::DirectConnection);
+    connect(this,SIGNAL(signalNewEcho(int,QString)), this,SLOT(slotNewEcho(int,QString)));
+    connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)),Qt::QueuedConnection);
+
+    TLuaThread * pThread = new TLuaThread(this);
+    pThread->start();
+}   */
+
+
+/*void TLuaInterpreter::slotEchoWindow( Host * pH, QString window, QString txt)
+{
+    string key = window.toLatin1().data();
+    if(cKMProtocol::consoleMap.find(key) == cKMProtocol::consoleMap.end())
+    {
+        // a window with this name doesn't exist
+        return;
+    }
+    cConsole * pTe = cKMProtocol::consoleMap[key];
+    //FIXME
+    pTe->addLine(txt);
+}
+
+void TLuaInterpreter::slotClearWindow( Host * pH, QString window )
+{
+    string key = window.toLatin1().data();
+    if( cKMProtocol::dockWindowMap.find( key ) == cKMProtocol::dockWindowMap.end())
+    {
+        return;
+    }
+    TConsole * pC = cKMProtocol::consoleMap[key];
+    pC->clear();
+}
+
+void TLuaInterpreter::slotAddTimer( Host * pH, int timeout, QString callbackfunction, QString parameters )
+{
+    qDebug()<<"DEBUG: cRunningScript::slotAddTimer() timeout="<<timeout<<" callback="<<callbackfunction<<"("<<parameters<<") called"; 
+    TLuaTimer * t = new TLuaTimer(this,timeout, pH, callbackfunction, parameters);
+    //connect(t,SIGNAL(signalLuaTimerTimeout(int,QString,QString)),this,SLOT(slotLuaTimerCallback(int,QString,QString)));
+    t->start();
+}
+
+void TLuaInterpreter::slotLuaTimerCallback( Host * pH, QString callbackfunction, QString parameters)
+{
+    qDebug()<<"DEBUG: cRunningScript::slotLuaTimerCallback() called Lua function="<<callbackfunction<<"("<<parameters<<")";  
+    QString code = callbackfunction+"(\""+parameters+"\")";
+    mpLuaSessionThread->postJob(code);
+} 
+
+
+void TLuaInterpreter::slotDeleteTrigger( Host* pH, QString name)
+{
+    qDebug()<<"TLuaInterpreter::slotDeleteTrigger() called";
+    // FIXME
+}
+
+void TLuaInterpreter::slotNewTrigger(QString name, QString regex, int sessionID, QString TriggerCallback)
+{
+    qDebug()<<"cRunningScript::slotNewTrigger() regex="<<regex<<" sessionID="<<sessionID<<" triggercallback="<<TriggerCallback;
+}
+
+
+
+int TLuaInterpreter::OpenWindow(lua_State *L)
+{
+    int n = lua_gettop(L);
+    if(n!=2)
+    {
+        lua_pushstring(L,"wrong number of arguments to Send(SESSION, TextToSend)");
+        lua_error(L);
+    }
+    int luaSessionID;
+    if(!lua_isnumber(L, 1)) 
+    {
+        lua_pushstring(L, "argument 1 to Send must be the session ID stored in SESSION");
+        lua_error(L);
+    }
+    else
+    { 
+        luaSessionID=lua_tonumber(L,1);
+    }  
+    string luaWindow="";
+    if(!lua_isstring(L,2))
+    {
+        lua_pushstring(L, "argument 2 to Send must be a string containing the text to send to the mud.");
+        lua_error(L);
+    }
+    else
+    { 
+        luaWindow=lua_tostring(L,2);
+    }
+
+    emit signalOpenWindow( mpHost, QString(luaWindow.c_str()));
+
+    return 0;
+}
+
+
+void TLuaInterpreter::slotOpenWindow( Host * pHost, QString window )
+{
+    string key = window.toLatin1().data();
+    if(cKMProtocol::dockWindowMap.find(key) != cKMProtocol::dockWindowMap.end())
+    {
+        return;
+    }
+    QDockWidget * dock = new QDockWidget( window, mudlet::self() );
+    cKMProtocol::dockWindowMap[key] = dock;
+    dock->setAllowedAreas( Qt::AllDockWidgetAreas );
+    mudlet::self()->setDockOptions( QMainWindow::AnimatedDocks | QMainWindow::AllowTabbedDocks|QMainWindow::AllowNestedDocks);
+    TConsole * pC = new TConsole;
+    cKMProtocol::consoleMap[key]=te;
+    dock->setWidget( pC );
+    mudlet::self()->addDockWidget( Qt::RightDockWidgetArea, dock );
+}
+
+int TLuaInterpreter::ClearWindow( lua_State * L )
+{
+    int n = lua_gettop( L );
+    if( n != 2 )
+    {
+        lua_pushstring( L, "wrong number of arguments to Send(SESSION, TextToSend)");
+        lua_error( L );
+    }
+    int luaSessionID;
+    if( ! lua_isnumber( L, 1) ) 
+    {
+        lua_pushstring( L, "argument 1 to Send must be the session ID stored in SESSION");
+        lua_error( L );
+    }
+    else
+    { 
+        luaSessionID=lua_tonumber( L, 1 );
+    }  
+    string luaWindow="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "argument 2 to Send must be a string containing the text to send to the mud.");
+        lua_error( L );
+  }
+  else
+  { 
+      luaWindow=lua_tostring(L,2);
+  }
+
+  emit signalClearWindow( mpHost, QString( luaWindow.c_str() ) );
+  return 0;
+}
+
+
+
+int TLuaInterpreter::EchoWindow( lua_State * L )
+{
+    int n = lua_gettop( L );
+    if( n != 3 )
+    {
+        lua_pushstring( L, "wrong number of arguments to EchoWindow(session_id,windowname,txt) ");
+        lua_error( L );
+    }
+    int luaSessionID;
+    if( ! lua_isnumber( L, 1 ) ) 
+    {
+        lua_pushstring( L, "syntax error: EchoWindow(session_id, windowname, txt) ");
+        lua_error( L );
+    }
+    else
+    { 
+        luaSessionID = lua_tonumber( L, 1 );
+    }
+
+    string luaWindow="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "syntax error: EchoWindow(session_id,windowname,txt) ");
+        lua_error( L );
+    }
+    else
+    { 
+        luaWindow=lua_tostring( L, 2 );
+    }
+
+    string luaSendText = "";
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "syntax error: EchoWindow(session_id,windowname,txt) ");
+        lua_error( L );
+    }
+    else
+    { 
+        luaSendText = lua_tostring( L, 3 );
+    }
+
+    emit signalEchoWindow( mpHost, QString(luaWindow.c_str()), QString(luaSendText.c_str()));
+
+    return 0;
+}
+  */
+
+/*
+int TLuaInterpreter::AddTrigger( lua_State * L )
+{
+    int n = lua_gettop( L );
+    if( n != 4 )
+    {
+        lua_pushstring( L, "wrong number of arguments to AddTrigger(SESSION, trigger_name, trigger_type, callback_function)");
+        lua_error( L );
+    }
+    int luaSessionID;
+    if( ! lua_isnumber( L, 1 ) ) 
+    {
+        lua_pushstring( L, "syntax error: argumen 1 of AddTrigger() must be a number");
+        lua_error( L );
+    }
+    else
+    { 
+        luaSessionID = lua_tonumber( L, 1 );
+    }  
+    string luaTriggerName = "";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "argument 2 to Send must be a string containing the trigger name.");
+        lua_error( L );
+    }
+    else
+    { 
+        luaTriggerName = lua_tostring( L, 2 );
+    }
+    string luaRegex = "";
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring(L, "argument 3 to AddTrigger() must be a string containing the trigger type.");
+        lua_error(L);
+    }
+    else
+    { 
+      luaRegex=lua_tostring( L, 3 );
+    }
+    string luaTriggerCallback = "";
+    if( ! lua_isstring( L, 4 ) )
+    {
+        lua_pushstring( L, "argument 2 to Send must be a string containing the the name of the Lua function to call when the trigger matches.");
+        lua_error( L );
+    }
+    else
+    { 
+        luaTriggerCallback = lua_tostring( L, 4 );
+    }
+
+    emit signalNewTrigger( QString( luaTriggerName.c_str()), QString(luaRegex.c_str()), luaSessionID, QString(luaTriggerCallback.c_str()));
+    return 0;
+}
+
+int TLuaInterpreter::AddTimer( lua_State * L )
+{
+  int n = lua_gettop( L );
+  if( n != 4 )
+  {
+      lua_pushstring( L, "wrong number of arguments to AddTimer(SESSION, timeout in milliseconds, \"callback_function\", \"callback_function_parameter_string\")");
+      lua_error( L );
+  }
+
+  int luaSessionID;
+  if( ! lua_isnumber( L, 1 ) ) 
+  {
+      lua_pushstring( L, "wrong argument 1 to AddTimer(). This must be the session ID stored in the Lua global SESSION");
+      lua_error( L );
+  }
+  else
+  { 
+      luaSessionID = lua_tonumber( L, 1 );
+  }  
+
+  int luaTimeout = 0;
+  if( ! lua_isnumber( L, 2 ) )
+  {
+      lua_pushstring( L, "Argument 2 to AddTimer() must be a number - i.e. the timeout specified in milliseconds");
+      lua_error( L );
+  }
+  else
+  { 
+      luaTimeout = lua_tonumber( L, 2 );
+  }  
+
+  string luaCallbackfunction = "";
+  if( ! lua_isstring( L, 3 ) )
+  {
+      lua_pushstring( L, "Argument 3 to AddTimer() must be the Lua function name (in quotes) to be called when the timer fires");
+      lua_error( L );
+  }
+  else
+  { 
+      luaCallbackfunction = lua_tostring( L, 3 );
+  }  
+
+  string luaParameter = "";
+  if( ! lua_isstring( L, 4 ) )
+  {
+      lua_pushstring( L, "Argument 4 to AddTimer() must be a string (in quotes) representing the parameter passed to the Lua callback function when the timer fires.");
+      lua_error( L );
+  }
+  else
+  { 
+      luaParameter = lua_tostring( L, 4 );
+  }  
+
+  emit signalAddTimer( mpHost, luaTimeout, QString(luaCallbackfunction.c_str()), QString(luaParameter.c_str()));
+
+  return 0;
+}
+
+
+
+int TLuaInterpreter::DeleteTrigger(lua_State *L)
+{
+  int n = lua_gettop(L);
+  if(n!=2)
+  {
+      lua_pushstring(L,"wrong number of arguments to Send(SESSION, \"TextToSend\")");
+      lua_error(L);
+  }
+  int luaSessionID;
+  if(!lua_isnumber(L, 1)) 
+  {
+      lua_pushstring(L, "argument 1 to Send must be the session ID stored in SESSION");
+      lua_error(L);
+  }
+  else
+  { 
+      luaSessionID=lua_tonumber(L,1);
+  }  
+  string luaTriggerName="";
+  if(!lua_isstring(L,2))
+  {
+      lua_pushstring(L, "argument 2 to Send must be a stringn (in quotes) containing the text to send to the mud.");
+      lua_error(L);
+  }
+  else
+  { 
+      luaTriggerName=lua_tostring(L,2);
+  }  
+  emit signalDeleteTrigger(mpHost, QString(luaTriggerName.c_str()));
+  return 0;
+}
+
+int TLuaInterpreter::DeleteTimer(lua_State *L)
+{
+  int n = lua_gettop(L);
+  if(n!=2)
+  {
+      lua_pushstring(L,"wrong number of arguments to Send(SESSION, TextToSend)");
+      lua_error(L);
+  }
+  int luaSessionID;
+  if(!lua_isnumber(L, 1)) 
+  {
+      lua_pushstring(L, "argument 1 to Send must be the session ID stored in SESSION");
+      lua_error(L);
+  }
+  else
+  { 
+      luaSessionID=lua_tonumber(L,1);
+  }  
+  string luaSendText="";
+  if(!lua_isstring(L,2))
+  {
+      lua_pushstring(L, "argument 2 to Send must be a string containing the text to send to the mud.");
+      lua_error(L);
+  }
+  else
+  { 
+      luaSendText=lua_tostring(L,2);
+  }  
+  emit signalNewCommand(mpHost, QString(luaSendText.c_str()));
+  return 0;
+}
+  */
+/*
+void TLuaInterpreter::threadRunLuaScript()
+{
+  lua_State * L = lua_open();
+  luaL_openlibs(L);
+
+  lua_pushstring(L, "SESSION");
+  lua_pushnumber(L, script->session);
+  lua_settable(L, LUA_GLOBALSINDEX);
+
+  lua_pushstring(L, "SCRIPT_NAME");
+  lua_pushstring(L, script->name.toLatin1().data());
+  lua_settable(L, LUA_GLOBALSINDEX);
+
+  lua_pushstring(L, "SCRIPT_ID");
+  lua_pushnumber(L, id);
+  lua_settable(L, LUA_GLOBALSINDEX);
+
+  lua_register(L, "Wait", cRunningScript::Wait);
+  lua_register(L, "Send", cRunningScript::Send);
+  lua_register(L, "Echo", cRunningScript::Echo);
+    //  lua_register(L, "EchoWindow", cRunningScript::EchoWindow);
+    //lua_register(L, "AddTrigger", cRunningScript::AddTrigger);
+    //lua_register(L, "DeleteTrigger", cRunningScript::DeleteTrigger);
+    //lua_register(L, "AddTimer", cRunningScript::AddTimer);
+    //lua_register(L, "OpenWindow", cRunningScript::OpenWindow);
+    //lua_register(L, "ClearWindow", cRunningScript::ClearWindow);
+
+  int error = luaL_dofile(L, script->getCommand().toLatin1().data());
+  if( error != 0 )
+  {
+      string e = "no error message available from Lua";
+      if(lua_isstring(L,1)) 
+      {
+          e = "Lua error:";
+          e+=lua_tostring(L,1);
+      }
+      //FIXME
+      //emit signalNewEcho(script->session, QString(e.c_str()));
+      qDebug()<<"LUA_ERROR:"<<e.c_str();
+  }
+  lua_close(L);    
+}
+ */
 

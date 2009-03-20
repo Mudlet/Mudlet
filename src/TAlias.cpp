@@ -324,10 +324,6 @@ void TAlias::compile()
 
 void TAlias::execute()
 {
-    if( mCommand.size() > 0 )
-    {
-        mpHost->send( mCommand );
-    }
     if( mNeedsToBeCompiled )
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    

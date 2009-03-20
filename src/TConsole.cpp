@@ -814,7 +814,6 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         mEngineCursor = i;
         mUserCursor.setX( 0 );
         mCurrentLine = buffer.line( i );
-        mCurrentLine.replace( QChar( 0x21af ), QChar('\n') );
         //qDebug()<<"line<"<<mCurrentLine<<">";
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
@@ -1108,11 +1107,10 @@ void TConsole::insertText( QString text, QPoint P )
             mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
         }
     }
-    if( mTriggerEngineMode )
+    if( ( mTriggerEngineMode ) && ( y != mEngineCursor ) )
     {
         if( y >= buffer.getLastLineNumber() )
         {
-            cout<<"TConsole::insertText( txt, point ) trace A"<<endl;
             buffer.append( text,
                            mFormatCurrent.fgColor,
                            mFormatCurrent.bgColor,
@@ -1122,7 +1120,6 @@ void TConsole::insertText( QString text, QPoint P )
         }
         else
         {
-            cout<<"TConsole::insertText( txt, point ) trace B"<<endl;
             buffer.insertInLine( P, text, mFormatCurrent );
         }
         return;
@@ -1131,7 +1128,6 @@ void TConsole::insertText( QString text, QPoint P )
     {
         if( mUserCursor.y() >= buffer.getLastLineNumber() )
         {
-            cout<<"TConsole::insertText( txt, point ) trace C"<<endl;
             buffer.append( text,
                            mFormatCurrent.fgColor,
                            mFormatCurrent.bgColor,
@@ -1141,7 +1137,6 @@ void TConsole::insertText( QString text, QPoint P )
         }
         else
         {
-            cout<<"TConsole::insertText( txt, point ) trace D"<<endl;
             buffer.insert( mUserCursor,
                            text,
                            mFormatCurrent.fgColor,
@@ -1207,7 +1202,6 @@ bool TConsole::hasSelection()
 
 void TConsole::insertText( QString msg )
 {
-    qDebug()<<"TConsole::insertText("<<msg<<") mUserCursor.y()="<<mUserCursor.y()<<" lastLine="<<buffer.getLastLineNumber()<<" mEnginCursor="<<mEngineCursor;
     insertText( msg, mUserCursor );    
 }
 
