@@ -150,6 +150,7 @@ void TTimer::execute()
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
         pL->compileAndExecuteScript( mScript );
         mTimer.stop();
+        mpHost->mTimerUnit.markCleanup( this );
         return;
     }
     

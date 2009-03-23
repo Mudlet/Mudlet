@@ -189,12 +189,6 @@ QString Host::getBufferLine( int line )
 
 void Host::incomingStreamProcessor( QString & data, QString & prompt )
 {
-    /*mTextBufferList.append( data );
-    if( mTextBufferList.size() > 500 )
-    {
-        mTextBufferList.pop_front();    
-    } */
-    
     mTriggerUnit.processDataStream( data );
     
     QList<QString> eventList = mEventMap.keys();
@@ -211,6 +205,7 @@ void Host::incomingStreamProcessor( QString & data, QString & prompt )
     }
     
     mEventMap.clear();
+    mTimerUnit.doCleanup();
 }
 
 void Host::registerEventHandler( QString name, TScript * pScript )

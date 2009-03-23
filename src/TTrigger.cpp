@@ -397,6 +397,7 @@ END:
         // call lua trigger function with number of matches and matches itselves as arguments
         execute();
         pL->clearCaptureGroups();
+        return true;
     }
 }
 
@@ -558,6 +559,7 @@ bool TTrigger::match( char * subject, QString & toMatch )
                 if( ret )
                 {
                     conditionMet = true;
+                    cout << "kein multiline trigger -> trigger matched, ignoring other conditions"<< endl;
                     break; 
                 }
             }

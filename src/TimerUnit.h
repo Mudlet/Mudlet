@@ -50,7 +50,8 @@ public:
     bool                  restore( QDataStream &, bool );
     void                  reParentTimer( int childID, int oldParentID, int newParentID );
     void                  stopAllTriggers();
-
+    void                  markCleanup( TTimer * );
+    void                  doCleanup();
     qint64                getNewID();
     QMutex                mTimerUnitLock;
     
@@ -65,6 +66,7 @@ private:
     QMap<int, TTimer *>   mTimerMap;
     std::list<TTimer *>   mTimerRootNodeList;
     qint64                mMaxID;
+    std::list<TTimer *>   mCleanupList;
   
     
 };

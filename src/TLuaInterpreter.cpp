@@ -1722,7 +1722,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "debug", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
-    lua_register( pGlobalLua, "reset", TLuaInterpreter::reset );
+    lua_register( pGlobalLua, "resetFormat", TLuaInterpreter::reset );
     lua_register( pGlobalLua, "moveCursorEnd", TLuaInterpreter::moveCursorEnd );
     lua_register( pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber );
     

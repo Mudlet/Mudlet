@@ -258,15 +258,20 @@ bool TimerUnit::serialize( QDataStream & ofs )
     
 }
 
-/*void TimerUnit::processDataStream( QString & data )
+void TimerUnit::doCleanup()
 {
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    typedef list<TTimer *>::iterator I;
+    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
-        TTimer * pChild = *it;
-        pChild->match( data );
+        delete *it;
     }
-} */
+    mCleanupList.clear();
+}
+
+void TimerUnit::markCleanup( TTimer * pT )
+{
+    mCleanupList.push_back( pT );
+}
 
 bool TimerUnit::restore( QDataStream & ifs, bool initMode )
 {

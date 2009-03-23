@@ -137,7 +137,10 @@ bool XMLexport::writeHost( Host * pT )
     for( ItTriggerUnit it1 = pT->mTriggerUnit.mTriggerRootNodeList.begin(); it1 != pT->mTriggerUnit.mTriggerRootNodeList.end(); it1++)
     {
         TTrigger * pChildTrigger = *it1;
-        ret = writeTrigger( pChildTrigger );
+        if( ! pChildTrigger->isTempTrigger() )
+        {
+            ret = writeTrigger( pChildTrigger );
+        }
     }
     writeEndElement(); //end trigger package tag
 
@@ -146,7 +149,10 @@ bool XMLexport::writeHost( Host * pT )
     for( ItTimerUnit it2 = pT->mTimerUnit.mTimerRootNodeList.begin(); it2 != pT->mTimerUnit.mTimerRootNodeList.end(); it2++)
     {
         TTimer * pChildTimer = *it2;
-        ret = writeTimer( pChildTimer );
+        if( ! pChildTimer->isTempTimer() )
+        {
+            ret = writeTimer( pChildTimer );
+        }
     }
     writeEndElement();
 

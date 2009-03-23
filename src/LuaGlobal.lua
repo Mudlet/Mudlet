@@ -88,6 +88,30 @@ function showCaptureGroups()
     end
 end
 
+-- prints the content of the table multimatches[n][m] to the screen
+-- this is meant as a tool to help write multiline trigger scripts
+-- This helps you to easily see what your multiline trigger actually captured in all regex
+-- You can use these values directly in your script by referring to it with multimatches[regex-number][capturegroup]
+function showMultimatches()
+    moveCursorEnd("main");
+    echo("-------------------------------------------------------");
+    moveCursorEnd("main");
+    echo("The table multimatches[n][m] contains:");
+    moveCursorEnd("main");
+    echo("-------------------------------------------------------");
+    moveCursorEnd("main");
+    for k,v in ipairs(multimatches) do
+        moveCursorEnd("main");
+       	echo("regex " .. k .. " captured: (multimatches["..k .."][1-n])");
+       	for k2,v2 in ipairs(v) do
+           		moveCursorEnd("main");
+           		echo("          key="..k2.." value="..v2);
+       	end
+    end
+    moveCursorEnd("main");
+    echo("-------------------------------------------------------\n");
+end
+
 
 -----------------------------------------------------------
 -- some functions from Vadim Peretrokin 2009
