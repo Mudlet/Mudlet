@@ -634,17 +634,323 @@ EXPAND TO: sip ceylon mint</tt></pre>
 <div class="sidebarblock">
 <div class="content">
 <div class="title">Example - Don&#8217;t miss the training!</div>
-<div class="paragraph"><p>Your character can train in his attributes once every three hours. You could either try tracking this manually or add a trigger starting timer after each training. Once the three hours have passed, your character will conveniently say to himself that it is time to do a couple of push-ups.
-MUDLET RECOMMENDS: Alternatively, you could also create a timer that would suggest that -you- take a break and do some real-life push-ups each two hours of playtime. Think of the possibilities!</p></div>
+<div class="paragraph"><p>Your character can train in his attributes once every three hours. You could either try tracking this manually or add a trigger starting timer after each training. Once the three hours have passed, your character will conveniently say to himself that it is time to do a couple of push-ups.</p></div>
 </div></div>
 </div>
-<h2 id="_mudlet">Mudlet</h2>
+<h2 id="_mudlet_technical_manual">Mudlet Technical Manual</h2>
 <div class="sectionbody">
-<h3 id="_2_exporting_and_importing_profiles_or_packages">2.? Exporting and Importing Profiles or Packages</h3>
+</div>
+<h2 id="_multi_session_gameing">Multi Session Gameing</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Mudlet lets you play several simultaneous MUD sessions. However, currently we have the restriction that you cannot use the same profile twice. Consequently, if you want to play three characters on the same MUD at the same time, you need to make 3 profiles with 3 different names e.g. <a href="mailto:ernie@avalon.de">ernie@avalon.de</a>, <a href="mailto:bert@avalon.de">bert@avalon.de</a> etc.
+Split Screen</p></div>
+<div class="paragraph"><p>Mudlet has a split screen. If you scroll up in the old text, the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.</p></div>
+<div class="paragraph"><p>Split screen can be activated via the page up / page down keys or with the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately. The size of the 2 parts of the split screen can be modidfied when dragging the seperator bar with the mouse.</p></div>
+</div>
+<h2 id="_command_line_auto_completion_tab_completion_and_history">Command Line Auto-Completion, Tab-Completion and History</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
+1. Tab completion searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
+2. Autocompletion tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
+3. If you haven&#8217;t started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
+4. To get out of autocompletion you can press the ESC key any time.
+Logging Output to HTML Log Files</p></div>
+<div class="paragraph"><p>Press on the little button with the blue folder with the green arrow icon on the lower right side of the screen next to the command line.</p></div>
+<div class="paragraph"><p>When you press on it again logging stops. Log files can be found at the mudlet home directory in your profile directory. The path is &lt;path to mudlet home&gt;/.config/mudlet/profiles/&lt;name&gt;/logs On Linux this would be: /home/username/.config/mudlet/profiles/profilename/logs</p></div>
+<div class="paragraph"><p>On Windows the path prefix depends on your windows version and your language settings: On my system it&#8217;s c:\Dokumente und Einstellungen\heiko\.config\mudlet\profiles\&lt;name&gt;\logs. Log files have a file name similar to the autosaved profiles: date#time.html</p></div>
+</div>
+<h2 id="_buttons_and_custom_user_toolbars">Buttons and Custom User Toolbars</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Buttons are co</p></div>
+</div>
+<h2 id="_mudlet_8217_s_trigger_engine">Mudlet&#8217;s Trigger Engine</h2>
+<div class="sectionbody">
+<h3 id="_simple_trigger_matching">Simple Trigger Matching</h3>
+<div class="paragraph"><p>Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
+After editing is finished your changes will only become permanent if you press on the save icon on the upper left. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.
+Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available. Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.</p></div>
+<h3 id="_simple_highlighter_triggers">Simple Highlighter Triggers</h3>
+<div class="paragraph"><p>If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:
+selectString( "pond", 1 )
+fg( "red " )
+bg( "blue" )</p></div>
+<h3 id="_and_and_or_condition_triggers">"AND" and "OR" Condition Triggers</h3>
+<div class="paragraph"><p>AND -Triggers execute their respective command or script only if all conditions in their respective conditions expression list are fullfilled.
+OR-Triggers execute when <strong>any</strong> one of their conditions is true.
+To make OR-Triggers you simply have to add a few conditions to the conditions list e.g. in our example: "pond", "frog", "Plop". The trigger will now also execute on lines like this: "A frog is green" or "You hear a loud Plop!" However, it will not execute on "With a loud plop the frog dived into the water." because "plop" in the line is in lower case letters and your condition specified a "P" in upper case.
+The simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains, whatever you&#8217;d like to call it.</p></div>
+<h3 id="_trigger_chains_filter_chains">Trigger Chains - Filter Chains</h3>
+<div class="paragraph"><p>Imagine the following scenario: You want to collect some berries. You know that the room contains some berries if the room description contains the words "You see several sorts of berries." You make a new substring trigger for this line, but instead of chosing a regular trigger, you chose to add a new trigger group. Now you add "You see several sorts of berries." to the expression list of the trigger group. When adding condions to a trigger group, the trigger group turns from an organizational unit into a filter unit. From now on this folder is a filter and will only let data through that matches it&#8217;s condition.
+In our case this is exactly what we want, because we don&#8217;t want to collect all sorts of berries, but we only want 2 particular kinds, namely, strawberries and blackberries. Now you add two regular triggers to our berry filter - one containing the condition: "strawberries" and the other one "blackberries". Then we add the commands to pick the particular kind of berry to both triggers.
+Now what happens is that as soon as a room description reads "You see several sorts of berries." the filter will let the line containing the room description pass through to our two berry triggers and they will issue commands to pick berries. However, in any other situation the words "strawberries" and "blackberries" will <strong>NOT</strong> trigger - only in the above scenario when the filter parent&#8217;s condition is met. This is a very nice way to solve complicated problems with a few easy filter chains. This example is trivial, but using filter chains will rapidly show you how formerly complicated things that could only be solved with very complicated regular expressions can be solved easily now with a couple of filter chains.</p></div>
+<h3 id="_multi_line_triggers_and_multi_condition_triggers">Multi-Line Triggers and Multi-Condition Triggers</h3>
+<div class="paragraph"><p>Multi Condition Triggers are the most advanced feature of Mudlet&#8217;s trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
+All conditions in the list must have matched within the specified margin of lines (delta), in order to trigger the script.
+Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition return true, the trigger script is run.
+In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. The sequence of the conditions is binding. This means if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will <strong>NOT</strong> run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condidtion #2 has been true.
+Conditions can also be Lua Functions that return a boolean truth value. You can mix all types of condtions.</p></div>
+<div class="paragraph"><p>Example: Let&#8217;s go back to our pond &amp; frog example. We have explained the difference between AND-triggers and OR-triggers. If you have a room description consisting of 3 lines:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+You see a pond
+</p>
+</li>
+<li>
+<p>
+You see a frog.
+</p>
+</li>
+<li>
+<p>
+The frog sits on a stone.
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>Every single one of these 3 lines will be fed into the trigger engine one after another. If we define an OR-trigger with a condition list consisting of 3 conditions</p></div>
+<div class="paragraph"><p>condition #1: pond</p></div>
+<div class="paragraph"><p>condition #2: frog</p></div>
+<div class="paragraph"><p>condition #3: stone</p></div>
+<div class="paragraph"><p>The trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true.</p></div>
+<div class="paragraph"><p>in line #1 we get: pond = true. In line #2 we get frog = true and in line #3 two conditions are true i.e. frog=true and stone = true; Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.</p></div>
+<div class="paragraph"><p>the multi condition switch must be turned off to get an OR-trigger):
+conditi</p></div>
+<div class="paragraph"><p>To complicate matters, however, you don&#8217;t want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn&#8217;t have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Conditon Triggers. If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description.</p></div>
+<div class="paragraph"><p>Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlet&#8217;s MCTs.</p></div>
+<div class="paragraph"><p>You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Multiline triggers cannot yet pass all capture groups on to the script. Currently, only the last condition will pass on capturegroups. This issue will be resolved soon though. In the future Mudlet will pass the 2-dimensional table multimatches[ conditionNumber ] [ matches[ ] ].</td>
+</tr></table>
+</div>
+<div class="ulist"><ul>
+<li>
+<p>
+This article will be extended later <strong>*</strong>
+</p>
+</li>
+</ul></div>
+<h3 id="_temporary_triggers_scripting_only">Temporary Triggers (scripting only)</h3>
+<div class="paragraph"><p>Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).</p></div>
+<h3 id="_line_triggers_scripting_only">Line Triggers (scripting only)</h3>
+<div class="paragraph"><p>Line triggers trigger on a specified line in the future - or a sequence of lines - irrespective of the content of the line. This type of triggers can be very handy in scripting if you know what is coming e.g. you want to parse a table from the MUD, maps etc.</p></div>
+</div>
+<h2 id="_the_timer_engine">The Timer Engine</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Mudlet supports 3 different sort of timers:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Timers that fire repeatedly in a certain interval specified by the user.
+</p>
+</li>
+<li>
+<p>
+Offset Timers are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
+</p>
+</li>
+<li>
+<p>
+Temporary Timers that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
+</p>
+</li>
+</ol></div>
+</div>
+<h2 id="_exporting_and_importing_profiles_or_packages">Exporting and Importing Profiles or Packages</h2>
+<div class="sectionbody">
 <div class="paragraph"><p>Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).</p></div>
 <div class="paragraph"><p>The file name consists of the date and time, the profile was written to disc.
 You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You&#8217;ll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
 You can also import entire profiles as they are basically packages.</p></div>
+</div>
+<h2 id="_quick_lua_syntax_overview">Quick Lua syntax overview</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Lua variables can be either a string or a number. They are whatever there were initially initialized with.
+=== string concatenation, variable substitution)</p></div>
+<div class="paragraph"><p>a = "Jim"
+b = "Tom"
+c = 350
+d = 1</p></div>
+<div class="paragraph"><p>Then you can write:</p></div>
+<div class="paragraph"><p>e = c + d and e will equal 351
+e = a .. b and e will equal "JimTom" note that you cant use a+b to concatenate string values. For this you must use ..
+e = a .. c and e will equal "Jim350"</p></div>
+<div class="paragraph"><p>Lua tables can basically be considered multidimensional arrays and dictionaries at the same time.
+If we have the table matches, matches[1] is the first element, matches[n] the n-th element.</p></div>
+<div class="paragraph"><p>a = "Tom"
+matches[1] = "Betty"
+b = matches[1]
+c = a .. b and e will equal "TomBetty"</p></div>
+<div class="paragraph"><p>To output a table you can use a conveniance function printTable( name ). This function is defined in LuaGlobal.lua and can be found in your home directory under ./mudlet (note the leading dot ) Profiles and mudlet_documentation.html are stored in this directory as well.</p></div>
+</div>
+<h2 id="_lua_interface_functions_to_mudlet_or_how_do_i_access_triggers_timers_etc_from_lua_scripts">Lua interface functions to Mudlet - or how do I access triggers, timers etc. from Lua scripts</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>How to get data from regex capture groups?
+Regular expression capture groups (e.g. â€ž(\d+)â€œ ) are passed on to Lua scripts as a Lua table matches.
+To make use of this information inside Lua scripts, you need to specify the number of the capture group within the regex.</p></div>
+<div class="paragraph"><p>Example: You have (\d+) weapons and they are (?:(\b\w+\W+)+)</p></div>
+<div class="paragraph"><p>This regex contains 3 capture groups, but only the 2 green colored ones contain data as the red capture group is a non-capturing group. Consequently, your Lua script gets passed only 2 instead of 3 capture groups and matches[3] is undefined.</p></div>
+<div class="paragraph"><p>In your Lua script you may write following program in order to print the number and status of your weapons on the screen:</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph"><p>You have (\d+) weapons and they are (?:(\b\w+\W+)+)</p></div>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>number_of_weapons = matches[1]
+status_of_weapons = matches[2]
+notice = number_of_weapons .. status_of_weapons
+echo( notice )
+send( â€žput weapons in backpackâ€œ )
+
+-- the following 2 lines color the first capture
+-- group red and the second group blue
+-- see below for details
+
+selectCaptureGroup( 1 )
+setFgColor( 255,0,0 )
+
+selectCaptureGroup( 2 )
+setFgColor( 0,0,255 )</tt></pre>
+</div></div>
+<div class="paragraph"><p>The best way is to use selectCaptureGroup( number ) to select the proper capture group and then perform your actions on it e.g. replace(), colorize etc. Note: Both selectCaptureGroup() and matches[n] start with group 1.</p></div>
+<div class="paragraph"><p>How to select all occurrences of "Tom" and colorize them?</p></div>
+<div class="paragraph"><p>You add a functon like this to a script conataining you main function definitions. Note that script items differ from all other "scripts" in triggers, timers, actions etc. because they require you to put your code in proper functions that can be called by your other trigger-scripts, timer-scripts etc. via normal function calls. Trigger-scripts, timer-scripts etc. cannot contain any function definitions because they are automatically generated functions themself because this makes usage a lot easier.</p></div>
+<div class="paragraph"><p>To come back to our question how to select all occurrences of "Tom" and colorize them:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>function setBgColorAll( word, r, g, b )
+    i = 0
+    word_count = 1
+    while i &gt; -1 do
+        i = selectString(word, word_count)
+        if i == -1 then
+             return
+        end
+        word_count = word_count +1
+        setBgColor( r, g, b )
+    end
+end</tt></pre>
+</div></div>
+<div class="paragraph"><p>Then you simply define a substring matching trigger on the word "Tom" and in the trigger script you call above function:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>setBgColorAll("Tom", 255,50,50)</tt></pre>
+</div></div>
+<h3 id="_sending_commands_to_the_mud_or_printing_information_messages_on_the_screen">Sending commands to the MUD or printing information messages on the screen</h3>
+<div class="paragraph"><p>To print information messages on the session screen you can use the echo( message ) function, or insertText( text). Currently, it only takes one string as argument.</p></div>
+<div class="paragraph"><p>To send a command to the MUD, you can use the send( command ) function. Note: everything you send via send() will be processed by the alias processing unit.
+In Alias scripts the command that is being sent to the MUD is contained in the variable command that you can change in the context of Alias scripts.
+Alias take regular expressions, as well. As a result, you can use following regex and script to talk like Yoda:</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph"><p>say (\w+).<strong>(\w</strong>).<strong>(.</strong>)</p></div>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>send( "say " .. matches[3] .." " .. matches[1] .." ".. matches[2] )</tt></pre>
+</div></div>
+<div class="paragraph"><p>Note: The variable â€œcommandâ€� contains what was entered in the command line or issued via the expandAlias( ) function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion.</p></div>
+<h4 id="_changing_text_from_the_mud_or_reformatting_text_colorize_make_bold_etc">Changing text from the MUD or reformatting text (colorize, make bold etc.)</h4>
+<div class="paragraph"><p>When sending commands to the MUD - from now on referred to as output stream - alias scripts find the command that whas issued by the user stored in the variable "command".</p></div>
+<div class="paragraph"><p>By manipulating the value, the command can easily be changed before it is being sent to the MUD.</p></div>
+<div class="paragraph"><p>However, things get much more complicated with the data received from the MUD â€“ from now on referred to as input stream. Before triggers can be run on the MUD data Mudlet has to strip all format codes from the text and store it in data structures associated with the text. Consequently, the text that is being passed on to the trigger processing unit is a small subset of the data received from the MUD. If you want to edit, replace, delete or reformat text from within your trigger scripts you have to keep this in mind if you don&#8217;t want to lose all text format information as colors etc.</p></div>
+<div class="paragraph"><p>As the text is linked with data structures containing the format of the text, the cursor position inside the line is important if data is being changed. You select a word or a sequence of characters from the line and then issue commands to do actions on the selected data.</p></div>
+<div class="paragraph"><p>Replacing the word "Tom" with "Betty" in the line: Jim, Tom and Lucy are learning a new spell. Could be done with following script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString("Tom",1)
+replace("Betty")</tt></pre>
+</div></div>
+<div class="paragraph"><p>Things get more complicated if there are two or more occurrences of "Tom" in the line e. g. Jim and Tom like magic. Jim, Tom and Lucy are learning a new spell.</p></div>
+<div class="paragraph"><p>The above example code would select the first occurrence of "Tom" in this line and ignore the second.
+If you want to work on the the second occurrence of "Tom" you have to specify the occurrence number in the call to select().</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString( "Tom", 2 )
+replace( "Betty" )</tt></pre>
+</div></div>
+<div class="paragraph"><p>This code would change the second "Tom" and leave the first "Tom" alone. The function call</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>replaceAll( "Betty" )</tt></pre>
+</div></div>
+<div class="paragraph"><p>will replace all occurrences of "Tom" with "Betty" in the line if "Tom" has been selected before. ReplaceAll() is a conveniance function defined in LuaGlobal.lua.</p></div>
+<div class="paragraph"><p>Colorization example: You want to change to color of the words ugly monster to red on a white background.</p></div>
+<div class="paragraph"><p>You add a new trigger and define the regex: ugly monster
+In the script you write:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString("ugly monster", 1 )
+setFgColor(255,0,0)
+setBgColor(255,255,255)</tt></pre>
+</div></div>
+<div class="paragraph"><p>Another means to select text is to select a range of characters by specifying cursor positions.
+If we have following line: Jim and Tom like magic. Jim, Tom and Lucy are learning a new spell.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectSection( 28, 3 )</tt></pre>
+</div></div>
+<div class="paragraph"><p>This example would select the second Tom. The first argument to selectSection is the cursor position within the line and the second argument is the length of the selection.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectCaptureGroup( number )</tt></pre>
+</div></div>
+<h3 id="_deleting_text_gagging">Deleting Text - Gagging</h3>
+<div class="paragraph"><p>This function selects the captureGroup number if you use Perl regular expressions containing capture groups. The first capture group starts with index 1.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>deleteLine()</tt></pre>
+</div></div>
+<div class="paragraph"><p>This function deletes the current line - or any line where the cursor is currently placed. You can use repeated calls to this function to effectively erase the entire text buffer.
+If you want to delete or gag certain words only, you can select the text that you want to delete and then replace it with an empty string e.g:</p></div>
+<div class="paragraph"><p>If you get this line form the MUD: "Mary and Tom walk to the diner."</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString( "Tom", 1 )
+replace( "" );</tt></pre>
+</div></div>
+<div class="paragraph"><p>Then the output will be changed to: "Mary and walk to the diner."</p></div>
+<h3 id="_cursor_movement_and_cursor_placement">Cursor Movement and Cursor Placement</h3>
+<div class="paragraph"><p>moveCursor( windowName, x, y )
+This will move the user cursor of window windowName to the absolute (x/y) coordinates in the text.</p></div>
+<div class="paragraph"><p>moveCursor( "main", 20, 3950 ) will move the cursor on the 20th character from the left on line number 3950.
+To determine the current cursor position you can use getLineNumber() and getColumnNumber() as well as getLastLineNumber() to get the number of the last line in the text buffer. moveCursorEnd("main") will move the cursor of the main display to end of the buffer. This is always a new line of size 1 containing the character <em>\n</em>.</p></div>
+<div class="paragraph"><p>number_of_last_line_in_text = getLineCount()</p></div>
+<div class="paragraph"><p>returns the number of the last line of the text in the console buffer. This number will change as soon as a new <em>\n</em> is printed either by the user or</p></div>
+<div class="paragraph"><p>when a new line arrives from the MUD. All lines from the MUD are terminated with <em>\n</em> which is called line feed or the new line character. This control character ends the current line and move the cursor to the beginning of the next line, thus creating a new, empty line below the line that contains the <em>\n</em>.</p></div>
+<div class="paragraph"><p>line_number_of_the_current_cursor_position = getLineNumber()</p></div>
+<div class="paragraph"><p>column_number_of_the_current_cursor_position = getColumnNumber()</p></div>
+<div class="paragraph"><p>luaTable_containing_textlines = getLines( absolute_line_number_from, absolute_line_number_to )</p></div>
+<div class="paragraph"><p>this will return a Lua table containing all lines between the absolute positions from and to. NOTE: This function uses absolute line numbers, not relative ones like in moveCursor(). This little demo script shows you how to use cursor functions:</p></div>
+<div class="paragraph"><p>moveCursor() return true or false depending on wheather the move was possible.</p></div>
+<div class="paragraph"><p>User defined dockable windows</p></div>
+<div class="paragraph"><p>You may want to use dock windows to display information you gathered in your scripts, or you may want to use them as chat windows etc.
+Adding a user defined window:</p></div>
+<div class="paragraph"><p>openUserWindow( string window_name )</p></div>
+<div class="paragraph"><p>echoUserWindow( string window_name, string text )</p></div>
+<div class="paragraph"><p>setWindowSize( int x, int y )</p></div>
+<div class="paragraph"><p>clearWindow( string window_name )</p></div>
+<div class="paragraph"><p>Dynamic Timers</p></div>
+<div class="paragraph"><p>tempTimer( double timout, string lua_code_to_execute, string/float/int timer_name )
+disableTimer( name )
+enableTimer( name )</p></div>
+</div>
+<h2 id="_dynamic_triggers">Dynamic Triggers</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>triggerID = tempTrigger( regex, code ) creates a fast substring matching trigger
+triggerID = tempRegexTrigger( regex, code ) creates a regular expression matching trigger</p></div>
+</div>
+<h2 id="_registering_event_handlers_and_raising_events">Registering Event Handlers and Raising Events</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>raiseEvent( string name, args )</p></div>
+</div>
+<h2 id="_handling_tables_in_lua">Handling Tables in Lua</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Nick Gammon has written a very nice overview on how to deal with Lua tables. You can find it here: <a href="http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036">http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036</a>.</p></div>
 <div class="sidebarblock">
 <div class="content">
 <div class="paragraph" id="example1"><div class="title">Example: How to use multilinematches[n][m]</div><p>(this example can be tested on the MUD batmud.bat.org)</p></div>
@@ -691,17 +997,6 @@ regex 3 captured: (multimatches[3][1-n])
 </div></div>
 <div class="paragraph"><p>You can now see what the table multimatches[][] contains in this case. The</p></div>
 </div></div>
-<h3 id="_temporary_triggers">Temporary Triggers</h3>
-<div class="paragraph"><p>Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).</p></div>
-<h3 id="_line_triggers_scripting_only">Line Triggers (scripting only)</h3>
-<div class="paragraph"><p>Line triggers trigger on a specified line in the future - or a sequence of lines - irrespective of the content of the line. This type of triggers can be very handy in scripting if you know what is coming e.g. you want to parse a table from the MUD, maps etc.</p></div>
-<h3 id="heading3">The Timer Engine</h3>
-<div class="paragraph"><p>Mudlet supports 3 different sort of timers:</p></div>
-<div class="paragraph"><p>Timers that fire repeatedly in a certain interval specified by the user.</p></div>
-<div class="paragraph"><p>Offset Timers are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.</p></div>
-<div class="paragraph"><p>Temporary Timers that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
-=== Accessing the Mudlet buffer
-missing</p></div>
 </div>
 <h2 id="heading4">Lua API</h2>
 <div class="sectionbody">
@@ -1009,7 +1304,7 @@ This function is defined in luaglobal.lua.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-03-24 00:56:31 CEST
+Last updated 2009-03-24 01:40:17 CEST
 </div>
 </div>
 </body>
