@@ -282,7 +282,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
     
     if( namecount <= 0 )
     {
-        ;//cout << "no named substrings detected" << endl;
+        ;
     }
     else
     {
@@ -363,15 +363,15 @@ END:
 {
     if( mIsMultiline )
     {
-        mMultiCaptureGroupList.push_back( captureList );
-        mMultiCaptureGroupPosList.push_back( posList );
         if( regexNumber == 0 )
         {
             if( mudlet::debugMode ) TDebug()<<"Trigger is a multiline trigger condition #0=true -> creating new MatchState number of matchstates="<<mConditionMap.size()+1>>0;
             // wird automatisch auf #1 gesetzt
             TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
             mConditionMap[pCondition] = pCondition;  
-            goto EXIT_OK;//DON'T RUN SCRIPTS
+            pCondition->multiCaptureList.push_back( captureList );
+            pCondition->multiCapturePosList.push_back( posList );
+            goto EXIT_OK; //DON'T RUN SCRIPTS
         }
         else
         {
@@ -383,7 +383,9 @@ END:
                 if( (*it).second->nextCondition() == regexNumber )
                 {
                     if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
-                    (*it).second->conditionMatched();    
+                    (*it).second->conditionMatched();
+                    (*it).second->multiCaptureList.push_back( captureList );
+                    (*it).second->multiCapturePosList.push_back( posList );
                 }
             }
             goto EXIT_OK; //DON'T RUN SCRIPTS
@@ -393,7 +395,6 @@ END:
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups( captureList, posList );
-
         // call lua trigger function with number of matches and matches itselves as arguments
         execute();
         pL->clearCaptureGroups();
@@ -526,7 +527,7 @@ bool TTrigger::match( char * subject, QString & toMatch )
             int matchStateCnt = 0;
             for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
             {
-                qDebug()<<"TMatchState #"<<++matchStateCnt<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
+                //qDebug()<<"TMatchState #"<<++matchStateCnt<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
                 (*it).second->newLineArrived();
             }
         }
@@ -552,14 +553,13 @@ bool TTrigger::match( char * subject, QString & toMatch )
                     ret = match_exact_match( toMatch, mRegexCodeList[i], i );
                     break;
             }
-            //normal policy: one match is enough to fire trigger, 
-            //in case of multiline *all* have to match in order to fire the trigger
+            // policy: one match is enough to fire trigger, but in the case of
+            //         multiline *all* have to match in order to fire the trigger
             if( ! mIsMultiline ) 
             {
                 if( ret )
                 {
                     conditionMet = true;
-                    cout << "kein multiline trigger -> trigger matched, ignoring other conditions"<< endl;
                     break; 
                 }
             }
@@ -582,7 +582,11 @@ bool TTrigger::match( char * subject, QString & toMatch )
                 {
                     if( mudlet::debugMode ) TDebug()<<"multiline trigger name="<<mName<<" *FIRES* all conditons are fullfilled! executing script">>0;
                     removeList.push_back( (*it).first );
-                    triggerFires = true;
+                    conditionMet = true;
+                    TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+                    pL->setMultiCaptureGroups( (*it).second->multiCaptureList, (*it).second->multiCapturePosList );
+                    execute();
+                    pL->clearCaptureGroups();
                 }
             
                 if( ! (*it).second->newLine() )
@@ -598,19 +602,6 @@ bool TTrigger::match( char * subject, QString & toMatch )
                     if( mudlet::debugMode ) TDebug()<< "removing condition from conditon table.";
                     mConditionMap.erase( *it );
                 }
-            }
-            if( triggerFires )
-            {
-                conditionMet = true;
-                // FIXME: decision: do we want this: clear condition map after first match to prevent built-up mass triggering
-                //mConditionMap.clear();
-                TLuaInterpreter * pL = mpHost->getLuaInterpreter();
-                pL->setMultiCaptureGroups( mMultiCaptureGroupList, mMultiCaptureGroupPosList );
-                cout << "multiline trigger: calling execute()"<<endl;
-                execute();
-                pL->clearCaptureGroups();
-                mMultiCaptureGroupList.clear();
-                mMultiCaptureGroupPosList.clear();
             }
         }
         

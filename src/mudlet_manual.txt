@@ -324,16 +324,19 @@ Buttons are co
 
 Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
 After editing is finished your changes will only become permanent if you press on the save icon on the upper left. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.
-Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available. Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.
-
+Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available. 
+****
+Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.
+****
 
 === Simple Highlighter Triggers
 
 If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:
+----
 selectString( "pond", 1 )
 fg( "red " )
 bg( "blue" )
-
+----
 
 === "AND" and "OR" Condition Triggers
 
@@ -359,31 +362,34 @@ In multiline triggers, however, each single regex/string/Lua function condition 
 Conditions can also be Lua Functions that return a boolean truth value. You can mix all types of condtions.
 
 Example: Let's go back to our pond & frog example. We have explained the difference between AND-triggers and OR-triggers. If you have a room description consisting of 3 lines:
-
-
+----
 1. You see a pond
-
 2. You see a frog.
-
 3. The frog sits on a stone.
+----
+Every single one of these 3 lines will be fed into the trigger engine one after another. If we define an OR-trigger with a condition list consisting of 3 condition patterns:
 
+condition #1 pattern = pond
+condition #2 pattern = frog
+condition #3 pattern = stone
 
-Every single one of these 3 lines will be fed into the trigger engine one after another. If we define an OR-trigger with a condition list consisting of 3 conditions
+Wheather or not a condition is found to be true *also* depends on another property, i.e. the *type* of the condition.
+The condition type can be among others:
+====
+1. substring matching  -> the condition is true if the condition pattern is a substring of the output line from the MUD. In other words: If the pattern "pond" is contained in any line of output, the condition is true.
+2. begin of line matching -> the condition is only true if the conditon pattern can be found at the beginning of a line from the MUD.
+3. Perl regular expression -> the condition is true if the Perl regex pattern is matched. You'll find more information on Perl regex below.
+====
+In our example we chose condition type "substring" for all three condtions.
+Consequently, the trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.
+....
+in line #1 we get: pond = true. 
+in line #2 we get frog = true and 
+in line #3 two conditions are true i.e. frog=true and stone = true
+....
+Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.
 
-
-condition #1: pond
-
-condition #2: frog
-
-condition #3: stone
-
-
-The trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true.
-
-in line #1 we get: pond = true. In line #2 we get frog = true and in line #3 two conditions are true i.e. frog=true and stone = true; Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.
-
-the multi condition switch must be turned off to get an OR-trigger):
-conditi
+CAUTION: The multiline condition switch must be turned off to get an OR-trigger! If the multiline condition switch is turned on the trigger becomes and AND trigger which means that the trigger only fires if all conditions are true and fullfilled in the correct sequence. With OR-triggers the sequence is irrelevant.
 
 To complicate matters, however, you don't want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn't have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Conditon Triggers. If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description.
 
@@ -393,10 +399,6 @@ Sadly, there are many unfriendly people in this world and somebody goes around a
 You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.
 
 
-NOTE: Multiline triggers cannot yet pass all capture groups on to the script. Currently, only the last condition will pass on capturegroups. This issue will be resolved soon though. In the future Mudlet will pass the 2-dimensional table multimatches[ conditionNumber ] [ matches[ ] ].
-
-
-*** This article will be extended later ***
 
 
 === Temporary Triggers (scripting only)
@@ -413,10 +415,11 @@ Line triggers trigger on a specified line in the future - or a sequence of lines
 
 Mudlet supports 3 different sort of timers:
 
+======
 1. Timers that fire repeatedly in a certain interval specified by the user.
 2. Offset Timers are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
 3. Temporary Timers that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
-
+======
 
 == Exporting and Importing Profiles or Packages
 
@@ -433,25 +436,27 @@ You can also import entire profiles as they are basically packages.
 Lua variables can be either a string or a number. They are whatever there were initially initialized with.
 === string concatenation, variable substitution)
 
+----
 a = "Jim"
 b = "Tom"
 c = 350
 d = 1
-
+-----
 Then you can write: 
 
+-----
 e = c + d and e will equal 351
 e = a .. b and e will equal "JimTom" note that you cant use a+b to concatenate string values. For this you must use ..
 e = a .. c and e will equal "Jim350"
-
+-----
 Lua tables can basically be considered multidimensional arrays and dictionaries at the same time.
 If we have the table matches, matches[1] is the first element, matches[n] the n-th element.
-
+-----
 a = "Tom"
 matches[1] = "Betty"
 b = matches[1]
 c = a .. b and e will equal "TomBetty"
-
+-----
 To output a table you can use a conveniance function printTable( name ). This function is defined in LuaGlobal.lua and can be found in your home directory under ./mudlet (note the leading dot ) Profiles and mudlet_documentation.html are stored in this directory as well.
 
 == Lua interface functions to Mudlet - or how do I access triggers, timers etc. from Lua scripts
@@ -520,15 +525,16 @@ To print information messages on the session screen you can use the echo( messag
 To send a command to the MUD, you can use the send( command ) function. Note: everything you send via send() will be processed by the alias processing unit.
 In Alias scripts the command that is being sent to the MUD is contained in the variable command that you can change in the context of Alias scripts.
 Alias take regular expressions, as well. As a result, you can use following regex and script to talk like Yoda:
-
-****
+Perl regex:
+----
 say (\w+).*(\w*).*(.*)
-****
------
+----
+script:
+----
 send( "say " .. matches[3] .." " .. matches[1] .." ".. matches[2] )
 -----
 
-Note: The variable â€œcommandâ€� contains what was entered in the command line or issued via the expandAlias( ) function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion.
+Note: The variable "command" contains what was entered in the command line or issued via the expandAlias( ) function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion.
 
 
 ==== Changing text from the MUD or reformatting text (colorize, make bold etc.)
@@ -670,11 +676,9 @@ raiseEvent( string name, args )
 
 Nick Gammon has written a very nice overview on how to deal with Lua tables. You can find it here: http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036.
 
-
-****
 [[example1]]
-.Example: How to use multilinematches[n][m]
-(this example can be tested on the MUD batmud.bat.org)
+.How to use multilinematches[n][m]
+(The following example can be tested on the MUD batmud.bat.org)
 
 In the case of a multiline trigger with these 2 Perl regex as conditions:
 ----
@@ -687,6 +691,8 @@ You have an almost non-existent ability for avoiding hits.
 You are irreproachably kind.
 You have not completed any quests.
 You are refreshed, hungry, very young and brave.
+Conquer leads the human race.
+Hp:295/295 Sp:132/132 Ep:182/181 Exp:269 >
 ----
 If you add this script to the trigger:
 ----
@@ -697,24 +703,65 @@ The script, i.e. the call to the function showMultimatches() generates this outp
  -------------------------------------------------------
  The table multimatches[n][m] contains:
  -------------------------------------------------------
-regex 1 captured: (multimatches[1][1-n])
-          key=1 value=You are irreproachably kind.
-          key=2 value=irreproachably
-          key=3 value=d
-regex 2 captured: (multimatches[2][1-n])
-          key=1 value=You have not completed any quests
-          key=2 value=not
-          key=3 value=completed
-          key=4 value=any
-          key=5 value=quests
-regex 3 captured: (multimatches[3][1-n])
-          key=1 value=You are refreshed, hungry, very young and brave.
-          key=2 value=refreshed
-          key=3 value=e
+ regex 1 captured: (multimatches[1][1-n])
+           key=1 value=You have not completed any quests
+           key=2 value=not
+           key=3 value=completed
+           key=4 value=any
+           key=5 value=quests
+ regex 2 captured: (multimatches[2][1-n])
+           key=1 value=You are refreshed, hungry, very young and brave
+           key=2 value=refreshed
+           key=3 value=young
+           key=4 value=and
+           key=5 value=brave
  -------------------------------------------------------
 ----
-You can now see what the table multimatches[][] contains in this case. The 
-****
+The function showMultimatches() prints out the content of the table multimatches[n][m].
+You can now see what the table multimatches[][] contains in this case. The first trigger condition (=regex 1) got as the first full match "You have not completed any quests". This is stored in multimatches[1][1] as the value of key=1 in the sub-table matches[1] which, in turn, is the value of key=1 of the table multimatches[n][m].
+
+The structure of the table multimatches: 
+
+----
+multimatches { 
+                1 = {  
+                       matches[1] of regex 1 
+                       matches[2] of regex 1 
+                       matches[3] of regex 1 
+                              ...
+                       matches[n] of regex 1 }, 
+                2 = {  
+                       matches[1] of regex 2 
+                       matches[2] of regex 2
+                             ...
+                       matches[n] of regex 2 },
+                 ...         ...
+                n = { 
+                       matches[1] of regex n
+                       matches[2] of regex n
+                             ...
+                       matches[n] of regex n }
+}
+-----
+The sub-table matches[n] is the same table matches[n] you get when you have a standard non-multiline trigger.
+The value of the first key, i. e. matches[1], holds the first complete match of the regex. Subsequent keys hold the respective capture groups.
+For example: 
+Let regex = "You have (\d+) gold and (\d+) silver" and the text from the MUD = "You have 5 gold and 7 silver coins in your bag."
+Then matches[1] contains "You have 5 gold and 7 silver", matches[2] = "5" and matches[3] = "7".
+In your script you could do:
+----
+myGold = myGold + tonumber( matches[2] )
+mySilver = mySilver + tonumber( matches[3] )
+----
+However, if you'd like to use this script in the context of a multiline trigger, matches[] would not be defined as there are more than one regex. 
+You need to use multimatches[n][m] in multiline triggers. Above script would look like this if above regex would be the first regex in the multiline trigger:
+----
+myGold = myGold + tonumber( multimatches[1][2] );
+mySilver = mySilver + tonumber( multimatches[1][3] );
+----
+What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines. 
+
+
 
 
 
@@ -823,6 +870,7 @@ This function is defined in luaglobal.lua.
 |function replaceWildcard(what, replacement)|Replaces the given wildcard (as a number) with the given text.
 
 Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
+|resetFormat() |resets the user character format to the default.
 | |
 |===================================================
 

@@ -30,13 +30,14 @@ end
 -- Echo something after your line
 function suffix(what)
 	local length = string.len(line)
-	moveCursor(length-1, 0)
+	moveCursor("main", length-1, getLineNumber())
 	insertText(what)
 end
 
 
 -- Echo something before your line
 function prefix(what)
+    moveCursor("main",0,getLineNumber());
 	insertText(what)
 end
 
@@ -111,6 +112,9 @@ function showMultimatches()
     moveCursorEnd("main");
     echo("-------------------------------------------------------\n");
 end
+
+
+
 
 
 -----------------------------------------------------------

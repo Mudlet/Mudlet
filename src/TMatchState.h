@@ -72,12 +72,13 @@ public:
         }
     }
 
-    //private:
 
-    int mNumberOfConditions;    
-    int mNextCondition;
-    int mLineCount;    
-    int mDelta;
+    std::list< std::list<std::string> > multiCaptureList;
+    std::list< std::list<int> >         multiCapturePosList;
+    int                                 mNumberOfConditions;
+    int                                 mNextCondition;
+    int                                 mLineCount;
+    int                                 mDelta;
 };
 
 #endif

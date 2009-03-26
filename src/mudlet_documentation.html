@@ -653,8 +653,10 @@ Split Screen</p></div>
 1. Tab completion searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
 2. Autocompletion tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
 3. If you haven&#8217;t started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
-4. To get out of autocompletion you can press the ESC key any time.
-Logging Output to HTML Log Files</p></div>
+4. To get out of autocompletion you can press the ESC key any time.</p></div>
+</div>
+<h2 id="_logging_output_to_html_log_files">Logging Output to HTML Log Files</h2>
+<div class="sectionbody">
 <div class="paragraph"><p>Press on the little button with the blue folder with the green arrow icon on the lower right side of the screen next to the command line.</p></div>
 <div class="paragraph"><p>When you press on it again logging stops. Log files can be found at the mudlet home directory in your profile directory. The path is &lt;path to mudlet home&gt;/.config/mudlet/profiles/&lt;name&gt;/logs On Linux this would be: /home/username/.config/mudlet/profiles/profilename/logs</p></div>
 <div class="paragraph"><p>On Windows the path prefix depends on your windows version and your language settings: On my system it&#8217;s c:\Dokumente und Einstellungen\heiko\.config\mudlet\profiles\&lt;name&gt;\logs. Log files have a file name similar to the autosaved profiles: date#time.html</p></div>
@@ -668,12 +670,71 @@ Logging Output to HTML Log Files</p></div>
 <h3 id="_simple_trigger_matching">Simple Trigger Matching</h3>
 <div class="paragraph"><p>Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
 After editing is finished your changes will only become permanent if you press on the save icon on the upper left. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.
-Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available. Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.</p></div>
+Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Tip" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.</td>
+</tr></table>
+</div>
 <h3 id="_simple_highlighter_triggers">Simple Highlighter Triggers</h3>
-<div class="paragraph"><p>If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:
-selectString( "pond", 1 )
+<div class="paragraph"><p>If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString( "pond", 1 )
 fg( "red " )
-bg( "blue" )</p></div>
+bg( "blue" )</tt></pre>
+</div></div>
 <h3 id="_and_and_or_condition_triggers">"AND" and "OR" Condition Triggers</h3>
 <div class="paragraph"><p>AND -Triggers execute their respective command or script only if all conditions in their respective conditions expression list are fullfilled.
 OR-Triggers execute when <strong>any</strong> one of their conditions is true.
@@ -690,49 +751,103 @@ Normal triggers fire and run the script as soon as one of the conditions in the 
 In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. The sequence of the conditions is binding. This means if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will <strong>NOT</strong> run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condidtion #2 has been true.
 Conditions can also be Lua Functions that return a boolean truth value. You can mix all types of condtions.</p></div>
 <div class="paragraph"><p>Example: Let&#8217;s go back to our pond &amp; frog example. We have explained the difference between AND-triggers and OR-triggers. If you have a room description consisting of 3 lines:</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-You see a pond
-</p>
-</li>
-<li>
-<p>
-You see a frog.
-</p>
-</li>
-<li>
-<p>
-The frog sits on a stone.
-</p>
-</li>
-</ol></div>
-<div class="paragraph"><p>Every single one of these 3 lines will be fed into the trigger engine one after another. If we define an OR-trigger with a condition list consisting of 3 conditions</p></div>
-<div class="paragraph"><p>condition #1: pond</p></div>
-<div class="paragraph"><p>condition #2: frog</p></div>
-<div class="paragraph"><p>condition #3: stone</p></div>
-<div class="paragraph"><p>The trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true.</p></div>
-<div class="paragraph"><p>in line #1 we get: pond = true. In line #2 we get frog = true and in line #3 two conditions are true i.e. frog=true and stone = true; Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.</p></div>
-<div class="paragraph"><p>the multi condition switch must be turned off to get an OR-trigger):
-conditi</p></div>
-<div class="paragraph"><p>To complicate matters, however, you don&#8217;t want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn&#8217;t have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Conditon Triggers. If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description.</p></div>
-<div class="paragraph"><p>Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlet&#8217;s MCTs.</p></div>
-<div class="paragraph"><p>You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">Multiline triggers cannot yet pass all capture groups on to the script. Currently, only the last condition will pass on capturegroups. This issue will be resolved soon though. In the future Mudlet will pass the 2-dimensional table multimatches[ conditionNumber ] [ matches[ ] ].</td>
-</tr></table>
-</div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>1. You see a pond
+2. You see a frog.
+3. The frog sits on a stone.</tt></pre>
+</div></div>
+<div class="paragraph"><p>Every single one of these 3 lines will be fed into the trigger engine one after another. If we define an OR-trigger with a condition list consisting of 3 condition patterns:</p></div>
+<div class="paragraph"><p>condition #1 pattern = pond
+condition #2 pattern = frog
+condition #3 pattern = stone</p></div>
+<div class="paragraph"><p>Wheather or not a condition is found to be true <strong>also</strong> depends on another property, i.e. the <strong>type</strong> of the condition.
+The condition type can be among others:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-This article will be extended later <strong>*</strong>
+substring matching  &#8594; the condition is true if the condition pattern is a substring of the output line from the MUD. In other words: If the pattern "pond" is contained in any line of output, the condition is true.
+</p>
+</li>
+<li>
+<p>
+begin of line matching &#8594; the condition is only true if the conditon pattern can be found at the beginning of a line from the MUD.
+</p>
+</li>
+<li>
+<p>
+Perl regular expression matching &#8594; the condition is true if the Perl regex pattern is matched. You&#8217;ll find more information on Perl regex below.
 </p>
 </li>
 </ul></div>
+<div class="paragraph"><p>In our example we chose condition type "substring" for all three condtions.
+Consequently, the trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><tt>in line #1 we get: pond = true.
+in line #2 we get frog = true and
+in line #3 two conditions are true i.e. frog=true and stone = true</tt></pre>
+</div></div>
+<div class="paragraph"><p>Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Caution" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">The multiline condition switch must be turned off to get an OR-trigger! If the multiline condition switch is turned on the trigger becomes and AND trigger which means that the trigger only fires if all conditions are true and fullfilled in the correct sequence. With OR-triggers the sequence is irrelevant.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>To complicate matters, however, you don&#8217;t want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn&#8217;t have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Conditon Triggers. If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description.</p></div>
+<div class="paragraph"><p>Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlet&#8217;s MCTs.</p></div>
+<div class="paragraph"><p>You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.</p></div>
 <h3 id="_temporary_triggers_scripting_only">Temporary Triggers (scripting only)</h3>
 <div class="paragraph"><p>Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).</p></div>
 <h3 id="_line_triggers_scripting_only">Line Triggers (scripting only)</h3>
@@ -740,50 +855,75 @@ This article will be extended later <strong>*</strong>
 </div>
 <h2 id="_the_timer_engine">The Timer Engine</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet supports 3 different sort of timers:</p></div>
+<div class="paragraph"><p>Mudlet supports 4 different sort of timers:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
-Timers that fire repeatedly in a certain interval specified by the user.
+1. <strong>Standard Timers</strong> that fire repeatedly in a certain interval specified by the user.
 </p>
 </li>
 <li>
 <p>
-Offset Timers are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
+2. <strong>Offset Timers</strong> are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
 </p>
 </li>
 <li>
 <p>
-Temporary Timers that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
+3. <strong>Temporary Timers</strong> (scripting only) behave like regular timers, but they are one shot only timers. Temporary timers cannot be accessed from the GUI and are not saved in profiles.
+</p>
+</li>
+<li>
+<p>
+4. <strong>Batch Job Timers</strong> (scripting only) are special purpose timers. A batch job is a sequence of commands that is send to the MUD according to a chosen time interval. The sequence of commands is guaranteed. When using regular temporary timers or standard GUI timers there is no such guarantee as to when a certain timer fires compared to the other timers that are going to fire in the same interval. As a result, if the sequence of commands is important for a script you need to chose a batch job timer. Of course you can write your own timer that sends the commands one after another thus reenabling itself until the job is done, but this will not be necessary in most cases if you use the batch job timers.
+Here is an example for a typical batch job timer:
+You want to write an autominer script that mines a gold mine automatically and has to record the path back out of the mine in case the mine suddenly crashes and you only have a few seconds to get out in time before you get buried and your character dies. The path is a complicated maze so you can&#8217;t afford that your script messes up the sequence of the directions i. e. instead of North, West, Up, North, Down it walke West, Down, Up, North just because the time interval was short as you had no time left and there was a bit of lag on the internet so the tempTimer that was to fire "up", was fired after the tempTimer that was to send "Down".
 </p>
 </li>
 </ol></div>
 </div>
 <h2 id="_exporting_and_importing_profiles_or_packages">Exporting and Importing Profiles or Packages</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).</p></div>
-<div class="paragraph"><p>The file name consists of the date and time, the profile was written to disc.
-You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You&#8217;ll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
-You can also import entire profiles as they are basically packages.</p></div>
+<div class="paragraph"><p>Importing and exporting anything from a single trigger, a trigger group, button packages, timers or entire systems is easy in Mudlet.
+Basically, it just means a single click.</p></div>
+<div class="paragraph"><p>Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).
+The file name consists of the date and time, the profile was written to disc.</p></div>
+<div class="paragraph"><p>Importing a package means simply clicking on the "import" button in the trigger editor (&#8594;triggers) and chosing the package file. Packages may contain anything ranging from a single trigger, button alias etc. to full profiles with hundrets of trigger groups, timers etc.</p></div>
+<div class="paragraph"><p>Exporting is also easy. Select your item in the script editor and then click on the "Export" button. You&#8217;ll be prompted for a file name and that&#8217;s it. You can send your cool trigger, buttons, timers etc. to your friends via email or use them in another profile of yours.
+Exporting your good stuff is strongly recommended as it makes MUDding more enjoyable for everybody. Share your knowledge and help others!</p></div>
+<div class="paragraph"><p>You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You&#8217;ll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
+You can also import entire profiles as they are basically packages.
+If you have written a nice set of triggers, buttons, scripts etc. or maybe even a fully fledged "system" of some sort and you want to share it with others, you can make a nice packages that others can import.
+Of course, you can open your xml profile in a text editor and delete what is not needed for the package, but this is too much work.
+The simplest way is simply to arrange your modules in such a way that they all go into one main folder e.g. all triggers are put into a main trigger folder and named accordingly. Then you export this trigger package by using the button "profiles save as". You are asked for a filename. Call it MySystemTriggerPackage.xml etc. Then you proceed with the Alias, the scripts, the buttons, the keys etc. and make packages for each and export them individually.
+Then you open a new <strong>empty</strong> profile in Mudlet and import all your sub packages. When everything is imported, export the whole thing via "profile save as" and give it an appropriate name. Others can now import the entire system in a single package file.</p></div>
 </div>
 <h2 id="_quick_lua_syntax_overview">Quick Lua syntax overview</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Lua variables can be either a string or a number. They are whatever there were initially initialized with.
 === string concatenation, variable substitution)</p></div>
-<div class="paragraph"><p>a = "Jim"
+<div class="listingblock">
+<div class="content">
+<pre><tt>a = "Jim"
 b = "Tom"
 c = 350
-d = 1</p></div>
+d = 1</tt></pre>
+</div></div>
 <div class="paragraph"><p>Then you can write:</p></div>
-<div class="paragraph"><p>e = c + d and e will equal 351
+<div class="listingblock">
+<div class="content">
+<pre><tt>e = c + d and e will equal 351
 e = a .. b and e will equal "JimTom" note that you cant use a+b to concatenate string values. For this you must use ..
-e = a .. c and e will equal "Jim350"</p></div>
+e = a .. c and e will equal "Jim350"</tt></pre>
+</div></div>
 <div class="paragraph"><p>Lua tables can basically be considered multidimensional arrays and dictionaries at the same time.
 If we have the table matches, matches[1] is the first element, matches[n] the n-th element.</p></div>
-<div class="paragraph"><p>a = "Tom"
+<div class="listingblock">
+<div class="content">
+<pre><tt>a = "Tom"
 matches[1] = "Betty"
 b = matches[1]
-c = a .. b and e will equal "TomBetty"</p></div>
+c = a .. b and e will equal "TomBetty"</tt></pre>
+</div></div>
 <div class="paragraph"><p>To output a table you can use a conveniance function printTable( name ). This function is defined in LuaGlobal.lua and can be found in your home directory under ./mudlet (note the leading dot ) Profiles and mudlet_documentation.html are stored in this directory as well.</p></div>
 </div>
 <h2 id="_lua_interface_functions_to_mudlet_or_how_do_i_access_triggers_timers_etc_from_lua_scripts">Lua interface functions to Mudlet - or how do I access triggers, timers etc. from Lua scripts</h2>
@@ -844,16 +984,18 @@ end</tt></pre>
 <div class="paragraph"><p>To print information messages on the session screen you can use the echo( message ) function, or insertText( text). Currently, it only takes one string as argument.</p></div>
 <div class="paragraph"><p>To send a command to the MUD, you can use the send( command ) function. Note: everything you send via send() will be processed by the alias processing unit.
 In Alias scripts the command that is being sent to the MUD is contained in the variable command that you can change in the context of Alias scripts.
-Alias take regular expressions, as well. As a result, you can use following regex and script to talk like Yoda:</p></div>
-<div class="sidebarblock">
+Alias take regular expressions, as well. As a result, you can use following regex and script to talk like Yoda:
+Perl regex:</p></div>
+<div class="listingblock">
 <div class="content">
-<div class="paragraph"><p>say (\w+).<strong>(\w</strong>).<strong>(.</strong>)</p></div>
+<pre><tt>say (\w+).*(\w*).*(.*)</tt></pre>
 </div></div>
+<div class="paragraph"><p>script:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>send( "say " .. matches[3] .." " .. matches[1] .." ".. matches[2] )</tt></pre>
 </div></div>
-<div class="paragraph"><p>Note: The variable â€œcommandâ€� contains what was entered in the command line or issued via the expandAlias( ) function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion.</p></div>
+<div class="paragraph"><p>Note: The variable "command" contains what was entered in the command line or issued via the expandAlias( ) function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion.</p></div>
 <h4 id="_changing_text_from_the_mud_or_reformatting_text_colorize_make_bold_etc">Changing text from the MUD or reformatting text (colorize, make bold etc.)</h4>
 <div class="paragraph"><p>When sending commands to the MUD - from now on referred to as output stream - alias scripts find the command that whas issued by the user stored in the variable "command".</p></div>
 <div class="paragraph"><p>By manipulating the value, the command can easily be changed before it is being sent to the MUD.</p></div>
@@ -951,9 +1093,7 @@ triggerID = tempRegexTrigger( regex, code ) creates a regular expression matchin
 <h2 id="_handling_tables_in_lua">Handling Tables in Lua</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Nick Gammon has written a very nice overview on how to deal with Lua tables. You can find it here: <a href="http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036">http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=6036</a>.</p></div>
-<div class="sidebarblock">
-<div class="content">
-<div class="paragraph" id="example1"><div class="title">Example: How to use multilinematches[n][m]</div><p>(this example can be tested on the MUD batmud.bat.org)</p></div>
+<div class="paragraph" id="example1"><div class="title">How to use multilinematches[n][m]</div><p>(The following example can be tested on the MUD batmud.bat.org)</p></div>
 <div class="paragraph"><p>In the case of a multiline trigger with these 2 Perl regex as conditions:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -966,7 +1106,9 @@ triggerID = tempRegexTrigger( regex, code ) creates a regular expression matchin
 <pre><tt>You have an almost non-existent ability for avoiding hits.
 You are irreproachably kind.
 You have not completed any quests.
-You are refreshed, hungry, very young and brave.</tt></pre>
+You are refreshed, hungry, very young and brave.
+Conquer leads the human race.
+Hp:295/295 Sp:132/132 Ep:182/181 Exp:269 &gt;</tt></pre>
 </div></div>
 <div class="paragraph"><p>If you add this script to the trigger:</p></div>
 <div class="listingblock">
@@ -979,24 +1121,64 @@ You are refreshed, hungry, very young and brave.</tt></pre>
 <pre><tt> -------------------------------------------------------
  The table multimatches[n][m] contains:
  -------------------------------------------------------
-regex 1 captured: (multimatches[1][1-n])
-          key=1 value=You are irreproachably kind.
-          key=2 value=irreproachably
-          key=3 value=d
-regex 2 captured: (multimatches[2][1-n])
-          key=1 value=You have not completed any quests
-          key=2 value=not
-          key=3 value=completed
-          key=4 value=any
-          key=5 value=quests
-regex 3 captured: (multimatches[3][1-n])
-          key=1 value=You are refreshed, hungry, very young and brave.
-          key=2 value=refreshed
-          key=3 value=e
+ regex 1 captured: (multimatches[1][1-n])
+           key=1 value=You have not completed any quests
+           key=2 value=not
+           key=3 value=completed
+           key=4 value=any
+           key=5 value=quests
+ regex 2 captured: (multimatches[2][1-n])
+           key=1 value=You are refreshed, hungry, very young and brave
+           key=2 value=refreshed
+           key=3 value=young
+           key=4 value=and
+           key=5 value=brave
  -------------------------------------------------------</tt></pre>
 </div></div>
-<div class="paragraph"><p>You can now see what the table multimatches[][] contains in this case. The</p></div>
+<div class="paragraph"><p>The function showMultimatches() prints out the content of the table multimatches[n][m].
+You can now see what the table multimatches[][] contains in this case. The first trigger condition (=regex 1) got as the first full match "You have not completed any quests". This is stored in multimatches[1][1] as the value of key=1 in the sub-table matches[1] which, in turn, is the value of key=1 of the table multimatches[n][m].</p></div>
+<div class="paragraph"><p>The structure of the table multimatches:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>multimatches {
+                1 = {
+                       matches[1] of regex 1
+                       matches[2] of regex 1
+                       matches[3] of regex 1
+                              ...
+                       matches[n] of regex 1 },
+                2 = {
+                       matches[1] of regex 2
+                       matches[2] of regex 2
+                             ...
+                       matches[n] of regex 2 },
+                 ...         ...
+                n = {
+                       matches[1] of regex n
+                       matches[2] of regex n
+                             ...
+                       matches[n] of regex n }
+}</tt></pre>
 </div></div>
+<div class="paragraph"><p>The sub-table matches[n] is the same table matches[n] you get when you have a standard non-multiline trigger.
+The value of the first key, i. e. matches[1], holds the first complete match of the regex. Subsequent keys hold the respective capture groups.
+For example:
+Let regex = "You have (\d+) gold and (\d+) silver" and the text from the MUD = "You have 5 gold and 7 silver coins in your bag."
+Then matches[1] contains "You have 5 gold and 7 silver", matches[2] = "5" and matches[3] = "7".
+In your script you could do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>myGold = myGold + tonumber( matches[2] )
+mySilver = mySilver + tonumber( matches[3] )</tt></pre>
+</div></div>
+<div class="paragraph"><p>However, if you&#8217;d like to use this script in the context of a multiline trigger, matches[] would not be defined as there are more than one regex.
+You need to use multimatches[n][m] in multiline triggers. Above script would look like this if above regex would be the first regex in the multiline trigger:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>myGold = myGold + tonumber( multimatches[1][2] );
+mySilver = mySilver + tonumber( multimatches[1][3] );</tt></pre>
+</div></div>
+<div class="paragraph"><p>What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines.</p></div>
 </div>
 <h2 id="heading4">Lua API</h2>
 <div class="sectionbody">
@@ -1295,6 +1477,10 @@ This function is defined in luaglobal.lua.</p></td>
 <p class="table">Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$</tt></p></td>
 </tr>
 <tr>
+<td align="left"><p class="table">resetFormat()</p></td>
+<td align="left"><p class="table">resets the user character format to the default.</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table"></p></td>
 <td align="left"><p class="table"></p></td>
 </tr>
@@ -1304,7 +1490,7 @@ This function is defined in luaglobal.lua.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-03-24 01:40:17 CEST
+Last updated 2009-03-26 02:07:28 CEST
 </div>
 </div>
 </body>

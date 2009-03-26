@@ -470,16 +470,12 @@ int TLuaInterpreter::selectSection( lua_State * L )
 int TLuaInterpreter::moveCursor( lua_State * L )
 {
     string luaWindowName="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
+    if( lua_isstring( L, 1 ) )
     {
         luaWindowName = lua_tostring( L, 1 );
     }
+    else
+        luaWindowName = "main";
     int luaFrom;
     if( ! lua_isnumber( L, 2 ) )
     {
@@ -511,6 +507,7 @@ int TLuaInterpreter::moveCursor( lua_State * L )
         lua_pushboolean( L, mudlet::self()->moveCursor( windowName, luaFrom, luaTo ) );
     return 1;
 }
+
 
 int TLuaInterpreter::getBufferLine( lua_State * L )
 {

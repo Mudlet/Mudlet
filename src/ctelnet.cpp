@@ -854,7 +854,7 @@ void cTelnet::handle_socket_signal_readyRead()
                                     gotRest( cleandata );
                                     cleandata = "";
                                     initStreamDecompressor();
-                                    for( unsigned int _i2=0; _i2<i+_i+1;_i2++ ) pBuffer++;
+                                    pBuffer += _i+1;
                                     mWaitingForCompressedStreamToStart = false;
                                     int restLength = datalen-_i-1;
                                     if( restLength > 0 ) datalen = decompressBuffer( pBuffer, restLength );
@@ -879,7 +879,7 @@ void cTelnet::handle_socket_signal_readyRead()
                         gotRest( cleandata );
                         cleandata = "";
                         initStreamDecompressor();
-                        for( unsigned int _i=0; _i<i+1;_i++ ) pBuffer++;
+                        pBuffer += i+1;
                         mWaitingForCompressedStreamToStart = false;
                         int restLength = datalen-i-1;
                         if( restLength > 0 ) datalen = decompressBuffer( pBuffer, restLength );
