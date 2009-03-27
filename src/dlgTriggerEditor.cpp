@@ -413,6 +413,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( mpSearchArea->tree_widget_search_results_main_2, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
+    connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     connect( mpTriggersMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_trigger_main_area_delete_regex()));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));

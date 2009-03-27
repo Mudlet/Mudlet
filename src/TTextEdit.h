@@ -63,6 +63,8 @@ public:
                                       QColor & bgColor );
     std::string       getCurrentTime();
     void              showNewLines();
+    void              forceUpdate();
+    void              needUpdate( int, int );
     void              scrollTo( int );    
     void              scrollUp( int lines );
     void              scrollDown( int lines );
@@ -98,6 +100,7 @@ public slots:
 
 private:
     
+    bool              mForceUpdate;
     void              initDefaultSettings();
     bool              mScrollUp;
     QColor            mFgColor;

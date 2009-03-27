@@ -195,7 +195,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     if(!hostInfo.addresses().isEmpty())
     {
         mHostAddress = hostInfo.addresses().first();
-        QString msg	= "\nThe IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
+        QString msg = "The IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
         postMessage( msg );
  	     	msg = "trying to connect to "+mHostAddress.toString()+":"+QString::number(hostPort)+" ...\n";
         postMessage( msg );

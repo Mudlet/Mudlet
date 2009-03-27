@@ -247,11 +247,15 @@ void TConsole::slot_toggleLogging()
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
         mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
+        QString message = QString("Logging has started. Log file is ") + mLogFile.fileName();
+        printSystemMessage( message );
     }
     else
     {
         mLogStream << "</pre></body></html>";
         mLogFile.close();
+        QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() ;
+        printSystemMessage( message );
     }
 }
 
@@ -1119,11 +1123,13 @@ void TConsole::insertText( QString text, QPoint P )
                            false,
                            false,
                            false );
+            console->update();
         }
         else
         {
             cout<<"TConsole::insertText( txt, point ) trace B"<<endl;
             buffer.insertInLine( P, text, mFormatCurrent );
+            console->needUpdate(mUserCursor.y(),mUserCursor.y()+1);
         }
         return;
     }
@@ -1138,19 +1144,16 @@ void TConsole::insertText( QString text, QPoint P )
                            false,
                            false,
                            false );
+            console->showNewLines();
         }
         else
         {
             cout<<"TConsole::insertText( txt, point ) trace D"<<endl;
-            buffer.insert( mUserCursor,
-                           text,
-                           mFormatCurrent.fgColor,
-                           mFormatCurrent.bgColor,
-                           false,
-                           false,
-                           false );
+            buffer.insertInLine( mUserCursor,
+                                 text,
+                                 mFormatCurrent );
+            console->needUpdate(mUserCursor.y(),mUserCursor.y()+1);
         }
-        console->showNewLines();
     }
 }
 
@@ -1436,7 +1439,7 @@ void TConsole::printSystemMessage( QString & msg )
     }
     
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    buffer.append(  msg, 
+    buffer.append(  QString("System Message: ")+msg,
                     mSystemMessageFgColor,
                     mSystemMessageBgColor,
                     false, 

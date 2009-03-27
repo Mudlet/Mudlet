@@ -63,6 +63,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mpScrollBar( 0 )
 , mInit_OK( false )
 , mShowTimeStamps( false )
+, mForceUpdate( false )
 {    
     if( ! mIsDebugConsole )
     {
@@ -99,6 +100,30 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     palette.setColor( QPalette::Base, mBgColor );
     setPalette(palette);
     showNewLines();
+}
+
+void TTextEdit::forceUpdate()
+{
+    mForceUpdate = true;
+    update();
+}
+
+void TTextEdit::needUpdate( int y1, int y2 )
+{
+    forceUpdate();
+
+    //TODO: implemente this properly
+    /*
+    int current = imageTopLine();
+    if( y1 < current || y2 < current ) return;
+    if( (y1 > current + mScreenHeight) || (y2 > current + mScreenHeight) ) return;
+    QRect rect;
+    rect.setX( 0 );
+    rect.setY( abs(current-y1)*mFontHeight );
+    rect.setWidth( mScreenWidth * mFontWidth );
+    rect.setHeight(abs(y2-y1)*mFontHeight );
+    qDebug()<<"needUpdate() updating rect="<<rect;
+    update( rect );*/
 }
 
 void TTextEdit::focusInEvent ( QFocusEvent * event )
@@ -355,8 +380,11 @@ void TTextEdit::drawCharacters( QPainter & painter,
 
 void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 {
-    if( mScrollVector >= mScreenHeight )
+    if( ( mScrollVector >= mScreenHeight ) || mForceUpdate )
+    {
         mScrollVector = 0;
+        mForceUpdate = false;
+    }
     
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
@@ -511,9 +539,10 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     QPainter painter( this );
     
     const QRect & rect = e->rect();
+    std::cout << "rect.x="<<rect.x()<<" y="<<rect.y()<< " height="<<rect.height()<<std::endl;
     drawBackground( painter, rect, palette().base().color() );
     drawForeground( painter, rect );
-    
+    std::cout << "!!!!!!!!! REPAINT !!!!!!!!!!!!!!"<<std::endl;
     //cout << "frame render time: " << time.elapsed()<<" milliseconds"<<endl;
 }
 
