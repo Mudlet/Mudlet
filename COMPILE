@@ -47,12 +47,30 @@ Mudlet is developed on GNU/Linux (Debian Sid)
    Ubuntu users can do: sudo apt-get install build-essential libqscintilla2-dev lua5.1 liblua5.1-0-dev qt4-dev-tools
    Others, see your distribution details for the said packages.
 
-2. navigate to the Mudlet directory, through the terminal, and do: 
-   make clean && qmake-qt4 && make
+2. COMPILING:
+=============
+   There are two ways to compile Mudlet.
 
-3. wait until Mudlet compiles
-4. run mudlet by entering: cd src && ./mudlet
-5. Note: If you run into compiler problems then look at the file mudlet/src/src.pro and 
+1. The simplest: after having untared the source (tar xzvf mudlet-HEAD.tar.gz)
+   cd mudlet
+   cmake .
+   make
+   make install
+   The binary can be found in mudlet/src/mudlet
+
+2. Our cmake build doesn't work on all systems yet. So if you have problems you can use the
+   manual way with qmake. You can adjust the paths to the dependencies in the project file
+   mudlet/src/src.pro - simply look at the top of the file and adjust the paths you find to
+   your own system. This is easy. If compile breaks with an error your paths are not correct.
+   After having adjusted src.pro:
+   make clean 
+   qmake-qt4 (NOTE: On most systems there is qmake and qmake-qt4 qmake relates to the old qt version 3 qmake.)
+   make
+   make install
+
+   The binary can be found in mudlet/src/mudlet
+
+   Note: If you run into compiler problems then look at the file mudlet/src/src.pro and 
    change the INCLUDE and/or LIBS part of the make file and set the correct path to the 
    qscintilla2 include dir "Qsci" correctly. Note that each line in this file needs to end with a "\"
 

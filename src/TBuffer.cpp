@@ -17,7 +17,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
+//#define NDEBUG
+#include <assert.h>
 #include <QDebug>
 #include <stdio.h>
 #include <iostream>
@@ -81,15 +82,8 @@ TBuffer::TBuffer( Host * pH )
 {   
     buffer.clear();
     lineBuffer.clear();
-    
-    std::deque<TChar *> newLine;
-    TChar * pC = new TChar;
-    newLine.push_back( pC );
-    buffer.push_back( newLine );
-    lineBuffer << QChar( 0x21af );
-    timeBuffer << QTime::currentTime().toString() + "   ";
     newLines = 0;
-    mLastLine = buffer.size()-1;
+    mLastLine = 0;
 }
 
 
@@ -130,21 +124,19 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
         {
             if(lineBuffer[last].size() == 1) // <LF> at beginning of new line marker
             {
-                if( lineBuffer[last][0] == QChar( 0x21af ) )
+                if( lineBuffer[last].at( 0 ) == QChar( 0x21af ) )
                 {
                     if( text.at( i ) != QChar( '\n' ) )
                     {
                         mCursorMoved = false;
                         lineBuffer[last].replace( 0, 1, text.at( i ) );
-                        TChar * pC = new TChar;
+                        TChar * pC = buffer[last][0];
                         pC->fgColor = fgColor;
                         pC->bgColor = bgColor;
                         pC->italics = italics;
                         pC->bold = bold;
                         pC->underline = underline;
-                        buffer[last].push_back( pC );
-                        buffer[last].pop_front();
-                        timeBuffer[last]=QTime::currentTime().toString()+"   ";
+                        timeBuffer[last] = QTime::currentTime().toString()+"   ";
                         continue;
                     }
                 }
@@ -177,6 +169,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             mLastLine++;
             newLines++;
             mCursorMoved = true;
+            qDebug()<<last<<"<LF>-#"<<lineBuffer[last].size()<<"/"<<buffer[last].size()<<" <"<<lineBuffer[last]<<">";
         }
     }
 }
@@ -259,6 +252,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
 
 bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
 {
+    if( text.size() < 1 ) return false;
     int x = P.x();
     int y = P.y();
     if( ( y > 0 ) && ( y <= (int)buffer.size()-1 ) )
@@ -382,6 +376,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     
     for( int i=startLine; i<buffer.size(); i++ )
     {
+        assert( buffer[i].size() == lineBuffer[i].size() );
         std::deque<TChar *> newLine;
         QString lineText;
         
@@ -539,38 +534,62 @@ void TBuffer::expandLine( int y, int count, TChar * pC )
     }
 }
 
-bool TBuffer::replaceInLine( QPoint & P_begin, QPoint & P_end, QString & with, TChar & format )
+bool TBuffer::replaceInLine( QPoint & P_begin,
+                             QPoint & P_end,
+                             QString & with,
+                             TChar & format )
 {
-    if( ( P_begin.x() >= 0 ) 
-        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
-        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    int x1 = P_begin.x();
+    int x2 = P_end.x();
+    int y1 = P_begin.y();
+    int y2 = P_end.y();
+    if( ( x2 >= buffer[y2].size() ) || ( x1 >= buffer[y1].size() ) )
     {
-        // remove selection
-        int i = 0;
-        for( int y=P_begin.y(); y<=P_end.y(); y++ )
-        {
-            int x = 0;
-            if( y == P_begin.y() )
-            {
-                x = P_begin.x();
-            }
-            int x_end = buffer[y].size()-1;
-            if( y == P_end.y() )
-            {
-                x_end = P_end.x();
-            }
-            lineBuffer[y].remove( x, x_end-x );
-            typedef std::deque<TChar *>::iterator IT;
-            IT it = buffer[y].begin();
-            buffer[y].erase( it+x, it+x_end );
-        }
-    
-        // insert replacement 
-        insertInLine( P_begin, with, format );
-        return true;
+        return false;
     }
-    else 
-        return false;       
+    if( x1 < 0 || x2 < 0 )
+    {
+        return false;
+    }
+
+    int xb,xe, yb, ye;
+    if( y1 <= y2 )
+    {
+        yb = y1;
+        ye = y2;
+        xb = x1;
+        xe = x2;
+    }
+    else
+    {
+        yb = y2;
+        ye = y1;
+        xb = x2;
+        xe = x1;
+    }
+
+    for( int y=yb; y<=ye; y++ )
+    {
+        int x = 0;
+        if( y == yb )
+        {
+            x = xb;
+        }
+        int x_end = buffer[y].size()-1;
+        if( y == ye )
+        {
+            x_end = xe;
+        }
+        lineBuffer[y].remove( x, x_end-x );
+        typedef std::deque<TChar *>::iterator IT;
+        IT it1 = buffer[y].begin()+x;
+        IT it2 = buffer[y].begin()+x_end;
+        buffer[y].erase( it1, it2 );
+    }
+
+    // insert replacement
+    insertInLine( P_begin, with, format );
+    return true;
 }
 
 
