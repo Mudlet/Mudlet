@@ -1007,6 +1007,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
             else if( name() == "eventHandlerList")
             {
                 readStringList( pT->mEventHandlerList );
+                pT->setEventHandlerList( pT->mEventHandlerList );
                 qDebug()<<"eventHandlerList="<<pT->mEventHandlerList;
                 continue;
                 qDebug()<<"-----------------------------------------------------\n";
