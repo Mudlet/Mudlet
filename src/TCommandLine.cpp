@@ -70,19 +70,25 @@ bool TCommandLine::event( QEvent * event )
         switch( ke->key() ) 
         {
             case Qt::Key_Space:
-                mTabCompletionCount = 0;
-                mAutoCompletionCount = 0;
+                mTabCompletionCount = -1;
+                mAutoCompletionCount = -1;
+                mTabCompletionTyped = "";
+                mAutoCompletionTyped = "";
+                mHistoryBuffer = 0;
                 break;
+
             case Qt::Key_Backtab:
                 handleTabCompletion( false );
                 ke->accept();
                 return true;
                 break;
+
             case Qt::Key_Tab:
                 handleTabCompletion( true );
                 ke->accept();
                 return true;
                 break;
+
             case Qt::Key_unknown:
                 qWarning()<<"ERROR: key unknown!";
                 break;
@@ -92,6 +98,8 @@ bool TCommandLine::event( QEvent * event )
                 {
                     mTabCompletionTyped.chop(1);
                     mAutoCompletionTyped.chop(1);
+                    mTabCompletionCount = -1;
+                    mAutoCompletionCount = -1;
                 }
                 break;
 
@@ -100,6 +108,8 @@ bool TCommandLine::event( QEvent * event )
                 {
                     mTabCompletionTyped.chop(1);
                     mAutoCompletionTyped.chop(1);
+                    mTabCompletionCount = -1;
+                    mAutoCompletionCount = -1;
                 }
                 break;
 
@@ -142,6 +152,7 @@ bool TCommandLine::event( QEvent * event )
                 mAutoCompletion = false;
                 mTabCompletion = false;
                 mTabCompletionTyped = "";
+                mAutoCompletionTyped = "";
                 mUserKeptOnTyping = false;
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
@@ -228,11 +239,13 @@ void TCommandLine::enterCommand( QKeyEvent * event )
             mHistoryMap[ commandList[i] ] = 0;
         }*/
     }
-    mAutoCompletionTyped = "";
+
     mAutoCompletion = false;
     mTabCompletion = false;
-    mTabCompletionCount = 0;
-    mAutoCompletionCount = 0;
+    mTabCompletionCount = -1;
+    mAutoCompletionCount = -1;
+    mTabCompletionTyped = "";
+    mAutoCompletionTyped = "";
     selectAll();
 }
 
@@ -257,7 +270,7 @@ void TCommandLine::handleTabCompletion( bool direction )
         mUserKeptOnTyping = false;
         mTabCompletionCount = 0;
     }
-    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( 5000 );
+    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( 200 );
     QString buffer = bufferList.join("");
     buffer.replace(QChar('\n'), "" );
     buffer.replace(QChar( 0x21af ), "");
