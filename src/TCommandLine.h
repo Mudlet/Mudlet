@@ -71,7 +71,8 @@ private:
     TConsole *        mpConsole;
     QString           mSelectedText;
     int               mSelectionStart;
-    
+    QString           mTabCompletionOld;
+
 signals:
     void              textChanged ( const QString & ); 
     

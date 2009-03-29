@@ -169,7 +169,6 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             mLastLine++;
             newLines++;
             mCursorMoved = true;
-            qDebug()<<last<<"<LF>-#"<<lineBuffer[last].size()<<"/"<<buffer[last].size()<<" <"<<lineBuffer[last]<<">";
         }
     }
 }

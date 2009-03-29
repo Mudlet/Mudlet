@@ -87,6 +87,7 @@ public:
     bool              mShowTimeStamps;
     int               mScrollVector;
     int               mCursorY;
+    bool              mIsTailMode;
 
 signals:
     
@@ -122,7 +123,7 @@ private:
     TBuffer *         mpBuffer;
     TConsole *        mpConsole;
 
-    bool              mIsTailMode;
+
     bool              mHighlight_on;
     bool              mHighlightingBegin;
     bool              mHighlightingEnd;

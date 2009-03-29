@@ -158,6 +158,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     
     QPushButton * timeStampButton = new QPushButton;
     timeStampButton->setCheckable( true );
+    timeStampButton->setFocusPolicy( Qt::NoFocus );
     timeStampButton->setToolTip("Show Time Stamps");
     QIcon icon(":/icons/dialog-information.png");
     timeStampButton->setIcon( icon );
@@ -165,6 +166,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     
     QPushButton * logButton = new QPushButton;
     logButton->setCheckable( true );
+    logButton->setFocusPolicy( Qt::NoFocus );
     logButton->setToolTip("start logging MUD output to log file");
     QIcon icon3(":/icons/folder-downloads.png");
     logButton->setIcon( icon3 );
@@ -173,6 +175,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 
     QIcon icon2(":/icons/edit-bomb.png");
     emergencyStop->setIcon( icon2 );
+    emergencyStop->setFocusPolicy( Qt::NoFocus );
     emergencyStop->setCheckable( true );
     emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
     

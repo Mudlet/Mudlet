@@ -690,7 +690,8 @@ void dlgTriggerEditor::slot_deleteTrigger()
 
 void dlgTriggerEditor::slot_deleteTimer()
 {
-    QTreeWidgetItem * pItem = treeWidget_timers->currentItem();    
+    QTreeWidgetItem * pItem = treeWidget_timers->currentItem();
+    if( ! pItem ) return;
     QTreeWidgetItem * pParent = pItem->parent();
     
     if( ! pItem ) return;
@@ -3340,6 +3341,12 @@ void dlgTriggerEditor::exportTrigger( QFile & file )
         {
             name = pT->getName();
         }
+        else
+        {
+            QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
     }
     else
     {
@@ -3367,6 +3374,12 @@ void dlgTriggerEditor::exportTimer( QFile & file )
         if( pT )
         {
             name = pT->getName();
+        }
+        else
+        {
+            QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
         }
     }
     else
@@ -3396,6 +3409,12 @@ void dlgTriggerEditor::exportAlias( QFile & file )
         {
             name = pT->getName();
         }
+        else
+        {
+            QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
     }
     else
     {
@@ -3423,6 +3442,12 @@ void dlgTriggerEditor::exportAction( QFile & file )
         if( pT )
         {
             name = pT->getName();
+        }
+        else
+        {
+            QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
         }
     }
     else
@@ -3452,6 +3477,12 @@ void dlgTriggerEditor::exportScript( QFile & file )
         {
             name = pT->getName();
         }
+        else
+        {
+            QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
     }
     else
     {
@@ -3480,6 +3511,13 @@ void dlgTriggerEditor::exportKey( QFile & file )
         {
             name = pT->getName();
         }
+        else
+        {
+             QMessageBox::warning(this, tr("Export Package:"),
+                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
+
     }
     else
     {

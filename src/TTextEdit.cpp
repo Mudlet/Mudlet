@@ -361,10 +361,11 @@ void TTextEdit::drawCharacters( QPainter & painter,
         //mPainterInit = true;
     }
     
-    if( ( font.bold() != isBold ) || ( font.underline() != isUnderline ) )
+    if( ( font.bold() != isBold ) || ( font.underline() != isUnderline ) || (font.italic() != isItalics) )
     {
         font.setBold( isBold );
         font.setUnderline( isUnderline );
+        font.setItalic( isItalics );
         painter.setFont( font );
     }
     
@@ -539,10 +540,8 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     QPainter painter( this );
     
     const QRect & rect = e->rect();
-    std::cout << "rect.x="<<rect.x()<<" y="<<rect.y()<< " height="<<rect.height()<<std::endl;
     drawBackground( painter, rect, palette().base().color() );
     drawForeground( painter, rect );
-    std::cout << "!!!!!!!!! REPAINT !!!!!!!!!!!!!!"<<std::endl;
     //cout << "frame render time: " << time.elapsed()<<" milliseconds"<<endl;
 }
 
