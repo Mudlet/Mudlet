@@ -69,6 +69,10 @@ bool TCommandLine::event( QEvent * event )
         //qDebug()<<"modifier="<<ke->modifiers()<<" key="<<ke->key();
         switch( ke->key() ) 
         {
+            case Qt::Key_Space:
+                mTabCompletionCount = 0;
+                mAutoCompletionCount = 0;
+                break;
             case Qt::Key_Backtab:
                 handleTabCompletion( false );
                 ke->accept();
@@ -227,8 +231,8 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     mAutoCompletionTyped = "";
     mAutoCompletion = false;
     mTabCompletion = false;
-    mTabCompletionCount = -1;
-    mAutoCompletionCount = -1;
+    mTabCompletionCount = 0;
+    mAutoCompletionCount = 0;
     selectAll();
 }
 
