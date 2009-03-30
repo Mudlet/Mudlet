@@ -75,6 +75,7 @@ bool TCommandLine::event( QEvent * event )
                 mTabCompletionTyped = "";
                 mAutoCompletionTyped = "";
                 mHistoryBuffer = 0;
+                mLastCompletion = "";
                 break;
 
             case Qt::Key_Backtab:
@@ -100,6 +101,7 @@ bool TCommandLine::event( QEvent * event )
                     mAutoCompletionTyped.chop(1);
                     mTabCompletionCount = -1;
                     mAutoCompletionCount = -1;
+                    mLastCompletion = "";
                 }
                 break;
 
@@ -110,6 +112,7 @@ bool TCommandLine::event( QEvent * event )
                     mAutoCompletionTyped.chop(1);
                     mTabCompletionCount = -1;
                     mAutoCompletionCount = -1;
+                    mLastCompletion = "";
                 }
                 break;
 
@@ -181,9 +184,11 @@ bool TCommandLine::event( QEvent * event )
                 else
                 {
                     QLineEdit::event( event );
+
                     if( mTabCompletionOld.size() < text().size() )
                     {
                         mUserKeptOnTyping = true;
+                        mAutoCompletionCount = 0;
                     }
                     else
                     {
@@ -224,20 +229,6 @@ void TCommandLine::enterCommand( QKeyEvent * event )
 
         mHistoryList.removeAll( text() );
         mHistoryList.push_front( text() );
-/*        QStringList commandList = text().split( QString(mpHost->mCommandSeparator), QString::SkipEmptyParts );
-
-        QMap<QString, int> tmpMap;
-        for( int i=0; i<commandList.size(); i++ )
-        {
-            tmpMap.insert( commandList[i], i );
-        }
-        commandList.clear();
-        commandList = tmpMap.uniqueKeys();
-        if( commandList.size() == 0 ) mpHost->send( "" );
-        for( int i=0; i<commandList.size(); i++ )
-        {
-            mHistoryMap[ commandList[i] ] = 0;
-        }*/
     }
 
     mAutoCompletion = false;
@@ -245,7 +236,7 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped = "";
-    mAutoCompletionTyped = "";
+
     selectAll();
 }
 
@@ -271,11 +262,12 @@ void TCommandLine::handleTabCompletion( bool direction )
         mTabCompletionCount = 0;
     }
     QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( 200 );
-    QString buffer = bufferList.join("");
-    buffer.replace(QChar('\n'), "" );
-    buffer.replace(QChar( 0x21af ), "");
+    QString buffer = bufferList.join(" ");
+
+    buffer.replace(QChar( 0x21af ), "\n");
+    buffer.replace(QChar('\n'), " " );
+
     QStringList wordList = buffer.split( QRegExp("\\b"), QString::SkipEmptyParts );
-    qDebug()<<"mTabCompletionCount="<<mTabCompletionCount;
     if( direction )
     {
         mTabCompletionCount++;
@@ -284,7 +276,6 @@ void TCommandLine::handleTabCompletion( bool direction )
     {
         mTabCompletionCount--;
     }
-    qDebug()<<"mTabCompletionCount="<<mTabCompletionCount;
     if( wordList.size() > 0 )
     {
         if( mTabCompletionTyped.endsWith(" ") ) return;
@@ -340,19 +331,16 @@ void TCommandLine::handleAutoCompletion()
     QString neu = text();
     neu.chop( selectedText().size() );
     setText( neu );
+    mTabCompletionOld = neu;
     qDebug()<<"after chop text=<"<<text()<<">";
     int oldLength = text().size();
     qDebug()<<"historyList="<<mHistoryList;
-    if( mAutoCompletionCount <= 0 ) mAutoCompletionCount = 0;
     if( mAutoCompletionCount >= mHistoryList.size() ) mAutoCompletionCount = mHistoryList.size()-1;
+    if( mAutoCompletionCount <= 0 ) mAutoCompletionCount = 0;
     for( int i=mAutoCompletionCount; i<mHistoryList.size(); i++ )
     {
         if( text() == mHistoryList[i].mid( 0, text().size() ) )
         {
-            if( mLastCompletion == mHistoryList[i] )
-            {
-                continue;
-            }
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setText( mHistoryList[i] );
@@ -367,7 +355,7 @@ void TCommandLine::handleAutoCompletion()
 void TCommandLine::historyDown(QKeyEvent *event)
 {
     if( mHistoryList.size() < 1 ) return;
-    if( selectedText().size() == text().size() )  
+    if( (selectedText().size() == text().size()) || (text().size() == 0) )
     {
         if( mHistoryBuffer >= 1 )
         {
@@ -400,7 +388,7 @@ void TCommandLine::historyDown(QKeyEvent *event)
 void TCommandLine::historyUp(QKeyEvent *event)
 {
     if( mHistoryList.size() < 1 ) return;
-    if( selectedText().size() == text().size() )  
+    if( (selectedText().size() == text().size()) || (text().size() == 0) )
     {
         if( mHistoryBuffer < mHistoryList.size()-1 )
         {
