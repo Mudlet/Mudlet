@@ -110,7 +110,7 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         if( propertyList[i] == REGEX_WILDCARD )
         {
             const char *error;
-            char * pattern = mRegexCodeList.last().toLatin1().data();
+            char * pattern = regexList[i].toLatin1().data();
             int erroffset;
             
             pcre * re;
@@ -131,7 +131,7 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         if( propertyList[i] == REGEX_PERL )
         {
             const char *error;
-            char * pattern = mRegexCodeList.last().toLatin1().data();
+            char * pattern = regexList[i].toLatin1().data();
             int erroffset;
             
             pcre * re;
@@ -207,7 +207,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
     
     pcre * re = mRegexMap[regexNumber];
 
-    if( re == 0 )
+    if( ! re )
     {
         if( mudlet::debugMode ) TDebug()<<"ERROR: the regex of trigger "<<mName<<" does not compile. Please correct the expression. This trigger will never match until it is fixed.">>0;
         return false; //regex compile error

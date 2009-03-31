@@ -39,7 +39,6 @@ bool XMLimport::importPackage( QIODevice * device )
 
         if( isStartElement() ) 
         {
-            qDebug()<<"FOUND package HEADER";
             if( name() == "MudletPackage" )// && attributes().value("version") == "1.0")
             {
                 readPackage();
@@ -59,7 +58,6 @@ void XMLimport::readPackage()
     while( ! atEnd() ) 
     {
         readNext();
-        qDebug()<<"-----> readPackage() Package name="<<name().toString()<<"text:"<<text().toString();
         if( isEndElement() )
         {
             break;
@@ -176,8 +174,6 @@ void XMLimport::readUnknownTimerElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Timer Package Element:name="<<name().toString()<<"text:"<<text().toString();
-
         if( isEndElement() )
         {
             break;
@@ -196,8 +192,6 @@ void XMLimport::readUnknownAliasElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Alias Package Element:name="<<name().toString()<<"text:"<<text().toString();
-
         if( isEndElement() )
         {
             break;
@@ -216,8 +210,6 @@ void XMLimport::readUnknownActionElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Action Package Element:name="<<name().toString()<<"text:"<<text().toString();
-
         if( isEndElement() )
         {
             break;
@@ -236,8 +228,6 @@ void XMLimport::readUnknownScriptElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Script Package Element:name="<<name().toString()<<"text:"<<text().toString();
-
         if( isEndElement() )
         {
             break;
@@ -256,8 +246,6 @@ void XMLimport::readUnknownKeyElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Key Package Element:name="<<name().toString()<<"text:"<<text().toString();
-
         if( isEndElement() )
         {
             break;
@@ -319,7 +307,6 @@ void XMLimport::readHostPackage()
 
             else
             {
-                qDebug()<<"[INFO] unknown Host element (readHostPackage())";
                 readUnknownHostElement();
             }
         }
@@ -343,44 +330,37 @@ void XMLimport::readHostPackage( Host * pT )
             if( name() == "name" )
             {
                 pT->mHostName = readElementText();
-                qDebug()<<"hostName="<<pT->mHostName;
                 continue;
             }
             else if( name() == "login")
             {
                 pT->mLogin = readElementText();
-                qDebug()<<"login="<<pT->mLogin;
                 continue;
             }
             else if( name() == "pass")
             {
                 pT->mPass = readElementText();
-                qDebug()<<"pass="<<pT->mPass;
                 continue;
             }       
             else if( name() =="url" )
             {
                 pT->mUrl = readElementText();
-                qDebug()<<"url="<<pT->mUrl;
                 continue;
             }       
 
             else if( name() == "port")
             {
                 pT->mPort = readElementText().toInt();
-                qDebug()<<"port="<<pT->mPort;
                 continue;
             }            
             else if( name() == "wrapAt")
             {
                 pT->mWrapAt = readElementText().toInt();
-                qDebug()<<"wrapAt="<<pT->mWrapAt;
                 continue;
             }
             else if( name() == "wrapIndentCount" )
             {
                 pT->mWrapIndentCount = readElementText().toInt();
-                qDebug()<<"wrapIndentCount"<<pT->mWrapIndentCount;
                 continue;
             }
             else if( name() == "commandSeperator" )
@@ -490,7 +470,6 @@ void XMLimport::readHostPackage( Host * pT )
             } 
             else
             {
-                qDebug()<<"[INFO] UNKNOWN Trigger element: name="<<name().toString()<<"text:"<<text().toString();
                 readUnknownHostElement();
             } 
         }
@@ -510,7 +489,6 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
         pT = new TTrigger( 0, mpHost );
     }
 
-    qDebug()<<"[REGISTER] Trigger:"<<pT->getName();
     mpHost->getTriggerUnit()->registerTrigger( pT );
 
     pT->mIsActive = ( attributes().value("isActive") == "yes" );
@@ -530,25 +508,21 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             if( name() == "name" )
             {
                 pT->mName = readElementText();
-                qDebug()<<"name="<<pT->mName;
                 continue;
             }
             else if( name() == "script")
             {
                 pT->mScript = readElementText();
-                qDebug()<<"script="<<pT->mScript;
                 continue;
             }
             else if( name() == "triggerType" )
             {
                 pT->mTriggerType = readElementText().toInt();
-                qDebug()<<"triggerType="<<pT->mTriggerType;
                 continue;
             }
             else if( name() == "conditonLineDelta" )
             {
                 pT->mConditionLineDelta = readElementText().toInt();
-                qDebug()<<"conditonLineDelta="<<pT->mConditionLineDelta;
                 continue;
             }
             else if( name() == "mCommand" )
@@ -559,15 +533,12 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             else if( name() == "regexCodeList")
             {
                 readStringList( pT->mRegexCodeList );
-                qDebug()<<"regexCodeList="<<pT->mRegexCodeList;
                 continue;
             }
             else if( name() == "regexCodePropertyList" )
             {
                 readIntegerList( pT->mRegexCodePropertyList );
-                qDebug()<<"regexCodePropertyList="<<pT->mRegexCodePropertyList;
                 pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
-                qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
 
@@ -581,11 +552,11 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             }
             else
             {
-                qDebug()<<"[INFO] UNKNOWN Trigger element: name="<<name().toString()<<"text:"<<text().toString();
                 readUnknownTriggerElement();
             }
         }
     }
+    pT->setIsActive( pT->mIsActive );
 }
 
 void XMLimport::readTimerPackage()
@@ -643,19 +614,16 @@ void XMLimport::readTimerGroup( TTimer * pParent )
             if( name() == "name" )
             {
                 pT->mName = readElementText();
-                qDebug()<<"name="<<pT->mName;
                 continue;
             }
             else if( name() == "script")
             {
                 pT->mScript = readElementText();
-                qDebug()<<"script="<<pT->mScript;
                 continue;
             }
             else if( name() == "command")
             {
                 pT->mCommand = readElementText();
-                qDebug()<<"command="<<pT->mCommand;
                 continue;
             }
             else if( name() == "time")
@@ -663,8 +631,6 @@ void XMLimport::readTimerGroup( TTimer * pParent )
                 QString timeString = readElementText();
                 QTime time = QTime::fromString( timeString, "hh:mm:ss.zzz" );
                 pT->setTime( time );
-                qDebug()<<"time="<<pT->mTime.toString("hh:mm:ss.zzz" );
-                qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
             else if( name() == "TimerGroup" )
@@ -677,14 +643,12 @@ void XMLimport::readTimerGroup( TTimer * pParent )
             }
             else
             {
-                qDebug()<<"[INFO] UNKNOWN Timer element: name="<<name().toString()<<"text:"<<text().toString();
                 readUnknownTimerElement();
             }
         }
     }
-    qDebug()<<"[REGISTER] Timer:"<<pT->getName();
     pT->registerTimer();
-    pT->mIsActive = pT->mUserActiveState;
+    pT->setIsActive( pT->mUserActiveState );
 
 }
 
@@ -741,26 +705,21 @@ void XMLimport::readAliasGroup( TAlias * pParent )
             if( name() == "name" )
             {
                 pT->mName = readElementText();
-                qDebug()<<"name="<<pT->mName;
                 continue;
             }
             else if( name() == "script")
             {
                 pT->mScript = readElementText();
-                qDebug()<<"script="<<pT->mScript;
                 continue;
             }
             else if( name() == "command")
             {
                 pT->mCommand = readElementText();
-                qDebug()<<"command="<<pT->mCommand;
                 continue;
             }
             else if( name() == "regex")
             {
                 pT->setRegexCode( readElementText() );
-                qDebug()<<"regex="<<pT->mRegexCode;
-                qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
             else if( name() == "AliasGroup" )
@@ -773,12 +732,10 @@ void XMLimport::readAliasGroup( TAlias * pParent )
             }
             else
             {
-                qDebug()<<"[INFO] UNKNOWN Alias element: name="<<name().toString()<<"text:"<<text().toString();
                 readUnknownAliasElement();
             }
         }
     }
-    qDebug()<<"[REGISTER] Alias:"<<pT->getName();
     mpHost->getAliasUnit()->registerAlias( pT );
 
 }
@@ -839,13 +796,11 @@ void XMLimport::readActionGroup( TAction * pParent )
             if( name() == "name" )
             {
                 pT->mName = readElementText();
-                qDebug()<<"name="<<pT->mName;
                 continue;
             }
             else if( name() == "script")
             {
                 pT->mScript = readElementText();
-                qDebug()<<"script="<<pT->mScript;
                 continue;
             }
             else if( name() == "css")
@@ -856,19 +811,16 @@ void XMLimport::readActionGroup( TAction * pParent )
             else if( name() == "commandButtonUp")
             {
                 pT->mCommandButtonUp = readElementText();
-                qDebug()<<"mCommandButtonUp="<<pT->mCommandButtonUp;
                 continue;
             }
             else if( name() == "commandButtonDown")
             {
                 pT->mCommandButtonDown = readElementText();
-                qDebug()<<"commandButtonDown="<<pT->mCommandButtonDown;
                 continue;
             }
             else if( name() == "icon")
             {
                 pT->mIcon = readElementText();
-                qDebug()<<"icon="<<pT->mIcon;
                 continue;
             }
             else if( name() == "orientation")
@@ -911,14 +863,11 @@ void XMLimport::readActionGroup( TAction * pParent )
             else if( name() == "posX")
             {
                 pT->mPosX = readElementText().toInt();
-                qDebug()<<"mPosX="<<pT->mPosX;
                 continue;
             }
             else if( name() == "posY")
             {
                 pT->mPosY = readElementText().toInt();
-                qDebug()<<"mPosY="<<pT->mPosY;
-                qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
           
@@ -932,12 +881,10 @@ void XMLimport::readActionGroup( TAction * pParent )
             }
             else
             {
-                qDebug()<<"[INFO]: UNKNOWN Action element: name="<<name().toString()<<"text:"<<text().toString();
                 readUnknownActionElement();
             }
         }
     }
-    qDebug()<<"[REGISTER] Action:"<<pT->getName();
     mpHost->getActionUnit()->registerAction( pT );
 
 }
@@ -995,22 +942,18 @@ void XMLimport::readScriptGroup( TScript * pParent )
             if( name() == "name" )
             {
                 pT->mName = readElementText();
-                qDebug()<<"name="<<pT->mName;
                 continue;
             }
             else if( name() == "script")
             {
                 pT->mScript = readElementText();
-                qDebug()<<"script="<<pT->mScript;
                 continue;
             }
             else if( name() == "eventHandlerList")
             {
                 readStringList( pT->mEventHandlerList );
                 pT->setEventHandlerList( pT->mEventHandlerList );
-                qDebug()<<"eventHandlerList="<<pT->mEventHandlerList;
                 continue;
-                qDebug()<<"-----------------------------------------------------\n";
             }
             else if( name() == "ScriptGroup" )
             {
@@ -1022,12 +965,10 @@ void XMLimport::readScriptGroup( TScript * pParent )
             }
             else
             {
-                qDebug()<<"[INFO] UNKNOWN Script element: name="<<name().toString()<<"text:"<<text().toString();
                 readUnknownScriptElement();
             }
         }
     }
-    qDebug()<<"[REGISTER] Script:"<<pT->getName();
     mpHost->getScriptUnit()->registerScript( pT );
     pT->compile();
 
@@ -1086,32 +1027,26 @@ void XMLimport::readKeyGroup( TKey * pParent )
             if( name() == "name" )
             {
                 pT->mName = readElementText();
-                qDebug()<<"name="<<pT->mName;
                 continue;
             }
             else if( name() == "script")
             {
                 pT->mScript = readElementText();
-                qDebug()<<"script="<<pT->mScript;
                 continue;
             }
             else if( name() == "command")
             {
                 pT->mCommand = readElementText();
-                qDebug()<<"command="<<pT->mCommand;
                 continue;
             }
             else if( name() == "keyCode" )
             {
                 pT->mKeyCode = readElementText().toInt();
-                qDebug()<<"keyCode="<<pT->mKeyCode;
                 continue;
             }
             else if( name() == "keyModifier" )
             {
                 pT->mKeyModifier = readElementText().toInt();
-                qDebug()<<"keyModifier="<<pT->mKeyModifier;
-                qDebug()<<"-----------------------------------------------------\n";
                 continue;
             }
 
@@ -1125,12 +1060,10 @@ void XMLimport::readKeyGroup( TKey * pParent )
             }
             else
             {
-                qDebug()<<"[INFO] UNKNOWN Key element: name="<<name().toString()<<"text:"<<text().toString();
                 readUnknownKeyElement();
             }
         }
     }
-    qDebug()<<"[REGISTER] Key:"<<pT->getName();
     mpHost->getKeyUnit()->registerKey( pT );
 
 }

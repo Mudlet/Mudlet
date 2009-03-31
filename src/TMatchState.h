@@ -32,7 +32,6 @@ public:
         mNextCondition=1; // first condition was true when the state was created 
         mDelta=delta; 
         mLineCount=1;
-        qDebug()<<"TMatchState::TMatchState() mNumberOfConditions="<<mNumberOfConditions<<"  mDelta="<<mDelta;
     }
     
     TMatchState( const TMatchState &ms )
@@ -47,7 +46,6 @@ public:
     void conditionMatched(){ mNextCondition++; }
     bool isComplete() 
     { 
-        qDebug()<<"TMatchState::isComplete() mNextCondition="<<mNextCondition<<" mNumberOfConditions="<<mNumberOfConditions;
         if( mNextCondition >= mNumberOfConditions )
         {
             return true;
@@ -62,12 +60,10 @@ public:
     { 
         if( mLineCount > mDelta )
         {
-            qDebug()<<"TMatchState::newLine() ***DELETE MatchState*** mLineCount>mDelta mLineCount="<<mLineCount<<" mDelta="<<mDelta;
             return false;
         }
         else
         {
-            qDebug()<<"TMatchState::newLine() delta increased but not yet reached"<<mLineCount<<" mDelta="<<mDelta;;
             return true; 
         }
     }
