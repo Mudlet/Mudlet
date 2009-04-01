@@ -491,7 +491,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
 
     mpHost->getTriggerUnit()->registerTrigger( pT );
 
-    pT->mIsActive = ( attributes().value("isActive") == "yes" );
+    pT->setIsActive( (attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTrigger = ( attributes().value("isTempTrigger") == "yes" );
     pT->mIsMultiline = ( attributes().value("isMultiline") == "yes" );
@@ -556,7 +556,6 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             }
         }
     }
-    pT->setIsActive( pT->mIsActive );
 }
 
 void XMLimport::readTimerPackage()

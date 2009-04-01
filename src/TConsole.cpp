@@ -1111,7 +1111,6 @@ void TConsole::insertText( QString text, QPoint P )
         }
         else
         {
-            //qDebug()<<"inserting at x="<<x<<" r="<<r<<" chars";
             mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
         }
     }
@@ -1119,20 +1118,21 @@ void TConsole::insertText( QString text, QPoint P )
     {
         if( y >= buffer.getLastLineNumber() )
         {
-            cout<<"TConsole::insertText( txt, point ) trace A"<<endl;
             buffer.append( text,
                            mFormatCurrent.fgColor,
                            mFormatCurrent.bgColor,
                            false,
                            false,
                            false );
-            console->update();
+        }
+        else if( y < mEngineCursor )
+        {
+            buffer.insertInLine( P, text, mFormatCurrent );
+            console->needUpdate(mUserCursor.y(),mUserCursor.y()+1);
         }
         else
         {
-            cout<<"TConsole::insertText( txt, point ) trace B"<<endl;
             buffer.insertInLine( P, text, mFormatCurrent );
-            console->needUpdate(mUserCursor.y(),mUserCursor.y()+1);
         }
         return;
     }
@@ -1140,7 +1140,6 @@ void TConsole::insertText( QString text, QPoint P )
     {
         if( mUserCursor.y() >= buffer.getLastLineNumber() )
         {
-            cout<<"TConsole::insertText( txt, point ) trace C"<<endl;
             buffer.append( text,
                            mFormatCurrent.fgColor,
                            mFormatCurrent.bgColor,
@@ -1151,7 +1150,6 @@ void TConsole::insertText( QString text, QPoint P )
         }
         else
         {
-            cout<<"TConsole::insertText( txt, point ) trace D"<<endl;
             buffer.insertInLine( mUserCursor,
                                  text,
                                  mFormatCurrent );
@@ -1213,7 +1211,6 @@ bool TConsole::hasSelection()
 
 void TConsole::insertText( QString msg )
 {
-    qDebug()<<"TConsole::insertText("<<msg<<") mUserCursor.y()="<<mUserCursor.y()<<" lastLine="<<buffer.getLastLineNumber()<<" mEnginCursor="<<mEngineCursor;
     insertText( msg, mUserCursor );    
 }
 

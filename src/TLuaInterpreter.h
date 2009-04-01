@@ -66,6 +66,7 @@ public:
     void threadLuaInterpreterExec( std::string code );
     bool call( QString & function, QString & mName );
     bool callMulti( QString & function, QString & mName );
+    bool callConditionFunction( std::string & function, QString & mName );
     bool compile( QString & );
     bool compileScript( QString & );
     bool compileAndExecuteScript( QString & );

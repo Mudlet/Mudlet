@@ -1549,13 +1549,17 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
         {
             regexPropertyList << REGEX_PERL;
         }
-        if( (fgColor == QColor(195,0,0)) && (bgColor == QColor(255,255,255)) )
+        if( (fgColor == QColor(195,0,0)) && (bgColor == QColor(55,55,55)) )
         {
-            regexPropertyList << REGEX_WILDCARD;
+            regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
         }
         if( (fgColor == QColor(0,155,0)) && (bgColor == QColor(255,255,255)) )
         {
             regexPropertyList << REGEX_EXACT_MATCH;
+        }
+        if( (fgColor == QColor(155,155,0)) && (bgColor == QColor(0,0,0)) )
+        {
+            regexPropertyList << REGEX_LUA_CODE;
         }
     }
     QString script = mpSourceEditorArea->script_scintilla->text();    
@@ -1974,15 +1978,19 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
                 pItem->setForeground(QColor(0,0,255));
                 pItem->setBackground(QColor(255,255,255));
                 break;
-            case REGEX_WILDCARD:
+            case REGEX_BEGIN_OF_LINE_SUBSTRING:
                 pItem->setForeground(QColor(195,0,0));
-                pItem->setBackground(QColor(255,255,255));
+                pItem->setBackground(QColor(55,55,55));
                 break;
             case REGEX_EXACT_MATCH:
                 pItem->setForeground(QColor(0,155,0));
                 pItem->setBackground(QColor(255,255,255));
                 break;
+            case REGEX_LUA_CODE:
+                pItem->setForeground(QColor(155,155,0));
+                pItem->setBackground(QColor(0,0,0));
             }
+
             pItem->setText( patternList[i] );
             mpTriggersMainArea->listWidget_regex_list->addItem( pItem );
         }
@@ -3192,13 +3200,17 @@ void dlgTriggerEditor::slot_trigger_main_area_edit_regex(QListWidgetItem*)
     {
         mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_PERL);;
     }
-    if( (fgColor == QColor(195,0,0)) && (bgColor == QColor(255,255,255)) )
+    if( (fgColor == QColor(195,0,0)) && (bgColor == QColor(55,55,55)) )
     {
-        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_WILDCARD);
+        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_BEGIN_OF_LINE_SUBSTRING);
     }
     if( (fgColor == QColor(0,155,0)) && (bgColor == QColor(255,255,255)) )
     {
         mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_EXACT_MATCH);
+    }
+    if( (fgColor == QColor(155,155,0)) && (bgColor == QColor(0,0,0)) )
+    {
+        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_LUA_CODE);
     }
 }
                        
@@ -3231,15 +3243,19 @@ void dlgTriggerEditor::slot_trigger_main_area_add_regex()
                 pItem->setForeground(QColor(0,0,255));
                 pItem->setBackground(QColor(255,255,255));
                 break;
-            case REGEX_WILDCARD:
+            case REGEX_BEGIN_OF_LINE_SUBSTRING:
                 pItem->setForeground(QColor(195,0,0));
-                pItem->setBackground(QColor(255,255,255));
+                pItem->setBackground(QColor(55,55,55));
                 break;
             case REGEX_EXACT_MATCH:
                 pItem->setForeground(QColor(0,155,0));
                 pItem->setBackground(QColor(255,255,255));
                 break;
+            case REGEX_LUA_CODE:
+                pItem->setForeground(QColor(155,155,0));
+                pItem->setBackground(QColor(0,0,0));
         }
+
         mIsTriggerMainAreaEditRegex = false;
         mpTriggerMainAreaEditRegexItem = 0;
     }
@@ -3260,14 +3276,17 @@ void dlgTriggerEditor::slot_trigger_main_area_add_regex()
             pItem->setForeground(QColor(0,0,255));
             pItem->setBackground(QColor(255,255,255));
             break;
-        case REGEX_WILDCARD:
+        case REGEX_BEGIN_OF_LINE_SUBSTRING:
             pItem->setForeground(QColor(195,0,0));
-            pItem->setBackground(QColor(255,255,255));
+            pItem->setBackground(QColor(55,55,55));
             break;
         case REGEX_EXACT_MATCH:
             pItem->setForeground(QColor(0,155,0));
             pItem->setBackground(QColor(255,255,255));
             break;
+        case REGEX_LUA_CODE:
+            pItem->setForeground(QColor(155,155,0));
+            pItem->setBackground(QColor(0,0,0));
         }    
         mpTriggersMainArea->listWidget_regex_list->addItem( pItem );
     

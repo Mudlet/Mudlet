@@ -35,6 +35,7 @@
 #include "mudlet.h"
 #include "TDebug.h"
 #include <pcre.h>
+#include <sstream>
 
 using namespace std;
 
@@ -45,12 +46,14 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mIsTempTrigger( false )
 , mIsLineTrigger( false )
 , mStartOfLineDelta( 0 )
-, mLineDelta( 0 )
+, mLineDelta( 3 )
 , mIsMultiline( false )
 , mPerlSlashGOption( false )
 , mTriggerType( REGEX_SUBSTRING )
 , mTriggerContainsPerlRegex( false )
+, mpLua( mpHost->getLuaInterpreter() )
 {
+
 } 
 
 TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host * pHost ) 
@@ -63,11 +66,12 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 , mIsTempTrigger( false )
 , mIsLineTrigger( false )
 , mStartOfLineDelta( 0 )
-, mLineDelta( 0 )
+, mLineDelta( 3 )
 , mIsMultiline( isMultiline )
 , mPerlSlashGOption( false )
 , mTriggerType( REGEX_SUBSTRING )
 , mTriggerContainsPerlRegex( false )
+, mpLua( mpHost->getLuaInterpreter() )
 {
     setRegexCodeList( regexList, regexProperyList );
 }
@@ -86,12 +90,15 @@ TTrigger::~TTrigger()
         
 }
 
+
+
+//FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
 void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList )
 {
-    QMutexLocker locker(& mLock);
     mRegexCodeList.clear();
     mRegexMap.clear();
     mRegexCodePropertyList.clear();
+    mLuaConditionMap.clear();
     mTriggerContainsPerlRegex = false;
     
     if( propertyList.size() != regexList.size() )
@@ -107,27 +114,6 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         mRegexCodeList.append( regexList[i] );
         mRegexCodePropertyList.append( propertyList[i] );                  
         
-        if( propertyList[i] == REGEX_WILDCARD )
-        {
-            const char *error;
-            char * pattern = regexList[i].toLatin1().data();
-            int erroffset;
-            
-            pcre * re;
-            re = pcre_compile( pattern,
-                               0,
-                               &error,
-                               &erroffset,
-                               0 );
-            
-            if (re == 0)
-            {
-                if( mudlet::debugMode ) TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
-                //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
-            }
-            mRegexMap[i] = re; 
-            mTriggerContainsPerlRegex = true;
-        }
         if( propertyList[i] == REGEX_PERL )
         {
             const char *error;
@@ -152,11 +138,24 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
         }
-                     
-    } 
+        if( propertyList[i] == REGEX_LUA_CODE )
+        {
+             std::string funcName = regexList[i].toLatin1().data();
+             QString code = QString("function ")+funcName.c_str()+QString("()\n")+mScript + QString("\nend\n");
+             if( ! mpLua->compile( code ) )
+             {
+                 needsAttention();
+             }
+             else
+             {
+                 mLuaConditionMap[i] = funcName;
+             }
+         }
+    }
 }
 
-TTrigger& TTrigger::clone(const TTrigger& b)
+
+TTrigger & TTrigger::clone(const TTrigger& b)
 {
     mName = b.mName;
     mRegexCodeList = b.mRegexCodeList;
@@ -164,7 +163,6 @@ TTrigger& TTrigger::clone(const TTrigger& b)
     mRegexMap = b.mRegexMap;
     mpHost = b.mpHost;
     mScript = b.mScript;
-    mIsActive = b.mIsActive;
     mIsTempTrigger = b.mIsTempTrigger;
     mIsFolder = b.mIsFolder;
     mNeedsToBeCompiled = b.mNeedsToBeCompiled;
@@ -186,7 +184,6 @@ bool TTrigger::isClone( TTrigger & b ) const
              && mRegexMap == b.mRegexMap 
              && mpHost == b.mpHost 
              && mScript == b.mScript 
-             && mIsActive == b.mIsActive 
              && mIsTempTrigger == b.mIsTempTrigger 
              && mIsFolder == b.mIsFolder 
              && mNeedsToBeCompiled == b.mNeedsToBeCompiled 
@@ -201,7 +198,7 @@ bool TTrigger::isClone( TTrigger & b ) const
 
 bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
 {
-    if( ! mIsActive ) return false;
+    if( ! isActive() ) return false;
     
     if( ! mRegexMap.contains(regexNumber ) ) return false;
     
@@ -413,9 +410,41 @@ ERROR:
     
 }
 
-bool TTrigger::match_wildcard( QString & toMatch, int regexNumber )
+bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber )
 {
-    //return match_perl( toMatch, regexNumber); //FIXME
+    if( toMatch.startsWith( regex ) )
+    {
+        if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
+        if( mIsMultiline )
+        {
+            if( regexNumber == 0 )
+            {
+                if( mudlet::debugMode ) TDebug()<<"#0=true -> creating new MatchState">>0;
+                // wird automatisch auf #1 gesetzt
+                TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
+                mConditionMap[pCondition] = pCondition;
+                return true;
+            }
+            else
+            {
+                int k=0;
+                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
+                {
+                    k++;//weg
+                    if( mudlet::debugMode ) TDebug()<<"LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
+                    if( (*it).second->nextCondition() == regexNumber )
+                    {
+                        if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
+                        (*it).second->conditionMatched();
+                    }
+                }
+                return true;
+            }
+        }
+        execute();
+        return true;
+    }
+    return false;
 }
 
 bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNumber )
@@ -452,6 +481,45 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
         execute();    
         return true;
     }    
+    return false;
+}
+
+bool TTrigger::match_lua_code( int regexNumber )
+{
+    if( mLuaConditionMap.find( regexNumber ) == mLuaConditionMap.end() ) return false;
+
+    if( mpLua->callConditionFunction( mLuaConditionMap[regexNumber], mName ) )
+    {
+        if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
+        if( mIsMultiline )
+        {
+            if( regexNumber == 0 )
+            {
+                if( mudlet::debugMode ) TDebug()<<"#0=true -> creating new MatchState">>0;
+                // wird automatisch auf #1 gesetzt
+                TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
+                mConditionMap[pCondition] = pCondition;
+                return true;
+            }
+            else
+            {
+                int k=0;
+                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
+                {
+                    k++;//weg
+                    if( mudlet::debugMode ) TDebug()<<"LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
+                    if( (*it).second->nextCondition() == regexNumber )
+                    {
+                        if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
+                        (*it).second->conditionMatched();
+                    }
+                }
+                return true;
+            }
+        }
+        execute();
+        return true;
+    }
     return false;
 }
 
@@ -496,7 +564,7 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
 bool TTrigger::match( char * subject, QString & toMatch )
 {
     bool ret = false;
-    if( mIsActive )
+    if( isActive() )
     {
         if( mIsLineTrigger )
         {
@@ -531,12 +599,12 @@ bool TTrigger::match( char * subject, QString & toMatch )
                 (*it).second->newLineArrived();
             }
         }
-        for( int i=0; i<mRegexCodeList.size(); i++ )
+
+        for( int i=0; i<mRegexCodePropertyList.size(); i++ )
         {
             ret = false;
             switch( mRegexCodePropertyList.value(i) )
             {
-        
                 case REGEX_SUBSTRING:
                     ret = match_substring( toMatch, mRegexCodeList[i], i );
                     break;
@@ -545,12 +613,16 @@ bool TTrigger::match( char * subject, QString & toMatch )
                     ret = match_perl( subject, toMatch, i );
                     break;
                 
-                case REGEX_WILDCARD:
-                    ret = match_perl( subject, toMatch, i );
+                case REGEX_BEGIN_OF_LINE_SUBSTRING:
+                    ret = match_begin_of_line_substring( toMatch, mRegexCodeList[i], i );
                     break;
                 
                 case REGEX_EXACT_MATCH:
                     ret = match_exact_match( toMatch, mRegexCodeList[i], i );
+                    break;
+
+                case REGEX_LUA_CODE:
+                    ret = match_lua_code( i );
                     break;
             }
             // policy: one match is enough to fire trigger, but in the case of
@@ -651,12 +723,12 @@ bool TTrigger::registerTrigger()
 
 void TTrigger::compile()
 {
+    cout << "mNeedsToBeCompiled="<<mNeedsToBeCompiled<<endl;
     if( mNeedsToBeCompiled )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("function Trigger") + QString::number( mID ) + QString("()\n"); 
-        QString code = funcName + mScript + QString("\nend\n");
-        if( pL->compile( code ) )
+        mFuncName = QString("Trigger")+QString::number( mID );
+        QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+        if( mpLua->compile( code ) )
         {
             mNeedsToBeCompiled = false;//FIXME isnt sure that compile actually worked!
         }
@@ -675,37 +747,34 @@ void TTrigger::compile()
 
 void TTrigger::execute()
 {
-    if( mIsTempTrigger )
+    /*if( mIsTempTrigger )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        pL->compileAndExecuteScript( mScript );
+
+        mpLua->compileAndExecuteScript( mScript );
         return;
-    }
+    }*/
     if( mCommand.size() > 0 )
     {
         mpHost->send( mCommand );
     }
     if( mNeedsToBeCompiled )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("function Trigger") + QString::number( mID ) + QString("()\n"); 
-        QString code = funcName + mScript + QString("\nend\n");
-        if( pL->compile( code ) )
+        cout << "excute() mNeedsToBeCompiled=true compiling..."<<endl;
+        mFuncName = QString("Trigger")+QString::number( mID );
+        QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+        if( mpLua->compile( code ) )
         {
             mNeedsToBeCompiled = false;
         }
     }
 
-    TLuaInterpreter * pL = mpHost->getLuaInterpreter();
-    QString funcName = QString("Trigger") + QString::number( mID );
-    funcName = QString("Trigger") + QString::number( mID );
     if( mIsMultiline )
     {
-        pL->callMulti( funcName, mName );
+        mpLua->callMulti( mFuncName, mName );
     }
     else
     {
-        pL->call( funcName, mName );
+        mpLua->call( mFuncName, mName );
     }
 }
 
@@ -713,7 +782,7 @@ void TTrigger::enableTrigger( QString & name )
 {
     if( mName == name )
     {
-        mIsActive = true;
+        setIsActive( true );
     }
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -727,7 +796,7 @@ void TTrigger::disableTrigger( QString & name )
 {
     if( mName == name )
     {
-        mIsActive = false;
+        setIsActive( false );
     }
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -741,7 +810,7 @@ TTrigger * TTrigger::killTrigger( QString & name )
 {
     if( mName == name )
     {
-        mIsActive = false;
+        setIsActive( false );
     }
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -755,15 +824,12 @@ TTrigger * TTrigger::killTrigger( QString & name )
 
 bool TTrigger::serialize( QDataStream & ofs )
 {
-    QMutexLocker locker(& mLock);
-        
     ofs << mName;
     ofs << mScript;
     ofs << mRegexCodeList;
     ofs << mRegexCodePropertyList;
     qDebug()<<"serializing:"<< mName;
     ofs << mID;
-    ofs << mIsActive;
     ofs << mIsFolder;
     ofs << mTriggerType;
     ofs << mIsTempTrigger; 
@@ -791,7 +857,6 @@ bool TTrigger::restore( QDataStream & ifs, bool initMode )
     ifs >> propertyList;
     setRegexCodeList( regexList, propertyList );
     ifs >> mID;
-    ifs >> mIsActive;
     ifs >> mIsFolder;
     ifs >> mTriggerType;
     ifs >> mIsTempTrigger;

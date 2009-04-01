@@ -40,8 +40,9 @@
 
 #define REGEX_SUBSTRING 0
 #define REGEX_PERL 1
-#define REGEX_WILDCARD 2
+#define REGEX_BEGIN_OF_LINE_SUBSTRING 2
 #define REGEX_EXACT_MATCH 3
+#define REGEX_LUA_CODE 4
 
 #define OVECCOUNT 30    // should be a multiple of 3 
 
@@ -63,33 +64,31 @@ public:
                      TTrigger & clone( const TTrigger & );
                       //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
                       //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
-    QString          getCommand()                    { QMutexLocker locker(& mLock); return mCommand; } 
-    void             setCommand( QString b )           { QMutexLocker locker(& mLock); mCommand = b; }
-    QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
-    void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
-    QStringList &    getRegexCodeList()              { QMutexLocker locker(& mLock); return mRegexCodeList; }
-    QList<int>       getRegexCodePropertyList()      { QMutexLocker locker(& mLock); return mRegexCodePropertyList; }
+    QString          getCommand()                    { return mCommand; }
+    void             setCommand( QString b )         { mCommand = b; }
+    QString          getName()                       { return mName; }
+    void             setName( QString name )         { mName = name; }
+    QStringList &    getRegexCodeList()              { return mRegexCodeList; }
+    QList<int>       getRegexCodePropertyList()      { return mRegexCodePropertyList; }
     void             compile();
     void             execute();
     bool             isFilterChain();
     void             setRegexCodeList( QStringList regex, QList<int> regexPorpertyList );        
-    QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
-    void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
+    QString          getScript()                     { return mScript; }
+    void             setScript( QString & script )   { mScript = script; mNeedsToBeCompiled=true; }
     bool             match( char *, QString & );
-    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
-    bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
-    bool             isMultiline()                   { QMutexLocker locker(& mLock); return mIsMultiline; }
-    int              getTriggerType()                { QMutexLocker locker(& mLock); return mTriggerType; }
-    bool             isTempTrigger()                 { QMutexLocker locker(& mLock); return mIsTempTrigger; }
-    bool             isLineTrigger()                 { QMutexLocker locker(& mLock); return mIsLineTrigger; }
-    void             setIsLineTrigger( bool b )      { QMutexLocker locker(& mLock); mIsLineTrigger = b; }
-    void             setStartOfLineDelta( int b )    { QMutexLocker locker(& mLock); mStartOfLineDelta = b; }
-    void             setLineDelta( int b )           { QMutexLocker locker(& mLock); mLineDelta = b; }
-    void             setTriggerType( int b )         { QMutexLocker locker(& mLock); mTriggerType = b; }    
-    void             setIsTempTrigger( bool b )      { QMutexLocker locker(& mLock); mIsTempTrigger = b; }
-    void             setIsMultiline( bool b )        { QMutexLocker locker(& mLock); mIsMultiline = b; }    
-    void             setIsActive( bool b )           { QMutexLocker locker(& mLock); mIsActive = b; }
-    void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
+    bool             isFolder()                      { return mIsFolder; }
+    bool             isMultiline()                   { return mIsMultiline; }
+    int              getTriggerType()                { return mTriggerType; }
+    bool             isTempTrigger()                 { return mIsTempTrigger; }
+    bool             isLineTrigger()                 { return mIsLineTrigger; }
+    void             setIsLineTrigger( bool b )      { mIsLineTrigger = b; }
+    void             setStartOfLineDelta( int b )    { mStartOfLineDelta = b; }
+    void             setLineDelta( int b )           { mLineDelta = b; }
+    void             setTriggerType( int b )         { mTriggerType = b; }
+    void             setIsTempTrigger( bool b )      { mIsTempTrigger = b; }
+    void             setIsMultiline( bool b )        { mIsMultiline = b; }
+    void             setIsFolder( bool b )           { mIsFolder = b; }
     void             enableTrigger( QString & );
     void             disableTrigger( QString & );
     TTrigger *       killTrigger( QString & );
@@ -97,8 +96,10 @@ public:
     bool             match_perl( char *, QString &, int );
     bool             match_wildcard( QString &, int );
     bool             match_exact_match( QString &, QString &, int );
-    void             setConditionLineDelta( int delta )  { QMutexLocker locker(& mLock); mConditionLineDelta = delta; }
-    int              getConditionLineDelta() { QMutexLocker locker(& mLock); return mConditionLineDelta; }
+    bool             match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber );
+    bool             match_lua_code( int );
+    void             setConditionLineDelta( int delta )  { mConditionLineDelta = delta; }
+    int              getConditionLineDelta() { return mConditionLineDelta; }
     bool             registerTrigger();
     
     bool             serialize( QDataStream & );
@@ -116,7 +117,6 @@ private:
     QMap<int, pcre *>                      mRegexMap;
     Host *                                 mpHost;
     QString                                mScript;
-    bool                                   mIsActive;
     bool                                   mIsTempTrigger;
     bool                                   mIsFolder;
     bool                                   mNeedsToBeCompiled;
@@ -130,7 +130,10 @@ private:
     std::map<TMatchState*, TMatchState*>   mConditionMap;
     std::list< std::list<std::string> >    mMultiCaptureGroupList;
     std::list< std::list<int> >            mMultiCaptureGroupPosList;
-    QMutex                                 mLock;
+    TLuaInterpreter *                      mpLua;
+    std::map<int, std::string>             mLuaConditionMap;
+    QString                                mFuncName;
+
 };
 
 #endif

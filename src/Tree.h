@@ -28,12 +28,6 @@
 #include <fstream>
 #include <list>
 #include <string>
-
-#include <QMutex>
-#include <QMutexLocker>
-
-//#include "TTrigger.h"
-
 #include <QDebug>
 
 template<class T>
@@ -43,27 +37,38 @@ public:
                        Tree();
                        Tree( T * parent );		     
     virtual            ~Tree(); 
-                       T * getParent()      { return mpParent; }
+                       T * getParent()             { return mpParent; }
     std::list<T *> *   getChildrenList();
-    bool               hasChildren()   { return (mpMyChildrenList->size() > 0); }
-    int                getChildCount()  { return mpMyChildrenList->size(); }
+    bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
+    int                getChildCount()             { return mpMyChildrenList->size(); }
     void               DumpFamily();
     void               Dump();
-    void               setFullyExpanded()    { FullyExpanded = true; }
-    bool               isFullyExpanded()     { return FullyExpanded; }
-    qint64             getID()               { return mID; }
-    void               setID( qint64 id )       { QMutexLocker locker(& mLock); mID=id; }
+    void               setFullyExpanded()          { FullyExpanded = true; }
+    bool               isFullyExpanded()           { return FullyExpanded; }
+    qint64             getID()                     { return mID; }
+    void               setID( qint64 id )          { mID=id; }
     void               addChild( T * newChild );
     bool               popChild( T * removeChild );
     void               setParent( T * parent );
-    
+    void               setNeedsAttention();
+    bool               needsAttention();
+    virtual bool       canBeActivated();
+    bool               isActive();
+    bool               setIsActive( bool );
+    bool               shouldBeActive();
+    void               setShouldBeActive( bool b );
     T *                mpParent;
     std::list<T *> *   mpMyChildrenList;
     qint64             mID;
     
-    
     bool               FullyExpanded;
-    QMutex             mLock;
+
+private:
+
+    bool               activate();
+    bool               mActive;
+    bool               mNeedSave;
+    bool               mUserActiveState;
     
 };
 
@@ -72,6 +77,9 @@ Tree<T>::Tree()
 : mpParent( 0 )
 , mpMyChildrenList( new std::list<T *> )
 , mID( 0 ) 
+, mActive( false )
+, mNeedSave( true )
+, mUserActiveState( false )
 {
 }
 
@@ -80,6 +88,9 @@ Tree<T>::Tree( T *  pParent )
 : mpParent( pParent )
 , mpMyChildrenList( new std::list<T *> )
 , mID( 0 )
+, mActive( false )
+, mNeedSave( true )
+, mUserActiveState( false )
 {
     if( pParent ) 
     {
@@ -109,23 +120,84 @@ Tree<T>::~Tree()
 }
 
 template<class T>
+void Tree<T>::setNeedsAttention()
+{
+    mActive = false;
+    mNeedSave = true;
+}
+
+template<class T>
+bool Tree<T>::shouldBeActive()
+{
+    return mUserActiveState;
+}
+
+template<class T>
+void Tree<T>::setShouldBeActive( bool b )
+{
+    mUserActiveState = b;
+}
+
+template<class T>
+bool Tree<T>::setIsActive( bool b )
+{
+    setShouldBeActive( b );
+    if( b )
+    {
+        return activate();
+    }
+    else
+    {
+        mActive = false;
+        return true;
+    }
+}
+
+template<class T>
+bool Tree<T>::canBeActivated()
+{
+    return shouldBeActive();
+}
+
+template<class T>
+bool Tree<T>::activate()
+{
+    if( canBeActivated() )
+    {
+        mActive = true;
+        return true;
+    }
+    mActive = false;
+    return false;
+}
+
+template<class T>
+bool Tree<T>::isActive()
+{
+    return mActive && mNeedSave;
+}
+
+template<class T>
+bool Tree<T>::needsAttention()
+{
+    return mNeedSave;
+}
+
+template<class T>
 void Tree<T>::addChild( T * newChild )
 {
-    QMutexLocker locker(& mLock); 
     mpMyChildrenList->push_back( newChild );
 }
 
 template<class T>
 void Tree<T>::setParent( T * pParent )
 {
-    QMutexLocker locker(& mLock);
     mpParent = pParent;
 }
 
 template<class T>
 bool Tree<T>::popChild( T * pChild )
 {
-    QMutexLocker locker(& mLock);
     typedef typename std::list<T *>::const_iterator IT;
     for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {

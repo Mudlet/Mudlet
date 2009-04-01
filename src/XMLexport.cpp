@@ -229,7 +229,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
         tag = "Trigger";
     }
     writeStartElement( tag );
-    writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
+    writeAttribute( "isActive", pT->isActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isTempTrigger", pT->mIsTempTrigger ? "yes" : "no" ); 
     writeAttribute( "isMultiline", pT->mIsMultiline ? "yes" : "no" );

@@ -58,14 +58,14 @@ mudlet * mudlet::self()
 
 
 mudlet::mudlet() 
-: QMainWindow() //Ui::MainWindow()
+: QMainWindow()
 {
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
     QVBoxLayout * layout = new QVBoxLayout( this );
     layout->setContentsMargins(0,0,0,0);
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet Beta 8 - built: 03-29-2009");
+    setWindowTitle("Mudlet Beta 9pre - built: 04-1-2009");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     
@@ -93,7 +93,7 @@ mudlet::mudlet()
         mpMainToolBar->setIconSize(QSize(32,32));
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     }
-    
+
     QAction * actionConnect = new QAction(QIcon(":/icons/preferences-web-browser-cache.png"), tr("Connect"), this);
     actionConnect->setStatusTip(tr("Connect To Server"));
     mpMainToolBar->addAction( actionConnect );
@@ -181,11 +181,13 @@ mudlet::mudlet()
     }
     else
     {
-        mainFont = QFont("Bitstream Vera Sans Mono", 7, QFont::Courier);        
+        mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
     }
-    QFont mdiFont = QFont("Bitstream Vera Sans Mono", 5, QFont::Courier);            
+    QFont mdiFont = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
     setFont( mainFont );
     mdiArea->setFont( mdiFont );
+    QIcon noIcon;
+    mdiArea->setWindowIcon( noIcon );
     mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
     
     

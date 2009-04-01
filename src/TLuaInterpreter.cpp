@@ -1463,6 +1463,57 @@ bool TLuaInterpreter::call( QString & function, QString & mName )
     else return false;
 }
 
+bool TLuaInterpreter::callConditionFunction( std::string & function, QString & mName )
+{
+    lua_State * L = pGlobalLua;
+    if( ! L )
+    {
+        qDebug()<< "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return false;
+    }
+
+    lua_getfield( L, LUA_GLOBALSINDEX, function.c_str() );
+    int error = lua_pcall( L, 0, 1, 0 );
+    if( error != 0 )
+    {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i=1; i<=nbpossible_errors; i++)
+        {
+            string e = "";
+            if(lua_isstring( L, i) )
+            {
+                e = "Lua error:";
+                e+=lua_tostring( L, i );
+
+                if( mudlet::debugMode ) TDebug()<<"LUA: ERROR running script "<< mName << " (" << function.c_str() <<") ERROR:"<<e.c_str()>>0;
+            }
+        }
+    }
+    else
+    {
+        if( mudlet::debugMode ) TDebug()<<"LUA OK script "<<mName << " (" << function.c_str() <<") ran without errors">>0;
+    }
+
+    int ret = 0;
+    int returnValues = lua_gettop( L );
+    if( returnValues > 0 )
+    {
+        if( lua_isboolean( L, 1 ) )
+        {
+            ret = lua_toboolean( L, 1 );
+        }
+    }
+    lua_pop( L, returnValues );
+    if( (error == 0) && (ret>0) )
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 bool TLuaInterpreter::callMulti( QString & function, QString & mName )
 {
     lua_State * L = pGlobalLua;

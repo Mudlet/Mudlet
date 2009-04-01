@@ -475,7 +475,12 @@ p, li { white-space: pre-wrap; }
    </item>
    <item>
     <property name="text">
-     <string>pattern equals entire line (speed: ok)</string>
+     <string>pattern equals entire line (speed: good)</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Condition is defined as a Lua Function that returns true or false</string>
     </property>
    </item>
   </widget>
@@ -565,25 +570,7 @@ p, li { white-space: pre-wrap; }
      <bool>true</bool>
     </property>
    </widget>
-   <zorder>spinBox_linemargin</zorder>
-   <zorder>label_3</zorder>
-   <zorder>label_7</zorder>
-   <zorder>perlSlashGOption</zorder>
   </widget>
-  <zorder>label_4</zorder>
-  <zorder>lineEdit_trigger_name</zorder>
-  <zorder>label_5</zorder>
-  <zorder>trigger_command</zorder>
-  <zorder>label</zorder>
-  <zorder>listWidget_regex_list</zorder>
-  <zorder>label_2</zorder>
-  <zorder>label_6</zorder>
-  <zorder>widget_2</zorder>
-  <zorder>perlSlashGOption</zorder>
-  <zorder>comboBox_regexstyle</zorder>
-  <zorder>label_7</zorder>
-  <zorder>checkBox_multlinetrigger</zorder>
-  <zorder>lineEdit</zorder>
  </widget>
  <resources>
   <include location="../mudlet_alpha.qrc"/>

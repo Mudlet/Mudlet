@@ -121,7 +121,8 @@ HEADERS += mudlet.h \
     TFlipButton.h \
     TToolBar.h \
     TBuffer.h \
-    TriggerUnit.h
+    TriggerUnit.h \
+    Tree.h
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
     ui/main_window.ui \

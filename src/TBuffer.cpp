@@ -95,7 +95,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
-    if( buffer.size() > mLinesLimit )
+    if( (int)buffer.size() > mLinesLimit )
     {
         while( buffer.size() > mLinesLimit-10000 )
         {

@@ -775,13 +775,13 @@ void dlgConnectionProfiles::slot_connectToServer()
     
     QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
     QDir dir( folder );
+    dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
-    entries.sort();
     for( int i=0;i<entries.size(); i++ )
         qDebug()<<i<<"#"<<entries[i];
     if( entries.size() > 0 )
     {
-        QFile file(folder+"/"+entries[entries.size()-1]);
+        QFile file(folder+"/"+entries[0]);
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
