@@ -276,7 +276,6 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
             pC->underline = format.underline;
             typedef std::deque<TChar *>::iterator IT;
             IT it = buffer[y].begin();
-            
             buffer[y].insert( it+x+i, pC );
         }   
     }

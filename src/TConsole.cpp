@@ -815,7 +815,8 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     
     mTriggerEngineMode = true;
     mDeletedLines = 0;
-    for( int i=lineBeforeNewContent; i<buffer.getLastLineNumber()+1; i++ )
+    int lastLineNumber = buffer.getLastLineNumber();
+    for( int i=lineBeforeNewContent; i<=lastLineNumber; i++ )
     {
         mUserCursor.setY( i );
         mEngineCursor = i;
@@ -826,8 +827,8 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
         mpHost->incomingStreamProcessor( mCurrentLine, prompt );
-        mUserCursor.setY( mUserCursor.y() + 1 );
-        mUserCursor.setX( 0 );
+        //mUserCursor.setY( mUserCursor.y() + 1 );
+        //mUserCursor.setX( 0 );
 
         if( mDeletedLines > 0 )
         {
@@ -1096,6 +1097,7 @@ void TConsole::insertText( QString text, QPoint P )
     int r = text.size();
     if( mTriggerEngineMode )
     {
+
         if( hasSelection() )
         {
             if( r < o )
@@ -1116,7 +1118,7 @@ void TConsole::insertText( QString text, QPoint P )
     }
     if( mTriggerEngineMode )
     {
-        if( y >= buffer.getLastLineNumber() )
+        if( y > buffer.getLastLineNumber() )
         {
             buffer.append( text,
                            mFormatCurrent.fgColor,
@@ -1130,7 +1132,7 @@ void TConsole::insertText( QString text, QPoint P )
             buffer.insertInLine( P, text, mFormatCurrent );
             console->needUpdate(mUserCursor.y(),mUserCursor.y()+1);
         }
-        else
+        else if( y == mEngineCursor )
         {
             buffer.insertInLine( P, text, mFormatCurrent );
         }
@@ -1355,21 +1357,21 @@ void TConsole::printCommand( QString & msg )
 
 void TConsole::echo( QString & msg )
 {
-    QPoint P = mUserCursor;
+    QPoint P;
     if( mTriggerEngineMode )
     {
-        P.setX( mCurrentLine.size()-1 );
-        insertText( "\n"+msg, P );
-        console->showNewLines();
+        P.setY( mEngineCursor );
+        P.setX( (buffer.line(mEngineCursor)).size()-1 );
+        insertText( msg, P );
     }
     else
+    {
         print( msg );
+    }
 }
 
 void TConsole::print( const char * msg )
 {
-    //QColor fgColor = QColor(0,0,0);
-    //QColor bgColor = QColor(255,255,255);
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.append( msg, 
                    mFormatCurrent.fgColor,

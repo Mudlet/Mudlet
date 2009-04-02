@@ -360,33 +360,8 @@ END:
 {
     if( mIsMultiline )
     {
-        if( regexNumber == 0 )
-        {
-            if( mudlet::debugMode ) TDebug()<<"Trigger is a multiline trigger condition #0=true -> creating new MatchState number of matchstates="<<mConditionMap.size()+1>>0;
-            // wird automatisch auf #1 gesetzt
-            TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
-            mConditionMap[pCondition] = pCondition;  
-            pCondition->multiCaptureList.push_back( captureList );
-            pCondition->multiCapturePosList.push_back( posList );
-            goto EXIT_OK; //DON'T RUN SCRIPTS
-        }
-        else
-        {
-            int k=0;
-            for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
-            {
-                k++;
-                if( mudlet::debugMode ) TDebug()<<"evaluating condition number "<<regexNumber<<" waiting for condition number "<< (*it).second->nextCondition()<<" to be met.">>0;
-                if( (*it).second->nextCondition() == regexNumber )
-                {
-                    if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
-                    (*it).second->conditionMatched();
-                    (*it).second->multiCaptureList.push_back( captureList );
-                    (*it).second->multiCapturePosList.push_back( posList );
-                }
-            }
-            goto EXIT_OK; //DON'T RUN SCRIPTS
-        }                               
+        updateMultistates( regexNumber, captureList, posList );
+        return true;
     }
     else
     {
@@ -414,32 +389,15 @@ bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex
 {
     if( toMatch.startsWith( regex ) )
     {
+        std::list<std::string> captureList;
+        std::list<int> posList;
+        captureList.push_back( regex.toLatin1().data() );
+        posList.push_back( 0 );
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
         if( mIsMultiline )
         {
-            if( regexNumber == 0 )
-            {
-                if( mudlet::debugMode ) TDebug()<<"#0=true -> creating new MatchState">>0;
-                // wird automatisch auf #1 gesetzt
-                TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
-                mConditionMap[pCondition] = pCondition;
-                return true;
-            }
-            else
-            {
-                int k=0;
-                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
-                {
-                    k++;//weg
-                    if( mudlet::debugMode ) TDebug()<<"LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
-                    if( (*it).second->nextCondition() == regexNumber )
-                    {
-                        if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
-                        (*it).second->conditionMatched();
-                    }
-                }
-                return true;
-            }
+            updateMultistates( regexNumber, captureList, posList );
+            return true;
         }
         execute();
         return true;
@@ -447,36 +405,59 @@ bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex
     return false;
 }
 
+inline void TTrigger::updateMultistates( int regexNumber,
+                                         std::list<std::string> & captureList,
+                                         std::list<int> & posList )
+{
+    if( regexNumber == 0 )
+    {
+        // wird automatisch auf #1 gesetzt
+        TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
+        mConditionMap[pCondition] = pCondition;
+        pCondition->multiCaptureList.push_back( captureList );
+        pCondition->multiCapturePosList.push_back( posList );
+        if( mudlet::debugMode ) TDebug() << "match state " << mConditionMap.size() << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] >> 0;
+    }
+    else
+    {
+        int k=0;
+        for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
+        {
+            k++;
+            if( (*it).second->nextCondition() == regexNumber )
+            {
+                if( mudlet::debugMode ) TDebug() << "match state " << k << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] >> 0;
+                (*it).second->conditionMatched();
+                (*it).second->multiCaptureList.push_back( captureList );
+                (*it).second->multiCapturePosList.push_back( posList );
+            }
+        }
+    }
+}
+
 bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNumber )
 {
-    if( toMatch.indexOf( regex ) != -1 )
+    cout << "match_substring() enter"<<endl;
+    int where = toMatch.indexOf( regex );
+    if( where != -1 )
     {
+        std::list<std::string> captureList;
+        std::list<int> posList;
+        captureList.push_back( regex.toLatin1().data() );
+        posList.push_back( where );
+        if( mPerlSlashGOption )
+        {
+            while( (where = toMatch.indexOf( regex, where )) != -1 )
+            {
+                captureList.push_back( regex.toLatin1().data() );
+                posList.push_back( where );
+            }
+        }
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
         if( mIsMultiline )
         {
-            if( regexNumber == 0 )
-            {
-                if( mudlet::debugMode ) TDebug()<<"#0=true -> creating new MatchState">>0;
-                // wird automatisch auf #1 gesetzt
-                TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
-                mConditionMap[pCondition] = pCondition;    
-                return true;
-            }
-            else
-            {
-                int k=0;
-                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
-                {
-                    k++;//weg
-                    if( mudlet::debugMode ) TDebug()<<"LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
-                    if( (*it).second->nextCondition() == regexNumber )
-                    {
-                        if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
-                        (*it).second->conditionMatched();    
-                    }
-                }
-                return true;
-            }
+            updateMultistates( regexNumber, captureList, posList );
+            return true;
         }
         execute();    
         return true;
@@ -486,6 +467,7 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
 
 bool TTrigger::match_lua_code( int regexNumber )
 {
+    cout << "match_lua_code() enter"<<endl;
     if( mLuaConditionMap.find( regexNumber ) == mLuaConditionMap.end() ) return false;
 
     if( mpLua->callConditionFunction( mLuaConditionMap[regexNumber], mName ) )
@@ -493,29 +475,10 @@ bool TTrigger::match_lua_code( int regexNumber )
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
         if( mIsMultiline )
         {
-            if( regexNumber == 0 )
-            {
-                if( mudlet::debugMode ) TDebug()<<"#0=true -> creating new MatchState">>0;
-                // wird automatisch auf #1 gesetzt
-                TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
-                mConditionMap[pCondition] = pCondition;
-                return true;
-            }
-            else
-            {
-                int k=0;
-                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
-                {
-                    k++;//weg
-                    if( mudlet::debugMode ) TDebug()<<"LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
-                    if( (*it).second->nextCondition() == regexNumber )
-                    {
-                        if( mudlet::debugMode ) TDebug()<<"MatchState["<<k<<"] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
-                        (*it).second->conditionMatched();
-                    }
-                }
-                return true;
-            }
+            std::list<std::string> captureList;
+            std::list<int> posList;
+            updateMultistates( regexNumber, captureList, posList );
+            return true;
         }
         execute();
         return true;
@@ -529,31 +492,15 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
     if( text.endsWith(QChar('\n')) ) text.chop(1); //TODO: speed optimization
     if( text == line )
     {
+        std::list<std::string> captureList;
+        std::list<int> posList;
+        captureList.push_back( line.toLatin1().data() );
+        posList.push_back( 0 );
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
         if( mIsMultiline )
         {
-            if( regexNumber == 0 )
-            {
-                if( mudlet::debugMode ) TDebug()<<"#0=true -> creating new MatchState">>0;
-                // wird automatisch auf 1 gesetzt
-                TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
-                mConditionMap[pCondition] = pCondition;    
-                return true;
-            }
-            else
-            {
-                int k=0;
-                for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
-                {
-                    if( mudlet::debugMode ) TDebug() << "LOOKING FOR condition="<<regexNumber<<" MatchState condition="<< (*it).second->nextCondition()>>0;
-                    if( (*it).second->nextCondition() == regexNumber )
-                    {
-                        if( mudlet::debugMode ) TDebug() << "MatchState[" << k << "] conditon #"<<regexNumber<<"=true "<<"nextCondition="<<(*it).second->nextCondition()<<" regex="<<regexNumber<<" updating MatchState["<<k<<"].">>0;
-                        (*it).second->conditionMatched();    
-                    }
-                }
-                return true;
-            }
+            updateMultistates( regexNumber, captureList, posList );
+            return true;
         }
         execute();    
         return true;
@@ -589,19 +536,26 @@ bool TTrigger::match( char * subject, QString & toMatch )
         }
         
         bool conditionMet = false;
-        
+        int highestCondition = 0;
         if( mIsMultiline )
         {
             int matchStateCnt = 0;
             for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
             {
-                //qDebug()<<"TMatchState #"<<++matchStateCnt<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
+
                 (*it).second->newLineArrived();
+                int next = (*it).second->nextCondition();
+                if( next > highestCondition )
+                {
+                    highestCondition = next;
+                }
             }
         }
 
-        for( int i=0; i<mRegexCodePropertyList.size(); i++ )
+        int size = mRegexCodePropertyList.size();
+        for( int i=0; ; i++ )
         {
+            if( i >= size ) break;
             ret = false;
             switch( mRegexCodePropertyList.value(i) )
             {
@@ -635,6 +589,11 @@ bool TTrigger::match( char * subject, QString & toMatch )
                     break; 
                 }
             }
+            else
+            {
+                if( ( ! ret ) && ( i >= highestCondition ) ) break;
+            }
+
         }
         
         // in the case of multiline triggers: check our state
@@ -648,7 +607,6 @@ bool TTrigger::match( char * subject, QString & toMatch )
             for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
             {
                 k++;
-                if( mudlet::debugMode ) TDebug()<<"---> multiline conditons: condition total="<<mConditionMap.size()<<" checking conditon #"<<k>>0;
                 //qDebug()<<"TMatchState #"<<k<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
                 if( (*it).second->isComplete() )
                 {
