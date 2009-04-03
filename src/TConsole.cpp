@@ -556,7 +556,6 @@ void TConsole::translateToPlainText( QString & s )
     int cursorX=0, cursorY=0;
     if( mFormatSequenceRest.size() > 0 ) 
     {
-        qDebug()<<"PREPENDING:<"<<mFormatSequenceRest<<">";
         s.prepend( mFormatSequenceRest );
         mFormatSequenceRest.clear();
     }
@@ -842,6 +841,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mStandardFormat );
     console->showNewLines();
     console2->showNewLines();
+    moveCursorEnd();
 }
 
 QString TConsole::assemble_html_font_specs()
@@ -1097,13 +1097,12 @@ void TConsole::insertText( QString text, QPoint P )
     int r = text.size();
     if( mTriggerEngineMode )
     {
-
         if( hasSelection() )
         {
             if( r < o )
             {
                 int a = -1*(o-r);
-                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );        
+                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
             }
             if( r > o )
             {
@@ -1113,26 +1112,14 @@ void TConsole::insertText( QString text, QPoint P )
         }
         else
         {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );    
+            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );
         }
-    }
-    if( mTriggerEngineMode )
-    {
-        if( y > buffer.getLastLineNumber() )
-        {
-            buffer.append( text,
-                           mFormatCurrent.fgColor,
-                           mFormatCurrent.bgColor,
-                           false,
-                           false,
-                           false );
-        }
-        else if( y < mEngineCursor )
+        if( y < mEngineCursor )
         {
             buffer.insertInLine( P, text, mFormatCurrent );
             console->needUpdate(mUserCursor.y(),mUserCursor.y()+1);
         }
-        else if( y == mEngineCursor )
+        else if( y >= mEngineCursor )
         {
             buffer.insertInLine( P, text, mFormatCurrent );
         }
@@ -1140,7 +1127,7 @@ void TConsole::insertText( QString text, QPoint P )
     }
     else
     {
-        if( mUserCursor.y() >= buffer.getLastLineNumber() )
+        if( mUserCursor.y() == buffer.getLastLineNumber() )
         {
             buffer.append( text,
                            mFormatCurrent.fgColor,
@@ -1155,7 +1142,21 @@ void TConsole::insertText( QString text, QPoint P )
             buffer.insertInLine( mUserCursor,
                                  text,
                                  mFormatCurrent );
-            console->needUpdate(mUserCursor.y(),mUserCursor.y()+1);
+            if( text.indexOf("\n") != -1 )
+            {
+                int y_tmp = mUserCursor.y();
+                int down = buffer.wrapLine( mUserCursor.y(),mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent );
+                console->needUpdate( y_tmp, y_tmp+down+1 );
+                int y_neu = y_tmp+down;
+                int x_adjust = text.lastIndexOf("\n");
+                int x_neu = x_adjust >= 0 ? x_adjust : 0;
+                moveCursor( x_neu, y_neu );
+            }
+            else
+            {
+                console->needUpdate( mUserCursor.y(),mUserCursor.y()+1 );
+                moveCursor( mUserCursor.x()+text.size()-1, mUserCursor.y() );
+            }
         }
     }
 }
@@ -1256,10 +1257,10 @@ int TConsole::getLastLineNumber()
 
 void TConsole::moveCursorEnd()
 {
-    if( ! moveCursor( 0, buffer.getLastLineNumber() ) )
-    {
-        qWarning("ERROR: cant move cursor to last line");
-    }
+    int y = buffer.getLastLineNumber();
+    int x = buffer.line( y ).size()-1;
+    x = x >= 0 ? x : 0;
+    moveCursor( x, y );
 }
 
 bool TConsole::moveCursor( int x, int y )

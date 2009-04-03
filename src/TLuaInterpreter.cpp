@@ -1294,30 +1294,12 @@ bool TLuaInterpreter::compileScript( QString & code )
 
 bool TLuaInterpreter::compile( QString & code )
 {
-    if( mudlet::debugMode )
-    {
-        qDebug("TLuaInterpreter: compiling following code:");
-        qDebug("--------------------------------------------snip<");
-        qDebug() << code;
-        qDebug(">snip--------------------------------------------");
-    }
     lua_State * L = pGlobalLua;
     if( ! L )
     {
         qDebug()<< "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
         return false;
     }
-    
-    /*lua_newtable( L );      
-    
-    // set values
-    for( int i=0; i<matches.size(); i++ )
-    {
-        lua_pushnumber( L, i+1 ); // Lua indexes start with 1
-        lua_pushstring( L, matches[i].toLatin1().data() );
-        lua_settable( L, -3 );
-    }
-    lua_setglobal( L, "matches" );*/
     
     int error = luaL_dostring( L, code.toLatin1().data() );
     QString n;

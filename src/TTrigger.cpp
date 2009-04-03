@@ -53,7 +53,6 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mTriggerContainsPerlRegex( false )
 , mpLua( mpHost->getLuaInterpreter() )
 {
-
 } 
 
 TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host * pHost ) 
@@ -437,7 +436,6 @@ inline void TTrigger::updateMultistates( int regexNumber,
 
 bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNumber )
 {
-    cout << "match_substring() enter"<<endl;
     int where = toMatch.indexOf( regex );
     if( where != -1 )
     {
@@ -467,7 +465,6 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
 
 bool TTrigger::match_lua_code( int regexNumber )
 {
-    cout << "match_lua_code() enter"<<endl;
     if( mLuaConditionMap.find( regexNumber ) == mLuaConditionMap.end() ) return false;
 
     if( mpLua->callConditionFunction( mLuaConditionMap[regexNumber], mName ) )
@@ -681,14 +678,14 @@ bool TTrigger::registerTrigger()
 
 void TTrigger::compile()
 {
-    cout << "mNeedsToBeCompiled="<<mNeedsToBeCompiled<<endl;
+    cout << "TTrigger::compile() mNeedsToBeCompiled="<<mNeedsToBeCompiled<<endl;
     if( mNeedsToBeCompiled )
     {
         mFuncName = QString("Trigger")+QString::number( mID );
         QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
         if( mpLua->compile( code ) )
         {
-            mNeedsToBeCompiled = false;//FIXME isnt sure that compile actually worked!
+            mNeedsToBeCompiled = false;
         }
         else
         {
@@ -724,6 +721,8 @@ void TTrigger::execute()
         {
             mNeedsToBeCompiled = false;
         }
+        else
+            return;
     }
 
     if( mIsMultiline )
