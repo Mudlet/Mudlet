@@ -69,6 +69,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , layerCommandLine( 0 )
 , mLogFileName(QString(""))
 , mLogToLogFile( false )
+, networkLatency( new QLineEdit )
 {
     if( mIsDebugConsole )
     {
@@ -172,6 +173,19 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     logButton->setIcon( icon3 );
     connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
+    networkLatency->setReadOnly( true );
+    networkLatency->setFocusPolicy( Qt::NoFocus );
+    networkLatency->setToolTip("latency of the MUD-server and network (current/average)");
+    networkLatency->setMaximumWidth( 120 );
+    networkLatency->setMinimumWidth( 120 );
+    networkLatency->setAutoFillBackground(true);
+    QPalette lagPalette;
+    lagPalette.setColor( QPalette::Text, QColor(100,255,100) );
+    lagPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    lagPalette.setColor( QPalette::Base, QColor(0,0,0) );
+    networkLatency->setPalette(lagPalette);
+    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
+    networkLatency->setFont( latencyFont );
 
     QIcon icon2(":/icons/edit-bomb.png");
     emergencyStop->setIcon( icon2 );
@@ -183,7 +197,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     layoutLayer2->addWidget( timeStampButton );
     layoutLayer2->addWidget( logButton );
     layoutLayer2->addWidget( emergencyStop );
-    
+    layoutLayer2->addWidget( networkLatency );
+
     layout->addWidget( layer );
     layout->addWidget( layerCommandLine );
           
@@ -802,7 +817,7 @@ void TConsole::translateToPlainText( QString & s )
 }
 
 void TConsole::printOnDisplay( QString & incomingSocketData )  
-{   
+{
     QString prompt ="";//FIXME
     if( mLogToLogFile )
     {
@@ -815,6 +830,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     mTriggerEngineMode = true;
     mDeletedLines = 0;
     int lastLineNumber = buffer.getLastLineNumber();
+    mProcessingTime.restart();
     for( int i=lineBeforeNewContent; i<=lastLineNumber; i++ )
     {
         mUserCursor.setY( i );
@@ -837,11 +853,14 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
             continue;
         }
     }
+    double processT = mProcessingTime.elapsed();
     mTriggerEngineMode = false;    
     buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mStandardFormat );
     console->showNewLines();
     console2->showNewLines();
     moveCursorEnd();
+    networkLatency->setText( QString("net:%1 sys:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
+                                                     .arg(processT/1000,0,'f',3));
 }
 
 QString TConsole::assemble_html_font_specs()

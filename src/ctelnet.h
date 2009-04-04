@@ -21,13 +21,15 @@ copyright (c) 2008 by Heiko Koehn (koehnheiko@googlemail.com)
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <queue>
+#include <QQueue>
 #include <QTextCodec>
 #include <QHostAddress>
 #include <QTcpSocket>
 #include <QHostInfo>
 #include <zlib.h>
 #include <QTimer>
-
+#include <QTime>
 
 #define TN_SE 240
 #define TN_NOP 241
@@ -81,7 +83,11 @@ public:
   void                setDisplayDimensions();
   void                encodingChanged(QString encoding);
   void                set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
-    
+
+  bool                mResponseProcessed;
+  QTime               networkLatencyTime;
+  double              networkLatency;
+
 protected slots:
   
   void                handle_socket_signal_hostFound(QHostInfo);
@@ -119,6 +125,11 @@ private:
   QTextEncoder *      outgoingDataDecoder;
   QString             hostName;
   int                 hostPort;
+
+  double              networkLatencyMin;
+  double              networkLatencyMax;
+  bool                mWaitingForResponse;
+  QQueue<QTime>       mCommandQueue;
   z_stream            mZstream;  
   bool                mMCCP_version_1;
   bool                mMCCP_version_2;
@@ -131,14 +142,15 @@ private:
   bool                heAnnouncedState[256];
   bool                triedToEnable[256];
   bool                recvdGA;
+  bool                mGA_Driver;
   int                 curX, curY;
   QString             termType;
   QString             encoding;
   QTimer *            mpPostingTimer;
   std::string         mMudData;
   bool                mIsTimerPosting;
-    QTimer * mTimerLogin;
-    QTimer * mTimerPass;
+  QTimer *            mTimerLogin;
+  QTimer *            mTimerPass;
 };
 
 #endif

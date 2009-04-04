@@ -197,8 +197,12 @@ public:
       QWidget *         layer;
       QWidget *         layerCommandLine;  
       QPushButton *     emergencyStop;
+      QLineEdit *       networkLatency;
+
     
 private:
+
+      QTime             mProcessingTime;
       QString           profile_name; 
       TChar             mStandardFormat;
       //std::string       getCurrentTime();

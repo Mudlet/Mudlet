@@ -39,6 +39,8 @@ cTelnet::cTelnet( Host * pH )
 : mpHost(pH)
 , mpPostingTimer( new QTimer( this ) )
 , mUSE_IRE_DRIVER_BUGFIX( false )
+, mResponseProcessed( true )
+, mGA_Driver( false )
 {
     if( mpHost )
     {
@@ -197,7 +199,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         mHostAddress = hostInfo.addresses().first();
         QString msg = "The IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
         postMessage( msg );
- 	     	msg = "trying to connect to "+mHostAddress.toString()+":"+QString::number(hostPort)+" ...\n";
+        msg = "trying to connect to "+mHostAddress.toString()+":"+QString::number(hostPort)+" ...\n";
         postMessage( msg );
         socket.connectToHost(mHostAddress, hostPort);
     }
@@ -249,15 +251,17 @@ bool cTelnet::socketOutRaw(string & data)
         if (written == -1)
         {
             return false;
-            qDebug()<<"MUDLET SOCKET ERROR: cant write all data to socket. sleeping(1)";
-    		  		  // buffer full - try again
-      		  		// FIXME: socket errors need to be checked here!
             continue;
         }
         remlen -= written;
         dataLength += written;
     } 
     while(remlen > 0);
+
+    if( mGA_Driver )
+    {
+        mCommandQueue.enqueue( QTime::currentTime() );
+    }
 
     return true;
 }
@@ -761,7 +765,7 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
 
 void cTelnet::handle_socket_signal_readyRead()
 {
-    char buffer[327690]; 
+    char buffer[327690];
     int amount = socket.read( buffer, 327680 );
     buffer[amount+1] = '\0';
     //cout << "RAW_BUFFER_BEGIN<"<<buffer<<">RAW_BUFFER_END"<<endl;
@@ -858,7 +862,6 @@ void cTelnet::handle_socket_signal_readyRead()
                                     mWaitingForCompressedStreamToStart = false;
                                     int restLength = datalen-_i-1;
                                     if( restLength > 0 ) datalen = decompressBuffer( pBuffer, restLength );
-                                    cout << "decompressed buffer len = "<<datalen<<endl;
                                     i = 0;
                                     goto MAIN_LOOP_END;
                                 }
@@ -912,6 +915,7 @@ void cTelnet::handle_socket_signal_readyRead()
 MAIN_LOOP_END: ;
         if(recvdGA)
         {
+            mGA_Driver = true;
             //cout << " GOT telnet command TN_GA" << "cleandata="<<cleandata<<endl;
             //we got a prompt
             if( mUSE_IRE_DRIVER_BUGFIX )
@@ -921,6 +925,20 @@ MAIN_LOOP_END: ;
             gotPrompt( cleandata );
             cleandata = "";
             recvdGA = false;
+            if( ! mCommandQueue.isEmpty() )
+            {
+                double latency = mCommandQueue.dequeue().msecsTo( QTime::currentTime() );
+                latency = latency/1000;
+                if( latency < 1 )
+                {
+                    networkLatency = latency;
+                }
+                else
+                {
+                    mCommandQueue.clear();
+                }
+
+            }
         }
     }//for
   
