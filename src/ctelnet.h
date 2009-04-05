@@ -129,7 +129,8 @@ private:
   double              networkLatencyMin;
   double              networkLatencyMax;
   bool                mWaitingForResponse;
-  QQueue<QTime>       mCommandQueue;
+  std::queue<int>     mCommandQueue;
+  int                 mCommands;
   z_stream            mZstream;  
   bool                mMCCP_version_1;
   bool                mMCCP_version_2;

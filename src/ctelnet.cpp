@@ -41,6 +41,7 @@ cTelnet::cTelnet( Host * pH )
 , mUSE_IRE_DRIVER_BUGFIX( false )
 , mResponseProcessed( true )
 , mGA_Driver( false )
+, mCommands( 0 )
 {
     if( mpHost )
     {
@@ -260,7 +261,12 @@ bool cTelnet::socketOutRaw(string & data)
 
     if( mGA_Driver )
     {
-        mCommandQueue.enqueue( QTime::currentTime() );
+        mCommands++;
+        if( mCommands == 1 )
+        {
+            mWaitingForResponse = true;
+            networkLatencyTime.restart();
+        }
     }
 
     return true;
@@ -765,6 +771,13 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
 
 void cTelnet::handle_socket_signal_readyRead()
 {
+    if( mWaitingForResponse )
+    {
+        double time = networkLatencyTime.elapsed();
+        networkLatency = time/1000;
+        mWaitingForResponse = false;
+    }
+
     char buffer[327690];
     int amount = socket.read( buffer, 327680 );
     buffer[amount+1] = '\0';
@@ -918,27 +931,23 @@ MAIN_LOOP_END: ;
             mGA_Driver = true;
             //cout << " GOT telnet command TN_GA" << "cleandata="<<cleandata<<endl;
             //we got a prompt
+
+            if( mCommands > 0 )
+            {
+                mCommands--;
+                if( networkLatencyTime.elapsed() > 2000 )
+                {
+                    mCommands = 0;
+                }
+            }
+
             if( mUSE_IRE_DRIVER_BUGFIX )
             {
                 cleandata.push_back('\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
             }
+            recvdGA = false;
             gotPrompt( cleandata );
             cleandata = "";
-            recvdGA = false;
-            if( ! mCommandQueue.isEmpty() )
-            {
-                double latency = mCommandQueue.dequeue().msecsTo( QTime::currentTime() );
-                latency = latency/1000;
-                if( latency < 1 )
-                {
-                    networkLatency = latency;
-                }
-                else
-                {
-                    mCommandQueue.clear();
-                }
-
-            }
         }
     }//for
   
