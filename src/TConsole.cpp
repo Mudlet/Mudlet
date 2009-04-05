@@ -1168,13 +1168,17 @@ void TConsole::insertText( QString text, QPoint P )
                 console->needUpdate( y_tmp, y_tmp+down+1 );
                 int y_neu = y_tmp+down;
                 int x_adjust = text.lastIndexOf("\n");
-                int x_neu = x_adjust >= 0 ? x_adjust : 0;
+                int x_neu = 0;
+                if( x_adjust != -1 )
+                {
+                    x_neu = text.size()-x_adjust-1 > 0 ? : 0;
+                }
                 moveCursor( x_neu, y_neu );
             }
             else
             {
                 console->needUpdate( mUserCursor.y(),mUserCursor.y()+1 );
-                moveCursor( mUserCursor.x()+text.size()-1, mUserCursor.y() );
+                moveCursor( mUserCursor.x()+text.size(), mUserCursor.y() );
             }
         }
     }
@@ -1222,7 +1226,6 @@ bool TConsole::deleteLine( int y )
     return buffer.deleteLine( y );
 }
 
-
 bool TConsole::hasSelection() 
 {
     if( mP_start != mP_end )
@@ -1235,7 +1238,6 @@ void TConsole::insertText( QString msg )
 {
     insertText( msg, mUserCursor );    
 }
-
 
 void TConsole::insertHTML( QString text )
 {

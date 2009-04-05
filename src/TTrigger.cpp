@@ -714,7 +714,6 @@ void TTrigger::execute()
     }
     if( mNeedsToBeCompiled )
     {
-        cout << "excute() mNeedsToBeCompiled=true compiling..."<<endl;
         mFuncName = QString("Trigger")+QString::number( mID );
         QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
         if( mpLua->compile( code ) )
