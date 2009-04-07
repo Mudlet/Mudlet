@@ -63,6 +63,9 @@ public:
                                 dlgTriggerEditor( Host * );
     void                        fillout_form();
     void                        closeEvent(QCloseEvent *event);    
+    void                        showError( QString );
+    void                        showWarning( QString );
+    void                        showInfo( QString );
     QsciLexerLua *              mpLuaLexer;
 
 signals:

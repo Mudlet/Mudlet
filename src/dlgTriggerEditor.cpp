@@ -56,6 +56,30 @@ const int dlgTriggerEditor::cmScriptView = 4;
 const int dlgTriggerEditor::cmActionView = 5;
 const int dlgTriggerEditor::cmKeysView = 6;
 
+const QString msgInfoAddAlias = "Alias are input triggers. To make a new alias: <b>1.</b> Define an input trigger pattern. " \
+                                "<b>2.</b> Define a command to send to the MUD in clear text <b><u>instead of the alias pattern</b></u>or write a script for more complicated needs. " \
+                                "<b>3.</b> <b><u>Save</b></u> the new alias. <b>4.</b> <b><u>Activate</b></u> the alias. "\
+                                "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>";
+
+const QString msgInfoAddTrigger = "To add a new trigger: <b>1.</b> Define a <b><u>pattern</b></u> that you want to trigger on. <b>2.</b> select the appropriate pattern <b><u>type</b></u>."\
+                                  "<b>3.</b> Define a clear text command that you want to send to the MUD if the trigger finds the pattern in the text from the MUD or write a script."\
+                                  "<b>4.<u> Save</b></u> the new trigger. <b>5.<u> Activate</b></u> the trigger." \
+                                  "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>";
+
+const QString msgInfoAddScript = "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>";
+
+
+const QString msgInfoAddTimer = "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>";
+
+
+const QString msgInfoAddButton = "To add a new button: <b>1.</b> Add a new group to define a new Button bar in case you don't have any."\
+                                 "<b>2.</b> Add new buttons to a button bar." \
+                                 "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>";
+
+const QString msgInfoAddKey = "To add a new key binding <b>1.</b> add a new key <b>2.</b> click on <u><b>grab key</b></u> and then press your key combination. <b><u>NOTE:</b></u> If you want to bind a key combination you must hold down the modifier keys (e.g. control, shift etc.) down before clicking on grab key. " \
+                              "<b>3.</b> Define a command that is executed when the key is hit. <b>4. <u>Save</u></b> your new key binding <b>4. <u>Activate</b></u> the new key binding." \
+                              "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>";
+
 dlgTriggerEditor::dlgTriggerEditor( Host * pH ) 
 : mpHost( pH )
 , mpCurrentActionItem( 0 )
@@ -77,6 +101,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy6( QSizePolicy::Expanding, QSizePolicy::Fixed );
     mpSystemMessageArea->setSizePolicy( sizePolicy6 );
     pVB1->addWidget( mpSystemMessageArea );
+    connect( mpSystemMessageArea->messageAreaCloseButton, SIGNAL(pressed()), mpSystemMessageArea, SLOT(hide()));
     
     // main areas   
     
@@ -1052,6 +1077,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpSourceEditorArea->script_scintilla->clear();
     mpTriggersMainArea->trigger_command->clear();
     treeWidget->setCurrentItem( pNewItem );
+    showInfo( msgInfoAddTrigger );
 }  
 
 
@@ -1143,6 +1169,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     mpTimersMainArea->lineEdit_command->clear();
     mpSourceEditorArea->script_scintilla->clear();
     treeWidget_timers->setCurrentItem( pNewItem );
+    showInfo( msgInfoAddTimer );
 }  
 
 void dlgTriggerEditor::addKey( bool isFolder )
@@ -1229,6 +1256,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
     mpSourceEditorArea->script_scintilla->clear();
     treeWidget_keys->setCurrentItem( pNewItem );
+    showInfo( msgInfoAddKey );
 }  
 
 
@@ -1324,6 +1352,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->setText( name );
     
     treeWidget_alias->setCurrentItem( pNewItem );
+    showInfo(msgInfoAddAlias);
 }  
 
 void dlgTriggerEditor::addAction( bool isFolder )
@@ -1424,6 +1453,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     
     treeWidget_actions->setCurrentItem( pNewItem );
     mpCurrentActionItem = pNewItem;
+    showInfo( msgInfoAddButton );
 }  
 
 
@@ -3005,6 +3035,33 @@ void dlgTriggerEditor::slot_show_aliases()
     mpSourceEditorArea->show();
     //mpOptionsAreaAlias->show();
     treeWidget_alias->show();
+}
+
+void dlgTriggerEditor::showError( QString error )
+{
+    mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
+    mpSystemMessageArea->notificationAreaIconLabelError->show();
+    mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+    mpSystemMessageArea->notificationAreaMessageBox->setText( error );
+    mpSystemMessageArea->show();
+}
+
+void dlgTriggerEditor::showInfo( QString error )
+{
+    mpSystemMessageArea->notificationAreaIconLabelError->hide();
+    mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+    mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+    mpSystemMessageArea->notificationAreaMessageBox->setText( error );
+    mpSystemMessageArea->show();
+}
+
+void dlgTriggerEditor::showWarning( QString error )
+{
+    mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
+    mpSystemMessageArea->notificationAreaIconLabelError->hide();
+    mpSystemMessageArea->notificationAreaIconLabelWarning->show();
+    mpSystemMessageArea->notificationAreaMessageBox->setText( error );
+    mpSystemMessageArea->show();
 }
 
 void dlgTriggerEditor::slot_show_actions()
