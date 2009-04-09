@@ -225,6 +225,7 @@ void TTimer::execute()
         }
     }
     mpLua->call( mFuncName, mName );
+
 }
 
 bool TTimer::canBeUnlocked( TTimer * pChild )
@@ -250,9 +251,10 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
 
 void TTimer::enableTimer( qint64 id )
 {
-    qDebug()<<"trying enableTimer() name="<<mName;
+
     if( mID == id )
     {
+  qDebug()<<"trying enableTimer() name="<<mName;
         if( canBeUnlocked( 0 ) )
         {
             qDebug()<< "can be unlocked. shouldBeActive()="<<shouldBeActive();
@@ -300,19 +302,18 @@ void TTimer::disableTimer( qint64 id )
 
 void TTimer::enableTimer( QString & name )
 {
-    qDebug()<<"trying enableTimer() name="<<mName;
     if( mName == name )
     {
         if( canBeUnlocked( 0 ) )
         {
-            qDebug()<< "isActive()="<<isActive();
-            if( isActive() )
+            if( activate() )
             {
                 qDebug()<<"OK "<<name<<" was unlocked";
                 mTimer.start();
             }
             else
             {
+                deactivate();
                 qDebug()<<"SORRY: "<<name<<" must stay LOCKED";
                 mTimer.stop();
             }

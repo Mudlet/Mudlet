@@ -610,7 +610,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
-
+    pT->registerTimer();
     while( ! atEnd() ) 
     {
         readNext();
@@ -655,7 +655,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
             }
         }
     }
-    pT->registerTimer();
+
     if( ! pT->isOffsetTimer() )
         pT->setIsActive( pT->shouldBeActive() );
     else
@@ -703,6 +703,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
         pT = new TAlias( 0, mpHost );
     }
 
+    mpHost->getAliasUnit()->registerAlias( pT );
     pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
@@ -748,7 +749,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
             }
         }
     }
-    mpHost->getAliasUnit()->registerAlias( pT );
+
 
 }
 
@@ -791,7 +792,7 @@ void XMLimport::readActionGroup( TAction * pParent )
     {
         pT = new TAction( 0, mpHost );
     }
-
+    mpHost->getActionUnit()->registerAction( pT );
     pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
@@ -898,7 +899,7 @@ void XMLimport::readActionGroup( TAction * pParent )
             }
         }
     }
-    mpHost->getActionUnit()->registerAction( pT );
+
 
 }
 
@@ -941,7 +942,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
     {
         pT = new TScript( 0, mpHost );
     }
-
+    mpHost->getScriptUnit()->registerScript( pT );
     pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
@@ -983,9 +984,6 @@ void XMLimport::readScriptGroup( TScript * pParent )
             }
         }
     }
-    mpHost->getScriptUnit()->registerScript( pT );
-    pT->compile();
-
 }
 
 void XMLimport::readKeyPackage()
@@ -1027,7 +1025,7 @@ void XMLimport::readKeyGroup( TKey * pParent )
     {
         pT = new TKey( 0, mpHost );
     }
-
+    mpHost->getKeyUnit()->registerKey( pT );
     pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
@@ -1079,8 +1077,6 @@ void XMLimport::readKeyGroup( TKey * pParent )
             }
         }
     }
-    mpHost->getKeyUnit()->registerKey( pT );
-
 }
 
 

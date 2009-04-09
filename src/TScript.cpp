@@ -60,7 +60,6 @@ TScript::~TScript()
     {
         if( ! mpHost )
         {
-            qDebug() << "ERROR: TTrigger::**UN**registerTrigger() pHost=0";
             return;
         }
         mpHost->getScriptUnit()->unregisterScript( this );     
@@ -74,10 +73,8 @@ bool TScript::registerScript()
 {
     if( ! mpHost )
     {
-        qDebug() << "ERROR: TTrigger::registerTrigger() pHost=0";
         return false;
     }
-    qDebug()<<"calling TriggerUnit->registerTrigger(this) ...";
     return mpHost->getScriptUnit()->registerScript(this);    
 }
 
@@ -145,10 +142,8 @@ bool TScript::setScript( QString & script )
 
 bool TScript::compileScript()
 {
-    mFuncName = QString("Script")+QString::number( mID );
-    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpLua->compile( code, error ) )
+    if( mpLua->compile( mScript, error ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;

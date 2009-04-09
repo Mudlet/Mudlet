@@ -821,11 +821,11 @@ void dlgTriggerEditor::slot_timer_toggle_active()
         // irrespective of the user defined state.
         if( pT->shouldBeActive() )
         {
-            pT->enableTimer( pT->getName() );
+            pT->enableTimer( pT->getID() );
         }
         else
         {
-            pT->disableTimer( pT->getName() );
+            pT->disableTimer( pT->getID() );
         }
         
         if( pT->shouldBeActive() )
@@ -844,12 +844,12 @@ void dlgTriggerEditor::slot_timer_toggle_active()
             // state of offset timers is managed by the trigger engine
             if( pT->shouldBeActive() )
             {
-                pT->enableTimer( pT->getName() );
+                pT->enableTimer( pT->getID() );
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
             }
             else
             {
-                pT->disableTimer( pT->getName() );
+                pT->disableTimer( pT->getID() );
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
             }
         }
@@ -857,12 +857,12 @@ void dlgTriggerEditor::slot_timer_toggle_active()
         {
             if( pT->shouldBeActive() )
             {
-                pT->enableTimer( pT->getName() );
+                pT->enableTimer( pT->getID() );
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             }
             else
             {
-                pT->disableTimer( pT->getName() );
+                pT->disableTimer( pT->getID() );
                 icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
             }
         }

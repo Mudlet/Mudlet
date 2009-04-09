@@ -78,15 +78,10 @@ bool TKey::match( int key, int modifier )
             {
                 if( mCommand.size() > 0 )
                 {
-                    // when a command is specified we use it instead of the script
                     mpHost->send( mCommand );
-                    return true;
                 }
-                else
-                {
-                    execute();
-                    return true;
-                }
+                execute();
+                return true;
             }
         }
         
@@ -189,7 +184,7 @@ void TKey::execute()
 {
     if( mCommand.size() > 0 )
     {
-        mpHost->send( mCommand );
+        mpHost->sendRaw( mCommand );
     }
     if( mNeedsToBeCompiled )
     {

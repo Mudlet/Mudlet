@@ -189,22 +189,14 @@ void KeyUnit::addKey( TKey * pT )
 {
     if( ! pT ) return;
     
-    QMutexLocker locker(& mKeyUnitLock); 
-    
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
-    }
-    
+    pT->setID( getNewID() );
+
     mKeyMap.insert( pT->getID(), pT );
 }
 
 void KeyUnit::removeKey( TKey * pT )
 {
     if( ! pT ) return;
-    
-    //FIXME: warning: race condition
-    //QMutexLocker locker(& mTriggerUnitLock); 
     mKeyMap.remove( pT->getID() );    
 }
 
