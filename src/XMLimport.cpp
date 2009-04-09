@@ -538,7 +538,6 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             else if( name() == "regexCodePropertyList" )
             {
                 readIntegerList( pT->mRegexCodePropertyList );
-                pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList );
                 continue;
             }
 
@@ -555,6 +554,16 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 readUnknownTriggerElement();
             }
         }
+    }
+
+    if( ! pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList ) )
+    {
+        qDebug()<<"IMPORT: ERROR: cant initialize pattern list for trigger "<<pT->getName();
+    }
+    QString script = pT->mScript;
+    if( ! pT->setScript( script ) )
+    {
+        qDebug()<<"IMPORT: ERROR: trigger script "<< pT->getName()<<" does not compile";
     }
 }
 
@@ -598,8 +607,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         pT = new TTimer( 0, mpHost );
     }
 
-    pT->mUserActiveState = ( attributes().value("isActive") == "yes" );
-    pT->mIsActive = pT->mUserActiveState;
+    pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
 
@@ -617,7 +625,8 @@ void XMLimport::readTimerGroup( TTimer * pParent )
             }
             else if( name() == "script")
             {
-                pT->mScript = readElementText();
+                QString script = readElementText();
+                pT->setScript( script );
                 continue;
             }
             else if( name() == "command")
@@ -647,7 +656,10 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         }
     }
     pT->registerTimer();
-    pT->setIsActive( pT->mUserActiveState );
+    if( ! pT->isOffsetTimer() )
+        pT->setIsActive( pT->shouldBeActive() );
+    else
+        pT->deactivate();
 
 }
 
@@ -691,7 +703,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
         pT = new TAlias( 0, mpHost );
     }
 
-    pT->mIsActive = ( attributes().value("isActive") == "yes" );
+    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
     while( ! atEnd() ) 
@@ -708,7 +720,8 @@ void XMLimport::readAliasGroup( TAlias * pParent )
             }
             else if( name() == "script")
             {
-                pT->mScript = readElementText();
+                QString script = readElementText();
+                pT->setScript( script );
                 continue;
             }
             else if( name() == "command")
@@ -779,7 +792,7 @@ void XMLimport::readActionGroup( TAction * pParent )
         pT = new TAction( 0, mpHost );
     }
 
-    pT->mIsActive = ( attributes().value("isActive") == "yes" );
+    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
     pT->mButtonFlat = ( attributes().value("isFlatButton") == "yes" );
@@ -799,7 +812,8 @@ void XMLimport::readActionGroup( TAction * pParent )
             }
             else if( name() == "script")
             {
-                pT->mScript = readElementText();
+                QString script = readElementText();
+                pT->setScript( script );
                 continue;
             }
             else if( name() == "css")
@@ -928,7 +942,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
         pT = new TScript( 0, mpHost );
     }
 
-    pT->mIsActive = ( attributes().value("isActive") == "yes" );
+    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
     while( ! atEnd() ) 
@@ -945,7 +959,8 @@ void XMLimport::readScriptGroup( TScript * pParent )
             }
             else if( name() == "script")
             {
-                pT->mScript = readElementText();
+                QString script = readElementText();
+                pT->setScript( script );
                 continue;
             }
             else if( name() == "eventHandlerList")
@@ -1013,7 +1028,7 @@ void XMLimport::readKeyGroup( TKey * pParent )
         pT = new TKey( 0, mpHost );
     }
 
-    pT->mIsActive = ( attributes().value("isActive") == "yes" );
+    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
     while( ! atEnd() ) 
@@ -1030,7 +1045,8 @@ void XMLimport::readKeyGroup( TKey * pParent )
             }
             else if( name() == "script")
             {
-                pT->mScript = readElementText();
+                QString script = readElementText();
+                pT->setScript( script );
                 continue;
             }
             else if( name() == "command")
@@ -1111,3 +1127,4 @@ void XMLimport::readIntegerList( QList<int> & list )
         }
     }
 }
+

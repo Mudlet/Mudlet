@@ -39,6 +39,7 @@
 #include <QTextDocumentFragment>
 #include <QPoint>
 #include "TBuffer.h"
+#include "Host.h"
 
 class Host;
 class mudlet;

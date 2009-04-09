@@ -36,6 +36,7 @@
 #include <QDataStream>
 #include "Host.h"
 #include <QTextBlock>
+#include "TLuaInterpreter.h"
 
 class TEvent;
 
@@ -49,42 +50,40 @@ public:
     
     
     virtual          ~TScript();
-    TScript( TScript * parent, Host * pHost ); 
-    TScript( QString name, Host * pHost ); 
-    TScript& clone(const TScript& );
+                     TScript( TScript * parent, Host * pHost );
+                     TScript( QString name, Host * pHost );
+                     TScript& clone(const TScript& );
     
-    QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
-    void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
+    QString          getName()                                         { return mName; }
+    void             setName( QString name )                           { mName = name; }
     void             compile();
     void             compileAll();
+    bool             compileScript();
     void             execute();
-    QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
-    void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
-    bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
-    void             setIsActive( bool b )           { QMutexLocker locker(& mLock); mIsActive = b; }
-    void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
+    QString          getScript()                                       { return mScript; }
+    bool             setScript( QString & script );
+    bool             isFolder()                                        { return mIsFolder; }
+    void             setIsFolder( bool b )                             { mIsFolder = b; }
     bool             registerScript();
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     void             callEventHandler( QString &, TEvent * );
     void             setEventHandlerList( QStringList handlerList );
-    QStringList      getEventHandlerList()            { QMutexLocker locker(& mLock); return mEventHandlerList; }
+    QStringList      getEventHandlerList()                             { return mEventHandlerList; }
     bool             isClone(TScript &b) const;
     
     
 private:
     
-    TScript(){};
+                     TScript(){};
     QString          mName;
     QString          mScript;
-    bool             mIsActive;
+    QString          mFuncName;
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
     QStringList      mEventHandlerList;
-    
-    QMutex           mLock;
+    TLuaInterpreter* mpLua;
 };
 
 #endif

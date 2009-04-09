@@ -37,7 +37,7 @@
 #include "Host.h"
 #include <pcre.h>
 
-
+class TLuaInterpreter;
 
 class TAlias : public Tree<TAlias>
 {
@@ -48,24 +48,23 @@ public:
     
     
     virtual          ~TAlias();
-    TAlias( TAlias * parent, Host * pHost ); 
-    TAlias( QString name, Host * pHost ); 
-    TAlias& clone(const TAlias& );
+                     TAlias( TAlias * parent, Host * pHost );
+                     TAlias( QString name, Host * pHost );
+                     TAlias& clone(const TAlias& );
     
-    QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
-    void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
+    QString          getName()                       { return mName; }
+    void             setName( QString name )         { mName = name; }
     void             compile();
+    bool             compileScript();
     void             execute();
-    QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
-    void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    QString          getRegexCode()                  { QMutexLocker locker(& mLock); return mRegexCode; }
+    QString          getScript()                     { return mScript; }
+    bool             setScript( QString & script );
+    QString          getRegexCode()                  { return mRegexCode; }
     void             setRegexCode( QString );   
-    void             setCommand( QString command )   { QMutexLocker locker(& mLock); mCommand = command; }
-    QString          getCommand()                    { QMutexLocker locker(& mLock); return mCommand; }
-    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
-    bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
-    void             setIsActive( bool b )           { QMutexLocker locker(& mLock); mIsActive = b; }
-    void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
+    void             setCommand( QString command )   { mCommand = command; }
+    QString          getCommand()                    { return mCommand; }
+    bool             isFolder()                      { return mIsFolder; }
+    void             setIsFolder( bool b )           { mIsFolder = b; }
     bool             match( QString & toMatch );
     bool             registerAlias();
     bool             serialize( QDataStream & );
@@ -74,18 +73,17 @@ public:
     
 private:
     
-    TAlias(){};
+                     TAlias(){};
     QString          mName;
     QString          mCommand;
     QString          mRegexCode;
     pcre *           mpRegex;
     QString          mScript;
-    bool             mIsActive;
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
-    
-    QMutex           mLock;
+    QString          mFuncName;
+    TLuaInterpreter * mpLua;
 };
 
 #endif

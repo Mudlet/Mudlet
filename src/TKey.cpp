@@ -32,6 +32,8 @@
 #include "Host.h"
 #include "HostManager.h"
 #include <iostream>
+#include "TDebug.h"
+#include "mudlet.h"
 
 using namespace std;
 
@@ -39,6 +41,7 @@ TKey::TKey( TKey * parent, Host * pHost )
 : Tree<TKey>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
+, mpLua( pHost->getLuaInterpreter() )
 {
 } 
 
@@ -47,6 +50,7 @@ TKey::TKey( QString name, Host * pHost )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
+, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -66,7 +70,7 @@ TKey::~TKey()
 
 bool TKey::match( int key, int modifier )
 {
-    if( mIsActive )
+    if( isActive() )
     {
         if( ! mIsFolder )
         {
@@ -80,9 +84,7 @@ bool TKey::match( int key, int modifier )
                 }
                 else
                 {
-                    QStringList captureList;
-                    captureList << QString("");
-                    execute( captureList );    
+                    execute();
                     return true;
                 }
             }
@@ -109,15 +111,12 @@ bool TKey::registerKey()
     return mpHost->getKeyUnit()->registerKey( this );    
 }
 
-void TKey::compile()
-{
-}
 
 void TKey::enableKey( QString & name )
 {
     if( mName == name )
     {
-        mIsActive = true;
+        setIsActive( true );
     }
     typedef list<TKey *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -131,7 +130,7 @@ void TKey::disableKey( QString & name )
 {
     if( mName == name )
     {
-        mIsActive = false;
+        setIsActive( false );
     }
     typedef list<TKey *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -141,7 +140,52 @@ void TKey::disableKey( QString & name )
     }
 }
 
-void TKey::execute(QStringList & list)
+void TKey::compile()
+{
+    if( mNeedsToBeCompiled )
+    {
+        if( ! compileScript() )
+        {
+            if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of key binding:"<<mName>>0;
+            mOK_code = false;
+        }
+    }
+    typedef list<TKey *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TKey * pChild = *it;
+        pChild->compile();
+    }
+}
+
+bool TKey::setScript( QString & script )
+{
+    mScript = script;
+    mNeedsToBeCompiled = true;
+    mOK_code = compileScript();
+    return mOK_code;
+}
+
+bool TKey::compileScript()
+{
+    mFuncName = QString("Key")+QString::number( mID );
+    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString error;
+    if( mpLua->compile( code, error ) )
+    {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+        return true;
+    }
+    else
+    {
+        mOK_code = false;
+        setError( error );
+        return false;
+    }
+}
+
+void TKey::execute()
 {
     if( mCommand.size() > 0 )
     {
@@ -149,77 +193,20 @@ void TKey::execute(QStringList & list)
     }
     if( mNeedsToBeCompiled )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("function Key") + QString::number( mID ) + QString("()\n"); 
-        QString code = funcName + mScript + QString("\nend\n");
-        if( pL->compile( code ) )
+        if( ! compileScript() )
         {
-            mNeedsToBeCompiled = false;
+            return;
         }
-        funcName = QString("Key") + QString::number( mID ); 
-        pL->call( funcName, mName );
     }
-    else
-    {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("Key") + QString::number( mID ); 
-        pL->call( funcName, mName );
-    }
+    mpLua->call( mFuncName, mName );
 }
 
 bool TKey::serialize( QDataStream & ofs )
 {
-    QMutexLocker locker(& mLock);
-    ofs << mName;
-    ofs << mKeyCode;
-    ofs << mKeyModifier;
-    ofs << mScript;
-    ofs << mID;
-    ofs << mCommand;
-    ofs << mIsActive;
-    ofs << mIsFolder;
-    ofs << (qint64)mpMyChildrenList->size();
-    
-    bool ret = true;
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TKey * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
 } 
 
 bool TKey::restore( QDataStream & ifs, bool initMode )
 {
-    ifs >> mName;
-    ifs >> mKeyCode;
-    ifs >> mKeyModifier;
-    ifs >> mScript;
-    ifs >> mID;
-    ifs >> mCommand;
-    ifs >> mIsActive;
-    ifs >> mIsFolder;
-    qint64 children;
-    ifs >> children;
-    mID = mpHost->getKeyUnit()->getNewID();
-    
-    bool ret = false;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret = true;
-    
-    for( qint64 i=0; i<children; i++ )
-    {
-        TKey * pChild = new TKey( this, mpHost );
-        ret = pChild->restore( ifs, initMode );
-        if( initMode ) 
-            pChild->registerKey();
-    }
-
-    if (getChildrenList()->size() > 0)
-        mIsFolder = true;
-    return ret;
 }
 
 TKey& TKey::clone(const TKey& b)
@@ -231,14 +218,22 @@ TKey& TKey::clone(const TKey& b)
     mRegexCode = b.mRegexCode;
     mRegex = b.mRegex;
     mScript = b.mScript;
-    mIsActive = b.mIsActive;
     mIsFolder = b.mIsFolder;
     mpHost = b.mpHost;
     mNeedsToBeCompiled = b.mNeedsToBeCompiled;
     return *this;
 }
 
-bool TKey::isClone(TKey &b) const {
-    return (mName == b.mName && mCommand == b.mCommand && mKeyCode == b.mKeyCode && mKeyModifier == b.mKeyModifier && mRegexCode == b.mRegexCode && mRegex == b.mRegex && \
-        mScript == b.mScript && mIsActive == b.mIsActive && mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled);
+bool TKey::isClone(TKey &b) const
+{
+    return( mName == b.mName
+            && mCommand == b.mCommand
+            && mKeyCode == b.mKeyCode
+            && mKeyModifier == b.mKeyModifier
+            && mRegexCode == b.mRegexCode
+            && mRegex == b.mRegex
+            && mScript == b.mScript
+            && mIsFolder == b.mIsFolder
+            && mpHost == b.mpHost
+            && mNeedsToBeCompiled == b.mNeedsToBeCompiled );
 }

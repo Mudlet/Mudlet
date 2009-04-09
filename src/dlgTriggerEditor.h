@@ -76,6 +76,7 @@ signals:
     
 public slots:
     
+    void                        slot_itemClicked( QTreeWidgetItem * pItem, int column );
     void                        slot_choseButtonColor();
     void                        slot_export();
     void                        slot_import();
@@ -149,6 +150,13 @@ public slots:
     
 private:
     
+    void                        saveOpenChanges();
+    void                        saveTrigger();
+    void                        saveAlias();
+    void                        saveTimer();
+    void                        saveKey();
+    void                        saveScript();
+    void                        saveAction();
     void                        readSettings();
     void                        writeSettings();
     void                        addScript( bool );
@@ -171,7 +179,13 @@ private:
     void                        exportAction( QFile & );
     void                        exportScript( QFile & );
     void                        exportKey( QFile & );
-    
+    QTreeWidgetItem *           mCurrentAlias;
+    QTreeWidgetItem *           mCurrentTrigger;
+    QTreeWidgetItem *           mCurrentTimer;
+    QTreeWidgetItem *           mCurrentAction;
+    QTreeWidgetItem *           mCurrentScript;
+    QTreeWidgetItem *           mCurrentKey;
+
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;
     QTreeWidgetItem *           mpScriptsBaseItem;

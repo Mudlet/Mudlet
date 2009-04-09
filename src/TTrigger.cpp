@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+#include <assert.h>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -92,7 +92,7 @@ TTrigger::~TTrigger()
 
 
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
-void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList )
+bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList )
 {
     mRegexCodeList.clear();
     mRegexMap.clear();
@@ -100,12 +100,13 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
     mLuaConditionMap.clear();
     mTriggerContainsPerlRegex = false;
     
-    if( propertyList.size() != regexList.size() )
+    assert( propertyList.size() == regexList.size() );
+    if( ( propertyList.size() < 1 ) && ( ! isFolder() ) )
     {
-        qDebug()<<"\nCRITICAL ERROR: TTrigger::setRegexCodeList() regexlist.size() != propertyList.size()";
-        return;
+        setError("No patterns defined.");
+        return false;
     }
-    
+    bool state = true;
     for( int i=0; i<regexList.size(); i++ )
     {
         if( regexList[i].size() < 1 ) continue;
@@ -129,11 +130,14 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             if (re == 0)
             {
                 if( mudlet::debugMode ) TDebug()<<"REGEX_COMPILE_ERROR:"<<pattern>>0;
+                setError( QString( "Pattern '" )+QString(pattern)+QString( "' failed to compile. Correct the pattern.") );
+                state = false;
                 //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
             else
+            {
                 if( mudlet::debugMode ) TDebug()<<"[OK]: REGEX_COMPILE OK">>0;
-            
+            }
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
         }
@@ -143,7 +147,8 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              QString code = QString("function ")+funcName.c_str()+QString("()\n")+mScript + QString("\nend\n");
              if( ! mpLua->compile( code ) )
              {
-                 needsAttention();
+                 setError(QString("pattern type Lua condition '")+regexList[i]+QString("' failed to compile. Check the syntax."));
+                 state = false;
              }
              else
              {
@@ -151,6 +156,15 @@ void TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              }
          }
     }
+    if( ! state )
+    {
+        mOK_init = false;
+    }
+    else
+    {
+        mOK_init = true;
+    }
+    return state;
 }
 
 
@@ -197,9 +211,7 @@ bool TTrigger::isClone( TTrigger & b ) const
 
 bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
 {
-    if( ! isActive() ) return false;
-    
-    if( ! mRegexMap.contains(regexNumber ) ) return false;
+    assert( mRegexMap.contains(regexNumber ) );
     
     pcre * re = mRegexMap[regexNumber];
 
@@ -681,15 +693,10 @@ void TTrigger::compile()
     cout << "TTrigger::compile() mNeedsToBeCompiled="<<mNeedsToBeCompiled<<endl;
     if( mNeedsToBeCompiled )
     {
-        mFuncName = QString("Trigger")+QString::number( mID );
-        QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
-        if( mpLua->compile( code ) )
-        {
-            mNeedsToBeCompiled = false;
-        }
-        else
+        if( ! compileScript() )
         {
             if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of Trigger:"<<mName>>0;
+            mOK_code = false;
         }
     }
     typedef list<TTrigger *>::const_iterator I;
@@ -700,28 +707,45 @@ void TTrigger::compile()
     }
 }
 
+bool TTrigger::setScript( QString & script )
+{
+    mScript = script;
+    mNeedsToBeCompiled = true;
+    mOK_code = compileScript();
+    return mOK_code;
+}
+
+bool TTrigger::compileScript()
+{
+    mFuncName = QString("Trigger")+QString::number( mID );
+    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString error;
+    if( mpLua->compile( code, error ) )
+    {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+        return true;
+    }
+    else
+    {
+        mOK_code = false;
+        setError( error );
+        return false;
+    }
+}
+
 void TTrigger::execute()
 {
-    /*if( mIsTempTrigger )
-    {
-
-        mpLua->compileAndExecuteScript( mScript );
-        return;
-    }*/
     if( mCommand.size() > 0 )
     {
         mpHost->send( mCommand );
     }
     if( mNeedsToBeCompiled )
     {
-        mFuncName = QString("Trigger")+QString::number( mID );
-        QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
-        if( mpLua->compile( code ) )
+        if( ! compileScript() )
         {
-            mNeedsToBeCompiled = false;
-        }
-        else
             return;
+        }
     }
 
     if( mIsMultiline )

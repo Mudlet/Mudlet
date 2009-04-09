@@ -28,6 +28,7 @@
 #include <fstream>
 #include <list>
 #include <string>
+#include <QString>
 #include <QDebug>
 
 template<class T>
@@ -50,25 +51,34 @@ public:
     void               addChild( T * newChild );
     bool               popChild( T * removeChild );
     void               setParent( T * parent );
-    void               setNeedsAttention();
-    bool               needsAttention();
-    virtual bool       canBeActivated();
+
     bool               isActive();
+    bool               activate();
+    void               deactivate();
     bool               setIsActive( bool );
     bool               shouldBeActive();
     void               setShouldBeActive( bool b );
     T *                mpParent;
     std::list<T *> *   mpMyChildrenList;
     qint64             mID;
-    
+    QString &          getError();
+    void               setError( QString );
+    bool               state();
+
     bool               FullyExpanded;
+
+
+protected:
+
+    virtual bool       canBeActivated();
+    bool               mOK_init;
+    bool               mOK_code;
 
 private:
 
-    bool               activate();
     bool               mActive;
-    bool               mNeedSave;
     bool               mUserActiveState;
+    QString            mErrorMessage;
     
 };
 
@@ -77,8 +87,9 @@ Tree<T>::Tree()
 : mpParent( 0 )
 , mpMyChildrenList( new std::list<T *> )
 , mID( 0 ) 
+, mOK_init( true )
+, mOK_code( true )
 , mActive( false )
-, mNeedSave( true )
 , mUserActiveState( false )
 {
 }
@@ -88,8 +99,9 @@ Tree<T>::Tree( T *  pParent )
 : mpParent( pParent )
 , mpMyChildrenList( new std::list<T *> )
 , mID( 0 )
+, mOK_init( true )
+, mOK_code( true )
 , mActive( false )
-, mNeedSave( true )
 , mUserActiveState( false )
 {
     if( pParent ) 
@@ -119,12 +131,6 @@ Tree<T>::~Tree()
     }               
 }
 
-template<class T>
-void Tree<T>::setNeedsAttention()
-{
-    mActive = false;
-    mNeedSave = true;
-}
 
 template<class T>
 bool Tree<T>::shouldBeActive()
@@ -154,9 +160,15 @@ bool Tree<T>::setIsActive( bool b )
 }
 
 template<class T>
-bool Tree<T>::canBeActivated()
+inline bool Tree<T>::state()
 {
-    return shouldBeActive();
+    return mOK_init && mOK_code;
+}
+
+template<class T>
+inline bool Tree<T>::canBeActivated()
+{
+    return shouldBeActive() && state();
 }
 
 template<class T>
@@ -172,16 +184,17 @@ bool Tree<T>::activate()
 }
 
 template<class T>
-bool Tree<T>::isActive()
+void Tree<T>::deactivate()
 {
-    return mActive && mNeedSave;
+    mActive = false;
 }
 
 template<class T>
-bool Tree<T>::needsAttention()
+bool Tree<T>::isActive()
 {
-    return mNeedSave;
+    return mActive && canBeActivated();
 }
+
 
 template<class T>
 void Tree<T>::addChild( T * newChild )
@@ -215,6 +228,19 @@ std::list<T *> * Tree<T>::getChildrenList()
 {
     return mpMyChildrenList;
 }
+
+template<class T>
+QString & Tree<T>::getError()
+{
+    return mErrorMessage;
+}
+
+template<class T>
+void Tree<T>::setError( QString error )
+{
+    mErrorMessage = error;
+}
+
 
 template<class T>
 void Tree<T>::DumpFamily()

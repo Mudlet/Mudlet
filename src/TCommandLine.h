@@ -32,6 +32,9 @@
 #include "Host.h"
 
 class TConsole;
+class KeyUnit;
+class Host;
+class TConsole;
 
 class TCommandLine : public QLineEdit
 {

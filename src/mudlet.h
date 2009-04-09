@@ -26,7 +26,6 @@
 #include <QMainWindow>
 #include <QCloseEvent>
 #include "ui_console.h"
-//#include "ui_main_window.h"
 #include "TConsole.h"
 #include "mudlet.h"
 #include "ctelnet.h"
@@ -35,12 +34,13 @@
 #include <QMap>
 #include "Host.h"
 #include <QMdiArea>
+#include "TConsole.h"
 
 class QAction;
 class QMenu;
 class QTextEdit;
 class EAction;
-
+class TConsole;
 
 class mudlet : public QMainWindow
 {

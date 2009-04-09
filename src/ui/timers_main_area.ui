@@ -1,7 +1,8 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>timers_main_area</class>
- <widget class="QWidget" name="timers_main_area" >
-  <property name="geometry" >
+ <widget class="QWidget" name="timers_main_area">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
@@ -9,29 +10,29 @@
     <height>130</height>
    </rect>
   </property>
-  <property name="sizePolicy" >
-   <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="minimumSize" >
+  <property name="minimumSize">
    <size>
     <width>0</width>
     <height>130</height>
    </size>
   </property>
-  <property name="maximumSize" >
+  <property name="maximumSize">
    <size>
     <width>16777215</width>
     <height>130</height>
    </size>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QWidget" native="1" name="widget" >
-   <property name="geometry" >
+  <widget class="QWidget" name="widget" native="true">
+   <property name="geometry">
     <rect>
      <x>40</x>
      <y>68</y>
@@ -39,26 +40,26 @@
      <height>61</height>
     </rect>
    </property>
-   <property name="sizePolicy" >
-    <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <property name="minimumSize" >
+   <property name="minimumSize">
     <size>
      <width>0</width>
      <height>61</height>
     </size>
    </property>
-   <property name="maximumSize" >
+   <property name="maximumSize">
     <size>
      <width>16777215</width>
      <height>61</height>
     </size>
    </property>
-   <widget class="QLabel" name="label" >
-    <property name="geometry" >
+   <widget class="QLabel" name="label">
+    <property name="geometry">
      <rect>
       <x>36</x>
       <y>22</y>
@@ -66,37 +67,37 @@
       <height>16</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Fixed" hsizetype="Expanding" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>0</width>
       <height>0</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>80</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>9</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
     </property>
-    <property name="text" >
+    <property name="text">
      <string>Time:</string>
     </property>
    </widget>
-   <widget class="QTimeEdit" name="timeEdit_hours" >
-    <property name="geometry" >
+   <widget class="QTimeEdit" name="timeEdit_hours">
+    <property name="geometry">
      <rect>
       <x>76</x>
       <y>6</y>
@@ -104,30 +105,30 @@
       <height>51</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>60</width>
       <height>40</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>60</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="palette" >
+    <property name="palette">
      <palette>
       <active>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>255</red>
           <green>234</green>
           <blue>218</blue>
@@ -136,9 +137,9 @@
        </colorrole>
       </active>
       <inactive>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>255</red>
           <green>234</green>
           <blue>218</blue>
@@ -147,9 +148,9 @@
        </colorrole>
       </inactive>
       <disabled>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>244</red>
           <green>244</green>
           <blue>244</blue>
@@ -159,27 +160,27 @@
       </disabled>
      </palette>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>30</pointsize>
      </font>
     </property>
-    <property name="autoFillBackground" >
+    <property name="autoFillBackground">
      <bool>true</bool>
     </property>
-    <property name="frame" >
+    <property name="frame">
      <bool>false</bool>
     </property>
-    <property name="alignment" >
+    <property name="alignment">
      <set>Qt::AlignCenter</set>
     </property>
-    <property name="buttonSymbols" >
+    <property name="buttonSymbols">
      <enum>QAbstractSpinBox::NoButtons</enum>
     </property>
-    <property name="accelerated" >
+    <property name="accelerated">
      <bool>false</bool>
     </property>
-    <property name="dateTime" >
+    <property name="dateTime">
      <datetime>
       <hour>0</hour>
       <minute>0</minute>
@@ -189,15 +190,15 @@
       <day>1</day>
      </datetime>
     </property>
-    <property name="currentSection" >
+    <property name="currentSection">
      <enum>QDateTimeEdit::HourSection</enum>
     </property>
-    <property name="displayFormat" >
+    <property name="displayFormat">
      <string>h</string>
     </property>
    </widget>
-   <widget class="QTimeEdit" name="timeEdit_minutes" >
-    <property name="geometry" >
+   <widget class="QTimeEdit" name="timeEdit_minutes">
+    <property name="geometry">
      <rect>
       <x>166</x>
       <y>6</y>
@@ -205,30 +206,30 @@
       <height>51</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>60</width>
       <height>40</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>60</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="palette" >
+    <property name="palette">
      <palette>
       <active>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>255</red>
           <green>254</green>
           <blue>215</blue>
@@ -237,9 +238,9 @@
        </colorrole>
       </active>
       <inactive>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>255</red>
           <green>254</green>
           <blue>215</blue>
@@ -248,9 +249,9 @@
        </colorrole>
       </inactive>
       <disabled>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>244</red>
           <green>244</green>
           <blue>244</blue>
@@ -260,35 +261,35 @@
       </disabled>
      </palette>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>30</pointsize>
      </font>
     </property>
-    <property name="autoFillBackground" >
+    <property name="autoFillBackground">
      <bool>true</bool>
     </property>
-    <property name="frame" >
+    <property name="frame">
      <bool>false</bool>
     </property>
-    <property name="alignment" >
+    <property name="alignment">
      <set>Qt::AlignCenter</set>
     </property>
-    <property name="buttonSymbols" >
+    <property name="buttonSymbols">
      <enum>QAbstractSpinBox::NoButtons</enum>
     </property>
-    <property name="accelerated" >
+    <property name="accelerated">
      <bool>true</bool>
     </property>
-    <property name="currentSection" >
+    <property name="currentSection">
      <enum>QDateTimeEdit::MinuteSection</enum>
     </property>
-    <property name="displayFormat" >
+    <property name="displayFormat">
      <string>m</string>
     </property>
    </widget>
-   <widget class="QTimeEdit" name="timeEdit_seconds" >
-    <property name="geometry" >
+   <widget class="QTimeEdit" name="timeEdit_seconds">
+    <property name="geometry">
      <rect>
       <x>256</x>
       <y>6</y>
@@ -296,30 +297,30 @@
       <height>51</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>60</width>
       <height>40</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>60</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="palette" >
+    <property name="palette">
      <palette>
       <active>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>232</red>
           <green>255</green>
           <blue>231</blue>
@@ -328,9 +329,9 @@
        </colorrole>
       </active>
       <inactive>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>232</red>
           <green>255</green>
           <blue>231</blue>
@@ -339,9 +340,9 @@
        </colorrole>
       </inactive>
       <disabled>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>244</red>
           <green>244</green>
           <blue>244</blue>
@@ -351,35 +352,35 @@
       </disabled>
      </palette>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>30</pointsize>
      </font>
     </property>
-    <property name="autoFillBackground" >
+    <property name="autoFillBackground">
      <bool>true</bool>
     </property>
-    <property name="frame" >
+    <property name="frame">
      <bool>false</bool>
     </property>
-    <property name="alignment" >
+    <property name="alignment">
      <set>Qt::AlignCenter</set>
     </property>
-    <property name="buttonSymbols" >
+    <property name="buttonSymbols">
      <enum>QAbstractSpinBox::NoButtons</enum>
     </property>
-    <property name="accelerated" >
+    <property name="accelerated">
      <bool>true</bool>
     </property>
-    <property name="currentSection" >
+    <property name="currentSection">
      <enum>QDateTimeEdit::SecondSection</enum>
     </property>
-    <property name="displayFormat" >
+    <property name="displayFormat">
      <string>s</string>
     </property>
    </widget>
-   <widget class="QTimeEdit" name="timeEdit_msecs" >
-    <property name="geometry" >
+   <widget class="QTimeEdit" name="timeEdit_msecs">
+    <property name="geometry">
      <rect>
       <x>348</x>
       <y>6</y>
@@ -387,30 +388,30 @@
       <height>51</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>110</width>
       <height>40</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>110</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="palette" >
+    <property name="palette">
      <palette>
       <active>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>255</red>
           <green>230</green>
           <blue>232</blue>
@@ -419,9 +420,9 @@
        </colorrole>
       </active>
       <inactive>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>255</red>
           <green>230</green>
           <blue>232</blue>
@@ -430,9 +431,9 @@
        </colorrole>
       </inactive>
       <disabled>
-       <colorrole role="Base" >
-        <brush brushstyle="SolidPattern" >
-         <color alpha="255" >
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
           <red>244</red>
           <green>244</green>
           <blue>244</blue>
@@ -442,35 +443,35 @@
       </disabled>
      </palette>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>30</pointsize>
      </font>
     </property>
-    <property name="autoFillBackground" >
+    <property name="autoFillBackground">
      <bool>true</bool>
     </property>
-    <property name="frame" >
+    <property name="frame">
      <bool>false</bool>
     </property>
-    <property name="alignment" >
+    <property name="alignment">
      <set>Qt::AlignCenter</set>
     </property>
-    <property name="buttonSymbols" >
+    <property name="buttonSymbols">
      <enum>QAbstractSpinBox::NoButtons</enum>
     </property>
-    <property name="accelerated" >
+    <property name="accelerated">
      <bool>true</bool>
     </property>
-    <property name="currentSection" >
+    <property name="currentSection">
      <enum>QDateTimeEdit::MSecSection</enum>
     </property>
-    <property name="displayFormat" >
+    <property name="displayFormat">
      <string>z</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_3" >
-    <property name="geometry" >
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
      <rect>
       <x>464</x>
       <y>0</y>
@@ -478,35 +479,35 @@
       <height>58</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>80</width>
       <height>0</height>
      </size>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>8</pointsize>
      </font>
     </property>
-    <property name="text" >
+    <property name="text">
      <string>(Format: Hours, Minutes, Seconds, Milliseconds)</string>
     </property>
-    <property name="scaledContents" >
+    <property name="scaledContents">
      <bool>true</bool>
     </property>
-    <property name="wordWrap" >
+    <property name="wordWrap">
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QLabel" name="label_2" >
-    <property name="geometry" >
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
      <rect>
       <x>140</x>
       <y>14</y>
@@ -514,25 +515,25 @@
       <height>35</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Preferred" hsizetype="Preferred" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>0</width>
       <height>0</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>80</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>40</pointsize>
       <weight>75</weight>
@@ -540,12 +541,12 @@
       <stylestrategy>PreferAntialias</stylestrategy>
      </font>
     </property>
-    <property name="text" >
+    <property name="text">
      <string>:</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_6" >
-    <property name="geometry" >
+   <widget class="QLabel" name="label_6">
+    <property name="geometry">
      <rect>
       <x>232</x>
       <y>12</y>
@@ -553,25 +554,25 @@
       <height>35</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Preferred" hsizetype="Preferred" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>0</width>
       <height>0</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>80</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>40</pointsize>
       <weight>75</weight>
@@ -579,12 +580,12 @@
       <stylestrategy>PreferAntialias</stylestrategy>
      </font>
     </property>
-    <property name="text" >
+    <property name="text">
      <string>:</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_7" >
-    <property name="geometry" >
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
      <rect>
       <x>324</x>
       <y>12</y>
@@ -592,25 +593,25 @@
       <height>35</height>
      </rect>
     </property>
-    <property name="sizePolicy" >
-     <sizepolicy vsizetype="Preferred" hsizetype="Preferred" >
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <property name="minimumSize" >
+    <property name="minimumSize">
      <size>
       <width>0</width>
       <height>0</height>
      </size>
     </property>
-    <property name="maximumSize" >
+    <property name="maximumSize">
      <size>
       <width>80</width>
       <height>16777215</height>
      </size>
     </property>
-    <property name="font" >
+    <property name="font">
      <font>
       <pointsize>40</pointsize>
       <weight>75</weight>
@@ -618,13 +619,13 @@
       <stylestrategy>PreferAntialias</stylestrategy>
      </font>
     </property>
-    <property name="text" >
+    <property name="text">
      <string>:</string>
     </property>
    </widget>
   </widget>
-  <widget class="QLineEdit" name="lineEdit_timer_name" >
-   <property name="geometry" >
+  <widget class="QLineEdit" name="lineEdit_timer_name">
+   <property name="geometry">
     <rect>
      <x>116</x>
      <y>2</y>
@@ -633,8 +634,8 @@
     </rect>
    </property>
   </widget>
-  <widget class="QLabel" name="label_5" >
-   <property name="geometry" >
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
     <rect>
      <x>38</x>
      <y>2</y>
@@ -642,12 +643,12 @@
      <height>22</height>
     </rect>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>Timer name:</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_4" >
-   <property name="geometry" >
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
     <rect>
      <x>48</x>
      <y>22</y>
@@ -655,56 +656,35 @@
      <height>23</height>
     </rect>
    </property>
-   <property name="sizePolicy" >
-    <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <property name="minimumSize" >
+   <property name="minimumSize">
     <size>
      <width>0</width>
      <height>0</height>
     </size>
    </property>
-   <property name="maximumSize" >
+   <property name="maximumSize">
     <size>
      <width>16777215</width>
      <height>16777215</height>
     </size>
    </property>
-   <property name="font" >
+   <property name="font">
     <font>
      <pointsize>9</pointsize>
     </font>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>Command:</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="checkBox" >
-   <property name="geometry" >
-    <rect>
-     <x>14</x>
-     <y>50</y>
-     <width>114</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="font" >
-    <font>
-     <stylestrategy>PreferAntialias</stylestrategy>
-    </font>
-   </property>
-   <property name="layoutDirection" >
-    <enum>Qt::RightToLeft</enum>
-   </property>
-   <property name="text" >
-    <string>Repeating timer</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_command" >
-   <property name="geometry" >
+  <widget class="QLineEdit" name="lineEdit_command">
+   <property name="geometry">
     <rect>
      <x>116</x>
      <y>26</y>
@@ -713,15 +693,7 @@
     </rect>
    </property>
   </widget>
-  <zorder>widget</zorder>
-  <zorder>lineEdit_timer_name</zorder>
-  <zorder>label_5</zorder>
-  <zorder>checkBox</zorder>
-  <zorder>label_4</zorder>
-  <zorder>lineEdit_command</zorder>
  </widget>
- <resources>
-  <include location="../mudlet_alpha.qrc" />
- </resources>
+ <resources/>
  <connections/>
 </ui>

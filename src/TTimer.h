@@ -52,61 +52,51 @@ public:
                      TTimer( TTimer * parent, Host * pHost ); 
                      TTimer( QString name, QTime time, Host * pHost ); 
                      TTimer& clone(const TTimer& );
-    
-    //QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
-    QString &        getName()                       { QMutexLocker locker(& mLock); return mName; }
-    
-    void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
-    QTime &          getTime()                       { QMutexLocker locker(& mLock); return mTime; }
+    QString &        getName()                       { return mName; }
+    void             setName( QString name )         { mName = name; }
+    QTime &          getTime()                       { return mTime; }
     void             compile();
+    bool             compileScript();
     void             execute();
     void             setTime( QTime time );         
-    QString          getCommand()                    { QMutexLocker locker(& mLock); return mCommand; }
-    void             setCommand( QString & cmd )     { QMutexLocker locker(& mLock); mCommand = cmd; }
-    QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
-    void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }
-    bool             getUserActiveState()               { QMutexLocker locker(& mLock); return mUserActiveState; }  
+    QString          getCommand()                    { return mCommand; }
+    void             setCommand( QString & cmd )     { mCommand = cmd; }
+    QString          getScript()                     { return mScript; }
+    bool             setScript( QString & script );
     bool             canBeUnlocked( TTimer * );
-    bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
-    void             setIsTempTimer( bool b )        { QMutexLocker locker(& mLock); mIsTempTimer = b; }    
-    bool             isTempTimer()                   { QMutexLocker locker(& mLock); return mIsTempTimer; }
-    void             setUserActiveState( bool b );
-    void             setIsActive( bool b );           
-    void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
+    bool             isFolder()                      { return mIsFolder; }
+    void             setIsTempTimer( bool b )        { mIsTempTimer = b; }
+    bool             isTempTimer()                   { return mIsTempTimer; }
+    void             setIsFolder( bool b )           { mIsFolder = b; }
     bool             registerTimer();
+    bool             setIsActive( bool );
     void             stop();
     void             start();
     void             enableTimer( QString & );
     void             disableTimer( QString & );
     void             enableTimer( qint64 );
     void             disableTimer( qint64 );
-    
     TTimer *         killTimer( QString & );
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
-    void             slot_timer_fires();
     bool             isClone(TTimer &b) const;
     bool             isOffsetTimer();
     
-    
-    
 private:
     
-                     TTimer(){};
-    QString          mName;
-    QString          mScript;
-    QTime            mTime;
-
-    QString          mCommand;
-    bool             mIsActive;
-    bool             mUserActiveState; // temp state that holds user selected timer state during disabled parent timer periods
-    bool             mIsFolder;
-    Host *           mpHost;
-    bool             mNeedsToBeCompiled;
-    bool             mIsTempTimer;
-    QMutex           mLock;
-    QTimer           mTimer;
+                       TTimer(){};
+    QString            mName;
+    QString            mScript;
+    QTime              mTime;
+    QString            mCommand;
+    QString            mFuncName;
+    bool               mIsFolder;
+    Host *             mpHost;
+    bool               mNeedsToBeCompiled;
+    bool               mIsTempTimer;
+    QMutex             mLock;
+    QTimer             mTimer;
+    TLuaInterpreter *  mpLua;
         
 };
 

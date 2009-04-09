@@ -55,49 +55,51 @@ public:
                      TAction( QString name, Host * pHost ); 
                      TAction & clone(const TAction & );
     
-    QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
-    void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
-    void             setButtonColor( QColor c )      { QMutexLocker locker(& mLock); mButtonColor = c; }
-    QColor           getButtonColor()                { QMutexLocker locker(& mLock); return mButtonColor; }
-    void             setButtonRotation( int r )      { QMutexLocker locker(& mLock); mButtonRotation = r; }
-    int              getButtonRotation()             { QMutexLocker locker(& mLock); return mButtonRotation; }
-    void             setButtonColumns( int c )       { QMutexLocker locker(& mLock); mButtonColumns = c; }
-    int              getButtonColumns()              { QMutexLocker locker(& mLock); return mButtonColumns; }
-    bool             getButtonFlat()                 { QMutexLocker locker(& mLock); return mButtonFlat; }
-    void             setButtonFlat( bool flat )      { QMutexLocker locker(& mLock); mButtonFlat = flat; }
+    QString          getName()                                 { return mName; }
+    void             setName( QString name )                   { mName = name; }
+    void             setButtonColor( QColor c )                { mButtonColor = c; }
+    QColor           getButtonColor()                          { return mButtonColor; }
+    void             setButtonRotation( int r )                { mButtonRotation = r; }
+    int              getButtonRotation()                       { return mButtonRotation; }
+    void             setButtonColumns( int c )                 { mButtonColumns = c; }
+    int              getButtonColumns()                        { return mButtonColumns; }
+    bool             getButtonFlat()                           { return mButtonFlat; }
+    void             setButtonFlat( bool flat )                { mButtonFlat = flat; }
     
-    void             setSizeX( int s )      { QMutexLocker locker(& mLock); mSizeX = s; }
-    int              getSizeX()             { QMutexLocker locker(& mLock); return mSizeX; }
-    void             setSizeY( int s )      { QMutexLocker locker(& mLock); mSizeY = s; }
-    int              getSizeY()             { QMutexLocker locker(& mLock); return mSizeY; }
+    void             setSizeX( int s )                         { mSizeX = s; }
+    int              getSizeX()                                { return mSizeX; }
+    void             setSizeY( int s )                         { mSizeY = s; }
+    int              getSizeY()                                { return mSizeY; }
     
     
     void             compile();
+    bool             compileScript();
     void             execute(QStringList &);
-    QString          getIcon()                     { QMutexLocker locker(& mLock); return mIcon; }
-    void             setIcon( QString & icon )   { QMutexLocker locker(& mLock); mIcon = icon; }
-    QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
-    void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    QString          getCommandButtonUp()                  { QMutexLocker locker(& mLock); return mCommandButtonUp; }
-    void             setCommandButtonUp( QString cmd )   { QMutexLocker locker(& mLock); mCommandButtonUp = cmd; }
-    void             setCommandButtonDown( QString command )   { QMutexLocker locker(& mLock); mCommandButtonDown = command; }
-    QString          getCommandButtonDown()                    { QMutexLocker locker(& mLock); return mCommandButtonDown; }
-    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
-    bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
-    bool             isPushDownButton()              { QMutexLocker locker(& mLock); return mIsPushDownButton; }
-    void             setIsPushDownButton( bool b )   { QMutexLocker locker(& mLock); mIsPushDownButton = b; }
-    void             setIsActive( bool b )           { QMutexLocker locker(& mLock); mIsActive = b; }
-    void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
+    QString          getIcon()                                 { return mIcon; }
+    void             setIcon( QString & icon )                 { mIcon = icon; }
+    QString          getScript()                               { return mScript; }
+    bool             setScript( QString & script );
+    QString          getCommandButtonUp()                      { return mCommandButtonUp; }
+    void             setCommandButtonUp( QString cmd )         { mCommandButtonUp = cmd; }
+    void             setCommandButtonDown( QString command )   { mCommandButtonDown = command; }
+    QString          getCommandButtonDown()                    { return mCommandButtonDown; }
+    bool             isFolder()                                { return mIsFolder; }
+    bool             isPushDownButton()                        { return mIsPushDownButton; }
+    void             setIsPushDownButton( bool b )             { mIsPushDownButton = b; }
+    void             setIsFolder( bool b )                     { mIsFolder = b; }
     bool             match( QString & toMatch );
     bool             registerAction();
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
-    void             insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu );
-    void             expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu );
+    void             insertActions( mudlet * pMainWindow,
+                                    TToolBar * pT,
+                                    QMenu * menu );
+    void             expandToolbar( mudlet * pMainWindow,
+                                    TToolBar * pT,
+                                    QMenu * menu );
     bool             isClone(TAction & ) const;
     TToolBar *       mpToolBar;
     int              mButtonState;
-    
     int              mPosX;
     int              mPosY;
     int              mOrientation;
@@ -108,7 +110,6 @@ public:
     QRegExp          mRegex;
     QString          mScript;
     bool             mIsPushDownButton;
-    bool             mIsActive;
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
@@ -127,7 +128,8 @@ public:
 private:
     
     TAction(){};
-    QMutex           mLock;
+    QString          mFuncName;
+    TLuaInterpreter * mpLua;
 };
 
 #endif

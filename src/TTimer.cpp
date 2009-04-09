@@ -37,20 +37,22 @@
 using namespace std;
 
 TTimer::TTimer( TTimer * parent, Host * pHost ) 
-: Tree<TTimer>( parent ),
-mpHost( pHost ),
-mNeedsToBeCompiled( true ),
-mIsTempTimer( false )
+: Tree<TTimer>( parent )
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mIsTempTimer( false )
+, mpLua( mpHost->getLuaInterpreter() )
 {
 } 
 
 TTimer::TTimer( QString name, QTime time, Host * pHost ) 
-: Tree<TTimer>(0),
-mName( name ),
-mTime( time ),
-mpHost( pHost ),
-mNeedsToBeCompiled( true ),
-mIsTempTimer( false )
+: Tree<TTimer>(0)
+, mName( name )
+, mTime( time )
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mIsTempTimer( false )
+, mpLua( mpHost->getLuaInterpreter() )
 {
 }
 
@@ -97,7 +99,10 @@ bool TTimer::isOffsetTimer()
 {
     if( mpParent )
     {
-        return ! mpParent->isFolder();
+        if( ! mpParent->isFolder() )
+        {
+            return true;
+        }
     }
     else
     {
@@ -105,11 +110,10 @@ bool TTimer::isOffsetTimer()
     }
 }
 
-void TTimer::setIsActive( bool b )
+bool TTimer::setIsActive( bool b )
 {
-    QMutexLocker locker(& mLock); 
-    mIsActive = b; 
-    if( mIsActive )
+    bool ret = Tree<TTimer>::setIsActive( b );
+    if( ret )
     {
         start(); 
     }
@@ -117,18 +121,9 @@ void TTimer::setIsActive( bool b )
     {
         stop(); 
     }
+    return ret;
 }
 
-void TTimer::slot_timer_fires()
-{
-    qDebug()<<"[ *** CRITICAL ERROR *** ]: "<<mName<<" fired. and called wrong callback: Please file a bug report!";
-    // execute();    
-    exit(-1);
-}
-
-void TTimer::compile()
-{
-}
 
 void TTimer::start()
 {
@@ -141,24 +136,66 @@ void TTimer::stop()
     mTimer.stop();    
 }
 
+void TTimer::compile()
+{
+    if( mNeedsToBeCompiled )
+    {
+        if( ! compileScript() )
+        {
+            if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of timer:"<<mName>>0;
+            mOK_code = false;
+        }
+    }
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TTimer * pChild = *it;
+        pChild->compile();
+    }
+}
+
+bool TTimer::setScript( QString & script )
+{
+    mScript = script;
+    mNeedsToBeCompiled = true;
+    mOK_code = compileScript();
+    return mOK_code;
+}
+
+bool TTimer::compileScript()
+{
+    mFuncName = QString("Timer")+QString::number( mID );
+    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString error;
+    if( mpLua->compile( code, error ) )
+    {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+        return true;
+    }
+    else
+    {
+        mOK_code = false;
+        setError( error );
+        return false;
+    }
+}
+
 void TTimer::execute()
 {
     if( mudlet::debugMode ) TDebug() << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;
     
     if( mIsTempTimer )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        pL->compileAndExecuteScript( mScript );
+        mpLua->compileAndExecuteScript( mScript );
         mTimer.stop();
         mpHost->mTimerUnit.markCleanup( this );
         return;
     }
     
-    if( isOffsetTimer() )
+    if( ( ! isFolder() && hasChildren() ) || ( isOffsetTimer() ) )
     {
-        disableTimer( mID );
-        mIsActive = false;
-        
+        qDebug()<<"offset timer: enable my children";
         typedef list<TTimer *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
@@ -167,6 +204,11 @@ void TTimer::execute()
             {
                 pChild->enableTimer( pChild->getID() );
             }
+        }
+        if( isOffsetTimer() )
+        {
+            disableTimer( mID );
+            deactivate();
         }
     }
     
@@ -177,29 +219,17 @@ void TTimer::execute()
     
     if( mNeedsToBeCompiled )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QStringList list;
-        QString funcName = QString("function Timer") + QString::number( mID ) + QString("()\n"); 
-        QString code = funcName + mScript + QString("\nend\n");
-        if( pL->compile( code ) )
+        if( ! compileScript() )
         {
-            mNeedsToBeCompiled = false;
+            return;
         }
-        funcName = QString("Timer") + QString::number( mID ); 
-        pL->call( funcName, mName );
     }
-    else
-    {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("Timer") + QString::number( mID ); 
-        QStringList list;
-        pL->call( funcName, mName );
-    }
+    mpLua->call( mFuncName, mName );
 }
 
 bool TTimer::canBeUnlocked( TTimer * pChild )
 {
-    if( mUserActiveState )
+    if( shouldBeActive() )
     {
         if( ! mpParent )
         {
@@ -225,17 +255,17 @@ void TTimer::enableTimer( qint64 id )
     {
         if( canBeUnlocked( 0 ) )
         {
-            qDebug()<< "mUserActiveState="<<mUserActiveState;
-            mIsActive = mUserActiveState;
-            if( mIsActive ) 
+            qDebug()<< "can be unlocked. shouldBeActive()="<<shouldBeActive();
+            if( activate() )
             {
                 qDebug()<<"OK ID="<<id<<" was unlocked";
                 mTimer.start();
             }
             else
             {
+                deactivate();
                 qDebug()<<"SORRY: ID="<<id<<" must stay LOCKED";
-                mIsActive = false;
+                mTimer.stop();
             }
         }
     }
@@ -255,7 +285,7 @@ void TTimer::disableTimer( qint64 id )
 {
     if( mID == id )
     {
-        mIsActive = false;
+        deactivate();
         mTimer.stop();
     }
     
@@ -275,9 +305,8 @@ void TTimer::enableTimer( QString & name )
     {
         if( canBeUnlocked( 0 ) )
         {
-            qDebug()<< "mUserActiveState="<<mUserActiveState;
-            mIsActive = mUserActiveState;
-            if( mIsActive ) 
+            qDebug()<< "isActive()="<<isActive();
+            if( isActive() )
             {
                 qDebug()<<"OK "<<name<<" was unlocked";
                 mTimer.start();
@@ -285,7 +314,7 @@ void TTimer::enableTimer( QString & name )
             else
             {
                 qDebug()<<"SORRY: "<<name<<" must stay LOCKED";
-                mIsActive = false;
+                mTimer.stop();
             }
         }
     }
@@ -303,9 +332,10 @@ void TTimer::enableTimer( QString & name )
 
 void TTimer::disableTimer( QString & name )
 {
+    qDebug()<<"trying to disable timer "<<name;
     if( mName == name )
     {
-        mIsActive = false;
+        deactivate();
         mTimer.stop();
     }
     
@@ -317,18 +347,12 @@ void TTimer::disableTimer( QString & name )
     }
 }
 
-void TTimer::setUserActiveState( bool state )
-{ 
-    QMutexLocker locker(& mLock); 
-    mUserActiveState = state; 
-}
-
 
 TTimer * TTimer::killTimer( QString & name )
 {
     if( mName == name )
     {
-        mIsActive = false;
+        deactivate();
         mTimer.stop();
         return this;
     }
@@ -344,69 +368,19 @@ TTimer * TTimer::killTimer( QString & name )
 
 bool TTimer::serialize( QDataStream & ofs )
 {
-    QMutexLocker locker(& mLock);
-    qDebug()<<"serializing:"<< mName;
-    
-    ofs << mName;
-    ofs << mScript;
-    ofs << mTime;
-    ofs << mCommand;
-    ofs << mID;
-    ofs << mIsActive;
-    ofs << mIsFolder;
-    ofs << mIsTempTimer;
-    ofs << (qint64)mpMyChildrenList->size();
-    bool ret = true;
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTimer * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
 } 
 
 
 bool TTimer::restore( QDataStream & ifs, bool initMode )
 {
-    ifs >> mName;
-    ifs >> mScript;
-    ifs >> mTime;
-    ifs >> mCommand;
-    ifs >> mID;
-    ifs >> mIsActive;
-    ifs >> mIsFolder;
-    ifs >> mIsTempTimer;
-    qint64 children;
-    ifs >> children;
-    mID = mpHost->getTimerUnit()->getNewID();
-    
-    bool ret = false;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret = true;
-    
-    for( qint64 i=0; i<children; i++ )
-    {
-        TTimer * pChild = new TTimer( this, mpHost );
-        ret = pChild->restore( ifs, initMode );
-        if( initMode )
-            pChild->registerTimer();
-    }
-
-    if (getChildrenList()->size() > 0)
-        mIsFolder = true;
-    
-    return ret;
 }
 
-TTimer& TTimer::clone(const TTimer& b)
+TTimer& TTimer::clone(const TTimer & b)
 {
     mName = b.mName;
     mScript = b.mScript;
     mTime = b.mTime;
     mCommand = b.mCommand;
-    mIsActive = b.mIsActive;
     mIsFolder = b.mIsFolder;
     mpHost = b.mpHost;
     mNeedsToBeCompiled = b.mNeedsToBeCompiled;
@@ -414,7 +388,14 @@ TTimer& TTimer::clone(const TTimer& b)
     return *this;
 }
 
-bool TTimer::isClone(TTimer &b) const {
-    return (mName == b.mName && mScript == b.mScript && mTime == b.mTime && mCommand == b.mCommand && mIsActive == b.mIsActive && \
-        mIsFolder == b.mIsFolder && mpHost == b.mpHost && mNeedsToBeCompiled == b.mNeedsToBeCompiled && mIsTempTimer == b.mIsTempTimer);
+bool TTimer::isClone( TTimer & b ) const
+{
+    return( mName == b.mName
+            && mScript == b.mScript
+            && mTime == b.mTime
+            && mCommand == b.mCommand
+            && mIsFolder == b.mIsFolder
+            && mpHost == b.mpHost
+            && mNeedsToBeCompiled == b.mNeedsToBeCompiled
+            && mIsTempTimer == b.mIsTempTimer );
 }

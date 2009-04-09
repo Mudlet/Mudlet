@@ -31,22 +31,26 @@
 #include "TScript.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "mudlet.h"
+#include "TDebug.h"
 
 using namespace std;
 
 
 TScript::TScript( TScript * parent, Host * pHost ) 
-: Tree<TScript>( parent ),
-mpHost( pHost ),
-mNeedsToBeCompiled( true )
+: Tree<TScript>( parent )
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mpLua( pHost->getLuaInterpreter() )
 {
 } 
 
 TScript::TScript( QString name, Host * pHost ) 
-: Tree<TScript>(0),
-mName( name ),
-mpHost( pHost ),
-mNeedsToBeCompiled( true )
+: Tree<TScript>(0)
+, mName( name )
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -79,7 +83,6 @@ bool TScript::registerScript()
 
 void TScript::setEventHandlerList( QStringList handlerList )
 {
-    QMutexLocker locker(& mLock);
     for( int i=0; i<mEventHandlerList.size(); i++ )
     {
         mpHost->unregisterEventHandler( mEventHandlerList[i], this );
@@ -94,17 +97,6 @@ void TScript::setEventHandlerList( QStringList handlerList )
     } 
 }
 
-
-void TScript::compile()
-{
-    TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-    
-    if( pL->compile( mScript ) )
-    {
-        mNeedsToBeCompiled = false;
-    }
-    else mNeedsToBeCompiled = true;
-}
 
 void TScript::compileAll()
 {
@@ -125,86 +117,76 @@ void TScript::callEventHandler( QString & func, TEvent * pE )
     pL->callEventHandler( mName, argumentList, typeList );    
 }
 
-void TScript::execute()
+void TScript::compile()
 {
     if( mNeedsToBeCompiled )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        if( pL->compile( mScript ) )
+        if( ! compileScript() )
         {
-            mNeedsToBeCompiled = false;
+            if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of script:"<<mName>>0;
+            mOK_code = false;
         }
-        QStringList list; 
-        pL->call( mName, mName );
     }
-    else
-    {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QStringList list;
-        pL->call( mName, mName );
-    }
-}
-
-bool TScript::serialize( QDataStream & ofs )
-{
-    QMutexLocker locker(& mLock);
-    qDebug()<<"serializing:"<< mName;
-    
-    ofs << mName;
-    ofs << mScript;
-    ofs << mID;
-    ofs << mIsActive;
-    ofs << mIsFolder;
-    ofs << mEventHandlerList;
-    ofs << (qint64)mpMyChildrenList->size();
-    bool ret = true;
     typedef list<TScript *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TScript * pChild = *it;
-        ret = pChild->serialize( ofs );
+        pChild->compile();
     }
-    return ret;
+}
+
+bool TScript::setScript( QString & script )
+{
+    mScript = script;
+    mNeedsToBeCompiled = true;
+    mOK_code = compileScript();
+    return mOK_code;
+}
+
+bool TScript::compileScript()
+{
+    mFuncName = QString("Script")+QString::number( mID );
+    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString error;
+    if( mpLua->compile( code, error ) )
+    {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+        return true;
+    }
+    else
+    {
+        mOK_code = false;
+        setError( error );
+        return false;
+    }
+}
+
+void TScript::execute()
+{
+    if( mNeedsToBeCompiled )
+    {
+        if( ! compileScript() )
+        {
+            return;
+        }
+    }
+    mpLua->call( mFuncName, mName );
+}
+
+
+bool TScript::serialize( QDataStream & ofs )
+{
 } 
 
 bool TScript::restore( QDataStream & ifs, bool initMode )
 {
-    ifs >> mName;
-    ifs >> mScript;
-    ifs >> mID;
-    ifs >> mIsActive;
-    ifs >> mIsFolder;
-    ifs >> mEventHandlerList;
-    setEventHandlerList( mEventHandlerList );
-    qint64 children;
-    ifs >> children;
-    
-    mID = mpHost->getScriptUnit()->getNewID();
-    
-    bool ret = false;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret = true;
-    
-    for( qint64 i=0; i<children; i++ )
-    {
-        TScript * pChild = new TScript( this, mpHost );
-        ret = pChild->restore( ifs, initMode );
-        if( initMode ) 
-            pChild->registerScript();
-    }
-
-    if (getChildrenList()->size() > 0)
-        mIsFolder = true;
-    
-    return ret;
 }
 
 TScript& TScript::clone(const TScript& b)
 {
     mName = b.mName;
     mScript = b.mScript;
-    mIsActive = b.mIsActive;
     mIsFolder = b.mIsFolder;
     mpHost = b.mpHost;
     mNeedsToBeCompiled = b.mNeedsToBeCompiled;
@@ -212,7 +194,12 @@ TScript& TScript::clone(const TScript& b)
     return *this;
 }
 
-bool TScript::isClone(TScript &b) const {
-    return (mName == b.mName && mScript == b.mScript && mIsActive == b.mIsActive && mIsFolder == b.mIsFolder && mpHost == b.mpHost && \
-        mNeedsToBeCompiled == b.mNeedsToBeCompiled && mEventHandlerList == b.mEventHandlerList);
+bool TScript::isClone(TScript &b) const
+{
+    return ( mName == b.mName
+             && mScript == b.mScript
+             && mIsFolder == b.mIsFolder
+             && mpHost == b.mpHost
+             && mNeedsToBeCompiled == b.mNeedsToBeCompiled
+             && mEventHandlerList == b.mEventHandlerList );
 }

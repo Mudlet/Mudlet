@@ -229,7 +229,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
         tag = "Trigger";
     }
     writeStartElement( tag );
-    writeAttribute( "isActive", pT->isActive() ? "yes" : "no" );
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isTempTrigger", pT->mIsTempTrigger ? "yes" : "no" ); 
     writeAttribute( "isMultiline", pT->mIsMultiline ? "yes" : "no" );
@@ -298,7 +298,7 @@ bool XMLexport::writeAlias( TAlias * pT )
 
     writeStartElement( tag );
 
-    writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
@@ -350,7 +350,7 @@ bool XMLexport::writeAction( TAction * pT )
 
     writeStartElement( tag );
 
-    writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isPushButton", pT->mIsPushDownButton ? "yes" : "no" );
     writeAttribute( "isFlatButton", pT->mButtonFlat ? "yes" : "no" );
@@ -417,7 +417,7 @@ bool XMLexport::writeTimer( TTimer * pT )
 
     writeStartElement( tag );
 
-    writeAttribute( "isActive", pT->mUserActiveState ? "yes" : "no" );
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isTempTimer", pT->mIsTempTimer ? "yes" : "no" );
 
@@ -471,7 +471,7 @@ bool XMLexport::writeScript( TScript * pT )
 
     writeStartElement( tag );
 
-    writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
@@ -529,7 +529,7 @@ bool XMLexport::writeKey( TKey * pT )
 
     writeStartElement( tag );
 
-    writeAttribute( "isActive", pT->mIsActive ? "yes" : "no" );
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
@@ -548,3 +548,4 @@ bool XMLexport::writeKey( TKey * pT )
 
     return true;
 }
+

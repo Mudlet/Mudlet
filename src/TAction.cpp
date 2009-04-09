@@ -29,7 +29,7 @@
 #include <QString>
 #include <QTextDocument>
 #include <QIcon>
-
+#include "TDebug.h"
 #include <QObject>
 #include "TAction.h"
 #include "Host.h"
@@ -51,6 +51,7 @@ TAction::TAction( TAction * parent, Host * pHost )
 , mPosX( 0 )
 , mPosY( 0 )
 , mButtonColor( QColor( 255,255,255) )
+, mpLua( pHost->getLuaInterpreter() )
 {
 } 
 
@@ -66,6 +67,7 @@ TAction::TAction( QString name, Host * pHost )
 , mPosX( 0 )
 , mPosY( 0 )
 , mButtonColor( QColor( 255,255,255) )
+, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -101,6 +103,47 @@ bool TAction::registerAction()
 
 void TAction::compile()
 {
+    if( mNeedsToBeCompiled )
+    {
+        if( ! compileScript() )
+        {
+            if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of action:"<<mName>>0;
+            mOK_code = false;
+        }
+    }
+    typedef list<TAction *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TAction * pChild = *it;
+        pChild->compile();
+    }
+}
+
+bool TAction::setScript( QString & script )
+{
+    mScript = script;
+    mNeedsToBeCompiled = true;
+    mOK_code = compileScript();
+    return mOK_code;
+}
+
+bool TAction::compileScript()
+{
+    mFuncName = QString("Action")+QString::number( mID );
+    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString error;
+    if( mpLua->compile( code, error ) )
+    {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+        return true;
+    }
+    else
+    {
+        mOK_code = false;
+        setError( error );
+        return false;
+    }
 }
 
 void TAction::execute(QStringList & list)
@@ -115,22 +158,14 @@ void TAction::execute(QStringList & list)
     }
     if( mNeedsToBeCompiled )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("function Action") + QString::number( mID ) + QString("()\n"); 
-        QString code = funcName + mScript + QString("\nend\n");
-        if( pL->compile( code ) )
+        if( ! compileScript() )
         {
-            mNeedsToBeCompiled = false;
+            mpHost->mpConsole->activateWindow();
+            mpHost->mpConsole->setFocus();
+            return;
         }
-        funcName = QString("Action") + QString::number( mID ); 
-        pL->call( funcName, mName );
     }
-    else
-    {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("Action") + QString::number( mID ); 
-        pL->call( funcName, mName );
-    }
+    mpLua->call( mFuncName, mName );
     // move focus back to the active console / command line
     mpHost->mpConsole->activateWindow();
     mpHost->mpConsole->setFocus();
@@ -167,9 +202,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 
 void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 {
-    QMutexLocker locker(& mLock);
     mpToolBar = pT;
-    
     QIcon icon( mIcon );
     EAction * action = new EAction( icon, mName, pMainWindow );
     action->setCheckable( mIsPushDownButton );
@@ -198,60 +231,10 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 
 bool TAction::serialize( QDataStream & ofs )
 {
-    QMutexLocker locker(& mLock);
-    ofs << mName;
-    ofs << mScript;
-    qDebug()<<"serializing:"<< mName;
-    ofs << mID;
-    ofs << mIsActive;
-    ofs << mIsPushDownButton;
-    ofs << mIsFolder;
-    ofs << mIcon;
-    ofs << mCommandButtonUp;
-    ofs << mCommandButtonDown;
-    ofs << (qint64)mpMyChildrenList->size();
-    bool ret = true;
-    typedef list<TAction *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TAction * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
 } 
 
 bool TAction::restore( QDataStream & ifs, bool initMode )
 {
-    ifs >> mName;
-    ifs >> mScript;
-    ifs >> mID;
-    ifs >> mIsActive;
-    ifs >> mIsPushDownButton;
-    ifs >> mIsFolder;
-    ifs >> mIcon;
-    ifs >> mCommandButtonUp;
-    ifs >> mCommandButtonDown;
-    qint64 children;
-    ifs >> children;
-    
-    mID = mpHost->getActionUnit()->getNewID();
-    
-    bool ret = false;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret = true;
-    
-    for( qint64 i=0; i<children; i++ )
-    {
-        TAction * pChild = new TAction( this, mpHost );
-        ret = pChild->restore( ifs, initMode );
-        if( initMode )
-            pChild->registerAction();
-    }
-
-    if (getChildrenList()->size() > 0)
-        mIsFolder = true;
-    return ret;
 }
 
 TAction& TAction::clone(const TAction& b)
@@ -262,7 +245,6 @@ TAction& TAction::clone(const TAction& b)
     mRegex = b.mRegex;
     mScript = b.mScript;
     mIsPushDownButton = b.mIsPushDownButton;
-    mIsActive = b.mIsActive;
     mIsFolder = b.mIsFolder;
     mpHost = b.mpHost;
     mNeedsToBeCompiled = b.mNeedsToBeCompiled;
@@ -279,7 +261,6 @@ bool TAction::isClone( TAction & b ) const
              && mRegex == b.mRegex 
              && mScript == b.mScript 
              && mIsPushDownButton == b.mIsPushDownButton 
-             && mIsActive == b.mIsActive 
              && mIsFolder == b.mIsFolder 
              && mpHost == b.mpHost 
              && mNeedsToBeCompiled == b.mNeedsToBeCompiled 

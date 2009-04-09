@@ -73,9 +73,10 @@ public:
     void             compile();
     void             execute();
     bool             isFilterChain();
-    void             setRegexCodeList( QStringList regex, QList<int> regexPorpertyList );        
+    bool             setRegexCodeList( QStringList regex, QList<int> regexPorpertyList );
     QString          getScript()                     { return mScript; }
-    void             setScript( QString & script )   { mScript = script; mNeedsToBeCompiled=true; }
+    bool             setScript( QString & script );
+    bool             compileScript();
     bool             match( char *, QString & );
     bool             isFolder()                      { return mIsFolder; }
     bool             isMultiline()                   { return mIsMultiline; }

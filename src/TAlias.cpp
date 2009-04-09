@@ -37,17 +37,19 @@
 using namespace std;
 
 TAlias::TAlias( TAlias * parent, Host * pHost ) 
-: Tree<TAlias>( parent ),
-mpHost( pHost ),
-mNeedsToBeCompiled( true )
+: Tree<TAlias>( parent )
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mpLua( pHost->getLuaInterpreter() )
 {
 } 
 
 TAlias::TAlias( QString name, Host * pHost ) 
-: Tree<TAlias>(0),
-mName( name ),
-mpHost( pHost ),
-mNeedsToBeCompiled( true )
+: Tree<TAlias>(0)
+, mName( name )
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -67,7 +69,7 @@ TAlias::~TAlias()
 
 bool TAlias::match( QString & toMatch )
 {
-    if( ! mIsActive ) return false;
+    if( ! isActive() ) return false;
 
     bool matchCondition = false;
     bool ret = false;
@@ -251,9 +253,7 @@ ERROR:
 
 void TAlias::setRegexCode( QString code )
 {
-    QMutexLocker locker(& mLock); 
     mRegexCode = code; 
-    
     const char *error;
     char * pattern = code.toLatin1().data();
     int erroffset;
@@ -267,19 +267,14 @@ void TAlias::setRegexCode( QString code )
     
     if (re == NULL)
     {
-        qDebug()<<"REGEX_COMPILE_ERROR:"<<pattern;
-        re = pcre_compile( "MUDLET ERROR: regex doesnt compile",        
-                           0,                    
-                           &error,               
-                           &erroffset,           
-                           NULL);                
-        
+        mOK_init = false;
     }
     else
-        qDebug()<<"[OK]: REGEX_COMPILE OK";
+    {
+        mOK_init = true;
+    }
     
     mpRegex = re; 
-    qDebug()<<"regex code für alias:"<<mName<<"="<<code;
 }
 
 TAlias& TAlias::clone(const TAlias& b)
@@ -289,7 +284,6 @@ TAlias& TAlias::clone(const TAlias& b)
     mRegexCode = b.mRegexCode;
     mpRegex = b.mpRegex;
     mScript = b.mScript;
-    mIsActive = b.mIsActive;
     mIsFolder = b.mIsFolder;
     mpHost = b.mpHost;
     mNeedsToBeCompiled = b.mNeedsToBeCompiled;
@@ -302,7 +296,6 @@ bool TAlias::isClone(TAlias &b) const {
             && mRegexCode == b.mRegexCode 
             && mpRegex == b.mpRegex 
             && mScript == b.mScript 
-            && mIsActive == b.mIsActive 
             && mIsFolder == b.mIsFolder 
             && mpHost == b.mpHost 
             && mNeedsToBeCompiled == b.mNeedsToBeCompiled );
@@ -320,6 +313,47 @@ bool TAlias::registerAlias()
 
 void TAlias::compile()
 {
+    if( mNeedsToBeCompiled )
+    {
+        if( ! compileScript() )
+        {
+            if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of alias:"<<mName>>0;
+            mOK_code = false;
+        }
+    }
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TAlias * pChild = *it;
+        pChild->compile();
+    }
+}
+
+bool TAlias::setScript( QString & script )
+{
+    mScript = script;
+    mNeedsToBeCompiled = true;
+    mOK_code = compileScript();
+    return mOK_code;
+}
+
+bool TAlias::compileScript()
+{
+    mFuncName = QString("Alias")+QString::number( mID );
+    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString error;
+    if( mpLua->compile( code, error ) )
+    {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+        return true;
+    }
+    else
+    {
+        mOK_code = false;
+        setError( error );
+        return false;
+    }
 }
 
 void TAlias::execute()
@@ -330,77 +364,19 @@ void TAlias::execute()
     }
     if( mNeedsToBeCompiled )
     {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("function Alias") + QString::number( mID ) + QString("()\n"); 
-        QString code = funcName + mScript + QString("\nend\n");
-        if( pL->compile( code ) )
+        if( ! compileScript() )
         {
-            mNeedsToBeCompiled = false;
+            return;
         }
-        funcName = QString("Alias") + QString::number( mID ); 
-        pL->call( funcName, mName );
     }
-    else
-    {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
-        QString funcName = QString("Alias") + QString::number( mID ); 
-        pL->call( funcName, mName );
-    }
+    mpLua->call( mFuncName, mName );
 }
 
 bool TAlias::serialize( QDataStream & ofs )
 {
-    QMutexLocker locker(& mLock);
-    qDebug()<<"serializing:"<< mName;
-    
-    ofs << mName;
-    ofs << mScript;
-    ofs << mID;
-    ofs << mCommand;
-    ofs << mRegexCode;
-    ofs << mIsActive;
-    ofs << mIsFolder;
-    ofs << (qint64)mpMyChildrenList->size();
-    
-    bool ret = true;
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TAlias * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
 } 
 
 bool TAlias::restore( QDataStream & ifs, bool initMode )
 {
-    ifs >> mName;
-    ifs >> mScript;
-    ifs >> mID;
-    ifs >> mCommand;
-    ifs >> mRegexCode;
-    setRegexCode( mRegexCode );
-    ifs >> mIsActive;
-    ifs >> mIsFolder;
-    qint64 children;
-    ifs >> children;
-    mID = mpHost->getAliasUnit()->getNewID();
-    
-    bool ret = false;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret = true;
-    
-    for( qint64 i=0; i<children; i++ )
-    {
-        TAlias * pChild = new TAlias( this, mpHost );
-        ret = pChild->restore( ifs, initMode );
-        if( initMode ) 
-            pChild->registerAlias();
-    }
-
-    if (getChildrenList()->size() > 0)
-        mIsFolder = true;
-    return ret;
 }
 

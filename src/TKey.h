@@ -36,7 +36,7 @@
 #include "Host.h"
 #include <QTextBlock>
 
-
+class TLuaInterpreter;
 
 class TKey : public Tree<TKey>
 {
@@ -47,41 +47,36 @@ public:
     
     
     virtual          ~TKey();
-    TKey( TKey * parent, Host * pHost ); 
-    TKey( QString name, Host * pHost ); 
-    TKey& clone(const TKey& );
+                     TKey( TKey * parent, Host * pHost );
+                     TKey( QString name, Host * pHost );
+                     TKey& clone(const TKey& );
     
-    QString          getName()                       { QMutexLocker locker(& mLock); return mName; }
-    void             setName( QString name )         { QMutexLocker locker(& mLock); mName = name; }
-    int              getKeyCode()                    { QMutexLocker locker(& mLock); return mKeyCode; }
-    void             setKeyCode( int code )          { QMutexLocker locker(& mLock); mKeyCode = code; }
-    int              getKeyModifiers()                  { QMutexLocker locker(& mLock); return mKeyModifier; }
-    void             setKeyModifiers( int code )        { QMutexLocker locker(& mLock); mKeyModifier = code; }
+    QString          getName()                          { return mName; }
+    void             setName( QString name )            { mName = name; }
+    int              getKeyCode()                       { return mKeyCode; }
+    void             setKeyCode( int code )             { mKeyCode = code; }
+    int              getKeyModifiers()                  { return mKeyModifier; }
+    void             setKeyModifiers( int code )        { mKeyModifier = code; }
     void             enableKey( QString & name );
     void             disableKey( QString & name );
     void             compile();
-    void             execute(QStringList &);
-    QString          getScript()                     { QMutexLocker locker(& mLock); return mScript; }
-    void             setScript( QString & script )   { QMutexLocker locker(& mLock); mScript = script; mNeedsToBeCompiled=true; }
-    QString          getRegexCode()                  { QMutexLocker locker(& mLock); return mRegexCode; }
-    void             setRegexCode( QString regex )   { QMutexLocker locker(& mLock); mRegexCode = regex; mRegex = QRegExp( regex ); mRegex.setMinimal( false ); }
-    void             setCommand( QString command )   { QMutexLocker locker(& mLock); mCommand = command; }
-    QString          getCommand()                    { QMutexLocker locker(& mLock); return mCommand; }
-    bool             isActive()                      { QMutexLocker locker(& mLock); return mIsActive; }  
-    bool             isFolder()                      { QMutexLocker locker(& mLock); return mIsFolder; }
-    void             setIsActive( bool b )           { QMutexLocker locker(& mLock); mIsActive = b; }
-    void             setIsFolder( bool b )           { QMutexLocker locker(& mLock); mIsFolder = b; }
+    bool             compileScript();
+    void             execute();
+    QString          getScript()                        { return mScript; }
+    bool             setScript( QString & script );
+    void             setCommand( QString command )      { mCommand = command; }
+    QString          getCommand()                       { return mCommand; }
+    bool             isFolder()                         { return mIsFolder; }
+    void             setIsFolder( bool b )              { mIsFolder = b; }
     bool             match( int, int );
-    
-    
     bool             registerKey();
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
-    bool             isClone(TKey &b) const;
+    bool             isClone( TKey & ) const;
     
 private:
     
-    TKey(){};
+                     TKey(){};
     QString          mName;
     QString          mCommand;
     
@@ -98,12 +93,11 @@ private:
     QString          mRegexCode;
     QRegExp          mRegex;
     QString          mScript;
-    bool             mIsActive;
+    QString          mFuncName;
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
-    
-    QMutex           mLock;
+    TLuaInterpreter * mpLua;
 };
 
 #endif

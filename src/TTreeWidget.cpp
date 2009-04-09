@@ -176,7 +176,7 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                 QIcon icon;
                 if( pTChild->isOffsetTimer() )
                 {
-                    if( pTChild->getUserActiveState() )
+                    if( pTChild->shouldBeActive() )
                     {
                         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                     }
@@ -187,7 +187,7 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                 }
                 else
                 {
-                    if( pTChild->getUserActiveState() )
+                    if( pTChild->shouldBeActive() )
                     {
                         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     }

@@ -1323,6 +1323,39 @@ bool TLuaInterpreter::compile( QString & code )
     else return false;
 }
 
+bool TLuaInterpreter::compile( QString & code, QString & errorMsg )
+{
+    lua_State * L = pGlobalLua;
+    if( ! L )
+    {
+        qDebug()<< "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return false;
+    }
+
+    int error = luaL_dostring( L, code.toLatin1().data() );
+    QString n;
+    if( error != 0 )
+    {
+        string e = "Lua syntax error:";
+        if( lua_isstring( L, 1 ) )
+        {
+            e.append( lua_tostring( L, 1 ) );
+        }
+        errorMsg = "<b><font color='blue'>";
+        errorMsg.append( e.c_str() );
+        errorMsg.append("</b></font>");
+        if( mudlet::debugMode ) TDebug()<<"\n "<<e.c_str()<<"\n">>0;
+    }
+    else
+    {
+        if( mudlet::debugMode ) TDebug()<<"\nLUA: code compiled without errors. OK\n" >> 0;
+    }
+    lua_pop( L, lua_gettop( L ) );
+
+    if( error == 0 ) return true;
+    else return false;
+}
+
 void TLuaInterpreter::setMultiCaptureGroups( const std::list< std::list<std::string> > & captureList,
                                              const std::list< std::list<int> > & posList )
 {
@@ -1855,12 +1888,10 @@ int TLuaInterpreter::startTempTimer( double timeout, QString function )
     pT->setTime( time2 );
     pT->setScript( function );
     pT->setIsFolder( false );
-    pT->setIsActive( true );
     pT->setIsTempTimer( true );
     pT->registerTimer();    
     int id = pT->getID();
     pT->setName( QString::number( id ) );
-    pT->setUserActiveState( true );
     pT->setIsActive( true );
     pT->enableTimer( id );
     return id;                  
