@@ -657,9 +657,9 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     }
 
     if( ( ! pT->isOffsetTimer() ) && ( pT->shouldBeActive() ) )
-        pT->activate();
+        pT->enableTimer( pT->getID() );
     else
-        pT->deactivate();
+        pT->disableTimer( pT->getID() );
 
 }
 
