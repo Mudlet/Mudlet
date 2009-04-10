@@ -606,11 +606,11 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     {
         pT = new TTimer( 0, mpHost );
     }
-
+    pT->registerTimer();
     pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
-    pT->registerTimer();
+
     while( ! atEnd() ) 
     {
         readNext();
@@ -656,8 +656,8 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         }
     }
 
-    if( ! pT->isOffsetTimer() )
-        pT->setIsActive( pT->shouldBeActive() );
+    if( ( ! pT->isOffsetTimer() ) && ( pT->shouldBeActive() ) )
+        pT->activate();
     else
         pT->deactivate();
 

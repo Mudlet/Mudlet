@@ -73,10 +73,8 @@ TTimer::~TTimer()
 
 bool TTimer::registerTimer()
 {
-    qDebug()<<"registerTimer:"<<mID;
     if( ! mpHost )
     {
-        qDebug() << "ERROR: TTrigger::registerTrigger() pHost=0";
         return false;
     }
     setTime( mTime );
@@ -195,7 +193,6 @@ void TTimer::execute()
     
     if( ( ! isFolder() && hasChildren() ) || ( isOffsetTimer() ) )
     {
-        qDebug()<<"offset timer: enable my children";
         typedef list<TTimer *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
@@ -234,15 +231,12 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
     {
         if( ! mpParent )
         {
-            qDebug() << "Tree ID=" << mID<<" name="<<mName << " is *NOT* locked!" ;
             return true;    
         }
-        qDebug()<<"id="<<mID<<" name="<<mName<<" NOT locked " << " checking parent="<<mpParent->getID();
         return mpParent->canBeUnlocked( 0 );
     }
     else
     {
-        qDebug() << "LOCKED, sorry ID="<<mID<<" name=" << mName << " is locked.";
         DumpFamily();
         return false;
     }
@@ -254,19 +248,15 @@ void TTimer::enableTimer( qint64 id )
 
     if( mID == id )
     {
-  qDebug()<<"trying enableTimer() name="<<mName;
         if( canBeUnlocked( 0 ) )
         {
-            qDebug()<< "can be unlocked. shouldBeActive()="<<shouldBeActive();
             if( activate() )
             {
-                qDebug()<<"OK ID="<<id<<" was unlocked";
                 mTimer.start();
             }
             else
             {
                 deactivate();
-                qDebug()<<"SORRY: ID="<<id<<" must stay LOCKED";
                 mTimer.stop();
             }
         }
@@ -308,13 +298,11 @@ void TTimer::enableTimer( QString & name )
         {
             if( activate() )
             {
-                qDebug()<<"OK "<<name<<" was unlocked";
                 mTimer.start();
             }
             else
             {
                 deactivate();
-                qDebug()<<"SORRY: "<<name<<" must stay LOCKED";
                 mTimer.stop();
             }
         }
@@ -333,7 +321,6 @@ void TTimer::enableTimer( QString & name )
 
 void TTimer::disableTimer( QString & name )
 {
-    qDebug()<<"trying to disable timer "<<name;
     if( mName == name )
     {
         deactivate();

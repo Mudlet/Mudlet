@@ -155,7 +155,7 @@ bool Tree<T>::setIsActive( bool b )
     else
     {
         mActive = false;
-        return true;
+        return false;
     }
 }
 

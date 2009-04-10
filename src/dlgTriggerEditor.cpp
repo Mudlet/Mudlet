@@ -1919,14 +1919,14 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
             pT->setCommand( command );
             pT->setName( name );
             pT->setScript( script );
-            if( pT->isOffsetTimer() )
+           /* if( pT->isOffsetTimer() )
             {
                 pT->setShouldBeActive( true );
             }
             else
             {
                 pT->setIsActive( true );
-            }    
+            }*/
             
             QIcon icon;
             if( pT->isFolder() )
@@ -2009,14 +2009,14 @@ void dlgTriggerEditor::saveTimer()
             pT->setCommand( command );
             pT->setName( name );
             pT->setScript( script );
-            if( pT->isOffsetTimer() )
+           /* if( pT->isOffsetTimer() )
             {
-                pT->setShouldBeActive( true );
+                pT->setShouldBeActive( false );
             }
             else
             {
-                pT->setIsActive( true );
-            }
+                pT->setIsActive( false );
+            }*/
 
             QIcon icon;
             if( pT->isFolder() )

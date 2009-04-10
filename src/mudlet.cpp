@@ -137,7 +137,7 @@ mudlet::mudlet()
     
     QAction * actionNotes = new QAction(QIcon(":/icons/view-pim-notes.png"), tr("Notepad"), this);
     actionNotes->setStatusTip(tr("take notes"));
-    mpMainToolBar->addAction( actionNotes );
+   // mpMainToolBar->addAction( actionNotes );
     
         
     QAction * actionMultiView = new QAction(QIcon(":/icons/view-split-left-right.png"), tr("MultiView"), this);
@@ -146,7 +146,7 @@ mudlet::mudlet()
     
     QAction * actionStopAllTriggers = new QAction(QIcon(":/icons/edit-bomb.png"), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setStatusTip(tr("stop all triggers, alias, actions, timers and scripts"));
-    mpMainToolBar->addAction( actionStopAllTriggers );
+    //mpMainToolBar->addAction( actionStopAllTriggers );
     
     
     /* QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
@@ -203,7 +203,7 @@ mudlet::mudlet()
     connect(actionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
     connect(actionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-    connect(actionStopAllTriggers, SIGNAL(triggered()), this, SLOT(slot_stopAllTriggers()));
+    //connect(actionStopAllTriggers, SIGNAL(triggered()), this, SLOT(slot_stopAllTriggers()));
     
     readSettings();
     
@@ -619,9 +619,10 @@ void mudlet::show_options_dialog()
 
 void mudlet::show_help_dialog()
 {
-    dlgHelpDialog * pDlg = new dlgHelpDialog(this);
+    QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/mudlet_documentation.html"));
+   /* dlgHelpDialog * pDlg = new dlgHelpDialog(this);
     pDlg->raise();
-    pDlg->show();
+    pDlg->show();*/
 }
 
 void mudlet::slot_show_about_dialog()
