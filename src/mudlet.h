@@ -124,6 +124,7 @@ private:
    QMap<Host *, QToolBar *>      mUserToolbarMap; 
    QMap<QTimer *, TTimer *>      mTimerMap;
    QToolBar *                   mpMainToolBar;
+	QMenu	*					restoreBar;
 };
 
 #endif

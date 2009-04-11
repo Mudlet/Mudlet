@@ -368,9 +368,8 @@ from getting appended to the previous prompt line</string>
          </rect>
         </property>
         <property name="toolTip">
-         <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
-communicate with the client on where a newline should be. Enable this to fix text
-from getting appended to the previous prompt line</string>
+         <string>Select this option for better compatability if you are using a netbook, 
+or some other computer model that has a small screen.</string>
         </property>
         <property name="text">
          <string>Use Mudlet on a netbook with a small screen</string>

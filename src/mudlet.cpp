@@ -70,6 +70,7 @@ mudlet::mudlet()
     mpMainToolBar = new QToolBar( this );
     
     addToolBar( mpMainToolBar );
+	restoreBar = menuBar()->addMenu( "" );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
     
