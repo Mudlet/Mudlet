@@ -76,10 +76,6 @@ bool TKey::match( int key, int modifier )
         {
             if( ( mKeyCode == key ) && ( mKeyModifier == modifier ) )
             {
-                if( mCommand.size() > 0 )
-                {
-                    mpHost->send( mCommand );
-                }
                 execute();
                 return true;
             }
