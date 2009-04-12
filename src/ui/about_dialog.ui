@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>781</width>
-    <height>361</height>
+    <height>380</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -16,10 +16,16 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>380</height>
+   </size>
+  </property>
   <property name="maximumSize">
    <size>
     <width>800</width>
-    <height>361</height>
+    <height>380</height>
    </size>
   </property>
   <property name="palette">
@@ -37,9 +43,9 @@
      <colorrole role="Window">
       <brush brushstyle="SolidPattern">
        <color alpha="255">
-        <red>232</red>
-        <green>200</green>
-        <blue>159</blue>
+        <red>0</red>
+        <green>170</green>
+        <blue>127</blue>
        </color>
       </brush>
      </colorrole>
@@ -57,9 +63,9 @@
      <colorrole role="Window">
       <brush brushstyle="SolidPattern">
        <color alpha="255">
-        <red>232</red>
-        <green>200</green>
-        <blue>159</blue>
+        <red>0</red>
+        <green>170</green>
+        <blue>127</blue>
        </color>
       </brush>
      </colorrole>
@@ -68,18 +74,18 @@
      <colorrole role="Base">
       <brush brushstyle="SolidPattern">
        <color alpha="255">
-        <red>232</red>
-        <green>200</green>
-        <blue>159</blue>
+        <red>0</red>
+        <green>170</green>
+        <blue>127</blue>
        </color>
       </brush>
      </colorrole>
      <colorrole role="Window">
       <brush brushstyle="SolidPattern">
        <color alpha="255">
-        <red>232</red>
-        <green>200</green>
-        <blue>159</blue>
+        <red>0</red>
+        <green>170</green>
+        <blue>127</blue>
        </color>
       </brush>
      </colorrole>
@@ -95,8 +101,8 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>0</y>
+     <x>10</x>
+     <y>10</y>
      <width>322</width>
      <height>361</height>
     </rect>
@@ -120,9 +126,9 @@
   <widget class="QTextBrowser" name="textBrowser">
    <property name="geometry">
     <rect>
-     <x>316</x>
-     <y>0</y>
-     <width>487</width>
+     <x>340</x>
+     <y>10</y>
+     <width>431</width>
      <height>361</height>
     </rect>
    </property>
@@ -204,19 +210,22 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt;Mudlet version: &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline; color:#ff0000;&quot;&gt;Beta-6&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt; built: March 15, 2009&lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; color:#00007f;&quot;&gt;latest version can be found at: http://mudlet.sourceforge.net/&lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; color:#00007f;&quot;&gt;official project homepage, news and forum at: www.mudlet.org&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt;Mudlet version: &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline; color:#ff0000;&quot;&gt;Beta-9pre&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt; built: April 12, 2009&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; color:#000000;&quot;&gt;latest version can be found at:&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; color:#00007f;&quot;&gt; &lt;/span&gt;&lt;a href=&quot;http://mudlet.sourceforge.net&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;http://mudlet.sourceforge.net&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; color:#00007f;&quot;&gt;/&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; color:#000000;&quot;&gt;forum at:&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; color:#00007f;&quot;&gt; &lt;/span&gt;&lt;a href=&quot;http://mudlet.sourceforge.net/phpBB3/index.php&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;http://mudlet.sourceforge.net/phpBB3/index.php&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;documentation and Help:&lt;/span&gt; &lt;a href=&quot;http://mudlet.sourceforge.net/wordpress/?page_id=40&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Manual, Help and FAQs&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
 &lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:8pt;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600;&quot;&gt;Mudlet &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans';&quot;&gt;was written by&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; text-decoration: underline;&quot;&gt;Heiko Köhn&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600;&quot;&gt;  ( &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; color:#0000ff;&quot;&gt;KoehnHeiko@googlemail.com &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600;&quot;&gt;) September &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans';&quot;&gt;2008-2009.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600;&quot;&gt;Author: &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; text-decoration: underline;&quot;&gt;Heiko Köhn&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600;&quot;&gt;  ( &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600; color:#0000ff;&quot;&gt;KoehnHeiko@googlemail.com &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:10pt; font-weight:600;&quot;&gt;) &lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:6pt;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
 &lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600;&quot;&gt;Credits:&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:8pt;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;GUI design and initial feature planning by &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;Vadim Peretokin&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; text-decoration: underline; color:#000000;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;(&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;vadim.peretokin@mudlet.org&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;) He is responsible for the project homepage. &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;Vadim Peretokin&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; text-decoration: underline; color:#000000;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;(&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;vadim.peretokin@mudlet.org&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;) &lt;/span&gt;GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Ubuntu packages. Project management, public relations &amp;amp; user help. He has been with the project from the very beginning and is an official spokesman of the project.&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:6pt; color:#000000;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;Bruno Bigras&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; color:#000000;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;( &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;bruno@burnbox.net&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt; ) is the second programmer on the team. He has  joined in January 2009 and has committed many bug fixes, patches and actively helps Mudlet improve.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:6pt; color:#000000;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt;&quot;&gt;Logo design and artwork by &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline;&quot;&gt;Thorsten Wilms&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt;&quot;&gt; (&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;t_w_@freenet.de). &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;Visit his homepage at&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt; &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#00aa00;&quot;&gt;thorwil.wordpress.com&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline;&quot;&gt;Thorsten Wilms&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt;&quot;&gt; (&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;t_w_@freenet.de). &lt;/span&gt;has designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;thorwil.wordpress.com&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;Leigh Stillard&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt; ( &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;leigh.stillard@gmail.com&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt; ) is the author and maintainer of our windows installer. He builds the official windows binaries.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;&lt;/p&gt;
@@ -224,7 +233,7 @@ p, li { white-space: pre-wrap; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:6pt;&quot;&gt; &lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;Damian Monogue&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt; (&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#0000ff;&quot;&gt;demonnic@gmail.com)&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt; is in charge of developing and building binary packages of Mudlet for Windows and Apple OSX. He also administers our server and helps the project in many ways. &lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;Maksym V. Grinenko&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:7pt; color:#000000;&quot;&gt; (&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;maksym.grinenko@gmail.com) documentation, improved the forum and helps with GUI design and documentation.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;Maksym V. Grinenko&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:7pt; color:#000000;&quot;&gt; (&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;maksym.grinenko@gmail.com) work on the manual, forum help and helps with GUI design and documentation.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;Most icons are taken from the &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; font-weight:600; text-decoration: underline; color:#000000;&quot;&gt;KDE4 oxygen&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt; icon theme at &lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#00aa00;&quot;&gt;www.oxygen-icons.org or www.kde.org.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:8pt; color:#000000;&quot;&gt;The rest is from Thorsten Wilms.&lt;/span&gt;&lt;/p&gt;
@@ -378,6 +387,9 @@ p, li { white-space: pre-wrap; }
 &lt;p align=&quot;justify&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans';&quot;&gt;&lt;/p&gt;
 &lt;p align=&quot;justify&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans';&quot;&gt;&lt;/p&gt;
 &lt;p align=&quot;justify&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans';&quot;&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="openExternalLinks">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>

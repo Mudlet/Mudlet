@@ -620,7 +620,7 @@ void mudlet::show_options_dialog()
 
 void mudlet::show_help_dialog()
 {
-    QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/mudlet_documentation.html"));
+    QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/wordpress/?page_id=40"));
    /* dlgHelpDialog * pDlg = new dlgHelpDialog(this);
     pDlg->raise();
     pDlg->show();*/
