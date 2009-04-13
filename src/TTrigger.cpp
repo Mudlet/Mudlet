@@ -89,8 +89,6 @@ TTrigger::~TTrigger()
         
 }
 
-
-
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
 bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList )
 {
@@ -99,14 +97,18 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
     mRegexCodePropertyList.clear();
     mLuaConditionMap.clear();
     mTriggerContainsPerlRegex = false;
-    
+
     assert( propertyList.size() == regexList.size() );
+
     if( ( propertyList.size() < 1 ) && ( ! isFolder() ) )
     {
         setError("No patterns defined.");
+        mOK_init = false;
         return false;
     }
+
     bool state = true;
+
     for( int i=0; i<regexList.size(); i++ )
     {
         if( regexList[i].size() < 1 ) continue;
@@ -140,21 +142,27 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             }
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
+            continue;
         }
         if( propertyList[i] == REGEX_LUA_CODE )
         {
-             std::string funcName = regexList[i].toLatin1().data();
-             QString code = QString("function ")+funcName.c_str()+QString("()\n")+mScript + QString("\nend\n");
-             if( ! mpLua->compile( code ) )
+             std::string funcName;
+             std::stringstream func;
+             func << "trigger" << mName.toLatin1().data() << "condition" << i;
+             funcName = func.str();
+             QString code = QString("function ")+funcName.c_str()+QString("()\n")+regexList[i]+QString("\nend\n");
+             QString error;
+             if( ! mpLua->compile( code, error ) )
              {
-                 setError(QString("pattern type Lua condition '")+regexList[i]+QString("' failed to compile. Check the syntax."));
+                 setError( QString("pattern type Lua condition function '")+regexList[i]+QString("' failed to compile.")+error);
                  state = false;
              }
              else
              {
                  mLuaConditionMap[i] = funcName;
              }
-         }
+             continue;
+        }
     }
     if( ! state )
     {
