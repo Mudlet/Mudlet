@@ -345,19 +345,172 @@ div.toclevel4 {
 <div id="header">
 <h1>Mudlet Manual</h1>
 </div>
-<h2 id="_table_of_content">Table of Content</h2>
+<div id="preamble">
 <div class="sectionbody">
-<div class="paragraph"><p><a href="#heading1">1. General Introduction to Modern MUD Clients.</a></p></div>
-<div class="paragraph"><p><a href="#heading2">2. Mudlet&#8217;s Command Line</a>
-<a href="#headingAlias">3. The Alias Engine</a>
-<a href="#heading3">4. The Trigger Engine</a>
-<a href="#heading4">5. The Timer Engine</a>
-<a href="#heading5">6. Key Bindings</a>
-<a href="#heading6">7. User defined Buttons and Menus</a>
-<a href="#heading7">8. Introduction to Scripting with Mudlet</a>
-<a href="#heading8">9. Scripting API and Reference</a></p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Table of Contents</div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+<a href="#introduction">General Introduction to Modern MUD Clients.</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#manual">Technical Manual</a>
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+<a href="#splitScreen">Split Screen</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#commandLine">Mudlet&#8217;s Command Line</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#logging">Logging to HTML log files</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#export">Import &amp; Export of Packages</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#alias">The Alias Engine</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#triggers">The Trigger Engine</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#timers">The Timer Engine</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#keys">Key Bindings</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#buttons">Buttons and Menus</a>
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+<a href="#scripting">Scripting</a>
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+<a href="#luaSyntax">Introduction to Scripting with Mudlet</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#luaTables">Lua Tables and Dictionaries</a>
+</p>
+<div class="olist lowerroman"><ol class="lowerroman">
+<li>
+<p>
+<a href="#matches">Single Line Trigger Scripts</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#multimatches">Multiline Trigger Scripts</a>
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+<a href="#events">Events - Defining &amp; Using Event Handlers</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#cursorControl">Cursor Control - Custom Printing</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#lineTriggers">Using tempLineTrigger</a>
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+<a href="#exampleScripts">Advanced Learning From Selected Example Scripts</a>
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+<a href="#inlineMapExample">inlineMapExample</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#silbermine">Auto Miner Bot Example - How to write a little Bot with Mudlet?</a>
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+<a href="#customGui">Custom GUI Elements</a>
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+<a href="#userWindows">User Terminal Windows</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#userWebkitWindows">User Webkit Webbrowser Windows</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#labels">Custom Mini Text Displays - Scripting Labels</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#buttons">Scripting Buttons</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#userGfxWindows">User Custom Graphics Windows</a>
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+<a href="#api">Lua API and Reference</a>
+</p>
+</li>
+</ol></div>
+</div></div>
 </div>
-<h2 id="_introduction">Introduction</h2>
+</div>
+<h2 id="introduction">Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Welcome to <strong>Mudlet</strong>, a modern MUD client for GNU/Linux that offers all the tools to get the most out of your gaming experience.
 Throughout this document we hope to familiarize you with the basic aspects of Mudlet, from the interface to its <em>very</em> powerful and feature rich scripting backend.
@@ -386,7 +539,7 @@ Now just click <tt>Connect</tt> to play!
 </li>
 </ul></div>
 </div>
-<h2 id="heading1">1. General Introduction to Modern MUD Clients</h2>
+<h2 id="introduction">1. General Introduction to Modern MUD Clients</h2>
 <div class="sectionbody">
 <h3 id="_1_1_mudlet_8217_s_automation_features">1.1 Mudlet&#8217;s automation features</h3>
 <div class="paragraph"><p>Mudlet offers a vast array of standard features to automate or otherwise improve your gaming experience. These include, but are not limited to:</p></div>
@@ -638,30 +791,116 @@ EXPAND TO: sip ceylon mint</tt></pre>
 <div class="paragraph"><p>Your character can train in his attributes once every three hours. You could either try tracking this manually or add a trigger starting timer after each training. Once the three hours have passed, your character will conveniently say to himself that it is time to do a couple of push-ups.</p></div>
 </div></div>
 </div>
+<h2 id="manual">Main Manual</h2>
+<div class="sectionbody">
+</div>
 <h2 id="_multi_session_gameing">Multi Session Gameing</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet lets you play several simultaneous MUD sessions. However, currently we have the restriction that you cannot use the same profile twice. Consequently, if you want to play three characters on the same MUD at the same time, you need to make 3 profiles with 3 different names e.g. <a href="mailto:ernie@avalon.de">ernie@avalon.de</a>, <a href="mailto:bert@avalon.de">bert@avalon.de</a> etc.
-Split Screen</p></div>
-<div class="paragraph"><p>Mudlet has a split screen. If you scroll up in the old text, the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.</p></div>
-<div class="paragraph"><p>Split screen can be activated via the page up / page down keys or with the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately. The size of the 2 parts of the split screen can be modidfied when dragging the seperator bar with the mouse.</p></div>
+<div class="paragraph"><p>Mudlet lets you play several simultaneous MUD sessions. However, currently we have the restriction that you cannot use the same profile twice. Consequently, if you want to play three characters on the same MUD at the same time, you need to make 3 profiles with 3 different names e.g. <a href="mailto:ernie@avalon.de">ernie@avalon.de</a>, <a href="mailto:bert@avalon.de">bert@avalon.de</a> etc.</p></div>
 </div>
-<h2 id="_command_line_auto_completion_tab_completion_and_history">Command Line Auto-Completion, Tab-Completion and History</h2>
+<h2 id="splitScreen">Split Screen</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Mudlet has a <em>split screen</em>. If you scroll up in the old text, the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.</p></div>
+<div class="paragraph"><p>Split screen can be activated via the page up / page down keys or with the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately as well as pressing control+return on the keyboard. The size of the 2 parts of the split screen can be modidfied when dragging the seperator bar with the mouse.
+Split screen usage is necessary when selecting text in order to copy it to trigger editor e.g. when making triggers. If you don&#8217;t use split screen when selecting text, new arriving text will upset your selection.</p></div>
+</div>
+<h2 id="commandLine">Command Line Auto-Completion, Tab-Completion and History</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
-1. Tab completion searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
-2. Autocompletion tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
-3. If you haven&#8217;t started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
-4. To get out of autocompletion you can press the ESC key any time.
-Logging Output to HTML Log Files</p></div>
+1. <em>Tab completion</em> searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
+2. <em>Autocompletion</em> tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
+3. <em>Command History</em>: If you haven&#8217;t started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
+4. <em>ESC</em>:To get out of autocompletion you can press the ESC key any time.</p></div>
+</div>
+<h2 id="logging">Logging Output to HTML Log Files</h2>
+<div class="sectionbody">
 <div class="paragraph"><p>Press on the little button with the blue folder with the green arrow icon on the lower right side of the screen next to the command line.</p></div>
-<div class="paragraph"><p>When you press on it again logging stops. Log files can be found at the mudlet home directory in your profile directory. The path is &lt;path to mudlet home&gt;/.config/mudlet/profiles/&lt;name&gt;/logs On Linux this would be: /home/username/.config/mudlet/profiles/profilename/logs</p></div>
+<div class="paragraph"><p>Clicking it a second time stops logging. A red system message will tell you where you can find the log file. Just copy the the filename and open the log file in your web browser. The log files are html files that can be put on web pages without any further editing etc..
+Log files can be found at the mudlet home directory in your profile directory. The path is &lt;path to mudlet home&gt;/.config/mudlet/profiles/&lt;name&gt;/logs On Linux this would be: /home/username/.config/mudlet/profiles/profilename/logs</p></div>
 <div class="paragraph"><p>On Windows the path prefix depends on your windows version and your language settings: On my system it&#8217;s c:\Dokumente und Einstellungen\heiko\.config\mudlet\profiles\&lt;name&gt;\logs. Log files have a file name similar to the autosaved profiles: date#time.html</p></div>
 </div>
-<h2 id="_buttons_and_custom_user_toolbars">Buttons and Custom User Toolbars</h2>
+<h2 id="export">Exporting and Importing Profiles or Packages</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Buttons are co</p></div>
+<div class="paragraph"><p>Mudlet supports XML packages that can be imported and exported while playing. You can find a package section on the forum of <a href="http://mudlet.sourceforge.net">http://mudlet.sourceforge.net</a> where you can download ready made packages for your MUD or upload your own packages for other players to use. A package can contain anything ranging from a single trigger to hundrets of button groups, trigger groups alias - in other words, entire "systems". To import a package you simply have to open the trigger editor and click the import icon, select the xml package file and import it. Often package files will be compressed to save space. If the file is compressed, you&#8217;ll need to uncompress it before importing it.</p></div>
+<h3 id="_importing_packages">Importing Packages</h3>
+<div class="paragraph"><p>The imported package will be stored permanently in your profile when you safe the profile. If you don&#8217;t like the imported package, delete its components manually or simply don&#8217;t save the profile. Then the new content will be lost on restart. Automatic package removal is not yet supported in Mudlet.</p></div>
+<div class="paragraph"><p>Packages are nothing else, but profiles - or parts of profiles that can be exchanged, imported and exported between your own profiles and between different players. From a technical perspective a package and a profile xml file are the same thing.</p></div>
+<h3 id="_sharing_your_scripts_exporting_items_or_profiles">Sharing your scripts - Exporting items or profiles</h3>
+<div class="paragraph"><p>Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).</p></div>
+<div class="paragraph"><p>The file name consists of the date and time, the profile was written to disc.
+You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You&#8217;ll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
+You can also import entire profiles as they are basically packages.</p></div>
 </div>
-<h2 id="_mudlet_8217_s_trigger_engine">Mudlet&#8217;s Trigger Engine</h2>
+<h2 id="alias">Mudlet&#8217;s Alias Engine</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
+We have explicitly chosen not to offer multi condition alias or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that alias, i.e. input triggers operates on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream.
+We are talking a bit about what is going on behind the scenes, in order to make clear that alias and triggers are essentially the same thing. In Mudlet triggers and alias are treated the same way, work the same way and only differ in terms of complexity and the amount of features.</p></div>
+<div class="paragraph"><p>Now, how does it all work? When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit. The text will be matched against all active alias in the hierarchy unless access to a branch is locked by the user or by a script.
+For an input trigger to match the command text the same rules as explained above in the trigger section apply. However, to simplify matters there is only one alias type. As alias are not performance critical we could reduce the amount of trigger types to just Perl regex as this type can do it all and performance is no issue with alias as the amount of data is much less. Even if you type like a madman you&#8217;ll never get close to sending the same amount of text to the MUD than the amount of text the MUD sends back to you.</p></div>
+<div class="paragraph"><p>What does it mean that a regex is true or "matched"? A trigger or an alias fires - or executes its commands/script - when the text matches the pattern of the trigger or alias. In most cases this means that the text contains the trigger/alias pattern. If the regex pattern is <tt style="color: blue;background-color: #b0e0e6;">reen</tt> then a text "The green house" will match because "reen" is contained in the text. More complex regex patterns can also hold information on where in the text a certain pattern must occur in order to match. <tt style="color: blue;background-color: #b0e0e6;">^tj</tt> only matches when the letters "tj" occur at the beginning of the text. Consequently, a text like "go tj" would not match.
+Regex patterns can also capture data like numbers, sequences of letters, words etc. at certain positions in the text. This is very useful for MUD related scripting and this is why it is explained below.</p></div>
+<div class="paragraph"><p>Let&#8217;s get back to alias. We start with a simple example.</p></div>
+<div class="paragraph"><p>We want Mudlet to send "put weapon in bag" whenever we type "pwb". Consequently, the pattern is <tt style="background-color: #b0e0e6;">pwb</tt> and as the task is so simple it&#8217;s enough to enter "put weapon in bag" in the send field. Then we click on save to save the changes and activate the alias by clicking on the padlock icon.
+Then we leave the trigger editor and test our new alias. After typing "pwb" and pressing return Mudlet will send the command "put weapon in bag" to the MUD.</p></div>
+<div class="paragraph"><p>Let&#8217;s move on to a more complicated example that is needed very often.</p></div>
+<div class="paragraph"><p>We want our script to automatically put the weapon in the correct bag as we have many bags and many weapons. The pattern stays the same. <tt style="background-color: #b0e0e6;">^pwb</tt> The ^ at the beginning of the line means that the command starts with pwd and no other letter in front of this. If we define our pattern more clearly, the pattern will match less often. Without the <tt style="background-color: #b0e0e6;">^</tt> the alias will match and the alias script will always be run whenever there is the sequence of letters "pwd" in your commands. This may not always be what you want. This is why it&#8217;s usually a good idea to make the pattern definition as exact as needed by being <em>less</em> general. The more general the pattern, the more often it will match.</p></div>
+<div class="paragraph"><p>Back to our task: The pattern is <tt style="background-color: #b0e0e6;">^pwb</tt>. Let&#8217;s assume that we have defined 2 variables in some other script. The variable "weapon" is the weapon we use and the variale "bag" is the name of the bag. NOTE: In Mudlet global variables can be accessed anywhere from within Mudlet scripts - no matter if they have been defined in a trigger script, in an alias script or in a key or button script. As soon as it&#8217;s been defined it somewhere it is usable. To make sure that a variable is local only, i. e. cannot be referenced from other scripts, you have to use the keyword local in front of your variable definition.
+Back to our alias: Pattern is:<tt style="background-color: #b0e0e6;">^pwb</tt> Script is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>send( "put " .. weapon .. " in " .. bag )</tt></pre>
+</div></div>
+<div class="paragraph"><p>Depending on the values of our variables Weapon and bag the command "<sup>pwd" will be substitued with an appropriate command.
+To set your weapon and bag variables we use 2 more aliases:
+Alias to set the weapon: <tt style="background-color: #b0e0e6;"></sup>uw (\w</tt>)+
+Script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>weapon = matches[2];
+send( "wield " .. weapon )</tt></pre>
+</div></div>
+<div class="paragraph"><p>To set our bag variable:
+Pattern:<tt style="background-color: #b0e0e6;">^set bag (.*)"</tt></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>bag = matches[2]</tt></pre>
+</div></div>
+<div class="paragraph"><p>Now let&#8217;s go back to our initial problem. We want an alias to put our current weapon into our current bag. But what happens if we are in the middle of a fight and absolutely need to sip a healing potions because we are close to death and cannot take the risk that the bag may be too full to take the weapon? We want to upgrade out little alias to take into account that the bag may be full and chose an empty bag instead. To do this we set up a trigger that detects messages that indicate that the attempt to put the weapon in the bag failed. In this trigger we execute this little bag-is-full-detection-trigger
+Trigger Pattern: (type substring) "Your bag is full."
+script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>bagIsFull = true;</tt></pre>
+</div></div>
+<div class="paragraph"><p>This detection trigger will set the variable bagIsFull to true as soon as it sees the message "Your bag is full.". Then you know that you have to use your spare bag to take the weapon.</p></div>
+<div class="paragraph"><p>Now we have the tools to write an improved version of our little alias script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>if bagIsFull then
+    send( "put " .. weapon .. " in " .. spareBag )
+else
+    send( "put " .. weapon .. " in " .. bag )
+end</tt></pre>
+</div></div>
+<div class="paragraph"><p>The next example is one of the most common aliases a tell alias:
+Pattern:<tt style="background-color: #b0e0e6;">^tj (.*)"</tt>
+Script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>send( "tell Jane " .. matches[2]</tt></pre>
+</div></div>
+<div class="paragraph"><p>Sadly, Jane is your fiance and the one thing she is a vegetarian and absolutely hates all words that relate to meat.
+Luckily, you know enough about aliases by now to make her believe that you&#8217;d never ever even think about meat. So you head to your globa function script (any script item will do as long as you define your variables <strong>outside of</strong> your function definitions. See the scripts chapter below for more information.
+In your script "my global functions" you add a Lua table containing a list of all of all words that a vegetarian might hate.
+For example: happyJaneTable = { "meat", "burger", "steak", "hamburger", "chickenburger" }
+Now you can upgrade your tell-jane script to automatically filter all words that Jane might not like.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt></tt></pre>
+</div></div>
+</div>
+<h2 id="triggers">Mudlet&#8217;s Trigger Engine</h2>
 <div class="sectionbody">
 <h3 id="_simple_trigger_matching">Simple Trigger Matching</h3>
 <div class="paragraph"><p>Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
@@ -800,7 +1039,7 @@ GNQfHLG+TyMTkAVEr88xQfVnkBg7GAKixSIykDYQsL21/wFkW/B5QqT9lwAAAABJRU5ErkJggg==" />
 <h3 id="_line_triggers_scripting_only">Line Triggers (scripting only)</h3>
 <div class="paragraph"><p>Line triggers trigger on a specified line in the future - or a sequence of lines - irrespective of the content of the line. This type of triggers can be very handy in scripting if you know what is coming e.g. you want to parse a table from the MUD, maps etc.</p></div>
 </div>
-<h2 id="_the_timer_engine">The Timer Engine</h2>
+<h2 id="timers">The Timer Engine</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Mudlet supports 3 different sort of timers:</p></div>
 <div class="exampleblock">
@@ -808,52 +1047,30 @@ GNQfHLG+TyMTkAVEr88xQfVnkBg7GAKixSIykDYQsL21/wFkW/B5QqT9lwAAAABJRU5ErkJggg==" />
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
-Timers that fire repeatedly in a certain interval specified by the user.
+<em>Regular GUI Timers</em> that fire repeatedly in a certain interval specified by the user.
 </p>
 </li>
 <li>
 <p>
-Offset Timers are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
+<em>Offset Timers</em> are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
 </p>
 </li>
 <li>
 <p>
-Temporary Timers that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
+<em>Temporary Timers</em> that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
 </p>
 </li>
 </ol></div>
 </div></div>
 </div>
-<h2 id="headingAlias">Alias</h2>
+<h2 id="buttons">Buttons and Custom User Toolbars</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
-We have explicitly chosen not to offer multi condition alias or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that alias, i.e. input triggers operates on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream.
-We are talking a bit about what is going on behind the scenes, in order to make clear that alias and triggers are essentially the same thing. In Mudlet triggers and alias are treated the same way, work the same way and only differ in terms of complexity and the amount of features.</p></div>
-<div class="paragraph"><p>Now, how does it all work? When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit. The text will be matched against all active alias in the hierarchy unless access to a branch is locked by the user or by a script.
-For an input trigger to match the command text the same rules as explained above in the trigger section apply. However, to simplify matters there is only one alias type. As alias are not performance critical we could reduce the amount of trigger types to just Perl regex as this type can do it all and performance is no issue with alias as the amount of data is much less. Even if you type like a madman you&#8217;ll never get close to sending the same amount of text to the MUD than the amount of text the MUD sends back to you.</p></div>
-<div class="paragraph"><p>What does it mean that a regex is true or "matched"? A trigger or an alias fires - or executes its commands/script - when the text matches the pattern of the trigger or alias. In most cases this means that the text contains the trigger/alias pattern. If the regex pattern is "reen" then a text "The green house" will match because "reen" is contained in the text. More complex regex patterns can also hold information on where in the text a certain pattern must occur in order to match. "^tj" only matches when the letters "tj" occur at the beginning of the text. Consequently, a text like "go tj" would not match.
-Regex patterns can also capture data like numbers, sequences of letters, words etc. at certain positions in the text. This is very useful for MUD related scripting and this is why it is explained below.</p></div>
-<div class="paragraph"><p>Let&#8217;s get back to alias. We start with a simple example.</p></div>
-<div class="exampleblock">
-<div class="content">
-<div class="paragraph"><p>We want Mudlet to send "put weapon in bag" whenever we type "pwb". Consequently, the pattern is "pwb" and as the task is so simple it&#8217;s enough to enter "put weapon in bag" in the send field. Then we click on save to save the changes and activate the alias by clicking on the padlock icon.
-Then we leave the trigger editor and test our new alias. After typing "pwb" and pressing return Mudlet will send the command "put weapon in bag" to the MUD.</p></div>
-</div></div>
-<div class="paragraph"><p>Let&#8217;s move on to a more complicated example that is needed very often.</p></div>
-<div class="exampleblock">
-<div class="content">
-<div class="paragraph"><p>We want our script to automatically put the weapon in the correct bag as we have many bags and many weapons. The pattern stays the same. "<sup>pwb" (the </sup> at the beginning of the line means that the command starts with pwd and no other letter in front of this. If we define our pattern more clearly, the pattern will match less often. Without the <sup> the alias script will always be run whenever there is the sequence of letters "pwd" in your commands. This may not always be what you want. This is why it&#8217;s usually a good idea to define the pattern as closely as needed.)
-Back to our task: The pattern is "</sup>pwb". In our scripts we have defined variables several variables. "weapon" is the weapon we use and the variale "bag" is the name of the bag.</p></div>
-</div></div>
+<div class="paragraph"><p>Buttons are co</p></div>
 </div>
-<h2 id="_exporting_and_importing_profiles_or_packages">Exporting and Importing Profiles or Packages</h2>
+<h2 id="scripting">Scripting with Mudlet</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).</p></div>
-<div class="paragraph"><p>The file name consists of the date and time, the profile was written to disc.
-You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You&#8217;ll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
-You can also import entire profiles as they are basically packages.</p></div>
 </div>
-<h2 id="_quick_lua_syntax_overview">Quick Lua syntax overview</h2>
+<h2 id="luaSyntax">A quick Lua syntax overview</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Lua variables can be either a string or a number. They are whatever there were initially initialized with.
 === string concatenation, variable substitution)</p></div>
@@ -1042,7 +1259,7 @@ enableTimer( name )</p></div>
 <div class="paragraph"><p>triggerID = tempTrigger( regex, code ) creates a fast substring matching trigger
 triggerID = tempRegexTrigger( regex, code ) creates a regular expression matching trigger</p></div>
 </div>
-<h2 id="_registering_event_handlers_and_raising_events">Registering Event Handlers and Raising Events</h2>
+<h2 id="events">Registering Event Handlers and Raising Events</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>raiseEvent( string name, args )</p></div>
 </div>
@@ -1136,7 +1353,7 @@ mySilver = mySilver + tonumber( multimatches[1][3] );</tt></pre>
 </div></div>
 <div class="paragraph"><p>What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines.</p></div>
 </div>
-<h2 id="heading4">Lua API</h2>
+<h2 id="api">Lua API</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Mudlet defines several global Lua variables that are accessible from anywhere.</p></div>
 <div class="tableblock">
@@ -1446,7 +1663,7 @@ This function is defined in luaglobal.lua.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-04-13 22:15:33 CEST
+Last updated 2009-04-14 01:11:27 CEST
 </div>
 </div>
 </body>
