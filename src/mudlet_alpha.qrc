@@ -100,5 +100,6 @@
         <file>fonts/ttf-bitstream-vera-1.10/README.TXT</file>
         <file>fonts/ttf-bitstream-vera-1.10/local.conf</file>
         <file>fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT</file>
+        <file>icons/red-bomb.png</file>
     </qresource>
 </RCC>

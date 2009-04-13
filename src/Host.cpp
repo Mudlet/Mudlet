@@ -106,7 +106,13 @@ void Host::stopAllTriggers()
     mTriggerUnit.stopAllTriggers();
     mAliasUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
-    mScriptUnit.stopAllTriggers();
+}
+
+void Host::reenableAllTriggers()
+{
+    mTriggerUnit.reenableAllTriggers();
+    mAliasUnit.reenableAllTriggers();
+    mTimerUnit.reenableAllTriggers();
 }
 
 void Host::send( QString cmd, bool dontExpandAliases )

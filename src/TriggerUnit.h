@@ -51,6 +51,7 @@ public:
     void                  processDataStream( QString & );
     void                  dump();
     void                  stopAllTriggers();
+    void                  reenableAllTriggers();
     std::list<TTrigger *> mCleanupList;
     qint64                getNewID();
     QMutex                mTriggerUnitLock;

@@ -147,33 +147,31 @@ bool TAlias::match( QString & toMatch )
         if( mudlet::debugMode ) TDebug()<<"Alias: capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
     }
     (void)pcre_fullinfo( re,                                              
-                            NULL,                 
-                            PCRE_INFO_NAMECOUNT,  
-                            &namecount);                                          
+                         NULL,
+                         PCRE_INFO_NAMECOUNT,
+                         &namecount );
     
-    if (namecount <= 0) 
+    if( namecount <= 0 )
     {
-    //cout << "no named substrings detected" << endl; 
+        //cout << "no named substrings detected" << endl;
     }
     else
     {
         unsigned char *tabptr;
         (void)pcre_fullinfo( re,
-                                NULL,                     
-                                PCRE_INFO_NAMETABLE,      
-                                &name_table);             
+                             NULL,
+                             PCRE_INFO_NAMETABLE,
+                             &name_table );
         
-        (void)pcre_fullinfo(
-                                re,                       
-                                NULL,                     
-                                PCRE_INFO_NAMEENTRYSIZE,  
-                                &name_entry_size);      
+        (void)pcre_fullinfo( re,
+                             NULL,
+                             PCRE_INFO_NAMEENTRYSIZE,
+                             &name_entry_size );
         
         tabptr = name_table;
-        for (i = 0; i < namecount; i++)
+        for( i = 0; i < namecount; i++ )
         {
             int n = (tabptr[0] << 8) | tabptr[1];
-        //printf("GOT:(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2, ovector[2*n+1] - ovector[2*n], subject + ovector[2*n]);
             tabptr += name_entry_size;
         }
     } 
@@ -183,9 +181,9 @@ bool TAlias::match( QString & toMatch )
         int options = 0;                
         int start_offset = ovector[1];  
         
-        if (ovector[0] == ovector[1])
+        if( ovector[0] == ovector[1] )
         {
-            if (ovector[0] >= subject_length)
+            if( ovector[0] >= subject_length )
             {
                 goto END;
             }
@@ -201,14 +199,14 @@ bool TAlias::match( QString & toMatch )
                         ovector,                                                           
                         30 ); 
         
-        if (rc == PCRE_ERROR_NOMATCH)
+        if( rc == PCRE_ERROR_NOMATCH )
         {
-            if (options == 0) break;
+            if( options == 0 ) break;
             ovector[1] = start_offset + 1;
             continue; 
         }
         
-        if (rc < 0)
+        if( rc < 0 )
         {
             goto END;
         }
@@ -217,7 +215,7 @@ bool TAlias::match( QString & toMatch )
         {
             qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
         }
-        for (i = 0; i < rc; i++)
+        for( i = 0; i < rc; i++ )
         {
             char * substring_start = subject + ovector[2*i];
             int substring_length = ovector[2*i+1] - ovector[2*i];
@@ -265,7 +263,7 @@ void TAlias::setRegexCode( QString code )
                        &erroffset,           
                        NULL);                
     
-    if (re == NULL)
+    if( re == NULL )
     {
         mOK_init = false;
     }

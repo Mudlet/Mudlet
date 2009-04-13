@@ -50,6 +50,7 @@ public:
     bool                  restore( QDataStream &, bool );
     void                  reParentTimer( int childID, int oldParentID, int newParentID );
     void                  stopAllTriggers();
+    void                  reenableAllTriggers();
     void                  markCleanup( TTimer * );
     void                  doCleanup();
     qint64                getNewID();

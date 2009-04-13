@@ -37,7 +37,7 @@ class AliasUnit
     
 public:
     AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    std::list<TAlias *>   getAliasRootNodeList()   { QMutexLocker locker(& mAliasUnitLock); return mAliasRootNodeList; }
+    std::list<TAlias *>   getAliasRootNodeList()   { return mAliasRootNodeList; }
     TAlias *              getAlias( int id );
     bool                  registerAlias( TAlias * pT );
     void                  unregisterAlias( TAlias * pT );
@@ -47,8 +47,7 @@ public:
     qint64                getNewID();
     bool                  processDataStream( QString & );
     void                  stopAllTriggers();
-    
-    QMutex                mAliasUnitLock;
+    void                  reenableAllTriggers();
     
 private: 
     AliasUnit(){;}

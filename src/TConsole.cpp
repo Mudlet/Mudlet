@@ -192,7 +192,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     emergencyStop->setFocusPolicy( Qt::NoFocus );
     emergencyStop->setCheckable( true );
     emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
-    
+    connect( emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers( bool )));
+
     layoutLayer2->addWidget( mpCommandLine );
     layoutLayer2->addWidget( timeStampButton );
     layoutLayer2->addWidget( logButton );
@@ -1504,5 +1505,23 @@ void TConsole::pasteWindow( TBuffer bufferSlice )
 void TConsole::slot_user_scrolling( int action )
 {
 }
+
+void TConsole::slot_stop_all_triggers( bool b )
+{
+    if( b )
+    {
+        mpHost->stopAllTriggers();
+        QIcon icon2(":/icons/red-bomb.png");
+        emergencyStop->setIcon( icon2 );
+    }
+    else
+    {
+        mpHost->reenableAllTriggers();
+        QIcon icon2(":/icons/edit-bomb.png");
+        emergencyStop->setIcon( icon2 );
+    }
+}
+
+
 
 

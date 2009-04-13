@@ -348,13 +348,14 @@ div.toclevel4 {
 <h2 id="_table_of_content">Table of Content</h2>
 <div class="sectionbody">
 <div class="paragraph"><p><a href="#heading1">1. General Introduction to Modern MUD Clients.</a></p></div>
-<div class="paragraph"><p><a href="#heading2">2. Mudlet&#8217;s Command Line</a></p></div>
-<div class="paragraph"><p><a href="#heading3">3. The Trigger Engine</a></p></div>
-<div class="paragraph"><p><a href="#heading4">4. The Timer Engine</a></p></div>
-<div class="paragraph"><p><a href="#heading5">5. Key Bindings</a></p></div>
-<div class="paragraph"><p><a href="#heading6">6. User defined Buttons and Menus</a></p></div>
-<div class="paragraph"><p><a href="#heading7">7. Introduction to Scripting with Mudlet</a></p></div>
-<div class="paragraph"><p><a href="#heading8">8. Scripting API and Reference</a></p></div>
+<div class="paragraph"><p><a href="#heading2">2. Mudlet&#8217;s Command Line</a>
+<a href="#headingAlias">3. The Alias Engine</a>
+<a href="#heading3">4. The Trigger Engine</a>
+<a href="#heading4">5. The Timer Engine</a>
+<a href="#heading5">6. Key Bindings</a>
+<a href="#heading6">7. User defined Buttons and Menus</a>
+<a href="#heading7">8. Introduction to Scripting with Mudlet</a>
+<a href="#heading8">9. Scripting API and Reference</a></p></div>
 </div>
 <h2 id="_introduction">Introduction</h2>
 <div class="sectionbody">
@@ -637,9 +638,6 @@ EXPAND TO: sip ceylon mint</tt></pre>
 <div class="paragraph"><p>Your character can train in his attributes once every three hours. You could either try tracking this manually or add a trigger starting timer after each training. Once the three hours have passed, your character will conveniently say to himself that it is time to do a couple of push-ups.</p></div>
 </div></div>
 </div>
-<h2 id="_mudlet_technical_manual">Mudlet Technical Manual</h2>
-<div class="sectionbody">
-</div>
 <h2 id="_multi_session_gameing">Multi Session Gameing</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Mudlet lets you play several simultaneous MUD sessions. However, currently we have the restriction that you cannot use the same profile twice. Consequently, if you want to play three characters on the same MUD at the same time, you need to make 3 profiles with 3 different names e.g. <a href="mailto:ernie@avalon.de">ernie@avalon.de</a>, <a href="mailto:bert@avalon.de">bert@avalon.de</a> etc.
@@ -650,13 +648,11 @@ Split Screen</p></div>
 <h2 id="_command_line_auto_completion_tab_completion_and_history">Command Line Auto-Completion, Tab-Completion and History</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
-- Tab completion searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
-- Autocompletion tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
-- If you haven&#8217;t started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
-- To get out of autocompletion you can press the ESC key any time.</p></div>
-</div>
-<h2 id="_logging_output_to_html_log_files">Logging Output to HTML Log Files</h2>
-<div class="sectionbody">
+1. Tab completion searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
+2. Autocompletion tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
+3. If you haven&#8217;t started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
+4. To get out of autocompletion you can press the ESC key any time.
+Logging Output to HTML Log Files</p></div>
 <div class="paragraph"><p>Press on the little button with the blue folder with the green arrow icon on the lower right side of the screen next to the command line.</p></div>
 <div class="paragraph"><p>When you press on it again logging stops. Log files can be found at the mudlet home directory in your profile directory. The path is &lt;path to mudlet home&gt;/.config/mudlet/profiles/&lt;name&gt;/logs On Linux this would be: /home/username/.config/mudlet/profiles/profilename/logs</p></div>
 <div class="paragraph"><p>On Windows the path prefix depends on your windows version and your language settings: On my system it&#8217;s c:\Dokumente und Einstellungen\heiko\.config\mudlet\profiles\&lt;name&gt;\logs. Log files have a file name similar to the autosaved profiles: date#time.html</p></div>
@@ -668,123 +664,13 @@ Split Screen</p></div>
 <h2 id="_mudlet_8217_s_trigger_engine">Mudlet&#8217;s Trigger Engine</h2>
 <div class="sectionbody">
 <h3 id="_simple_trigger_matching">Simple Trigger Matching</h3>
-<h4 id="_making_a_simple_trigger_and_editing_your_trigger">Making a Simple Trigger and Editing your Trigger</h4>
-<div class="paragraph"><p>The pattern list holds
-Type your trigger in the input line below the trigger conditions list box and then click on the little + icon on the right side of the input line where you entered your pattern. This click will add your new pattern to the pattern list of the trigger.
-To edit a pattern in the list, select it with the mouse. The pattern will appear in the edit line below the pattern list where you can edit the pattern. <strong>After your edit you have to press the return key to update the list</strong>.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Caution" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">After your editing is finished your changes will only become permanent if you <strong>press on the save icon</strong> on the middle of the icon bar. This is the same throughout the entire program. <strong>If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.</strong></td>
-</tr></table>
-</div>
-<div class="paragraph"><p>Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Tip" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.</td>
-</tr></table>
-</div>
+<div class="paragraph"><p>Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
+After editing is finished your changes will only become permanent if you press on the save icon on the upper left. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.
+Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available.</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="paragraph"><p>Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.</p></div>
+</div></div>
 <h3 id="_simple_highlighter_triggers">Simple Highlighter Triggers</h3>
 <div class="paragraph"><p>If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:</p></div>
 <div class="listingblock">
@@ -821,7 +707,9 @@ condition #2 pattern = frog
 condition #3 pattern = stone</p></div>
 <div class="paragraph"><p>Wheather or not a condition is found to be true <strong>also</strong> depends on another property, i.e. the <strong>type</strong> of the condition.
 The condition type can be among others:</p></div>
-<div class="ulist"><ul>
+<div class="exampleblock">
+<div class="content">
+<div class="olist arabic"><ol class="arabic">
 <li>
 <p>
 substring matching  &#8594; the condition is true if the condition pattern is a substring of the output line from the MUD. In other words: If the pattern "pond" is contained in any line of output, the condition is true.
@@ -834,10 +722,11 @@ begin of line matching &#8594; the condition is only true if the conditon patter
 </li>
 <li>
 <p>
-Perl regular expression matching &#8594; the condition is true if the Perl regex pattern is matched. You&#8217;ll find more information on Perl regex below.
+Perl regular expression &#8594; the condition is true if the Perl regex pattern is matched. You&#8217;ll find more information on Perl regex below.
 </p>
 </li>
-</ul></div>
+</ol></div>
+</div></div>
 <div class="paragraph"><p>In our example we chose condition type "substring" for all three condtions.
 Consequently, the trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.</p></div>
 <div class="literalblock">
@@ -906,7 +795,6 @@ GNQfHLG+TyMTkAVEr88xQfVnkBg7GAKixSIykDYQsL21/wFkW/B5QqT9lwAAAABJRU5ErkJggg==" />
 <div class="paragraph"><p>To complicate matters, however, you don&#8217;t want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn&#8217;t have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Conditon Triggers. If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description.</p></div>
 <div class="paragraph"><p>Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlet&#8217;s MCTs.</p></div>
 <div class="paragraph"><p>You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.</p></div>
-<div class="paragraph"><p>You will find more detailed information on how to work with triggers in scripts, especially how to make use of the captured information in the scripting section of this <a href="#example1">manual</a>.</p></div>
 <h3 id="_temporary_triggers_scripting_only">Temporary Triggers (scripting only)</h3>
 <div class="paragraph"><p>Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).</p></div>
 <h3 id="_line_triggers_scripting_only">Line Triggers (scripting only)</h3>
@@ -914,47 +802,56 @@ GNQfHLG+TyMTkAVEr88xQfVnkBg7GAKixSIykDYQsL21/wFkW/B5QqT9lwAAAABJRU5ErkJggg==" />
 </div>
 <h2 id="_the_timer_engine">The Timer Engine</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet supports 4 different sort of timers:</p></div>
+<div class="paragraph"><p>Mudlet supports 3 different sort of timers:</p></div>
+<div class="exampleblock">
+<div class="content">
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
-<strong>Standard Timers</strong> that fire repeatedly in a certain interval specified by the user.
+Timers that fire repeatedly in a certain interval specified by the user.
 </p>
 </li>
 <li>
 <p>
-<strong>Offset Timers</strong> are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
+Offset Timers are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
 </p>
 </li>
 <li>
 <p>
-<strong>Temporary Timers</strong> (scripting only) behave like regular timers, but they are one shot only timers. Temporary timers cannot be accessed from the GUI and are not saved in profiles.
-</p>
-</li>
-<li>
-<p>
-<strong>Batch Job Timers</strong> (scripting only) are special purpose timers. A batch job is a sequence of commands that is send to the MUD according to a chosen time interval. The sequence of commands is guaranteed. When using regular temporary timers or standard GUI timers there is no such guarantee as to when a certain timer fires compared to the other timers that are going to fire in the same interval. As a result, if the sequence of commands is important for a script you need to chose a batch job timer. Of course you can write your own timer that sends the commands one after another thus reenabling itself until the job is done, but this will not be necessary in most cases if you use the batch job timers.
-Here is an example for a typical batch job timer:
-You want to write an autominer script that mines a gold mine automatically and has to record the path back out of the mine in case the mine suddenly crashes and you only have a few seconds to get out in time before you get buried and your character dies. The path is a complicated maze so you can&#8217;t afford that your script messes up the sequence of the directions i. e. instead of North, West, Up, North, Down it walke West, Down, Up, North just because the time interval was short as you had no time left and there was a bit of lag on the internet so the tempTimer that was to fire "up", was fired after the tempTimer that was to send "Down".
+Temporary Timers that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
 </p>
 </li>
 </ol></div>
+</div></div>
+</div>
+<h2 id="headingAlias">Alias</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
+We have explicitly chosen not to offer multi condition alias or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that alias, i.e. input triggers operates on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream.
+We are talking a bit about what is going on behind the scenes, in order to make clear that alias and triggers are essentially the same thing. In Mudlet triggers and alias are treated the same way, work the same way and only differ in terms of complexity and the amount of features.</p></div>
+<div class="paragraph"><p>Now, how does it all work? When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit. The text will be matched against all active alias in the hierarchy unless access to a branch is locked by the user or by a script.
+For an input trigger to match the command text the same rules as explained above in the trigger section apply. However, to simplify matters there is only one alias type. As alias are not performance critical we could reduce the amount of trigger types to just Perl regex as this type can do it all and performance is no issue with alias as the amount of data is much less. Even if you type like a madman you&#8217;ll never get close to sending the same amount of text to the MUD than the amount of text the MUD sends back to you.</p></div>
+<div class="paragraph"><p>What does it mean that a regex is true or "matched"? A trigger or an alias fires - or executes its commands/script - when the text matches the pattern of the trigger or alias. In most cases this means that the text contains the trigger/alias pattern. If the regex pattern is "reen" then a text "The green house" will match because "reen" is contained in the text. More complex regex patterns can also hold information on where in the text a certain pattern must occur in order to match. "^tj" only matches when the letters "tj" occur at the beginning of the text. Consequently, a text like "go tj" would not match.
+Regex patterns can also capture data like numbers, sequences of letters, words etc. at certain positions in the text. This is very useful for MUD related scripting and this is why it is explained below.</p></div>
+<div class="paragraph"><p>Let&#8217;s get back to alias. We start with a simple example.</p></div>
+<div class="exampleblock">
+<div class="content">
+<div class="paragraph"><p>We want Mudlet to send "put weapon in bag" whenever we type "pwb". Consequently, the pattern is "pwb" and as the task is so simple it&#8217;s enough to enter "put weapon in bag" in the send field. Then we click on save to save the changes and activate the alias by clicking on the padlock icon.
+Then we leave the trigger editor and test our new alias. After typing "pwb" and pressing return Mudlet will send the command "put weapon in bag" to the MUD.</p></div>
+</div></div>
+<div class="paragraph"><p>Let&#8217;s move on to a more complicated example that is needed very often.</p></div>
+<div class="exampleblock">
+<div class="content">
+<div class="paragraph"><p>We want our script to automatically put the weapon in the correct bag as we have many bags and many weapons. The pattern stays the same. "<sup>pwb" (the </sup> at the beginning of the line means that the command starts with pwd and no other letter in front of this. If we define our pattern more clearly, the pattern will match less often. Without the <sup> the alias script will always be run whenever there is the sequence of letters "pwd" in your commands. This may not always be what you want. This is why it&#8217;s usually a good idea to define the pattern as closely as needed.)
+Back to our task: The pattern is "</sup>pwb". In our scripts we have defined variables several variables. "weapon" is the weapon we use and the variale "bag" is the name of the bag.</p></div>
+</div></div>
 </div>
 <h2 id="_exporting_and_importing_profiles_or_packages">Exporting and Importing Profiles or Packages</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Importing and exporting anything from a single trigger, a trigger group, button packages, timers or entire systems is easy in Mudlet.
-Basically, it just means a single click.</p></div>
-<div class="paragraph"><p>Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).
-The file name consists of the date and time, the profile was written to disc.</p></div>
-<div class="paragraph"><p><strong>Importing</strong> a package means simply clicking on the "import" button in the trigger editor (&#8594;triggers) and chosing the package file. Packages may contain anything ranging from a single trigger, button alias etc. to full profiles with hundrets of trigger groups, timers etc.</p></div>
-<div class="paragraph"><p><strong>Exporting</strong> is also easy. Select your item in the script editor and then click on the "Export" button. You&#8217;ll be prompted for a file name and that&#8217;s it. You can send your cool trigger, buttons, timers etc. to your friends via email or use them in another profile of yours.
-Exporting your good stuff is strongly recommended as it makes MUDding more enjoyable for everybody. Share your knowledge and help others!</p></div>
-<div class="paragraph"><p>You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You&#8217;ll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
-You can also import entire profiles as they are basically packages.
-If you have written a nice set of triggers, buttons, scripts etc. or maybe even a fully fledged "system" of some sort and you want to share it with others, you can make a nice packages that others can import.
-Of course, you can open your xml profile in a text editor and delete what is not needed for the package, but this is too much work.
-The simplest way is simply to arrange your modules in such a way that they all go into one main folder e.g. all triggers are put into a main trigger folder and named accordingly. Then you export this trigger package by using the button "profiles save as". You are asked for a filename. Call it MySystemTriggerPackage.xml etc. Then you proceed with the Alias, the scripts, the buttons, the keys etc. and make packages for each and export them individually.
-Then you open a new <strong>empty</strong> profile in Mudlet and import all your sub packages. When everything is imported, export the whole thing via "profile save as" and give it an appropriate name. Others can now import the entire system in a single package file.</p></div>
+<div class="paragraph"><p>Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).</p></div>
+<div class="paragraph"><p>The file name consists of the date and time, the profile was written to disc.
+You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You&#8217;ll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
+You can also import entire profiles as they are basically packages.</p></div>
 </div>
 <h2 id="_quick_lua_syntax_overview">Quick Lua syntax overview</h2>
 <div class="sectionbody">
@@ -1282,7 +1179,7 @@ cellspacing="0" cellpadding="4">
 width="100%"
 frame="hsides"
 cellspacing="0" cellpadding="4">
-<caption class="title">Main Functions</caption>
+<caption class="title">Lua API</caption>
 <col width="50%" />
 <col width="50%" />
 <thead valign="top">
@@ -1293,103 +1190,25 @@ cellspacing="0" cellpadding="4">
 </thead>
 <tbody valign="top">
 <tr>
-<td align="left"><p class="table">send( command )</p></td>
-<td align="left"><p class="table">This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.</p></td>
+<td align="left"><p class="table">clearUserWindow( window_name )</p></td>
+<td align="left"><p class="table">Clears the user window with the name given as argument.</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">echo( text )</p></td>
-<td align="left"><p class="table">prints text to the main window</p></td>
+<td align="left"><p class="table">copy()</p></td>
+<td align="left"><p class="table">Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error</p></td>
-<td align="left"><p class="table">Selects a substring from the line where the user cursor is currently
-positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of
-the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that
-the cursor is in the correct line if you want to call one of the select functions.
-NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) &gt; -1 then setFgColor( 255,0,0) end"</p></td>
+<td align="left"><p class="table">cut()</p></td>
+<td align="left"><p class="table">Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">deleteLine()</p></td>
 <td align="left"><p class="table">deletes the current Line under the user cursor.</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">timer_id = tempTimer( seconds, lua_code )</p></td>
-<td align="left"><p class="table">Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.</p></td>
+<td align="left"><p class="table"><strong>deselect()</strong></p></td>
+<td align="left"><p class="table">deselects the last selected text</p></td>
 </tr>
-<tr>
-<td align="left"><p class="table">enableTrigger( name )</p></td>
-<td align="left"><p class="table">enables a Trigger. see enableTimer() for more details.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">insertText( string )</p></td>
-<td align="left"><p class="table">Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">suffix( what )</p></td>
-<td align="left"><p class="table">prints "what" at the end of the line when used in a trigger script</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">prefix( what )</p></td>
-<td align="left"><p class="table">prints "what" at the beginning of a line when used in a trigger script</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">boolean = selectSection( from, length_of_string )</p></td>
-<td align="left"><p class="table">Absolute column number for start of selection and length of selection</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">selectCaptureGroup( groupNumber ) with first group = 0</p></td>
-<td align="left"><p class="table">Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">replace( with )</p></td>
-<td align="left"><p class="table">replaces the selected text with "with". To delete text use replace("")</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">replaceAll( what, with )</p></td>
-<td align="left"><p class="table">replaces all occurrences of what in the current line with with</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">fg( color_name )</p></td>
-<td align="left"><p class="table">Sets the current selection foreground color to color_name. You can find the pre-defined color names <a href="#colortable">here</a></p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">bg( color_name )</p></td>
-<td align="left"><p class="table">same as fg( color_name ) just for the background color.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">resetFormat()</p></td>
-<td align="left"><p class="table">Resets the character format to default. This should be used after you have colorized some text, but don&#8217;t want to keep using these colors for further prints.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setBgColor( r,g,b )</p></td>
-<td align="left"><p class="table">Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setFgColor( r, g, b )</p></td>
-<td align="left"><p class="table">Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">openUserWindow( name )</p></td>
-<td align="left"><p class="table">Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="tableblock">
-<table rules="all"
-width="100%"
-frame="hsides"
-cellspacing="0" cellpadding="4">
-<caption class="title">Trigger, Timer, Alias and Key Functions</caption>
-<col width="50%" />
-<col width="50%" />
-<thead valign="top">
-<tr>
-<th align="left"> Function </th>
-<th align="left"> Description</th>
-</tr>
-</thead>
-<tbody valign="top">
 <tr>
 <td align="left"><p class="table">disableTimer( name )</p></td>
 <td align="left"><p class="table">Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.</p></td>
@@ -1401,6 +1220,10 @@ cellspacing="0" cellpadding="4">
 <tr>
 <td align="left"><p class="table">disableKey( name )</p></td>
 <td align="left"><p class="table">Uses trigger name as id or the id returned by tempTrigger()</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">echo( text )</p></td>
+<td align="left"><p class="table">prints text to the main window</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">echoUserWindow( window_name, text )</p></td>
@@ -1423,6 +1246,61 @@ cellspacing="0" cellpadding="4">
 <td align="left"><p class="table">like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.</p></td>
 </tr>
 <tr>
+<td align="left"><p class="table">lineNumber = getLineNumber()</p></td>
+<td align="left"><p class="table">to get the absolute line number of the current user cursor</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">number = getColumnNumber()</p></td>
+<td align="left"><p class="table">To get the absolute column number of the current user cursor</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">number = getLineCount()</p></td>
+<td align="left"><p class="table">To get the absolute amount of lines in the current console buffer</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )</p></td>
+<td align="left"><p class="table">Returns a section of the content of the screen text buffer. Absolute line numbers are used</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">number_of_last_line = getLineCount()</p></td>
+<td align="left"><p class="table">number of the last line in the buffer</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">insertText( string )</p></td>
+<td align="left"><p class="table">Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">killTimer( name )</p></td>
+<td align="left"><p class="table">Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">killTrigger( name )</p></td>
+<td align="left"><p class="table">See killTimer()</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">boolean = moveCursor( windowName, x, y )</p></td>
+<td align="left"><p class="table">Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don&#8217;t exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">moveCursorEnd( windowName )</p></td>
+<td align="left"><p class="table">Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">openUserWindow( name )</p></td>
+<td align="left"><p class="table">Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">paste()</p></td>
+<td align="left"><p class="table">pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">pasteWindow( name )</p></td>
+<td align="left"><p class="table">pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
+selectString( line, 1 )
+cut()
+pasteWindow( "chat" )</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">raiseEvent( event_name, arg-1, &#8230; arg-n )</p></td>
 <td align="left"><p class="table">Raises the event event_name. The event system will call the main function (the one that is called exactly like
 the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with
@@ -1439,6 +1317,42 @@ uses minimal arguments, name the event name. There can only be one event handler
 as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you
 should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees
 and thus help reduce complexity on large systems.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">replace( with )</p></td>
+<td align="left"><p class="table">replaces the selected text with "with". To delete text use replace("")</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">replaceAll( what, with )</p></td>
+<td align="left"><p class="table">replaces all occurrences of what in the current line with with</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error</p></td>
+<td align="left"><p class="table">Selects a substring from the line where the user cursor is currently
+positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of
+the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that
+the cursor is in the correct line if you want to call one of the select functions.
+NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) &gt; -1 then setFgColor( 255,0,0) end"</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">boolean = selectSection( from, length_of_string )</p></td>
+<td align="left"><p class="table">Absolute column number for start of selection and length of selection</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">selectCaptureGroup( groupNumber ) with first group = 0</p></td>
+<td align="left"><p class="table">Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">send( command )</p></td>
+<td align="left"><p class="table">This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setBgColor( r,g,b )</p></td>
+<td align="left"><p class="table">Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setFgColor( r, g, b )</p></td>
+<td align="left"><p class="table">Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">timer_id = tempTimer( seconds, lua_code )</p></td>
@@ -1460,94 +1374,9 @@ will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 <td align="left"><p class="table">temorary trigger using perl regex pattern matching</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">killTimer( name )</p></td>
-<td align="left"><p class="table">Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">killTrigger( name )</p></td>
-<td align="left"><p class="table">See killTimer()</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="tableblock">
-<table rules="all"
-width="100%"
-frame="hsides"
-cellspacing="0" cellpadding="4">
-<caption class="title">Buffer, Screen and Mini Windows Functions</caption>
-<col width="50%" />
-<col width="50%" />
-<thead valign="top">
-<tr>
-<th align="left"> Function </th>
-<th align="left"> Description</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr>
-<td align="left"><p class="table">openUserWindow( name )</p></td>
-<td align="left"><p class="table">Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">clearUserWindow( window_name )</p></td>
-<td align="left"><p class="table">Clears the user window with the name given as argument.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table"><strong>userWindowLineWrap( window, boolean )</strong></p></td>
+<td align="left"><p class="table">userWindowLineWrap( window, boolean )</p></td>
 <td align="left"><p class="table">turns line wrap mode on or off in user dock windows
-userWindowLineWrap( "chat", true ) turns on line wrap for window "chat" (<strong>not implemented</strong>)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">copy()</p></td>
-<td align="left"><p class="table">Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">cut()</p></td>
-<td align="left"><p class="table">Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table"><strong>deselect()</strong></p></td>
-<td align="left"><p class="table">deselects the last selected text (<strong>not implemented yet</strong>)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">lineNumber = getLineNumber()</p></td>
-<td align="left"><p class="table">to get the absolute line number of the current user cursor</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">number = getColumnNumber()</p></td>
-<td align="left"><p class="table">To get the absolute column number of the current user cursor</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">number = getLineCount()</p></td>
-<td align="left"><p class="table">To get the absolute amount of lines in the current console buffer</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )</p></td>
-<td align="left"><p class="table">Returns a section of the content of the screen text buffer. Absolute line numbers are used</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">number_of_last_line = getLineCount()</p></td>
-<td align="left"><p class="table">number of the last line in the buffer</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">boolean = moveCursor( windowName, x, y )</p></td>
-<td align="left"><p class="table">Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don&#8217;t exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">moveCursorEnd( windowName )</p></td>
-<td align="left"><p class="table">Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">paste()</p></td>
-<td align="left"><p class="table">pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">pasteWindow( name )</p></td>
-<td align="left"><p class="table">pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
-selectString( line, 1 )
-cut()
-pasteWindow( "chat" )</p></td>
+userWindowLineWrap( "chat", true ) turns on line wrap for window "chat"</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">printTable( table_name )</p></td>
@@ -1559,251 +1388,57 @@ This function is defined in luaglobal.lua.</p></td>
 <td align="left"><p class="table">Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">showMultimatches()</p></td>
-<td align="left"><p class="table">Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers</p></td>
+<td align="left"><p class="table">fg( "red" )</p></td>
+<td align="left"><p class="table">Sets the current foreground color to red. Check the luaglobal.lua file for the defined color names ( about 255) e.g. fg("green") will set the foreground color to green.</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table"></p></td>
+<td align="left"><p class="table">bg( "blue" )</p></td>
+<td align="left"><p class="table">same as fg( color_name ) just for the background color.</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">table.load( file, table )</p></td>
-</tr>
-<tr>
 <td align="left"><p class="table">restores a Lua table from a data file that has been saved with table.save()</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">table.save( file, table )</p></td>
-</tr>
-<tr>
 <td align="left"><p class="table">saves the given table into the given file</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">showCaptureGroups()</p></td>
-</tr>
-<tr>
 <td align="left"><p class="table">a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (&#8594;trigger editor&#8594;bug symbol)</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">printTable( table )</p></td>
-</tr>
-<tr>
 <td align="left"><p class="table">another debug function that prints the content of a Lua table on the screen split in key and value.</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">sendAll( what )</p></td>
-</tr>
-<tr>
 <td align="left"><p class="table">sends a list of commands to the MUD</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">suffix( what )</p></td>
+<td align="left"><p class="table">prints "what" at the end of the line when used in a trigger script</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">prefix( what )</p></td>
+<td align="left"><p class="table">prints "what" at the beginning of a line when used in a trigger script</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">debug( arg1 &#8230; argn )</p></td>
-</tr>
-<tr>
 <td align="left"><p class="table">prints out debug information to the user debug console</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">function replaceWildcard(what, replacement)</p></td>
+<td align="left"><p class="table">Replaces the given wildcard (as a number) with the given text.</p>
+<p class="table">Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$</tt></p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">Replaces the given wildcard (as a number) with the given text.
-Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$</tt></p></td>
 <td align="left"><p class="table">resetFormat()</p></td>
-</tr>
-<tr>
 <td align="left"><p class="table">resets the user character format to the default.</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table"></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="tableblock" id="colortable">
-<table rules="all"
-width="100%"
-frame="hsides"
-cellspacing="0" cellpadding="4">
-<caption class="title">Color Table (for use in the fg("colorname") and bg("colorname") functions)</caption>
-<col width="20%" />
-<col width="20%" />
-<col width="20%" />
-<col width="20%" />
-<col width="20%" />
-<thead valign="top">
-<tr>
-<th align="left"> snow</th>
-<th align="left"> ghost_white</th>
-<th align="left"> white_smoke</th>
-<th align="left">gainsboro</th>
-<th align="left">floral_white</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr>
-<td align="left"><p class="table">old_lace</p></td>
-<td align="left"><p class="table">linen</p></td>
-<td align="left"><p class="table">antique_white</p></td>
-<td align="left"><p class="table">papaya_whip</p></td>
-<td align="left"><p class="table">blanched_almond</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">bisque</p></td>
-<td align="left"><p class="table">peach_puff</p></td>
-<td align="left"><p class="table">navajo_white</p></td>
-<td align="left"><p class="table">moccasin</p></td>
-<td align="left"><p class="table">cornsilk</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">ivory</p></td>
-<td align="left"><p class="table">lemon_chiffon</p></td>
-<td align="left"><p class="table">seashell</p></td>
-<td align="left"><p class="table">honeydew</p></td>
-<td align="left"><p class="table">mint_cream</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">azure</p></td>
-<td align="left"><p class="table">alice_blue</p></td>
-<td align="left"><p class="table">lavender</p></td>
-<td align="left"><p class="table">lavender_blush</p></td>
-<td align="left"><p class="table">misty_rose</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">white</p></td>
-<td align="left"><p class="table">black</p></td>
-<td align="left"><p class="table">dark_slate_gray</p></td>
-<td align="left"><p class="table">dark_slate_grey</p></td>
-<td align="left"><p class="table">dim_gray</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">dim_grey</p></td>
-<td align="left"><p class="table">slate_gray</p></td>
-<td align="left"><p class="table">slate_grey</p></td>
-<td align="left"><p class="table">light_slate_gray</p></td>
-<td align="left"><p class="table">light_slate_grey</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">gray</p></td>
-<td align="left"><p class="table">grey</p></td>
-<td align="left"><p class="table">light_grey</p></td>
-<td align="left"><p class="table">light_gray</p></td>
-<td align="left"><p class="table">midnight_blue</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">navy</p></td>
-<td align="left"><p class="table">navy_blue</p></td>
-<td align="left"><p class="table">cornflower_blue</p></td>
-<td align="left"><p class="table">dark_slate_blue</p></td>
-<td align="left"><p class="table">slate_blue</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">medium_slate_blue</p></td>
-<td align="left"><p class="table">light_slate_blue</p></td>
-<td align="left"><p class="table">medium_blue</p></td>
-<td align="left"><p class="table">royal_blue</p></td>
-<td align="left"><p class="table">blue</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">dodger_blue</p></td>
-<td align="left"><p class="table">deep_sky_blue</p></td>
-<td align="left"><p class="table">sky_blue</p></td>
-<td align="left"><p class="table">light_sky_blue</p></td>
-<td align="left"><p class="table">steel_blue</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">light_steel_blue</p></td>
-<td align="left"><p class="table">light_blue</p></td>
-<td align="left"><p class="table">powder_blue</p></td>
-<td align="left"><p class="table">pale_turquoise</p></td>
-<td align="left"><p class="table">dark_turquoise</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">medium_turquoise</p></td>
-<td align="left"><p class="table">turquoise</p></td>
-<td align="left"><p class="table">cyan</p></td>
-<td align="left"><p class="table">light_cyan</p></td>
-<td align="left"><p class="table">cadet_blue</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">medium_aquamarine</p></td>
-<td align="left"><p class="table">aquamarine</p></td>
-<td align="left"><p class="table">dark_green</p></td>
-<td align="left"><p class="table">dark_olive_green</p></td>
-<td align="left"><p class="table">dark_sea_green</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">sea_green</p></td>
-<td align="left"><p class="table">medium_sea_green</p></td>
-<td align="left"><p class="table">light_sea_green</p></td>
-<td align="left"><p class="table">pale_green</p></td>
-<td align="left"><p class="table">spring_green</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">lawn_green</p></td>
-<td align="left"><p class="table">green</p></td>
-<td align="left"><p class="table">chartreuse</p></td>
-<td align="left"><p class="table">medium_spring_green</p></td>
-<td align="left"><p class="table">green_yellow</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">lime_green</p></td>
-<td align="left"><p class="table">yellow_green</p></td>
-<td align="left"><p class="table">forest_green</p></td>
-<td align="left"><p class="table">olive_drab</p></td>
-<td align="left"><p class="table">dark_khaki</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">khaki</p></td>
-<td align="left"><p class="table">pale_goldenrod</p></td>
-<td align="left"><p class="table">light_goldenrod_yellow</p></td>
-<td align="left"><p class="table">light_yellow</p></td>
-<td align="left"><p class="table">yellow</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">gold</p></td>
-<td align="left"><p class="table">light_goldenrod</p></td>
-<td align="left"><p class="table">goldenrod</p></td>
-<td align="left"><p class="table">dark_goldenrod</p></td>
-<td align="left"><p class="table">rosy_brown</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">indian_red</p></td>
-<td align="left"><p class="table">saddle_brown</p></td>
-<td align="left"><p class="table">sienna</p></td>
-<td align="left"><p class="table">peru</p></td>
-<td align="left"><p class="table">burlywood</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">beige</p></td>
-<td align="left"><p class="table">wheat</p></td>
-<td align="left"><p class="table">sandy_brown</p></td>
-<td align="left"><p class="table">tan</p></td>
-<td align="left"><p class="table">chocolate</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">firebrick</p></td>
-<td align="left"><p class="table">brown</p></td>
-<td align="left"><p class="table">dark_salmon</p></td>
-<td align="left"><p class="table">salmon</p></td>
-<td align="left"><p class="table">light_salmon</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">orange</p></td>
-<td align="left"><p class="table">dark_orange</p></td>
-<td align="left"><p class="table">coral</p></td>
-<td align="left"><p class="table">light_coral</p></td>
-<td align="left"><p class="table">tomato</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">orange_red</p></td>
-<td align="left"><p class="table">red</p></td>
-<td align="left"><p class="table">hot_pink</p></td>
-<td align="left"><p class="table">deep_pink</p></td>
-<td align="left"><p class="table">pink</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">light_pink</p></td>
-<td align="left"><p class="table">pale_violet_red</p></td>
-<td align="left"><p class="table">maroon</p></td>
-<td align="left"><p class="table">medium_violet_red</p></td>
-<td align="left"><p class="table">violet_red</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">magenta</p></td>
-<td align="left"><p class="table">violet</p></td>
-<td align="left"><p class="table">plum</p></td>
-<td align="left"><p class="table">orchid</p></td>
-<td align="left"><p class="table">medium_orchid</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">dark_orchid</p></td>
-<td align="left"><p class="table">blue_violet</p></td>
-<td align="left"><p class="table">purple</p></td>
-<td align="left"><p class="table">medium_purple</p></td>
-<td align="left"><p class="table">thistle</p></td>
+<td align="left"><p class="table"></p></td>
 </tr>
 </tbody>
 </table>
@@ -1811,7 +1446,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-03-27 13:09:51 CEST
+Last updated 2009-04-13 22:15:33 CEST
 </div>
 </div>
 </body>

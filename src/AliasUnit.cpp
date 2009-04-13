@@ -36,12 +36,22 @@
 using namespace std;
 
 void AliasUnit::stopAllTriggers()
-{    
+{
     typedef list<TAlias *>::const_iterator I;
     for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
-        pChild->setIsActive( false );
+        pChild->disableFamily();
+    }
+}
+
+void AliasUnit::reenableAllTriggers()
+{
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        pChild->enableFamily();
     }
 }
 
@@ -50,6 +60,7 @@ bool AliasUnit::processDataStream( QString & data )
     TLuaInterpreter * Lua = mpHost->getLuaInterpreter();
     QString lua_command_string = "command";
     Lua->set_lua_string( lua_command_string, data );
+    bool state = false;
     typedef list<TAlias *>::const_iterator I;
     for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
@@ -57,12 +68,15 @@ bool AliasUnit::processDataStream( QString & data )
         // = data.replace( "\n", "" );
         if( pChild->match( data ) )
         {
-            return true;
+            state = true;
         }
     }
-    
+    // the idea to get "command" after alias processing was done and send its value
+    // was too difficult for users because if multiple alias change the value of command it becomes too difficult to handle for many users
+    // it's easier if we simply intercepts the command and hand responsibility for
+    // sending a command to the user scripts.
     //data = Lua->get_lua_string( lua_command_string );
-    return false;
+    return state;
 }
 
 
@@ -79,8 +93,6 @@ void AliasUnit::addAliasRootNode( TAlias * pT )
 
 void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID )
 {
-    QMutexLocker locker(& mAliasUnitLock);
-    
     TAlias * pOldParent = getAliasPrivate( oldParentID );
     TAlias * pNewParent = getAliasPrivate( newParentID );
     TAlias * pChild = getAliasPrivate( childID );
@@ -117,7 +129,6 @@ void AliasUnit::removeAliasRootNode( TAlias * pT )
 
 TAlias * AliasUnit::getAlias( int id )
 { 
-    QMutexLocker locker(& mAliasUnitLock); 
     if( mAliasMap.find( id ) != mAliasMap.end() )
     {
         return mAliasMap.value( id );
@@ -175,8 +186,6 @@ void AliasUnit::unregisterAlias( TAlias * pT )
 void AliasUnit::addAlias( TAlias * pT )
 {
     if( ! pT ) return;
-    
-    QMutexLocker locker(& mAliasUnitLock); 
     
     if( ! pT->getID() )
     {

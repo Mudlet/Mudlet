@@ -748,10 +748,11 @@ void mudlet::slot_multi_view()
 
 void mudlet::slot_stopAllTriggers()
 {
+    /*
     foreach( TConsole * pC, mConsoleMap )
     {
         pC->mpHost->stopAllTriggers();
-    }
+    }*/
 }   
 
 mudlet::~mudlet()

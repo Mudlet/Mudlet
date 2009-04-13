@@ -135,6 +135,7 @@ public:
     void               unregisterEventHandler( QString, TScript * );
     void               raiseEvent( TEvent * event );
     void               stopAllTriggers();
+    void               reenableAllTriggers();
     void               set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX = b; mTelnet.set_USE_IRE_DRIVER_BUGFIX( b ); }
     void               adjustNAWS();
     class              Exception_NoLogin{};

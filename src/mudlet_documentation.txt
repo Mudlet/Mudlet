@@ -5,18 +5,13 @@ Mudlet Manual
 <<heading1,1. General Introduction to Modern MUD Clients.>>
 
 <<heading2,2. Mudlet's Command Line>>
-
-<<heading3,3. The Trigger Engine>>
-
-<<heading4,4. The Timer Engine>>
-
-<<heading5,5. Key Bindings>>
-
-<<heading6,6. User defined Buttons and Menus>>
-
-<<heading7,7. Introduction to Scripting with Mudlet>>
-
-<<heading8,8. Scripting API and Reference>>
+<<headingAlias,3. The Alias Engine>>
+<<heading3,4. The Trigger Engine>>
+<<heading4,5. The Timer Engine>>
+<<heading5,6. Key Bindings>>
+<<heading6,7. User defined Buttons and Menus>>
+<<heading7,8. Introduction to Scripting with Mudlet>>
+<<heading8,9. Scripting API and Reference>>
 
 
 == Introduction
@@ -285,30 +280,22 @@ Timers, as the name suggests, can be used to execute a specific command at a cer
 Your character can train in his attributes once every three hours. You could either try tracking this manually or add a trigger starting timer after each training. Once the three hours have passed, your character will conveniently say to himself that it is time to do a couple of push-ups.
 ****
 
-= Mudlet Technical Manual
-
 == Multi Session Gameing
+Mudlet lets you play several simultaneous MUD sessions. However, currently we have the restriction that you cannot use the same profile twice. Consequently, if you want to play three characters on the same MUD at the same time, you need to make 3 profiles with 3 different names e.g. ernie@avalon.de, bert@avalon.de etc.
+Split Screen
 
-You can play several characters, or play on several MUDs at the same time, but you cannot connect the same _profile name_ twice.
-By _profile name_ we refer to the name of the profile that is being used as the name of the folder where all profile data, such as saved profile data, packages, log files, login data and server address, is being stored in the Mudlet config directory (-> your home directory/.config/mudlet).
-Consequently, if you want to play three characters on the same MUD at the same time, you need to make 3 new profiles with 3 different names e.g. ernie@avalon.de, bert@avalon.de etc. and then import the same package in each profile.
+Mudlet has a split screen. If you scroll up in the old text, the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.
 
-== Split Screen
-Mudlet has a split screen. If you scroll up in the old text with the mouse wheel or the pageUp/pageDown keys, the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment. Also, if you want to copy text from the screen e.g. when making triggers etc., you should use the split screen before you select your text as the text will stand still and stop moving.
-
-Scrolling back to the end will close the split screen automatically. A click on the middle mouse button or *control+return* will close the split screen immediately. The size of the 2 parts of the split screen can be modidfied when dragging the seperator bar with the mouse. The seperator position will be remembered as long as the session lasts.
+Split screen can be activated via the page up / page down keys or with the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately. The size of the 2 parts of the split screen can be modidfied when dragging the seperator bar with the mouse.
 
 == Command Line Auto-Completion, Tab-Completion and History
-To speed up your typing Mudlet offers command-completion and tab-completion that has been specifically developed for MUD or MUSH playing and works differently from what you are used to in word processors etc. as those are usually based on alphabetical indexing which is not useful for MUD playing. Mudlet, by contrast, uses a autocompletion policy based on a timeline based 
 
-This is how it works:
 The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
-- Tab completion searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want. Mudlet will index all words in the last 200 lines of MUD output and make proposals based on the idea last in first out. For example: You want to type the difficult name "Fridolinchen". You see it on the screen as part of the room description. You start off with typing "f" and then press the tab key. Mudlet will now seach the last 200 lines of MUD output for all words starting with the letter "f" and propose you the last occurence first. In our example Mudlet's first proposal is "Frankenstein". As this is not what we want you have to press tab until the proposal matches what you want. 
-- Autocompletion tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
-- If you haven't started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
-- To get out of autocompletion you can press the ESC key any time.
-
-== Logging Output to HTML Log Files
+1. Tab completion searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
+2. Autocompletion tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
+3. If you haven't started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
+4. To get out of autocompletion you can press the ESC key any time.
+Logging Output to HTML Log Files
 
 Press on the little button with the blue folder with the green arrow icon on the lower right side of the screen next to the command line.
 
@@ -325,18 +312,14 @@ Buttons are co
 
 == Mudlet's Trigger Engine
 
-=== Simple Trigger Matching 
-==== Making a Simple Trigger and Editing your Trigger
-The pattern list holds
-Type your trigger in the input line below the trigger conditions list box and then click on the little + icon on the right side of the input line where you entered your pattern. This click will add your new pattern to the pattern list of the trigger.
-To edit a pattern in the list, select it with the mouse. The pattern will appear in the edit line below the pattern list where you can edit the pattern. *After your edit you have to press the return key to update the list*.
+=== Simple Trigger Matching
 
-[CAUTION]
-After your editing is finished your changes will only become permanent if you *press on the save icon* on the middle of the icon bar. This is the same throughout the entire program. *If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.*
-
+Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
+After editing is finished your changes will only become permanent if you press on the save icon on the upper left. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.
 Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available. 
-
-TIP: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.
+****
+Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.
+****
 
 === Simple Highlighter Triggers
 
@@ -384,11 +367,11 @@ condition #3 pattern = stone
 
 Wheather or not a condition is found to be true *also* depends on another property, i.e. the *type* of the condition.
 The condition type can be among others:
-
-- substring matching  -> the condition is true if the condition pattern is a substring of the output line from the MUD. In other words: If the pattern "pond" is contained in any line of output, the condition is true.
-- begin of line matching -> the condition is only true if the conditon pattern can be found at the beginning of a line from the MUD.
-- Perl regular expression matching -> the condition is true if the Perl regex pattern is matched. You'll find more information on Perl regex below.
-
+====
+1. substring matching  -> the condition is true if the condition pattern is a substring of the output line from the MUD. In other words: If the pattern "pond" is contained in any line of output, the condition is true.
+2. begin of line matching -> the condition is only true if the conditon pattern can be found at the beginning of a line from the MUD.
+3. Perl regular expression -> the condition is true if the Perl regex pattern is matched. You'll find more information on Perl regex below.
+====
 In our example we chose condition type "substring" for all three condtions.
 Consequently, the trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.
 ....
@@ -407,7 +390,7 @@ Sadly, there are many unfriendly people in this world and somebody goes around a
 
 You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.
 
-You will find more detailed information on how to work with triggers in scripts, especially how to make use of the captured information in the scripting section of this <<example1,manual>>.
+
 
 
 === Temporary Triggers (scripting only)
@@ -422,34 +405,45 @@ Line triggers trigger on a specified line in the future - or a sequence of lines
 
 == The Timer Engine
 
-Mudlet supports 4 different sort of timers:
+Mudlet supports 3 different sort of timers:
 
-. *Standard Timers* that fire repeatedly in a certain interval specified by the user.
-. *Offset Timers* are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
-. *Temporary Timers* (scripting only) behave like regular timers, but they are one shot only timers. Temporary timers cannot be accessed from the GUI and are not saved in profiles.
-. *Batch Job Timers* (scripting only) are special purpose timers. A batch job is a sequence of commands that is send to the MUD according to a chosen time interval. The sequence of commands is guaranteed. When using regular temporary timers or standard GUI timers there is no such guarantee as to when a certain timer fires compared to the other timers that are going to fire in the same interval. As a result, if the sequence of commands is important for a script you need to chose a batch job timer. Of course you can write your own timer that sends the commands one after another thus reenabling itself until the job is done, but this will not be necessary in most cases if you use the batch job timers.
-Here is an example for a typical batch job timer:
-You want to write an autominer script that mines a gold mine automatically and has to record the path back out of the mine in case the mine suddenly crashes and you only have a few seconds to get out in time before you get buried and your character dies. The path is a complicated maze so you can't afford that your script messes up the sequence of the directions i. e. instead of North, West, Up, North, Down it walke West, Down, Up, North just because the time interval was short as you had no time left and there was a bit of lag on the internet so the tempTimer that was to fire "up", was fired after the tempTimer that was to send "Down".
+======
+1. Timers that fire repeatedly in a certain interval specified by the user.
+2. Offset Timers are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
+3. Temporary Timers that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
+======
+[[headingAlias]]
+== Alias
+Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
+We have explicitly chosen not to offer multi condition alias or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that alias, i.e. input triggers operates on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream.
+We are talking a bit about what is going on behind the scenes, in order to make clear that alias and triggers are essentially the same thing. In Mudlet triggers and alias are treated the same way, work the same way and only differ in terms of complexity and the amount of features.
 
+Now, how does it all work? When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit. The text will be matched against all active alias in the hierarchy unless access to a branch is locked by the user or by a script.
+For an input trigger to match the command text the same rules as explained above in the trigger section apply. However, to simplify matters there is only one alias type. As alias are not performance critical we could reduce the amount of trigger types to just Perl regex as this type can do it all and performance is no issue with alias as the amount of data is much less. Even if you type like a madman you'll never get close to sending the same amount of text to the MUD than the amount of text the MUD sends back to you.
+
+What does it mean that a regex is true or "matched"? A trigger or an alias fires - or executes its commands/script - when the text matches the pattern of the trigger or alias. In most cases this means that the text contains the trigger/alias pattern. If the regex pattern is "reen" then a text "The green house" will match because "reen" is contained in the text. More complex regex patterns can also hold information on where in the text a certain pattern must occur in order to match. "^tj" only matches when the letters "tj" occur at the beginning of the text. Consequently, a text like "go tj" would not match.
+Regex patterns can also capture data like numbers, sequences of letters, words etc. at certain positions in the text. This is very useful for MUD related scripting and this is why it is explained below.
+
+Let's get back to alias. We start with a simple example. 
+=====
+We want Mudlet to send "put weapon in bag" whenever we type "pwb". Consequently, the pattern is "pwb" and as the task is so simple it's enough to enter "put weapon in bag" in the send field. Then we click on save to save the changes and activate the alias by clicking on the padlock icon.
+Then we leave the trigger editor and test our new alias. After typing "pwb" and pressing return Mudlet will send the command "put weapon in bag" to the MUD.
+======
+Let's move on to a more complicated example that is needed very often. 
+======
+We want our script to automatically put the weapon in the correct bag as we have many bags and many weapons. The pattern stays the same. "^pwb" (the ^ at the beginning of the line means that the command starts with pwd and no other letter in front of this. If we define our pattern more clearly, the pattern will match less often. Without the ^ the alias script will always be run whenever there is the sequence of letters "pwd" in your commands. This may not always be what you want. This is why it's usually a good idea to define the pattern as closely as needed.)
+Back to our task: The pattern is "^pwb". In our scripts we have defined variables several variables. "weapon" is the weapon we use and the variale "bag" is the name of the bag.
+
+=======
 
 == Exporting and Importing Profiles or Packages
-Importing and exporting anything from a single trigger, a trigger group, button packages, timers or entire systems is easy in Mudlet. 
-Basically, it just means a single click.
+
 
 Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).
+
 The file name consists of the date and time, the profile was written to disc.
-
-*Importing* a package means simply clicking on the "import" button in the trigger editor (->triggers) and chosing the package file. Packages may contain anything ranging from a single trigger, button alias etc. to full profiles with hundrets of trigger groups, timers etc.
-
-*Exporting* is also easy. Select your item in the script editor and then click on the "Export" button. You'll be prompted for a file name and that's it. You can send your cool trigger, buttons, timers etc. to your friends via email or use them in another profile of yours.
-Exporting your good stuff is strongly recommended as it makes MUDding more enjoyable for everybody. Share your knowledge and help others!
-
 You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You'll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
 You can also import entire profiles as they are basically packages.
-If you have written a nice set of triggers, buttons, scripts etc. or maybe even a fully fledged "system" of some sort and you want to share it with others, you can make a nice packages that others can import.
-Of course, you can open your xml profile in a text editor and delete what is not needed for the package, but this is too much work.
-The simplest way is simply to arrange your modules in such a way that they all go into one main folder e.g. all triggers are put into a main trigger folder and named accordingly. Then you export this trigger package by using the button "profiles save as". You are asked for a filename. Call it MySystemTriggerPackage.xml etc. Then you proceed with the Alias, the scripts, the buttons, the keys etc. and make packages for each and export them individually.
-Then you open a new *empty* profile in Mudlet and import all your sub packages. When everything is imported, export the whole thing via "profile save as" and give it an appropriate name. Others can now import the entire system in a single package file.
 
 
 == Quick Lua syntax overview
@@ -804,48 +798,40 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 |multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 4th capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
 |===================================================
 
-.Main Functions
+.Lua API
 [width="100%",frame="topbot",options="header"]
 |===================================================
 |Function|Description
-|send( command )|This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
-|echo( text )|prints text to the main window
-|int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error|Selects a substring from the line where the user cursor is currently 
-positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of 
-the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that 
-the cursor is in the correct line if you want to call one of the select functions. 
-NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) > -1 then setFgColor( 255,0,0) end"
+|clearUserWindow( window_name )|Clears the user window with the name given as argument.
+|copy()|Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.
+|cut()|Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )
 |deleteLine()|deletes the current Line under the user cursor. 
-|timer_id = tempTimer( seconds, lua_code )|Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
-|enableTrigger( name )|enables a Trigger. see enableTimer() for more details.
-|disableTrigger( name )|Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
-|insertText( string )|Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.
-|suffix( what )|prints "what" at the end of the line when used in a trigger script
-|prefix( what )|prints "what" at the beginning of a line when used in a trigger script
-|boolean = selectSection( from, length_of_string )|Absolute column number for start of selection and length of selection
-|selectCaptureGroup( groupNumber ) with first group = 0|Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)
-|replace( with )|replaces the selected text with "with". To delete text use replace("")
-|replaceAll( what, with )|replaces all occurrences of what in the current line with with 
-|fg( color_name )|Sets the current selection foreground color to color_name. You can find the pre-defined color names <<colortable, here>> 
-|bg( color_name )|same as fg( color_name ) just for the background color.
-|resetFormat()|Resets the character format to default. This should be used after you have colorized some text, but don't want to keep using these colors for further prints.
-|setBgColor( r,g,b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
-|setFgColor( r, g, b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
-|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
-|===================================================
-
-.Trigger, Timer, Alias and Key Functions
-[width="100%",frame="topbot",options="header"]
-|===================================================
-| Function | Description
+|*deselect()*|deselects the last selected text
 |disableTimer( name )|Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.
 |disableTrigger( name )|Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
 |disableKey( name )|Uses trigger name as id or the id returned by tempTrigger()
+|echo( text )|prints text to the main window
 |echoUserWindow( window_name, text )|prints text to user dock window name
 |enableTimer( name )|enables or activates a timer that was previously disabled. The parameter "name" expects the timer ID that was returned by tempTimer() on creation of the timer or the name of the timer in case of a GUI timer
 |enableTrigger( name )|enables a Trigger. see enableTimer() for more details.
 |enableKey( name )|enable key or key group "name"
 |expandAlias( command )|like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.
+|lineNumber = getLineNumber()|to get the absolute line number of the current user cursor
+|number = getColumnNumber()|To get the absolute column number of the current user cursor
+|number = getLineCount()|To get the absolute amount of lines in the current console buffer
+|lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )|Returns a section of the content of the screen text buffer. Absolute line numbers are used
+|number_of_last_line = getLineCount()|number of the last line in the buffer
+|insertText( string )|Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.
+|killTimer( name )|Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.
+|killTrigger( name )|See killTimer()
+|boolean = moveCursor( windowName, x, y )|Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.
+|moveCursorEnd( windowName )|Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
+|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
+|paste()|pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.
+|pasteWindow( name )|pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
+selectString( line, 1 )
+cut()
+pasteWindow( "chat" )
 |raiseEvent( event_name, arg-1, ... arg-n )|Raises the event event_name. The event system will call the main function (the one that is called exactly like 
 the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with 
 the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without 
@@ -862,6 +848,18 @@ uses minimal arguments, name the event name. There can only be one event handler
 as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you 
 should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees 
 and thus help reduce complexity on large systems.
+|replace( with )|replaces the selected text with "with". To delete text use replace("")
+|replaceAll( what, with )|replaces all occurrences of what in the current line with with 
+|int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error|Selects a substring from the line where the user cursor is currently 
+positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of 
+the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that 
+the cursor is in the correct line if you want to call one of the select functions. 
+NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) > -1 then setFgColor( 255,0,0) end"
+|boolean = selectSection( from, length_of_string )|Absolute column number for start of selection and length of selection
+|selectCaptureGroup( groupNumber ) with first group = 0|Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)
+|send( command )|This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
+|setBgColor( r,g,b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
+|setFgColor( r, g, b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
 |timer_id = tempTimer( seconds, lua_code )|Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 |trigger_id = tempTrigger( string, lua_code )|creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one.
 |trigger_id = tempLineTrigger( from, howMany, LuaCode )|Temporary trigger that will fire on n consecutive lines following the current line. This is useful 
@@ -869,74 +867,26 @@ to parse output that is known to arrive in a certain line margin or to delete un
 tempLineTrigger( 20, 2, [[send("shout Help")]] )
 will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 |trigger_id = tempRegexTrigger( regex, lua_code )|temorary trigger using perl regex pattern matching
-|killTimer( name )|Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.
-|killTrigger( name )|See killTimer()
-|===================================================
-
-.Buffer, Screen and Mini Windows Functions
-[width="100%",frame="topbot",options="header"]
-|===================================================
-| Function | Description
-|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
-|clearUserWindow( window_name )|Clears the user window with the name given as argument.
-|*userWindowLineWrap( window, boolean )*|turns line wrap mode on or off in user dock windows
-userWindowLineWrap( "chat", true ) turns on line wrap for window "chat" (*not implemented*)
-|copy()|Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.
-|cut()|Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )
-|*deselect()*|deselects the last selected text (*not implemented yet*)
-|lineNumber = getLineNumber()|to get the absolute line number of the current user cursor
-|number = getColumnNumber()|To get the absolute column number of the current user cursor
-|number = getLineCount()|To get the absolute amount of lines in the current console buffer
-|lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )|Returns a section of the content of the screen text buffer. Absolute line numbers are used
-|number_of_last_line = getLineCount()|number of the last line in the buffer
-|boolean = moveCursor( windowName, x, y )|Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.
-|moveCursorEnd( windowName )|Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
-|paste()|pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.
-|pasteWindow( name )|pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
-selectString( line, 1 )
-cut()
-pasteWindow( "chat" )
+|userWindowLineWrap( window, boolean )|turns line wrap mode on or off in user dock windows
+userWindowLineWrap( "chat", true ) turns on line wrap for window "chat"
 |printTable( table_name )|Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the lua table "matches".
 This function is defined in luaglobal.lua.
 |showCaptureGroups()|Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua
-|showMultimatches()|Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers|
+|fg( "red" )|Sets the current foreground color to red. Check the luaglobal.lua file for the defined color names ( about 255) e.g. fg("green") will set the foreground color to green.
+|bg( "blue" )|same as fg( color_name ) just for the background color.
 |table.load( file, table )|restores a Lua table from a data file that has been saved with table.save()
 |table.save( file, table )|saves the given table into the given file
 |showCaptureGroups()|a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (->trigger editor->bug symbol)
 |printTable( table )|another debug function that prints the content of a Lua table on the screen split in key and value.
 |sendAll( what )|sends a list of commands to the MUD
+|suffix( what )|prints "what" at the end of the line when used in a trigger script
+|prefix( what )|prints "what" at the beginning of a line when used in a trigger script
 |debug( arg1 ... argn )|prints out debug information to the user debug console
 |function replaceWildcard(what, replacement)|Replaces the given wildcard (as a number) with the given text.
+
 Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 |resetFormat() |resets the user character format to the default.
+| |
 |===================================================
 
-[[colortable]]
-.Color Table (for use in the fg("colorname") and bg("colorname") functions)
-[frame="topbot",options="header"]
-|===================================================
-| snow| ghost_white| white_smoke|gainsboro|floral_white
-| old_lace| linen| antique_white| papaya_whip| blanched_almond
-| bisque| peach_puff| navajo_white| moccasin | cornsilk| ivory
-| lemon_chiffon| seashell| honeydew| mint_cream| azure| alice_blue
-| lavender| lavender_blush| misty_rose| white | black| dark_slate_gray 
-| dark_slate_grey| dim_gray   | dim_grey| slate_gray | slate_grey | light_slate_gray  
-| light_slate_grey| gray| grey| light_grey | light_gray | midnight_blue
-| navy| navy_blue | cornflower_blue| dark_slate_blue| slate_blue | medium_slate_blue 
-| light_slate_blue| medium_blue| royal_blue | blue  | dodger_blue| deep_sky_blue 
-| sky_blue| light_sky_blue| steel_blue| light_steel_blue| light_blue| powder_blue 
-| pale_turquoise| dark_turquoise | medium_turquoise| turquoise| cyan| light_cyan 
-| cadet_blue| medium_aquamarine| aquamarine| dark_green | dark_olive_green| dark_sea_green
-| sea_green | medium_sea_green| light_sea_green| pale_green | spring_green| lawn_green  
-| green| chartreuse | medium_spring_green| green_yellow| lime_green | yellow_green 
-| forest_green | olive_drab| dark_khaki| khaki | pale_goldenrod| light_goldenrod_yellow
-| light_yellow| yellow| gold   | light_goldenrod| goldenrod| dark_goldenrod
-| rosy_brown| indian_red| saddle_brown | sienna| peru | burlywood
-| beige| wheat| sandy_brown| tan| chocolate | firebrick
-| brown| dark_salmon| salmon | light_salmon| orange| dark_orange
-| coral| light_coral | tomato| orange_red | red | hot_pink 
-| deep_pink| pink| light_pink| pale_violet_red| maroon| medium_violet_red
-| violet_red| magenta| violet| plum | orchid | medium_orchid
-| dark_orchid| blue_violet| purple| medium_purple| thistle
-|===================================================
 

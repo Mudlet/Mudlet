@@ -37,14 +37,25 @@
 using namespace std;
 
 void TimerUnit::stopAllTriggers()
-{    
+{
     typedef list<TTimer *>::const_iterator I;
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
-        pChild->disableTimer( pChild->getName() );
+        pChild->disableTimer( pChild->getID() );
     }
 }
+
+void TimerUnit::reenableAllTriggers()
+{
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    {
+        TTimer * pChild = *it;
+        pChild->enableTimer( pChild->getID() );
+    }
+}
+
 
 void TimerUnit::addTimerRootNode( TTimer * pT )
 {

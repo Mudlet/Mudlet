@@ -197,10 +197,20 @@ void TriggerUnit::stopAllTriggers()
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
-        pChild->setIsActive( false );
+        QString name = pChild->getName();
+        pChild->disableFamily();
     }
 }
 
+void TriggerUnit::reenableAllTriggers()
+{
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        pChild->enableFamily();
+    }
+}
 
 bool TriggerUnit::serialize( QDataStream & ofs )
 {

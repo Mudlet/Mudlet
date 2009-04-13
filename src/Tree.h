@@ -51,7 +51,8 @@ public:
     void               addChild( T * newChild );
     bool               popChild( T * removeChild );
     void               setParent( T * parent );
-
+    void               enableFamily();
+    void               disableFamily();
     bool               isActive();
     bool               activate();
     void               deactivate();
@@ -195,6 +196,27 @@ bool Tree<T>::isActive()
     return mActive && canBeActivated();
 }
 
+template<class T>
+void Tree<T>::enableFamily()
+{
+    activate();
+    typedef typename std::list<T *>::const_iterator IT;
+    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
+    {
+        (*it)->enableFamily();
+    }
+}
+
+template<class T>
+void Tree<T>::disableFamily()
+{
+    deactivate();
+    typedef typename std::list<T *>::const_iterator IT;
+    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
+    {
+        (*it)->disableFamily();
+    }
+}
 
 template<class T>
 void Tree<T>::addChild( T * newChild )
