@@ -9,7 +9,8 @@ Mudlet Manual
 .. <<commandLine,Mudlet's Command Line>>
 .. <<logging,Logging to HTML log files>>
 .. <<export, Import & Export of Packages>>
-.. <<alias,The Alias Engine>>
+.. <<variables,Using Variables in Mudlet>>
+.. <<alias,Input Triggers - Mudlet's Alias Engine>>
 .. <<triggers,The Trigger Engine>>
 .. <<timers,The Timer Engine>>
 .. <<keys,Key Bindings>>
@@ -338,21 +339,87 @@ Mudlet supports XML packages that can be imported and exported while playing. Yo
 The imported package will be stored permanently in your profile when you safe the profile. If you don't like the imported package, delete its components manually or simply don't save the profile. Then the new content will be lost on restart. Automatic package removal is not yet supported in Mudlet.
 
 Packages are nothing else, but profiles - or parts of profiles that can be exchanged, imported and exported between your own profiles and between different players. From a technical perspective a package and a profile xml file are the same thing.
-
-=== Sharing your scripts - Exporting items or profiles
-Mudlet stores your profiles as XML files in your home directory under .config/mudlet/profiles/your_profile_name/current (note the leading dot).
-
-The file name consists of the date and time, the profile was written to disc.
-You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You'll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
+=== Exporting Packages
+*Exporting* is also easy. Select your item in the script editor and then click on the "Export" button. You'll be prompted for a file name and that's it. You can send your cool trigger, buttons, timers etc. to your friends via email or use them in another profile of yours.
+Exporting your good stuff is strongly recommended as it makes MUDding more enjoyable for everybody. Share your knowledge and help others!
+Mudlet stores your saved profiles as XML files in your home directory under [blue]+.config/mudlet/profiles/your_profile_name/current (note the leading dot)+.unless you have specified a different file name or location by using the "save profile as" profile button meant for creating generic packages to be shared with other profiles or other users.
+The file name of normally saved profiles ("save profile" button) consists of the date and time, the profile was written to disc. 
+You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You'll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder that e.g. is named after the package you'd like to make. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
 You can also import entire profiles as they are basically packages.
+=== Sharing your System with others - Making complex Packages
+If you have written a nice set of triggers, buttons, scripts etc. or maybe even a fully fledged "system" of some sort and you want to share it with others, you can make a nice packages that other people can import with a single mouse click.
+Of course, you can open your xml profile in a text editor and delete what is not needed for the package, but this is too much work. The simplest way is to arrange your modules in such a way that they all go into one main folder e.g. all triggers that belong to the package are put into a main trigger folder and named according to the intended package name. Then you export this trigger package by using the button "profiles save as" in the trigger editor. You are asked for a filename. Call it MySystemTriggerPackage.xml etc. Then you proceed with the Alias, the scripts, the buttons, the keys etc. and make packages for each and export them individually.
+Finally, you create a *new empty* profile in Mudlet and import all your sub packages. When everything is imported, export the whole thing via "profile save as" and give it the desired package name. Others can now import the entire system in a single package file. It's a good idea in the spirit of open source software to share your systems with others. Please use the forum on http://mudlet.sourceforge.net to share your finished packages with other users so that other users can learn from your work or improve it.
+
+[[variables]]
+== Using Variables in Mudlet
+One of the major design goals in Mudlet was to integrate scripts and variables as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients. If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias a key, an event handler, a free function etc. it can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (connection) runs in its own dedicated Lua interpreter. Consequently, all scripts are compiled into the same Lua interpreter and thus their code runs in the same variable space.
+To give you an example: Let's make a little trigger that counts how many monsters you have killed. Each time you have made a new kill, the trigger matches on the kill message and runs a little script that increases the amount of kills by one each time the trigger fires - in other words, each time you kill a monster and the kill message is sent from the MUD. For the kill counter we declare a variable and call it [red]+myKills+. This variable is going to hold the number of kills we've made so far. The script will look like this:
+-------
+myKills = myKills + 1
+-------
+Then we add a little alias, a button or a keybindings that executes another little script that prints your current kill statistics on the screen. The attached script would look like this:
+----------
+echo( "I have killed " .. myKills .. " monsters today." )
+----------
+***********************
+.Lua Primer: Variables, String & numbers
+Lua variables can be either a string or a number. They are whatever there were initially initialized with or what data type they can be converted to. 
+----
+a = "Jim"
+b = "Tom"
+c = 350
+d = 1
+-----
+Then you can write: 
+-----
+e = c + d and e will equal 351
+e = a .. b and e will equal "JimTom" note that you cant use a+b to concatenate string values. For this you must use ..
+e = a .. c and e will equal "Jim350"
+-----
+There is another form of variables in Lua called tables which can be used for lists, arrays or dictionaries. This is explained later.
+For an indepth coverage of variables in Lua take a look at a Lua tutorial e. g. this one on numbers http://lua-users.org/wiki/NumbersTutorial and this one on strings http://lua-users.org/wiki/StringsTutorial or this one on Lua tables http://lua-users.org/wiki/TablesTutorial
+*************************
+Let's get back to our example. The trigger script expects [red]+myKills+ to be a number so you have to initialze the variable myKills to 0 before running the script for the first time. The best place to initialze variables is in script script *outside of a function definiton* as this code is executed when the session is loaded or if you compile the script again after you have edited it.
+To do this click on the "Scripts" icon and select the standard script "My Global Variable Definitions". If you are using an older version of Mudlet or a profile that doesn't have this script item, simply click on the "Add" icon and make your own script. You can call it whatever you want to.
+Add following code to initialze your new variable myKills to a number and set its value to 0:
+-----
+myKills = 0
+-----
+Whenever you edit this script, it will be recompiled and the code will be run as it is not part of a function definiton. This is the major difference between trigger-scripts, alias-scripts etc. and script-scripts. Script-scripts can contain an unlimited amount of function definitions and also *free code* i. e. code outside of a function definition - code that is not enclosed by function xyz() .... end. On saving the script the script gets compiled and the free code is run instantly. All other item scripts, i. e. trigger-scripts etc., secretly define a function name for the script and thus the script is not free code, but function code. When a trigger fires Mudlet calls this invisible function name to run the script e.g. trigger738(), button82(), alias8(). This means that if you define variables inside a trigger script the variable will not be defined before the trigger runs for the first time. However, if you define this variable as free code in a script-script the definition becomes available immediately on script save.
+Now, whenever you add new variables to your variable definiton script, the script gets run and your old variables will be reeinitialzed and reset to 0. This will be no big problem in most cases as you won't work on your systems while really playing in most cases. To solve this problem you have two options:
+1. Add a script group (a folder) and add a new script item for each variable you define. This way, editing a variable definition will only reset the edited variable and none of the others that are defined in different scripts. This has the added advantage that you have a nice graphical overview of your defined variables.
+2. Change the variable initialization to only initialize the variable if it hasn't been initialized before, thus keeping the values of previously defined variables. This would look like this:
+--------
+if myKills == nil then    -- this code initialzes the variable myKills to the number 0 if it hasn't been initialzed before
+    myKills = 0
+end
+--------
+In Lua all undefined variables are initialzed to the value [red]+nil+. The value [red]+nil+ is not the same thing as the number [red]+0+ or the empty string [red]+""+. What it means is that a variable that has the value [red]+nil+ has not been declared yet and does not exist. If a variable does not exist, it cannot be used as its value is undefined at this point. Consequently, increasing the value of [red]+nil+ by one is impossible as the variable doesnt exist yet and will lead to a Lua error. The above script simply checks if the variable myKills has been defined yet and if it hasn't, it will declare the variable and set its value to 0.
+=== Lists
+Having variables that hold a single value is the most important usage of variables, but very often you'll like to define variables that hold a list of values e. g. a list of your ennemies, a list the items you are currently carrying etc.. To define a variable to be a list you need to declare it to be a Lua table.
+------
+myEnnemies = { "Peter", "Jim", "Carl", "John" }
+------
+
+
+=== Saving Variable Values to Disc
+Having statistics scripts that last as long as the session lasts is a nice thing, but it makes more sense to write the variables to disc and reload them when you play the next time. To do this you have to save your variables. Mudlet has 2 ways to implement variable persistency. First, you can tell Mudlet to save all of your variables on exit automatically and ask Mudlet to automatically restore them when the session gets reloaded the next time you play on this profile. 
+Second, you can take care of saving your variables yourself and reloading them yourself. This gives you more control and will be the preferred solution in bigger systems.
+
+To be continued ...
 
 [[alias]]
-== Mudlet's Alias Engine
+== Input Triggers - Mudlet's Alias Engine
 Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
-We have explicitly chosen not to offer multi condition alias or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that alias, i.e. input triggers operates on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream.
-We are talking a bit about what is going on behind the scenes, in order to make clear that alias and triggers are essentially the same thing. In Mudlet triggers and alias are treated the same way, work the same way and only differ in terms of complexity and the amount of features.
+We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlet's alias engine. 
+When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit, in form of the Lua variable [red]+command+. This variable will be matched against all active alias in the hierarchy unless access to an alias branch is locked by the user or by a script. *If an input trigger matches, it will intercept the user command and the original command will be ignored*. Upon a match the clear text command is being send as a command to the MUD in replacement of the original command, if a clear text command has been specified by the user _and_ the attached alias script is being executed. However, the initial command that the user has typed in the command line will *not* be sent unless you do this as part of your script. Consequently, if you want your input trigger to send a command to the MUD, you'll either have to specify a clear text command for simple cases or send commands via the attached alias script e.g. send("kill monster"). You may argue that you feel that it is unnecessary work to be forced to send a command replacement yourself, but this very fact makes our alias system way more powerful because it gives you complete control about what is happening. Why is this so? The initial user command is being helt in the Lua variable [red]+command+. When this value changes within the alias unit processing chain, the initial user input that the input triggers work on can be rewritten and changed in the process. Consequently, you can substitute the user input step by step - or alias by alias - without that anything happens as far as sending commands is being concerned unless you explicitly decide to do so.
 
-Now, how does it all work? When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit. The text will be matched against all active alias in the hierarchy unless access to a branch is locked by the user or by a script.
+[[aliasProcessing]]
+[icon="./images/icons/diagram_alias.png"]
+NOTE: .
+The example in the diagram above shows 2 matching aliases, but only one of them sends commands to the MUD - and only if the player is healthy enough to attack the opponent. The other alias that matched the user input (ennemy) choses a fitting opponent and sets the variable ennemy accordingly, otherwise it issues a warning that attacking one of the available ennemies would be too dangerous.
+
 For an input trigger to match the command text the same rules as explained above in the trigger section apply. However, to simplify matters there is only one alias type. As alias are not performance critical we could reduce the amount of trigger types to just Perl regex as this type can do it all and performance is no issue with alias as the amount of data is much less. Even if you type like a madman you'll never get close to sending the same amount of text to the MUD than the amount of text the MUD sends back to you.
 
 What does it mean that a regex is true or "matched"? A trigger or an alias fires - or executes its commands/script - when the text matches the pattern of the trigger or alias. In most cases this means that the text contains the trigger/alias pattern. If the regex pattern is [blue,#b0e0e6]+reen+ then a text "The green house" will match because "reen" is contained in the text. More complex regex patterns can also hold information on where in the text a certain pattern must occur in order to match. [blue,#b0e0e6]+^tj+ only matches when the letters "tj" occur at the beginning of the text. Consequently, a text like "go tj" would not match.
@@ -381,7 +448,7 @@ weapon = matches[2];
 send( "wield " .. weapon )
 -------------
 To set our bag variable:
-Pattern:[,#b0e0e6]+^set bag (.*)"+
+Pattern:[,#b0e0e6]+^set bag (.*)+
 -------------
 bag = matches[2]
 -------------
@@ -404,7 +471,7 @@ end
 ---------------
 
 The next example is one of the most common aliases a tell alias:
-Pattern:[,#b0e0e6]+^tj (.*)"+
+Pattern:[,#b0e0e6]+^tj (.*)+
 Script:
 ---------------
 send( "tell Jane " .. matches[2]
@@ -412,11 +479,22 @@ send( "tell Jane " .. matches[2]
 Sadly, Jane is your fiance and the one thing she is a vegetarian and absolutely hates all words that relate to meat.
 Luckily, you know enough about aliases by now to make her believe that you'd never ever even think about meat. So you head to your globa function script (any script item will do as long as you define your variables *outside of* your function definitions. See the scripts chapter below for more information.
 In your script "my global functions" you add a Lua table containing a list of all of all words that a vegetarian might hate.
-For example: happyJaneTable = { "meat", "burger", "steak", "hamburger", "chickenburger" }
-Now you can upgrade your tell-jane script to automatically filter all words that Jane might not like.
--------------------
-
+For example: 
+-------------
+happyJaneTable = { "meat", "burger", "steak", "hamburger", "chickenburger" }
 ------------------
+Now you can upgrade your tell-jane script to automatically search our tell for all words that Jane might not like. In case such a word is found we substitute the entire tell with "How is the weather?".
+-----------------
+for key, value in ipairs( happyJaneTable ) do     -- looking at each element of the list
+    badWord = happyJaneTable[key]                 -- check out the Lua table chapter below for more info
+    begin, end = string.find( command, badWord )  -- begin holds the start position of the word, end* the end-position
+    if begin ~= nil then                          -- we have found a bad word
+        send( "tell Jane How is the weather?" )
+        return
+    end
+end
+-----------------
+
 [[triggers]]
 == Mudlet's Trigger Engine
 
@@ -525,24 +603,7 @@ Buttons are co
 [[scripting]]
 == Scripting with Mudlet
 [[luaSyntax]]
-== A quick Lua syntax overview
 
-Lua variables can be either a string or a number. They are whatever there were initially initialized with.
-=== string concatenation, variable substitution)
-
-----
-a = "Jim"
-b = "Tom"
-c = 350
-d = 1
------
-Then you can write: 
-
------
-e = c + d and e will equal 351
-e = a .. b and e will equal "JimTom" note that you cant use a+b to concatenate string values. For this you must use ..
-e = a .. c and e will equal "Jim350"
------
 Lua tables can basically be considered multidimensional arrays and dictionaries at the same time.
 If we have the table matches, matches[1] is the first element, matches[n] the n-th element.
 -----
@@ -877,40 +938,48 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 |multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 4th capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
 |===================================================
 
-.Lua API
+.Main Functions
 [width="100%",frame="topbot",options="header"]
 |===================================================
 |Function|Description
-|clearUserWindow( window_name )|Clears the user window with the name given as argument.
-|copy()|Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.
-|cut()|Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )
+|send( command )|This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
+|echo( text )|prints text to the main window
+|int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error|Selects a substring from the line where the user cursor is currently 
+positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of 
+the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that 
+the cursor is in the correct line if you want to call one of the select functions. 
+NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) > -1 then setFgColor( 255,0,0) end"
 |deleteLine()|deletes the current Line under the user cursor. 
-|*deselect()*|deselects the last selected text
+|timer_id = tempTimer( seconds, lua_code )|Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
+|enableTrigger( name )|enables a Trigger. see enableTimer() for more details.
+|disableTrigger( name )|Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
+|insertText( string )|Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.
+|suffix( what )|prints "what" at the end of the line when used in a trigger script
+|prefix( what )|prints "what" at the beginning of a line when used in a trigger script
+|boolean = selectSection( from, length_of_string )|Absolute column number for start of selection and length of selection
+|selectCaptureGroup( groupNumber ) with first group = 0|Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)
+|replace( with )|replaces the selected text with "with". To delete text use replace("")
+|replaceAll( what, with )|replaces all occurrences of what in the current line with with 
+|fg( color_name )|Sets the current selection foreground color to color_name. You can find the pre-defined color names <<colortable, here>> 
+|bg( color_name )|same as fg( color_name ) just for the background color.
+|resetFormat()|Resets the character format to default. This should be used after you have colorized some text, but don't want to keep using these colors for further prints.
+|setBgColor( r,g,b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
+|setFgColor( r, g, b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
+|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
+|===================================================
+
+.Trigger, Timer, Alias and Key Functions
+[width="100%",frame="topbot",options="header"]
+|===================================================
+| Function | Description
 |disableTimer( name )|Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.
 |disableTrigger( name )|Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
 |disableKey( name )|Uses trigger name as id or the id returned by tempTrigger()
-|echo( text )|prints text to the main window
 |echoUserWindow( window_name, text )|prints text to user dock window name
 |enableTimer( name )|enables or activates a timer that was previously disabled. The parameter "name" expects the timer ID that was returned by tempTimer() on creation of the timer or the name of the timer in case of a GUI timer
 |enableTrigger( name )|enables a Trigger. see enableTimer() for more details.
 |enableKey( name )|enable key or key group "name"
 |expandAlias( command )|like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.
-|lineNumber = getLineNumber()|to get the absolute line number of the current user cursor
-|number = getColumnNumber()|To get the absolute column number of the current user cursor
-|number = getLineCount()|To get the absolute amount of lines in the current console buffer
-|lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )|Returns a section of the content of the screen text buffer. Absolute line numbers are used
-|number_of_last_line = getLineCount()|number of the last line in the buffer
-|insertText( string )|Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.
-|killTimer( name )|Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.
-|killTrigger( name )|See killTimer()
-|boolean = moveCursor( windowName, x, y )|Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.
-|moveCursorEnd( windowName )|Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
-|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
-|paste()|pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.
-|pasteWindow( name )|pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
-selectString( line, 1 )
-cut()
-pasteWindow( "chat" )
 |raiseEvent( event_name, arg-1, ... arg-n )|Raises the event event_name. The event system will call the main function (the one that is called exactly like 
 the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with 
 the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without 
@@ -927,18 +996,6 @@ uses minimal arguments, name the event name. There can only be one event handler
 as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you 
 should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees 
 and thus help reduce complexity on large systems.
-|replace( with )|replaces the selected text with "with". To delete text use replace("")
-|replaceAll( what, with )|replaces all occurrences of what in the current line with with 
-|int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error|Selects a substring from the line where the user cursor is currently 
-positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of 
-the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that 
-the cursor is in the correct line if you want to call one of the select functions. 
-NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) > -1 then setFgColor( 255,0,0) end"
-|boolean = selectSection( from, length_of_string )|Absolute column number for start of selection and length of selection
-|selectCaptureGroup( groupNumber ) with first group = 0|Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)
-|send( command )|This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
-|setBgColor( r,g,b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
-|setFgColor( r, g, b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
 |timer_id = tempTimer( seconds, lua_code )|Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 |trigger_id = tempTrigger( string, lua_code )|creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one.
 |trigger_id = tempLineTrigger( from, howMany, LuaCode )|Temporary trigger that will fire on n consecutive lines following the current line. This is useful 
@@ -946,26 +1003,74 @@ to parse output that is known to arrive in a certain line margin or to delete un
 tempLineTrigger( 20, 2, [[send("shout Help")]] )
 will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 |trigger_id = tempRegexTrigger( regex, lua_code )|temorary trigger using perl regex pattern matching
-|userWindowLineWrap( window, boolean )|turns line wrap mode on or off in user dock windows
-userWindowLineWrap( "chat", true ) turns on line wrap for window "chat"
+|killTimer( name )|Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.
+|killTrigger( name )|See killTimer()
+|===================================================
+
+.Buffer, Screen and Mini Windows Functions
+[width="100%",frame="topbot",options="header"]
+|===================================================
+| Function | Description
+|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
+|clearUserWindow( window_name )|Clears the user window with the name given as argument.
+|*userWindowLineWrap( window, boolean )*|turns line wrap mode on or off in user dock windows
+userWindowLineWrap( "chat", true ) turns on line wrap for window "chat" (*not implemented*)
+|copy()|Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.
+|cut()|Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )
+|*deselect()*|deselects the last selected text (*not implemented yet*)
+|lineNumber = getLineNumber()|to get the absolute line number of the current user cursor
+|number = getColumnNumber()|To get the absolute column number of the current user cursor
+|number = getLineCount()|To get the absolute amount of lines in the current console buffer
+|lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )|Returns a section of the content of the screen text buffer. Absolute line numbers are used
+|number_of_last_line = getLineCount()|number of the last line in the buffer
+|boolean = moveCursor( windowName, x, y )|Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.
+|moveCursorEnd( windowName )|Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
+|paste()|pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.
+|pasteWindow( name )|pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
+selectString( line, 1 )
+cut()
+pasteWindow( "chat" )
 |printTable( table_name )|Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the lua table "matches".
 This function is defined in luaglobal.lua.
 |showCaptureGroups()|Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua
-|fg( "red" )|Sets the current foreground color to red. Check the luaglobal.lua file for the defined color names ( about 255) e.g. fg("green") will set the foreground color to green.
-|bg( "blue" )|same as fg( color_name ) just for the background color.
+|showMultimatches()|Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers
 |table.load( file, table )|restores a Lua table from a data file that has been saved with table.save()
 |table.save( file, table )|saves the given table into the given file
 |showCaptureGroups()|a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (->trigger editor->bug symbol)
 |printTable( table )|another debug function that prints the content of a Lua table on the screen split in key and value.
 |sendAll( what )|sends a list of commands to the MUD
-|suffix( what )|prints "what" at the end of the line when used in a trigger script
-|prefix( what )|prints "what" at the beginning of a line when used in a trigger script
 |debug( arg1 ... argn )|prints out debug information to the user debug console
 |function replaceWildcard(what, replacement)|Replaces the given wildcard (as a number) with the given text.
-
 Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 |resetFormat() |resets the user character format to the default.
-| |
 |===================================================
 
+[[colortable]]
+.Color Table (for use in the fg("colorname") and bg("colorname") functions)
+[frame="topbot",options="header"]
+|===================================================
+| snow| ghost_white| white_smoke|gainsboro|floral_white
+| old_lace| linen| antique_white| papaya_whip| blanched_almond
+| bisque| peach_puff| navajo_white| moccasin | cornsilk| ivory
+| lemon_chiffon| seashell| honeydew| mint_cream| azure| alice_blue
+| lavender| lavender_blush| misty_rose| white | black| dark_slate_gray 
+| dark_slate_grey| dim_gray   | dim_grey| slate_gray | slate_grey | light_slate_gray  
+| light_slate_grey| gray| grey| light_grey | light_gray | midnight_blue
+| navy| navy_blue | cornflower_blue| dark_slate_blue| slate_blue | medium_slate_blue 
+| light_slate_blue| medium_blue| royal_blue | blue  | dodger_blue| deep_sky_blue 
+| sky_blue| light_sky_blue| steel_blue| light_steel_blue| light_blue| powder_blue 
+| pale_turquoise| dark_turquoise | medium_turquoise| turquoise| cyan| light_cyan 
+| cadet_blue| medium_aquamarine| aquamarine| dark_green | dark_olive_green| dark_sea_green
+| sea_green | medium_sea_green| light_sea_green| pale_green | spring_green| lawn_green  
+| green| chartreuse | medium_spring_green| green_yellow| lime_green | yellow_green 
+| forest_green | olive_drab| dark_khaki| khaki | pale_goldenrod| light_goldenrod_yellow
+| light_yellow| yellow| gold   | light_goldenrod| goldenrod| dark_goldenrod
+| rosy_brown| indian_red| saddle_brown | sienna| peru | burlywood
+| beige| wheat| sandy_brown| tan| chocolate | firebrick
+| brown| dark_salmon| salmon | light_salmon| orange| dark_orange
+| coral| light_coral | tomato| orange_red | red | hot_pink 
+| deep_pink| pink| light_pink| pale_violet_red| maroon| medium_violet_red
+| violet_red| magenta| violet| plum | orchid | medium_orchid
+| dark_orchid| blue_violet| purple| medium_purple| thistle
+|===================================================
 
