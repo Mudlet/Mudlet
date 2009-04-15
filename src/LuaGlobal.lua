@@ -73,7 +73,11 @@ end
 
 -- Function shows the content of a Lua table on the screen
 function printTable( map )
-    table.foreach( matches, __printTable )
+	echo("-------------------------------------------------------\n");
+	for k, v in pairs( map ) do
+		echo( "key=" .. k .. " value=" .. v .. "\n" )
+	end
+	echo("-------------------------------------------------------\n");
 end
 
 function __printTable( k, v )
@@ -106,10 +110,26 @@ function showMultimatches()
     echo("\n-------------------------------------------------------\n");
 end
 
+function listPrint( map )
+	echo("-------------------------------------------------------\n");
+	for k,v in ipairs(myEnnemies) do
+		echo( k .. ". ) "..v .. "\n" );
+	end
+	echo("-------------------------------------------------------\n");
+end
+
+function listAdd( list, what )
+	table.insert( list, what );
+end
 
 
-
-
+function listRemove( list, what )
+	for k,v in ipairs( list ) do
+		if v == what then
+			table.remove( list, k )
+		end
+	end
+end
 -----------------------------------------------------------
 -- some functions from Vadim Peretrokin 2009
 -----------------------------------------------------------

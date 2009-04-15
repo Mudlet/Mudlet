@@ -398,11 +398,34 @@ end
 In Lua all undefined variables are initialzed to the value [red]+nil+. The value [red]+nil+ is not the same thing as the number [red]+0+ or the empty string [red]+""+. What it means is that a variable that has the value [red]+nil+ has not been declared yet and does not exist. If a variable does not exist, it cannot be used as its value is undefined at this point. Consequently, increasing the value of [red]+nil+ by one is impossible as the variable doesnt exist yet and will lead to a Lua error. The above script simply checks if the variable myKills has been defined yet and if it hasn't, it will declare the variable and set its value to 0.
 === Lists
 Having variables that hold a single value is the most important usage of variables, but very often you'll like to define variables that hold a list of values e. g. a list of your ennemies, a list the items you are currently carrying etc.. To define a variable to be a list you need to declare it to be a Lua table.
+Let's declare the variable [red]+myEnnemies+ as a list containing the names of your ennemies:
+------
+myEnnemies = {}
+------
+You can now add new ennemies to this list by calling the lua function listAdd( listName, item ) e.g.
+-----
+listAdd( myEnnemies, "Tom" )
+listAdd( myEnnemies, "Jim" )
+-----
+To print the content of your ennemy list on the screen you can run this script
+-------
+listPrint( myEnnemies )
+-------
+Now let's make a little alias that adds a new name to your ennemy list when you type "add ennemy " followed by the name of the ennemy e. g. "add ennemy Peter"
+Open the alias editor by clicking on the alias icon. Click on the "Add" icon to add a new alias.
+Choose any name you like for your alias e.g. "add new ennemy" and then define following pattern for the alias:
+[blue,#b0e0e6]+^add ennemy (.*)+
+Then add this little script in the script editor below:
+------
+listAdd( myEnnemies, matches[2] )
+echo( "Added a new ennemy:" .. matches[2] .. "\n" )
+------
+Save the alias and try. Alias are explained in detail below.
+Another way to declare a list is to define its values directly.
 ------
 myEnnemies = { "Peter", "Jim", "Carl", "John" }
 ------
-
-
+To remove an item from the list you can use the function listRemove( listName, item ).
 === Saving Variable Values to Disc
 Having statistics scripts that last as long as the session lasts is a nice thing, but it makes more sense to write the variables to disc and reload them when you play the next time. To do this you have to save your variables. Mudlet has 2 ways to implement variable persistency. First, you can tell Mudlet to save all of your variables on exit automatically and ask Mudlet to automatically restore them when the session gets reloaded the next time you play on this profile. 
 Second, you can take care of saving your variables yourself and reloading them yourself. This gives you more control and will be the preferred solution in bigger systems.
@@ -526,18 +549,17 @@ The simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains,
 
 === Trigger Chains - Filter Chains
 
-Imagine the following scenario: You want to collect some berries. You know that the room contains some berries if the room description contains the words "You see several sorts of berries." You make a new substring trigger for this line, but instead of chosing a regular trigger, you chose to add a new trigger group. Now you add "You see several sorts of berries." to the expression list of the trigger group. When adding condions to a trigger group, the trigger group turns from an organizational unit into a filter unit. From now on this folder is a filter and will only let data through that matches it's condition.
-In our case this is exactly what we want, because we don't want to collect all sorts of berries, but we only want 2 particular kinds, namely, strawberries and blackberries. Now you add two regular triggers to our berry filter - one containing the condition: "strawberries" and the other one "blackberries". Then we add the commands to pick the particular kind of berry to both triggers.
-Now what happens is that as soon as a room description reads "You see several sorts of berries." the filter will let the line containing the room description pass through to our two berry triggers and they will issue commands to pick berries. However, in any other situation the words "strawberries" and "blackberries" will *NOT* trigger - only in the above scenario when the filter parent's condition is met. This is a very nice way to solve complicated problems with a few easy filter chains. This example is trivial, but using filter chains will rapidly show you how formerly complicated things that could only be solved with very complicated regular expressions can be solved easily now with a couple of filter chains.
-
+Imagine the following scenario: You want to collect some berries. You know that the room contains some berries if the room description contains the words "You are inside a forrest." You make a new substring trigger for this line, but instead of chosing a regular trigger, you chose to add a new trigger group. Now you add "You are inside a forrest" to the expression list of the trigger group. *When adding condions to a trigger group, the trigger group turns from an organizational unit into a filter unit.* From now on this folder is a filter and will only let data pass through that matches it's condition.
+In our case this is exactly what we want, because we don't want to collect all sorts of berries, but we only want 2 particular kinds, namely, strawberries and blackberries, and we know that these berries can only be trusted if they are picked inside a forrest as other areas may contain contaminated berries. Now you add two regular triggers to our berry-in-the-forrest filter - one containing the condition: "strawberries" and the other one "blackberries". Then we add the commands to pick the particular kind of berry to both triggers (send field).
+Now what happens is that as soon as a room description reads "You are inside a forrest." the filter will let the line containing the room description pass through to our two berry triggers and they will issue commands to pick berries, if there are such berries. However, in any other situation the words "strawberries" and "blackberries" will *NOT* trigger a pick - only in the above scenario when the filter parent's condition is met. This is a very nice way to solve complicated problems with a few easy filter chains. This example is trivial, but using filter chains will rapidly show you how formerly complicated things that could only be solved with very complicated regular expressions can be solved easily now with a couple of filter chains.
+It should be noted that filter chains only work on single lines. This means that if the filter chain head "You are inside a forrest" is in a different line than the other child chain element triggers (stawberr- and black berry triggers) the triggers will not fire as the line that is being let through the filter does not contain the words strawberries or blackberries. Most MUDs, however, offer a feature that lets your client do the word wrapping. This is a very powerful tool for scripting and should be enabled by you in your MUD as then the entire room description or the entire tell will be sent out to Mudlet in one line and Mudlet will do the word wrapping for you. Now you can use filter chains much more effectively as the line content comprises many lines. Triggering will become much easier. Ask your MUD operators how to enable this feature. Most big MUDs can do this these days.
 
 === Multi-Line Triggers and Multi-Condition Triggers
-
 Multi Condition Triggers are the most advanced feature of Mudlet's trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
 All conditions in the list must have matched within the specified margin of lines (delta), in order to trigger the script.
-Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition return true, the trigger script is run.
-In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. The sequence of the conditions is binding. This means if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condidtion #2 has been true.
-Conditions can also be Lua Functions that return a boolean truth value. You can mix all types of condtions.
+Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition returns true, the trigger script is run.
+In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. *The sequence of the conditions is binding.* This means that if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condidtion #2 has been true.
+Conditions can also be Lua Functions or plain Lua code that returns a boolean truth value. You can mix all types of condtions to build complex multi-condition triggers that only fire if all conditions are met. This is a very powerful feature as it reduces the amount of scripting to a minimum or even takes away with the need to script formerly complex processes completely. Multicondition triggers are multi-line triggers, i. e. the conditions can all be met in a single line or many lines after the first condition has been fulfilled. This effectively reduces the amount of complexity as you have all the important conditions placed into a single trigger and all the tedious bookeeping, variable and condition state accounting is being done by Mudlet's trigger engine. The result of this is that the amount of manual condition checking via many different trigger scripts and legions of if condition1 == true then check conditon2 can be forgotten about. All you have to do is to define the conditions and the final action that is taken if the trigger fires.
 
 Example: Let's go back to our pond & frog example. We have explained the difference between AND-triggers and OR-triggers. If you have a room description consisting of 3 lines:
 ----
@@ -551,12 +573,13 @@ condition #1 pattern = pond
 condition #2 pattern = frog
 condition #3 pattern = stone
 
-Wheather or not a condition is found to be true *also* depends on another property, i.e. the *type* of the condition.
+Wheather or not a condition is found to be true *also* depends on another property, namely the *type* of the condition.
 The condition type can be among others:
 ====
 1. substring matching  -> the condition is true if the condition pattern is a substring of the output line from the MUD. In other words: If the pattern "pond" is contained in any line of output, the condition is true.
 2. begin of line matching -> the condition is only true if the conditon pattern can be found at the beginning of a line from the MUD.
 3. Perl regular expression -> the condition is true if the Perl regex pattern is matched. You'll find more information on Perl regex below.
+4. Lua code that returns a truth value e.g. a call to a function check() that return either true or false depending on the condition
 ====
 In our example we chose condition type "substring" for all three condtions.
 Consequently, the trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.
@@ -567,38 +590,69 @@ in line #3 two conditions are true i.e. frog=true and stone = true
 ....
 Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.
 
-CAUTION: The multiline condition switch must be turned off to get an OR-trigger! If the multiline condition switch is turned on the trigger becomes and AND trigger which means that the trigger only fires if all conditions are true and fullfilled in the correct sequence. With OR-triggers the sequence is irrelevant.
+*CAUTION: The multiline condition switch must be turned off to get an OR-trigger! If the multiline condition switch is turned on the trigger becomes and AND trigger which means that the trigger only fires if all conditions are true and fullfilled in the correct sequence. With OR-triggers the sequence is irrelevant.*
 
-To complicate matters, however, you don't want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn't have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Conditon Triggers. If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description.
-
+To complicate matters, however, you don't want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn't have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Conditon Triggers (MCT). If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. when you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description despite that this room description my be spread over a number of lines. (NOTE: If you have word wrap turned off in your MUD chances are that the entire room description will be contained in a single line, but we are trying to keep the examples as easy as possible.)
 
 Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlet's MCTs.
 
 You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.
+However, unlocking the full potential of Mudlet requires you do learn some Lua basics. In this manual we'll try to be as easy on you as we can in this respect, but it's highly recommended that you dig deeper into Lua after a while. It's one of the easiest fully fledged scripting languages available, easy to learn and the fastest of them all, and this is why it has been chosen by us. You don't need to become a programmer to be able to use Mudlet effectively. All you have to know is how to work with variables and how to do if conditions and maybe a few loops. But knowing more won't harm you and it will make your systems more effective.
 
+=== Lua Code Conditions & Variable Triggers 
+In a Lua Code/Function Condition (LFC) you can run Lua code inside the trigger engine directly. The easiest example would be a simple variable trigger:
+Add a new trigger and chose pattern type Lua Function Conditon.
+Then define this pattern:
+[blue,#b0e0e6]+if health <= 100 then escape() end+
+Another formulation of the same would be:
+[blue,#b0e0e6]+checkHealth()+ For the last formulation to work you have defined a lua function checkHealth(). Open the script editor, add a new script "health care" and add this code to the new script-script.
+------
+function checkHealth()
+    if health <= 100 then
+        echo( "WARNING: Low health! I have to run away!\n" )
+        startEscape();
+        return true
+    else
+        return false
+    end
+end
+--------
 
 === Temporary Triggers (scripting only)
-
 Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).
-
+There are several forms of temp-triggers that address different scripting needs.
+Check the Lua API table for reference.
 
 === Line Triggers (scripting only)
-
 Line triggers trigger on a specified line in the future - or a sequence of lines - irrespective of the content of the line. This type of triggers can be very handy in scripting if you know what is coming e.g. you want to parse a table from the MUD, maps etc.
 
 [[timers]]
 == The Timer Engine
-Mudlet supports 3 different sort of timers:
-======
-1. _Regular GUI Timers_ that fire repeatedly in a certain interval specified by the user.
-2. _Offset Timers_ are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
-3. _Temporary Timers_ that very useful for scripting. They behave like regular timers, but they are one shot only timers. Temporary timers can not be accessed from the GUI and are not saved in profiles.
-======
+Mudlet supports 4 different sort of timers:
+=======
+. *Regular GUI Timers* that fire repeatedly in a certain interval specified by the user.
+. *Offset Timers* are child timers of a parent timer and fire a single shot after a specified timeout after their parent firied its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
+. *Temporary Timers* are very useful for scripting. They behave like regular timers, but they are one shot only timers. 
+. *Batch Job Timers* are a form of timers that issue a sequence of commands/scripts according to a certain timeout instead of a single command/script. This is a very important tool if the sequence of commands is important. Timers depend largely on the operating system you are using and it cannot be guaranteed under certain conditions that if you have set up 5 timers to fire after 1.3 seconds that the sequence in which they fire is the same sequence in which they were created. If the sequence of commands is important, you should always use batch job timers as this form of timers guarantees that the sequence of commands is observed. For example: If you want to make an autominer bot that digs its way into a gold mine digging left, down, down, right, left, down until a trigger catches a message that indicates that the mine is going to collapse and bury your poor soul unless you run for your life and head out of the mine. In this scenario the sequence of commands is vital as you'd lose your way and die. This is a classical case for a batch job timer. 
+========
+The most common usage of temporary timers is the function tempTimer(). It let's you specify a timeout after which a script is being run e. g. 
+------
+tempTimer( 0.3, [[send("kill rat")]] )
+------
+This will issue the command "kill rat" after 0.3 seconds. Other clients call this kind of function wait() or doAfter() etc. It is one of the most used functions in MUD scripting. tempTimer() is a single shot timer. It will only fire once and is then marked for deletion. TempTriggers(), by contrast, live through the entire session and are never deleted unless you explicitly delete them or disable them.
+
+Anothe often used function in the context of timers is enableTimer( timerName ), or disableTimer( timerName ). Those are the counterparts of enableTrigger( triggerName ) and disableTrigger( triggerName ), enableKey( keyName ) etc..
+
+*NOTE: Temporary timers cannot be accessed from the GUI and are not saved in profiles.*
+
+To be continued ....
 
 [[buttons]]
 == Buttons and Custom User Toolbars
+[[diag_buttons]]
+[icon="./images/icons/cssButtons.png"]
+NOTE: .
 
-Buttons are co
 
 [[scripting]]
 == Scripting with Mudlet
@@ -944,6 +998,9 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 |Function|Description
 |send( command )|This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
 |echo( text )|prints text to the main window
+|listPrint( listName )|prints the content of list listName on the screen e.g. listPrint( myEnnemies )
+|listAdd( listName, what )|adds a new element what to the list listName e.g. listAdd( myEnnemies, "Tom" )
+|listRemove( listName, what )|removes item what from the list listName e.g. listRemove( myEnnemies, "Bert" )
 |int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error|Selects a substring from the line where the user cursor is currently 
 positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of 
 the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that 
