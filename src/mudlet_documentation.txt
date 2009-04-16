@@ -34,27 +34,25 @@ Mudlet Manual
 .. <<userGfxWindows,User Custom Graphics Windows>>
 . <<api,Lua API and Reference>>
 ****************
+
 [[introduction]]
 == Introduction
-Welcome to *Mudlet*, a modern MUD client for GNU/Linux that offers all the tools to get the most out of your gaming experience. 
-Throughout this document we hope to familiarize you with the basic aspects of Mudlet, from the interface to its _very_ powerful and feature rich scripting backend. 
-The main focus in the development of Mudlet has been efficiency and performance, but we also try to make it as easily accessible 
-as possible. However, keep in mind that this is a complex piece of software with a large set of tools that do require some understanding of the underlying principle. 
-To use Mudlet in any meaningful way, you have to take a closer look at the technical section in this manual. If you are not familiar with using modern MUD clients in general you should also take a look 
-at the general introduction to MUD clients section in this manual. 
+Welcome to *Mudlet*, a modern MUD client for GNU/Linux, Windows and Mac OSX that offers all the tools to get the most out of your gaming experience. 
+Throughout this document we hope to familiarize you with the basic aspects of Mudlet, from the interface to its _very_ powerful and feature rich scripting backend 
+The main focus in the development of Mudlet has been efficiency and performance, but we also try to make it as easily accessible as possible. However, keep in mind that this is a complex piece of software with a large set of tools that does require some deeper understanding of the underlying principles.
+To use Mudlet in any meaningful way, you have to take a closer look at the technical section in this manual. If you are not familiar with using modern MUD clients in general you should also take a look at the general introduction to MUD clients section at the beginning of this manual. 
 You are welcome to ask questions on the forum of our website. If you find a bug, please let us know.
-
+[[diag_variables]]
+[icon="./images/icons/diag_variables.png"]
+NOTE: Everything is centered around the central Lua scripting unit. Everything shares the same variables & functions and everything is accessible from anywhere.
 
 === Quick Start
-
 To connect to the MUD of your choice, click on `Connections` → `Connection Profiles`. 
 
 * Create a new profile by clicking on `Add New Profile`.
 * Specify the `host` and the `port` of the MUD (This information is usually found on the MUD's homepage).
 * Now just click `Connect` to play!
 
-
-[[introduction]]
 == 1. General Introduction to Modern MUD Clients
 === 1.1 Mudlet's automation features
 Mudlet offers a vast array of standard features to automate or otherwise improve your gaming experience. These include, but are not limited to:
@@ -315,12 +313,14 @@ Split screen usage is necessary when selecting text in order to copy it to trigg
 
 [[commandLine]]
 == Command Line Auto-Completion, Tab-Completion and History
-
+Mudlet's command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that take typical MUD playing situations into account. Normally, autocompletion works on the basis of alphabetic indexing, which isn't suitable for MUD playing as it wouldn't distinguish between the temporal proximity of words. 
 The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
+=======
 1. _Tab completion_ searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
 2. _Autocompletion_ tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
-3. _Command History_: If you haven't started to type anything yet, you can browse through your command history with the cursur up and cursor down keys. However, if you have started typing pressing cursor up will result in autocompletion.
-4. _ESC_:To get out of autocompletion you can press the ESC key any time.
+3. _Command History_: If you haven't started to type anything yet, you can browse through your command history with the cursor up and cursor down keys. However, if you have started typing pressing cursor up will result in a shot at autocompletion.
+4. _ESC_:To get out of autocompletion you can press the ESC key any time. After pressing ESC the entire text gets selected and you can overwrite it or get back into command history mode.
+=======
 
 [[logging]]
 == Logging Output to HTML Log Files
@@ -354,6 +354,10 @@ Finally, you create a *new empty* profile in Mudlet and import all your sub pack
 [[variables]]
 == Using Variables in Mudlet
 One of the major design goals in Mudlet was to integrate scripts and variables as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients. If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias a key, an event handler, a free function etc. it can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (connection) runs in its own dedicated Lua interpreter. Consequently, all scripts are compiled into the same Lua interpreter and thus their code runs in the same variable space.
+[[diag_variables]]
+[icon="./images/icons/diag_variables.png"]
+NOTE: Everything shares the same variables & functions.
+
 To give you an example: Let's make a little trigger that counts how many monsters you have killed. Each time you have made a new kill, the trigger matches on the kill message and runs a little script that increases the amount of kills by one each time the trigger fires - in other words, each time you kill a monster and the kill message is sent from the MUD. For the kill counter we declare a variable and call it [red]+myKills+. This variable is going to hold the number of kills we've made so far. The script will look like this:
 -------
 myKills = myKills + 1
@@ -388,8 +392,13 @@ myKills = 0
 -----
 Whenever you edit this script, it will be recompiled and the code will be run as it is not part of a function definiton. This is the major difference between trigger-scripts, alias-scripts etc. and script-scripts. Script-scripts can contain an unlimited amount of function definitions and also *free code* i. e. code outside of a function definition - code that is not enclosed by function xyz() .... end. On saving the script the script gets compiled and the free code is run instantly. All other item scripts, i. e. trigger-scripts etc., secretly define a function name for the script and thus the script is not free code, but function code. When a trigger fires Mudlet calls this invisible function name to run the script e.g. trigger738(), button82(), alias8(). This means that if you define variables inside a trigger script the variable will not be defined before the trigger runs for the first time. However, if you define this variable as free code in a script-script the definition becomes available immediately on script save.
 Now, whenever you add new variables to your variable definiton script, the script gets run and your old variables will be reeinitialzed and reset to 0. This will be no big problem in most cases as you won't work on your systems while really playing in most cases. To solve this problem you have two options:
-1. Add a script group (a folder) and add a new script item for each variable you define. This way, editing a variable definition will only reset the edited variable and none of the others that are defined in different scripts. This has the added advantage that you have a nice graphical overview of your defined variables.
-2. Change the variable initialization to only initialize the variable if it hasn't been initialized before, thus keeping the values of previously defined variables. This would look like this:
+
+*First option*: Add a script group (a folder) and add a new script item for each variable you define. This way, editing a variable definition will only reset the edited variable and none of the others that are defined in different scripts. This has the added advantage that you have a nice graphical overview of your defined variables.
+[[diag_variable_orga_screen_small]]
+[icon="./images/icons/variable_orga_screen_small.png"]
+NOTE: Organize your variables 
+
+*Second option (more advanced)*: Change the variable initialization to only initialize the variable if it hasn't been initialized before, thus keeping the values of previously defined variables. This would look like this:
 --------
 if myKills == nil then    -- this code initialzes the variable myKills to the number 0 if it hasn't been initialzed before
     myKills = 0
@@ -441,6 +450,8 @@ When you enter a command on the keyboard and press enter or return, the text tha
 [[aliasProcessing]]
 [icon="./images/icons/diagram_alias.png"]
 NOTE: .
+
+
 The example in the diagram above shows 2 matching aliases, but only one of them sends commands to the MUD - and only if the player is healthy enough to attack the opponent. The other alias that matched the user input (ennemy) choses a fitting opponent and sets the variable ennemy accordingly, otherwise it issues a warning that attacking one of the available ennemies would be too dangerous.
 
 For an input trigger to match the command text the same rules as explained above in the trigger section apply. However, to simplify matters there is only one alias type. As alias are not performance critical we could reduce the amount of trigger types to just Perl regex as this type can do it all and performance is no issue with alias as the amount of data is much less. Even if you type like a madman you'll never get close to sending the same amount of text to the MUD than the amount of text the MUD sends back to you.
@@ -560,6 +571,9 @@ All conditions in the list must have matched within the specified margin of line
 Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition returns true, the trigger script is run.
 In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. *The sequence of the conditions is binding.* This means that if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condidtion #2 has been true.
 Conditions can also be Lua Functions or plain Lua code that returns a boolean truth value. You can mix all types of condtions to build complex multi-condition triggers that only fire if all conditions are met. This is a very powerful feature as it reduces the amount of scripting to a minimum or even takes away with the need to script formerly complex processes completely. Multicondition triggers are multi-line triggers, i. e. the conditions can all be met in a single line or many lines after the first condition has been fulfilled. This effectively reduces the amount of complexity as you have all the important conditions placed into a single trigger and all the tedious bookeeping, variable and condition state accounting is being done by Mudlet's trigger engine. The result of this is that the amount of manual condition checking via many different trigger scripts and legions of if condition1 == true then check conditon2 can be forgotten about. All you have to do is to define the conditions and the final action that is taken if the trigger fires.
+[[aliasProcessing]]
+[icon="./images/icons/trigger_problem.png"]
+NOTE: This diagram shows what steps are involved in the process of problem solving with Mudlet's trigger engine. The main question is: How do we arrive at a solution to our problem, and how can we simplify the problem as much as possible?
 
 Example: Let's go back to our pond & frog example. We have explained the difference between AND-triggers and OR-triggers. If you have a room description consisting of 3 lines:
 ----
