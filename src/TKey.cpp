@@ -180,7 +180,7 @@ void TKey::execute()
 {
     if( mCommand.size() > 0 )
     {
-        mpHost->sendRaw( mCommand );
+        mpHost->send( mCommand );
     }
     if( mNeedsToBeCompiled )
     {

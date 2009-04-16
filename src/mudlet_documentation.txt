@@ -313,7 +313,7 @@ Split screen usage is necessary when selecting text in order to copy it to trigg
 
 [[commandLine]]
 == Command Line Auto-Completion, Tab-Completion and History
-Mudlet's command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that take typical MUD playing situations into account. Normally, autocompletion works on the basis of alphabetic indexing, which isn't suitable for MUD playing as it wouldn't distinguish between the temporal proximity of words. 
+Mudlet's command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that take typical MUD playing situations into account. Normally, autocompletion works on the basis of alphabetic indexing, which isn't suitable for MUD playing as it wouldn't distinguish between the temporal proximity of words, which, in turn is closely related to the probability that the word is
 The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
 =======
 1. _Tab completion_ searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
@@ -564,14 +564,36 @@ Imagine the following scenario: You want to collect some berries. You know that 
 In our case this is exactly what we want, because we don't want to collect all sorts of berries, but we only want 2 particular kinds, namely, strawberries and blackberries, and we know that these berries can only be trusted if they are picked inside a forrest as other areas may contain contaminated berries. Now you add two regular triggers to our berry-in-the-forrest filter - one containing the condition: "strawberries" and the other one "blackberries". Then we add the commands to pick the particular kind of berry to both triggers (send field).
 Now what happens is that as soon as a room description reads "You are inside a forrest." the filter will let the line containing the room description pass through to our two berry triggers and they will issue commands to pick berries, if there are such berries. However, in any other situation the words "strawberries" and "blackberries" will *NOT* trigger a pick - only in the above scenario when the filter parent's condition is met. This is a very nice way to solve complicated problems with a few easy filter chains. This example is trivial, but using filter chains will rapidly show you how formerly complicated things that could only be solved with very complicated regular expressions can be solved easily now with a couple of filter chains.
 It should be noted that filter chains only work on single lines. This means that if the filter chain head "You are inside a forrest" is in a different line than the other child chain element triggers (stawberr- and black berry triggers) the triggers will not fire as the line that is being let through the filter does not contain the words strawberries or blackberries. Most MUDs, however, offer a feature that lets your client do the word wrapping. This is a very powerful tool for scripting and should be enabled by you in your MUD as then the entire room description or the entire tell will be sent out to Mudlet in one line and Mudlet will do the word wrapping for you. Now you can use filter chains much more effectively as the line content comprises many lines. Triggering will become much easier. Ask your MUD operators how to enable this feature. Most big MUDs can do this these days.
+Let's look at a practical example for a trigger chain: 
+*************
+.Practical example: Prompt Detection Trigger Chain that raises a prompt event and checks balance
+My newbie prompt on Achaea looks like this [blue]+500h, 500m ex-+ when I have balance and [blue]+500h, 500m ex-+ when I have lost balance.
+We are going to develop a prompt detection trigger that raises the event gotPrompt and sets the variables myBalance=true or myBalance=false;
+To begin with, we add a new trigger group and add the Perl regex pattern to detect the prompt:
+-----
+^(\d+)h, (\d+)m
+-----
+The pattern reads in plain English: At the beginning of a prompt line there are is a number directly followed by the letter h, a comma, a space and another number  followed by the letter h.
+Whenever this pattern matches the trigger will fire and we'll know that we have a prompt line. 
+Detecting balance is more difficult as balance is indicated by the letters [blue]+ex-+ on the same line after the prompt and imbalance is indicated by the letters [blue]+e-+.
+As we have set a pattern in a trigger group (folder), the folder is turned into a filter or a trigger chain head. It will now only let data through to its children when its own pattern is matched. In other words, *the child triggers of the trigger chain will only recieve data on prompt lines.*
+We are going to take advantage of this by adding two simple substring triggers to detect balance and imbalance. The balance trigger pattern is [,#b0e0e6]+ex-+ and the imbalance detector pattern is [,#b0e0e6]+e-+.
+On the screen this looks like this:
+[icon="./images/icons/prompt_detection2.png"]
+NOTE: .
 
+In the two balance detection triggers we now write myBalance=false and myBalance=true respectively plus a little echo on the screen that shows our current balance status. The outcome looks like this:
+[icon="./images/icons/prompt_detection1.png"]
+NOTE: .
+
+We could now add a call deleteLine() to the prompt detection trigger to erase the prompt from the screen if we don't want to see it as we have computed all relevant information.
+*************
 === Multi-Line Triggers and Multi-Condition Triggers
 Multi Condition Triggers are the most advanced feature of Mudlet's trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
 All conditions in the list must have matched within the specified margin of lines (delta), in order to trigger the script.
 Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition returns true, the trigger script is run.
 In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. *The sequence of the conditions is binding.* This means that if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condidtion #2 has been true.
 Conditions can also be Lua Functions or plain Lua code that returns a boolean truth value. You can mix all types of condtions to build complex multi-condition triggers that only fire if all conditions are met. This is a very powerful feature as it reduces the amount of scripting to a minimum or even takes away with the need to script formerly complex processes completely. Multicondition triggers are multi-line triggers, i. e. the conditions can all be met in a single line or many lines after the first condition has been fulfilled. This effectively reduces the amount of complexity as you have all the important conditions placed into a single trigger and all the tedious bookeeping, variable and condition state accounting is being done by Mudlet's trigger engine. The result of this is that the amount of manual condition checking via many different trigger scripts and legions of if condition1 == true then check conditon2 can be forgotten about. All you have to do is to define the conditions and the final action that is taken if the trigger fires.
-[[aliasProcessing]]
 [icon="./images/icons/trigger_problem.png"]
 NOTE: This diagram shows what steps are involved in the process of problem solving with Mudlet's trigger engine. The main question is: How do we arrive at a solution to our problem, and how can we simplify the problem as much as possible?
 
@@ -613,7 +635,7 @@ Sadly, there are many unfriendly people in this world and somebody goes around a
 You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.
 However, unlocking the full potential of Mudlet requires you do learn some Lua basics. In this manual we'll try to be as easy on you as we can in this respect, but it's highly recommended that you dig deeper into Lua after a while. It's one of the easiest fully fledged scripting languages available, easy to learn and the fastest of them all, and this is why it has been chosen by us. You don't need to become a programmer to be able to use Mudlet effectively. All you have to know is how to work with variables and how to do if conditions and maybe a few loops. But knowing more won't harm you and it will make your systems more effective.
 
-=== Lua Code Conditions & Variable Triggers 
+=== Lua Code Conditions & Variable Triggers - Expression Triggers 
 In a Lua Code/Function Condition (LFC) you can run Lua code inside the trigger engine directly. The easiest example would be a simple variable trigger:
 Add a new trigger and chose pattern type Lua Function Conditon.
 Then define this pattern:
@@ -631,7 +653,18 @@ function checkHealth()
     end
 end
 --------
-
+-------------------
+.Lua Sytax Primer: Expressions
+if A == B then (...)   ----> if A equals B
+if A ~= B then (...)   ----> if A *NOT* equals B
+if A <= B then (...)   ----> if A is smaller or equal to B
+if A >= B then (...)   ----> if A is greater or equalt to B 
+if A < B then (...)    ----> if A is smaller than B
+if A > B then (...)    ----> if A is greater than B
+The operators 'and' and 'or' behave differently in Lua than in most other programming languages as they are not guaranteed to return a boolean value.
+For more information look here: 
+-------------------
+Lua function conditions effectively means that you run the Lua code they represent on every single line that is received from the MUD, unless the LFCs are part of a multi-condition trigger, in which case the LFCs would only be run when they would be the current test-condition of their respective trigger state. LFCs are implemented in such a way that the trigger engine only calls the compiled byte code, but running as few scripts as possible is always the best idea. LFCs are nice and handy, and for most people the performance aspect will not be relevant at all.
 === Temporary Triggers (scripting only)
 Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).
 There are several forms of temp-triggers that address different scripting needs.
