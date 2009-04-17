@@ -65,7 +65,7 @@ mudlet::mudlet()
     QVBoxLayout * layout = new QVBoxLayout( this );
     layout->setContentsMargins(0,0,0,0);
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet Beta 9pre - built: 04-1-2009");
+    setWindowTitle("Mudlet Beta 9 - built: April-17-2009");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     
