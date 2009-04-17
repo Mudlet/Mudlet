@@ -367,7 +367,7 @@ Then we add a little alias, a button or a keybindings that executes another litt
 echo( "I have killed " .. myKills .. " monsters today." )
 ----------
 ***********************
-.Lua Primer: Variables, String & numbers
+.Lua Primer: Variables, Strings & numbers
 Lua variables can be either a string or a number. They are whatever there were initially initialized with or what data type they can be converted to. 
 ----
 a = "Jim"
@@ -574,12 +574,13 @@ To begin with, we add a new trigger group and add the Perl regex pattern to dete
 ^(\d+)h, (\d+)m
 -----
 The pattern reads in plain English: At the beginning of a prompt line there are is a number directly followed by the letter h, a comma, a space and another number  followed by the letter h.
-Whenever this pattern matches the trigger will fire and we'll know that we have a prompt line. 
+Whenever this pattern matches the trigger will fire and we'll know that we have a prompt line. We use the 2 numbers that we captured in our pattern to update our health and mana stats.
+
 Detecting balance is more difficult as balance is indicated by the letters [blue]+ex-+ on the same line after the prompt and imbalance is indicated by the letters [blue]+e-+.
 As we have set a pattern in a trigger group (folder), the folder is turned into a filter or a trigger chain head. It will now only let data through to its children when its own pattern is matched. In other words, *the child triggers of the trigger chain will only recieve data on prompt lines.*
 We are going to take advantage of this by adding two simple substring triggers to detect balance and imbalance. The balance trigger pattern is [,#b0e0e6]+ex-+ and the imbalance detector pattern is [,#b0e0e6]+e-+.
 On the screen this looks like this:
-[icon="./images/icons/prompt_detection2.png"]
+[icon="./images/icons/prompt_detection6.png"]
 NOTE: .
 
 In the two balance detection triggers we now write myBalance=false and myBalance=true respectively plus a little echo on the screen that shows our current balance status. The outcome looks like this:
@@ -653,17 +654,20 @@ function checkHealth()
     end
 end
 --------
--------------------
+*************
 .Lua Sytax Primer: Expressions
+------------------
 if A == B then (...)   ----> if A equals B
 if A ~= B then (...)   ----> if A *NOT* equals B
 if A <= B then (...)   ----> if A is smaller or equal to B
 if A >= B then (...)   ----> if A is greater or equalt to B 
 if A < B then (...)    ----> if A is smaller than B
 if A > B then (...)    ----> if A is greater than B
+-------------------
 The operators 'and' and 'or' behave differently in Lua than in most other programming languages as they are not guaranteed to return a boolean value.
 For more information look here: 
--------------------
+***************
+
 Lua function conditions effectively means that you run the Lua code they represent on every single line that is received from the MUD, unless the LFCs are part of a multi-condition trigger, in which case the LFCs would only be run when they would be the current test-condition of their respective trigger state. LFCs are implemented in such a way that the trigger engine only calls the compiled byte code, but running as few scripts as possible is always the best idea. LFCs are nice and handy, and for most people the performance aspect will not be relevant at all.
 === Temporary Triggers (scripting only)
 Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).
@@ -1016,10 +1020,6 @@ myGold = myGold + tonumber( multimatches[1][2] );
 mySilver = mySilver + tonumber( multimatches[1][3] );
 ----
 What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines. 
-
-
-
-
 
 
 
