@@ -235,6 +235,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
         return false; //regex compile error
     }
     
+    int numberOfCaptureGroups = 0;
     const char *error;
     unsigned char *name_table;
     int erroffset;
@@ -329,6 +330,10 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
         }
     } 
     //TODO: add named groups seperately later as Lua::namedGroups
+    if( mIsColorizerTrigger )
+    {
+        numberOfCaptureGroups = captureList.size();
+    }
     for( ; mPerlSlashGOption ; )
     {
         int options = 0;                
@@ -391,27 +396,29 @@ END:
         int r2 = mFgColor.red();
         int g2 = mFgColor.green();
         int b2 = mFgColor.blue();
+        int total = captureList.size();
         TConsole * pC = mpHost->mpConsole;
-        if( ! mIsMultiline )
+        std::list<std::string>::iterator its = captureList.begin();
+        std::list<int>::iterator iti = posList.begin();
+        for( int i=1; iti!=posList.end(); ++iti, ++its, i++ )
         {
-            std::list<std::string>::iterator its = captureList.begin();
-            std::list<int>::iterator iti = posList.begin();
-            for( int i=0; iti!=posList.end(); ++iti, ++its, i++ )
+            int begin = *iti;
+            std::string & s = *its;
+            int length = s.size();
+            if( total > 1 )
             {
-                int begin = *iti;
-                std::string & s = *its;
-                int length = s.size();
-                if( captureList.size() > 1 )
-                {
-                    if( i > 0 )
-                    {
-                        int pos = pC->selectSection( begin, length );
-                    }
-                }
-                else
+                // skip complete match in Perl /g option type of triggers
+                // to enable people to highlight capture groups
+                if( i % numberOfCaptureGroups != 1 )
                 {
                     int pos = pC->selectSection( begin, length );
+                    pC->setBgColor( r1, g1, b1 );
+                    pC->setFgColor( r2, g2, b2 );
                 }
+            }
+            else
+            {
+                int pos = pC->selectSection( begin, length );
                 pC->setBgColor( r1, g1, b1 );
                 pC->setFgColor( r2, g2, b2 );
             }
@@ -427,8 +434,6 @@ END:
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups( captureList, posList );
-
-        // call lua trigger function with number of matches and matches itselves as arguments
         execute();
         pL->clearCaptureGroups();
         return true;
@@ -464,19 +469,16 @@ bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
-            if( ! mIsMultiline )
+            std::list<std::string>::iterator its = captureList.begin();
+            std::list<int>::iterator iti = posList.begin();
+            for( int i=0; iti!=posList.end(); ++iti, ++its )
             {
-                std::list<std::string>::iterator its = captureList.begin();
-                std::list<int>::iterator iti = posList.begin();
-                for( int i=0; iti!=posList.end(); ++iti, ++its )
-                {
-                    int begin = *iti;
-                    std::string & s = *its;
-                    int length = s.size();
-                    int pos = pC->selectSection( begin, length );
-                    pC->setBgColor( r1, g1, b1 );
-                    pC->setFgColor( r2, g2, b2 );
-                }
+                int begin = *iti;
+                std::string & s = *its;
+                int length = s.size();
+                int pos = pC->selectSection( begin, length );
+                pC->setBgColor( r1, g1, b1 );
+                pC->setFgColor( r2, g2, b2 );
             }
             pC->reset();
         }
@@ -556,19 +558,16 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
-            if( ! mIsMultiline )
+            std::list<std::string>::iterator its = captureList.begin();
+            std::list<int>::iterator iti = posList.begin();
+            for( int i=0; iti!=posList.end(); ++iti, ++its )
             {
-                std::list<std::string>::iterator its = captureList.begin();
-                std::list<int>::iterator iti = posList.begin();
-                for( int i=0; iti!=posList.end(); ++iti, ++its )
-                {
-                    int begin = *iti;
-                    std::string & s = *its;
-                    int length = s.size();
-                    int pos = pC->selectSection( begin, length );
-                    pC->setBgColor( r1, g1, b1 );
-                    pC->setFgColor( r2, g2, b2 );
-                }
+                int begin = *iti;
+                std::string & s = *its;
+                int length = s.size();
+                int pos = pC->selectSection( begin, length );
+                pC->setBgColor( r1, g1, b1 );
+                pC->setFgColor( r2, g2, b2 );
             }
             pC->reset();
         }
@@ -631,19 +630,16 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
-            if( ! mIsMultiline )
+            std::list<std::string>::iterator its = captureList.begin();
+            std::list<int>::iterator iti = posList.begin();
+            for( int i=0; iti!=posList.end(); ++iti, ++its )
             {
-                std::list<std::string>::iterator its = captureList.begin();
-                std::list<int>::iterator iti = posList.begin();
-                for( int i=0; iti!=posList.end(); ++iti, ++its )
-                {
-                    int begin = *iti;
-                    std::string & s = *its;
-                    int length = s.size();
-                    int pos = pC->selectSection( begin, length );
-                    pC->setBgColor( r1, g1, b1 );
-                    pC->setFgColor( r2, g2, b2 );
-                }
+                int begin = *iti;
+                std::string & s = *its;
+                int length = s.size();
+                int pos = pC->selectSection( begin, length );
+                pC->setBgColor( r1, g1, b1 );
+                pC->setFgColor( r2, g2, b2 );
             }
             pC->reset();
         }
