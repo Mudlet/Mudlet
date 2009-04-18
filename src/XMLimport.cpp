@@ -496,7 +496,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mIsTempTrigger = ( attributes().value("isTempTrigger") == "yes" );
     pT->mIsMultiline = ( attributes().value("isMultiline") == "yes" );
     pT->mPerlSlashGOption = ( attributes().value("isPerlSlashGOption") == "yes" );
-
+    pT->mIsColorizerTrigger = ( attributes().value("isColorizerTrigger") == "yes" );
     while( ! atEnd() ) 
     {
         readNext();
@@ -528,6 +528,16 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             else if( name() == "mCommand" )
             {
                 pT->mCommand = readElementText();
+                continue;
+            }
+            else if( name() == "mFgColor")
+            {
+                pT->mFgColor.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mBgColor")
+            {
+                pT->mBgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "regexCodeList")

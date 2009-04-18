@@ -52,6 +52,9 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mTriggerType( REGEX_SUBSTRING )
 , mTriggerContainsPerlRegex( false )
 , mpLua( mpHost->getLuaInterpreter() )
+, mIsColorizerTrigger( false )
+, mFgColor( QColor(255,0,0) )
+, mBgColor( QColor(255,255,0) )
 {
 } 
 
@@ -71,6 +74,9 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 , mTriggerType( REGEX_SUBSTRING )
 , mTriggerContainsPerlRegex( false )
 , mpLua( mpHost->getLuaInterpreter() )
+, mIsColorizerTrigger( false )
+, mFgColor( QColor(255,0,0) )
+, mBgColor( QColor(255,255,0) )
 {
     setRegexCodeList( regexList, regexProperyList );
 }
@@ -377,6 +383,41 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
 
 END:
 {
+    if( mIsColorizerTrigger )
+    {
+        int r1 = mBgColor.red();
+        int g1 = mBgColor.green();
+        int b1 = mBgColor.blue();
+        int r2 = mFgColor.red();
+        int g2 = mFgColor.green();
+        int b2 = mFgColor.blue();
+        TConsole * pC = mpHost->mpConsole;
+        if( ! mIsMultiline )
+        {
+            std::list<std::string>::iterator its = captureList.begin();
+            std::list<int>::iterator iti = posList.begin();
+            for( int i=0; iti!=posList.end(); ++iti, ++its, i++ )
+            {
+                int begin = *iti;
+                std::string & s = *its;
+                int length = s.size();
+                if( captureList.size() > 1 )
+                {
+                    if( i > 0 )
+                    {
+                        int pos = pC->selectSection( begin, length );
+                    }
+                }
+                else
+                {
+                    int pos = pC->selectSection( begin, length );
+                }
+                pC->setBgColor( r1, g1, b1 );
+                pC->setFgColor( r2, g2, b2 );
+            }
+        }
+        pC->reset();
+    }
     if( mIsMultiline )
     {
         updateMultistates( regexNumber, captureList, posList );
@@ -386,6 +427,7 @@ END:
     {
         TLuaInterpreter * pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups( captureList, posList );
+
         // call lua trigger function with number of matches and matches itselves as arguments
         execute();
         pL->clearCaptureGroups();
@@ -413,13 +455,46 @@ bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex
         captureList.push_back( regex.toLatin1().data() );
         posList.push_back( 0 );
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
+        if( mIsColorizerTrigger )
+        {
+            int r1 = mBgColor.red();
+            int g1 = mBgColor.green();
+            int b1 = mBgColor.blue();
+            int r2 = mFgColor.red();
+            int g2 = mFgColor.green();
+            int b2 = mFgColor.blue();
+            TConsole * pC = mpHost->mpConsole;
+            if( ! mIsMultiline )
+            {
+                std::list<std::string>::iterator its = captureList.begin();
+                std::list<int>::iterator iti = posList.begin();
+                for( int i=0; iti!=posList.end(); ++iti, ++its )
+                {
+                    int begin = *iti;
+                    std::string & s = *its;
+                    int length = s.size();
+                    int pos = pC->selectSection( begin, length );
+                    pC->setBgColor( r1, g1, b1 );
+                    pC->setFgColor( r2, g2, b2 );
+                }
+            }
+            pC->reset();
+        }
         if( mIsMultiline )
         {
             updateMultistates( regexNumber, captureList, posList );
             return true;
         }
-        execute();
-        return true;
+        else
+        {
+            TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+            pL->setCaptureGroups( captureList, posList );
+
+            // call lua trigger function with number of matches and matches itselves as arguments
+            execute();
+            pL->clearCaptureGroups();
+            return true;
+        }
     }
     return false;
 }
@@ -465,20 +540,53 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
         posList.push_back( where );
         if( mPerlSlashGOption )
         {
-            while( (where = toMatch.indexOf( regex, where )) != -1 )
+            while( (where = toMatch.indexOf( regex, where + 1 )) != -1 )
             {
                 captureList.push_back( regex.toLatin1().data() );
                 posList.push_back( where );
             }
         }
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
+        if( mIsColorizerTrigger )
+        {
+            int r1 = mBgColor.red();
+            int g1 = mBgColor.green();
+            int b1 = mBgColor.blue();
+            int r2 = mFgColor.red();
+            int g2 = mFgColor.green();
+            int b2 = mFgColor.blue();
+            TConsole * pC = mpHost->mpConsole;
+            if( ! mIsMultiline )
+            {
+                std::list<std::string>::iterator its = captureList.begin();
+                std::list<int>::iterator iti = posList.begin();
+                for( int i=0; iti!=posList.end(); ++iti, ++its )
+                {
+                    int begin = *iti;
+                    std::string & s = *its;
+                    int length = s.size();
+                    int pos = pC->selectSection( begin, length );
+                    pC->setBgColor( r1, g1, b1 );
+                    pC->setFgColor( r2, g2, b2 );
+                }
+            }
+            pC->reset();
+        }
         if( mIsMultiline )
         {
             updateMultistates( regexNumber, captureList, posList );
             return true;
         }
-        execute();    
-        return true;
+        else
+        {
+            TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+            pL->setCaptureGroups( captureList, posList );
+
+            // call lua trigger function with number of matches and matches itselves as arguments
+            execute();
+            pL->clearCaptureGroups();
+            return true;
+        }
     }    
     return false;
 }
@@ -514,13 +622,45 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
         captureList.push_back( line.toLatin1().data() );
         posList.push_back( 0 );
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
+        if( mIsColorizerTrigger )
+        {
+            int r1 = mBgColor.red();
+            int g1 = mBgColor.green();
+            int b1 = mBgColor.blue();
+            int r2 = mFgColor.red();
+            int g2 = mFgColor.green();
+            int b2 = mFgColor.blue();
+            TConsole * pC = mpHost->mpConsole;
+            if( ! mIsMultiline )
+            {
+                std::list<std::string>::iterator its = captureList.begin();
+                std::list<int>::iterator iti = posList.begin();
+                for( int i=0; iti!=posList.end(); ++iti, ++its )
+                {
+                    int begin = *iti;
+                    std::string & s = *its;
+                    int length = s.size();
+                    int pos = pC->selectSection( begin, length );
+                    pC->setBgColor( r1, g1, b1 );
+                    pC->setFgColor( r2, g2, b2 );
+                }
+            }
+            pC->reset();
+        }
         if( mIsMultiline )
         {
             updateMultistates( regexNumber, captureList, posList );
             return true;
         }
-        execute();    
-        return true;
+        else
+        {
+            TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+            pL->setCaptureGroups( captureList, posList );
+            // call lua trigger function with number of matches and matches itselves as arguments
+            execute();
+            pL->clearCaptureGroups();
+            return true;
+        }
     }    
     return false;
 }
@@ -698,7 +838,6 @@ bool TTrigger::registerTrigger()
 
 void TTrigger::compile()
 {
-    cout << "TTrigger::compile() mNeedsToBeCompiled="<<mNeedsToBeCompiled<<endl;
     if( mNeedsToBeCompiled )
     {
         if( ! compileScript() )
@@ -755,7 +894,6 @@ void TTrigger::execute()
             return;
         }
     }
-
     if( mIsMultiline )
     {
         mpLua->callMulti( mFuncName, mName );

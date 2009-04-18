@@ -30,7 +30,7 @@
 #include <string>
 #include <QMutex>
 #include <QString>
-#include <QRegExp>
+#include <QColor>
 #include "Tree.h"
 #include <QDataStream>
 #include "Host.h"
@@ -70,6 +70,12 @@ public:
     void             setName( QString name )         { mName = name; }
     QStringList &    getRegexCodeList()              { return mRegexCodeList; }
     QList<int>       getRegexCodePropertyList()      { return mRegexCodePropertyList; }
+    QColor           getFgColor()                    { return mFgColor; }
+    QColor           getBgColor()                    { return mBgColor; }
+    void             setFgColor( QColor & c )        { mFgColor = c; }
+    void             setBgColor( QColor & c )        { mBgColor = c; }
+    bool             isColorizerTrigger()            { return mIsColorizerTrigger; }
+    void             setIsColorizerTrigger( bool b ) { mIsColorizerTrigger = b; }
     void             compile();
     void             execute();
     bool             isFilterChain();
@@ -137,6 +143,9 @@ private:
     TLuaInterpreter *                      mpLua;
     std::map<int, std::string>             mLuaConditionMap;
     QString                                mFuncName;
+    QColor                                 mFgColor;
+    QColor                                 mBgColor;
+    bool                                   mIsColorizerTrigger;
 
 };
 

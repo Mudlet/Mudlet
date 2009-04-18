@@ -12,6 +12,17 @@ Mudlet Manual
 .. <<variables,Using Variables in Mudlet>>
 .. <<alias,Input Triggers - Mudlet's Alias Engine>>
 .. <<triggers,The Trigger Engine>>
+... <<simpleTriggers, Simple Triggers>>
+... <<simpleHighlighterTriggers, Simple Highlighter Triggers>>
+... <<andandorTriggers, AND and OR Triggers>>
+... <<triggerChains, Trigger Chains & Filter Chains>>
+... <<multilineTriggers, Multi-line and Multi-condition Triggers>>
+... <<luaConditionTriggers, Lua Code Conditions & Variable Triggers - Expression Triggers >>
+... <<generatingTriggers, Scripting: Generating Triggers>>
+..... <<specialTriggerTypes, Special Trigger Types for Scripting Needs>>
+..... <<tempTriggers, Temporary Triggers>>
+.... <<lineTriggers, Line Triggers>>
+.... <<enablingTriggers, Enabling and Disabling Triggers in Scripts>>
 .. <<timers,The Timer Engine>>
 .. <<keys,Key Bindings>>
 .. <<buttons,Buttons and Menus>>
@@ -182,12 +193,15 @@ Alias as basically, a feature to save you a bit of typing - much like buttons wh
 To learn more about more complex aliases have a look at section 2 of the manual.
 
 ==== 1.9 Simple Triggers
-Triggers are an automation feature offered in many modern MUD clients. They allow you quicker response to a parcticular situation or greater convenience since you need to do less manual work.
-The way a trigger works is simple: You define some text that you want to trigger some action. When the trigger sees this text in the MUD output, it'll run the commands you've told it to.
-Example: Whenever you see a bunny you want to attack it. You type "bunny" in the field titled "Add to List" and then either press the enter key or click on the little + icon next to the input line to add this word to the list of texts this trigger fires on.
-Now you type "kill bunny" in the field called command. Then click on the save icon to save the trigger and make sure the trigger is actually active (= blue checkbox icon is checked). When the trigger is active each time the word "bunny" will appear in the MUD output, your trigger will issue the command "kill bunny".
-If you want to stop hunting bunnies, you can simply select the bunny trigger and then click on the padlock icon to deactivate the trigger.
-The trigger will stop to fire until you re-enable it again via the padlock icon.
+Triggers are an automation feature offered in all MUD clients. They help you respond quicker a parcticular situation and generally make things more convenient for you since you need to do less manual work as your triggers will do the hard work for you often times. This helps you concentrate more on the important aspects of the game and lessen stress. 
+The way a trigger works is simple: You define some text that you want to trigger some action. This is called the trigger pattern. When the trigger "sees" this text in the MUD output, it'll run the commands you've told it to.
+Example: Whenever you see a bunny, you want to attack it. You type "bunny" in the data field titled "add to list" and then either press the enter key or click on the little + icon next to the input line to add this word to the list of texts this trigger fires on.
+Now you type "kill bunny" in the field called "send plain text". Then click on the save icon to save the trigger and activate your new trigger (= blue checkbox icon in front of the trigger name in the trigger tree on the right side is checked). When the trigger is active each time the word "bunny" will appear in the MUD output, your trigger will issue the command "kill bunny" automatically as long as it is active. 
+When you want to stop hunting bunnies, you can simply select the bunny trigger and then click on the padlock icon to deactivate the trigger.
+The trigger will stop firing until you re-enable it again via the padlock icon.
+If you lock a group of triggers or an entire trigger branch, all triggers in this branch will be locked until you remove the lock again. The locking starts from the root of the tree down to the end. As soon as a lock is met the trigger engine will skip the locked branch. Locking and unlocking branches is one of the most common actions you have to take care of when playing. You turn on your defensive triggers when engaging into a battle and you turn them off afterwards, or you turn on your harvesting triggers only when you are going to harvest.
+
+TIP: *Beginners should use Mudlet's automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don't have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
 
 ===== 1.10 Matching one unknown
 You can also set up a trigger to gather the scimitars, gold or whatever the skeletons could carry around with them. Since we do not know what the loot is, we will need to set up a trigger to match the line and take whatever was dropped. Examples:
@@ -535,21 +549,23 @@ end
 === Simple Trigger Matching
 
 Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
-After editing is finished your changes will only become permanent if you press on the save icon on the upper left. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.
-Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available. 
+After editing is finished your changes will only become permanent if you press on the save icon on the upper middle. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will not be usable until you save them or edit some other item, as chosing another item will trigger an automatic save. So adding multiple new triggers without saving them will autosave the previous item, but the current item will not be saved until you do it manually.
+After having chosen a trigger pattern, you have to tell Mudlet what type of pattern it is. Select the pattern type from the listbox below the expression line edit. Normal substring matching will do for most people and it is one of the fastest matching type available.
 ****
 Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.
 ****
-
+[[simpleHighlighterTriggers]]
 === Simple Highlighter Triggers
+TIP: *Beginners should use Mudlet's automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text. 
+You don't have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
 
-If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:
+More advanced users will often want to do custom highlighting from within scripts. This is how it works: If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:
 ----
 selectString( "pond", 1 )
 fg( "red " )
 bg( "blue" )
 ----
-
+[[andandorTriggers]]
 === "AND" and "OR" Condition Triggers
 
 AND -Triggers execute their respective command or script only if all conditions in their respective conditions expression list are fullfilled.
@@ -557,7 +573,7 @@ OR-Triggers execute when *any* one of their conditions is true.
 To make OR-Triggers you simply have to add a few conditions to the conditions list e.g. in our example: "pond", "frog", "Plop". The trigger will now also execute on lines like this: "A frog is green" or "You hear a loud Plop!" However, it will not execute on "With a loud plop the frog dived into the water." because "plop" in the line is in lower case letters and your condition specified a "P" in upper case.
 The simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains, whatever you'd like to call it.
 
-
+[[triggerChains]]
 === Trigger Chains - Filter Chains
 
 Imagine the following scenario: You want to collect some berries. You know that the room contains some berries if the room description contains the words "You are inside a forrest." You make a new substring trigger for this line, but instead of chosing a regular trigger, you chose to add a new trigger group. Now you add "You are inside a forrest" to the expression list of the trigger group. *When adding condions to a trigger group, the trigger group turns from an organizational unit into a filter unit.* From now on this folder is a filter and will only let data pass through that matches it's condition.
@@ -589,6 +605,7 @@ NOTE: .
 
 We could now add a call deleteLine() to the prompt detection trigger to erase the prompt from the screen if we don't want to see it as we have computed all relevant information.
 *************
+[[multilineTriggers]]
 === Multi-Line Triggers and Multi-Condition Triggers
 Multi Condition Triggers are the most advanced feature of Mudlet's trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
 All conditions in the list must have matched within the specified margin of lines (delta), in order to trigger the script.
@@ -669,13 +686,19 @@ For more information look here:
 ***************
 
 Lua function conditions effectively means that you run the Lua code they represent on every single line that is received from the MUD, unless the LFCs are part of a multi-condition trigger, in which case the LFCs would only be run when they would be the current test-condition of their respective trigger state. LFCs are implemented in such a way that the trigger engine only calls the compiled byte code, but running as few scripts as possible is always the best idea. LFCs are nice and handy, and for most people the performance aspect will not be relevant at all.
+[[generatingTriggers]]
+=== Scripting: Generating Triggers - Special Trigger Types for Scripting Needs
+[[tempTriggers]]
 === Temporary Triggers (scripting only)
 Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).
 There are several forms of temp-triggers that address different scripting needs.
 Check the Lua API table for reference.
-
+[[lineTriggers]]
 === Line Triggers (scripting only)
 Line triggers trigger on a specified line in the future - or a sequence of lines - irrespective of the content of the line. This type of triggers can be very handy in scripting if you know what is coming e.g. you want to parse a table from the MUD, maps etc.
+[[enablingTriggers]]
+=== Enabling and Disabling Triggers in Scripts
+enableTrigger() disableTrigger()
 
 [[timers]]
 == The Timer Engine

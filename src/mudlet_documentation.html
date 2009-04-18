@@ -395,6 +395,67 @@ div.toclevel4 {
 <p>
 <a href="#triggers">The Trigger Engine</a>
 </p>
+<div class="olist lowerroman"><ol class="lowerroman">
+<li>
+<p>
+<a href="#simpleTriggers">Simple Triggers</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#simpleHighlighterTriggers">Simple Highlighter Triggers</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#andandorTriggers">AND and OR Triggers</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#triggerChains">Trigger Chains &amp; Filter Chains</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#multilineTriggers">Multi-line and Multi-condition Triggers</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#luaConditionTriggers">Lua Code Conditions &amp; Variable Triggers - Expression Triggers</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#generatingTriggers">Scripting: Generating Triggers</a>
+</p>
+<div class="olist upperroman"><ol class="upperroman">
+<li>
+<p>
+<a href="#specialTriggerTypes">Special Trigger Types for Scripting Needs</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#tempTriggers">Temporary Triggers</a>
+</p>
+<div class="olist upperalpha"><ol class="upperalpha">
+<li>
+<p>
+<a href="#lineTriggers">Line Triggers</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#enablingTriggers">Enabling and Disabling Triggers in Scripts</a>
+</p>
+</li>
+</ol></div>
+</li>
+</ol></div>
+</li>
+</ol></div>
 </li>
 <li>
 <p>
@@ -1538,12 +1599,69 @@ Now you are ready to go. Type "tw" in the command line and press the enter key. 
 Alias as basically, a feature to save you a bit of typing - much like buttons which will be described in detail in section two of the manual.
 To learn more about more complex aliases have a look at section 2 of the manual.</p></div>
 <h4 id="_1_9_simple_triggers">1.9 Simple Triggers</h4>
-<div class="paragraph"><p>Triggers are an automation feature offered in many modern MUD clients. They allow you quicker response to a parcticular situation or greater convenience since you need to do less manual work.
-The way a trigger works is simple: You define some text that you want to trigger some action. When the trigger sees this text in the MUD output, it&#8217;ll run the commands you&#8217;ve told it to.
-Example: Whenever you see a bunny you want to attack it. You type "bunny" in the field titled "Add to List" and then either press the enter key or click on the little + icon next to the input line to add this word to the list of texts this trigger fires on.
-Now you type "kill bunny" in the field called command. Then click on the save icon to save the trigger and make sure the trigger is actually active (= blue checkbox icon is checked). When the trigger is active each time the word "bunny" will appear in the MUD output, your trigger will issue the command "kill bunny".
-If you want to stop hunting bunnies, you can simply select the bunny trigger and then click on the padlock icon to deactivate the trigger.
-The trigger will stop to fire until you re-enable it again via the padlock icon.</p></div>
+<div class="paragraph"><p>Triggers are an automation feature offered in all MUD clients. They help you respond quicker a parcticular situation and generally make things more convenient for you since you need to do less manual work as your triggers will do the hard work for you often times. This helps you concentrate more on the important aspects of the game and lessen stress.
+The way a trigger works is simple: You define some text that you want to trigger some action. This is called the trigger pattern. When the trigger "sees" this text in the MUD output, it&#8217;ll run the commands you&#8217;ve told it to.
+Example: Whenever you see a bunny, you want to attack it. You type "bunny" in the data field titled "add to list" and then either press the enter key or click on the little + icon next to the input line to add this word to the list of texts this trigger fires on.
+Now you type "kill bunny" in the field called "send plain text". Then click on the save icon to save the trigger and activate your new trigger (= blue checkbox icon in front of the trigger name in the trigger tree on the right side is checked). When the trigger is active each time the word "bunny" will appear in the MUD output, your trigger will issue the command "kill bunny" automatically as long as it is active.
+When you want to stop hunting bunnies, you can simply select the bunny trigger and then click on the padlock icon to deactivate the trigger.
+The trigger will stop firing until you re-enable it again via the padlock icon.
+If you lock a group of triggers or an entire trigger branch, all triggers in this branch will be locked until you remove the lock again. The locking starts from the root of the tree down to the end. As soon as a lock is met the trigger engine will skip the locked branch. Locking and unlocking branches is one of the most common actions you have to take care of when playing. You turn on your defensive triggers when engaging into a battle and you turn them off afterwards, or you turn on your harvesting triggers only when you are going to harvest.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Tip" src="data:image/png;base64,
+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" />
+</td>
+<td class="content"><strong>Beginners should use Mudlet&#8217;s automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don&#8217;t have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.</strong></td>
+</tr></table>
+</div>
 <h5 id="_1_10_matching_one_unknown">1.10 Matching one unknown</h5>
 <div class="paragraph"><p>You can also set up a trigger to gather the scimitars, gold or whatever the skeletons could carry around with them. Since we do not know what the loot is, we will need to set up a trigger to match the line and take whatever was dropped. Examples:</p></div>
 <div class="listingblock">
@@ -2593,7 +2711,7 @@ ETFgERERETFgEREREREDFhEREREDFhEREdG97f8B0Z/3XfusMzUAAAAASUVORK5CYII=" />
 </div></div>
 <div class="sidebarblock">
 <div class="content">
-<div class="paragraph"><div class="title">Lua Primer: Variables, String &amp; numbers</div><p>Lua variables can be either a string or a number. They are whatever there were initially initialized with or what data type they can be converted to.</p></div>
+<div class="paragraph"><div class="title">Lua Primer: Variables, Strings &amp; numbers</div><p>Lua variables can be either a string or a number. They are whatever there were initially initialized with or what data type they can be converted to.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>a = "Jim"
@@ -7938,26 +8056,83 @@ end</tt></pre>
 <div class="sectionbody">
 <h3 id="_simple_trigger_matching">Simple Trigger Matching</h3>
 <div class="paragraph"><p>Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
-After editing is finished your changes will only become permanent if you press on the save icon on the upper left. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will be lost once you select to edit some other item.
-Select the trigger type from the listbox below the expression line edit. Normal substring matching will do for most people and it is the fastest matching type available.</p></div>
+After editing is finished your changes will only become permanent if you press on the save icon on the upper middle. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will not be usable until you save them or edit some other item, as chosing another item will trigger an automatic save. So adding multiple new triggers without saving them will autosave the previous item, but the current item will not be saved until you do it manually.
+After having chosen a trigger pattern, you have to tell Mudlet what type of pattern it is. Select the pattern type from the listbox below the expression line edit. Normal substring matching will do for most people and it is one of the fastest matching type available.</p></div>
 <div class="sidebarblock">
 <div class="content">
 <div class="paragraph"><p>Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.</p></div>
 </div></div>
-<h3 id="_simple_highlighter_triggers">Simple Highlighter Triggers</h3>
-<div class="paragraph"><p>If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:</p></div>
+<h3 id="simpleHighlighterTriggers">Simple Highlighter Triggers</h3>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Tip" src="data:image/png;base64,
+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" />
+</td>
+<td class="content"><strong>Beginners should use Mudlet&#8217;s automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text.
+You don&#8217;t have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.</strong></td>
+</tr></table>
+</div>
+<div class="paragraph"><p>More advanced users will often want to do custom highlighting from within scripts. This is how it works: If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>selectString( "pond", 1 )
 fg( "red " )
 bg( "blue" )</tt></pre>
 </div></div>
-<h3 id="_and_and_or_condition_triggers">"AND" and "OR" Condition Triggers</h3>
+<h3 id="andandorTriggers">"AND" and "OR" Condition Triggers</h3>
 <div class="paragraph"><p>AND -Triggers execute their respective command or script only if all conditions in their respective conditions expression list are fullfilled.
 OR-Triggers execute when <strong>any</strong> one of their conditions is true.
 To make OR-Triggers you simply have to add a few conditions to the conditions list e.g. in our example: "pond", "frog", "Plop". The trigger will now also execute on lines like this: "A frog is green" or "You hear a loud Plop!" However, it will not execute on "With a loud plop the frog dived into the water." because "plop" in the line is in lower case letters and your condition specified a "P" in upper case.
 The simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains, whatever you&#8217;d like to call it.</p></div>
-<h3 id="_trigger_chains_filter_chains">Trigger Chains - Filter Chains</h3>
+<h3 id="triggerChains">Trigger Chains - Filter Chains</h3>
 <div class="paragraph"><p>Imagine the following scenario: You want to collect some berries. You know that the room contains some berries if the room description contains the words "You are inside a forrest." You make a new substring trigger for this line, but instead of chosing a regular trigger, you chose to add a new trigger group. Now you add "You are inside a forrest" to the expression list of the trigger group. <strong>When adding condions to a trigger group, the trigger group turns from an organizational unit into a filter unit.</strong> From now on this folder is a filter and will only let data pass through that matches it&#8217;s condition.
 In our case this is exactly what we want, because we don&#8217;t want to collect all sorts of berries, but we only want 2 particular kinds, namely, strawberries and blackberries, and we know that these berries can only be trusted if they are picked inside a forrest as other areas may contain contaminated berries. Now you add two regular triggers to our berry-in-the-forrest filter - one containing the condition: "strawberries" and the other one "blackberries". Then we add the commands to pick the particular kind of berry to both triggers (send field).
 Now what happens is that as soon as a room description reads "You are inside a forrest." the filter will let the line containing the room description pass through to our two berry triggers and they will issue commands to pick berries, if there are such berries. However, in any other situation the words "strawberries" and "blackberries" will <strong>NOT</strong> trigger a pick - only in the above scenario when the filter parent&#8217;s condition is met. This is a very nice way to solve complicated problems with a few easy filter chains. This example is trivial, but using filter chains will rapidly show you how formerly complicated things that could only be solved with very complicated regular expressions can be solved easily now with a couple of filter chains.
@@ -7973,8 +8148,8 @@ To begin with, we add a new trigger group and add the Perl regex pattern to dete
 <pre><tt>^(\d+)h, (\d+)m</tt></pre>
 </div></div>
 <div class="paragraph"><p>The pattern reads in plain English: At the beginning of a prompt line there are is a number directly followed by the letter h, a comma, a space and another number  followed by the letter h.
-Whenever this pattern matches the trigger will fire and we&#8217;ll know that we have a prompt line.
-Detecting balance is more difficult as balance is indicated by the letters <tt style="color: blue;">ex-</tt> on the same line after the prompt and imbalance is indicated by the letters <tt style="color: blue;">e-</tt>.
+Whenever this pattern matches the trigger will fire and we&#8217;ll know that we have a prompt line. We use the 2 numbers that we captured in our pattern to update our health and mana stats.</p></div>
+<div class="paragraph"><p>Detecting balance is more difficult as balance is indicated by the letters <tt style="color: blue;">ex-</tt> on the same line after the prompt and imbalance is indicated by the letters <tt style="color: blue;">e-</tt>.
 As we have set a pattern in a trigger group (folder), the folder is turned into a filter or a trigger chain head. It will now only let data through to its children when its own pattern is matched. In other words, <strong>the child triggers of the trigger chain will only recieve data on prompt lines.</strong>
 We are going to take advantage of this by adding two simple substring triggers to detect balance and imbalance. The balance trigger pattern is <tt style="background-color: #b0e0e6;">ex-</tt> and the imbalance detector pattern is <tt style="background-color: #b0e0e6;">e-</tt>.
 On the screen this looks like this:</p></div>
@@ -11282,7 +11457,7 @@ SUVORK5CYII=" />
 </div>
 <div class="paragraph"><p>We could now add a call deleteLine() to the prompt detection trigger to erase the prompt from the screen if we don&#8217;t want to see it as we have computed all relevant information.</p></div>
 </div></div>
-<h3 id="_multi_line_triggers_and_multi_condition_triggers">Multi-Line Triggers and Multi-Condition Triggers</h3>
+<h3 id="multilineTriggers">Multi-Line Triggers and Multi-Condition Triggers</h3>
 <div class="paragraph"><p>Multi Condition Triggers are the most advanced feature of Mudlet&#8217;s trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
 All conditions in the list must have matched within the specified margin of lines (delta), in order to trigger the script.
 Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition returns true, the trigger script is run.
@@ -12944,13 +13119,16 @@ if A &gt; B then (...)    ----&gt; if A is greater than B</tt></pre>
 <div class="paragraph"><p>The operators <em>and</em> and <em>or</em> behave differently in Lua than in most other programming languages as they are not guaranteed to return a boolean value.
 For more information look here:</p></div>
 </div></div>
-<div class="paragraph"><p>Lua function conditions effectively means that you run the Lua code they represent on every single line that is received from the MUD, unless the LFCs are part of a multi-condition trigger, in which case the LFCs would only be run when they would be the current test-condition of their respective trigger state. LFCs are implemented in such a way that the trigger engine only calls the compiled byte code, but running as few scripts as possible is always the best idea. LFCs are nice and handy, and for most people the performance aspect will not be relevant at all.
-=== Temporary Triggers (scripting only)
-Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).
+<div class="paragraph"><p>Lua function conditions effectively means that you run the Lua code they represent on every single line that is received from the MUD, unless the LFCs are part of a multi-condition trigger, in which case the LFCs would only be run when they would be the current test-condition of their respective trigger state. LFCs are implemented in such a way that the trigger engine only calls the compiled byte code, but running as few scripts as possible is always the best idea. LFCs are nice and handy, and for most people the performance aspect will not be relevant at all.</p></div>
+<h3 id="generatingTriggers">Scripting: Generating Triggers - Special Trigger Types for Scripting Needs</h3>
+<h3 id="tempTriggers">Temporary Triggers (scripting only)</h3>
+<div class="paragraph"><p>Temporary triggers are lightweight triggers that are tailored for typical scripting needs. These are only available via Lua scripting. They are not stored in profiles, but stay in memory as long as the program runs or until they are deleted (killTimer()).
 There are several forms of temp-triggers that address different scripting needs.
 Check the Lua API table for reference.</p></div>
-<h3 id="_line_triggers_scripting_only">Line Triggers (scripting only)</h3>
+<h3 id="lineTriggers">Line Triggers (scripting only)</h3>
 <div class="paragraph"><p>Line triggers trigger on a specified line in the future - or a sequence of lines - irrespective of the content of the line. This type of triggers can be very handy in scripting if you know what is coming e.g. you want to parse a table from the MUD, maps etc.</p></div>
+<h3 id="enablingTriggers">Enabling and Disabling Triggers in Scripts</h3>
+<div class="paragraph"><p>enableTrigger() disableTrigger()</p></div>
 </div>
 <h2 id="timers">The Timer Engine</h2>
 <div class="sectionbody">
@@ -17655,7 +17833,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-04-17 01:32:39 CEST
+Last updated 2009-04-18 00:59:41 CEST
 </div>
 </div>
 </body>

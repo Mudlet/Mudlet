@@ -75,7 +75,8 @@ signals:
     void                        update();
     
 public slots:
-    
+    void                        slot_colorizeTriggerSetBgColor();
+    void                        slot_colorizeTriggerSetFgColor();
     void                        slot_itemClicked( QTreeWidgetItem * pItem, int column );
     void                        slot_choseButtonColor();
     void                        slot_export();

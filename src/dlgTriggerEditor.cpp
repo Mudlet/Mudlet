@@ -120,7 +120,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpTriggerMainAreaEditRegexItem = 0;
     connect(mpTriggersMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     connect(mpTriggersMainArea->listWidget_regex_list, SIGNAL(itemClicked ( QListWidgetItem *)), this, SLOT(slot_trigger_main_area_edit_regex(QListWidgetItem*)));
-    
+    connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
+    connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
+
     mpTimersMainArea = new dlgTimersMainArea( mainArea );
     QSizePolicy sizePolicy7(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpTimersMainArea->setSizePolicy( sizePolicy7 );
@@ -1714,7 +1716,15 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
             pT->setIsMultiline( isMultiline );
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
-
+            QPalette FgColorPalette;
+            QPalette BgColorPalette;
+            FgColorPalette = mpTriggersMainArea->pushButtonFgColor->palette();
+            BgColorPalette = mpTriggersMainArea->pushButtonBgColor->palette();
+            QColor fgColor = FgColorPalette.color( QPalette::Button );
+            QColor bgColor = BgColorPalette.color( QPalette::Button );
+            pT->setFgColor( fgColor );
+            pT->setBgColor( bgColor );
+            pT->setIsColorizerTrigger( mpTriggersMainArea->colorizerTrigger->isChecked() );
             QIcon icon;
             if( pT->isFilterChain() )
             {
@@ -1774,11 +1784,9 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
 
 void dlgTriggerEditor::saveTrigger()
 {
-    qDebug()<<"saveTrigger()";
     QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem )
     {
-        qDebug()<<"pItem==0!!!! ERROR";
         return;
     }
 
@@ -1838,7 +1846,15 @@ void dlgTriggerEditor::saveTrigger()
             pT->setIsMultiline( isMultiline );
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
-
+            QPalette FgColorPalette;
+            QPalette BgColorPalette;
+            FgColorPalette = mpTriggersMainArea->pushButtonFgColor->palette();
+            BgColorPalette = mpTriggersMainArea->pushButtonBgColor->palette();
+            QColor fgColor = FgColorPalette.color( QPalette::Button );
+            QColor bgColor = BgColorPalette.color( QPalette::Button );
+            pT->setFgColor( fgColor );
+            pT->setBgColor( bgColor );
+            pT->setIsColorizerTrigger( mpTriggersMainArea->colorizerTrigger->isChecked() );
             QIcon icon;
             if( pT->isFilterChain() )
             {
@@ -2687,6 +2703,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
+
     if( (pItem == 0) || (column != 0) )
     {
         return;
@@ -2741,6 +2758,19 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->checkBox_multlinetrigger->setChecked( pT->isMultiline() );
         mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
         mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );
+        QColor fgColor = pT->getFgColor();
+        QColor bgColor = pT->getBgColor();
+        QPalette FgColorPalette;
+        QPalette BgColorPalette;
+        FgColorPalette.setColor( QPalette::Button, fgColor );
+        BgColorPalette.setColor( QPalette::Button, bgColor );
+        QString FgColorStyleSheet = QString("QPushButton{background-color:")+fgColor.name()+QString(";}");
+        QString BgColorStyleSheet = QString("QPushButton{background-color:")+bgColor.name()+QString(";}");
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet( FgColorStyleSheet );
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet( BgColorStyleSheet );
+        mpTriggersMainArea->pushButtonFgColor->setPalette( FgColorPalette );
+        mpTriggersMainArea->pushButtonBgColor->setPalette( BgColorPalette );
+        mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
         QString script = pT->getScript();
         mpSourceEditorArea->script_scintilla->setText( script );
         if( ! pT->state() ) showError( pT->getError() );
@@ -4764,3 +4794,34 @@ void dlgTriggerEditor::slot_chose_action_icon()
         tr("Images (*.png *.xpm *.jpg)"));    
     mpActionsMainArea->lineEdit_action_icon->setText( fileName );    
 }
+
+void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
+{
+    QColor color = QColorDialog::getColor( mpHost->mBlue, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        QString styleSheet = QString("QPushButton{background-color: ")+color.name()+QString(";}");
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet( styleSheet );
+        mpTriggersMainArea->pushButtonFgColor->setPalette( palette );
+    }
+}
+
+void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
+{
+    QColor color = QColorDialog::getColor( mpHost->mRed, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet( styleSheet );
+        mpTriggersMainArea->pushButtonBgColor->setPalette( palette );
+    }
+}
+
+
+
+
+

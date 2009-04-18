@@ -234,12 +234,15 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeAttribute( "isTempTrigger", pT->mIsTempTrigger ? "yes" : "no" ); 
     writeAttribute( "isMultiline", pT->mIsMultiline ? "yes" : "no" );
     writeAttribute( "isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no" );
+    writeAttribute( "isColorizerTrigger", pT->mIsColorizerTrigger ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "triggerType", QString::number( pT->mTriggerType ) );
     writeTextElement( "conditonLineDelta", QString::number( pT->mConditionLineDelta ) );
     writeTextElement( "mCommand", pT->mCommand );
+    writeTextElement( "mFgColor", pT->mFgColor.name() );
+    writeTextElement( "mBgColor", pT->mBgColor.name() );
     writeStartElement( "regexCodeList" );
     for( int i=0; i<pT->mRegexCodeList.size(); i++ )
     {
