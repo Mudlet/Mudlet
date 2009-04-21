@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "TCommandLine.h"
+#include <QShortcut>
 #include "TConsole.h"
 #include "TTextEdit.h"
 
@@ -29,9 +30,9 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole )
 , mSelectedText( "" )
 {
     mpKeyUnit = mpHost->getKeyUnit();
-    
+
     setFocusPolicy(Qt::StrongFocus);
-    
+
     QFont font("Courier New", 10, QFont::Courier);
     setFont(font);
     
@@ -172,7 +173,6 @@ bool TCommandLine::event( QEvent * event )
                 mpConsole->scrollDown( mpHost->mScreenHeight );
                 ke->accept();
                 return true;
-
 
             default:
 

@@ -97,8 +97,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 {
     // init generated dialog
     setupUi(this);
-        
-    
+
     mIsGrabKey = false;
     QVBoxLayout * pVB1 = new QVBoxLayout(mainArea);
     

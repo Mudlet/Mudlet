@@ -27,6 +27,7 @@
 #include "dlgProfilePreferences.h"
 #include "Host.h"
 #include "mudlet.h"
+#include "TTextEdit.h"
 
 dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
 {
@@ -482,6 +483,8 @@ void dlgProfilePreferences::slot_save_and_exit()
        QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
        file_use_smallscreen.remove();
     }
+    pHost->mpConsole->console->updateScreenView();
+    pHost->mpConsole->console->forceUpdate();
     close();
 }
 

@@ -736,13 +736,16 @@ void TBuffer::clear()
 {
     while( (getLastLineNumber() > -1 ) )   
     {
-        deleteLines( 0, 0 );
+        if( ! deleteLines( 0, 0 ) )
+        {
+            break;
+        }
     }
 }
 
 bool TBuffer::deleteLine( int y )
 { 
-    deleteLines( y, y ); 
+    return deleteLines( y, y );
 }
 
 
@@ -783,11 +786,12 @@ bool TBuffer::deleteLines( int from, int to )
             else
                 break;
         }
-        
         return true;
     }
     else 
+    {
         return false;
+    }
 }
 
 

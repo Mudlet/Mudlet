@@ -209,7 +209,10 @@ void TTextEdit::updateScreenView()
         }
     }
     else
+    {
         mpHost->mScreenWidth = currentScreenWidth;
+        mScreenWidth = currentScreenWidth;
+    }
     
     mpHost->mScreenHeight = mScreenHeight;
     if( ! mIsDebugConsole )

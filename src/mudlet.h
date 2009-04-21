@@ -77,7 +77,8 @@ public:
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
    QIcon *                       testicon; 
-    
+   bool                          isGoingDown() { return mIsGoingDown; }
+
 public slots:      
     
    void                          toggleFullScreenView(); 
@@ -110,8 +111,10 @@ private slots:
    void                          show_options_dialog();
     
 private:
-    
-   QMdiArea *                     mdiArea;  
+
+   void                          goingDown() { mIsGoingDown = true; }
+
+   QMdiArea *                    mdiArea;
    void                          readSettings();
    void                          writeSettings();
    Host *                        mpDefaultHost; 
@@ -123,8 +126,9 @@ private:
    QMap<QString, TConsole *>     dockWindowConsoleMap;
    QMap<Host *, QToolBar *>      mUserToolbarMap; 
    QMap<QTimer *, TTimer *>      mTimerMap;
-   QToolBar *                   mpMainToolBar;
-	QMenu	*					restoreBar;
+   QToolBar *                    mpMainToolBar;
+   QMenu *                       restoreBar;
+   bool                          mIsGoingDown;
 };
 
 #endif

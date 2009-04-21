@@ -59,6 +59,7 @@ mudlet * mudlet::self()
 
 mudlet::mudlet() 
 : QMainWindow()
+, mIsGoingDown( false )
 {
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
@@ -488,16 +489,10 @@ EAction * mudlet::generateAction( QString name, QString icon, QToolBar * pT )
 
 void mudlet::closeEvent(QCloseEvent *event)
 {
-    if( mpDebugConsole )
-    {
-        mpDebugConsole->setAttribute( Qt::WA_DeleteOnClose );
-        mpDebugConsole->close();
-    }
-    
+    goingDown();
+
     foreach( TConsole * pC, mConsoleMap )
     {
-        qDebug()<<"[SAVING] host="<< pC->mpHost->getName();
-        
         if( pC->mpHost->getName() != "default_host" )
         {
             // close script-editor
@@ -511,7 +506,13 @@ void mudlet::closeEvent(QCloseEvent *event)
             pC->close();
         } 
     }
-    
+
+    if( mpDebugConsole )
+    {
+        mpDebugConsole->setAttribute( Qt::WA_DeleteOnClose );
+        mpDebugConsole->close();
+    }
+
     writeSettings();
     event->accept();
 }
@@ -766,7 +767,6 @@ void mudlet::toggleFullScreenView()
     else
         showFullScreen();
 }
-
 
 
 

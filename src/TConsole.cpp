@@ -43,6 +43,7 @@
 #include "TTextEdit.h"
 #include <QGraphicsSimpleTextItem>
 #include "XMLexport.h"
+#include <QShortcut>
 
 using namespace std;
 
@@ -71,6 +72,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mLogToLogFile( false )
 , networkLatency( new QLineEdit )
 {
+    QShortcut * ps = new QShortcut(this);
+    ps->setKey(Qt::CTRL + Qt::Key_W);
+    ps->setContext(Qt::WidgetShortcut);
+
     if( mIsDebugConsole )
     {
         mStandardFormat.bgColor = mBgColor;
@@ -222,10 +227,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 
 void TConsole::closeEvent( QCloseEvent *event )
 {
-    qDebug()<<"EXITING::TConsole::"<<profile_name;
     if( profile_name != "default_host" )
     {
-        if( QMessageBox::question( this, "Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No ) == QMessageBox::Yes )
+        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No );
+        if( choice == QMessageBox::Yes )
         {
             QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
             QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
@@ -235,19 +240,40 @@ void TConsole::closeEvent( QCloseEvent *event )
                 dir_xml.mkpath( directory_xml );    
             }
             QFile file_xml( filename_xml );
-            if ( file_xml.open( QIODevice::WriteOnly ) )
+            if( file_xml.open( QIODevice::WriteOnly ) )
             {
                 XMLexport writer( mpHost );
                 writer.exportHost( & file_xml );
                 file_xml.close();
+                event->accept();
+                return;
             }
             else
             {
-                QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+                QMessageBox::critical( this, "ERROR: Not closing profile.", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+                goto ASK;
+            }
+        }
+        else if( choice == QMessageBox::No )
+        {
+            event->accept();
+            return;
+        }
+        else
+        {
+            if( ! mudlet::self()->isGoingDown() )
+            {
+                QMessageBox::warning( this, "Aborting exit","Session exit aborted on user request." );
+                event->ignore();
+                return;
+            }
+            else
+            {
+                event->accept();
+                return;
             }
         }
     }
-    event->accept();
 }
 
 void TConsole::slot_toggleLogging()
@@ -843,8 +869,6 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
         mpHost->incomingStreamProcessor( mCurrentLine, prompt );
-        //mUserCursor.setY( mUserCursor.y() + 1 );
-        //mUserCursor.setX( 0 );
 
         if( mDeletedLines > 0 )
         {
@@ -1218,8 +1242,10 @@ void TConsole::replace( QString text )
 
 void TConsole::skipLine()
 {
-    deleteLine( mUserCursor.y() );
-    mDeletedLines++;
+    if( deleteLine( mUserCursor.y() ) )
+    {
+        mDeletedLines++;
+    }
 }
 
 bool TConsole::deleteLine( int y )
@@ -1521,6 +1547,9 @@ void TConsole::slot_stop_all_triggers( bool b )
         emergencyStop->setIcon( icon2 );
     }
 }
+
+
+
 
 
 

@@ -154,7 +154,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         {
              std::string funcName;
              std::stringstream func;
-             func << "trigger" << mName.toLatin1().data() << "condition" << i;
+             func << "trigger" << mID << "condition" << i;
              funcName = func.str();
              QString code = QString("function ")+funcName.c_str()+QString("()\n")+regexList[i]+QString("\nend\n");
              QString error;
@@ -732,8 +732,8 @@ bool TTrigger::match( char * subject, QString & toMatch )
                     ret = match_lua_code( i );
                     break;
             }
-            // policy: one match is enough to fire trigger, but in the case of
-            //         multiline *all* have to match in order to fire the trigger
+            // policy: one match is enough to fire on OR-trigger, but in the case of
+            //         an AND-trigger all conditions have to be met in order to fire the trigger
             if( ! mIsMultiline ) 
             {
                 if( ret )
@@ -746,7 +746,6 @@ bool TTrigger::match( char * subject, QString & toMatch )
             {
                 if( ( ! ret ) && ( i >= highestCondition ) ) break;
             }
-
         }
         
         // in the case of multiline triggers: check our state

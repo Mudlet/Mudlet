@@ -199,7 +199,6 @@ public:
       QWidget *         layerCommandLine;  
       QPushButton *     emergencyStop;
       QLineEdit *       networkLatency;
-
     
 private:
 
