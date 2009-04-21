@@ -61,8 +61,8 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
     {
         setColors();
 
-        wrap_at_lineEdit->setText( QString::number(pHost->mWrapAt));    
-        indent_wrapped_lineEdit->setText(QString::number(pHost->mWrapIndentCount));
+        wrap_at_spinBox->setValue(pHost->mWrapAt);    
+        indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
 
         show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
         auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
@@ -463,8 +463,8 @@ void dlgProfilePreferences::slot_save_and_exit()
 {
     Host * pHost = mudlet::self()->getActiveHost();
     if( ! pHost ) return;
-    pHost->mWrapAt = wrap_at_lineEdit->text().toInt();
-    pHost->mWrapIndentCount = indent_wrapped_lineEdit->text().toInt();
+    pHost->mWrapAt = wrap_at_spinBox->value();
+    pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
     pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
     pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
     pHost->mCommandSeparator = command_separator_lineedit->text();
