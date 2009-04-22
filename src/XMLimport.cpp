@@ -319,6 +319,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mDisableAutoCompletion = ( attributes().value("disableAutoCompletion") == "yes" );
     pT->mPrintCommand = ( attributes().value("printCommand") == "yes" );
     pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
+    pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
 
     while( ! atEnd() ) 
     {

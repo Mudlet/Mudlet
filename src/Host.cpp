@@ -84,6 +84,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mUSE_IRE_DRIVER_BUGFIX( false )
 , mScreenWidth( 90 )
 , mScreenHeight( 25 )
+, mUSE_FORCE_LF_AFTER_PROMPT( false )
 {
 }
 
@@ -119,8 +120,15 @@ void Host::send( QString cmd, bool dontExpandAliases )
 {  
     if( mPrintCommand )
     {
-        mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
-                                        // this is important to get the cursor position right
+        if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
+        {
+            ;
+        }
+        else
+        {
+            mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
+                                            // this is important to get the cursor position right
+        }
     }
     else
     {

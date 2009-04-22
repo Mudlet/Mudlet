@@ -98,6 +98,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "disableAutoCompletion", pT->mDisableAutoCompletion ? "yes" : "no" );
     writeAttribute( "printCommand", pT->mPrintCommand ? "yes" : "no" );
     writeAttribute( "USE_IRE_DRIVER_BUGFIX", pT->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no" );
+    writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     writeTextElement( "login", pT->mLogin );

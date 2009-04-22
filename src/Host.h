@@ -178,7 +178,7 @@ public:
     bool mDisableAutoCompletion;
     //////////////////////////////////////////
     bool               mUSE_IRE_DRIVER_BUGFIX;
-    
+    bool               mUSE_FORCE_LF_AFTER_PROMPT;
     
     //private:
    
