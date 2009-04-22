@@ -138,6 +138,7 @@ public:
     static int reset( lua_State * );
     static int moveCursorEnd( lua_State * );
     static int getLastLineNumber( lua_State * );
+    static int getNetworkLatency( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

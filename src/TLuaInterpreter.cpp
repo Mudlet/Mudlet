@@ -848,6 +848,15 @@ int TLuaInterpreter::getLastLineNumber( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::getNetworkLatency( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    double number;
+    number = pHost->mTelnet.networkLatency;
+    lua_pushnumber( L, number );
+    return 1;
+}
+
 
 // tempTimer(int session, float seconds, string function to call, string name) // one shot timer.
 int TLuaInterpreter::tempTimer( lua_State *L )
@@ -1788,7 +1797,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "resetFormat", TLuaInterpreter::reset );
     lua_register( pGlobalLua, "moveCursorEnd", TLuaInterpreter::moveCursorEnd );
     lua_register( pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber );
-    
+    lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );

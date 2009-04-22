@@ -1172,6 +1172,18 @@ Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 |resetFormat() |resets the user character format to the default.
 |===================================================
 
+.Miscellaneous Functions
+[width="100%",frame="topbot",options="header"]
+|===================================================
+| Function | Description
+| latency = getNetworkLatency()|returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)
+| watchID = requestStopWatch() | return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
+| startStopWatch( watchID ) | start the stop watch
+| stopStopWatch( watchID ) | stops the stop watch
+| time = getTimeStopWatch( watchID ) | returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)
+|===================================================
+
+
 [[colortable]]
 .Color Table (for use in the fg("colorname") and bg("colorname") functions)
 [frame="topbot",options="header"]

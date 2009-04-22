@@ -194,6 +194,27 @@ void TTextEdit::setScroll(int cursor, int lines)
 
 void TTextEdit::updateScreenView()
 {
+
+
+    if( ! mIsDebugConsole )
+    {
+        mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
+        mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
+        mScreenWidth = 100;
+        if( (width()/mFontWidth ) < mScreenWidth )
+        {
+
+            mScreenWidth = 100;//width()/mFontWidth;
+        }
+    }
+    else
+    {
+        initDefaultSettings();
+        mIsDebugConsole = true;
+        mFontHeight = QFontMetrics( mDisplayFont ).height();
+        mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
+        mScreenWidth = 100;
+    }
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
     if( mpHost->mScreenWidth > currentScreenWidth )

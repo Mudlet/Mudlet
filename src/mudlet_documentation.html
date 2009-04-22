@@ -17624,6 +17624,44 @@ Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$<
 </tbody>
 </table>
 </div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="hsides"
+cellspacing="0" cellpadding="4">
+<caption class="title">Miscellaneous Functions</caption>
+<col width="50%" />
+<col width="50%" />
+<thead valign="top">
+<tr>
+<th align="left"> Function </th>
+<th align="left"> Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr>
+<td align="left"><p class="table">latency = getNetworkLatency()</p></td>
+<td align="left"><p class="table">returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">watchID = requestStopWatch()</p></td>
+<td align="left"><p class="table">return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">startStopWatch( watchID )</p></td>
+<td align="left"><p class="table">start the stop watch</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">stopStopWatch( watchID )</p></td>
+<td align="left"><p class="table">stops the stop watch</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">time = getTimeStopWatch( watchID )</p></td>
+<td align="left"><p class="table">returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <div class="tableblock" id="colortable">
 <table rules="all"
 width="100%"
@@ -17833,7 +17871,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-04-18 00:59:41 CEST
+Last updated 2009-04-22 01:17:03 CEST
 </div>
 </div>
 </body>
