@@ -184,13 +184,36 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     networkLatency->setMaximumWidth( 120 );
     networkLatency->setMinimumWidth( 120 );
     networkLatency->setAutoFillBackground( false );
-    /*QPalette lagPalette;
-    lagPalette.setColor( QPalette::Text, QColor(100,255,100) );
-    lagPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    lagPalette.setColor( QPalette::Base, QColor(0,0,0) );
-    networkLatency->setPalette(lagPalette);*/
-    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
-    networkLatency->setFont( latencyFont );
+    QPalette lagPalette;
+    //lagPalette.setColor( QPalette::Text, QColor(100,255,100) );
+    //lagPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    lagPalette.setColor( QPalette::Base, networkLatency->palette().color(QPalette::Window) );
+    networkLatency->setPalette(lagPalette);
+    networkLatency->setAlignment( Qt::AlignHCenter | Qt::AlignVCenter );
+    networkLatency->setFrame( false );
+    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
+    int width;
+    int maxWidth = 120;
+    width = QFontMetrics( latencyFont ).boundingRect(QString("net:0.000 sys:0.000")).width();
+    if( width < maxWidth )
+    {
+        networkLatency->setFont( latencyFont );
+    }
+    else
+    {
+         QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
+         width = QFontMetrics( latencyFont2 ).boundingRect(QString("net:0.000 sys:0.000")).width();
+         if( width < maxWidth )
+         {
+             networkLatency->setFont( latencyFont2 );
+         }
+         else
+         {
+             QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
+             width = QFontMetrics( latencyFont3 ).boundingRect(QString("net:0.000 sys:0.000")).width();
+             networkLatency->setFont( latencyFont3 );
+         }
+    }
 
     QIcon icon2(":/icons/edit-bomb.png");
     emergencyStop->setIcon( icon2 );
