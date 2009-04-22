@@ -76,6 +76,7 @@ public:
         fgColor = mpHost->mFgColor;
         fgColorLight = mpHost->mLightBlue;
         bgColor = mpHost->mBgColor;
+        isDefaultColor = true;
     }
     void reset()
     {
@@ -100,6 +101,7 @@ public:
     bool underline_old;
     bool m_reset;
     QString text;
+    bool isDefaultColor;
     Host * mpHost;
 };
 

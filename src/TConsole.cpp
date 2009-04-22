@@ -183,13 +183,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     networkLatency->setToolTip("latency of the MUD-server and network (current/average)");
     networkLatency->setMaximumWidth( 120 );
     networkLatency->setMinimumWidth( 120 );
-    networkLatency->setAutoFillBackground(true);
-    QPalette lagPalette;
+    networkLatency->setAutoFillBackground( false );
+    /*QPalette lagPalette;
     lagPalette.setColor( QPalette::Text, QColor(100,255,100) );
     lagPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     lagPalette.setColor( QPalette::Base, QColor(0,0,0) );
-    networkLatency->setPalette(lagPalette);
-    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
+    networkLatency->setPalette(lagPalette);*/
+    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
     networkLatency->setFont( latencyFont );
 
     QIcon icon2(":/icons/edit-bomb.png");
@@ -478,35 +478,43 @@ NORMAL_ANSI_COLOR_TAG:
         break; //FIXME
     case 30:
         m_fontSpecs.fgColor = mpHost->mBlack;
+        m_fontSpecs.isDefaultColor = false;
         m_fontSpecs.fgColorLight = mpHost->mLightBlack;
         break;
     case 31:
         m_fontSpecs.fgColor = mpHost->mRed;
         m_fontSpecs.fgColorLight = mpHost->mLightRed;
+        m_fontSpecs.isDefaultColor = false;
         break;
     case 32:
         m_fontSpecs.fgColor = mpHost->mGreen;
         m_fontSpecs.fgColorLight = mpHost->mLightGreen;
+        m_fontSpecs.isDefaultColor = false;
         break;
     case 33:
         m_fontSpecs.fgColor = mpHost->mYellow;
         m_fontSpecs.fgColorLight = mpHost->mLightYellow;
+        m_fontSpecs.isDefaultColor = false;
         break;
     case 34:
         m_fontSpecs.fgColor = mpHost->mBlue;
         m_fontSpecs.fgColorLight = mpHost->mLightBlue;
+        m_fontSpecs.isDefaultColor = false;
         break;
     case 35:
         m_fontSpecs.fgColor = mpHost->mMagenta;
         m_fontSpecs.fgColorLight = mpHost->mLightMagenta;
+        m_fontSpecs.isDefaultColor = false;
         break;
     case 36:
         m_fontSpecs.fgColor = mpHost->mCyan; 
         m_fontSpecs.fgColorLight = mpHost->mLightCyan;
+        m_fontSpecs.isDefaultColor = false;
         break;
     case 37:
         m_fontSpecs.fgColor = mpHost->mWhite;
         m_fontSpecs.fgColorLight = mpHost->mLightWhite;
+        m_fontSpecs.isDefaultColor = false;
         break;
     case 39:
         m_fontSpecs.bgColor = mpHost->mBgColor;//mWhite
@@ -794,12 +802,12 @@ void TConsole::translateToPlainText( QString & s )
                 {
                      // sequence_end is in next TCP/IPpacket keep translation state
                      mFormatSequenceRest = QChar('\033');
-                     if( ! m_fontSpecs.bold )
+                     if( ! m_fontSpecs.bold || m_fontSpecs.isDefaultColor )
                      {
                          buffer.append( s.mid( pos+1, dangling_esc ),
                                         m_fontSpecs.fgColor,
                                         m_fontSpecs.bgColor,
-                                        false,
+                                        m_fontSpecs.isDefaultColor ? m_fontSpecs.bold : false,
                                         m_fontSpecs.italics,
                                         m_fontSpecs.underline );
                      }
@@ -814,12 +822,12 @@ void TConsole::translateToPlainText( QString & s )
                      }
                      return;
                 }
-                if( ! m_fontSpecs.bold )
+                if( ! m_fontSpecs.bold || m_fontSpecs.isDefaultColor )
                 {
                     buffer.append( s.mid( pos+1, sequence_begin-pos-1 ),
                                    m_fontSpecs.fgColor,
                                    m_fontSpecs.bgColor,
-                                   false,
+                                   m_fontSpecs.isDefaultColor ? m_fontSpecs.bold : false,
                                    m_fontSpecs.italics,
                                    m_fontSpecs.underline );
                 }
