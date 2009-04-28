@@ -89,7 +89,14 @@ TBuffer::TBuffer( Host * pH )
 
 int TBuffer::getLastLineNumber()
 {
-    return buffer.size()-1;
+    if( ((int)buffer.size())-1 > 0 )
+    {
+        return ((int)buffer.size())-1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 
@@ -295,7 +302,9 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
         || ( x >= buffer[y].size() )
         || ( P2.x() < 0 ) 
         || ( P2.x() > buffer[y].size() ) )
-    x=0;
+    {
+        x=0;
+    }
     for( ; x<P2.x(); x++ )
     {
         if( lineBuffer[y][x] == QChar( 0x21af ) )
@@ -323,26 +332,54 @@ TBuffer TBuffer::cut( QPoint & P1, QPoint & P2 )
 
 void TBuffer::paste( QPoint & P, TBuffer chunk )
 {
+    bool hasAppended = false;
     int y = P.y();
     int x = P.x();
-    if( y < 0 || y >= buffer.size() )
-        y=getLastLineNumber();
-    if( x < 0 || x >= buffer[y].size() )
-        return;
-    for( int cy=0; cy<chunk.size(); cy++ )
+    if( chunk.buffer.size() < 1 )
     {
-        y = getLastLineNumber();//TODO: implement paste in position atm it's only paste at end
-        for( int cx=0; cx<chunk.buffer[cy].size(); cx++ )
+        return;
+    }
+    if( y < 0 || y > getLastLineNumber() )
+    {
+        y=getLastLineNumber();
+    }
+    if( x < 0 || x >= buffer[y].size() )
+    {
+        return;
+    }
+    for( int cx=0; cx<(int)chunk.buffer[0].size(); cx++ )
+    {
+        QPoint P_current(cx, y);
+        if( chunk.buffer[0][cx] )
         {
-            append(QString(chunk.lineBuffer[cy][cx]), 
-                   chunk.buffer[cy][cx]->fgColor, 
-                   chunk.buffer[cy][cx]->bgColor, 
-                   (chunk.buffer[cy][cx]->bold == true), 
-                   (chunk.buffer[cy][cx]->italics == true), 
-                   (chunk.buffer[cy][cx]->underline == true) );
-        } 
+            if( y < getLastLineNumber() )
+            {
+                TChar format;
+                format.fgColor = chunk.buffer[0][cx]->fgColor;
+                format.bgColor = chunk.buffer[0][cx]->bgColor;
+                format.bold = chunk.buffer[0][cx]->bold;
+                format.italics = chunk.buffer[0][cx]->italics;
+                format.underline = chunk.buffer[0][cx]->underline;
+                QString s = QString(chunk.lineBuffer[0][cx]);
+                insertInLine( P_current, s, format );
+            }
+            else
+            {
+                hasAppended = true;
+                append(QString(chunk.lineBuffer[0][cx]),
+                       chunk.buffer[0][cx]->fgColor,
+                       chunk.buffer[0][cx]->bgColor,
+                       (chunk.buffer[0][cx]->bold == true),
+                       (chunk.buffer[0][cx]->italics == true),
+                       (chunk.buffer[0][cx]->underline == true) );
+            }
+        }
+    }
+    cout << endl;
+    if( hasAppended )
+    {
         TChar format;
-        wrap( y, mWrapAt, mWrapIndent, format );
+        wrapLine( y, mWrapAt, mWrapIndent, format );
     }
 }
 
@@ -650,7 +687,7 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
-    if( ( x2 >= buffer[y2].size() ) || ( x1 >= buffer[y1].size() ) )
+    if( ( x2 > buffer[y2].size() ) || ( x1 > buffer[y1].size() ) )
     {
         return false;
     }
@@ -826,6 +863,72 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
     }
     else 
         return false;            
+}
+
+bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, QColor & fgColor )
+{
+    if( ( P_begin.x() >= 0 )
+        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    {
+        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        {
+            int x = 0;
+            if( y == P_begin.y() )
+            {
+                x = P_begin.x();
+            }
+            while( x < buffer[y].size() )
+            {
+                if( y >= P_end.y() )
+                {
+                    if( x >= P_end.x() )
+                    {
+                        return true;
+                    }
+                }
+
+                buffer[y][x]->fgColor = fgColor;
+                x++;
+            }
+        }
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, QColor & bgColor )
+{
+    if( ( P_begin.x() >= 0 )
+        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    {
+        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        {
+            int x = 0;
+            if( y == P_begin.y() )
+            {
+                x = P_begin.x();
+            }
+            while( x < buffer[y].size() )
+            {
+                if( y >= P_end.y() )
+                {
+                    if( x >= P_end.x() )
+                    {
+                        return true;
+                    }
+                }
+
+                buffer[y][x]->bgColor = bgColor;
+                x++;
+            }
+        }
+        return true;
+    }
+    else
+        return false;
 }
 
 QStringList TBuffer::getEndLines( int n )

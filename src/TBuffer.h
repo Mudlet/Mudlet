@@ -72,6 +72,8 @@ public:
     bool deleteLine( int );
     bool deleteLines( int from, int to );
     bool applyFormat( QPoint &, QPoint &, TChar & format );
+    bool applyFgColor( QPoint &, QPoint &, QColor & );
+    bool applyBgColor( QPoint &, QPoint &, QColor & );
     bool moveCursor( QPoint & where );
     QPoint & insertText( QString & what, QPoint & where );
     int getLastLineNumber();

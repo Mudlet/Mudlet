@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>578</width>
+    <width>721</width>
     <height>237</height>
    </rect>
   </property>
@@ -453,7 +453,7 @@ p, li { white-space: pre-wrap; }
        <height>16777215</height>
       </size>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_8">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
       <property name="spacing">
        <number>9</number>
       </property>
@@ -591,7 +591,7 @@ p, li { white-space: pre-wrap; }
         <property name="maximumSize">
          <size>
           <width>16777215</width>
-          <height>20</height>
+          <height>12</height>
          </size>
         </property>
         <property name="font">
@@ -617,6 +617,37 @@ p, li { white-space: pre-wrap; }
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="perlSlashGOption">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>13</width>
+          <height>13</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+          <stylestrategy>PreferAntialias</stylestrategy>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>If you chose this option all perl regex pattern in this trigger will be matched repeatedly on the same line until they fail to match. This will get you all possible matches of the patterns per line. See manual for detail. </string>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QWidget" name="widget_8" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -631,32 +662,83 @@ p, li { white-space: pre-wrap; }
          <property name="margin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="QCheckBox" name="perlSlashGOption">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-             <stylestrategy>PreferAntialias</stylestrategy>
-            </font>
-           </property>
-           <property name="toolTip">
-            <string>If you chose this option all perl regex pattern in this trigger will be matched repeatedly on the same line until they fail to match. This will get you all possible matches of the patterns per line. See manual for detail. </string>
-           </property>
-           <property name="layoutDirection">
-            <enum>Qt::LeftToRight</enum>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
         </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_15">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>12</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)</string>
+        </property>
+        <property name="text">
+         <string>act as filter:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="indent">
+         <number>0</number>
+        </property>
+        <property name="buddy">
+         <cstring>perlSlashGOption</cstring>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="filterTrigger">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>13</width>
+          <height>13</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>8</pointsize>
+          <stylestrategy>PreferAntialias</stylestrategy>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>If you chose this option all perl regex pattern in this trigger will be matched repeatedly on the same line until they fail to match. This will get you all possible matches of the patterns per line. See manual for detail. </string>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
        </widget>
       </item>
      </layout>

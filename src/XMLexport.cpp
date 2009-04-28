@@ -101,8 +101,8 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
-    writeTextElement( "login", pT->mLogin );
-    writeTextElement( "pass", pT->mPass );
+    //writeTextElement( "login", pT->mLogin );
+    //writeTextElement( "pass", pT->mPass );
     writeTextElement( "url", pT->mUrl );
     writeTextElement( "port", QString::number(pT->mPort) );
     writeTextElement( "wrapAt", QString::number(pT->mWrapAt) );
@@ -236,6 +236,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeAttribute( "isMultiline", pT->mIsMultiline ? "yes" : "no" );
     writeAttribute( "isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no" );
     writeAttribute( "isColorizerTrigger", pT->mIsColorizerTrigger ? "yes" : "no" );
+    writeAttribute( "isFilterTrigger", pT->mFilterTrigger ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );

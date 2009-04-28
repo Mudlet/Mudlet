@@ -204,7 +204,7 @@ QString Host::getBufferLine( int line )
 void Host::incomingStreamProcessor( QString & data, QString & prompt )
 {
     mTriggerUnit.processDataStream( data );
-    
+    // TODO: reihenfolge garantieren
     QList<QString> eventList = mEventMap.keys();
     for( int i=0; i<eventList.size(); i++ )
     {
@@ -213,8 +213,6 @@ void Host::incomingStreamProcessor( QString & data, QString & prompt )
         for( int ii=0; ii<scriptList.size(); ii++ )
         {
             scriptList.value( ii )->callEventHandler( eventList[i], mEventMap.value( eventList[i] ) );
-            
-            delete mEventMap.value( eventList[i] );
         }
     }
     

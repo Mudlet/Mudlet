@@ -1155,8 +1155,17 @@ void TConsole::scrollUp( int lines )
     console->scrollUp( lines );    
 }
 
+void TConsole::deselect()
+{
+    P_begin.setX( 0 );
+    P_begin.setY( 0 );
+    P_end.setX( 0 );
+    P_end.setY( 0 );
+}
+
 void TConsole::reset()
 {
+    deselect();
     mFormatCurrent.bgColor = mStandardFormat.bgColor;
     mFormatCurrent.fgColor = mStandardFormat.fgColor;
     mFormatCurrent.bold = false;
@@ -1286,7 +1295,7 @@ bool TConsole::deleteLine( int y )
 
 bool TConsole::hasSelection() 
 {
-    if( mP_start != mP_end )
+    if( P_begin != P_end )
         return true;
     else
         return false;
@@ -1420,13 +1429,15 @@ bool TConsole::selectSection( int from, int to )
 void TConsole::setFgColor( int r, int g, int b )
 {
     mFormatCurrent.fgColor = QColor( r, g, b );
-    buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    //buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    buffer.applyFgColor( P_begin, P_end, mFormatCurrent.fgColor );
 }
 
 void TConsole::setBgColor( int r, int g, int b )
 {
     mFormatCurrent.bgColor = QColor( r, g, b );
-    buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    //buffer.applyFormat( P_begin, P_end, mFormatCurrent );
+    buffer.applyBgColor( P_begin, P_end, mFormatCurrent.bgColor );
 }
 
 void TConsole::printCommand( QString & msg )
@@ -1548,8 +1559,7 @@ void TConsole::cut()
 
 void TConsole::paste()
 {
-    QPoint P = P_begin;
-    buffer.paste( P_begin, mClipboard );     //TODO: P_begin & P_end to replace selection
+    buffer.paste( mUserCursor, mClipboard );     //TODO: P_begin & P_end to replace selection
     console->showNewLines();
 }
 

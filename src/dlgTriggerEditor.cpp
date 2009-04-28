@@ -20,6 +20,7 @@
 
 #include "dlgTriggerEditor.h"
 #include "Host.h"
+#include <qsciscintillabase.h>
 #include "HostManager.h"
 #include "TriggerUnit.h"
 #include "TTrigger.h"
@@ -436,7 +437,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpLuaLexer = new QsciLexerLua;
     mpSourceEditorArea->script_scintilla->setLexer( mpLuaLexer );
     mpSourceEditorArea->script_scintilla->setAutoCompletionFillupsEnabled(true);
-    
+    mpSourceEditorArea->script_scintilla->SendScintilla( 2240,0,33 );
     connect( comboBox_search_triggers, SIGNAL( currentIndexChanged( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_clicked( QTreeWidgetItem *, int) ) );
@@ -1173,6 +1174,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->listWidget_regex_list->clear();
     mpSourceEditorArea->script_scintilla->clear();
     mpTriggersMainArea->trigger_command->clear();
+    mpTriggersMainArea->filterTrigger->setChecked( false );
     treeWidget->setCurrentItem( pNewItem );
     mCurrentTrigger = pNewItem;
     showInfo( msgInfoAddTrigger );
@@ -1714,6 +1716,7 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
             pT->setScript( script );
             pT->setIsMultiline( isMultiline );
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
+            pT->mFilterTrigger = mpTriggersMainArea->filterTrigger->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
             QPalette FgColorPalette;
             QPalette BgColorPalette;
@@ -1844,6 +1847,7 @@ void dlgTriggerEditor::saveTrigger()
             pT->setScript( script );
             pT->setIsMultiline( isMultiline );
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
+            pT->mFilterTrigger = mpTriggersMainArea->filterTrigger->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
             QPalette FgColorPalette;
             QPalette BgColorPalette;
@@ -2701,6 +2705,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     mpTriggersMainArea->listWidget_regex_list->clear();
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
+    mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
 
     if( (pItem == 0) || (column != 0) )
@@ -2756,6 +2761,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex( REGEX_SUBSTRING );
         mpTriggersMainArea->checkBox_multlinetrigger->setChecked( pT->isMultiline() );
         mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
+        mpTriggersMainArea->filterTrigger->setChecked( pT->mFilterTrigger );
         mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );
         QColor fgColor = pT->getFgColor();
         QColor bgColor = pT->getBgColor();

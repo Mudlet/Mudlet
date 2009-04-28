@@ -55,6 +55,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mIsColorizerTrigger( false )
 , mFgColor( QColor(255,0,0) )
 , mBgColor( QColor(255,255,0) )
+, mFilterTrigger( false )
 {
 } 
 
@@ -77,6 +78,7 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 , mIsColorizerTrigger( false )
 , mFgColor( QColor(255,0,0) )
 , mBgColor( QColor(255,255,0) )
+, mFilterTrigger( false )
 {
     setRegexCodeList( regexList, regexProperyList );
 }
@@ -223,7 +225,7 @@ bool TTrigger::isClone( TTrigger & b ) const
              && mConditionMap == b.mConditionMap );
 }
 
-bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
+bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, int posOffset )
 {
     assert( mRegexMap.contains(regexNumber ) );
     
@@ -295,7 +297,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
         std::string match;
         match.append( substring_start, substring_length );
         captureList.push_back( match );
-        posList.push_back( ovector[2*i] );
+        posList.push_back( ovector[2*i] + posOffset );
         if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
     }
     (void)pcre_fullinfo( re,                                              
@@ -381,7 +383,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber )
             std::string match;
             match.append( substring_start, substring_length );
             captureList.push_back( match );
-            posList.push_back( ovector[2*i] );
+            posList.push_back( ovector[2*i] + posOffset );
             if( mudlet::debugMode ) TDebug()<<"<Perl /g switch mode:> capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
         }
     }      
@@ -398,6 +400,7 @@ END:
         int b2 = mFgColor.blue();
         int total = captureList.size();
         TConsole * pC = mpHost->mpConsole;
+        pC->deselect();
         std::list<std::string>::iterator its = captureList.begin();
         std::list<int>::iterator iti = posList.begin();
         for( int i=1; iti!=posList.end(); ++iti, ++its, i++ )
@@ -408,7 +411,8 @@ END:
             if( total > 1 )
             {
                 // skip complete match in Perl /g option type of triggers
-                // to enable people to highlight capture groups
+                // to enable people to highlight capture groups if there are any
+                // otherwise highlight complete expression match
                 if( i % numberOfCaptureGroups != 1 )
                 {
                     int pos = pC->selectSection( begin, length );
@@ -436,6 +440,15 @@ END:
         pL->setCaptureGroups( captureList, posList );
         execute();
         pL->clearCaptureGroups();
+        if( mFilterTrigger )
+        {
+             if( captureList.size() > 0 )
+             {
+                 captureList.pop_front();
+                 posList.pop_front();
+                 filter( captureList.front(), posList.front() );
+             }
+        }
         return true;
     }
 }
@@ -451,14 +464,14 @@ ERROR:
     
 }
 
-bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber )
+bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset )
 {
     if( toMatch.startsWith( regex ) )
     {
         std::list<std::string> captureList;
         std::list<int> posList;
         captureList.push_back( regex.toLatin1().data() );
-        posList.push_back( 0 );
+        posList.push_back( 0 + posOffset );
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
         if( mIsColorizerTrigger )
         {
@@ -495,6 +508,15 @@ bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex
             // call lua trigger function with number of matches and matches itselves as arguments
             execute();
             pL->clearCaptureGroups();
+            if( mFilterTrigger )
+            {
+                if( captureList.size() > 0 )
+                {
+                    captureList.pop_front();
+                    posList.pop_front();
+                    filter( captureList.front(), posList.front() );
+                }
+            }
             return true;
         }
     }
@@ -531,7 +553,21 @@ inline void TTrigger::updateMultistates( int regexNumber,
     }
 }
 
-bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNumber )
+inline void TTrigger::filter( std::string & capture, int & posOffset )
+{
+    char * filterSubject = (char *) malloc( capture.size() + 2048 );
+    strcpy( filterSubject, capture.c_str() );
+    QString text = capture.c_str();
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TTrigger * pChild = *it;
+        (*it)->match( filterSubject, text, posOffset );
+    }
+    free( filterSubject );
+}
+
+bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset )
 {
     int where = toMatch.indexOf( regex );
     if( where != -1 )
@@ -539,13 +575,13 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
         std::list<std::string> captureList;
         std::list<int> posList;
         captureList.push_back( regex.toLatin1().data() );
-        posList.push_back( where );
+        posList.push_back( where + posOffset );
         if( mPerlSlashGOption )
         {
             while( (where = toMatch.indexOf( regex, where + 1 )) != -1 )
             {
                 captureList.push_back( regex.toLatin1().data() );
-                posList.push_back( where );
+                posList.push_back( where + posOffset );
             }
         }
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
@@ -558,6 +594,7 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
+            pC->deselect();
             std::list<std::string>::iterator its = captureList.begin();
             std::list<int>::iterator iti = posList.begin();
             for( int i=0; iti!=posList.end(); ++iti, ++its )
@@ -584,6 +621,15 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
             // call lua trigger function with number of matches and matches itselves as arguments
             execute();
             pL->clearCaptureGroups();
+            if( mFilterTrigger )
+            {
+                if( captureList.size() > 0 )
+                {
+                    captureList.pop_front();
+                    posList.pop_front();
+                    filter( captureList.front(), posList.front() );
+                }
+            }
             return true;
         }
     }    
@@ -610,7 +656,7 @@ bool TTrigger::match_lua_code( int regexNumber )
     return false;
 }
 
-bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNumber )
+bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNumber, int posOffset )
 {
     QString text = toMatch;
     if( text.endsWith(QChar('\n')) ) text.chop(1); //TODO: speed optimization
@@ -619,7 +665,7 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
         std::list<std::string> captureList;
         std::list<int> posList;
         captureList.push_back( line.toLatin1().data() );
-        posList.push_back( 0 );
+        posList.push_back( 0 + posOffset );
         if( mudlet::debugMode ) TDebug()<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") matched!">>0;
         if( mIsColorizerTrigger )
         {
@@ -655,13 +701,22 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
             // call lua trigger function with number of matches and matches itselves as arguments
             execute();
             pL->clearCaptureGroups();
+            if( mFilterTrigger )
+            {
+                if( captureList.size() > 0 )
+                {
+                    captureList.pop_front();
+                    posList.pop_front();
+                    filter( captureList.front(), posList.front() );
+                }
+            }
             return true;
         }
     }    
     return false;
 }
 
-bool TTrigger::match( char * subject, QString & toMatch )
+bool TTrigger::match( char * subject, QString & toMatch, int posOffset )
 {
     bool ret = false;
     if( isActive() )
@@ -713,19 +768,19 @@ bool TTrigger::match( char * subject, QString & toMatch )
             switch( mRegexCodePropertyList.value(i) )
             {
                 case REGEX_SUBSTRING:
-                    ret = match_substring( toMatch, mRegexCodeList[i], i );
+                    ret = match_substring( toMatch, mRegexCodeList[i], i, posOffset );
                     break;
                 
                 case REGEX_PERL:
-                    ret = match_perl( subject, toMatch, i );
+                    ret = match_perl( subject, toMatch, i, posOffset );
                     break;
                 
                 case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                    ret = match_begin_of_line_substring( toMatch, mRegexCodeList[i], i );
+                    ret = match_begin_of_line_substring( toMatch, mRegexCodeList[i], i, posOffset );
                     break;
                 
                 case REGEX_EXACT_MATCH:
-                    ret = match_exact_match( toMatch, mRegexCodeList[i], i );
+                    ret = match_exact_match( toMatch, mRegexCodeList[i], i, posOffset );
                     break;
 
                 case REGEX_LUA_CODE:
@@ -793,15 +848,17 @@ bool TTrigger::match( char * subject, QString & toMatch )
         //
         // a folder can also be a simple structural element in which case all data passes through
         // if at least one regex is defined a folder is considered a trigger chain otherwise a structural element
-        
-        if( conditionMet || ( mRegexCodeList.size() < 1 ) )
+        if( ! mFilterTrigger )
         {
-            typedef list<TTrigger *>::const_iterator I;
-            for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+            if( conditionMet || ( mRegexCodeList.size() < 1 ) )
             {
-                TTrigger * pChild = *it;
-                ret = pChild->match( subject, toMatch );
-                if( ret ) conditionMet = true;
+                typedef list<TTrigger *>::const_iterator I;
+                for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+                {
+                    TTrigger * pChild = *it;
+                    ret = pChild->match( subject, toMatch );
+                    if( ret ) conditionMet = true;
+                }
             }
         }
         return conditionMet;

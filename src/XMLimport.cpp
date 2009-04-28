@@ -333,7 +333,7 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mHostName = readElementText();
                 continue;
             }
-            else if( name() == "login")
+            /*else if( name() == "login")
             {
                 pT->mLogin = readElementText();
                 continue;
@@ -342,7 +342,7 @@ void XMLimport::readHostPackage( Host * pT )
             {
                 pT->mPass = readElementText();
                 continue;
-            }       
+            }*/
             else if( name() =="url" )
             {
                 pT->mUrl = readElementText();
@@ -498,6 +498,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mIsMultiline = ( attributes().value("isMultiline") == "yes" );
     pT->mPerlSlashGOption = ( attributes().value("isPerlSlashGOption") == "yes" );
     pT->mIsColorizerTrigger = ( attributes().value("isColorizerTrigger") == "yes" );
+    pT->mFilterTrigger = ( attributes().value("isFilterTrigger") == "yes" );
     while( ! atEnd() ) 
     {
         readNext();

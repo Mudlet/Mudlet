@@ -172,6 +172,7 @@ public:
       void              echo( QString & );
       bool              moveCursor( int x, int y );
       int               select( QString, int numOfMatch = 1 );
+      void              deselect();
       bool              selectSection( int, int );
       void              skipLine();
       void              setFgColor( int, int, int );
@@ -215,8 +216,8 @@ private:
       void              set_text_properties( int formatPropertyCode );  
       QString           assemble_html_font_specs();
       QString           mCurrentLine;
-      QPoint            mP_start;
-      QPoint            mP_end;
+      //QPoint            mP_start;
+      //QPoint            mP_end;
       QPoint            mUserCursor;
       QColor            mCommandFgColor;
       QColor            mCommandBgColor;

@@ -108,10 +108,9 @@ void TScript::compileAll()
 
 void TScript::callEventHandler( QString & func, TEvent * pE )
 {
-    TLuaInterpreter * pL = mpHost->getLuaInterpreter();    
     QStringList argumentList = pE->mArgumentList;
     QList<int> typeList = pE->mArgumentTypeList;
-    pL->callEventHandler( mName, argumentList, typeList );    
+    mpLua->callEventHandler( mName, argumentList, typeList );
 }
 
 void TScript::compile()

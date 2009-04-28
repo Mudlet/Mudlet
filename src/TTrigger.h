@@ -83,7 +83,7 @@ public:
     QString          getScript()                     { return mScript; }
     bool             setScript( QString & script );
     bool             compileScript();
-    bool             match( char *, QString & );
+    bool             match( char *, QString &, int posOffset = 0 );
     bool             isFolder()                      { return mIsFolder; }
     bool             isMultiline()                   { return mIsMultiline; }
     int              getTriggerType()                { return mTriggerType; }
@@ -99,11 +99,11 @@ public:
     void             enableTrigger( QString & );
     void             disableTrigger( QString & );
     TTrigger *       killTrigger( QString & );
-    bool             match_substring( QString &, QString &, int );
-    bool             match_perl( char *, QString &, int );
+    bool             match_substring( QString &, QString &, int, int posOffset = 0 );
+    bool             match_perl( char *, QString &, int, int posOffset = 0 );
     bool             match_wildcard( QString &, int );
-    bool             match_exact_match( QString &, QString &, int );
-    bool             match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber );
+    bool             match_exact_match( QString &, QString &, int, int posOffset = 0 );
+    bool             match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset = 0 );
     bool             match_lua_code( int );
     void             setConditionLineDelta( int delta )  { mConditionLineDelta = delta; }
     int              getConditionLineDelta() { return mConditionLineDelta; }
@@ -113,6 +113,7 @@ public:
     bool             restore( QDataStream & fs, bool );
     bool             mTriggerContainsPerlRegex;
     bool             mPerlSlashGOption;
+    bool             mFilterTrigger;
     bool             isClone( TTrigger & ) const;
     
 private:
@@ -121,6 +122,7 @@ private:
     void                                   updateMultistates( int regexNumber,
                                                               std::list<std::string> & captureList,
                                                               std::list<int> & posList );
+    void                                   filter( std::string &, int & );
     QString                                mName;
     QStringList                            mRegexCodeList;
     QList<int>                             mRegexCodePropertyList;
@@ -131,6 +133,7 @@ private:
     bool                                   mIsFolder;
     bool                                   mNeedsToBeCompiled;
     int                                    mTriggerType;
+
     bool                                   mIsLineTrigger;
     int                                    mStartOfLineDelta;
     int                                    mLineDelta;
