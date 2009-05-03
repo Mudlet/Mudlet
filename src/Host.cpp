@@ -90,6 +90,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mBorderLeftWidth( 0 )
 , mBorderRightWidth( 0 )
 , mUSE_UNIX_EOL( false )
+, mBlockScriptCompile( true )
 {
 }
 

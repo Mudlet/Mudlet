@@ -267,7 +267,7 @@ void TCommandLine::handleTabCompletion( bool direction )
     buffer.replace(QChar( 0x21af ), "\n");
     buffer.replace(QChar('\n'), " " );
 
-    QStringList wordList = buffer.split( QRegExp("\\b"), QString::SkipEmptyParts );
+    QStringList wordList = buffer.split( QChar(' '), QString::SkipEmptyParts );
     if( direction )
     {
         mTabCompletionCount++;
@@ -292,7 +292,7 @@ void TCommandLine::handleTabCompletion( bool direction )
 
         QStringList filterList = wordList.filter( QRegExp( "^"+lastWord+"\\w+",Qt::CaseInsensitive  ) );
         if( filterList.size() <= 1 ) return;
-        qDebug()<<"vor sortieren size="<<filterList.size()<<" filterList="<<filterList;
+        //qDebug()<<"vor sortieren size="<<filterList.size()<<" filterList="<<filterList;
         int offset = 0;
         for( ; ; )
         {
@@ -302,7 +302,7 @@ void TCommandLine::handleTabCompletion( bool direction )
             ++offset;
             if( offset >= filterList.size() ) break;
         }
-        qDebug()<<"nachher size="<<filterList.size()<<" tab="<<mTabCompletionCount<<" filterList="<<filterList;
+        //qDebug()<<"nachher size="<<filterList.size()<<" tab="<<mTabCompletionCount<<" filterList="<<filterList;
 
         if( filterList.size() > 0 )
         {

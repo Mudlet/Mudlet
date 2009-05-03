@@ -109,6 +109,7 @@ public:
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
     bool               serialize();
+    bool               blockScripts() { return mBlockScriptCompile; }
     void               serialize_options2( QString );
     void               restore_options2( QString );
     bool               restore( QString path, int );
@@ -226,6 +227,7 @@ public:
     int                mBorderLeftWidth;
     int                mBorderRightWidth;
     bool               mUSE_UNIX_EOL;
+    bool               mBlockScriptCompile;
 };
 #endif
 

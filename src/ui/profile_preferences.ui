@@ -13,32 +13,8 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_13">
-   <item row="2" column="0">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>459</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="2" column="1">
-    <widget class="QPushButton" name="closeButton">
-     <property name="text">
-      <string>Close</string>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
     <widget class="QTabWidget" name="tabWidgeta">
      <property name="enabled">
       <bool>true</bool>
@@ -50,7 +26,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="input_line_tab">
       <attribute name="title">
@@ -190,6 +166,9 @@
          <layout class="QGridLayout" name="gridLayout_14">
           <item row="0" column="0">
            <widget class="QPushButton" name="pushButton_command_line_font">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>Chose input line font</string>
             </property>
@@ -391,7 +370,7 @@
          <x>10</x>
          <y>310</y>
          <width>531</width>
-         <height>147</height>
+         <height>111</height>
         </rect>
        </property>
        <property name="title">
@@ -455,7 +434,7 @@ or some other computer model that has a small screen.</string>
         <rect>
          <x>10</x>
          <y>80</y>
-         <width>481</width>
+         <width>531</width>
          <height>111</height>
         </rect>
        </property>
@@ -582,6 +561,9 @@ or some other computer model that has a small screen.</string>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButtonBorderColor">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>260</x>
@@ -652,6 +634,9 @@ or some other computer model that has a small screen.</string>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButtonBorderImage">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>260</x>
@@ -662,6 +647,54 @@ or some other computer model that has a small screen.</string>
         </property>
         <property name="text">
          <string>Border Background Image</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_11">
+       <property name="geometry">
+        <rect>
+         <x>329</x>
+         <y>206</y>
+         <width>211</width>
+         <height>96</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Icon Size</string>
+       </property>
+       <widget class="QSpinBox" name="MainIconSize">
+        <property name="geometry">
+         <rect>
+          <x>120</x>
+          <y>30</y>
+          <width>50</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>4</number>
+        </property>
+        <property name="value">
+         <number>3</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_34">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>91</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Main Icon Size:</string>
         </property>
        </widget>
       </widget>
@@ -1032,6 +1065,216 @@ or some other computer model that has a small screen.</string>
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Script Editor Options</string>
+      </attribute>
+      <widget class="QComboBox" name="defaultTriggerType">
+       <property name="geometry">
+        <rect>
+         <x>150</x>
+         <y>20</y>
+         <width>291</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="palette">
+        <palette>
+         <active>
+          <colorrole role="Base">
+           <brush brushstyle="SolidPattern">
+            <color alpha="255">
+             <red>255</red>
+             <green>230</green>
+             <blue>232</blue>
+            </color>
+           </brush>
+          </colorrole>
+         </active>
+         <inactive>
+          <colorrole role="Base">
+           <brush brushstyle="SolidPattern">
+            <color alpha="255">
+             <red>255</red>
+             <green>230</green>
+             <blue>232</blue>
+            </color>
+           </brush>
+          </colorrole>
+         </inactive>
+         <disabled>
+          <colorrole role="Base">
+           <brush brushstyle="SolidPattern">
+            <color alpha="255">
+             <red>244</red>
+             <green>244</green>
+             <blue>244</blue>
+            </color>
+           </brush>
+          </colorrole>
+         </disabled>
+        </palette>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>8</pointsize>
+        </font>
+       </property>
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
+       <item>
+        <property name="text">
+         <string>pattern is a substring of the line (speed: good)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>pattern is a Perl style regular expression (speed: slowest)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>pattern is located at the beginning of the line (speed: best)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>pattern equals entire line (speed: good)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Condition is defined as a Lua Function that returns true or false</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_31">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>20</y>
+         <width>121</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Default Trigger Type:</string>
+       </property>
+      </widget>
+      <widget class="QSpinBox" name="TEMainIconSize">
+       <property name="geometry">
+        <rect>
+         <x>150</x>
+         <y>60</y>
+         <width>50</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>4</number>
+       </property>
+       <property name="value">
+        <number>3</number>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_32">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>60</y>
+         <width>121</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Main Icon Size:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_33">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>90</y>
+         <width>121</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Folder Icons Size:</string>
+       </property>
+      </widget>
+      <widget class="QSpinBox" name="TEFolderIconSize">
+       <property name="geometry">
+        <rect>
+         <x>150</x>
+         <y>90</y>
+         <width>50</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>4</number>
+       </property>
+       <property name="value">
+        <number>3</number>
+       </property>
+      </widget>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>447</width>
+          <height>17</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="closeButton">
+        <property name="text">
+         <string>Close</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

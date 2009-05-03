@@ -934,9 +934,9 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     Host * pHost = HostManager::self()->getHost( profile );
     if( ! pHost ) 
         return;
-    
     addConsoleForNewHost( pHost );
-    
+    pHost->mBlockScriptCompile = false;
+    pHost->getScriptUnit()->compileAll();
     //NOTE: this is a potential problem if users connect by hand quickly 
     //      and one host has a slower response time as the other one, but
     //      the worst that can happen is that they have to login manually.
