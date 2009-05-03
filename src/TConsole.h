@@ -219,7 +219,8 @@ public:
       QWidget *         mpMainFrame;
       TChar             mFormatCurrent;
       void echoConsole( QString & msg );
-
+      void              setConsoleBgColor( int, int, int );
+      void              setConsoleFgColor( int, int, int );
       QList<TConsole *> mSubConsoleList;
       std::map<std::string, TConsole *> mSubConsoleMap;
       std::map<std::string, TLabel *> mLabelMap;

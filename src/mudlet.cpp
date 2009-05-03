@@ -402,9 +402,7 @@ bool mudlet::setBackgroundColor( QString & name, int r, int g, int b, int alpha 
 {
     if( dockWindowConsoleMap.contains( name ) )
     {
-        QPalette mainPalette;
-        mainPalette.setColor( QPalette::Window, QColor(r, g, b, alpha) );
-        dockWindowConsoleMap[name]->setPalette( mainPalette );
+        dockWindowConsoleMap[name]->setConsoleBgColor(r,g,b);
         return true;
     }
     else if( mLabelMap.contains( name ) )

@@ -453,6 +453,20 @@ void TConsole::changeColors()
         console->setPalette( palette );
         console2->setPalette( palette );    
     }
+    else if( mIsSubConsole )
+    {
+        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
+        console->setFont( mDisplayFont );
+        console2->setFont( mDisplayFont );
+        QPalette palette;
+        palette.setColor( QPalette::Text, mFgColor );
+        palette.setColor( QPalette::Highlight, QColor(55,55,255) );
+        palette.setColor( QPalette::Base, mBgColor );
+        setPalette( palette );
+        layer->setPalette( palette );
+        console->setPalette( palette );
+        console2->setPalette( palette );
+    }
     else
     {
         mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
@@ -467,6 +481,18 @@ void TConsole::changeColors()
         console->setPalette( palette );
         console2->setPalette( palette );
     }
+}
+
+void TConsole::setConsoleBgColor( int r, int g, int b )
+{
+    mBgColor = QColor(r,g,b);
+    changeColors();
+}
+
+void TConsole::setConsoleFgColor( int r, int g, int b )
+{
+    mFgColor = QColor(r,g,b);
+    changeColors();
 }
 
 /*std::string TConsole::getCurrentTime()
