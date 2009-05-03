@@ -139,6 +139,26 @@ public:
     static int moveCursorEnd( lua_State * );
     static int getLastLineNumber( lua_State * );
     static int getNetworkLatency( lua_State * );
+    static int appendBuffer( lua_State * );
+    static int createBuffer( lua_State * );
+    static int showUserWindow( lua_State * );
+    static int hideUserWindow( lua_State * );
+    static int closeUserWindow( lua_State * );
+    static int resizeUserWindow( lua_State * );
+    static int createStopWatch( lua_State * );
+    static int stopStopWatch( lua_State * );
+    static int getStopWatchTime( lua_State * );
+    static int startStopWatch( lua_State * );
+    static int resetStopWatch( lua_State * );
+    static int createMiniConsole( lua_State * );
+    static int createLabel( lua_State * );
+    static int moveWindow( lua_State * );
+    static int setTextFormat( lua_State * );
+    static int setBackgroundImage( lua_State * );
+    static int setBackgroundColor( lua_State * );
+    static int createButton( lua_State * );
+    static int setLabelClickCallback( lua_State * );
+    static int getMainWindowSize( lua_State *L );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

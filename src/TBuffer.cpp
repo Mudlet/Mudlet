@@ -74,11 +74,11 @@ TChar::TChar( TChar const & copy )
 
 
 TBuffer::TBuffer( Host * pH )
-: mpHost( pH )
+: mLinesLimit( 100000 )
+, mpHost( pH )
 , mCursorMoved( false )
 , mWrapAt( 100 )
 , mWrapIndent( 5 )
-, mLinesLimit( 100000 )
 {   
     buffer.clear();
     lineBuffer.clear();
@@ -89,22 +89,22 @@ TBuffer::TBuffer( Host * pH )
 
 int TBuffer::getLastLineNumber()
 {
-    if( ((int)buffer.size())-1 > 0 )
+    if( static_cast<int>(buffer.size()) > 0 )
     {
-        return ((int)buffer.size())-1;
+        return static_cast<int>(buffer.size())-1;
     }
     else
     {
-        return 0;
+        return -1;
     }
 }
 
 
 void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
-    if( (int)buffer.size() > mLinesLimit )
+    if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
-        while( buffer.size() > mLinesLimit-10000 )
+        while( (int)buffer.size() > mLinesLimit-10000 )
         {
             deleteLine( 0 );
         }
@@ -188,7 +188,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
     int y = where.y();
     
     if( y < 0 ) return P;
-    if( y >= buffer.size() ) return P;
+    if( y >= static_cast<int>(buffer.size()) ) return P;
     
     
     for( int i=0; i<text.size(); i++ )
@@ -267,7 +267,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
         {
             return false;
         }
-        if( x >= buffer[y].size() )
+        if( x >= static_cast<int>(buffer[y].size()) )
         {
             TChar c;
             expandLine( y, x-buffer[y].size(), & c );
@@ -295,13 +295,13 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
     slice.clear();
     int y = P1.y();
     int x = P1.x();
-    if( y < 0 || y >= buffer.size() )
+    if( y < 0 || y >= static_cast<int>(buffer.size()) )
         return slice;
     
     if( ( x < 0 ) 
-        || ( x >= buffer[y].size() )
+        || ( x >= static_cast<int>(buffer[y].size()) )
         || ( P2.x() < 0 ) 
-        || ( P2.x() > buffer[y].size() ) )
+        || ( P2.x() > static_cast<int>(buffer[y].size()) ) )
     {
         x=0;
     }
@@ -332,6 +332,7 @@ TBuffer TBuffer::cut( QPoint & P1, QPoint & P2 )
 
 void TBuffer::paste( QPoint & P, TBuffer chunk )
 {
+    bool needAppend = false;
     bool hasAppended = false;
     int y = P.y();
     int x = P.x();
@@ -341,18 +342,25 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
     }
     if( y < 0 || y > getLastLineNumber() )
     {
-        y=getLastLineNumber();
+        y = getLastLineNumber();
     }
-    if( x < 0 || x >= buffer[y].size() )
+    if( y == -1 )
     {
-        return;
+        needAppend = true;
     }
-    for( int cx=0; cx<(int)chunk.buffer[0].size(); cx++ )
+    else
+    {
+        if( x < 0 || x >= static_cast<int>(buffer[y].size()) )
+        {
+            return;
+        }
+    }
+    for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
     {
         QPoint P_current(cx, y);
         if( chunk.buffer[0][cx] )
         {
-            if( y < getLastLineNumber() )
+            if( ( y < getLastLineNumber() ) && ( ! needAppend ) )
             {
                 TChar format;
                 format.fgColor = chunk.buffer[0][cx]->fgColor;
@@ -375,12 +383,41 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
             }
         }
     }
-    cout << endl;
     if( hasAppended )
     {
         TChar format;
-        wrapLine( y, mWrapAt, mWrapIndent, format );
+        if( y == -1 )
+        {
+            wrap( y,mWrapAt, mWrapIndent, format );
+        }
+        else
+        {
+            wrapLine( y, mWrapAt, mWrapIndent, format );
+        }
     }
+}
+
+void TBuffer::appendBuffer( TBuffer chunk )
+{
+    if( chunk.buffer.size() < 1 )
+    {
+        return;
+    }
+    int startLine = getLastLineNumber() > 0 ? getLastLineNumber() : 0;
+    for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
+    {
+        if( chunk.buffer[0][cx] )
+        {
+            append(QString(chunk.lineBuffer[0][cx]),
+                   chunk.buffer[0][cx]->fgColor,
+                   chunk.buffer[0][cx]->bgColor,
+                   (chunk.buffer[0][cx]->bold == true),
+                   (chunk.buffer[0][cx]->italics == true),
+                   (chunk.buffer[0][cx]->underline == true) );
+        }
+    }
+    TChar format;
+    wrap( startLine, mWrapAt, mWrapIndent, format );
 }
 
 int TBuffer::calcWrapPos( int line, int begin, int end )
@@ -404,21 +441,22 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
 {
-    if( buffer.size() <= startLine ) return 0;
+    if( startLine < 0 ) return 0;
+    if( static_cast<int>(buffer.size()) < startLine ) return 0;
     std::queue<std::deque<TChar *> > queue;
     QStringList tempList;
     int lineCount = 0;
     
-    for( int i=startLine; i<buffer.size(); i++ )
+    for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
     {
-        assert( buffer[i].size() == lineBuffer[i].size() );
+        assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
         std::deque<TChar *> newLine;
         QString lineText;
         
         int indent = 0;
-        if( buffer[i].size() >= screenWidth )
+        if( static_cast<int>(buffer[i].size()) >= screenWidth )
         {
-            for( unsigned int i3=0; i3<indentSize; i3++ )
+            for( int i3=0; i3<indentSize; i3++ )
             {
                 TChar * pSpace = new TChar;
                 pSpace->fgColor = format.fgColor;
@@ -434,7 +472,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         int lastSpace = -1;
         int wrapPos = -1;
         int length = buffer[i].size();
-        for( int i2=0; i2<buffer[i].size();  )
+        for( int i2=0; i2<static_cast<int>(buffer[i].size());  )
         {
             if( length-i2 > screenWidth-indent )
             {
@@ -462,7 +500,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
                         break;
                     }
                 }
-                if( i2 >= buffer[i].size() )
+                if( i2 >= static_cast<int>(buffer[i].size()) )
                 {
                     break;
                 }
@@ -513,23 +551,24 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & format )
 {
-    if( buffer.size() <= startLine ) return 0;
+    if( startLine < 0 ) return 0;
+    if( static_cast<int>(buffer.size()) <= startLine ) return 0;
     std::queue<std::deque<TChar *> > queue;
     QStringList tempList;
     int lineCount = 0;
 
-    for( int i=startLine; i<buffer.size(); i++ )
+    for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
     {
         if( i > startLine ) break; //only wrap one line of text
 
-        assert( buffer[i].size() == lineBuffer[i].size() );
+        assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
         std::deque<TChar *> newLine;
         QString lineText;
 
         int indent = 0;
-        if( buffer[i].size() >= screenWidth )
+        if( static_cast<int>(buffer[i].size()) >= screenWidth )
         {
-            for( unsigned int i3=0; i3<indentSize; i3++ )
+            for( int i3=0; i3<indentSize; i3++ )
             {
                 TChar * pSpace = new TChar;
                 pSpace->fgColor = format.fgColor;
@@ -544,8 +583,8 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         }
         int lastSpace = -1;
         int wrapPos = -1;
-        int length = buffer[i].size();
-        for( int i2=0; i2<buffer[i].size();  )
+        int length = static_cast<int>(buffer[i].size());
+        for( int i2=0; i2<static_cast<int>(buffer[i].size());  )
         {
             if( length-i2 > screenWidth-indent )
             {
@@ -573,7 +612,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
                         break;
                     }
                 }
-                if( i2 >= buffer[i].size() )
+                if( i2 >= static_cast<int>(buffer[i].size()) )
                 {
                     break;
                 }
@@ -624,9 +663,9 @@ bool TBuffer::moveCursor( QPoint & where )
     int x = where.x();
     int y = where.y();
     if( y < 0 ) return false;
-    if( y >= buffer.size() ) return false;
+    if( y >= static_cast<int>(buffer.size()) ) return false;
     
-    if( buffer[y].size()-1 >  x )
+    if( static_cast<int>(buffer[y].size())-1 >  x )
     {
         TChar c;
         expandLine( y, x-buffer[y].size()-1, & c );
@@ -648,21 +687,21 @@ int TBuffer::find( int line, QString what, int pos=0 )
 {
     if( lineBuffer[line].size() >= pos ) return -1;
     if( pos < 0 ) return -1;
-    if( ( line >= buffer.size() ) || ( line < 0 ) ) return -1;
+    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return -1;
     return lineBuffer[line].indexOf( what, pos );
 }
 
 
 QStringList TBuffer::split( int line, QString splitter )
 {
-    if( ( line >= buffer.size() ) || ( line < 0 ) ) return QStringList();   
+    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
     return lineBuffer[line].split( splitter );
 }
 
 
 QStringList TBuffer::split( int line, QRegExp splitter )
 {
-    if( ( line >= buffer.size() ) || ( line < 0 ) ) return QStringList();   
+    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
     return lineBuffer[line].split( splitter );
 }
 
@@ -687,7 +726,7 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
-    if( ( x2 > buffer[y2].size() ) || ( x1 > buffer[y1].size() ) )
+    if( ( x2 > static_cast<int>(buffer[y2].size()) ) || ( x1 > static_cast<int>(buffer[y1].size()) ) )
     {
         return false;
     }
@@ -739,13 +778,13 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
 
 bool TBuffer::replace( int line, QString what, QString with )
 {
-    if( ( line >= buffer.size() ) || ( line < 0 ) ) 
+    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) )
         return false;
     lineBuffer[line].replace( what, with );
     
     // fix size of the corresponding format buffer
     
-    int delta = lineBuffer[line].size() - buffer[line].size();
+    int delta = lineBuffer[line].size() - static_cast<int>(buffer[line].size());
     
     if( delta > 0 )
     {
@@ -789,10 +828,10 @@ bool TBuffer::deleteLine( int y )
 bool TBuffer::deleteLines( int from, int to )
 {
     if( ( from >= 0 ) 
-     && ( from < buffer.size() )
+     && ( from < static_cast<int>(buffer.size()) )
      && ( from <= to )   
      && ( to >=0 )
-     && ( to < buffer.size() ) )
+     && ( to < static_cast<int>(buffer.size()) ) )
     {
         int delta = to - from + 1;
         
@@ -800,7 +839,7 @@ bool TBuffer::deleteLines( int from, int to )
         {
             lineBuffer.removeAt( i ); 
             timeBuffer.removeAt( i );
-            for( int k=0; k<buffer[i].size(); k++ )
+            for( int k=0; k<static_cast<int>(buffer[i].size()); k++ )
             {
                 delete buffer[i][k];    
             }
@@ -835,7 +874,7 @@ bool TBuffer::deleteLines( int from, int to )
 bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
 {
     if( ( P_begin.x() >= 0 ) 
-        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
         && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
     {
         for( int y=P_begin.y(); y<=P_end.y(); y++ )
@@ -845,7 +884,7 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
             {
                 x = P_begin.x();
             }
-            while( x < buffer[y].size() ) 
+            while( x < static_cast<int>(buffer[y].size()) )
             {
                 if( y >= P_end.y() )
                 {
@@ -868,7 +907,7 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
 bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, QColor & fgColor )
 {
     if( ( P_begin.x() >= 0 )
-        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
         && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
     {
         for( int y=P_begin.y(); y<=P_end.y(); y++ )
@@ -878,7 +917,7 @@ bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, QColor & fgColor )
             {
                 x = P_begin.x();
             }
-            while( x < buffer[y].size() )
+            while( x < static_cast<int>(buffer[y].size()) )
             {
                 if( y >= P_end.y() )
                 {
@@ -901,7 +940,7 @@ bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, QColor & fgColor )
 bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, QColor & bgColor )
 {
     if( ( P_begin.x() >= 0 )
-        && ( ( P_end.y() < buffer.size() ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
         && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
     {
         for( int y=P_begin.y(); y<=P_end.y(); y++ )
@@ -911,7 +950,7 @@ bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, QColor & bgColor )
             {
                 x = P_begin.x();
             }
-            while( x < buffer[y].size() )
+            while( x < static_cast<int>(buffer[y].size()) )
             {
                 if( y >= P_end.y() )
                 {

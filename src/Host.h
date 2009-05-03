@@ -100,6 +100,12 @@ public:
     void               disableKey( QString & );
     void               killTimer( QString & );
     void               killTrigger( QString & );
+    double             stopStopWatch( int );
+    bool               resetStopWatch( int );
+    bool               startStopWatch( int );
+    double             getStopWatchTime( int );
+    int                createStopWatch();
+
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
     bool               serialize();
@@ -214,9 +220,12 @@ public:
     QMap<QString, QList<TScript *> > mEventHandlerMap;
     QMap<QString, TEvent *> mEventMap;
     bool               mIsAutologin;
-
-        
-    
+    QMap<int,QTime>    mStopWatchMap;
+    int                mBorderTopHeight;
+    int                mBorderBottomHeight;
+    int                mBorderLeftWidth;
+    int                mBorderRightWidth;
+    bool               mUSE_UNIX_EOL;
 };
 #endif
 

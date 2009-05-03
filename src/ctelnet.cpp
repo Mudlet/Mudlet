@@ -169,7 +169,7 @@ void cTelnet::handle_socket_signal_connected()
         mTimerLogin->start(2000);
         mTimerPass->start(3000);
     }
-    
+    /*
     //negotiate some telnet options, if allowed
     string cmd;
     //NAWS (used to send info about window size)
@@ -181,14 +181,14 @@ void cTelnet::handle_socket_signal_connected()
     cmd += TN_DONT;
     cmd += OPT_ECHO;
     socketOutRaw(cmd);
-    setDisplayDimensions();
+    setDisplayDimensions();*/
 }
 
 void cTelnet::handle_socket_signal_disconnected()
 {
     mNeedDecompression = false;
     reset();
-    qDebug()<<"cTelnet::handle_socket_signal_disconnected() SOCKET LOST CONNECTION!";
+    //qDebug()<<"cTelnet::handle_socket_signal_disconnected() SOCKET LOST CONNECTION!";
     QString err = "\nSocket got disconnected. " + socket.errorString();
     postMessage( err );
 }
@@ -219,9 +219,14 @@ bool cTelnet::sendData( QString & data )
         data.replace(QChar('\n'),"");
     }
     string outdata = (outgoingDataCodec->fromUnicode(data)).data();
-    outdata += "\r\n";
+    if( ! mpHost->mUSE_UNIX_EOL )
+    {
+        outdata.append("\r\n");
+    }
+    else
+        outdata += "\n";
     //cout<<"OUT:<"<<outdata<<">"<<endl;
-    return socketOutRaw(outdata);
+    return socketOutRaw( outdata );
 }
 
 
@@ -229,7 +234,7 @@ bool cTelnet::socketOutRaw(string & data)
 {
     if( ! socket.isWritable() )
     {
-        qDebug()<<"MUDLET SOCKET ERROR: socket not connected, but wants to send data="<<data.c_str();
+        //qDebug()<<"MUDLET SOCKET ERROR: socket not connected, but wants to send data="<<data.c_str();
         return false;
     }
     int dataLength = data.length();
@@ -238,9 +243,9 @@ bool cTelnet::socketOutRaw(string & data)
     /*cout << "SOCKET OUT RAW: [ ";
     for(unsigned int i=0;i<data.size();i++)
     {
-  		  		unsigned char c = data[i];
-  				  int ci = 0;
-  				  ci = (int)c;
+        unsigned char c = data[i];
+        int ci = 0;
+        ci = (int)c;
         cout << "<" << ci << "> ";
     }
     cout << " ]" << endl;*/
@@ -252,7 +257,6 @@ bool cTelnet::socketOutRaw(string & data)
         if (written == -1)
         {
             return false;
-            continue;
         }
         remlen -= written;
         dataLength += written;
@@ -364,6 +368,7 @@ void cTelnet::processTelnetCommand (const string &command)
                    if( ( option == OPT_SUPPRESS_GA ) || 
                        ( option == OPT_STATUS ) ||
                        ( option == OPT_TERMINAL_TYPE) || 
+                       ( option == OPT_ECHO ) ||
                        ( option == OPT_NAWS ) )
                    {
                        sendTelnetOption( TN_DO, option );
@@ -801,7 +806,7 @@ void cTelnet::handle_socket_signal_readyRead()
         if( iac || iac2 || insb || (ch == (unsigned char)TN_IAC) )
         {
             unsigned char _ch = ch;
-            //cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
+cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
             if (! (iac || iac2 || insb) && ( ch == (unsigned char)TN_IAC ) )
             {
                 iac = true;

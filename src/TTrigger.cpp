@@ -723,18 +723,18 @@ bool TTrigger::match( char * subject, QString & toMatch, int posOffset )
     {
         if( mIsLineTrigger )
         {
-            if( (mStartOfLineDelta == 0) && (mLineDelta > 0) )
+            if( --mStartOfLineDelta < 0 )
             {
-                mLineDelta--;
+                cout << "executing ID="<<mID<<endl;
                 execute();
-                mpHost->getTriggerUnit()->mCleanupList.push_back( this );
+                if( --mLineDelta <= 0 )
+                {
+                    deactivate();
+                    cout<<"deactivating ID="<<mID<<" anzahl="<<mpHost->getTriggerUnit()->getTriggerRootNodeList().size()<<endl;
+                    mpHost->getTriggerUnit()->mCleanupList.push_back( this );
+                }
                 return true;
             }
-            if( mStartOfLineDelta > 0 )
-            {
-                mStartOfLineDelta--;
-            }
-
             return false;
         }
               

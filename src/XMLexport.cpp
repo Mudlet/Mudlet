@@ -99,12 +99,17 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "printCommand", pT->mPrintCommand ? "yes" : "no" );
     writeAttribute( "USE_IRE_DRIVER_BUGFIX", pT->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no" );
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
+    writeAttribute( "mUSE_UNIX_EOL", pT->mUSE_UNIX_EOL ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
     //writeTextElement( "pass", pT->mPass );
     writeTextElement( "url", pT->mUrl );
     writeTextElement( "port", QString::number(pT->mPort) );
+    writeTextElement( "borderTopHeight", QString::number(pT->mBorderTopHeight) );
+    writeTextElement( "borderBottomHeight", QString::number(pT->mBorderBottomHeight) );
+    writeTextElement( "borderLeftWidth", QString::number(pT->mBorderLeftWidth) );
+    writeTextElement( "borderRightWidth", QString::number(pT->mBorderRightWidth) );
     writeTextElement( "wrapAt", QString::number(pT->mWrapAt) );
     writeTextElement( "wrapIndentCount", QString::number(pT->mWrapIndentCount) );
     writeTextElement( "commandSeperator", pT->mCommandSeperator );

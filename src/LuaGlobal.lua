@@ -130,6 +130,64 @@ function listRemove( list, what )
 		end
 	end
 end
+
+-------------------------------------------------------------------
+--.... some functions from Tichi 2009
+-------------------------------------------------------------------
+-- Gets the actual size of a non-numerical table
+function table.size(t)
+        if not t then
+                return 0
+        end
+
+        local i = 0
+        for k, v in pairs(t) do
+                i = i + 1
+        end
+        return i
+end
+
+-- Checks to see if a file exists
+function io.exists(file)
+        local f = io.open(file)
+        if f then
+                io.close(f)
+                return true
+        end
+        return false
+end
+
+-- Splits a string
+function string:split(delimiter)
+        local result = { }
+        local from  = 1
+        local delim_from, delim_to = string.find( self, delimiter, from  )
+        while delim_from do
+                table.insert( result, string.sub( self, from , delim_from-1 ) )
+                from  = delim_to + 1
+                delim_from, delim_to = string.find( self, delimiter, from  )
+        end
+        table.insert( result, string.sub( self, from  ) )
+        return result
+end
+
+-- Determines if a table contains a value as a key or as a value (recursive)
+function table.contains(t, value)
+        for k, v in pairs(t) do
+                if v == value then
+                        return true
+                elseif k == value then
+                        return true
+                elseif type(v) == "table" then
+                        if table.contains(v, value) then return true end
+                end
+        end
+
+        return false
+end
+
+
+
 -----------------------------------------------------------
 -- some functions from Vadim Peretrokin 2009
 -----------------------------------------------------------

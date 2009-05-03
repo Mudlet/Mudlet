@@ -187,6 +187,7 @@ void TriggerUnit::processDataStream( QString & data )
 
         for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++ )
         {
+            cout << "[SYSTEM:] DELETING Trigger ID="<<(*it)->mID<<endl;
             delete *it;
         }
         mCleanupList.clear();

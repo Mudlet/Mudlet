@@ -41,6 +41,7 @@ class QMenu;
 class QTextEdit;
 class EAction;
 class TConsole;
+class TLabel;
 
 class mudlet : public QMainWindow
 {
@@ -59,23 +60,37 @@ public:
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * ); 
    void                          unregisterTimer( TTimer*, QTimer * ); 
-   void                          openUserWindow( Host *, QString & );
-   void                          echoUserWindow( Host *, QString &, QString & ); 
-   void                          clearUserWindow( Host *, QString & ); 
-   void                          pasteWindow( Host * pHost, QString name ); 
-   void                          userWindowLineWrap( Host * pHost, QString & name, bool on );
+   bool                          openWindow( Host *, QString & );
+   bool                          createMiniConsole( Host *, QString &, int, int, int, int );
+   bool                          createLabel( Host *, QString &, int, int, int, int, bool );
+   bool                          echoWindow( Host *, QString &, QString & );
+   bool                          appendBuffer( Host *, QString & );
+   bool                          createBuffer( Host *, QString & );
+   bool                          showWindow( Host *, QString & );
+   bool                          hideWindow( Host *, QString & );
+   bool                          closeWindow( Host *, QString & );
+   bool                          resizeWindow( Host *, QString &, int, int );
+   bool                          clearWindow( Host *, QString & );
+   bool                          pasteWindow( Host * pHost, QString & name );
+   bool                          setBackgroundColor( QString & name, int r, int g, int b, int alpha );
+   bool                          setBackgroundImage( QString & name, QString & path );
+   bool                          setTextFormat( QString & name, int, int, int, int, int, int, bool, bool, bool );
+   bool                          setLabelClickCallback( Host *, QString &, QString & );
+   bool                          moveWindow( QString & name, int, int );
+   bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
    QString                       readProfileData( QString profile, QString item ); 
    EAction *                     generateAction( QString name, QString icon, QToolBar * );
-   void                          setWindowWrap( Host * pHost, QString & name, int & wrap );
-   void                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
+   bool                          setWindowWrap( Host * pHost, QString & name, int & wrap );
+   bool                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
    void                          bindMenu( QMenu *, EAction * ); 
-   void                          moveCursorEnd( QString & );
+   bool                          moveCursorEnd( QString & );
    bool                          moveCursor( QString &, int, int );
    int                           getLastLineNumber( QString & );
    static TConsole *             mpDebugConsole; 
    static QMainWindow *          mpDebugArea; 
    static bool                   debugMode; 
    QMap<Host *, TConsole *>      mConsoleMap; 
+   QMap<Host *, TLabel *>        mHostLabelMap;
    QIcon *                       testicon; 
    bool                          isGoingDown() { return mIsGoingDown; }
 
@@ -124,6 +139,7 @@ private:
    static                        mudlet * _self;
    QMap<QString, QDockWidget *>  dockWindowMap;
    QMap<QString, TConsole *>     dockWindowConsoleMap;
+   QMap<QString, TLabel *>       mLabelMap;
    QMap<Host *, QToolBar *>      mUserToolbarMap; 
    QMap<QTimer *, TTimer *>      mTimerMap;
    QToolBar *                    mpMainToolBar;

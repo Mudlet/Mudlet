@@ -581,7 +581,6 @@ void dlgConnectionProfiles::writeProfileData( QString profile, QString item, QSt
 
 void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem) 
 {
-    qDebug()<<"slot_item_clicked("<<pItem->text(0)<<")";
     if( pItem )
     {
         QString profile_name = pItem->text( 0 );
@@ -666,17 +665,22 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
         website_entry->setText( val );
         
         profile_history->clear();
-        item = "history_version";
-        QStringList historyList;
-        historyList = readProfileHistory( profile, item );
+        //item = "history_version";
+        //QStringList historyList;
+        /*historyList = readProfileHistory( profile, item );
         QStringList versionList;
         versionList << "Newest Profile";
         for( int i=historyList.size()-1; i>-1; i-- )
         {
             versionList << historyList[i];
         }
-        versionList << "Oldest Profile";
-        profile_history->insertItems( 1, versionList );
+        versionList << "Oldest Profile";*/
+        QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
+        QDir dir( folder );
+        dir.setSorting(QDir::Time);
+        QStringList entries = dir.entryList( QDir::Files, QDir::Time );
+
+        profile_history->insertItems( 1, entries );
         
     }
 }
@@ -781,7 +785,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         qDebug()<<i<<"#"<<entries[i];
     if( entries.size() > 0 )
     {
-        QFile file(folder+"/"+entries[0]);
+        QFile file(folder+"/"+profile_history->currentText());   //entries[0]);
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();

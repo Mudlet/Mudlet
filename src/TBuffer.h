@@ -74,6 +74,7 @@ public:
     bool applyFormat( QPoint &, QPoint &, TChar & format );
     bool applyFgColor( QPoint &, QPoint &, QColor & );
     bool applyBgColor( QPoint &, QPoint &, QColor & );
+    void appendBuffer( TBuffer chunk );
     bool moveCursor( QPoint & where );
     QPoint & insertText( QString & what, QPoint & where );
     int getLastLineNumber();

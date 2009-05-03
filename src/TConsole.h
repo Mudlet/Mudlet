@@ -40,11 +40,13 @@
 #include <QPoint>
 #include "TBuffer.h"
 #include "Host.h"
+#include "TLabel.h"
 
 class Host;
 class mudlet;
 class TTextEdit;
 class TBuffer;
+class TLabel;
 
 class TFontSpecs 
 {
@@ -146,7 +148,7 @@ Q_OBJECT
 
 public:
    
-                        TConsole( Host *, bool isDebugConsole );
+                        TConsole( Host *, bool isDebugConsole, QWidget * parent=0 );
 
       void              reset();
       void              echoUserWindow( QString & );
@@ -159,7 +161,10 @@ public:
       void              copy();
       void              cut();
       void              paste();
+      void              appendBuffer();
+      void              appendBuffer( TBuffer );
       void              closeEvent( QCloseEvent *event );
+      void              resizeEvent( QResizeEvent * event );
       void              pasteWindow( TBuffer );
       void              setUserWindow();
       QStringList       getLines( int from, int to );
@@ -190,7 +195,16 @@ public:
       bool              hasSelection();
       void              moveCursorEnd();
       int               getLastLineNumber();
-      
+      void              refresh();
+      TLabel *          createLabel( QString & name, int x, int y, int width, int height, bool fillBackground );
+      TConsole *        createMiniConsole( QString & name, int x, int y, int width, int height );
+      bool              createButton( QString & name, int x, int y, int width, int height, bool fillBackground );
+      bool              showWindow( QString & name );
+      bool              hideWindow( QString & name );
+      bool              printWindow( QString & name, QString & text );
+      bool              setBackgroundImage( QString & name, QString & path );
+      bool              setBackgroundColor( QString & name, int r, int g, int b, int alpha );
+
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 
@@ -202,7 +216,15 @@ public:
       QWidget *         layerCommandLine;  
       QPushButton *     emergencyStop;
       QLineEdit *       networkLatency;
-    
+      QWidget *         mpMainFrame;
+      TChar             mFormatCurrent;
+      void echoConsole( QString & msg );
+
+      QList<TConsole *> mSubConsoleList;
+      std::map<std::string, TConsole *> mSubConsoleMap;
+      std::map<std::string, TLabel *> mLabelMap;
+      //QMap<QString, TButton *> mButtonMap;
+
 private:
 
       QTime             mProcessingTime;
@@ -216,8 +238,6 @@ private:
       void              set_text_properties( int formatPropertyCode );  
       QString           assemble_html_font_specs();
       QString           mCurrentLine;
-      //QPoint            mP_start;
-      //QPoint            mP_end;
       QPoint            mUserCursor;
       QColor            mCommandFgColor;
       QColor            mCommandBgColor;
@@ -242,7 +262,7 @@ private:
       static const QString     cmLuaLineVariable;
       QPoint            P_begin;
       QPoint            P_end;
-      TChar             mFormatCurrent;
+
       TChar             mFormatBasic;
       TChar             mFormatSystemMessage;
       QFile             mLogFile;
@@ -251,6 +271,13 @@ private:
       QString           mLogFileName;
       int               mDeletedLines;
       int               mEngineCursor;
+
+      QWidget *         mpMainDisplay;
+      int               mMainFrameTopHeight;
+      int               mMainFrameBottomHeight;
+      int               mMainFrameLeftWidth;
+      int               mMainFrameRightWidth;
+      bool              mIsSubConsole;
 
 signals:
     

@@ -403,35 +403,93 @@ int TLuaInterpreter::getColumnNumber( lua_State * L )
     return 1; 
 }
 
-int TLuaInterpreter::userWindowLineWrap( lua_State * L )
+int TLuaInterpreter::getStopWatchTime( lua_State * L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
+    int watchID;
+    if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
     else
-    { 
-        luaSendText = lua_tostring( L, 1 );
+    {
+        watchID = lua_tointeger( L, 1 );
     }
-    
-    bool luaBool;
-    if( ! lua_isboolean( L, 2 ) ) 
-    {    
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    double time = pHost->getStopWatchTime( watchID );
+    lua_pushnumber( L, time );
+    return 1;
+}
+
+int TLuaInterpreter::createStopWatch( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    double watchID = pHost->createStopWatch();
+    lua_pushnumber( L, watchID );
+    return 1;
+}
+
+int TLuaInterpreter::stopStopWatch( lua_State * L )
+{
+    int watchID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
     else
-    { 
-        luaBool = static_cast<bool>(lua_toboolean( L, 2 ));
-    }      
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    QString name( luaSendText.c_str() );
-    mudlet::self()->userWindowLineWrap( pHost, name, luaBool );
-    return 0; 
+    {
+        watchID = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    double time = pHost->stopStopWatch( watchID );
+    lua_pushnumber( L, time );
+    return 1;
+}
+
+int TLuaInterpreter::startStopWatch( lua_State * L )
+{
+    int watchID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        watchID = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    bool b = pHost->startStopWatch( watchID );
+    lua_pushboolean( L, b );
+    return 1;
+}
+
+int TLuaInterpreter::resetStopWatch( lua_State * L )
+{
+    int watchID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        watchID = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    bool b = pHost->resetStopWatch( watchID );
+    lua_pushboolean( L, b );
+    return 1;
+}
+
+
+int TLuaInterpreter::userWindowLineWrap( lua_State * L )
+{
 }
 
 // cusorPositionInLine = selectSection( from_cursorPos, to_cursorPos ) -1 on not found
@@ -735,11 +793,233 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString text(luaSendText.c_str());
-    mudlet::self()->openUserWindow( pHost, text );
+    mudlet::self()->openWindow( pHost, text );
     return 0;
 }
 
-// openUserWindow( session, string window_name )
+int TLuaInterpreter::createMiniConsole( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    int x,y,width,height;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x = lua_tonumber( L, 2 );
+    }
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y = lua_tonumber( L, 3 );
+    }
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        width = lua_tonumber( L, 4 );
+    }
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        height = lua_tonumber( L, 5 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name(luaSendText.c_str());
+    mudlet::self()->createMiniConsole( pHost, name, x, y, width, height );
+    return 0;
+}
+
+int TLuaInterpreter::createLabel( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    int x,y,width,height;
+    bool fillBackground=false;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x = lua_tonumber( L, 2 );
+    }
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y = lua_tonumber( L, 3 );
+    }
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        width = lua_tonumber( L, 4 );
+    }
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        height = lua_tonumber( L, 5 );
+    }
+    if( ! lua_isnumber( L, 6 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fillBackground = lua_toboolean( L, 6 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name(luaSendText.c_str());
+    mudlet::self()->createLabel( pHost, name, x, y, width, height, fillBackground );
+    return 0;
+}
+
+int TLuaInterpreter::createButton( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    int x,y,width,height;
+    bool fillBackground=false;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x = lua_tonumber( L, 2 );
+    }
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y = lua_tonumber( L, 3 );
+    }
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        width = lua_tonumber( L, 4 );
+    }
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        height = lua_tonumber( L, 5 );
+    }
+    if( ! lua_isnumber( L, 6 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fillBackground = lua_toboolean( L, 6 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name(luaSendText.c_str());
+    //TODO FIXME
+    mudlet::self()->createLabel( pHost, name, x, y, width, height, fillBackground );
+    return 0;
+}
+
+
+int TLuaInterpreter::createBuffer( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->createBuffer( pHost, text );
+    return 0;
+}
+
 int TLuaInterpreter::clearUserWindow( lua_State *L )
 {
     string luaSendText="";
@@ -755,8 +1035,404 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString text(luaSendText.c_str());
-    mudlet::self()->clearUserWindow( pHost, text );    
+    mudlet::self()->clearWindow( pHost, text );
     
+    return 0;
+}
+
+int TLuaInterpreter::closeUserWindow( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->closeWindow( pHost, text );
+
+    return 0;
+}
+
+int TLuaInterpreter::hideUserWindow( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->hideWindow( pHost, text );
+
+    return 0;
+}
+
+int TLuaInterpreter::resizeUserWindow( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    double x1;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 2 );
+    }
+    double y1;
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y1 = lua_tonumber( L, 3 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->resizeWindow( pHost, text, static_cast<int>(x1), static_cast<int>(y1) );
+
+    return 0;
+}
+
+int TLuaInterpreter::moveWindow( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    double x1;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 2 );
+    }
+    double y1;
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y1 = lua_tonumber( L, 3 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->moveWindow( text, static_cast<int>(x1), static_cast<int>(y1) );
+
+    return 0;
+}
+
+
+int TLuaInterpreter::setBackgroundColor( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    double x1;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 2 );
+    }
+    double y1;
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y1 = lua_tonumber( L, 3 );
+    }
+    double x2;
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x2 = lua_tonumber( L, 4 );
+    }
+    double y2;
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y2 = lua_tonumber( L, 5 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->setBackgroundColor( text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2) );
+
+    return 0;
+}
+
+int TLuaInterpreter::setBackgroundImage( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    string luaName="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 2 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    QString name(luaName.c_str());
+    mudlet::self()->setBackgroundImage( text, name );
+
+    return 0;
+}
+
+int TLuaInterpreter::setLabelClickCallback( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    string luaName="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 2 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    QString name(luaName.c_str());
+    mudlet::self()->setLabelClickCallback( pHost, text, name );
+
+    return 0;
+}
+
+int TLuaInterpreter::setTextFormat( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+     double x1;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 2 );
+    }
+    double y1;
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y1 = lua_tonumber( L, 3 );
+    }
+    double x2;
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x2 = lua_tonumber( L, 4 );
+    }
+    double y2;
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y2 = lua_tonumber( L, 5 );
+    }
+    double g2;
+    if( ! lua_isnumber( L, 6 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        g2 = lua_tonumber( L, 6 );
+    }
+    double b2;
+    if( ! lua_isnumber( L, 7 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        b2 = lua_tonumber( L, 7 );
+    }
+    double bold;
+    if( ! lua_isnumber( L, 8 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bold = lua_tonumber( L, 8 );
+    }
+    double underline;
+    if( ! lua_isnumber( L, 9 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        underline = lua_tonumber( L, 9 );
+    }
+    double italics;
+    if( ! lua_isnumber( L, 10 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        italics = lua_tonumber( L, 10 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->setTextFormat( text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<bool>(y2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
+
+    return 0;
+}
+
+int TLuaInterpreter::showUserWindow( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    mudlet::self()->showWindow( pHost, text );
+
     return 0;
 }
 
@@ -796,7 +1472,7 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString text(luaSendText.c_str());
     QString windowName(luaWindowName.c_str());
-    mudlet::self()->echoUserWindow( pHost, windowName, text ); 
+    mudlet::self()->echoWindow( pHost, windowName, text );
     return 0;
 }
 
@@ -857,6 +1533,15 @@ int TLuaInterpreter::getNetworkLatency( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::getMainWindowSize( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QSize size = pHost->mpConsole->size();
+    lua_pushnumber( L, size.width() );
+    lua_pushnumber( L, size.height() );
+    return 2;
+}
 
 // tempTimer(int session, float seconds, string function to call, string name) // one shot timer.
 int TLuaInterpreter::tempTimer( lua_State *L )
@@ -1178,19 +1863,38 @@ int TLuaInterpreter::pasteWindow( lua_State *L )
     return 0;
 }
 
-
-int TLuaInterpreter::Send( lua_State * L )
+int TLuaInterpreter::appendBuffer( lua_State *L )
 {
-    string luaSendText="";
+    string luaName;
     if( ! lua_isstring( L, 1 ) )
     {
         lua_pushstring( L, "wrong argument type" );
-		      lua_error( L );
+        lua_error( L );
         return 1;
-		  }
-		  else
+    }
+    else
+    {
+        luaName = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name( luaName.c_str());
+    mudlet::self()->appendBuffer( pHost, name );
+    return 0;
+}
+
+int TLuaInterpreter::Send( lua_State * L )
+{
+    string luaSendText = "";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
     { 
-  		  		luaSendText = lua_tostring( L, 1 );
+        luaSendText = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     pHost->send( QString(luaSendText.c_str()) );    
@@ -1798,6 +2502,29 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "moveCursorEnd", TLuaInterpreter::moveCursorEnd );
     lua_register( pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber );
     lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );
+    lua_register( pGlobalLua, "createMiniConsole", TLuaInterpreter::createMiniConsole );
+    lua_register( pGlobalLua, "createLabel", TLuaInterpreter::createLabel );
+    lua_register( pGlobalLua, "hideWindow", TLuaInterpreter::hideUserWindow );
+    lua_register( pGlobalLua, "showWindow", TLuaInterpreter::showUserWindow );
+    lua_register( pGlobalLua, "createBuffer", TLuaInterpreter::createBuffer );
+    lua_register( pGlobalLua, "createStopWatch", TLuaInterpreter::createStopWatch );
+    lua_register( pGlobalLua, "getStopWatchTime", TLuaInterpreter::getStopWatchTime );
+    lua_register( pGlobalLua, "stopStopWatch", TLuaInterpreter::stopStopWatch );
+    lua_register( pGlobalLua, "startStopWatch", TLuaInterpreter::startStopWatch );
+    lua_register( pGlobalLua, "resetStopWatch", TLuaInterpreter::resetStopWatch );
+    lua_register( pGlobalLua, "closeUserWindow", TLuaInterpreter::closeUserWindow );
+    lua_register( pGlobalLua, "resizeWindow", TLuaInterpreter::resizeUserWindow );
+    lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );
+    lua_register( pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer );
+    lua_register( pGlobalLua, "debug", TLuaInterpreter::debug );
+    lua_register( pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage );
+    lua_register( pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor );
+    lua_register( pGlobalLua, "createButton", TLuaInterpreter::createButton );
+    lua_register( pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback );
+    lua_register( pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow );
+    lua_register( pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat );
+    lua_register( pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize );
+
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
@@ -1837,14 +2564,10 @@ void TLuaInterpreter::slotNewCommand(int hostID, QString cmd)
 
 void TLuaInterpreter::slotOpenUserWindow(int hostID, QString windowName )
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );  
-    mudlet::self()->openUserWindow( pHost, windowName );
 }
 
 void TLuaInterpreter::slotClearUserWindow(int hostID, QString windowName )
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );  
-    mudlet::self()->clearUserWindow( pHost, windowName );
 }
 
 void TLuaInterpreter::slotEnableTimer(int hostID, QString windowName )
@@ -1865,8 +2588,6 @@ void TLuaInterpreter::slotReplace(int hostID, QString text)
 
 void TLuaInterpreter::slotEchoUserWindow(int hostID, QString windowName, QString text )
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );  
-    mudlet::self()->echoUserWindow( pHost, windowName, text );
 }
 
 void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString function, QString timerName )

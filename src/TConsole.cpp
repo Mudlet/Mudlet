@@ -44,13 +44,15 @@
 #include <QGraphicsSimpleTextItem>
 #include "XMLexport.h"
 #include <QShortcut>
+#include "TLabel.h"
 
 using namespace std;
 
 const QString TConsole::cmLuaLineVariable("line");
 
-TConsole::TConsole( Host * pH, bool isDebugConsole ) 
-: mpHost( pH )
+TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
+: QWidget( parent )
+, mpHost( pH )
 , m_fontSpecs( pH )
 , buffer( pH )
 , mIsDebugConsole( isDebugConsole )
@@ -71,6 +73,12 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 , mLogFileName(QString(""))
 , mLogToLogFile( false )
 , networkLatency( new QLineEdit )
+, mpMainFrame( new QWidget(this) )
+, mpMainDisplay( new QWidget( mpMainFrame ) )
+, mMainFrameTopHeight( 0 )
+, mMainFrameBottomHeight( 0 )
+, mMainFrameLeftWidth( 0 )
+, mMainFrameRightWidth( 0 )
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -78,6 +86,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
 
     if( mIsDebugConsole )
     {
+        mIsSubConsole = false;
         mStandardFormat.bgColor = mBgColor;
         mStandardFormat.fgColor = mFgColor;
         mStandardFormat.bold = false;
@@ -86,6 +95,25 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     }
     else
     {
+        if( parent )
+        {
+            mIsSubConsole = true;
+            mpHost->mpConsole->mSubConsoleList.append( this );
+            mMainFrameTopHeight = 0;
+            mMainFrameBottomHeight = 0;
+            mMainFrameLeftWidth = 0;
+            mMainFrameRightWidth = 0;
+            cout<<"initialzed subConsole with border size=0"<<endl;
+        }
+        else
+        {
+            cout << "main console initialzed"<<endl;
+            mIsSubConsole = false;
+            mMainFrameTopHeight = mpHost->mBorderTopHeight;
+            mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
+            mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
+            mMainFrameRightWidth = mpHost->mBorderRightWidth;
+        }
         mStandardFormat.bgColor = mpHost->mBgColor;
         mStandardFormat.fgColor = mpHost->mFgColor;
         mStandardFormat.bold = false;
@@ -101,21 +129,47 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
     mIsHighColorMode = false;
-    
-    QVBoxLayout * layout = new QVBoxLayout( this );
+
+    QPalette mainPalette;
+    mainPalette.setColor( QPalette::Text, QColor(100,255,100) );
+    mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    mainPalette.setColor( QPalette::Window, QColor(255,255,0,80) );
+    //setPalette( mainPalette );
+
+    //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
+    QPalette framePalette;
+    framePalette.setColor( QPalette::Text, QColor(100,255,100) );
+    framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    framePalette.setColor( QPalette::Window, QColor(255,0,0,50) );
+    mpMainFrame->setPalette( framePalette );
+    mpMainFrame->setAutoFillBackground(true);
+    mpMainFrame->setContentsMargins(0,0,0,0);
+    QVBoxLayout * centralLayout = new QVBoxLayout( this );
+    centralLayout->addWidget( mpMainFrame );
+    //mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
+    //                       y - mMainFrameTopHeight - mMainFrameBottomHeight );
+    mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
+
+    mpMainFrame->show();
+    mpMainDisplay->show();
+
+
+    mpMainFrame->setContentsMargins(0,0,0,0);
+    mpMainDisplay->setContentsMargins(0,0,0,0);
+    QVBoxLayout * layout = new QVBoxLayout( mpMainDisplay );
     layout->setContentsMargins(0,0,0,0);
     layout->setSpacing(0);
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy3( QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy2( QSizePolicy::Expanding, QSizePolicy::Fixed);
     
-    mpCommandLine = new TCommandLine( pH, this );
+    mpCommandLine = new TCommandLine( pH, this, mpMainDisplay );
     mpCommandLine->setContentsMargins(0,0,0,0);
     mpCommandLine->setSizePolicy( sizePolicy );
     mpCommandLine->setMaximumHeight( 30 );
     mpCommandLine->setFocusPolicy( Qt::StrongFocus );
     
-    layer = new QWidget( this );
+    layer = new QWidget( mpMainDisplay );
     layer->setContentsMargins(0,0,0,0);
     layer->setSizePolicy( sizePolicy );
     layer->setFocusPolicy( Qt::NoFocus );
@@ -245,8 +299,66 @@ TConsole::TConsole( Host * pH, bool isDebugConsole )
        
     m_fontSpecs.init();
     connect( mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
+
+    this->layout()->setContentsMargins(0,0,0,0);
+    if( mIsSubConsole )
+    {
+        mpScrollBar->hide();
+        console2->hide();
+        layerCommandLine->hide();
+        mpMainFrame->move(0,0);
+        mpMainDisplay->move(0,0);
+    }
+    if( mIsDebugConsole )
+    {
+        layerCommandLine->hide();
+    }
     changeColors();
+cout << "[SYSTEM:] main console initialized successfully"<<endl;
 }
+
+void TConsole::resizeEvent( QResizeEvent * event )
+{
+    cout <<"[TEST] TConsole::resizeEvent()"<<endl;
+    if( ! mIsDebugConsole && ! mIsSubConsole )
+    {
+        mMainFrameTopHeight = mpHost->mBorderTopHeight;
+        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
+        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
+        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+    }
+    int x = event->size().width();
+    int y = event->size().height();
+    mpMainFrame->resize( x, y );
+    mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
+                           y - mMainFrameTopHeight - mMainFrameBottomHeight );
+    mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
+    /*for( int i=0; i<mSubConsoleList.size(); i++ )
+    {
+        cout << "[RESIZING subConsole]"<<endl;
+        mSubConsoleList[i]->resizeEvent( event );
+    }*/
+
+    QWidget::resizeEvent( event );
+}
+
+void TConsole::refresh()
+{
+    if( ! mIsDebugConsole )
+    {
+        mMainFrameTopHeight = mpHost->mBorderTopHeight;
+        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
+        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
+        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+    }
+    int x = mpMainFrame->size().width();
+    int y = mpMainFrame->size().height();
+    mpMainFrame->resize( x, y );
+    mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
+                           y - mMainFrameTopHeight - mMainFrameBottomHeight );
+    mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
+}
+
 
 void TConsole::closeEvent( QCloseEvent *event )
 {
@@ -1489,6 +1601,161 @@ void TConsole::printDebug( QString & msg )
     console->showNewLines();
 }
 
+TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width, int height )
+{
+    qDebug()<<"name="<<name;
+    cout << "TConsole::createMiniConsole() enter"<<endl;
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
+    {
+        cout<<"calling new TConsole()"<<endl;
+        TConsole * pC = new TConsole(mpHost, false, mpMainFrame );
+        cout << "TConsole::createMiniConsole() new TConsole() returned"<<endl;
+        if( ! pC )
+        {
+            cout << "TConsole::createMiniConsole() ERROR: cant new TConsole"<<endl;
+            return 0;
+        }
+        mSubConsoleMap[key] = pC;
+        pC->setUserWindow();
+        //pC->setAutoFillBackground(false);
+        pC->resize( width, height );
+        pC->setContentsMargins(0,0,0,0);
+        cout << "going to move"<<endl;
+        pC->move( x, y );
+        cout << "going to show"<<endl;
+        pC->show();
+        return pC;
+    }
+    else
+    {
+        cout << "error: exiting "<<endl;
+        return 0;
+    }
+}
+
+TLabel * TConsole::createLabel( QString & name, int x, int y, int width, int height, bool fillBackground )
+{
+    std::string key = name.toLatin1().data();
+    if( mLabelMap.find( key ) == mLabelMap.end() )
+    {
+        TLabel * pC = new TLabel( mpMainFrame );
+        mLabelMap[key] = pC;
+        pC->setAutoFillBackground( fillBackground );
+        pC->resize( width, height );
+        pC->setContentsMargins(0,0,0,0);
+        pC->move( x, y );
+        pC->show();
+        return pC;
+    }
+    else
+        return 0;
+}
+
+bool TConsole::createButton( QString & name, int x, int y, int width, int height, bool fillBackground )
+{
+    std::string key = name.toLatin1().data();
+    if( mLabelMap.find( key ) == mLabelMap.end() )
+    {
+        TLabel * pC = new TLabel( mpMainFrame );
+        mLabelMap[key] = pC;
+        pC->setAutoFillBackground( fillBackground );
+        pC->resize( width, height );
+        pC->setContentsMargins(0,0,0,0);
+        pC->move( x, y );
+        pC->show();
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TConsole::setBackgroundImage( QString & name, QString & path )
+{
+    std::string key = name.toLatin1().data();
+    if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        QPixmap bgPixmap( path );
+        mLabelMap[key]->setPixmap( bgPixmap );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TConsole::setBackgroundColor( QString & name, int r, int g, int b, int alpha )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        QPalette mainPalette;
+        mainPalette.setColor( QPalette::Window, QColor(r, g, b, alpha) );
+        mSubConsoleMap[key]->setPalette( mainPalette );
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        QPalette mainPalette;
+        mainPalette.setColor( QPalette::Window, QColor(r, g, b, alpha) );
+        mLabelMap[key]->setPalette( mainPalette );
+        return true;
+    }
+    else
+        return false;
+
+}
+
+bool TConsole::showWindow( QString & name )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        mSubConsoleMap[key]->show();
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        mLabelMap[key]->show();
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TConsole::hideWindow( QString & name )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        mSubConsoleMap[key]->hide();
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        mLabelMap[key]->hide();
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TConsole::printWindow( QString & name, QString & text )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        mSubConsoleMap[key]->print( text );
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        mLabelMap[key]->setText( text );
+        return true;
+    }
+    else
+        return false;
+}
+
 void TConsole::print( QString & msg )
 {
     int lineBeforeNewContent = buffer.getLastLineNumber();
@@ -1567,6 +1834,18 @@ void TConsole::pasteWindow( TBuffer bufferSlice )
 {
     mClipboard = bufferSlice;
     paste();
+}
+
+void TConsole::appendBuffer()
+{
+    buffer.appendBuffer( mClipboard );
+    console->showNewLines();
+}
+
+void TConsole::appendBuffer( TBuffer bufferSlice )
+{
+    buffer.appendBuffer( bufferSlice );
+    console->showNewLines();
 }
 
 void TConsole::slot_user_scrolling( int action )

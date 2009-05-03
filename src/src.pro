@@ -72,7 +72,8 @@ SOURCES += TConsole.cpp \
     FontManager.cpp \
     TFlipButton.cpp \
     TToolBar.cpp \
-    mudlet.cpp
+    mudlet.cpp \
+    TLabel.cpp
 HEADERS += mudlet.h \
     TTimer.h \
     EAction.h \
@@ -122,10 +123,10 @@ HEADERS += mudlet.h \
     TToolBar.h \
     TBuffer.h \
     TriggerUnit.h \
-    Tree.h
+    Tree.h \
+    TLabel.h
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
-    ui/main_window.ui \
     ui/trigger_editor.ui \
     ui/options_area_triggers.ui \
     ui/options_area_timers.ui \

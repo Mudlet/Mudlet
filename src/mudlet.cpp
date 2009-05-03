@@ -40,6 +40,7 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 
+using namespace std;
 
 TConsole *  mudlet::mpDebugConsole = 0;
 QMainWindow * mudlet::mpDebugArea = 0;
@@ -191,9 +192,7 @@ mudlet::mudlet()
     QIcon noIcon;
     mdiArea->setWindowIcon( noIcon );
     mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
-    
-    
-    
+
     connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -213,11 +212,9 @@ mudlet::mudlet()
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
-    
-   
+       
     qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
-        
-    
+
 }
 
 void mudlet::addConsoleForNewHost( Host * pH )
@@ -259,14 +256,14 @@ void mudlet::addConsoleForNewHost( Host * pH )
             (*it)->setTitleBarWidget( noTitleBar );
         }
         (*it)->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
-        switch( head->mLocation )
+        /*switch( head->mLocation )
         {
             case 0: addDockWidget( Qt::TopDockWidgetArea, *it ); break;
             case 1: addDockWidget( Qt::BottomDockWidgetArea, *it ); break;
             case 2: addDockWidget( Qt::LeftDockWidgetArea, *it ); break;    
             case 3: addDockWidget( Qt::RightDockWidgetArea, *it ); break;    
         
-        }
+        }*/
         if( head->mLocation == 4 )
         {
             addDockWidget( Qt::LeftDockWidgetArea, *it ); //float toolbar
@@ -278,7 +275,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
             (*it)->recordMove();
         }
         else
-            (*it)->show();
+            (*it)->hide();
     } 
 }
 
@@ -321,7 +318,7 @@ void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
     }
 }
 
-void mudlet::openUserWindow( Host * pHost, QString & name )
+bool mudlet::openWindow( Host * pHost, QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
@@ -339,17 +336,211 @@ void mudlet::openUserWindow( Host * pHost, QString & name )
         pC->setUserWindow();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
+        return true;
     }
+    else return false;
 }
 
-void mudlet::clearUserWindow( Host * pHost, QString & name )
+bool mudlet::createMiniConsole( Host * pHost, QString & name, int x, int y, int width, int height )
 {
-    if( dockWindowMap.contains( name ) )
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
+    if( ! dockWindowConsoleMap.contains( name ) )
+    {
+        cout << "calling createMiniConsole()"<<endl;
+        TConsole * pC = pHost->mpConsole->createMiniConsole( name, x, y, width, height );
+        cout << "ok returned from createMiniConsole()"<<endl;
+        if( pC )
+        {
+            dockWindowConsoleMap[name] = pC;
+            return true;
+        }
+        else
+            return false;
+    }
+    else
+        return false;
+}
+
+bool mudlet::createLabel( Host * pHost, QString & name, int x, int y, int width, int height, bool fillBg )
+{
+    if( ! mLabelMap.contains( name ) )
+    {
+        TLabel * pL = pHost->mpConsole->createLabel( name, x, y, width, height, fillBg );
+        if( pL )
+        {
+            mLabelMap[name] = pL;
+            return true;
+        }
+        else
+            return false;
+    }
+    else
+        return false;
+}
+
+
+bool mudlet::createBuffer( Host * pHost, QString & name )
+{
+    if( ! dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = new TConsole( pHost, false );
+        pC->setContentsMargins(0,0,0,0);
+        pC->show();
+        pC->layerCommandLine->hide();
+        pC->mpScrollBar->hide();
+        pC->setUserWindow();
+        dockWindowConsoleMap[name] = pC;
+//TODO
+        return true;
+    }
+    else return false;
+}
+
+bool mudlet::setBackgroundColor( QString & name, int r, int g, int b, int alpha )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        QPalette mainPalette;
+        mainPalette.setColor( QPalette::Window, QColor(r, g, b, alpha) );
+        dockWindowConsoleMap[name]->setPalette( mainPalette );
+        return true;
+    }
+    else if( mLabelMap.contains( name ) )
+    {
+        QPalette mainPalette;
+        mainPalette.setColor( QPalette::Window, QColor(r, g, b, alpha) );
+        mLabelMap[name]->setPalette( mainPalette );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::setBackgroundImage( QString & name, QString & path )
+{
+    if( mLabelMap.contains( name ) )
+    {
+        QPixmap bgPixmap( path );
+        mLabelMap[name]->setPixmap( bgPixmap );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::setTextFormat( QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->mFormatCurrent.bgColor = QColor(r1,g1,b1);
+        pC->mFormatCurrent.fgColor = QColor(r2,g2,b2);
+        pC->mFormatCurrent.bold = bold;
+        pC->mFormatCurrent.underline = underline;
+        pC->mFormatCurrent.italics = italics;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::clearWindow( Host * pHost, QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
     { 
         dockWindowConsoleMap[name]->buffer.clear(); 
-        dockWindowConsoleMap[name]->console->repaint();
+        dockWindowConsoleMap[name]->console->update();//repaint();
+        return true;
     }
-    else TDebug()<<"ERROR: window doesnt exit" >> 0;
+    else
+        return false;
+}
+
+bool mudlet::showWindow( Host * pHost, QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->console->show();
+        return true;
+    }
+    else if( mLabelMap.contains( name ) )
+    {
+        mLabelMap[name]->show();
+        return true;
+    }
+    else return false;
+}
+
+bool mudlet::hideWindow( Host * pHost, QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->console->hide();
+        return true;
+    }
+    else if( mLabelMap.contains( name ) )
+    {
+        mLabelMap[name]->hide();
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::resizeWindow( Host * pHost, QString & name, int x1, int y1 )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->resize( x1, y1 );
+        return true;
+    }
+    else if( mLabelMap.contains( name ) )
+    {
+        mLabelMap[name]->resize( x1, y1 );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::moveWindow( QString & name, int x1, int y1 )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->move( x1, y1 );
+        return true;
+    }
+    else if( mLabelMap.contains( name ) )
+    {
+        mLabelMap[name]->move( x1, y1 );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::closeWindow( Host * pHost, QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->console->close();
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::setLabelClickCallback( Host * pHost, QString & name, QString & func )
+{
+    if( mLabelMap.contains( name ) )
+    {
+        mLabelMap[name]->setScript( pHost, func );
+        return true;
+    }
+    else
+        return false;
 }
 
 int mudlet::getLastLineNumber( QString & name )
@@ -362,73 +553,86 @@ int mudlet::getLastLineNumber( QString & name )
     return -1;
 }
 
-void mudlet::moveCursorEnd( QString & name )
+bool mudlet::moveCursorEnd( QString & name )
 {
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->moveCursorEnd();
+        return true;
     }
-    else TDebug()<<"ERROR: window doesnt exit" >> 0;
+    else
+        return false;
 }
 
 bool mudlet::moveCursor( QString & name, int x, int y )
 {
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     {
-        dockWindowConsoleMap[name]->moveCursor( x, y );
+        return dockWindowConsoleMap[name]->moveCursor( x, y );
     }
-    else TDebug()<<"ERROR: window doesnt exit" >> 0;
+    else
+        return false;
 }
 
-void mudlet::userWindowLineWrap( Host * pHost, QString & name, bool on )
-{
-    //FIXME
-    /* if( dockWindowMap.contains( name ) )
-    { 
-        if( ! on ) dockWindowConsoleMap[name]->textEdit->setLineWrapMode( QPlainTextEdit::NoWrap );    
-        else dockWindowConsoleMap[name]->textEdit->setLineWrapMode( QPlainTextEdit::WidgetWidth );    
-    }
-    else qDebug()<<"ERROR: window doesnt exit";*/
-}
-
-void mudlet::setWindowWrap( Host * pHost, QString & name, int & wrap )
+bool mudlet::setWindowWrap( Host * pHost, QString & name, int & wrap )
 {
     QString wn = name;
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     { 
         dockWindowConsoleMap[wn]->setWrapAt( wrap );    
+        return true;
     }
-    else TDebug()<<"ERROR: user window '"<<name<<"' doesnt exit">>0;
+    else
+        return false;
 }
 
-void mudlet::setWindowWrapIndent( Host * pHost, QString & name, int & wrap )
+bool mudlet::setWindowWrapIndent( Host * pHost, QString & name, int & wrap )
 {
     QString wn = name;
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     { 
         dockWindowConsoleMap[wn]->setIndentCount( wrap );    
+        return true;
     }
-    else TDebug()<<"ERROR: user window '"<<name<<"' doesnt exit">>0;
+    else
+        return false;
 }
 
-void mudlet::echoUserWindow( Host * pHost, QString & name, QString & text )
+bool mudlet::echoWindow( Host * pHost, QString & name, QString & text )
 {
     QString wn = name;
     QString t=text;
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     { 
-        dockWindowConsoleMap[wn]->echoUserWindow( t );    
+        dockWindowConsoleMap[wn]->echoUserWindow( t );
+        return true;
     }
-    else TDebug()<<"ERROR: user window '"<<name<<"' doesnt exit">>0;
+    else if( mLabelMap.contains( name ) )
+    {
+        mLabelMap[wn]->setText( t );
+        return true;
+    }
+    else return false;
 }
 
-void mudlet::pasteWindow( Host * pHost, QString name )
+bool mudlet::pasteWindow( Host * pHost, QString & name )
 {
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     { 
-        dockWindowConsoleMap[name]->pasteWindow( mConsoleMap[pHost]->mClipboard );    
+        dockWindowConsoleMap[name]->pasteWindow( mConsoleMap[pHost]->mClipboard );
+        return true;
     }
-    else qDebug()<<"ERROR: window doesnt exit";
+    else return false;
+}
+
+bool mudlet::appendBuffer( Host * pHost, QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->appendBuffer( mConsoleMap[pHost]->mClipboard );
+        return true;
+    }
+    else return false;
 }
 
 void mudlet::slot_userToolBar_hovered( QAction* pA )

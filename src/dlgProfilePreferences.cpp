@@ -55,6 +55,8 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
     connect(pushButton_display_font, SIGNAL(clicked()), this, SLOT(setDisplayFont()));
     connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
+    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBoderColor()));
+    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBoderImage()));
 
     Host * pHost = mudlet::self()->getActiveHost();
     if( pHost )
@@ -71,11 +73,16 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
         
         checkBox_USE_IRE_DRIVER_BUGFIX->setChecked( pHost->mUSE_IRE_DRIVER_BUGFIX );
         checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked( pHost->mUSE_FORCE_LF_AFTER_PROMPT );
+        USE_UNIX_EOL->setChecked( pHost->mUSE_UNIX_EOL );
         QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
         if( file_use_smallscreen.exists() )
             checkBox_USE_SMALL_SCREEN->setChecked( true );
         else 
             checkBox_USE_SMALL_SCREEN->setChecked( false );
+        topBorderHeight->setValue(pHost->mBorderTopHeight);
+        bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
+        leftBorderWidth->setValue(pHost->mBorderLeftWidth);
+        rightBorderWidth->setValue(pHost->mBorderRightWidth);
     }
 }
 
@@ -472,6 +479,11 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
     pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
+    pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
+    pHost->mBorderTopHeight = topBorderHeight->value();
+    pHost->mBorderBottomHeight = bottomBorderHeight->value();
+    pHost->mBorderLeftWidth = leftBorderWidth->value();
+    pHost->mBorderRightWidth = rightBorderWidth->value();
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {
         QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
@@ -484,8 +496,10 @@ void dlgProfilePreferences::slot_save_and_exit()
        QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
        file_use_smallscreen.remove();
     }
+
     pHost->mpConsole->console->updateScreenView();
     pHost->mpConsole->console->forceUpdate();
+    pHost->mpConsole->refresh();
     close();
 }
 

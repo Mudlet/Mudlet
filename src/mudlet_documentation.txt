@@ -1059,7 +1059,7 @@ Mudlet defines several global Lua variables that are accessible from anywhere.
 |matches[n]|This Lua table is being used by Mudlet in the context of triggers that use Perl regular expressions. matches[1] holds the entire match, matches[2] holds the first capture group, matches[n] holds the n-th capture group. 
 
 If the trigger uses the Perl style /g switch to evaluate *all* possible matches of the given regex within the current line, matches[n+1] will hold the second entire match, matches[n+2] the first capture group of the second match and matches[n+m] the m-th capture group of the second match.
-|multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 4th capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
+|multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
 |===================================================
 
 .Main Functions
@@ -1176,11 +1176,45 @@ Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 [width="100%",frame="topbot",options="header"]
 |===================================================
 | Function | Description
-| latency = getNetworkLatency()|returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)
-| watchID = requestStopWatch() | return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
-| startStopWatch( watchID ) | start the stop watch
-| stopStopWatch( watchID ) | stops the stop watch
-| time = getTimeStopWatch( watchID ) | returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)
+|createBuffer( name )|creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work
+|appendBuffer( name )|like paste() but pastes at the end of the buffer/window and wraps new text automatically
+|showUserWindow( name )|shows user window name
+|hideUserWindow( name )|hides user window name
+|resizeUserWindow( name, x1, y1, x2, y2 )|resizes window name to x1/y1 and x2/y2 vectors
+|closeUserWindow( name )|closes a named window and delete it.
+|latency = getNetworkLatency()|returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)
+|watchID = createStopWatch() | return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
+|startStopWatch( watchID ) | start the stop watch
+|time = stopStopWatch( watchID ) | stops the stop watch and returns elapsed time in milliseconds in form of 0.001
+|resetStopWatch( watchID ) | resets the time to 0:0:0:0
+|time = getStopWatchTime( watchID ) | returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)
+|debug( text )|print text to debug console
+|appendBuffer( name, text )|append text at the end of temp buffer name (fast function)
+|setWindowWrap( windowName, wrapAt )|sets at what position in the line the console or miniconsole will start word wrap
+|createMiniConsole( name, posX, posY, width, height )|opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy/cut/paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing. 
+|createLabel( name, posX, posY, width, height, fillBackground)|labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. *DON'T* use labels for larger text displays because they are a lot slower than the highspeed mini consoles
+|hideWindow( name )| hides a user window, button or label
+|showWindow( name )| shows a window, button or label
+|resizeWindow( name, width, height )|resizes a user window, button or label
+|setBackgroundImage( labelName, imageFileName )|loads an image file (png) as a background image for a label. This can be used to display clickable images etc.
+|setBackgroundColor( red, green, blue, alpha )|sets rgb color values + an alpha channel for the level of transperancy of the background color 0=completely transparent, 255=no transparency values in between specify the level of transparency.
+|setLabelClickCallback( labelName, luaFunctionName )|specify a lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )
+|createButton( ... )|
+|echoUserWindow( windowName )|This function will print text to both mini console windows, dock windows and labels. Note that labels accept rich text formats (= html = very slow -> don't use this if the text is updated often! In this case use a mini console instead)
+|width, height = getMainWindowSize()|return window width and window height ( function with 2 return values ) to calculate the window dimensions and placement of custom gui toolkit items like labels, buttons, mini consoles etc.
+|setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )|sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
+example: 
+----
+createMiniConsole( "con1", 0,0,300,100);
+setTextFormat("con1",0,0,255,255,255,0,1,1,1); 
+echoUserWindow("con1","This is a test")
+----
+This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
+|table.size( tableName )|Gets the actual size of a non-numerical table
+|io.exists(file)|Checks to see if a file exists
+|string:split(delimiter)|Splits a string
+|table.contains(t, value)|Determines if a table contains a value as a key or as a value (recursive)
+
 |===================================================
 
 

@@ -320,6 +320,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mPrintCommand = ( attributes().value("printCommand") == "yes" );
     pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
     pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
+    pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
 
     while( ! atEnd() ) 
     {
@@ -333,16 +334,6 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mHostName = readElementText();
                 continue;
             }
-            /*else if( name() == "login")
-            {
-                pT->mLogin = readElementText();
-                continue;
-            }
-            else if( name() == "pass")
-            {
-                pT->mPass = readElementText();
-                continue;
-            }*/
             else if( name() =="url" )
             {
                 pT->mUrl = readElementText();
@@ -353,7 +344,27 @@ void XMLimport::readHostPackage( Host * pT )
             {
                 pT->mPort = readElementText().toInt();
                 continue;
-            }            
+            }
+            else if( name() == "borderTopHeight")
+            {
+                pT->mBorderTopHeight = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "borderBottomHeight")
+            {
+                pT->mBorderBottomHeight = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "borderLeftWidth")
+            {
+                pT->mBorderLeftWidth = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "borderRightWidth")
+            {
+                pT->mBorderRightWidth = readElementText().toInt();
+                continue;
+            }
             else if( name() == "wrapAt")
             {
                 pT->mWrapAt = readElementText().toInt();

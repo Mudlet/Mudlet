@@ -22,8 +22,8 @@
 #include "TConsole.h"
 #include "TTextEdit.h"
 
-TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole ) 
-: QLineEdit( (QWidget *) pConsole )
+TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent )
+: QLineEdit( parent )
 , mpHost( pHost )
 , mpConsole( pConsole )
 , mSelectionStart( 0 )

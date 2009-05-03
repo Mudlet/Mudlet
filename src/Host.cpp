@@ -85,6 +85,11 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mScreenWidth( 90 )
 , mScreenHeight( 25 )
 , mUSE_FORCE_LF_AFTER_PROMPT( false )
+, mBorderTopHeight( 0 )
+, mBorderBottomHeight( 0 )
+, mBorderLeftWidth( 0 )
+, mBorderRightWidth( 0 )
+, mUSE_UNIX_EOL( false )
 {
 }
 
@@ -200,6 +205,59 @@ QString Host::getBufferLine( int line )
     text = mTextBufferList[mTextBufferList.size()-1-line];
     return text;
 } */
+
+int Host::createStopWatch()
+{
+    int newWatchID = mStopWatchMap.size()+1;
+    mStopWatchMap[newWatchID] = QTime(0,0,0,0);
+    return newWatchID;
+}
+
+double Host::getStopWatchTime( int watchID )
+{
+    if( mStopWatchMap.contains( watchID ) )
+    {
+        return static_cast<double>(mStopWatchMap[watchID].elapsed()/1000);
+    }
+    else
+    {
+        return -1.0;
+    }
+}
+
+bool Host::startStopWatch( int watchID )
+{
+    if( mStopWatchMap.contains( watchID ) )
+    {
+        mStopWatchMap[watchID].start();
+        return true;
+    }
+    else
+        return false;
+}
+
+double Host::stopStopWatch( int watchID )
+{
+    if( mStopWatchMap.contains( watchID ) )
+    {
+        return static_cast<double>(mStopWatchMap[watchID].elapsed()/1000);
+    }
+    else
+    {
+        return -1.0;
+    }
+}
+
+bool Host::resetStopWatch( int watchID )
+{
+    if( mStopWatchMap.contains( watchID ) )
+    {
+        mStopWatchMap[watchID].setHMS(0,0,0,0);
+        return true;
+    }
+    else
+        return false;
+}
 
 void Host::incomingStreamProcessor( QString & data, QString & prompt )
 {
