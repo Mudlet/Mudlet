@@ -17282,7 +17282,7 @@ cellspacing="0" cellpadding="4">
 </tr>
 <tr>
 <td align="left"><p class="table">multimatches[n][m]</p></td>
-<td align="left"><p class="table">This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 4th capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <a href="#example1">example</a>.</p></td>
+<td align="left"><p class="table">This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <a href="#example1">example</a>.</p></td>
 </tr>
 </tbody>
 </table>
@@ -17640,11 +17640,35 @@ cellspacing="0" cellpadding="4">
 </thead>
 <tbody valign="top">
 <tr>
+<td align="left"><p class="table">createBuffer( name )</p></td>
+<td align="left"><p class="table">creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">appendBuffer( name )</p></td>
+<td align="left"><p class="table">like paste() but pastes at the end of the buffer/window and wraps new text automatically</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">showUserWindow( name )</p></td>
+<td align="left"><p class="table">shows user window name</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">hideUserWindow( name )</p></td>
+<td align="left"><p class="table">hides user window name</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">resizeUserWindow( name, x1, y1, x2, y2 )</p></td>
+<td align="left"><p class="table">resizes window name to x1/y1 and x2/y2 vectors</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">closeUserWindow( name )</p></td>
+<td align="left"><p class="table">closes a named window and delete it.</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">latency = getNetworkLatency()</p></td>
 <td align="left"><p class="table">returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">watchID = requestStopWatch()</p></td>
+<td align="left"><p class="table">watchID = createStopWatch()</p></td>
 <td align="left"><p class="table">return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines</p></td>
 </tr>
 <tr>
@@ -17652,12 +17676,99 @@ cellspacing="0" cellpadding="4">
 <td align="left"><p class="table">start the stop watch</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">stopStopWatch( watchID )</p></td>
-<td align="left"><p class="table">stops the stop watch</p></td>
+<td align="left"><p class="table">time = stopStopWatch( watchID )</p></td>
+<td align="left"><p class="table">stops the stop watch and returns elapsed time in milliseconds in form of 0.001</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">time = getTimeStopWatch( watchID )</p></td>
+<td align="left"><p class="table">resetStopWatch( watchID )</p></td>
+<td align="left"><p class="table">resets the time to 0:0:0:0</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">time = getStopWatchTime( watchID )</p></td>
 <td align="left"><p class="table">returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">debug( text )</p></td>
+<td align="left"><p class="table">print text to debug console</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">appendBuffer( name, text )</p></td>
+<td align="left"><p class="table">append text at the end of temp buffer name (fast function)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setWindowWrap( windowName, wrapAt )</p></td>
+<td align="left"><p class="table">sets at what position in the line the console or miniconsole will start word wrap</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">createMiniConsole( name, posX, posY, width, height )</p></td>
+<td align="left"><p class="table">opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy/cut/paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">createLabel( name, posX, posY, width, height, fillBackground)</p></td>
+<td align="left"><p class="table">labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. <strong>DON&#8217;T</strong> use labels for larger text displays because they are a lot slower than the highspeed mini consoles</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">hideWindow( name )</p></td>
+<td align="left"><p class="table">hides a user window, button or label</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">showWindow( name )</p></td>
+<td align="left"><p class="table">shows a window, button or label</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">resizeWindow( name, width, height )</p></td>
+<td align="left"><p class="table">resizes a user window, button or label</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setBackgroundImage( labelName, imageFileName )</p></td>
+<td align="left"><p class="table">loads an image file (png) as a background image for a label. This can be used to display clickable images etc.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setBackgroundColor( red, green, blue, alpha )</p></td>
+<td align="left"><p class="table">sets rgb color values + an alpha channel for the level of transperancy of the background color 0=completely transparent, 255=no transparency values in between specify the level of transparency.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setLabelClickCallback( labelName, luaFunctionName )</p></td>
+<td align="left"><p class="table">specify a lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">createButton( &#8230; )</p></td>
+<td align="left"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">echoUserWindow( windowName )</p></td>
+<td align="left"><p class="table">This function will print text to both mini console windows, dock windows and labels. Note that labels accept rich text formats (= html = very slow &#8594; don&#8217;t use this if the text is updated often! In this case use a mini console instead)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">width, height = getMainWindowSize()</p></td>
+<td align="left"><p class="table">return window width and window height ( function with 2 return values ) to calculate the window dimensions and placement of custom gui toolkit items like labels, buttons, mini consoles etc.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )</p></td>
+<td align="left"><p class="table">sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
+example:
+----
+createMiniConsole( "con1", 0,0,300,100);
+setTextFormat("con1",0,0,255,255,255,0,1,1,1);
+echoUserWindow("con1","This is a test")
+----
+This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">table.size( tableName )</p></td>
+<td align="left"><p class="table">Gets the actual size of a non-numerical table</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">io.exists(file)</p></td>
+<td align="left"><p class="table">Checks to see if a file exists</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">string:split(delimiter)</p></td>
+<td align="left"><p class="table">Splits a string</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">table.contains(t, value)</p></td>
+<td align="left"><p class="table">Determines if a table contains a value as a key or as a value (recursive)</p></td>
 </tr>
 </tbody>
 </table>
@@ -17871,7 +17982,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-04-22 01:17:03 CEST
+Last updated 2009-05-03 11:07:00 CEST
 </div>
 </div>
 </body>
