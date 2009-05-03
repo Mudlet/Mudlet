@@ -103,11 +103,9 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
             mMainFrameBottomHeight = 0;
             mMainFrameLeftWidth = 0;
             mMainFrameRightWidth = 0;
-            cout<<"initialzed subConsole with border size=0"<<endl;
         }
         else
         {
-            cout << "main console initialzed"<<endl;
             mIsSubConsole = false;
             mMainFrameTopHeight = mpHost->mBorderTopHeight;
             mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
@@ -133,14 +131,14 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QPalette mainPalette;
     mainPalette.setColor( QPalette::Text, QColor(100,255,100) );
     mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    mainPalette.setColor( QPalette::Window, QColor(255,255,0,80) );
+    mainPalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     //setPalette( mainPalette );
 
     //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
     QPalette framePalette;
     framePalette.setColor( QPalette::Text, QColor(100,255,100) );
     framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    framePalette.setColor( QPalette::Window, QColor(255,0,0,50) );
+    framePalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     mpMainFrame->setPalette( framePalette );
     mpMainFrame->setAutoFillBackground(true);
     mpMainFrame->setContentsMargins(0,0,0,0);
@@ -238,6 +236,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     networkLatency->setMaximumWidth( 120 );
     networkLatency->setMinimumWidth( 120 );
     networkLatency->setAutoFillBackground( false );
+    networkLatency->setContentsMargins(0,0,0,0);
     QPalette lagPalette;
     //lagPalette.setColor( QPalette::Text, QColor(100,255,100) );
     //lagPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
@@ -486,12 +485,14 @@ void TConsole::changeColors()
 void TConsole::setConsoleBgColor( int r, int g, int b )
 {
     mBgColor = QColor(r,g,b);
+    console->setConsoleBgColor( r, g, b );
     changeColors();
 }
 
 void TConsole::setConsoleFgColor( int r, int g, int b )
 {
     mFgColor = QColor(r,g,b);
+    console->setConsoleFgColor( r, g, b );
     changeColors();
 }
 
@@ -1788,9 +1789,9 @@ void TConsole::print( QString & msg )
     buffer.append(  msg, 
                     mFormatCurrent.fgColor,
                     mFormatCurrent.bgColor, 
-                    false, 
-                    false,
-                    false );
+                    mFormatCurrent.bold,
+                    mFormatCurrent.underline,
+                    mFormatCurrent.italics );
     buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatCurrent );
     console->showNewLines();
 }

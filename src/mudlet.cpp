@@ -435,9 +435,9 @@ bool mudlet::setTextFormat( QString & name, int r1, int g1, int b1, int r2, int 
         TConsole * pC = dockWindowConsoleMap[name];
         pC->mFormatCurrent.bgColor = QColor(r1,g1,b1);
         pC->mFormatCurrent.fgColor = QColor(r2,g2,b2);
-        pC->mFormatCurrent.bold = bold;
-        pC->mFormatCurrent.underline = underline;
-        pC->mFormatCurrent.italics = italics;
+        pC->mFormatCurrent.bold = true;
+        pC->mFormatCurrent.underline = true;
+        pC->mFormatCurrent.italics = true;
         return true;
     }
     else
