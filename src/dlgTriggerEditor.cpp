@@ -20,7 +20,7 @@
 
 #include "dlgTriggerEditor.h"
 #include "Host.h"
-#include <qsciscintillabase.h>
+//#include <qsciscintillabase.h>
 #include "HostManager.h"
 #include "TriggerUnit.h"
 #include "TTrigger.h"

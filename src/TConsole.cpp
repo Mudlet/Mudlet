@@ -1518,7 +1518,7 @@ int TConsole::select( QString text, int numOfMatch )
     int begin = 0;
     for( int i=0;i<numOfMatch; i++ )
     {
-        begin = buffer.line( mUserCursor.y() ).indexOf( text, begin );
+        begin = buffer.line( mUserCursor.y() ).indexOf( text, begin+1 );
         
         if( begin == -1 )
         {
@@ -1529,6 +1529,7 @@ int TConsole::select( QString text, int numOfMatch )
             return -1;
         }
     }   
+
     int end = begin + text.size();
     P_begin.setX( begin );
     P_begin.setY( mUserCursor.y() );
