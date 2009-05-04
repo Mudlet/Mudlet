@@ -62,7 +62,8 @@ XMLimport.cpp
 FontManager.cpp
 TToolBar.cpp
 TFlipButton.cpp
-TBuffer.cpp)
+TBuffer.cpp
+TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
 ui/console.ui
@@ -114,7 +115,8 @@ dlgAboutDialog.h
 dlgKeysMainArea.h
 dlgProfilePreferences.h
 TToolBar.h
-TTextEdit.h)
+TTextEdit.h
+TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)
 FIND_PACKAGE(Lua51 REQUIRED)
