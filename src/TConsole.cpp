@@ -1515,7 +1515,7 @@ int TConsole::select( QString text, int numOfMatch )
     if( mudlet::debugMode ) 
         TDebug() << "\nline under current user cursor: "<<mUserCursor.y()<<"#:" << buffer.line( mUserCursor.y() ) << "\n" >> 0;
     
-    int begin = 0;
+    int begin = -1;
     for( int i=0;i<numOfMatch; i++ )
     {
         begin = buffer.line( mUserCursor.y() ).indexOf( text, begin+1 );

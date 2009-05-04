@@ -163,7 +163,6 @@ int TLuaInterpreter::select( lua_State * L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     int pos = pHost->mpConsole->select( QString( luaSendText.c_str() ), luaNumOfMatch );
-    cout << "luaNumOfMatch="<<luaNumOfMatch<<" pos="<<pos<<endl;
     lua_pushnumber( L, pos );
     return 1;
 }
