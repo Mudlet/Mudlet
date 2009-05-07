@@ -134,14 +134,14 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mIsHighColorMode = false;
 
     QPalette mainPalette;
-    mainPalette.setColor( QPalette::Text, QColor(100,255,100) );
+    mainPalette.setColor( QPalette::Text, QColor(0,0,0) );
     mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     mainPalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     //setPalette( mainPalette );
 
     //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
     QPalette framePalette;
-    framePalette.setColor( QPalette::Text, QColor(100,255,100) );
+    framePalette.setColor( QPalette::Text, QColor(0,0,0) );
     framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     framePalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     mpMainFrame->setPalette( framePalette );

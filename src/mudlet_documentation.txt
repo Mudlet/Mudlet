@@ -265,7 +265,7 @@ Perl Style Regular Expression: You pick up (\d+) gold
 ----
 And in your code, the variables +matches[2]+ will contain the amount of gold you picked up (in this case, _16_). So now to say outloud how much gold did you loot, you can do the following:
 ----
-Script: echo("I got " .. matches[2] " gold!")
+Script: echo("I got " .. matches[2] .. " gold!")
 ----
 
 ===== More advanced example
@@ -367,7 +367,9 @@ Finally, you create a *new empty* profile in Mudlet and import all your sub pack
 
 [[variables]]
 == Using Variables in Mudlet
-One of the major design goals in Mudlet was to integrate scripts and variables as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients. If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias a key, an event handler, a free function etc. it can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (connection) runs in its own dedicated Lua interpreter. Consequently, all scripts are compiled into the same Lua interpreter and thus their code runs in the same variable space.
+Using Variables in Mudlet
+
+One of the major design goals in Mudlet was to integrate scripts and variables as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients, as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients. If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias key, an event handler, a free function, etc. It can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (connection) runs in its own dedicated Lua interpreter. Consequently, all scripts are compiled into the same Lua interpreter and thus their code runs in the same variable space.
 [[diag_variables]]
 [icon="./images/icons/diag_variables.png"]
 NOTE: Everything shares the same variables & functions.

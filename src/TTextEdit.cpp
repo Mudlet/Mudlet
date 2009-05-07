@@ -89,6 +89,9 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     
     setMouseTracking( true );
     setFocusPolicy( Qt::WheelFocus );
+    QCursor cursor;
+    cursor.setShape(Qt::IBeamCursor);
+    setCursor( cursor );
     setAutoFillBackground( true ); //experimental
     setAttribute( Qt::WA_InputMethodEnabled, true );
     setAttribute( Qt::WA_OpaquePaintEvent );

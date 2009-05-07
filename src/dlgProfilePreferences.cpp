@@ -494,7 +494,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderRightWidth = rightBorderWidth->value();
     mudlet::self()->mMainIconSize = MainIconSize->value();
     mudlet::self()->mTEFolderIconSize = TEFolderIconSize->value();
-    mudlet::self()->writeSettings();
+    mudlet::self()->setIcoSize(MainIconSize->value());
     pHost->mpEditorDialog->setTBIconSize( 0 );
 
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
