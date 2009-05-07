@@ -148,20 +148,18 @@ void cTelnet::handle_socket_signal_error()
 
 void cTelnet::slot_send_login()
 {
-    qDebug()<<"sending login";
     sendData( mpHost->getLogin() );    
 }
 
 void cTelnet::slot_send_pass()
 {
-    qDebug()<<"sending pass";
     sendData( mpHost->getPass() );
 }
 
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
-    QString msg = "A connection has been established successfully.\n";
+    QString msg = "A connection has been established successfully.";
     postMessage( msg );
     
     if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0) )
@@ -188,7 +186,6 @@ void cTelnet::handle_socket_signal_disconnected()
 {
     mNeedDecompression = false;
     reset();
-    //qDebug()<<"cTelnet::handle_socket_signal_disconnected() SOCKET LOST CONNECTION!";
     QString err = "\nSocket got disconnected. " + socket.errorString();
     if( ! mpHost->mIsGoingDown )
     {
@@ -287,7 +284,7 @@ void cTelnet::setDisplayDimensions()
     int y = mpHost->mScreenHeight;
     if(myOptionState[OPT_NAWS])
     {
-        cout<<"TELNET: sending NAWS:"<<x<<"x"<<y<<endl;
+        //cout<<"TELNET: sending NAWS:"<<x<<"x"<<y<<endl;
         string s;
         s = (char) TN_IAC;
         s += (char) TN_SB;
@@ -809,7 +806,9 @@ void cTelnet::handle_socket_signal_readyRead()
         if( iac || iac2 || insb || (ch == (unsigned char)TN_IAC) )
         {
             unsigned char _ch = ch;
-cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
+            #ifdef DEBUG
+                cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
+            #endif
             if (! (iac || iac2 || insb) && ( ch == (unsigned char)TN_IAC ) )
             {
                 iac = true;
@@ -817,14 +816,14 @@ cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
             }
             else if (iac && (ch == (unsigned char)TN_IAC) && (!insb)) 
             {
-          		  		//2. seq. of two IACs
+                //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
                 command = "";
             }
             else if(iac && (!insb) && ((ch == (unsigned char)TN_WILL) || (ch == (unsigned char)TN_WONT) || (ch == (unsigned char)TN_DO) || (ch == (unsigned char)TN_DONT)))
             {
-          		  		//3. IAC DO/DONT/WILL/WONT
+                //3. IAC DO/DONT/WILL/WONT
                 iac = false;
                 iac2 = true;
                 command += ch;

@@ -67,7 +67,7 @@ mudlet::mudlet()
 {
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
-
+    setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle("Mudlet Beta 10pre3 - built: May-06-2009");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
@@ -249,6 +249,7 @@ void mudlet::slot_close_profile()
         {
             QString name = mpCurrentActiveHost->getName();
             Host * pH = mpCurrentActiveHost;
+            mpCurrentActiveHost->mpEditorDialog->close();
             mConsoleMap[mpCurrentActiveHost]->close();
             if( mTabMap.contains( pH->getName() ) )
             {
@@ -790,7 +791,10 @@ EAction * mudlet::generateAction( QString name, QString icon, QToolBar * pT )
 void mudlet::closeEvent(QCloseEvent *event)
 {
     goingDown();
-
+    if( mpDebugConsole )
+    {
+        mpDebugConsole->close();
+    }
     foreach( TConsole * pC, mConsoleMap )
     {
         if( pC->mpHost->getName() != "default_host" )
@@ -807,14 +811,9 @@ void mudlet::closeEvent(QCloseEvent *event)
         } 
     }
 
-    if( mpDebugConsole )
-    {
-        mpDebugConsole->setAttribute( Qt::WA_DeleteOnClose );
-        mpDebugConsole->close();
-    }
-
-    writeSettings();
     event->accept();
+    writeSettings();
+    qApp->quit();
 }
 
 

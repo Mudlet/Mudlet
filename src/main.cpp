@@ -139,7 +139,6 @@ int main(int argc, char *argv[])
     
     mudlet::debugMode = false;
     HostManager::self();
-    //HostManager::self()->restore();  
     FontManager fm;
     fm.addFonts();
     mudlet::self()->show();
@@ -150,7 +149,7 @@ int main(int argc, char *argv[])
     while( t.elapsed() < 1500 ){}
     splash.finish( mudlet::self() );
     app.exec();
-    //HostManager::self()->serialize();
+    qDebug()<<"*** Have a nice day! ***";
 }
 
 

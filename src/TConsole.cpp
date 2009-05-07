@@ -366,6 +366,21 @@ void TConsole::refresh()
 
 void TConsole::closeEvent( QCloseEvent *event )
 {
+    if( mIsDebugConsole )
+    {
+        if( ! mudlet::self()->isGoingDown() )
+        {
+            hide();
+            event->ignore();
+            return;
+        }
+        else
+        {
+            event->accept();
+            return;
+        }
+    }
+
     if( profile_name != "default_host" )
     {
         ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No );
