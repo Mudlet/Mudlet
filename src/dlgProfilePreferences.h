@@ -24,6 +24,7 @@
 #include "ui_profile_preferences.h"
 #include <QDialog>
 
+class Host;
 
 class dlgProfilePreferences : public QDialog , public Ui::profile_preferences
 {
@@ -31,7 +32,7 @@ class dlgProfilePreferences : public QDialog , public Ui::profile_preferences
 
 public:
 
-    dlgProfilePreferences( QWidget * );
+    dlgProfilePreferences( QWidget *, Host * );
 
 signals:
 
@@ -63,5 +64,6 @@ public slots:
 
 private:
     void setColors();
+    Host * mpHost;
 };
 #endif

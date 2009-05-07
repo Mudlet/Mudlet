@@ -86,6 +86,8 @@ public:
    bool                          moveCursorEnd( QString & );
    bool                          moveCursor( QString &, int, int );
    int                           getLastLineNumber( QString & );
+   void                          readSettings();
+   void                          writeSettings();
    static TConsole *             mpDebugConsole; 
    static QMainWindow *          mpDebugArea; 
    static bool                   debugMode; 
@@ -93,6 +95,9 @@ public:
    QMap<Host *, TLabel *>        mHostLabelMap;
    QIcon *                       testicon; 
    bool                          isGoingDown() { return mIsGoingDown; }
+   int                           mMainIconSize;
+   int                           mTEFolderIconSize;
+   void                          setIcoSize( int s );
 
 public slots:      
     
@@ -115,6 +120,8 @@ protected:
 
 private slots:
    
+   void                          slot_close_profile();
+   void                          slot_tab_changed( int );
    void                          show_help_dialog(); 
    void                          connectToServer();
    void                          show_trigger_dialog();
@@ -128,14 +135,14 @@ private slots:
 private:
 
    void                          goingDown() { mIsGoingDown = true; }
+   QMap<QString, TConsole *>         mTabMap;
+   QTabBar *                     mpTabBar;
+   QWidget *                     mainPane;
 
-   QMdiArea *                    mdiArea;
-   void                          readSettings();
-   void                          writeSettings();
    Host *                        mpDefaultHost; 
-   QQueue<QString> tempLoginQueue;
-   QQueue<QString> tempPassQueue;
-   QQueue<Host *>  tempHostQueue;
+   QQueue<QString>               tempLoginQueue;
+   QQueue<QString>               tempPassQueue;
+   QQueue<Host *>                tempHostQueue;
    static                        mudlet * _self;
    QMap<QString, QDockWidget *>  dockWindowMap;
    QMap<QString, TConsole *>     dockWindowConsoleMap;
@@ -145,6 +152,7 @@ private:
    QToolBar *                    mpMainToolBar;
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
+   Host *                        mpCurrentActiveHost;
 };
 
 #endif

@@ -39,6 +39,8 @@
 #include "XMLimport.h"
 #include "EAction.h"
 #include "TTextEdit.h"
+//#define NDEBUG
+#include <assert.h>
 
 using namespace std;
 
@@ -61,35 +63,52 @@ mudlet * mudlet::self()
 mudlet::mudlet() 
 : QMainWindow()
 , mIsGoingDown( false )
+, mpCurrentActiveHost( 0 )
 {
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
-    QVBoxLayout * layout = new QVBoxLayout( this );
-    layout->setContentsMargins(0,0,0,0);
+
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet Beta 9 - built: April-17-2009");
+    setWindowTitle("Mudlet Beta 10pre3 - built: May-06-2009");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
-    
     addToolBar( mpMainToolBar );
-	restoreBar = menuBar()->addMenu( "" );
+    restoreBar = menuBar()->addMenu( "" );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
-    
-    mdiArea = new QMdiArea( this );
-    mdiArea->setContentsMargins(0,0,0,0);
-    mdiArea->setViewMode( QMdiArea::TabbedView );
-    mdiArea->setSizePolicy( sizePolicy );
+    QWidget * frame = new QWidget( this );
+    frame->setFocusPolicy( Qt::NoFocus );
+    setCentralWidget( frame );
+    mpTabBar = new QTabBar( frame );
+    mpTabBar->setMaximumHeight(30);
+    mpTabBar->setFocusPolicy( Qt::NoFocus );
+    connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
+    QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
+    layoutTopLevel->setContentsMargins(0,0,0,0);
+    layoutTopLevel->setContentsMargins(0,0,0,0);
+    layoutTopLevel->addWidget( mpTabBar );
+    mainPane = new QWidget( frame );
+    QPalette mainPalette;
+    mainPalette.setColor( QPalette::Text, QColor(100,255,100) );
+    mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    mainPalette.setColor( QPalette::Window, QColor(250,150,0,50) );
+    mainPane->setPalette( mainPalette );
+    mainPane->setAutoFillBackground(true);
+    mainPane->setFocusPolicy( Qt::NoFocus );
+    layoutTopLevel->addWidget( mainPane );
+    QHBoxLayout * layout = new QHBoxLayout( mainPane );
     layout->setContentsMargins(0,0,0,0);
-    layout->addWidget(mdiArea);
-    setCentralWidget( mdiArea );
+    layout->setContentsMargins(0,0,0,0);
+    //layout->addWidget(mainPane);
+
+    mainPane->setContentsMargins(0,0,0,0);
+    mainPane->setSizePolicy( sizePolicy );
+    mainPane->setFocusPolicy( Qt::NoFocus );
 
     QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
     if( file_use_smallscreen.exists() )
     {
         mpMainToolBar->setIconSize(QSize(16,16));
-        mdiArea->setTabPosition( QTabWidget::East );
-        mdiArea->setTabShape( QTabWidget::Triangular );
     }
     else
     {
@@ -122,9 +141,7 @@ mudlet::mudlet()
     actionScripts->setEnabled( true );
     actionScripts->setStatusTip(tr("Show Scripts"));
     mpMainToolBar->addAction( actionScripts );
-    
-    
-    
+
     QAction * actionKeys = new QAction(QIcon(":/icons/preferences-desktop-keyboard.png"), tr("Keys"), this);
     actionKeys->setStatusTip(tr("Options"));
     actionKeys->setEnabled( true );
@@ -161,6 +178,13 @@ mudlet::mudlet()
     actionAbout->setStatusTip(tr("About"));
     mpMainToolBar->addAction( actionAbout );
     
+    QAction * actionCloseProfile = new QAction(QIcon(":/icons/window-close.png"), tr("Close"), this);
+    actionScripts->setEnabled( true );
+    actionScripts->setStatusTip(tr("close connection"));
+    mpMainToolBar->addAction( actionCloseProfile );
+
+
+
     mpDebugArea = new QMainWindow(0);
     HostManager::self()->addHost("default_host", "", "","" );  
     mpDefaultHost = HostManager::self()->getHost(QString("default_host"));
@@ -188,11 +212,10 @@ mudlet::mudlet()
     }
     QFont mdiFont = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
     setFont( mainFont );
-    mdiArea->setFont( mdiFont );
+    mainPane->setFont( mainFont );
+    mpTabBar->setFont( mdiFont );
     QIcon noIcon;
-    mdiArea->setWindowIcon( noIcon );
-    mdiArea->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
-
+    mainPane->show();
     connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -205,7 +228,8 @@ mudlet::mudlet()
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
     connect(actionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     //connect(actionStopAllTriggers, SIGNAL(triggered()), this, SLOT(slot_stopAllTriggers()));
-    
+    connect(actionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
+
     readSettings();
     
     QTimer * timerAutologin = new QTimer( this );
@@ -213,24 +237,103 @@ mudlet::mudlet()
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
        
-    qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
+    //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
 
+}
+
+void mudlet::slot_close_profile()
+{
+    if( mpCurrentActiveHost )
+    {
+        if( mConsoleMap.contains( mpCurrentActiveHost ) )
+        {
+            QString name = mpCurrentActiveHost->getName();
+            Host * pH = mpCurrentActiveHost;
+            mConsoleMap[mpCurrentActiveHost]->close();
+            if( mTabMap.contains( pH->getName() ) )
+            {
+                mpTabBar->removeTab( mpTabBar->currentIndex() );
+                mConsoleMap.remove( pH );
+                HostManager::self()->deleteHost( pH->getName() );
+                mTabMap.remove( pH->getName() );
+            }
+        }
+    }
+}
+
+void mudlet::slot_tab_changed( int tabID )
+{
+    if( ( ! mTabMap.contains( mpTabBar->tabText( tabID ) ) ) && ( tabID != -1 ) )
+    {
+        mpCurrentActiveHost = 0;
+        return;
+    }
+
+    if( mConsoleMap.contains( mpCurrentActiveHost ) )
+    {
+        mpCurrentActiveHost->mpConsole->hide();
+        QString host = mpTabBar->tabText( tabID );
+        if( mTabMap.contains( host ) )
+        {
+            mpCurrentActiveHost = mTabMap[host]->mpHost;
+        }
+        else
+        {
+            mpCurrentActiveHost = 0;
+            return;
+        }
+    }
+    else
+    {
+        if( mTabMap.size() > 0 )
+        {
+            mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
+        }
+        else
+        {
+            mpCurrentActiveHost = 0;
+            return;
+        }
+    }
+
+    if( ! mpCurrentActiveHost || mConsoleMap.contains( mpCurrentActiveHost ) )
+    {
+        if( ! mpCurrentActiveHost ) return;
+        mpCurrentActiveHost->mpConsole->show();
+        mpCurrentActiveHost->mpConsole->repaint();
+        mpCurrentActiveHost->mpConsole->refresh();
+        mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
+        mpCurrentActiveHost->mpConsole->show();
+    }
+    else
+    {
+        mpCurrentActiveHost = 0;
+        return;
+    }
 }
 
 void mudlet::addConsoleForNewHost( Host * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
     TConsole * pConsole = new TConsole( pH, false );
+    if( ! pConsole ) return;
     pH->mpConsole = pConsole;
-    
     pConsole->setWindowTitle( pH->getName() );
     mConsoleMap[pH] = pConsole;
-
-    mdiArea->addSubWindow( pConsole );
-    
+    int newTabID = mpTabBar->addTab( pH->getName() );
+    mTabMap[pH->getName()] = pConsole;
+    if( mConsoleMap.size() > 1 )
+    {
+        mpTabBar->show();
+    }
+    else
+        mpTabBar->hide();
+    mainPane->layout()->addWidget( pConsole );
+    if( mpCurrentActiveHost )
+        mpCurrentActiveHost->mpConsole->hide();
+    mpCurrentActiveHost = pH;
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
-    mdiArea->show();
     
     dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH );
     pH->mpEditorDialog = pEditor;
@@ -348,9 +451,7 @@ bool mudlet::createMiniConsole( Host * pHost, QString & name, int x, int y, int 
 
     if( ! dockWindowConsoleMap.contains( name ) )
     {
-        cout << "calling createMiniConsole()"<<endl;
         TConsole * pC = pHost->mpConsole->createMiniConsole( name, x, y, width, height );
-        cout << "ok returned from createMiniConsole()"<<endl;
         if( pC )
         {
             dockWindowConsoleMap[name] = pC;
@@ -387,7 +488,7 @@ bool mudlet::createBuffer( Host * pHost, QString & name )
     {
         TConsole * pC = new TConsole( pHost, false );
         pC->setContentsMargins(0,0,0,0);
-        pC->show();
+        pC->hide();
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
@@ -449,7 +550,7 @@ bool mudlet::clearWindow( Host * pHost, QString & name )
     if( dockWindowConsoleMap.contains( name ) )
     { 
         dockWindowConsoleMap[name]->buffer.clear(); 
-        dockWindowConsoleMap[name]->console->update();//repaint();
+        dockWindowConsoleMap[name]->console->update();
         return true;
     }
     else
@@ -625,6 +726,8 @@ bool mudlet::pasteWindow( Host * pHost, QString & name )
 
 bool mudlet::appendBuffer( Host * pHost, QString & name )
 {
+    for(int i=0;i<dockWindowConsoleMap.size();i++)
+        qDebug()<<"window "<<i;
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->appendBuffer( mConsoleMap[pHost]->mClipboard );
@@ -664,24 +767,19 @@ void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
 
 Host * mudlet::getActiveHost()
 {
-    if( mConsoleMap.size() < 1 ) return 0;
-    if( mdiArea->activeSubWindow()->widget() == mpDebugConsole )
+    if( mConsoleMap.contains( mpCurrentActiveHost ) )
     {
-        return 0;
+        return mpCurrentActiveHost;
     }
     else
-    {
-        TConsole * pConsole = (TConsole *)mdiArea->activeSubWindow()->widget();
-        Host * pH = pConsole->getHost();
-        return pH;
-    }
+        return 0;
 }
 
 
 
 void mudlet::addSubWindow( TConsole* pConsole ) 
 {  
-    mdiArea->addSubWindow( pConsole );
+    mainPane->layout()->addWidget( pConsole );
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
 }
 
@@ -720,14 +818,25 @@ void mudlet::closeEvent(QCloseEvent *event)
 }
 
 
-
 void mudlet::readSettings()
 {
     QSettings settings("Mudlet", "Mudlet 1.0");
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
+    mMainIconSize = settings.value("mainiconsize",QVariant(32)).toInt();
+    mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(32)).toInt();
     resize( size );
     move( pos );
+    setIcoSize( mMainIconSize );
+}
+
+void mudlet::setIcoSize( int s )
+{
+    mpMainToolBar->setIconSize(QSize(s*8,s*8));
+    if( mMainIconSize > 2 )
+        mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+    else
+        mpMainToolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
 }
 
 void mudlet::writeSettings()
@@ -735,6 +844,8 @@ void mudlet::writeSettings()
     QSettings settings("Mudlet", "Mudlet 1.0");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue("mainiconsize", mMainIconSize);
+    settings.setValue("tefoldericonsize",mTEFolderIconSize);
 }
 
 void mudlet::connectToServer()
@@ -815,7 +926,7 @@ void mudlet::show_options_dialog()
 {
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
-    dlgProfilePreferences * pDlg = new dlgProfilePreferences( this );
+    dlgProfilePreferences * pDlg = new dlgProfilePreferences( this, pHost );
     if( ! pDlg ) return;
     pDlg->show();
 }
@@ -946,7 +1057,12 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
 
 void mudlet::slot_multi_view()
 {
-    mdiArea->tileSubWindows();    
+     QMapIterator<Host *, TConsole *> it( mConsoleMap );
+     while( it.hasNext() )
+     {
+         it.next();
+         it.value()->show();
+     }
 }
 
 void mudlet::slot_stopAllTriggers()

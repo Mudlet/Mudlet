@@ -409,7 +409,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     //addTriggerGroupMenu->addAction( addFiltersGroupMenuAction );
     
     addFolderAction->setMenu( addTriggerGroupMenu );
-    toolBar->setIconSize(QSize(32,32));
+    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
     toolBar->addAction( viewTriggerAction );
     toolBar->addAction( viewAliasAction );
     toolBar->addAction( viewScriptsAction );
@@ -483,6 +483,18 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSearchArea->hide();
     
     readSettings();
+    setTBIconSize( 0 );
+}
+
+void dlgTriggerEditor::setTBIconSize( int s )
+{
+    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    treeWidget->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    treeWidget_alias->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    treeWidget_timers->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    treeWidget_scripts->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    treeWidget_keys->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    treeWidget_actions->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
 }
     
 void dlgTriggerEditor::slot_choseButtonColor()

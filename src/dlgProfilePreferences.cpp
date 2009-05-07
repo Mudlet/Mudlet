@@ -29,7 +29,9 @@
 #include "mudlet.h"
 #include "TTextEdit.h"
 
-dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
+dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
+: QDialog( pF )
+, mpHost( pH )
 {
     // init generated dialog
     setupUi(this);
@@ -58,7 +60,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
     connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBoderColor()));
     connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBoderImage()));
 
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( pHost )
     {
         setColors();
@@ -83,12 +85,14 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF ):QDialog( pF )
         bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
         leftBorderWidth->setValue(pHost->mBorderLeftWidth);
         rightBorderWidth->setValue(pHost->mBorderRightWidth);
+        MainIconSize->setValue(mudlet::self()->mMainIconSize);
+        TEFolderIconSize->setValue(mudlet::self()->mTEFolderIconSize);
     }
 }
 
 void dlgProfilePreferences::setColors()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;
 
     QPalette palette;
@@ -168,12 +172,11 @@ void dlgProfilePreferences::setColors()
 
 void dlgProfilePreferences::resetColors()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;
 
     pHost->mFgColor       = QColor(255,255,255);
     pHost->mBgColor       = QColor(  0,  0,  0);
-    if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
     pHost->mBlack         = QColor(  0,  0,  0);
     pHost->mLightBlack    = QColor(128,128,128);
     pHost->mRed           = QColor(128,  0,  0);
@@ -192,10 +195,14 @@ void dlgProfilePreferences::resetColors()
     pHost->mLightWhite    = QColor(255,255,255);
 
     setColors();
+    if( mudlet::self()->mConsoleMap.contains( pHost ) )
+    {
+        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    }
 }
 void dlgProfilePreferences::setFgColor()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mFgColor, this );
     if ( color.isValid() )
@@ -209,7 +216,7 @@ void dlgProfilePreferences::setFgColor()
 }
 void dlgProfilePreferences::setBgColor()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mBgColor, this );
     if ( color.isValid() )
@@ -224,33 +231,34 @@ void dlgProfilePreferences::setBgColor()
 
 void dlgProfilePreferences::setDisplayFont()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     bool ok;
     QFont font = QFontDialog::getFont(&ok, pHost->mDisplayFont, this);
     pHost->mDisplayFont = font;
     if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
     {
-        qDebug()<<"OK font changed";
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
 }
 void dlgProfilePreferences::setCommandLineFont()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     bool ok;
     QFont font = QFontDialog::getFont( &ok, pHost->mCommandLineFont, this );
     pHost->mCommandLineFont = font;
     if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
+    {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
+    }
     
 }
 
 
 void dlgProfilePreferences::setColorBlack()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mBlack, this );
     if ( color.isValid() )
@@ -264,7 +272,7 @@ void dlgProfilePreferences::setColorBlack()
 
 void dlgProfilePreferences::setColorLightBlack()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightBlack, this );
     if ( color.isValid() )
@@ -278,7 +286,7 @@ void dlgProfilePreferences::setColorLightBlack()
 
 void dlgProfilePreferences::setColorRed()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mRed, this );
     if ( color.isValid() )
@@ -292,7 +300,7 @@ void dlgProfilePreferences::setColorRed()
 
 void dlgProfilePreferences::setColorLightRed()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightRed, this );
     if ( color.isValid() )
@@ -306,7 +314,7 @@ void dlgProfilePreferences::setColorLightRed()
 
 void dlgProfilePreferences::setColorGreen()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mGreen, this );
     if ( color.isValid() )
@@ -319,7 +327,7 @@ void dlgProfilePreferences::setColorGreen()
 }
 void dlgProfilePreferences::setColorLightGreen()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightGreen, this );
     if ( color.isValid() )
@@ -333,7 +341,7 @@ void dlgProfilePreferences::setColorLightGreen()
 
 void dlgProfilePreferences::setColorBlue()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mBlue, this );
     if ( color.isValid() )
@@ -346,7 +354,7 @@ void dlgProfilePreferences::setColorBlue()
 }
 void dlgProfilePreferences::setColorLightBlue()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightBlue, this );
     if ( color.isValid() )
@@ -360,7 +368,7 @@ void dlgProfilePreferences::setColorLightBlue()
 
 void dlgProfilePreferences::setColorYellow()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mYellow, this );
     if ( color.isValid() )
@@ -373,7 +381,7 @@ void dlgProfilePreferences::setColorYellow()
 }
 void dlgProfilePreferences::setColorLightYellow()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightYellow, this );
     if ( color.isValid() )
@@ -387,7 +395,7 @@ void dlgProfilePreferences::setColorLightYellow()
 
 void dlgProfilePreferences::setColorCyan()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mCyan, this );
     if ( color.isValid() )
@@ -400,7 +408,7 @@ void dlgProfilePreferences::setColorCyan()
 }
 void dlgProfilePreferences::setColorLightCyan()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightCyan, this );
     if ( color.isValid() )
@@ -414,7 +422,7 @@ void dlgProfilePreferences::setColorLightCyan()
 
 void dlgProfilePreferences::setColorMagenta()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mMagenta, this );
     if ( color.isValid() )
@@ -427,7 +435,7 @@ void dlgProfilePreferences::setColorMagenta()
 }
 void dlgProfilePreferences::setColorLightMagenta()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightMagenta, this );
     if ( color.isValid() )
@@ -441,7 +449,7 @@ void dlgProfilePreferences::setColorLightMagenta()
 
 void dlgProfilePreferences::setColorWhite()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mWhite, this );
     if ( color.isValid() )
@@ -454,7 +462,7 @@ void dlgProfilePreferences::setColorWhite()
 }
 void dlgProfilePreferences::setColorLightWhite()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;    
     QColor color = QColorDialog::getColor( pHost->mLightWhite, this );
     if ( color.isValid() )
@@ -468,7 +476,7 @@ void dlgProfilePreferences::setColorLightWhite()
 
 void dlgProfilePreferences::slot_save_and_exit()
 {
-    Host * pHost = mudlet::self()->getActiveHost();
+    Host * pHost = mpHost;
     if( ! pHost ) return;
     pHost->mWrapAt = wrap_at_spinBox->value();
     pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
@@ -484,6 +492,11 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
+    mudlet::self()->mMainIconSize = MainIconSize->value();
+    mudlet::self()->mTEFolderIconSize = TEFolderIconSize->value();
+    mudlet::self()->writeSettings();
+    pHost->mpEditorDialog->setTBIconSize( 0 );
+
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {
         QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );

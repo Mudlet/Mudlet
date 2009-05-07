@@ -30,7 +30,7 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 , mSelectedText( "" )
 {
     mpKeyUnit = mpHost->getKeyUnit();
-
+    setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
     QFont font("Courier New", 10, QFont::Courier);
@@ -41,6 +41,8 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
     mRegularPalette.setColor(QPalette::Base,QColor(255,255,225));
     
+    setPalette( mRegularPalette );
+
     mTabCompletionPalette.setColor(QPalette::Text,QColor(0,0,192));
     mTabCompletionPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mTabCompletionPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));

@@ -462,7 +462,7 @@ end
 --  Functions are saved via string.dump, so make sure it has no upvalues
 --  References are saved
 --
-
+--[[
 function table.save( sfile, t )
  if t == nil then t = _G end
  local tables = {}
@@ -563,7 +563,7 @@ function table.unpickle( t, tables, tcopy, pickled )
   tcopy[i2] = v2
  end
 end
-
+]]--
 
 -- Replaces the given wildcard (as a number) with the given text.
 --

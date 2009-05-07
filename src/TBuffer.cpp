@@ -78,7 +78,7 @@ TBuffer::TBuffer( Host * pH )
 , mpHost( pH )
 , mCursorMoved( false )
 , mWrapAt( 100 )
-, mWrapIndent( 5 )
+, mWrapIndent( 0 )
 {   
     buffer.clear();
     lineBuffer.clear();

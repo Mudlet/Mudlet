@@ -91,6 +91,9 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mBorderRightWidth( 0 )
 , mUSE_UNIX_EOL( false )
 , mBlockScriptCompile( true )
+, mMainIconSize( 3 )
+, mTEFolderIconSize( 3 )
+, mIsGoingDown( false )
 {
 }
 

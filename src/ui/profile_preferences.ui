@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>571</width>
-    <height>554</height>
+    <height>567</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,7 +26,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="input_line_tab">
       <attribute name="title">
@@ -671,9 +671,6 @@ or some other computer model that has a small screen.</string>
           <height>22</height>
          </rect>
         </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
         <property name="minimum">
          <number>1</number>
         </property>
@@ -1174,41 +1171,6 @@ or some other computer model that has a small screen.</string>
         <string>Default Trigger Type:</string>
        </property>
       </widget>
-      <widget class="QSpinBox" name="TEMainIconSize">
-       <property name="geometry">
-        <rect>
-         <x>150</x>
-         <y>60</y>
-         <width>50</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>4</number>
-       </property>
-       <property name="value">
-        <number>3</number>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_32">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>60</y>
-         <width>121</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Main Icon Size:</string>
-       </property>
-      </widget>
       <widget class="QLabel" name="label_33">
        <property name="geometry">
         <rect>
@@ -1230,9 +1192,6 @@ or some other computer model that has a small screen.</string>
          <width>50</width>
          <height>22</height>
         </rect>
-       </property>
-       <property name="readOnly">
-        <bool>true</bool>
        </property>
        <property name="minimum">
         <number>1</number>

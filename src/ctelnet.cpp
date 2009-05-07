@@ -190,7 +190,10 @@ void cTelnet::handle_socket_signal_disconnected()
     reset();
     //qDebug()<<"cTelnet::handle_socket_signal_disconnected() SOCKET LOST CONNECTION!";
     QString err = "\nSocket got disconnected. " + socket.errorString();
-    postMessage( err );
+    if( ! mpHost->mIsGoingDown )
+    {
+        postMessage( err );
+    }
 }
 
 void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)

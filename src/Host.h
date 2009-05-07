@@ -228,6 +228,9 @@ public:
     int                mBorderRightWidth;
     bool               mUSE_UNIX_EOL;
     bool               mBlockScriptCompile;
+    int                mMainIconSize;
+    int                mTEFolderIconSize;
+    bool               mIsGoingDown;
 };
 #endif
 

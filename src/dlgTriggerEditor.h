@@ -148,7 +148,7 @@ public slots:
     void                        grab_key_callback( int key, int modifier );
     void                        slot_profileSaveAction();
     void                        slot_profileSaveAsAction();
-    
+    void                        setTBIconSize( int );
 private:
     
     void                        saveOpenChanges();

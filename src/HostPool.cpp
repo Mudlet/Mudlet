@@ -43,7 +43,10 @@ bool HostPool::deleteHost(QString hostname)
     }
     else
     {
-        delete mHostPool.value( hostname );
+        Host * pH = mHostPool[hostname];
+        pH->mIsGoingDown = true;
+        pH->mTelnet.disconnect();
+        std::cout << "[OK] Host deleted removing pool entry ..."<<std::endl;
         int ret = mHostPool.remove( hostname );
         std::cout << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret<<std::endl;
         

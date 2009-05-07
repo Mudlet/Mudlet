@@ -46,6 +46,9 @@
 #include <QShortcut>
 #include "TLabel.h"
 
+//#define NDEBUG
+#include <assert.h>
+
 using namespace std;
 
 const QString TConsole::cmLuaLineVariable("line");
@@ -80,6 +83,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mMainFrameLeftWidth( 0 )
 , mMainFrameRightWidth( 0 )
 {
+    cout<<"TConsole::constructor() called!"<<endl;
+
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
@@ -1631,33 +1636,25 @@ void TConsole::printDebug( QString & msg )
 
 TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width, int height )
 {
-    qDebug()<<"name="<<name;
-    cout << "TConsole::createMiniConsole() enter"<<endl;
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
     {
-        cout<<"calling new TConsole()"<<endl;
+        qDebug()<<"creating new mini console: name="<<name;
         TConsole * pC = new TConsole(mpHost, false, mpMainFrame );
-        cout << "TConsole::createMiniConsole() new TConsole() returned"<<endl;
         if( ! pC )
         {
-            cout << "TConsole::createMiniConsole() ERROR: cant new TConsole"<<endl;
             return 0;
         }
         mSubConsoleMap[key] = pC;
         pC->setUserWindow();
-        //pC->setAutoFillBackground(false);
         pC->resize( width, height );
         pC->setContentsMargins(0,0,0,0);
-        cout << "going to move"<<endl;
         pC->move( x, y );
-        cout << "going to show"<<endl;
         pC->show();
         return pC;
     }
     else
     {
-        cout << "error: exiting "<<endl;
         return 0;
     }
 }
@@ -1813,6 +1810,8 @@ void TConsole::print( QString & msg, QColor & fgColor, QColor & bgColor )
 
 void TConsole::printSystemMessage( QString & msg )
 {
+    assert( mpHost );
+
     QColor bgColor;
     QColor fgColor;
     
