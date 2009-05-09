@@ -1501,12 +1501,17 @@ void TConsole::selectCurrentLine()
 {
     //FIXME: size-1
     selectSection(0, buffer.line( mUserCursor.y() ).size()-1 );
+    qDebug()<<"line under cursor<"<<buffer.line(mUserCursor.y());
 }
 
 void TConsole::selectCurrentLine( std::string & buf )
 {
     std::string key = buf;
-    if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
+    if( buf == "main" )
+    {
+        return selectCurrentLine();
+    }
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
         TConsole * pC = mSubConsoleMap[key];
         if( ! pC ) return;
@@ -1521,26 +1526,21 @@ void TConsole::selectCurrentLine( std::string & buf )
 
 bool TConsole::setMiniConsoleFontSize( std::string & buf, int size )
 {
-    cout<<"buf=<"<<buf<<">"<<endl;;
     std::string key = buf;
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
         TConsole * pC = mSubConsoleMap[key];
         if( ! pC ) return false;
         pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
-        //pC->console->setFont(mDisplayFont);
         pC->console->updateScreenView();
         pC->console->forceUpdate();
         pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
-        //pC->console->setFont(mDisplayFont);
         pC->console2->updateScreenView();
         pC->console2->forceUpdate();
-        qDebug()<<"updated font size to size="<<size;
         return true;
     }
     else
     {
-        cout<<"ERROR: console <"<<buf<<"> does not exist"<<endl;
         false;
     }
 
@@ -1554,7 +1554,11 @@ QString TConsole::getCurrentLine()
 QString TConsole::getCurrentLine( std::string & buf )
 {
     std::string key = buf;
-    if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
+    if( buf == "main" )
+    {
+        return getCurrentLine();
+    }
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
         TConsole * pC = mSubConsoleMap[key];
         if( ! pC ) return false;
