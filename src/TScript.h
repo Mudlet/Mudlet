@@ -67,7 +67,7 @@ public:
     bool             registerScript();
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
-    void             callEventHandler( QString &, TEvent * );
+    void             callEventHandler( TEvent * );
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()                             { return mEventHandlerList; }
     bool             isClone(TScript &b) const;

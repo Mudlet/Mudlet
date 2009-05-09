@@ -106,11 +106,9 @@ void TScript::compileAll()
     }
 }
 
-void TScript::callEventHandler( QString & func, TEvent * pE )
+void TScript::callEventHandler( TEvent * pE )
 {
-    QStringList argumentList = pE->mArgumentList;
-    QList<int> typeList = pE->mArgumentTypeList;
-    mpLua->callEventHandler( mName, argumentList, typeList );
+    mpLua->callEventHandler( mName, pE );
 }
 
 void TScript::compile()

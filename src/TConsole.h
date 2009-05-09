@@ -204,7 +204,9 @@ public:
       bool              printWindow( QString & name, QString & text );
       bool              setBackgroundImage( QString & name, QString & path );
       bool              setBackgroundColor( QString & name, int r, int g, int b, int alpha );
-
+      QString           getCurrentLine( std::string & );
+      void              selectCurrentLine( std::string & );
+      bool              setMiniConsoleFontSize( std::string &, int );
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 
@@ -229,6 +231,8 @@ public:
 private:
 
       QTime             mProcessingTime;
+      QString           getCurrentLine();
+      void              selectCurrentLine();
       QString           profile_name; 
       TChar             mStandardFormat;
       //std::string       getCurrentTime();

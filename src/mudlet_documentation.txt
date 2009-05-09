@@ -1198,6 +1198,9 @@ Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 |hideWindow( name )| hides a user window, button or label
 |showWindow( name )| shows a window, button or label
 |resizeWindow( name, width, height )|resizes a user window, button or label
+|setMiniConsoleFontSize( name, fontSize )|Sets the font size of the mini console.
+|getCurrentLine()|returns the content of the current line under the user cursor in the buffer. The Lua variable line holds the content of getCurrentLine() before any triggers have been run on this line. When triggers change the content of the buffer, the variable line will not be adjusted and thus hold an outdated string. line = getCurrentLine() will update line to the real content of the current buffer. This is important if you want to copy the current line after it has been changed by some triggers. selectString( line,1 ) will return false and won't select anything because line no longer equals getCurrentLine(). Consequently, selectString( getCurrentLine(), 1 ) is what you need.
+|selectCurrentLine()|selects the content of the current buffer line
 |setBackgroundImage( labelName, imageFileName )|loads an image file (png) as a background image for a label. This can be used to display clickable images etc.
 |setBackgroundColor( red, green, blue, alpha )|sets rgb color values + an alpha channel for the level of transperancy of the background color 0=completely transparent, 255=no transparency values in between specify the level of transparency.
 |setLabelClickCallback( labelName, luaFunctionName )|specify a lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )

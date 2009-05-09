@@ -66,6 +66,9 @@ public:
     void                        showError( QString );
     void                        showWarning( QString );
     void                        showInfo( QString );
+    void                        focusInEvent( QFocusEvent * );
+    void                        focusOutEvent( QFocusEvent * );
+
     QsciLexerLua *              mpLuaLexer;
 
 signals:
@@ -75,6 +78,7 @@ signals:
     void                        update();
     
 public slots:
+    void                        slot_soundTrigger();
     void                        slot_colorizeTriggerSetBgColor();
     void                        slot_colorizeTriggerSetFgColor();
     void                        slot_itemClicked( QTreeWidgetItem * pItem, int column );
@@ -149,6 +153,7 @@ public slots:
     void                        slot_profileSaveAction();
     void                        slot_profileSaveAsAction();
     void                        setTBIconSize( int );
+
 private:
     
     void                        saveOpenChanges();

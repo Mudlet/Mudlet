@@ -36,8 +36,11 @@
 #include "TDebug.h"
 #include <pcre.h>
 #include <sstream>
+#include <QSound>
 
 using namespace std;
+
+const QString nothing = "";
 
 TTrigger::TTrigger( TTrigger * parent, Host * pHost ) 
 : Tree<TTrigger>( parent )
@@ -56,6 +59,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mFgColor( QColor(255,0,0) )
 , mBgColor( QColor(255,255,0) )
 , mFilterTrigger( false )
+, mSoundTrigger( false )
 {
 } 
 
@@ -79,6 +83,7 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 , mFgColor( QColor(255,0,0) )
 , mBgColor( QColor(255,255,0) )
 , mFilterTrigger( false )
+, mSoundTrigger( false )
 {
     setRegexCodeList( regexList, regexProperyList );
 }
@@ -935,6 +940,10 @@ bool TTrigger::compileScript()
 
 void TTrigger::execute()
 {
+    if( mSoundTrigger )
+    {
+        QSound::play( mSoundFile );
+    }
     if( mCommand.size() > 0 )
     {
         mpHost->send( mCommand );

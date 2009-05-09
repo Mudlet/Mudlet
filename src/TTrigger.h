@@ -31,12 +31,14 @@
 #include <QMutex>
 #include <QString>
 #include <QColor>
+
 #include "Tree.h"
 #include <QDataStream>
 #include "Host.h"
 #include <QTextBlock>
 #include "TMatchState.h"
 #include <pcre.h>
+#include <QSound>
 
 #define REGEX_SUBSTRING 0
 #define REGEX_PERL 1
@@ -108,12 +110,14 @@ public:
     void             setConditionLineDelta( int delta )  { mConditionLineDelta = delta; }
     int              getConditionLineDelta() { return mConditionLineDelta; }
     bool             registerTrigger();
-    
+    void             setSound( QString file ){ mSoundFile = file; }
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
     bool             mTriggerContainsPerlRegex;
     bool             mPerlSlashGOption;
     bool             mFilterTrigger;
+    bool             mSoundTrigger;
+    QString          mSoundFile;
     bool             isClone( TTrigger & ) const;
     
 private:

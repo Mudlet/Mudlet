@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
     
     Q_INIT_RESOURCE(mudlet_alpha);
     QApplication app(argc, argv);
+    app.setApplicationName("Mudlet");
     QPixmap pixmap(":/Mudlet_splashscreen_main");
     QSplashScreen splash(pixmap);
     splash.show();

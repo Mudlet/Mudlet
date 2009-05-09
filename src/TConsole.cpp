@@ -1497,6 +1497,76 @@ QStringList TConsole::getLines( int from, int to )
     return ret;
 }
 
+void TConsole::selectCurrentLine()
+{
+    //FIXME: size-1
+    selectSection(0, buffer.line( mUserCursor.y() ).size()-1 );
+}
+
+void TConsole::selectCurrentLine( std::string & buf )
+{
+    std::string key = buf;
+    if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
+    {
+        TConsole * pC = mSubConsoleMap[key];
+        if( ! pC ) return;
+        pC->selectCurrentLine();
+        return;
+    }
+    else
+    {
+        return;
+    }
+}
+
+bool TConsole::setMiniConsoleFontSize( std::string & buf, int size )
+{
+    cout<<"buf=<"<<buf<<">"<<endl;;
+    std::string key = buf;
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        TConsole * pC = mSubConsoleMap[key];
+        if( ! pC ) return false;
+        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+        //pC->console->setFont(mDisplayFont);
+        pC->console->updateScreenView();
+        pC->console->forceUpdate();
+        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+        //pC->console->setFont(mDisplayFont);
+        pC->console2->updateScreenView();
+        pC->console2->forceUpdate();
+        qDebug()<<"updated font size to size="<<size;
+        return true;
+    }
+    else
+    {
+        cout<<"ERROR: console <"<<buf<<"> does not exist"<<endl;
+        false;
+    }
+
+}
+
+QString TConsole::getCurrentLine()
+{
+    return buffer.line( mUserCursor.y() );
+}
+
+QString TConsole::getCurrentLine( std::string & buf )
+{
+    std::string key = buf;
+    if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
+    {
+        TConsole * pC = mSubConsoleMap[key];
+        if( ! pC ) return false;
+        return pC->getCurrentLine();
+    }
+    else
+    {
+        return QString("ERROR: mini console does not exist");
+    }
+}
+
+
 int TConsole::getLastLineNumber()
 {
     return buffer.getLastLineNumber();
@@ -1662,6 +1732,8 @@ TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width,
         }
         mSubConsoleMap[key] = pC;
         pC->setUserWindow();
+        pC->console->setIsMiniConsole();
+        pC->console2->setIsMiniConsole();
         pC->resize( width, height );
         pC->setContentsMargins(0,0,0,0);
         pC->move( x, y );

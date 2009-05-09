@@ -30,7 +30,7 @@
 #include "TDebug.h"
 #include <list>
 #include <string>
-
+#include "TEvent.h"
 
 extern "C" 
 {
@@ -167,6 +167,27 @@ int TLuaInterpreter::select( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::selectCurrentLine( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpConsole->selectCurrentLine( luaSendText );
+    return 0;
+}
+
+
+
 // cursorPositionInLine = selectCaptureGroup( groupNumber ) if not found -1
 int TLuaInterpreter::selectCaptureGroup( lua_State * L )
 {
@@ -293,6 +314,55 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
         lua_pushstring( L, strList[i].toLatin1().data() );
         lua_settable(L, -3);
     } */
+    return 0;
+}
+
+int TLuaInterpreter::getCurrentLine( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString line = pHost->mpConsole->getCurrentLine( luaSendText );
+    lua_pushstring( L, line.toLatin1().data() );
+    return 1;
+}
+
+int TLuaInterpreter::setMiniConsoleFontSize( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    int luaNumOfMatch;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaNumOfMatch = lua_tointeger( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpConsole->setMiniConsoleFontSize( luaSendText, luaNumOfMatch );
     return 0;
 }
 
@@ -2302,23 +2372,23 @@ bool TLuaInterpreter::callMulti( QString & function, QString & mName )
 }
 
 
-bool TLuaInterpreter::callEventHandler( QString & function, QStringList & argList, QList<int> & typeList )
+bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
 {
     lua_State * L = pGlobalLua;
     lua_getglobal( L, function.toLatin1().data() );
     lua_getfield( L, LUA_GLOBALSINDEX, function.toLatin1().data() );
-    for( int i=0; i<argList.size(); i++ )
+    for( int i=0; i<pE->mArgumentList.size(); i++ )
     {
-        if( typeList[i] == ARGUMENT_TYPE_NUMBER )
+        if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
         {
             lua_pushnumber( L, i ); 
         }
         else
         {
-            lua_pushstring( L, argList[i].toLatin1().data() );
+            lua_pushstring( L, pE->mArgumentList[i].toLatin1().data() );
         }
     }
-    int error = lua_pcall( L, argList.size(), LUA_MULTRET, 0 );     
+    int error = lua_pcall( L, pE->mArgumentList.size(), LUA_MULTRET, 0 );
     if( error != 0 )
     {
         string e = "";
@@ -2524,6 +2594,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow );
     lua_register( pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat );
     lua_register( pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize );
+    lua_register( pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine );
+    lua_register( pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize );
+    lua_register( pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";

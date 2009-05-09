@@ -54,6 +54,7 @@ class TLuaThread;
 class TGatekeeperThread;
 class Host;
 class TTrigger;
+class TEvent;
 
 class TLuaInterpreter : public QThread  {
    
@@ -82,7 +83,7 @@ public:
     void startLuaSessionInterpreter();
     void adjustCaptureGroups( int x, int a );
     void clearCaptureGroups();
-    bool callEventHandler( QString & function, QStringList & argList, QList<int> & typeList );
+    bool callEventHandler( QString & function, TEvent * pE );
     
     int startTempTimer( double, QString );
     int startTempTrigger( QString, QString );
@@ -158,7 +159,10 @@ public:
     static int setBackgroundColor( lua_State * );
     static int createButton( lua_State * );
     static int setLabelClickCallback( lua_State * );
-    static int getMainWindowSize( lua_State *L );
+    static int getMainWindowSize( lua_State * );
+    static int setMiniConsoleFontSize( lua_State * );
+    static int getCurrentLine( lua_State * );
+    static int selectCurrentLine( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

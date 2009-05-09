@@ -64,6 +64,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mInit_OK( false )
 , mShowTimeStamps( false )
 , mForceUpdate( false )
+, mIsMiniConsole( false )
 {    
     if( ! mIsDebugConsole )
     {
@@ -197,7 +198,7 @@ void TTextEdit::setScroll(int cursor, int lines)
 
 void TTextEdit::updateScreenView()
 {
-    if( ! mIsDebugConsole )
+    if( ! mIsDebugConsole && ! mIsMiniConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
@@ -209,26 +210,33 @@ void TTextEdit::updateScreenView()
     }
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
-    if( mpHost->mScreenWidth > currentScreenWidth )
+    if( ! mIsDebugConsole && ! mIsMiniConsole )
     {
-        if( currentScreenWidth < 100 )
+        if( mpHost->mScreenWidth > currentScreenWidth )
         {
-            mScreenWidth = 100;
+            if( currentScreenWidth < 100 )
+            {
+                mScreenWidth = 100;
+            }
+            else
+            {
+                mScreenWidth = currentScreenWidth;
+                mpHost->mScreenWidth = mScreenWidth;
+            }
         }
         else
         {
+            mpHost->mScreenWidth = currentScreenWidth;
             mScreenWidth = currentScreenWidth;
-            mpHost->mScreenWidth = mScreenWidth;
         }
+
+        mpHost->mScreenHeight = mScreenHeight;
     }
     else
     {
-        mpHost->mScreenWidth = currentScreenWidth;
         mScreenWidth = currentScreenWidth;
     }
-    
-    mpHost->mScreenHeight = mScreenHeight;
-    if( ! mIsDebugConsole )
+    if( ! mIsDebugConsole && ! mIsMiniConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
@@ -370,7 +378,7 @@ void TTextEdit::drawCharacters( QPainter & painter,
     QFont font = painter.font();
     if( ! mPainterInit )
     {
-        if( ! mIsDebugConsole )
+        if( ! mIsDebugConsole && ! mIsMiniConsole )
             painter.setFont( mpHost->mDisplayFont );
         else
             painter.setFont( mDisplayFont );

@@ -263,22 +263,15 @@ bool Host::resetStopWatch( int watchID )
         return false;
 }
 
+void Host::callEventHandlers()
+{
+
+}
+
 void Host::incomingStreamProcessor( QString & data, QString & prompt )
 {
     mTriggerUnit.processDataStream( data );
-    // TODO: reihenfolge garantieren
-    QList<QString> eventList = mEventMap.keys();
-    for( int i=0; i<eventList.size(); i++ )
-    {
-        if( ! mEventHandlerMap.contains( eventList[i] ) ) continue;
-        QList<TScript *> scriptList = mEventHandlerMap.value( eventList[i] );
-        for( int ii=0; ii<scriptList.size(); ii++ )
-        {
-            scriptList.value( ii )->callEventHandler( eventList[i], mEventMap.value( eventList[i] ) );
-        }
-    }
-    
-    mEventMap.clear();
+
     mTimerUnit.doCleanup();
 }
 
@@ -307,7 +300,12 @@ void Host::unregisterEventHandler( QString name, TScript * pScript )
 void Host::raiseEvent( TEvent * pE )
 {
     if( pE->mArgumentList.size() < 1 ) return;
-    mEventMap.insertMulti( pE->mArgumentList[0], pE );    
+    if( ! mEventHandlerMap.contains( pE->mArgumentList[0] ) ) return;
+    QList<TScript *> scriptList = mEventHandlerMap.value( pE->mArgumentList[0] );
+    for( int i=0; i<scriptList.size(); i++ )
+    {
+        scriptList.value( i )->callEventHandler( pE );
+    }
 }
 
 void Host::gotRest( QString & data )

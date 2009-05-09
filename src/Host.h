@@ -141,6 +141,7 @@ public:
     void               registerEventHandler( QString, TScript * );
     void               unregisterEventHandler( QString, TScript * );
     void               raiseEvent( TEvent * event );
+    void               callEventHandlers();
     void               stopAllTriggers();
     void               reenableAllTriggers();
     void               set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX = b; mTelnet.set_USE_IRE_DRIVER_BUGFIX( b ); }

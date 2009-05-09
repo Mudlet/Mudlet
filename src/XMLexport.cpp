@@ -242,6 +242,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeAttribute( "isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no" );
     writeAttribute( "isColorizerTrigger", pT->mIsColorizerTrigger ? "yes" : "no" );
     writeAttribute( "isFilterTrigger", pT->mFilterTrigger ? "yes" : "no" );
+    writeAttribute( "isSoundTrigger", pT->mSoundTrigger ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
@@ -250,6 +251,8 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeTextElement( "mCommand", pT->mCommand );
     writeTextElement( "mFgColor", pT->mFgColor.name() );
     writeTextElement( "mBgColor", pT->mBgColor.name() );
+    writeTextElement( "mSoundFile", pT->mSoundFile );
+
     writeStartElement( "regexCodeList" );
     for( int i=0; i<pT->mRegexCodeList.size(); i++ )
     {

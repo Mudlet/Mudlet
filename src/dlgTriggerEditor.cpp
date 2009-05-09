@@ -118,10 +118,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pVB1->addWidget( mpTriggersMainArea );
     mIsTriggerMainAreaEditRegex = false;
     mpTriggerMainAreaEditRegexItem = 0;
+    mpTriggersMainArea->lineEdit_soundFile->hide();
     connect(mpTriggersMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     connect(mpTriggersMainArea->listWidget_regex_list, SIGNAL(itemClicked ( QListWidgetItem *)), this, SLOT(slot_trigger_main_area_edit_regex(QListWidgetItem*)));
     connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
     connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
+    connect(mpTriggersMainArea->pushButtonSound, SIGNAL(clicked()), this, SLOT(slot_soundTrigger()));
 
     mpTimersMainArea = new dlgTimersMainArea( mainArea );
     QSizePolicy sizePolicy7(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -486,6 +488,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     setTBIconSize( 0 );
 }
 
+
+
 void dlgTriggerEditor::setTBIconSize( int s )
 {
     toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
@@ -804,15 +808,17 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
     {
         pItem->setIcon( 0, icon);
         pItem->setText( 0, pT->getName() );
-        showInfo( "Success, timer activated." );
     }
     else
     {
         QIcon iconError;
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
-        showError( pT->getError() );
     }
+    showInfo( QString( "Trying to %2 Trigger %1 %3." )
+              .arg(pT->getName())
+              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_timer_toggle_active()
@@ -908,7 +914,7 @@ void dlgTriggerEditor::slot_alias_toggle_active()
     
     TAlias * pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;    
-    
+
     pT->setIsActive( ! pT->shouldBeActive() );
     
     if( pT->isFolder() )
@@ -938,15 +944,17 @@ void dlgTriggerEditor::slot_alias_toggle_active()
     {
         pItem->setIcon( 0, icon);
         pItem->setText( 0, pT->getName() );
-        showInfo( "Success, timer activated." );
     }
     else
     {
         QIcon iconError;
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
-        showError( pT->getError() );
     }
+    showInfo( QString( "Trying to %2 Alias %1 %3." )
+              .arg(pT->getName())
+              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_script_toggle_active()
@@ -987,15 +995,17 @@ void dlgTriggerEditor::slot_script_toggle_active()
     {
         pItem->setIcon( 0, icon);
         pItem->setText( 0, pT->getName() );
-        showInfo( "Success, timer activated." );
     }
     else
     {
         QIcon iconError;
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
-        showError( pT->getError() );
     }
+    showInfo( QString( "Trying to %2 Script %1 %3." )
+              .arg(pT->getName())
+              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_action_toggle_active()
@@ -1036,15 +1046,17 @@ void dlgTriggerEditor::slot_action_toggle_active()
     {
         pItem->setIcon( 0, icon);
         pItem->setText( 0, pT->getName() );
-        showInfo( "Success, timer activated." );
     }
     else
     {
         QIcon iconError;
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
-        showError( pT->getError() );
     }
+    showInfo( QString( "Trying to %2 Action %1 %3." )
+              .arg(pT->getName())
+              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_key_toggle_active()
@@ -1085,15 +1097,17 @@ void dlgTriggerEditor::slot_key_toggle_active()
     {
         pItem->setIcon( 0, icon);
         pItem->setText( 0, pT->getName() );
-        showInfo( "Success, timer activated." );
     }
     else
     {
         QIcon iconError;
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
-        showError( pT->getError() );
     }
+    showInfo( QString( "Trying to %2 Key %1 %3." )
+              .arg(pT->getName())
+              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
 }
 
 
@@ -1673,6 +1687,8 @@ void dlgTriggerEditor::addScript( bool isFolder )
 
 void dlgTriggerEditor::slot_saveTriggerAfterEdit()
 {
+    return saveTrigger();
+    /*
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     QString command = mpTriggersMainArea->trigger_command->text();
     mpTriggersMainArea->lineEdit->clear();
@@ -1793,7 +1809,7 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
     {
         showError("Error: No item selected! Which item do you want to save?");
     }
-    mpTriggerMainAreaEditRegexItem = 0;
+    mpTriggerMainAreaEditRegexItem = 0;*/
 }
 
 void dlgTriggerEditor::saveTrigger()
@@ -1861,6 +1877,8 @@ void dlgTriggerEditor::saveTrigger()
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
             pT->mFilterTrigger = mpTriggersMainArea->filterTrigger->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
+            pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
+            pT->setSound( mpTriggersMainArea->lineEdit_soundFile->text() );
             QPalette FgColorPalette;
             QPalette BgColorPalette;
             FgColorPalette = mpTriggersMainArea->pushButtonFgColor->palette();
@@ -1929,7 +1947,9 @@ void dlgTriggerEditor::saveTrigger()
 
 void dlgTriggerEditor::slot_saveTimerAfterEdit()
 {
-    QString name = mpTimersMainArea->lineEdit_timer_name->text();
+    return saveTimer();
+
+    /*QString name = mpTimersMainArea->lineEdit_timer_name->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     
     QTreeWidgetItem * pItem = treeWidget_timers->currentItem(); 
@@ -1950,14 +1970,14 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
             pT->setCommand( command );
             pT->setName( name );
             pT->setScript( script );
-           /* if( pT->isOffsetTimer() )
-            {
-                pT->setShouldBeActive( true );
-            }
-            else
-            {
-                pT->setIsActive( true );
-            }*/
+           // if( pT->isOffsetTimer() )
+            //{
+            //    pT->setShouldBeActive( true );
+           // }
+           // else
+            //{
+             //   pT->setIsActive( true );
+            //}
             
             QIcon icon;
             if( pT->isFolder() )
@@ -2008,7 +2028,7 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
                 pItem->setText( 0, name );
             }
         }
-    }
+    }*/
 }
 
 void dlgTriggerEditor::saveTimer()
@@ -2105,7 +2125,9 @@ void dlgTriggerEditor::saveTimer()
 
 void dlgTriggerEditor::slot_saveAliasAfterEdit()
 {
-    qDebug()<<"slot_saveAliasAfterEdit()";
+    return saveAlias();
+
+    /*qDebug()<<"slot_saveAliasAfterEdit()";
     bool state = true;
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
     QString regex = mpAliasMainArea->pattern_textedit->text();
@@ -2167,16 +2189,14 @@ void dlgTriggerEditor::slot_saveAliasAfterEdit()
                 pItem->setText( 0, name );
             }
         }
-    }
+    }*/
 }
 
 void dlgTriggerEditor::saveAlias()
 {
-    qDebug()<<"saveAlias()";
     QTreeWidgetItem * pItem = mCurrentAlias;
     if( ! pItem )
     {
-        qDebug()<<"pItem==0!!!! ERROR";
         return;
     }
 
@@ -2198,8 +2218,6 @@ void dlgTriggerEditor::saveAlias()
             pT->setCommand( substitution );
             pT->setRegexCode( regex );
             pT->setScript( script );
-
-            pT->setIsActive( true );//FIXME: discuss if new triggers are automatically active
 
             QIcon icon;
             if( pT->isFolder() )
@@ -2244,7 +2262,9 @@ void dlgTriggerEditor::saveAlias()
 
 void dlgTriggerEditor::slot_saveActionAfterEdit()
 {
-    QString name = mpActionsMainArea->lineEdit_action_name->text();
+    return saveAction();
+
+    /*QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
     QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
@@ -2327,7 +2347,7 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
             }
         }
     }
-    mpHost->getActionUnit()->updateToolbar();
+    mpHost->getActionUnit()->updateToolbar();*/
 }
 
 void dlgTriggerEditor::saveAction()
@@ -2423,7 +2443,9 @@ void dlgTriggerEditor::saveAction()
 
 void dlgTriggerEditor::slot_saveScriptAfterEdit()
 {
-    QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
+    return saveScript();
+
+    /*QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
     QString script = mpSourceEditorArea->script_scintilla->text();    
     
     QList<QListWidgetItem*> itemList;
@@ -2491,7 +2513,7 @@ void dlgTriggerEditor::slot_saveScriptAfterEdit()
                 pItem->setText( 0, name );
             }
         }
-    }
+    }*/
 }
 
 void dlgTriggerEditor::saveScript()
@@ -2572,7 +2594,9 @@ void dlgTriggerEditor::saveScript()
 
 void dlgTriggerEditor::slot_saveKeyAfterEdit()
 {
-    bool state = true;
+    return saveKey();
+
+    /*bool state = true;
     QString name = mpKeysMainArea->lineEdit_name->text();
     if( name.size() < 1 )
     {
@@ -2632,7 +2656,7 @@ void dlgTriggerEditor::slot_saveKeyAfterEdit()
                 pItem->setText( 0, name );
             }
         }
-    }
+    }*/
 }
 
 void dlgTriggerEditor::saveKey()
@@ -2775,6 +2799,9 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
         mpTriggersMainArea->filterTrigger->setChecked( pT->mFilterTrigger );
         mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );
+        mpTriggersMainArea->soundTrigger->setChecked( pT->mSoundTrigger );
+        mpTriggersMainArea->lineEdit_soundFile->setText( pT->mSoundFile );
+
         QColor fgColor = pT->getFgColor();
         QColor bgColor = pT->getBgColor();
         QPalette FgColorPalette;
@@ -3845,6 +3872,42 @@ void dlgTriggerEditor::saveOpenChanges()
     };
 }
 
+void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
+{
+    mCurrentView;
+    if( ! mCurrentView )
+    {
+        mCurrentTrigger = 0;
+        mCurrentAlias = 0;
+        mCurrentKey = 0;
+        mCurrentAction = 0;
+        mCurrentScript = 0;
+        mCurrentTimer = 0;
+        qWarning("mFousOutView=0");
+        return;
+    }
+
+    if( mCurrentTrigger )
+        mCurrentTrigger->setSelected( true );
+    if( mCurrentTimer )
+        mCurrentTimer->setSelected( true );
+    if( mCurrentAlias )
+        mCurrentAlias->setSelected( true );
+    if( mCurrentScript )
+        mCurrentScript->setSelected( true );
+    if( mCurrentAction )
+        mCurrentAction->setSelected( true );
+    if( mCurrentKey )
+        mCurrentKey->setSelected( true );
+
+    QWidget::focusInEvent( pE );
+}
+
+void dlgTriggerEditor::focusOutEvent( QFocusEvent * pE )
+{
+    saveOpenChanges();
+}
+
 void dlgTriggerEditor::slot_show_timers()
 {
 
@@ -4628,25 +4691,16 @@ void dlgTriggerEditor::exportKey( QFile & file )
 
 void dlgTriggerEditor::slot_export()
 {
-    //FIXME: important for users with old profiles! 
-    
-    /*QString fileName = QFileDialog::getExistingDirectory(this, tr("Select Profile"),
-        QDir::homePath(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-    if( fileName.isEmpty() ) return;
-    
-    HostManager::self()->importHost( fileName );
-    return;*/
-    
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"),
-        QDir::currentPath(),
-        tr("trigger files (*.trigger *.xml)"));
+                                                    QDir::currentPath(),
+                                                    tr("Mudlet packages (*.xml)"));
     if(fileName.isEmpty()) return;
     
    
     QFile file(fileName);
     if( ! file.open(QFile::WriteOnly | QFile::Text) ) 
     {
-        QMessageBox::warning(this, tr("Export Trigger:"),
+        QMessageBox::warning(this, tr("export package:"),
                              tr("Cannot write file %1:\n%2.")
                              .arg(fileName)
                              .arg(file.errorString()));
@@ -4665,10 +4719,10 @@ void dlgTriggerEditor::slot_export()
         exportAlias( file );
         break;
     case cmScriptView:
-        exportAction( file );
+        exportScript( file );
         break;
     case cmActionView:
-        exportScript( file );
+        exportAction( file );
         break;
     case cmKeysView:
         exportKey( file );
@@ -4678,6 +4732,31 @@ void dlgTriggerEditor::slot_export()
 
 void dlgTriggerEditor::slot_import()
 {
+    if( mCurrentView )
+    {
+        switch( mCurrentView )
+        {
+            case cmTriggerView:
+                saveTrigger();
+                break;
+            case cmTimerView:
+                saveTimer();
+                break;
+            case cmAliasView:
+                saveAlias();
+                break;
+            case cmScriptView:
+                saveScript();
+                break;
+            case cmActionView:
+                saveAction();
+                break;
+            case cmKeysView:
+                saveKey();
+                break;
+        };
+    }
+
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
         QDir::currentPath(),
         tr("*.xml"));
@@ -4707,14 +4786,19 @@ void dlgTriggerEditor::slot_import()
     XMLimport reader( mpHost );
     reader.importPackage( & file );
     
-    qDebug()<<"OK reader.importPackage() returned!";
-    
     mpHost->setName( profileName );
     mpHost->setLogin( login );
     mpHost->setPass( pass );
     
     fillout_form();
-    
+
+    mCurrentTrigger = 0;
+    mCurrentTimer = 0;
+    mCurrentAlias = 0;
+    mCurrentScript = 0;
+    mCurrentAction = 0;
+    mCurrentKey = 0;
+    mCurrentView = 0;
 }
 
 void dlgTriggerEditor::slot_profileSaveAction()
@@ -4837,6 +4921,16 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
         mpTriggersMainArea->pushButtonBgColor->setPalette( palette );
     }
 }
+
+void dlgTriggerEditor::slot_soundTrigger()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("chose sound file"),
+                                                    QDir::homePath(),
+                                                    tr("*"));
+    mpTriggersMainArea->lineEdit_soundFile->setText( fileName );
+}
+
+
 
 
 

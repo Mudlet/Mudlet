@@ -86,10 +86,12 @@ public:
     void              copySelectionToClipboard();
     void              setConsoleFgColor( int r, int g, int b ){mFgColor = QColor(r,g,b);}
     void              setConsoleBgColor( int r, int g, int b ){mBgColor = QColor(r,g,b);}
+    void              setIsMiniConsole(){ mIsMiniConsole = true; }
     bool              mShowTimeStamps;
     int               mScrollVector;
     int               mCursorY;
     bool              mIsTailMode;
+    QFont             mDisplayFont;
 
 signals:
     
@@ -108,7 +110,7 @@ private:
     bool              mScrollUp;
     QColor            mFgColor;
     QColor            mBgColor;
-    QFont             mDisplayFont;
+
     QFont             mCommandLineFont;
     QFont             mCommandSeperator;
     int               mWrapAt;    
@@ -141,6 +143,7 @@ private:
     QScrollBar *      mpScrollBar;
     int               mOldScrollPos;
     bool              mInit_OK;
+    bool              mIsMiniConsole;
 };
 
 #endif

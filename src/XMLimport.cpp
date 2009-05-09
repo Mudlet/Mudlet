@@ -510,6 +510,8 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mPerlSlashGOption = ( attributes().value("isPerlSlashGOption") == "yes" );
     pT->mIsColorizerTrigger = ( attributes().value("isColorizerTrigger") == "yes" );
     pT->mFilterTrigger = ( attributes().value("isFilterTrigger") == "yes" );
+    pT->mSoundTrigger = ( attributes().value("isSoundTrigger") == "yes" );
+
     while( ! atEnd() ) 
     {
         readNext();
@@ -551,6 +553,11 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             else if( name() == "mBgColor")
             {
                 pT->mBgColor.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mSoundFile" )
+            {
+                pT->mSoundFile = readElementText();
                 continue;
             }
             else if( name() == "regexCodeList")
