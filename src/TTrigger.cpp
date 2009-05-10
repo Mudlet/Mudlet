@@ -337,7 +337,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
         }
     } 
     //TODO: add named groups seperately later as Lua::namedGroups
-    if( mIsColorizerTrigger )
+    if( mIsColorizerTrigger || mFilterTrigger )
     {
         numberOfCaptureGroups = captureList.size();
     }
@@ -447,11 +447,30 @@ END:
         pL->clearCaptureGroups();
         if( mFilterTrigger )
         {
-             if( captureList.size() > 0 )
+             if( captureList.size() > 1 )
              {
-                 captureList.pop_front();
-                 posList.pop_front();
-                 filter( captureList.front(), posList.front() );
+                 int total = captureList.size();
+                 std::list<std::string>::iterator its = captureList.begin();
+                 std::list<int>::iterator iti = posList.begin();
+                 for( int i=1; iti!=posList.end(); ++iti, ++its, i++ )
+                 {
+                     int begin = *iti;
+                     std::string & s = *its;
+                     if( total > 1 )
+                     {
+                         // skip complete match in Perl /g option type of triggers
+                         // to enable people to highlight capture groups if there are any
+                         // otherwise highlight complete expression match
+                         if( i % numberOfCaptureGroups != 1 )
+                         {
+                             filter( s, begin );
+                         }
+                     }
+                     else
+                     {
+                         filter( s, begin );
+                     }
+                 }
              }
         }
         return true;
@@ -517,8 +536,6 @@ bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex
             {
                 if( captureList.size() > 0 )
                 {
-                    captureList.pop_front();
-                    posList.pop_front();
                     filter( captureList.front(), posList.front() );
                 }
             }
@@ -560,8 +577,17 @@ inline void TTrigger::updateMultistates( int regexNumber,
 
 inline void TTrigger::filter( std::string & capture, int & posOffset )
 {
+    if( capture.size() < 1 ) return;
+    cout << "capture <"<<capture<<">"<<endl;
     char * filterSubject = (char *) malloc( capture.size() + 2048 );
-    strcpy( filterSubject, capture.c_str() );
+    if( filterSubject )
+       strcpy( filterSubject, capture.c_str() );
+    else
+    {
+        cout << "ERROR:"<<endl;
+        return;
+    }
+    cout << "trace3"<<endl;
     QString text = capture.c_str();
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -630,8 +656,6 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
             {
                 if( captureList.size() > 0 )
                 {
-                    captureList.pop_front();
-                    posList.pop_front();
                     filter( captureList.front(), posList.front() );
                 }
             }
@@ -710,8 +734,6 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
             {
                 if( captureList.size() > 0 )
                 {
-                    captureList.pop_front();
-                    posList.pop_front();
                     filter( captureList.front(), posList.front() );
                 }
             }

@@ -124,7 +124,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         mStandardFormat.underline = false;
     }
     setContentsMargins(0,0,0,0);
-    profile_name = mpHost->getName();
+    if( mpHost )
+        profile_name = mpHost->getName();
+    else
+        profile_name = "debug console";
     mFormatSystemMessage.bgColor = mBgColor;
     mFormatSystemMessage.fgColor = QColor( 255, 0, 0 );
     setAttribute( Qt::WA_DeleteOnClose );
@@ -211,7 +214,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutLayer->addWidget( splitter );
     layoutLayer->addWidget( mpScrollBar );
     
-    layerCommandLine = new QWidget( layer );
+    layerCommandLine = new QWidget( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0,0,0,0);
     layerCommandLine->setSizePolicy( sizePolicy2 );
     layerCommandLine->setMaximumHeight(31);
@@ -287,8 +290,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutLayer2->addWidget( networkLatency );
 
     layout->addWidget( layer );
-    layout->addWidget( layerCommandLine );
-          
+    //layout->addWidget( layerCommandLine );
+
+    centralLayout->addWidget(layerCommandLine);
+
     QList<int> sizeList;
     sizeList << 6 << 2;
     splitter->setSizes( sizeList );
@@ -342,6 +347,18 @@ void TConsole::resizeEvent( QResizeEvent * event )
         cout << "[RESIZING subConsole]"<<endl;
         mSubConsoleList[i]->resizeEvent( event );
     }*/
+
+    if( mIsSubConsole || mIsDebugConsole )
+    {
+        qDebug()<<"jo verstecken wir mal die command line";
+        layerCommandLine->hide();
+        mpCommandLine->hide();
+    }
+    else
+    {
+        qDebug()<<"oki verschieben wir sie mal height="<<mpMainFrame->height()<<" cL-hoehe="<<layerCommandLine->height();
+        layerCommandLine->move(0,mpMainFrame->height()-layerCommandLine->height());
+    }
 
     QWidget::resizeEvent( event );
 }

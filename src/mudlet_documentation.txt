@@ -1180,9 +1180,9 @@ Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 | Function | Description
 |createBuffer( name )|creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work
 |appendBuffer( name )|like paste() but pastes at the end of the buffer/window and wraps new text automatically
-|showUserWindow( name )|shows user window name
-|hideUserWindow( name )|hides user window name
-|resizeUserWindow( name, x1, y1, x2, y2 )|resizes window name to x1/y1 and x2/y2 vectors
+|showWindow( name )|shows user window name
+|hideWindow( name )|hides user window name
+|resizeWindow( name, x1, y1, x2, y2 )|resizes window name to x1/y1 and x2/y2 vectors
 |closeUserWindow( name )|closes a named window and delete it.
 |latency = getNetworkLatency()|returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)
 |watchID = createStopWatch() | return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines

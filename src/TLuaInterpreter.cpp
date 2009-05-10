@@ -1607,9 +1607,9 @@ int TLuaInterpreter::getMainWindowSize( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
-    QSize size = pHost->mpConsole->size();
+    QSize size = pHost->mpConsole->mpMainFrame->size();
     lua_pushnumber( L, size.width() );
-    lua_pushnumber( L, size.height() );
+    lua_pushnumber( L, size.height()-pHost->mpConsole->mpCommandLine->height() );
     return 2;
 }
 
