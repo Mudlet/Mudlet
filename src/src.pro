@@ -5,7 +5,7 @@ LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 unix:LIBS += -lqscintilla2 \
     -lpcre \
-    $$LIBLUA \
+    $$LIBLUA 
 win32:LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release \
     -lqscintilla2 \
     -Lc:\lua-5.1.4\src \
