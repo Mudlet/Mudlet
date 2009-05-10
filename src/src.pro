@@ -6,7 +6,6 @@ LIBLUA = -llua5.1
 unix:LIBS += -lqscintilla2 \
     -lpcre \
     $$LIBLUA \
-    -lphonon
 win32:LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release \
     -lqscintilla2 \
     -Lc:\lua-5.1.4\src \
