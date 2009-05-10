@@ -243,15 +243,18 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     networkLatency->setToolTip("latency of the MUD-server and network (current/average)");
     networkLatency->setMaximumWidth( 120 );
     networkLatency->setMinimumWidth( 120 );
-    networkLatency->setAutoFillBackground( false );
+    networkLatency->setAutoFillBackground( true );
     networkLatency->setContentsMargins(0,0,0,0);
     QPalette lagPalette;
     //lagPalette.setColor( QPalette::Text, QColor(100,255,100) );
     //lagPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    lagPalette.setColor( QPalette::Base, networkLatency->palette().color(QPalette::Window) );
-    networkLatency->setPalette(lagPalette);
+    lagPalette.setColor( QPalette::Base, QColor(255,255,255,255) );
+    lagPalette.setColor( QPalette::Text, QColor(0,0,0,255) );
+    lagPalette.setColor( QPalette::Window, QColor(255,255,255,255) );
+    networkLatency->setPalette( lagPalette );
     networkLatency->setAlignment( Qt::AlignHCenter | Qt::AlignVCenter );
     networkLatency->setFrame( false );
+
     QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
     int width;
     int maxWidth = 120;
@@ -288,10 +291,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutLayer2->addWidget( logButton );
     layoutLayer2->addWidget( emergencyStop );
     layoutLayer2->addWidget( networkLatency );
-
+    layoutLayer2->setContentsMargins(0,0,0,0);
     layout->addWidget( layer );
     //layout->addWidget( layerCommandLine );
-
+    QPalette whitePalette;
+    whitePalette.setColor( QPalette::Window, QColor(255,255,255,255) );
+    layerCommandLine->setPalette( whitePalette );
+    layerCommandLine->setAutoFillBackground( true );
     centralLayout->addWidget(layerCommandLine);
 
     QList<int> sizeList;
@@ -323,12 +329,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         layerCommandLine->hide();
     }
     changeColors();
-cout << "[SYSTEM:] main console initialized successfully"<<endl;
 }
 
 void TConsole::resizeEvent( QResizeEvent * event )
 {
-    cout <<"[TEST] TConsole::resizeEvent()"<<endl;
     if( ! mIsDebugConsole && ! mIsSubConsole )
     {
         mMainFrameTopHeight = mpHost->mBorderTopHeight;
@@ -340,7 +344,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
     int y = event->size().height();
     mpMainFrame->resize( x, y );
     mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
-                           y - mMainFrameTopHeight - mMainFrameBottomHeight );
+                           y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
     /*for( int i=0; i<mSubConsoleList.size(); i++ )
     {
@@ -350,13 +354,11 @@ void TConsole::resizeEvent( QResizeEvent * event )
 
     if( mIsSubConsole || mIsDebugConsole )
     {
-        qDebug()<<"jo verstecken wir mal die command line";
         layerCommandLine->hide();
         mpCommandLine->hide();
     }
     else
     {
-        qDebug()<<"oki verschieben wir sie mal height="<<mpMainFrame->height()<<" cL-hoehe="<<layerCommandLine->height();
         layerCommandLine->move(0,mpMainFrame->height()-layerCommandLine->height());
     }
 
