@@ -76,15 +76,18 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mLogFileName(QString(""))
 , mLogToLogFile( false )
 , networkLatency( new QLineEdit )
-, mpMainFrame( new QWidget(this) )
+, mpBaseVFrame( new QWidget( this ) )
+, mpTopToolBar( new QWidget( mpBaseVFrame ) )
+, mpBaseHFrame( new QWidget( mpBaseVFrame ) )
+, mpLeftToolBar( new QWidget( mpBaseHFrame ) )
+, mpMainFrame( new QWidget( mpBaseHFrame ) )
+, mpRightToolBar( new QWidget( mpBaseHFrame ) )
 , mpMainDisplay( new QWidget( mpMainFrame ) )
 , mMainFrameTopHeight( 0 )
 , mMainFrameBottomHeight( 0 )
 , mMainFrameLeftWidth( 0 )
 , mMainFrameRightWidth( 0 )
 {
-    cout<<"TConsole::constructor() called!"<<endl;
-
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
@@ -136,6 +139,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mHighColorModeBackground = false;
     mIsHighColorMode = false;
 
+    QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy sizePolicy3( QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy sizePolicy2( QSizePolicy::Expanding, QSizePolicy::Fixed);
+
     QPalette mainPalette;
     mainPalette.setColor( QPalette::Text, QColor(0,0,0) );
     mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
@@ -150,25 +157,82 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpMainFrame->setPalette( framePalette );
     mpMainFrame->setAutoFillBackground(true);
     mpMainFrame->setContentsMargins(0,0,0,0);
-    QVBoxLayout * centralLayout = new QVBoxLayout( this );
-    centralLayout->addWidget( mpMainFrame );
-    //mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
-    //                       y - mMainFrameTopHeight - mMainFrameBottomHeight );
-    mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
+    QVBoxLayout * centralLayout = new QVBoxLayout;
+    setLayout( centralLayout );
+    QVBoxLayout * baseVFrameLayout = new QVBoxLayout;
+    mpBaseVFrame->setLayout( baseVFrameLayout );
+    baseVFrameLayout->setMargin( 0 );
+    baseVFrameLayout->setSpacing( 0 );
+    centralLayout->addWidget( mpBaseVFrame );
+    QHBoxLayout * baseHFrameLayout = new QHBoxLayout;
+    mpBaseHFrame->setLayout( baseHFrameLayout );
+    baseHFrameLayout->setMargin( 0 );
+    baseHFrameLayout->setSpacing( 0 );
+    layout()->setSpacing( 0 );
+    layout()->setMargin( 0 );
+    setContentsMargins( 0, 0, 0, 0 );
 
+    QPalette baseVPalette;
+    baseVPalette.setColor( QPalette::Text, QColor(0,0,0) );
+    baseVPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    baseVPalette.setColor( QPalette::Window, QColor(255,0,0,255) );
+
+    QPalette baseHPalette;
+    baseHPalette.setColor( QPalette::Text, QColor(0,0,0) );
+    baseHPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    baseHPalette.setColor( QPalette::Window, QColor(0,255,0,255) );
+    //baseHPalette.setColor( QPalette::Base, QColor(0,255,100,255) );
+
+    mpBaseVFrame->setPalette( baseVPalette );
+    mpBaseVFrame->setAutoFillBackground(true);
+    mpBaseVFrame->setContentsMargins(0,0,0,0);
+    baseVFrameLayout->setSpacing(0);
+    mpTopToolBar->setContentsMargins(0,0,0,0);
+    mpBaseVFrame->setContentsMargins(0,0,0,0);
+    baseVFrameLayout->addWidget( mpTopToolBar );
+    baseVFrameLayout->addWidget( mpBaseHFrame );
+    baseHFrameLayout->addWidget( mpLeftToolBar );
+    QWidget * mpCorePane = new QWidget( mpBaseHFrame );
+    QVBoxLayout * coreSpreadLayout = new QVBoxLayout;
+    mpCorePane->setLayout( coreSpreadLayout );
+    mpCorePane->setContentsMargins(0,0,0,0);
+    coreSpreadLayout->setMargin(0);
+    coreSpreadLayout->setSpacing(0);
+    coreSpreadLayout->addWidget( mpMainFrame );
+    mpCorePane->setSizePolicy( sizePolicy );
+    baseHFrameLayout->addWidget( mpCorePane );
+    baseHFrameLayout->addWidget( mpRightToolBar );
+    mpTopToolBar->setContentsMargins(0,0,0,0);
+    mpBaseHFrame->setPalette( baseHPalette );
+    mpBaseHFrame->setAutoFillBackground(true);
+    baseHFrameLayout->setSpacing(0);
+    baseHFrameLayout->setMargin(0);
+    setContentsMargins(0,0,0,0);
+    mpBaseHFrame->setContentsMargins(0,0,0,0);
+    centralLayout->setSpacing(0);
+    centralLayout->setContentsMargins(0,0,0,0);
+    centralLayout->setMargin(0);
+    mpBaseHFrame->setPalette( baseHPalette );
+
+    mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
     mpMainFrame->show();
     mpMainDisplay->show();
-
-
     mpMainFrame->setContentsMargins(0,0,0,0);
     mpMainDisplay->setContentsMargins(0,0,0,0);
-    QVBoxLayout * layout = new QVBoxLayout( mpMainDisplay );
+    QVBoxLayout * layout = new QVBoxLayout;
+    mpMainDisplay->setLayout(layout);
     layout->setContentsMargins(0,0,0,0);
     layout->setSpacing(0);
-    QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy sizePolicy3( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy sizePolicy2( QSizePolicy::Expanding, QSizePolicy::Fixed);
-    
+
+    mpBaseVFrame->setSizePolicy(sizePolicy);
+    mpBaseHFrame->setSizePolicy(sizePolicy);
+    mpBaseVFrame->setFocusPolicy(Qt::NoFocus);
+    mpBaseHFrame->setFocusPolicy(Qt::NoFocus);
+
+    baseVFrameLayout->setMargin(0);
+    baseHFrameLayout->setMargin(0);
+    centralLayout->setMargin(0);
+
     mpCommandLine = new TCommandLine( pH, this, mpMainDisplay );
     mpCommandLine->setContentsMargins(0,0,0,0);
     mpCommandLine->setSizePolicy( sizePolicy );
@@ -315,7 +379,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     m_fontSpecs.init();
     connect( mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
 
-    this->layout()->setContentsMargins(0,0,0,0);
+    //this->layout()->setContentsMargins(0,0,0,0);
     if( mIsSubConsole )
     {
         mpScrollBar->hide();
@@ -328,6 +392,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     {
         layerCommandLine->hide();
     }
+
     changeColors();
 }
 

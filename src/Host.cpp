@@ -310,6 +310,7 @@ void Host::raiseEvent( TEvent * pE )
 
 void Host::gotRest( QString & data )
 {
+
     mRest = data; 
     if( mpConsole )
     {

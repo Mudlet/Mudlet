@@ -684,7 +684,6 @@ void cTelnet::gotRest( string & mud_data )
     }
     if( mud_data[mud_data.size()-1] == '\n' )
     {
-        //qDebug()<<"LF-posting";
         mpPostingTimer->stop();
         mMudData += mud_data;
         
@@ -706,7 +705,6 @@ void cTelnet::gotRest( string & mud_data )
 void cTelnet::slot_timerPosting()
 {
     if( ! mIsTimerPosting ) return;
-    //qDebug()<<"TIMER->posting";
     postData();
     mMudData = "";
     mIsTimerPosting = false; 

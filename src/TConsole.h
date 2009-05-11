@@ -218,7 +218,12 @@ public:
       QWidget *         layerCommandLine;  
       QPushButton *     emergencyStop;
       QLineEdit *       networkLatency;
+      QWidget *         mpBaseVFrame;
+      QWidget *         mpBaseHFrame;
       QWidget *         mpMainFrame;
+      QWidget *         mpTopToolBar;
+      QWidget *         mpLeftToolBar;
+      QWidget *         mpRightToolBar;
       TChar             mFormatCurrent;
       void echoConsole( QString & msg );
       void              setConsoleBgColor( int, int, int );
