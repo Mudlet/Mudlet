@@ -13,19 +13,15 @@ TFlipButton::TFlipButton( TToolBar * parent, TAction * pTAction, int id, Host * 
 {
     init();
 }
-/*
-TFlipButton::TFlipButton( const QString & text, QWidget * parent )
-: QPushButton( text, parent )
-{
-    init();
-}
 
-TFlipButton::TFlipButton( const QIcon & icon, const QString & text, QWidget * parent )
-: QPushButton( icon, text, parent )
+TFlipButton::TFlipButton( TEasyButtonBar * parent, TAction * pTAction, int id, Host * pHost )
+: QPushButton( 0 )
+, mpTAction( pTAction )
+, mID( id )
+, mpHost( pHost )
 {
     init();
 }
-*/
 
 void TFlipButton::init()
 {
@@ -126,13 +122,9 @@ QStyleOptionButton TFlipButton::getStyleOption() const
         opt.rect.setSize(size);
     }
     opt.features = QStyleOptionButton::None;
-    //    if( isFlat() ) opt.features |= QStyleOptionButton::Flat;
     if( menu() ) opt.features |= QStyleOptionButton::HasMenu;
-    //    if( autoDefault() || isDefault() ) opt.features |= QStyleOptionButton::AutoDefaultButton;
-    //    if( isDefault() ) opt.features |= QStyleOptionButton::DefaultButton;
     if( isDown() || ( menu() && menu()->isVisible() ) ) opt.state |= QStyle::State_Sunken;
     if( isChecked() ) opt.state |= QStyle::State_On;
-    //    if( !isFlat() && !isDown() ) opt.state |= QStyle::State_Raised;
     opt.text = text();
     opt.icon = icon();
     opt.iconSize = iconSize();

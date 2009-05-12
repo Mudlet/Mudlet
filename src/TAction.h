@@ -97,8 +97,15 @@ public:
     void             expandToolbar( mudlet * pMainWindow,
                                     TToolBar * pT,
                                     QMenu * menu );
+    void             insertActions( mudlet * pMainWindow,
+                                    TEasyButtonBar * pT,
+                                    QMenu * menu );
+    void             expandToolbar( mudlet * pMainWindow,
+                                    TEasyButtonBar * pT,
+                                    QMenu * menu );
     bool             isClone(TAction & ) const;
     TToolBar *       mpToolBar;
+    TEasyButtonBar * mpEasyButtonBar;
     int              mButtonState;
     int              mPosX;
     int              mPosY;

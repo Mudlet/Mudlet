@@ -45,6 +45,7 @@ TAction::TAction( TAction * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
+, mpEasyButtonBar( 0 )
 , mButtonColumns( 1 )
 , mIsLabel( false )
 , mUseCustomLayout( false )
@@ -61,6 +62,7 @@ TAction::TAction( QString name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
+, mpEasyButtonBar( 0 )
 , mButtonColumns( 1 )
 , mIsLabel( false )
 , mUseCustomLayout( false )
@@ -227,7 +229,64 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
     }
 }
                                    
-                                   
+
+void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * menu )
+{
+   typedef list<TAction *>::const_iterator I;
+   for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   {
+       TAction * pChild = *it;
+
+       QIcon icon( pChild->mIcon );
+       QString name = pChild->getName();
+       TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
+       button->setIcon( icon );
+       button->setText( name );
+       button->setCheckable( pChild->mIsPushDownButton );
+       button->setFlat( mButtonFlat );
+       button->setStyleSheet( css );
+
+       pT->addButton( button );
+
+       if( pChild->mIsFolder )
+       {
+           QMenu * newMenu = new QMenu( pT );
+           button->setMenu( newMenu );
+           newMenu->setStyleSheet( css );
+           pChild->insertActions( pMainWindow, pT, newMenu );
+       }
+   }
+}
+
+
+void TAction::insertActions( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * menu )
+{
+    mpEasyButtonBar = pT;
+    QIcon icon( mIcon );
+    EAction * action = new EAction( icon, mName, pMainWindow );
+    action->setCheckable( mIsPushDownButton );
+    action->mID = mID;
+    action->mpHost = mpHost;
+    action->setStatusTip( mName );
+    menu->addAction( action );
+    mudlet::self()->bindMenu( menu, action );
+
+    if( mIsFolder )
+    {
+        QMenu * newMenu = new QMenu( pT );//pMainWindow );
+        newMenu->setStyleSheet( css );
+        action->setMenu( newMenu );
+
+        typedef list<TAction *>::const_iterator I;
+        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        {
+            TAction * pChild = *it;
+            pChild->insertActions( pMainWindow, pT, newMenu );
+        }
+    }
+}
+
+
 
 bool TAction::serialize( QDataStream & ofs )
 {

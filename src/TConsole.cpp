@@ -142,7 +142,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy3( QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy2( QSizePolicy::Expanding, QSizePolicy::Fixed);
-
     QPalette mainPalette;
     mainPalette.setColor( QPalette::Text, QColor(0,0,0) );
     mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
@@ -172,10 +171,29 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layout()->setMargin( 0 );
     setContentsMargins( 0, 0, 0, 0 );
 
+    QVBoxLayout * topBarLayout = new QVBoxLayout;
+    mpTopToolBar->setLayout( topBarLayout );
+    mpTopToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    mpTopToolBar->setContentsMargins(0,0,0,0);
+    topBarLayout->setMargin( 0 );
+    topBarLayout->setSpacing(0);
+    QVBoxLayout * leftBarLayout = new QVBoxLayout;
+    mpLeftToolBar->setLayout( leftBarLayout );
+    mpLeftToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    leftBarLayout->setMargin( 0 );
+    leftBarLayout->setSpacing(0);
+    mpLeftToolBar->setContentsMargins(0,0,0,0);
+    QVBoxLayout * rightBarLayout = new QVBoxLayout;
+    mpRightToolBar->setLayout( rightBarLayout );
+    mpRightToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    rightBarLayout->setMargin( 0 );
+    rightBarLayout->setSpacing(0);
+    mpRightToolBar->setContentsMargins(0,0,0,0);
+
     QPalette baseVPalette;
     baseVPalette.setColor( QPalette::Text, QColor(0,0,0) );
     baseVPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    baseVPalette.setColor( QPalette::Window, QColor(255,0,0,255) );
+    baseVPalette.setColor( QPalette::Window, QColor(255,0,255,255) );
 
     QPalette baseHPalette;
     baseHPalette.setColor( QPalette::Text, QColor(0,0,0) );
@@ -187,8 +205,9 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBaseVFrame->setAutoFillBackground(true);
     mpBaseVFrame->setContentsMargins(0,0,0,0);
     baseVFrameLayout->setSpacing(0);
+    baseVFrameLayout->setMargin( 0 );
     mpTopToolBar->setContentsMargins(0,0,0,0);
-    mpBaseVFrame->setContentsMargins(0,0,0,0);
+    mpTopToolBar->setPalette(baseHPalette);
     baseVFrameLayout->addWidget( mpTopToolBar );
     baseVFrameLayout->addWidget( mpBaseHFrame );
     baseHFrameLayout->addWidget( mpLeftToolBar );
@@ -244,7 +263,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layer->setSizePolicy( sizePolicy );
     layer->setFocusPolicy( Qt::NoFocus );
         
-    QHBoxLayout * layoutLayer = new QHBoxLayout( layer );
+    QHBoxLayout * layoutLayer = new QHBoxLayout;
+    layer->setLayout( layoutLayer );
     layoutLayer->setMargin(0);
     QSizePolicy sizePolicyLayer(QSizePolicy::Expanding, QSizePolicy::Expanding);
         
@@ -357,6 +377,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutLayer2->addWidget( networkLatency );
     layoutLayer2->setContentsMargins(0,0,0,0);
     layout->addWidget( layer );
+
     //layout->addWidget( layerCommandLine );
     QPalette whitePalette;
     whitePalette.setColor( QPalette::Window, QColor(255,255,255,255) );
@@ -393,6 +414,12 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         layerCommandLine->hide();
     }
 
+    mpBaseVFrame->setContentsMargins(0,0,0,0);
+    mpBaseHFrame->setContentsMargins(0,0,0,0);
+    mpBaseVFrame->layout()->setMargin(0);
+    mpBaseVFrame->layout()->setSpacing(0);
+    mpBaseHFrame->layout()->setMargin(0);
+    mpBaseHFrame->layout()->setSpacing(0);
     changeColors();
 }
 
@@ -442,7 +469,7 @@ void TConsole::refresh()
     int x = mpMainFrame->size().width();
     int y = mpMainFrame->size().height();
     mpMainFrame->resize( x, y );
-    mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
+    mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth - 15,
                            y - mMainFrameTopHeight - mMainFrameBottomHeight );
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
 }

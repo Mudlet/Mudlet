@@ -2,17 +2,20 @@
 #define TFLIPBUTTON_H
 
 #include "TToolBar.h"
+#include "TEasyButtonBar.h"
 #include <QPushButton>
 #include <QStyleOptionButton>
 
 class TAction;
 class Host;
 class TToolBar;
+class TEasyButtonBar;
 
 class TFlipButton : public QPushButton
 {
 public:
     TFlipButton( TToolBar *, TAction *, int, Host * );
+    TFlipButton( TEasyButtonBar *, TAction *, int, Host * );
     TFlipButton( const QString & text, QWidget* parent = 0);
     TFlipButton( const QIcon & icon, const QString & text, QWidget * parent = 0 );
     

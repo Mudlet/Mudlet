@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2009 by Heiko Koehn                                *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -27,9 +27,11 @@
 #include <QMutex>
 #include <QDataStream>
 #include "TToolBar.h"
+#include "TEasyButtonBar.h"
 #include <QMenu>
 
 class TToolBar;
+class TEasyButtonBar;
 class TAction;
 class Host;
 
@@ -50,9 +52,12 @@ public:
     qint64                getNewID();
     void                  updateToolbar();
     std::list<TToolBar *> getToolBarList();
+    std::list<TEasyButtonBar *> getEasyButtonBarList();
     TAction *             getHeadAction( TToolBar * );
+    TAction *             getHeadAction( TEasyButtonBar * );
     void                  processDataStream( QString & );
     void                  constructToolbar( TAction *, mudlet * pMainWindow, TToolBar * pTB );
+    void                  constructToolbar( TAction *, mudlet * pMainWindow, TEasyButtonBar * pTB );
     QMutex                mActionUnitLock;
     
 private: 
@@ -67,7 +72,9 @@ private:
     std::list<TAction *>  mActionRootNodeList;
     qint64                mMaxID;
     TToolBar *            mpToolBar;
+    TEasyButtonBar *      mpEasyButtonBar;
     std::list<TToolBar *> mToolBarList;
+    std::list<TEasyButtonBar *> mEasyButtonBarList;
     
 };
 
