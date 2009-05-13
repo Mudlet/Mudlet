@@ -64,6 +64,7 @@ FontManager.cpp
 TToolBar.cpp
 TFlipButton.cpp
 TBuffer.cpp
+TEasyButtonBar.cpp
 TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
@@ -117,6 +118,7 @@ dlgKeysMainArea.h
 dlgProfilePreferences.h
 TToolBar.h
 TTextEdit.h
+TEasyButtonBar.h
 TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)
