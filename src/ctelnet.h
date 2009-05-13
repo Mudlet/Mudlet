@@ -1,7 +1,7 @@
 /***************************************************************************
     
 copyright (C) 2002-2005 by Tomas Mecir (kmuddy@kmuddy.com)
-copyright (c) 2008 by Heiko Koehn (koehnheiko@googlemail.com)
+copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
  
 ***************************************************************************
 *                                                                         *

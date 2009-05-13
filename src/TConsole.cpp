@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -175,39 +175,27 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpTopToolBar->setLayout( topBarLayout );
     mpTopToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
     mpTopToolBar->setContentsMargins(0,0,0,0);
+    mpTopToolBar->setAutoFillBackground(true);
     topBarLayout->setMargin( 0 );
     topBarLayout->setSpacing(0);
     QVBoxLayout * leftBarLayout = new QVBoxLayout;
     mpLeftToolBar->setLayout( leftBarLayout );
     mpLeftToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    mpLeftToolBar->setAutoFillBackground(true);
     leftBarLayout->setMargin( 0 );
     leftBarLayout->setSpacing(0);
     mpLeftToolBar->setContentsMargins(0,0,0,0);
     QVBoxLayout * rightBarLayout = new QVBoxLayout;
     mpRightToolBar->setLayout( rightBarLayout );
     mpRightToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    mpRightToolBar->setAutoFillBackground(true);
     rightBarLayout->setMargin( 0 );
     rightBarLayout->setSpacing(0);
     mpRightToolBar->setContentsMargins(0,0,0,0);
-
-    QPalette baseVPalette;
-    baseVPalette.setColor( QPalette::Text, QColor(0,0,0) );
-    baseVPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    baseVPalette.setColor( QPalette::Window, QColor(255,0,255,255) );
-
-    QPalette baseHPalette;
-    baseHPalette.setColor( QPalette::Text, QColor(0,0,0) );
-    baseHPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    baseHPalette.setColor( QPalette::Window, QColor(0,255,0,255) );
-    //baseHPalette.setColor( QPalette::Base, QColor(0,255,100,255) );
-
-    mpBaseVFrame->setPalette( baseVPalette );
-    mpBaseVFrame->setAutoFillBackground(true);
     mpBaseVFrame->setContentsMargins(0,0,0,0);
     baseVFrameLayout->setSpacing(0);
     baseVFrameLayout->setMargin( 0 );
     mpTopToolBar->setContentsMargins(0,0,0,0);
-    mpTopToolBar->setPalette(baseHPalette);
     baseVFrameLayout->addWidget( mpTopToolBar );
     baseVFrameLayout->addWidget( mpBaseHFrame );
     baseHFrameLayout->addWidget( mpLeftToolBar );
@@ -222,7 +210,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     baseHFrameLayout->addWidget( mpCorePane );
     baseHFrameLayout->addWidget( mpRightToolBar );
     mpTopToolBar->setContentsMargins(0,0,0,0);
-    mpBaseHFrame->setPalette( baseHPalette );
     mpBaseHFrame->setAutoFillBackground(true);
     baseHFrameLayout->setSpacing(0);
     baseHFrameLayout->setMargin(0);
@@ -231,8 +218,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     centralLayout->setSpacing(0);
     centralLayout->setContentsMargins(0,0,0,0);
     centralLayout->setMargin(0);
-    mpBaseHFrame->setPalette( baseHPalette );
-
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
     mpMainFrame->show();
     mpMainDisplay->show();

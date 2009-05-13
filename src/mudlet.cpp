@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -89,9 +89,9 @@ mudlet::mudlet()
     layoutTopLevel->addWidget( mpTabBar );
     mainPane = new QWidget( frame );
     QPalette mainPalette;
-    mainPalette.setColor( QPalette::Text, QColor(100,255,100) );
-    mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    mainPalette.setColor( QPalette::Window, QColor(250,150,0,50) );
+    //mainPalette.setColor( QPalette::Text, QColor(100,255,100) );
+    //mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    //mainPalette.setColor( QPalette::Window, QColor(250,150,0,50) );
     mainPane->setPalette( mainPalette );
     mainPane->setAutoFillBackground(true);
     mainPane->setFocusPolicy( Qt::NoFocus );
@@ -340,7 +340,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
     
-    std::list<TToolBar *> toolBarList = pH->getActionUnit()->getToolBarList();
+/*    std::list<TToolBar *> toolBarList = pH->getActionUnit()->getToolBarList();
     typedef std::list<TToolBar *>::iterator I;
     for( I it=toolBarList.begin(); it!=toolBarList.end(); it++ )
     {
@@ -360,14 +360,6 @@ void mudlet::addConsoleForNewHost( Host * pH )
             (*it)->setTitleBarWidget( noTitleBar );
         }
         (*it)->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
-        /*switch( head->mLocation )
-        {
-            case 0: addDockWidget( Qt::TopDockWidgetArea, *it ); break;
-            case 1: addDockWidget( Qt::BottomDockWidgetArea, *it ); break;
-            case 2: addDockWidget( Qt::LeftDockWidgetArea, *it ); break;    
-            case 3: addDockWidget( Qt::RightDockWidgetArea, *it ); break;    
-        
-        }*/
         if( head->mLocation == 4 )
         {
             addDockWidget( Qt::LeftDockWidgetArea, *it ); //float toolbar
@@ -401,7 +393,8 @@ void mudlet::addConsoleForNewHost( Host * pH )
         }
         (*it)->show();
         (*it)->mpTAction = head;
-    }
+    }*/
+    pH->getActionUnit()->updateToolbar();
 }
 
 void mudlet::bindMenu( QMenu * menu, EAction * action )
@@ -771,6 +764,7 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 void mudlet::slot_userToolBar_triggered( QAction* pA )
 {
+    qDebug()<<"slot_muserToolBar_triggered()";
     if( pA->isChecked() )
     {
         ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 2;
@@ -843,8 +837,8 @@ void mudlet::readSettings()
     QSettings settings("Mudlet", "Mudlet 1.0");
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
-    mMainIconSize = settings.value("mainiconsize",QVariant(32)).toInt();
-    mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(32)).toInt();
+    mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
+    mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(3)).toInt();
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );

@@ -3,7 +3,7 @@
 #define _TACTION_H_
 
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -71,7 +71,7 @@ public:
     void             setSizeY( int s )                         { mSizeY = s; }
     int              getSizeY()                                { return mSizeY; }
     
-    
+    void             fillMenu( TEasyButtonBar * pT, QMenu * menu );
     void             compile();
     bool             compileScript();
     void             execute(QStringList &);

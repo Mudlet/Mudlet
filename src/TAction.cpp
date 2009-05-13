@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -250,14 +250,38 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
 
        if( pChild->mIsFolder )
        {
-           QMenu * newMenu = new QMenu( pT );
+           QMenu * newMenu = new QMenu( button );
            button->setMenu( newMenu );
            newMenu->setStyleSheet( css );
-           pChild->insertActions( pMainWindow, pT, newMenu );
+           pChild->fillMenu( pT, newMenu );
        }
    }
 }
 
+void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
+{
+    typedef list<TAction *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TAction * pChild = *it;
+        mpEasyButtonBar = pT;
+        QIcon icon( mIcon );
+        EAction * action = new EAction( icon, pChild->mName, mudlet::self() );
+        action->setCheckable( pChild->mIsPushDownButton );
+        action->mID = pChild->mID;
+        action->mpHost = mpHost;
+        action->setStatusTip( pChild->mName );
+        menu->addAction( action );
+        if( pChild->mIsFolder )
+        {
+           QMenu * newMenu = new QMenu;
+           action->setMenu( newMenu );
+           newMenu->setStyleSheet( css );
+           pChild->fillMenu( pT, newMenu );
+           mudlet::self()->bindMenu( menu, action );
+        }
+    }
+}
 
 void TAction::insertActions( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * menu )
 {
@@ -270,20 +294,6 @@ void TAction::insertActions( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
     action->setStatusTip( mName );
     menu->addAction( action );
     mudlet::self()->bindMenu( menu, action );
-
-    if( mIsFolder )
-    {
-        QMenu * newMenu = new QMenu( pT );//pMainWindow );
-        newMenu->setStyleSheet( css );
-        action->setMenu( newMenu );
-
-        typedef list<TAction *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
-            TAction * pChild = *it;
-            pChild->insertActions( pMainWindow, pT, newMenu );
-        }
-    }
 }
 
 

@@ -188,6 +188,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
+        if( (*it)->mLocation != 4 ) continue;
         bool found = false;
         TToolBar * pTB;
         typedef list<TToolBar *>::iterator I2;
@@ -202,17 +203,14 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         if( ! found )
         {
             pTB = new TToolBar( *it, (*it)->getName(), mudlet::self() );
-            //pTB->mpTAction = *it;
             mToolBarList.push_back( pTB );
         }
         if( (*it)->mOrientation == 1 )
         {
-            qDebug()<<"orientation vertikal name="<<(*it)->getName();
             pTB->setVerticalOrientation();
         }
         else
         {
-            qDebug()<<"orientation horizontal: name="<<(*it)->getName();
             pTB->setHorizontalOrientation();
         }
         constructToolbar( *it, mudlet::self(), pTB );
@@ -243,17 +241,14 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         {
             pTB = new TEasyButtonBar( *it, (*it)->getName(), mpHost->mpConsole->mpTopToolBar );
             mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB );
-            //pTB->mpTAction = *it;
             mEasyButtonBarList.push_back( pTB );
         }
         if( (*it)->mOrientation == 1 )
         {
-            qDebug()<<"orientation vertikal name="<<(*it)->getName();
             pTB->setVerticalOrientation();
         }
         else
         {
-            qDebug()<<"orientation horizontal: name="<<(*it)->getName();
             pTB->setHorizontalOrientation();
         }
         constructToolbar( *it, mudlet::self(), pTB );
@@ -284,7 +279,8 @@ TAction * ActionUnit::getHeadAction( TToolBar * pT )
 }
     
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
-{ 
+{
+    if( pA->mLocation != 4 ) return;
     pTB->clear();
     if( pA->mLocation == 4 )
     {
@@ -305,23 +301,8 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
     else
         pTB->setVerticalOrientation();
     
-    if( pA->mLocation == 4 )
-    {
-        pTB->setTitleBarWidget( 0 );
-    }
-    else
-    {
-        QWidget * noTitleBar = new QWidget;
-        pTB->setTitleBarWidget( noTitleBar );
-    }
+    pTB->setTitleBarWidget( 0 );
     pTB->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
-    /*switch( pA->mLocation )
-    {
-        case 0: mudlet::self()->addDockWidget( Qt::TopDockWidgetArea, pTB ); break;
-        case 1: mudlet::self()->addDockWidget( Qt::BottomDockWidgetArea, pTB ); break;
-        case 2: mudlet::self()->addDockWidget( Qt::LeftDockWidgetArea, pTB ); break;    
-        case 3: mudlet::self()->addDockWidget( Qt::RightDockWidgetArea, pTB ); break;    
-    }*/
     if( pA->mLocation == 4 )
     {
         mudlet::self()->addDockWidget( Qt::LeftDockWidgetArea, pTB ); //float toolbar
@@ -336,46 +317,6 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
         pTB->show();
     pTB->setStyleSheet( pTB->mpTAction->css );
 }
-/*
-std::list<TEasyButtonBar *> ActionUnit::getToolBarList()
-{
-    typedef list<TAction *>::iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
-    {
-        bool found = false;
-        TEasyButtonBar * pTB;
-        typedef list<TEasyButtonBar *>::iterator I2;
-        for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
-        {
-            if( *it2 == (*it)->mpToolBar )
-            {
-                found = true;
-                pTB = *it2;
-            }
-        }
-        if( ! found )
-        {
-            pTB = new TEasyButtonBar( *it, (*it)->getName(), mudlet::self() );
-            //pTB->mpTAction = *it;
-            mToolBarList.push_back( pTB );
-        }
-        if( (*it)->mOrientation == 1 )
-        {
-            qDebug()<<"orientation vertikal name="<<(*it)->getName();
-            pTB->setVerticalOrientation();
-        }
-        else
-        {
-            qDebug()<<"orientation horizontal: name="<<(*it)->getName();
-            pTB->setHorizontalOrientation();
-        }
-        constructToolbar( *it, mudlet::self(), pTB );
-        (*it)->mpToolBar = pTB;
-        pTB->setStyleSheet( pTB->mpTAction->css );
-    }
-
-    return mToolBarList;
-}*/
 
 TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
 {
@@ -398,18 +339,14 @@ TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
 
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButtonBar * pTB )
 {
-    qDebug()<<"constructToolbar#NEW() called";
+    if( pA->mLocation == 4 ) return;
     pTB->clear();
-    qDebug()<<"trace#1";
     pA->expandToolbar( pMainWindow, pTB, 0 );
-qDebug()<<"trace#2";
     pTB->finalize();
-qDebug()<<"trace#3";
     if( pA->mOrientation == 0 )
         pTB->setHorizontalOrientation();
     else
         pTB->setVerticalOrientation();
-qDebug()<<"trace#4";
     switch( pA->mLocation )
     {
         case 0: mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB ); break;
@@ -417,17 +354,15 @@ qDebug()<<"trace#4";
         case 2: mpHost->mpConsole->mpLeftToolBar->layout()->addWidget( pTB ); break;
         case 3: mpHost->mpConsole->mpRightToolBar->layout()->addWidget( pTB ); break;
     }
-    qDebug()<<"trace#5";
     pTB->show();
-    qDebug()<<"trace#6";
     pTB->setStyleSheet( pTB->mpTAction->css );
-    qDebug()<<"trace#7";
 }
 
 
 void ActionUnit::updateToolbar()
 {
     getToolBarList();
+    getEasyButtonBarList();
 }
 
 bool ActionUnit::serialize( QDataStream & ofs )

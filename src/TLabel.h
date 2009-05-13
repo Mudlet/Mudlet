@@ -3,7 +3,7 @@
 
 
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn   *
  *   KoehnHeiko@googlemail.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
