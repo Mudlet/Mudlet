@@ -2896,6 +2896,7 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
 {
     if( ! pItem ) return;
     mCurrentAction = pItem;
+    mpActionsMainArea->show();
 
     mpSystemMessageArea->hide();
     mpActionsMainArea->lineEdit_action_button_down->clear();
@@ -4142,7 +4143,12 @@ void dlgTriggerEditor::slot_show_actions()
     treeWidget_scripts->hide();
     treeWidget_keys->hide();
     
-    mpActionsMainArea->show();
+    if( treeWidget_actions->currentItem() )
+    {
+        mpActionsMainArea->show();
+    }
+    else
+        mpActionsMainArea->hide();
     mpSourceEditorArea->show();
     //mpOptionsAreaActions->show();
     treeWidget_actions->show();

@@ -340,60 +340,6 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
     
-/*    std::list<TToolBar *> toolBarList = pH->getActionUnit()->getToolBarList();
-    typedef std::list<TToolBar *>::iterator I;
-    for( I it=toolBarList.begin(); it!=toolBarList.end(); it++ )
-    {
-        TAction * head = pH->getActionUnit()->getHeadAction( *it );        
-        if( head->mOrientation == 0 )
-            (*it)->setHorizontalOrientation();
-        else
-            (*it)->setVerticalOrientation();
-        
-        if( head->mLocation == 4 )
-        {
-            (*it)->setTitleBarWidget( 0 );
-        }
-        else
-        {
-            QWidget * noTitleBar = new QWidget;
-            (*it)->setTitleBarWidget( noTitleBar );
-        }
-        (*it)->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
-        if( head->mLocation == 4 )
-        {
-            addDockWidget( Qt::LeftDockWidgetArea, *it ); //float toolbar
-            (*it)->setFloating( true );
-            QPoint pos = QPoint( head->mPosX, head->mPosY );
-            (*it)->show();
-            (*it)->move( pos );
-            (*it)->mpTAction = head;
-            (*it)->recordMove();
-        }
-        else
-            (*it)->hide();
-    } 
-
-    std::list<TEasyButtonBar *> buttonBarList = pH->getActionUnit()->getEasyButtonBarList();
-    typedef std::list<TEasyButtonBar *>::iterator I2;
-    for( I2 it=buttonBarList.begin(); it!=buttonBarList.end(); it++ )
-    {
-        TAction * head = pH->getActionUnit()->getHeadAction( *it );
-        if( head->mOrientation == 0 )
-            (*it)->setHorizontalOrientation();
-        else
-            (*it)->setVerticalOrientation();
-
-        switch( head->mLocation )
-        {
-            case 0: pH->mpConsole->mpTopToolBar->layout()->addWidget( *it ); break;
-            //case 1: pH->mpConsole->mpTopToolBar->layout()->addWidget( *it ); break;
-            case 2: pH->mpConsole->mpLeftToolBar->layout()->addWidget( *it ); break;
-            case 3: pH->mpConsole->mpRightToolBar->layout()->addWidget( *it ); break;
-        }
-        (*it)->show();
-        (*it)->mpTAction = head;
-    }*/
     pH->getActionUnit()->updateToolbar();
 }
 
