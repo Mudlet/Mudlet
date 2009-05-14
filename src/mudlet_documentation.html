@@ -1726,7 +1726,7 @@ NOTE: Certain other languages, with a morphology richer than that of English, mi
 <div class="paragraph"><p>And in your code, the variables <tt>matches[2]</tt> will contain the amount of gold you picked up (in this case, <em>16</em>). So now to say outloud how much gold did you loot, you can do the following:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>Script: echo("I got " .. matches[2] " gold!")</tt></pre>
+<pre><tt>Script: echo("I got " .. matches[2] .. " gold!")</tt></pre>
 </div></div>
 <h5 id="_more_advanced_example">More advanced example</h5>
 <div class="paragraph"><p>Here&#8217;s an example by Heiko, which makes you talk like Yoda:</p></div>
@@ -1840,7 +1840,8 @@ Finally, you create a <strong>new empty</strong> profile in Mudlet and import al
 </div>
 <h2 id="variables">Using Variables in Mudlet</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>One of the major design goals in Mudlet was to integrate scripts and variables as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients. If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias a key, an event handler, a free function etc. it can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (connection) runs in its own dedicated Lua interpreter. Consequently, all scripts are compiled into the same Lua interpreter and thus their code runs in the same variable space.</p></div>
+<div class="paragraph"><p>Using Variables in Mudlet</p></div>
+<div class="paragraph"><p>One of the major design goals in Mudlet was to integrate scripts and variables as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients, as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients. If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias key, an event handler, a free function, etc. It can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (connection) runs in its own dedicated Lua interpreter. Consequently, all scripts are compiled into the same Lua interpreter and thus their code runs in the same variable space.</p></div>
 <div class="admonitionblock" id="diag_variables">
 <table><tr>
 <td class="icon">
@@ -17648,15 +17649,15 @@ cellspacing="0" cellpadding="4">
 <td align="left"><p class="table">like paste() but pastes at the end of the buffer/window and wraps new text automatically</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">showUserWindow( name )</p></td>
+<td align="left"><p class="table">showWindow( name )</p></td>
 <td align="left"><p class="table">shows user window name</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">hideUserWindow( name )</p></td>
+<td align="left"><p class="table">hideWindow( name )</p></td>
 <td align="left"><p class="table">hides user window name</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">resizeUserWindow( name, x1, y1, x2, y2 )</p></td>
+<td align="left"><p class="table">resizeWindow( name, x1, y1, x2, y2 )</p></td>
 <td align="left"><p class="table">resizes window name to x1/y1 and x2/y2 vectors</p></td>
 </tr>
 <tr>
@@ -17718,6 +17719,18 @@ cellspacing="0" cellpadding="4">
 <tr>
 <td align="left"><p class="table">resizeWindow( name, width, height )</p></td>
 <td align="left"><p class="table">resizes a user window, button or label</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setMiniConsoleFontSize( name, fontSize )</p></td>
+<td align="left"><p class="table">Sets the font size of the mini console.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">getCurrentLine()</p></td>
+<td align="left"><p class="table">returns the content of the current line under the user cursor in the buffer. The Lua variable line holds the content of getCurrentLine() before any triggers have been run on this line. When triggers change the content of the buffer, the variable line will not be adjusted and thus hold an outdated string. line = getCurrentLine() will update line to the real content of the current buffer. This is important if you want to copy the current line after it has been changed by some triggers. selectString( line,1 ) will return false and won&#8217;t select anything because line no longer equals getCurrentLine(). Consequently, selectString( getCurrentLine(), 1 ) is what you need.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">selectCurrentLine()</p></td>
+<td align="left"><p class="table">selects the content of the current buffer line</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">setBackgroundImage( labelName, imageFileName )</p></td>
@@ -17982,7 +17995,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-05-03 11:07:00 CEST
+Last updated 2009-05-10 04:16:47 CEST
 </div>
 </div>
 </body>
