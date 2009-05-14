@@ -58,6 +58,9 @@ public:
     void                  processDataStream( QString & );
     void                  constructToolbar( TAction *, mudlet * pMainWindow, TToolBar * pTB );
     void                  constructToolbar( TAction *, mudlet * pMainWindow, TEasyButtonBar * pTB );
+    void                  showToolBar( QString & );
+    void                  hideToolBar( QString & );
+
     QMutex                mActionUnitLock;
     
 private: 

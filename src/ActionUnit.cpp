@@ -277,6 +277,30 @@ TAction * ActionUnit::getHeadAction( TToolBar * pT )
     }
     return 0;
 }
+
+void ActionUnit::showToolBar( QString & name )
+{
+    typedef list<TEasyButtonBar *>::iterator IT;
+    for( IT it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
+    {
+        if( (*it)->mpTAction->mName == name )
+        {
+            (*it)->show();
+        }
+    }
+}
+
+void ActionUnit::hideToolBar( QString & name )
+{
+    typedef list<TEasyButtonBar *>::iterator IT;
+    for( IT it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
+    {
+        if( (*it)->mpTAction->mName == name )
+        {
+            (*it)->hide();
+        }
+    }
+}
     
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
 {

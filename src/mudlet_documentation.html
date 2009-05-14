@@ -17783,6 +17783,18 @@ This script would create a mini text console and write with yellow foreground co
 <td align="left"><p class="table">table.contains(t, value)</p></td>
 <td align="left"><p class="table">Determines if a table contains a value as a key or as a value (recursive)</p></td>
 </tr>
+<tr>
+<td align="left"><p class="table">state = getButtonState() with state = 1 button is checked and state = 0, button is not checked</p></td>
+<td align="left"><p class="table">this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example: checked = getButtonStated(); if checked == 1 then hideExits() else showExits() end;</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">showToolBar( name )</p></td>
+<td align="left"><p class="table">shows tool bar name on the screen</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">hideToolBar( name )</p></td>
+<td align="left"><p class="table">hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -17995,7 +18007,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-05-10 04:16:47 CEST
+Last updated 2009-05-14 21:58:40 CEST
 </div>
 </div>
 </body>

@@ -208,6 +208,8 @@ public:
       QString           getCurrentLine( std::string & );
       void              selectCurrentLine( std::string & );
       bool              setMiniConsoleFontSize( std::string &, int );
+
+
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 

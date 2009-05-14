@@ -1594,6 +1594,46 @@ int TLuaInterpreter::getLastLineNumber( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::hideToolBar( lua_State *L )
+{
+    string luaWindowName="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString windowName(luaWindowName.c_str());
+    pHost->getActionUnit()->hideToolBar( windowName );
+    return 0;
+}
+
+int TLuaInterpreter::showToolBar( lua_State *L )
+{
+    string luaWindowName="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString windowName(luaWindowName.c_str());
+    pHost->getActionUnit()->showToolBar( windowName );
+    return 0;
+}
+
 int TLuaInterpreter::getButtonState( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -1602,6 +1642,8 @@ int TLuaInterpreter::getButtonState( lua_State *L )
     lua_pushnumber( L, state );
     return 1;
 }
+
+
 
 
 int TLuaInterpreter::getNetworkLatency( lua_State *L )
@@ -2608,6 +2650,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize );
     lua_register( pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine );
     lua_register( pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState );
+    lua_register( pGlobalLua, "showToolBar", TLuaInterpreter::showToolBar );
+    lua_register( pGlobalLua, "hideToolBar", TLuaInterpreter::hideToolBar );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
