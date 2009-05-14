@@ -53,6 +53,14 @@ TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
         QSizePolicy sizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred);
         mpWidget->setSizePolicy( sizePolicy );
     }
+    else
+    {
+        mpWidget->setMinimumHeight( mpTAction->mSizeY );
+        mpWidget->setMaximumHeight( mpTAction->mSizeY );
+        mpWidget->setMinimumWidth( mpTAction->mSizeX );
+        mpWidget->setMaximumWidth( mpTAction->mSizeX );
+        mpWidget->setGeometry( mpTAction->mPosX, mpTAction->mPosY, mpTAction->mSizeX, mpTAction->mSizeY );
+    }
     setStyleSheet( mpTAction->css );
     mpWidget->setStyleSheet( mpTAction->css );
 }
@@ -71,6 +79,7 @@ void TEasyButtonBar::addButton( TFlipButton * pB )
     }
     else
     {
+        qDebug()<<"setting up custom sizes";
         QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY );
         pB->setMaximumSize( size );
         pB->setMinimumSize( size );
@@ -128,7 +137,10 @@ void TEasyButtonBar::finalize()
     fillerWidget->setSizePolicy( sizePolicy );
     int columns = mpTAction->getButtonColumns();
     if( columns <= 0 ) columns = 1;
-    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
+    if( mpLayout )
+    {
+        mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
+    }
     mpWidget->show();
 }
 
@@ -151,6 +163,10 @@ void TEasyButtonBar::slot_pressed()
     {
         pA->mButtonState = 1;
     }
+    if( pB->isChecked() )
+        pA->mpHost->mpConsole->mButtonState = 1;
+    else
+        pA->mpHost->mpConsole->mButtonState = 0;
     QStringList sL;
     pA->execute( sL );
 
@@ -172,14 +188,23 @@ void TEasyButtonBar::clear()
         mpLayout->setMargin(0);
         QSizePolicy sizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred );
         mpWidget->setSizePolicy( sizePolicy );
-        layout()->addWidget( pW );
+
+        mpWidget->setContentsMargins(0,0,0,0);
+        mpLayout->setMargin(0);
     }
     else
+    {
         mpLayout = 0;
+        mpWidget->setMinimumHeight( mpTAction->mSizeY );
+        mpWidget->setMaximumHeight( mpTAction->mSizeY );
+        mpWidget->setMinimumWidth( mpTAction->mSizeX );
+        mpWidget->setMaximumWidth( mpTAction->mSizeX );
+        mpWidget->setGeometry( mpTAction->mPosX, mpTAction->mPosY, mpTAction->mSizeX, mpTAction->mSizeY );
+    }
+    layout()->addWidget( pW );
     setStyleSheet( mpTAction->css );
     mpWidget->setStyleSheet( mpTAction->css );
-    mpWidget->setContentsMargins(0,0,0,0);
-    mpLayout->setMargin(0);
+
 }
 
 

@@ -526,6 +526,11 @@ void TConsole::closeEvent( QCloseEvent *event )
     }
 }
 
+int TConsole::getButtonState()
+{
+    return mButtonState;
+}
+
 void TConsole::slot_toggleLogging()
 {
     mLogToLogFile = ! mLogToLogFile;

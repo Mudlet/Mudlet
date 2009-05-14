@@ -1594,6 +1594,16 @@ int TLuaInterpreter::getLastLineNumber( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::getButtonState( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    int state;
+    state = pHost->mpConsole->getButtonState();
+    lua_pushnumber( L, state );
+    return 1;
+}
+
+
 int TLuaInterpreter::getNetworkLatency( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -2597,6 +2607,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine );
     lua_register( pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize );
     lua_register( pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine );
+    lua_register( pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";

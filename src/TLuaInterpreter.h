@@ -163,6 +163,7 @@ public:
     static int setMiniConsoleFontSize( lua_State * );
     static int getCurrentLine( lua_State * );
     static int selectCurrentLine( lua_State * );
+    static int getButtonState( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

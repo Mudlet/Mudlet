@@ -143,7 +143,6 @@ void TToolBar::slot_pressed()
     TFlipButton * pB = dynamic_cast<TFlipButton *>( sender() );
     if( ! pB )
     {
-        qDebug() << "ERROR: TToolBar::slot_pressed() sender() = 0";
         return;
     }
         
@@ -158,9 +157,12 @@ void TToolBar::slot_pressed()
     {
         pA->mButtonState = 1;    
     }
+    if( pB->isChecked() )
+        pA->mpHost->mpConsole->mButtonState = 1;
+    else
+        pA->mpHost->mpConsole->mButtonState = 0;
     QStringList sL;
     pA->execute( sL );
-    
 }
 
 void TToolBar::clear()

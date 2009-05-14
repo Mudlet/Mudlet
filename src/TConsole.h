@@ -163,6 +163,7 @@ public:
       void              paste();
       void              appendBuffer();
       void              appendBuffer( TBuffer );
+      int               getButtonState();
       void              closeEvent( QCloseEvent *event );
       void              resizeEvent( QResizeEvent * event );
       void              pasteWindow( TBuffer );
@@ -232,6 +233,7 @@ public:
       std::map<std::string, TConsole *> mSubConsoleMap;
       std::map<std::string, TLabel *> mLabelMap;
       //QMap<QString, TButton *> mButtonMap;
+      int               mButtonState;
 
 private:
 

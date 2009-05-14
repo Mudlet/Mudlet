@@ -1219,7 +1219,7 @@ This script would create a mini text console and write with yellow foreground co
 |io.exists(file)|Checks to see if a file exists
 |string:split(delimiter)|Splits a string
 |table.contains(t, value)|Determines if a table contains a value as a key or as a value (recursive)
-
+|state = getButtonState() with state = 1 button is checked and state = 0, button is not checked|this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example: checked = getButtonStated(); if checked == 1 then hideExits() else showExits() end;
 |===================================================
 
 
