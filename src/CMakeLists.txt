@@ -23,6 +23,7 @@ dlgTriggerEditor.cpp
 TTrigger.cpp
 TriggerUnit.cpp
 TLuaInterpreter.cpp
+TForkedProcess.cpp
 dlgTriggersMainArea.cpp
 dlgOptionsAreaTriggers.cpp
 dlgOptionsAreaTimers.cpp
@@ -97,6 +98,7 @@ ctelnet.h
 dlgConnectionProfiles.h
 dlgTriggerEditor.h
 TLuaInterpreter.h
+TForkedProcess.h
 dlgTriggers_main_area.h
 dlgOptionsAreaTriggers.h
 TCommandLine.h

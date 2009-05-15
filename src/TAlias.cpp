@@ -79,7 +79,7 @@ bool TAlias::match( QString & toMatch )
     
     const char *error;
     char * subject = (char *) malloc(strlen(toMatch.toLatin1().data())+20);
-    strcpy( subject, toMatch.toLatin1().data() );
+    strcpy( subject, toMatch.toLocal8Bit().data() );
     unsigned char *name_table;
     int erroffset;
     int find_all;
@@ -253,7 +253,7 @@ void TAlias::setRegexCode( QString code )
 {
     mRegexCode = code; 
     const char *error;
-    char * pattern = code.toLatin1().data();
+    char * pattern = code.toLocal8Bit().data();
     int erroffset;
     
     pcre * re;

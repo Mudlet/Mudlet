@@ -27,6 +27,7 @@
 #include <QProcess>
 #include <QTcpSocket>
 #include <QThread>
+#include <QTimer>
 
 extern "C" 
 {
@@ -58,6 +59,8 @@ class TEvent;
 
 class TLuaInterpreter : public QThread  {
    
+    friend class TForkedProcess;
+
 Q_OBJECT
 
 public:
@@ -163,6 +166,7 @@ public:
     static int setMiniConsoleFontSize( lua_State * );
     static int getCurrentLine( lua_State * );
     static int selectCurrentLine( lua_State * );
+    static int spawn( lua_State * );
     static int getButtonState( lua_State * );
     static int showToolBar( lua_State * );
     static int hideToolBar( lua_State * );
@@ -208,6 +212,8 @@ public slots:
     void slotEchoMessage( int, QString );
     void slotNewCommand( int, QString );
     void slotTempTimer( int hostID, double timeout, QString function, QString timerName );
+    void slotPurge();
+    void slotDeleteSender();
         
         //void slotNewEcho(int,QString);
 
@@ -221,7 +227,8 @@ private:
     Host * mpHost;
     int mHostID;
     //std::list<std::string> mCaptureList;
-    
+    QList<QObject *> objectsToDelete;
+    QTimer purgeTimer;
     
     
     lua_State * pGlobalLuaAliasExecutionUnit;

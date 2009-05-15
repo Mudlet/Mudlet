@@ -23,7 +23,7 @@
 #include <QDir>
 #include <QString>
 #include "TLuaInterpreter.h"
-#include <QProcess>
+#include "TForkedProcess.h"
 #include "TTrigger.h"
 #include "HostManager.h"
 #include "mudlet.h"
@@ -47,6 +47,7 @@ map<lua_State*, Host*> TLuaInterpreter::luaInterpreterMap;
 TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 :mpHost( pH )
 ,mHostID( id )
+,purgeTimer(this)
 {
   		pGlobalLua = 0;		
      
@@ -66,7 +67,10 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
     connect(this, SIGNAL(signalReplace(int, QString)), this, SLOT(slotReplace(int,QString)));    
     connect(this, SIGNAL(signalSetFgColor(int, int,int,int)), this, SLOT(slotSetFgColor(int,int,int,int)));    
     connect(this, SIGNAL(signalSetBgColor(int, int,int,int)), this, SLOT(slotSetBgColor(int,int,int,int)));        
+    connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
     initLuaGlobals();
+
+    purgeTimer.start(2000);
 }
 
 lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
@@ -87,6 +91,17 @@ lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
     qDebug()<<"MUDLET ERROR: TLuaInterpreter::getLuaExecutionUnit() execution unit undefined";
     return 0;
 }
+
+void TLuaInterpreter::slotDeleteSender() {
+    objectsToDelete.append(sender());
+}
+
+void TLuaInterpreter::slotPurge() {
+    while (!objectsToDelete.isEmpty()) {
+        delete objectsToDelete.takeFirst();
+    }
+}
+
 
 int TLuaInterpreter::Wait( lua_State *L )
 {
@@ -184,6 +199,12 @@ int TLuaInterpreter::selectCurrentLine( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mpConsole->selectCurrentLine( luaSendText );
     return 0;
+}
+
+int TLuaInterpreter::spawn( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    return TForkedProcess::startProcess(pHost->getLuaInterpreter(), L);
 }
 
 
@@ -2649,6 +2670,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine );
     lua_register( pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize );
     lua_register( pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine );
+    lua_register( pGlobalLua, "spawn", TLuaInterpreter::spawn );
     lua_register( pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState );
     lua_register( pGlobalLua, "showToolBar", TLuaInterpreter::showToolBar );
     lua_register( pGlobalLua, "hideToolBar", TLuaInterpreter::hideToolBar );

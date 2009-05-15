@@ -34,6 +34,7 @@ SOURCES += TConsole.cpp \
     TTrigger.cpp \
     TriggerUnit.cpp \
     TLuaInterpreter.cpp \
+    TForkedProcess.cpp \
     dlgTriggersMainArea.cpp \
     dlgOptionsAreaTriggers.cpp \
     dlgOptionsAreaTimers.cpp \
@@ -89,6 +90,7 @@ HEADERS += mudlet.h \
     dlgTriggerEditor.h \
     TTrigger.h \
     TLuaInterpreter.h \
+    TForkedProcess.h \
     dlgTriggers_main_area.h \
     dlgOptionsAreaTriggers.h \
     TCommandLine.h \
