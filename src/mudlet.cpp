@@ -355,6 +355,10 @@ void mudlet::slot_timer_fires()
     {
         TTimer * pTT = mTimerMap[pQT];
         pTT->execute();
+        if( ! pTT->isTempTimer() )
+        {
+            pTT->start();//FIXME: just a test
+        }
     }
     else
     {

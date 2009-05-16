@@ -298,6 +298,7 @@ void TTimer::enableTimer( QString & name )
         {
             if( activate() )
             {
+                setIsActive(true);
                 mTimer.start();
             }
             else
