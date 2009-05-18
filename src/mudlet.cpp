@@ -351,18 +351,15 @@ void mudlet::bindMenu( QMenu * menu, EAction * action )
 void mudlet::slot_timer_fires()
 {
     QTimer * pQT = (QTimer*)sender();
+    if( ! pQT ) return;
     if( mTimerMap.contains( pQT ) )
     {
         TTimer * pTT = mTimerMap[pQT];
         pTT->execute();
-        if( ! pTT->isTempTimer() )
+        if( (! pTT->isTempTimer()) && (! pTT->isOffsetTimer()) )
         {
             pTT->start();//FIXME: just a test
         }
-    }
-    else
-    {
-        qDebug()<<"MUDLET CRITICAL ERROR: Timer not registered!";
     }
 }
 
@@ -372,10 +369,6 @@ void mudlet::unregisterTimer( TTimer * pTT, QTimer * pQT )
     {
         mTimerMap.remove( pQT );
     }
-    else
-    {
-        qDebug()<<"MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
-    }    
 }
 
 void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )

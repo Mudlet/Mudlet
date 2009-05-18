@@ -252,6 +252,7 @@ void TTimer::enableTimer( qint64 id )
         {
             if( activate() )
             {
+                setIsActive(true);
                 mTimer.start();
             }
             else
