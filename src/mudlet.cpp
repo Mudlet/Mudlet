@@ -73,7 +73,7 @@ mudlet::mudlet()
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
-    restoreBar = menuBar()->addMenu( "" );
+    //restoreBar = menuBar()->addMenu( "" );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
     QWidget * frame = new QWidget( this );
@@ -115,11 +115,11 @@ mudlet::mudlet()
         mpMainToolBar->setIconSize(QSize(32,32));
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     }
-
+    //restoreBar = new QMenu( this );
     QAction * actionConnect = new QAction(QIcon(":/icons/preferences-web-browser-cache.png"), tr("Connect"), this);
     actionConnect->setStatusTip(tr("Connect To Server"));
     mpMainToolBar->addAction( actionConnect );
-    
+
     QAction * actionTriggers = new QAction(QIcon(":/icons/tools-wizard.png"), tr("Triggers"), this);
     actionTriggers->setStatusTip(tr("Show Triggers"));
     mpMainToolBar->addAction( actionTriggers );
@@ -227,9 +227,45 @@ mudlet::mudlet()
     connect(actionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
     connect(actionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-    //connect(actionStopAllTriggers, SIGNAL(triggered()), this, SLOT(slot_stopAllTriggers()));
     connect(actionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
+
+    QAction * mactionConnect = new QAction(tr("Connect"), this);
+    QAction * mactionTriggers = new QAction(tr("Triggers"), this);
+    QAction * mactionAlias = new QAction(tr("Aliases"), this);
+    QAction * mactionTimers = new QAction(tr("Timers"), this);
+    QAction * mactionButtons = new QAction(tr("Actions"), this);
+    QAction * mactionScripts = new QAction(tr("Scripts"), this);
+    QAction * mactionKeys = new QAction(tr("Keys"), this);
+    QAction * mactionHelp = new QAction(tr("Help"), this);
+    QAction * mactionOptions = new QAction(tr("Preferences"), this);
+    QAction * mactionMultiView = new QAction(tr("MultiView"), this);
+    QAction * mactionAbout = new QAction(tr("About"), this);
+    QAction * mactionCloseProfile = new QAction(tr("Close"), this);
+
+    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(mactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
+    connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
+    connect(mactionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
+    connect(mactionAlias, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
+    connect(mactionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
+    connect(mactionKeys, SIGNAL(triggered()),this,SLOT(show_key_dialog()));
+    connect(mactionButtons, SIGNAL(triggered()), this, SLOT(show_action_dialog()));
+    connect(mactionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
+    connect(mactionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
+    connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
+    connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
+    QMenu * menu;
+    menuBar()->addAction(mactionConnect);
+    menuBar()->addAction(mactionTriggers);
+    menuBar()->addAction(mactionTimers);
+    menuBar()->addAction(mactionAlias);
+    menuBar()->addAction(mactionScripts);
+    menuBar()->addAction(mactionKeys);
+    menuBar()->addAction(mactionButtons);
+    menuBar()->addAction(mactionOptions);
+    menuBar()->addAction(mactionAbout);
+    menuBar()->addAction(mactionHelp);
     readSettings();
     
     QTimer * timerAutologin = new QTimer( this );
@@ -801,6 +837,10 @@ void mudlet::setIcoSize( int s )
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     else
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
+    if( s == 1 )
+        menuBar()->show();
+    else
+        menuBar()->hide();
 }
 
 void mudlet::writeSettings()
