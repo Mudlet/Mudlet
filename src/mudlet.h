@@ -94,6 +94,7 @@ public:
    QMap<Host *, TConsole *>      mConsoleMap; 
    QMap<Host *, TLabel *>        mHostLabelMap;
    QIcon *                       testicon; 
+   bool                          mShowMenuBar;
    bool                          isGoingDown() { return mIsGoingDown; }
    int                           mMainIconSize;
    int                           mTEFolderIconSize;

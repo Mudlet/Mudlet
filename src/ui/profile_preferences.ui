@@ -694,6 +694,32 @@ or some other computer model that has a small screen.</string>
          <string>Main Icon Size:</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_35">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>91</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>show menu bar:</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="showMenuBar">
+        <property name="geometry">
+         <rect>
+          <x>120</x>
+          <y>60</y>
+          <width>16</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
       </widget>
      </widget>
      <widget class="QWidget" name="color_view_tab">

@@ -64,6 +64,7 @@ mudlet::mudlet()
 : QMainWindow()
 , mIsGoingDown( false )
 , mpCurrentActiveHost( 0 )
+, mShowMenuBar( false )
 {
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
@@ -825,9 +826,14 @@ void mudlet::readSettings()
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
     mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(3)).toInt();
+    mShowMenuBar = settings.value("showMenuBar",QVariant(0)).toBool();
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
+    if( mShowMenuBar )
+        menuBar()->show();
+    else
+        menuBar()->hide();
 }
 
 void mudlet::setIcoSize( int s )
@@ -837,7 +843,7 @@ void mudlet::setIcoSize( int s )
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     else
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
-    if( s == 1 )
+    if( mShowMenuBar )
         menuBar()->show();
     else
         menuBar()->hide();
@@ -850,6 +856,7 @@ void mudlet::writeSettings()
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mMainIconSize);
     settings.setValue("tefoldericonsize",mTEFolderIconSize);
+    settings.setValue("showMenuBar", mShowMenuBar );
 }
 
 void mudlet::connectToServer()
