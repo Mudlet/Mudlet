@@ -101,6 +101,8 @@ bool TTimer::isOffsetTimer()
         {
             return true;
         }
+		else
+		    return false;
     }
     else
     {
@@ -125,7 +127,10 @@ bool TTimer::setIsActive( bool b )
 
 void TTimer::start()
 {
-    if( mIsTempTimer ) mTimer.setSingleShot( true );
+    if( mIsTempTimer ) 
+	    mTimer.setSingleShot( true );
+    else
+	    mTimer.setSingleShot( false );
     mTimer.start();
 }
 
@@ -252,7 +257,6 @@ void TTimer::enableTimer( qint64 id )
         {
             if( activate() )
             {
-                setIsActive(true);
                 mTimer.start();
             }
             else
@@ -299,7 +303,6 @@ void TTimer::enableTimer( QString & name )
         {
             if( activate() )
             {
-                setIsActive(true);
                 mTimer.start();
             }
             else

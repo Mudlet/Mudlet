@@ -1144,7 +1144,17 @@ void XMLimport::readIntegerList( QList<int> & list )
         {
             if( name() == "integer")
             {
-                list << readElementText().toInt();
+                bool ok = false;
+                int num;
+                num = readElementText().toInt( &ok, 10 );
+                if( ok )
+                {
+                    list << num;
+                }
+                else
+                {
+                    qFatal("FATAL ERROR: reading package property list contained invalid elements");
+                }
             }
             else
             {
