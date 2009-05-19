@@ -64,13 +64,13 @@ mudlet::mudlet()
 : QMainWindow()
 , mIsGoingDown( false )
 , mpCurrentActiveHost( 0 )
-, mShowMenuBar( false )
+, mShowMenuBar( true )
 {
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet Beta 10pre4 - built: May-13-2009");
+    setWindowTitle("Mudlet Beta 10pre6 - built: May-19-2009");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
