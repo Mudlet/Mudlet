@@ -132,7 +132,9 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         if( propertyList[i] == REGEX_PERL )
         {
             const char *error;
-            char * pattern = regexList[i].toLocal8Bit().data();
+            char * pattern = (char *) malloc( strlen( regexList[i].toLocal8Bit().data() ) + 48 );
+            strcpy( pattern, regexList[i].toLocal8Bit().data() );
+
             int erroffset;
             
             pcre * re;

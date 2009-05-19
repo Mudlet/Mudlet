@@ -253,7 +253,8 @@ void TAlias::setRegexCode( QString code )
 {
     mRegexCode = code; 
     const char *error;
-    char * pattern = code.toLocal8Bit().data();
+    char * pattern = (char *) malloc( strlen( code.toLocal8Bit().data() ) + 48 );
+    strcpy( pattern, code.toLocal8Bit().data() );
     int erroffset;
     
     pcre * re;
