@@ -219,7 +219,8 @@ public:
       QWidget *         layerEdit;
       QWidget *         layer;
       QWidget *         layerCommandLine;  
-      QPushButton *     emergencyStop;
+      //QPushButton *     emergencyStop;
+      QToolButton *     emergencyStop;
       QLineEdit *       networkLatency;
       QWidget *         mpBaseVFrame;
       QWidget *         mpBaseHFrame;

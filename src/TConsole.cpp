@@ -71,7 +71,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mTriggerEngineMode( false )
 , mClipboard( mpHost )
 , mpScrollBar( new QScrollBar )
-, emergencyStop( new QPushButton )
+, emergencyStop( new QToolButton )//QPushButton )
 , layerCommandLine( 0 )
 , mLogFileName(QString(""))
 , mLogToLogFile( false )
@@ -291,15 +291,17 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
     
-    QPushButton * timeStampButton = new QPushButton;
+    //QPushButton * timeStampButton = new QPushButton;
+    QToolButton * timeStampButton = new QToolButton;
     timeStampButton->setCheckable( true );
     timeStampButton->setFocusPolicy( Qt::NoFocus );
     timeStampButton->setToolTip("Show Time Stamps");
     QIcon icon(":/icons/dialog-information.png");
     timeStampButton->setIcon( icon );
+    //connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
-    
-    QPushButton * logButton = new QPushButton;
+    //QPushButton * logButton = new QPushButton;
+    QToolButton * logButton = new QToolButton;
     logButton->setCheckable( true );
     logButton->setFocusPolicy( Qt::NoFocus );
     logButton->setToolTip("start logging MUD output to log file");
