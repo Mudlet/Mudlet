@@ -104,7 +104,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
 {
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
-        while( (int)buffer.size() > mLinesLimit-10000 )
+        while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
         {
             deleteLine( 0 );
         }
@@ -125,6 +125,10 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
             timeBuffer << QTime::currentTime().toString() + "   ";
+            QList<QColor> fgColorList;
+            QList<QColor> bgColorList;
+            fgColorBuffer << fgColorList;
+            bgColorBuffer << bgColorList;
             last = 0;
         }
         if( mCursorMoved ) 
@@ -144,6 +148,10 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
                         pC->bold = bold;
                         pC->underline = underline;
                         timeBuffer[last] = QTime::currentTime().toString()+"   ";
+                        QList<QColor> fgColorList;
+                        QList<QColor> bgColorList;
+                        fgColorBuffer << fgColorList;
+                        bgColorBuffer << bgColorList;
                         continue;
                     }
                 }
@@ -159,6 +167,8 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             pC->bold = bold;
             pC->underline = underline;
             buffer[last].push_back( pC );
+            fgColorBuffer[last] << fgColor;
+            bgColorBuffer[last] << bgColor;
         }
         if( text.at(i) == QChar('\n') )
         {
@@ -173,6 +183,10 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
             timeBuffer << QTime::currentTime().toString()+"   ";
+            QList<QColor> fgColorList;
+            QList<QColor> bgColorList;
+            fgColorBuffer << fgColorList;
+            bgColorBuffer << bgColorList;
             mLastLine++;
             newLines++;
             mCursorMoved = true;
@@ -839,6 +853,8 @@ bool TBuffer::deleteLines( int from, int to )
         {
             lineBuffer.removeAt( i ); 
             timeBuffer.removeAt( i );
+            fgColorBuffer.removeAt( i );
+            bgColorBuffer.removeAt( i );
             for( int k=0; k<static_cast<int>(buffer[i].size()); k++ )
             {
                 delete buffer[i][k];    

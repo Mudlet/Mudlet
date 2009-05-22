@@ -88,7 +88,7 @@ public:
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
     TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }    
-    void               incomingStreamProcessor( QString & paragraph, QString & prompt );
+    void               incomingStreamProcessor( QString & paragraph, QString & prompt, int line );
     void               gotRest( QString & );
     void               gotLine( QString & );
     void               gotPrompt( QString & );

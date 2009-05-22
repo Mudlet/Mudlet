@@ -48,7 +48,7 @@ public:
     bool                  serialize( QDataStream & );
     bool                  restore( QDataStream &, bool );
     void                  reParentTrigger( int childID, int oldParentID, int newParentID );
-    void                  processDataStream( QString & );
+    void                  processDataStream( QString &, int );
     void                  dump();
     void                  stopAllTriggers();
     void                  reenableAllTriggers();

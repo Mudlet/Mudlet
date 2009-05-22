@@ -268,9 +268,9 @@ void Host::callEventHandlers()
 
 }
 
-void Host::incomingStreamProcessor( QString & data, QString & prompt )
+void Host::incomingStreamProcessor( QString & data, QString & prompt, int line )
 {
-    mTriggerUnit.processDataStream( data );
+    mTriggerUnit.processDataStream( data, line );
 
     mTimerUnit.doCleanup();
 }

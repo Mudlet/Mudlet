@@ -64,8 +64,9 @@ mudlet::mudlet()
 : QMainWindow()
 , mIsGoingDown( false )
 , mpCurrentActiveHost( 0 )
-, mShowMenuBar( true )
+, mShowMenuBar( false )
 {
+    setUnifiedTitleAndToolBarOnMac( true );
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );

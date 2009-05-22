@@ -47,6 +47,7 @@
 #include "mudlet.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
+#include "dlgColorTrigger.h"
 
 using namespace std;
 
@@ -124,6 +125,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
     connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
     connect(mpTriggersMainArea->pushButtonSound, SIGNAL(clicked()), this, SLOT(slot_soundTrigger()));
+    connect(mpTriggersMainArea->colorTriggerFg, SIGNAL(clicked()), this, SLOT(slot_color_trigger_fg()));
+    connect(mpTriggersMainArea->colorTriggerBg, SIGNAL(clicked()), this, SLOT(slot_color_trigger_bg()));
 
     mpTimersMainArea = new dlgTimersMainArea( mainArea );
     QSizePolicy sizePolicy7(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -1201,6 +1204,16 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpSourceEditorArea->script_scintilla->clear();
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
+
+    QPalette pal = palette();
+    QColor color =  pal.color( QPalette::Button );
+    QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
+    mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
+    mpTriggersMainArea->pushButtonFgColor->setChecked( false );
+    mpTriggersMainArea->pushButtonBgColor->setChecked( false );
+    mpTriggersMainArea->colorTrigger->setChecked( false );
+    mpTriggersMainArea->colorizerTrigger->setChecked( false );
     treeWidget->setCurrentItem( pNewItem );
     mCurrentTrigger = pNewItem;
     showInfo( msgInfoAddTrigger );
@@ -1879,6 +1892,7 @@ void dlgTriggerEditor::saveTrigger()
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
             pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
             pT->setSound( mpTriggersMainArea->lineEdit_soundFile->text() );
+            pT->mColorTrigger = mpTriggersMainArea->colorTrigger->isChecked();
             QPalette FgColorPalette;
             QPalette BgColorPalette;
             FgColorPalette = mpTriggersMainArea->pushButtonFgColor->palette();
@@ -2743,6 +2757,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
+    mpTriggersMainArea->colorTrigger->setChecked( false );
 
     if( (pItem == 0) || (column != 0) )
     {
@@ -2802,6 +2817,12 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->soundTrigger->setChecked( pT->mSoundTrigger );
         mpTriggersMainArea->lineEdit_soundFile->setText( pT->mSoundFile );
 
+        QPalette pal = palette();
+        QColor color =  pal.color( QPalette::Button );
+        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
+        mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
+
         QColor fgColor = pT->getFgColor();
         QColor bgColor = pT->getBgColor();
         QPalette FgColorPalette;
@@ -2817,6 +2838,25 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
         QString script = pT->getScript();
         mpSourceEditorArea->script_scintilla->setText( script );
+
+        mpTriggersMainArea->colorTrigger->setChecked( pT->mColorTrigger );
+        if( pT->mColorTriggerBg )
+        {
+            QPalette palette;
+            QColor color = pT->mColorTriggerBgColor;
+            palette.setColor( QPalette::Button, color );
+            QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+            mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
+        }
+        if( pT->mColorTriggerFg )
+        {
+            QPalette palette;
+            QColor color = pT->mColorTriggerFgColor;
+            palette.setColor( QPalette::Button, color );
+            QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+            mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
+        }
+
         if( ! pT->state() ) showError( pT->getError() );
     }
     mpTriggerMainAreaEditRegexItem = 0;
@@ -4934,6 +4974,52 @@ void dlgTriggerEditor::slot_soundTrigger()
                                                     QDir::homePath(),
                                                     tr("*"));
     mpTriggersMainArea->lineEdit_soundFile->setText( fileName );
+}
+
+void dlgTriggerEditor::slot_color_trigger_fg()
+{
+    QTreeWidgetItem * pItem = mCurrentTrigger;
+    if( ! pItem )
+    {
+        return;
+    }
+    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+    if( ! pT ) return;
+
+    dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 0 );
+    pD->exec();
+    if( pT->mColorTriggerFg )
+    {
+        QPalette palette;
+        QColor color = pT->mColorTriggerFgColor;
+        palette.setColor( QPalette::Button, color );
+        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
+    }
+}
+
+void dlgTriggerEditor::slot_color_trigger_bg()
+{
+    QTreeWidgetItem * pItem = mCurrentTrigger;
+    if( ! pItem )
+    {
+        return;
+    }
+    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+    if( ! pT ) return;
+
+    dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 1 );
+    pD->exec();
+    if( pT->mColorTriggerBg )
+    {
+        QPalette palette;
+        QColor color = pT->mColorTriggerBgColor;
+        palette.setColor( QPalette::Button, color );
+        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
+    }
 }
 
 

@@ -511,6 +511,9 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mIsColorizerTrigger = ( attributes().value("isColorizerTrigger") == "yes" );
     pT->mFilterTrigger = ( attributes().value("isFilterTrigger") == "yes" );
     pT->mSoundTrigger = ( attributes().value("isSoundTrigger") == "yes" );
+    pT->mColorTrigger = ( attributes().value("isColorTrigger") == "yes" );
+    pT->mColorTriggerBg = ( attributes().value("isColorTriggerBg") == "yes" );
+    pT->mColorTriggerFg = ( attributes().value("isColorTriggerFg") == "yes" );
 
     while( ! atEnd() ) 
     {
@@ -553,6 +556,16 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             else if( name() == "mBgColor")
             {
                 pT->mBgColor.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "colorTriggerFgColor")
+            {
+                pT->mColorTriggerFgColor.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "colorTriggerBgColor")
+            {
+                pT->mColorTriggerBgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mSoundFile" )

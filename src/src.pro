@@ -1,11 +1,10 @@
 QT += webkit
 QT += network
-   
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 unix:LIBS += -lqscintilla2 \
     -lpcre \
-    $$LIBLUA 
+    $$LIBLUA
 win32:LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release \
     -lqscintilla2 \
     -Lc:\lua-5.1.4\src \
@@ -76,8 +75,8 @@ SOURCES += TConsole.cpp \
     TToolBar.cpp \
     mudlet.cpp \
     TLabel.cpp \
-    TEasyButtonBar.cpp
-
+    TEasyButtonBar.cpp \
+    dlgColorTrigger.cpp
 HEADERS += mudlet.h \
     TTimer.h \
     EAction.h \
@@ -130,8 +129,8 @@ HEADERS += mudlet.h \
     TriggerUnit.h \
     Tree.h \
     TLabel.h \
-    TEasyButtonBar.h
-
+    TEasyButtonBar.h \
+    dlgColorTrigger.h
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
     ui/trigger_editor.ui \
@@ -151,7 +150,8 @@ FORMS += ui/connection_profiles.ui \
     ui/timers_main_area.ui \
     ui/about_dialog.ui \
     ui/keybindings_main_area.ui \
-    ui/profile_preferences.ui
+    ui/profile_preferences.ui \
+    ui/color_trigger.ui
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc

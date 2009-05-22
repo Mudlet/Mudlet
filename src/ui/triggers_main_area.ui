@@ -390,7 +390,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset>
+            <iconset resource="../mudlet_alpha.qrc">
              <normaloff>:/icons/document-save-all.png</normaloff>:/icons/document-save-all.png</iconset>
            </property>
           </widget>
@@ -407,7 +407,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset>
+            <iconset resource="../mudlet_alpha.qrc">
              <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
            </property>
           </widget>
@@ -424,7 +424,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset>
+            <iconset resource="../mudlet_alpha.qrc">
              <normaloff>:/icons/dialog-cancel.png</normaloff>:/icons/dialog-cancel.png</iconset>
            </property>
           </widget>
@@ -1031,9 +1031,6 @@
       </item>
       <item>
        <widget class="QGroupBox" name="colorTrigger">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -1101,7 +1098,7 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QPushButton" name="pushButtonBgColor_2">
+          <widget class="QPushButton" name="colorTriggerBg">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -1117,7 +1114,7 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QPushButton" name="pushButtonFgColor_2">
+          <widget class="QPushButton" name="colorTriggerFg">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -1137,6 +1134,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections/>
 </ui>

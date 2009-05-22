@@ -85,7 +85,8 @@ public:
     QString          getScript()                     { return mScript; }
     bool             setScript( QString & script );
     bool             compileScript();
-    bool             match( char *, QString &, int posOffset = 0 );
+    bool             match( char *, QString &, int line, int posOffset = 0 );
+    bool             match_colors( int );
     bool             isFolder()                      { return mIsFolder; }
     bool             isMultiline()                   { return mIsMultiline; }
     int              getTriggerType()                { return mTriggerType; }
@@ -118,8 +119,14 @@ public:
     bool             mFilterTrigger;
     bool             mSoundTrigger;
     QString          mSoundFile;
+    bool             mColorTrigger;
+    bool             mColorTriggerFg;
+    bool             mColorTriggerBg;
+    QColor           mColorTriggerFgColor;
+    QColor           mColorTriggerBgColor;
     bool             isClone( TTrigger & ) const;
-    
+    Host *                                 mpHost;
+
 private:
     
                                            TTrigger(){};
@@ -131,7 +138,7 @@ private:
     QStringList                            mRegexCodeList;
     QList<int>                             mRegexCodePropertyList;
     QMap<int, pcre *>                      mRegexMap;
-    Host *                                 mpHost;
+
     QString                                mScript;
     bool                                   mIsTempTrigger;
     bool                                   mIsFolder;

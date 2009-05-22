@@ -170,7 +170,7 @@ qint64 TriggerUnit::getNewID()
     return ++mMaxID;
 }
 
-void TriggerUnit::processDataStream( QString & data )
+void TriggerUnit::processDataStream( QString & data, int line )
 {    
     if( data.size() > 0 )
     {
@@ -181,7 +181,7 @@ void TriggerUnit::processDataStream( QString & data )
         for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
         {
             TTrigger * pChild = *it;
-            pChild->match( subject, data );
+            pChild->match( subject, data, line );
         }
         free( subject );
 

@@ -89,6 +89,8 @@ public:
     std::deque< std::deque<TChar*> > buffer; 
     QStringList timeBuffer;
     QStringList lineBuffer;
+    QList<QList<QColor> > fgColorBuffer;
+    QList<QList<QColor> > bgColorBuffer;
     int mLinesLimit;
     int newLines;
 

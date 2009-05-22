@@ -1161,7 +1161,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         //qDebug()<<"line<"<<mCurrentLine<<">";
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
-        mpHost->incomingStreamProcessor( mCurrentLine, prompt );
+        mpHost->incomingStreamProcessor( mCurrentLine, prompt, i );
 
         if( mDeletedLines > 0 )
         {

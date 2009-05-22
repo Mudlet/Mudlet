@@ -153,6 +153,8 @@ public slots:
     void                        slot_profileSaveAction();
     void                        slot_profileSaveAsAction();
     void                        setTBIconSize( int );
+    void                        slot_color_trigger_fg();
+    void                        slot_color_trigger_bg();
 
 private:
     
