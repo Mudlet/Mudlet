@@ -57,6 +57,8 @@ public:
    void                          printOnDisplay( Host * pH, QString & s );
    void                          print( Host *, QString & );
    void                          addConsoleForNewHost( Host * pH );
+   void							 disableToolbarButtons();
+   void							 enableToolbarButtons();
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * ); 
    void                          unregisterTimer( TTimer*, QTimer * ); 

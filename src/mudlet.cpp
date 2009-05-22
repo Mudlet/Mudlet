@@ -129,7 +129,7 @@ mudlet::mudlet()
     QAction * actionAlias = new QAction(QIcon(":/icons/system-users.png"), tr("Aliases"), this);
     actionAlias->setStatusTip(tr("Show Aliases"));
     actionAlias->setEnabled( true );
-    mpMainToolBar->addAction( actionAlias );    
+    mpMainToolBar->addAction( actionAlias );
     
     QAction * actionTimers = new QAction(QIcon(":/icons/chronometer.png"), tr("Timers"), this);
     actionTimers->setStatusTip(tr("Show Timers"));
@@ -137,7 +137,7 @@ mudlet::mudlet()
     
     QAction * actionButtons = new QAction(QIcon(":/icons/bookmarks.png"), tr("Actions"), this);
     actionButtons->setStatusTip(tr("Show Actions"));
-    mpMainToolBar->addAction( actionButtons );    
+    mpMainToolBar->addAction( actionButtons );
     
     QAction * actionScripts = new QAction(QIcon(":/icons/document-properties.png"), tr("Scripts"), this);
     actionScripts->setEnabled( true );
@@ -185,7 +185,7 @@ mudlet::mudlet()
     actionScripts->setStatusTip(tr("close connection"));
     mpMainToolBar->addAction( actionCloseProfile );
 
-
+    disableToolbarButtons();
 
     mpDebugArea = new QMainWindow(0);
     HostManager::self()->addHost("default_host", "", "","" );  
@@ -296,6 +296,8 @@ void mudlet::slot_close_profile()
                 HostManager::self()->deleteHost( pH->getName() );
                 mTabMap.remove( pH->getName() );
             }
+			if( !mpCurrentActiveHost )
+				disableToolbarButtons();
         }
     }
 }
@@ -422,6 +424,30 @@ void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
     {
         mTimerMap[pQT] = pTT;
     }
+}
+
+void mudlet::disableToolbarButtons() {
+	mpMainToolBar->actions()[1]->setEnabled( false );
+    mpMainToolBar->actions()[2]->setEnabled( false );
+    mpMainToolBar->actions()[3]->setEnabled( false );
+    mpMainToolBar->actions()[4]->setEnabled( false );
+    mpMainToolBar->actions()[5]->setEnabled( false );
+    mpMainToolBar->actions()[6]->setEnabled( false );
+    mpMainToolBar->actions()[8]->setEnabled( false );
+    mpMainToolBar->actions()[9]->setEnabled( false );
+    mpMainToolBar->actions()[11]->setEnabled( false );
+}
+
+void mudlet::enableToolbarButtons() {
+	mpMainToolBar->actions()[1]->setEnabled( true );
+    mpMainToolBar->actions()[2]->setEnabled( true );
+    mpMainToolBar->actions()[3]->setEnabled( true );
+    mpMainToolBar->actions()[4]->setEnabled( true );
+    mpMainToolBar->actions()[5]->setEnabled( true );
+    mpMainToolBar->actions()[6]->setEnabled( true );
+    mpMainToolBar->actions()[8]->setEnabled( true );
+    mpMainToolBar->actions()[9]->setEnabled( true );
+    mpMainToolBar->actions()[11]->setEnabled( true );
 }
 
 bool mudlet::openWindow( Host * pHost, QString & name )
@@ -866,6 +892,7 @@ void mudlet::connectToServer()
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
     pDlg->fillout_form();
     pDlg->exec();
+	enableToolbarButtons();
 }
 
 void mudlet::show_trigger_dialog()
