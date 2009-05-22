@@ -29,6 +29,7 @@
 #include <QString>
 #include <QStringList>
 #include <deque>
+#include <QTime>
 
 class Host;
 
@@ -108,6 +109,7 @@ private:
     bool mCursorMoved;
     int mWrapAt;
     int mWrapIndent;
+    QTime mTime;
     
     
 };

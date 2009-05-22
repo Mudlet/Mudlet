@@ -84,6 +84,8 @@ TBuffer::TBuffer( Host * pH )
     lineBuffer.clear();
     newLines = 0;
     mLastLine = 0;
+    mTime = QTime::currentTime();
+    mTime.start();
 }
 
 
@@ -124,7 +126,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             newLine.push_back( pC );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
-            timeBuffer << QTime::currentTime().toString() + "   ";
+            timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
             QList<QColor> fgColorList;
             QList<QColor> bgColorList;
             fgColorBuffer << fgColorList;
@@ -147,7 +149,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
                         pC->italics = italics;
                         pC->bold = bold;
                         pC->underline = underline;
-                        timeBuffer[last] = QTime::currentTime().toString()+"   ";
+                        timeBuffer[last] = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
                         QList<QColor> fgColorList;
                         QList<QColor> bgColorList;
                         fgColorBuffer << fgColorList;
@@ -182,7 +184,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             newLine.push_back( pC );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
-            timeBuffer << QTime::currentTime().toString()+"   ";
+            timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
             QList<QColor> fgColorList;
             QList<QColor> bgColorList;
             fgColorBuffer << fgColorList;
@@ -256,7 +258,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
             newLine.push_back( pC );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
-            timeBuffer << QTime::currentTime().toString()+"   ";
+            timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "-   ";
             mLastLine++;
             newLines++;
             x = 0;
@@ -459,6 +461,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
     std::queue<std::deque<TChar *> > queue;
     QStringList tempList;
+    QStringList timeList;
     int lineCount = 0;
     
     for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
@@ -466,7 +469,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
         std::deque<TChar *> newLine;
         QString lineText;
-        
+        QString time = timeBuffer[i];
         int indent = 0;
         if( static_cast<int>(buffer[i].size()) >= screenWidth )
         {
@@ -529,7 +532,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
             }
             queue.push( newLine );
             tempList.append( lineText );
-            
+            timeList.append( time );
             newLine.clear();
             lineText.clear();
             indent = 0;
@@ -557,7 +560,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     for( int i=0; i<tempList.size(); i++ )
     {
         lineBuffer.append( tempList[i] );
-        timeBuffer.append( QTime::currentTime().toString()+"   " );
+        timeBuffer.append( timeList[i] );//QTime::currentTime().toString("hh:mm:ss.zzz")+"   " );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -666,7 +669,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     for( int i=0; i<tempList.size(); i++ )
     {
         lineBuffer.insert( startLine+i, tempList[i] );
-        timeBuffer.insert( startLine+i, QTime::currentTime().toString()+"   " );
+        timeBuffer.insert( startLine+i, QTime::currentTime().toString("hh:mm:ss.zzz")+"   " );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
