@@ -66,6 +66,7 @@ TToolBar.cpp
 TFlipButton.cpp
 TBuffer.cpp
 TEasyButtonBar.cpp
+dlgColorTrigger.cpp
 TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
@@ -88,6 +89,7 @@ ui/help_dialog.ui
 ui/timers_main_area.ui
 ui/about_dialog.ui
 ui/keybindings_main_area.ui
+ui/color_trigger.ui
 ui/profile_preferences.ui)
 
 SET(mudlet_MOC_HDRS mudlet.h
@@ -121,6 +123,7 @@ dlgProfilePreferences.h
 TToolBar.h
 TTextEdit.h
 TEasyButtonBar.h
+dlgColorTrigger.h
 TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)
