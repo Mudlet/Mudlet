@@ -101,5 +101,7 @@
         <file>fonts/ttf-bitstream-vera-1.10/local.conf</file>
         <file>fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT</file>
         <file>icons/red-bomb.png</file>
+        <file>icons/export.png</file>
+        <file>icons/import.png</file>
     </qresource>
 </RCC>

@@ -315,11 +315,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     saveAction->setStatusTip(tr("Save Edited Trigger, Script, Alias etc. If information has been edited, it must be saved or the changes will be lost."));
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
     
-    QAction * importAction = new QAction(QIcon(":/icons/application-x-cpio.png"), tr("Import"), this);
+    QAction * importAction = new QAction(QIcon(":/icons/import.png"), tr("Import"), this);
     importAction->setEnabled( true );
     connect( importAction, SIGNAL(triggered()), this, SLOT( slot_import()));
     
-    QAction * exportAction = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Export"), this);
+    QAction * exportAction = new QAction(QIcon(":/icons/export.png"), tr("Export"), this);
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
     
