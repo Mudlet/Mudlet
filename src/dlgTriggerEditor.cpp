@@ -100,6 +100,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     // init generated dialog
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true ); //MAC OSX: make window moveable
+    QStatusBar * statusBar = new QStatusBar(this);
+    statusBar->setSizeGripEnabled( true );
+    setStatusBar( statusBar );
+    statusBar->show();
     mIsGrabKey = false;
     QVBoxLayout * pVB1 = new QVBoxLayout(mainArea);
     
@@ -522,8 +526,8 @@ void dlgTriggerEditor::closeEvent(QCloseEvent *event)
 void dlgTriggerEditor::readSettings()
 {
     QSettings settings("Mudlet", "Mudlet 1.0");
-    QPoint pos = settings.value("script_editor_pos", QPoint(0, 0)).toPoint();
-    QSize size = settings.value("script_editor_size", QSize(750, 550)).toSize();
+    QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
+    QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize( size );
     move( pos );
 }
