@@ -233,7 +233,7 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
 void dlgConnectionProfiles::slot_update_name( const QString name )             
 {
     QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
-    const QString allowedChars = "012345789 _-#aAbBcCdDeEfFg GhHiIjJkKl LmMnNoOpPqQ rRsStTuUvV wWxXyYzZ";
+    const QString allowedChars = "0123456789 _-#aAbBcCdDeEfFg GhHiIjJkKl LmMnNoOpPqQ rRsStTuUvV wWxXyYzZ";
     if( ! allowedChars.contains( name.right( 1 ) ) )
     {
         QString val = name;

@@ -586,22 +586,19 @@ inline void TTrigger::updateMultistates( int regexNumber,
 inline void TTrigger::filter( std::string & capture, int & posOffset )
 {
     if( capture.size() < 1 ) return;
-    cout << "capture <"<<capture<<">"<<endl;
     char * filterSubject = (char *) malloc( capture.size() + 2048 );
     if( filterSubject )
        strcpy( filterSubject, capture.c_str() );
     else
     {
-        cout << "ERROR:"<<endl;
         return;
     }
-    cout << "trace3"<<endl;
     QString text = capture.c_str();
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTrigger * pChild = *it;
-        (*it)->match( filterSubject, text, posOffset );
+        (*it)->match( filterSubject, text, -1, posOffset );
     }
     free( filterSubject );
 }
@@ -675,6 +672,7 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
 
 bool TTrigger::match_colors( int line )
 {
+    if( line == -1 ) return false;
     bool bgColorMatch = false;
     bool fgColorMatch = false;
     bool canExecute = false;
@@ -760,11 +758,11 @@ bool TTrigger::match_colors( int line )
                 bool matching = false;
                 for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
                 {
-                    if( ( (*it)->fgColor == mColorTriggerFgColor ) && ( (*it)->bgColor == mColorTriggerBgColor ) )
+                    if( (*it)->fgColor == mColorTriggerFgColor )
                     {
                         if( matchBegin == -1 )
                             matchBegin = pos;
-                        bool matching = true;
+                        matching = true;
                     }
                     else
                     {
@@ -805,10 +803,11 @@ bool TTrigger::match_colors( int line )
                 bool matching = false;
                 for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
                 {
-                    if( ( (*it)->fgColor == mColorTriggerFgColor ) && ( (*it)->bgColor == mColorTriggerBgColor ) )
+                    if( (*it)->bgColor == mColorTriggerBgColor )
                     {
                         if( matchBegin == -1 )
                             matchBegin = pos;
+                        matching = true;
                     }
                    else
                     {
@@ -863,7 +862,6 @@ bool TTrigger::match_colors( int line )
             }
             TLuaInterpreter * pL = mpHost->getLuaInterpreter();
             pL->setCaptureGroups( captureList, posList );
-
             // call lua trigger function with number of matches and matches itselves as arguments
             execute();
             pL->clearCaptureGroups();

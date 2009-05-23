@@ -104,6 +104,8 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
+    //fgColor.setAlpha(255);
+    //bgColor.setAlpha(255);
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
         while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
@@ -111,6 +113,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             deleteLine( 0 );
         }
     }
+    bool runOncePerLine = true;
     for( int i=0; i<text.size(); i++ )
     {
         int last = buffer.size()-1;
@@ -150,10 +153,6 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
                         pC->bold = bold;
                         pC->underline = underline;
                         timeBuffer[last] = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-                        QList<QColor> fgColorList;
-                        QList<QColor> bgColorList;
-                        fgColorBuffer << fgColorList;
-                        bgColorBuffer << bgColorList;
                         continue;
                     }
                 }
@@ -169,8 +168,48 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             pC->bold = bold;
             pC->underline = underline;
             buffer[last].push_back( pC );
-            fgColorBuffer[last] << fgColor;
-            bgColorBuffer[last] << bgColor;
+            if( runOncePerLine )
+            {
+                bool doublicate = false;
+                for( int k=0; k<fgColorBuffer[last].size(); k++ )
+                {
+                    if( fgColorBuffer[last][k].red() == fgColor.red() )
+                    {
+                        if( fgColorBuffer[last][k].green() == fgColor.green() )
+                        {
+                            if( fgColorBuffer[last][k].blue() == fgColor.blue() )
+                            {
+                                doublicate = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if( ! doublicate )
+                {
+                    fgColorBuffer[last].append( fgColor );
+                }
+                doublicate = false;
+                for( int k=0; k<bgColorBuffer[last].size(); k++ )
+                {
+                    if( bgColorBuffer[last][k].red() == bgColor.red() )
+                    {
+                        if( bgColorBuffer[last][k].green() == bgColor.green() )
+                        {
+                            if( bgColorBuffer[last][k].blue() == bgColor.blue() )
+                            {
+                                doublicate = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if( ! doublicate )
+                {
+                    bgColorBuffer[last] << bgColor;
+                }
+                runOncePerLine = false;
+            }
         }
         if( text.at(i) == QChar('\n') )
         {
@@ -192,6 +231,7 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             mLastLine++;
             newLines++;
             mCursorMoved = true;
+            runOncePerLine = true;
         }
     }
 }
@@ -259,6 +299,8 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
             timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "-   ";
+            fgColorBuffer << QList<QColor>();
+            bgColorBuffer << QList<QColor>();
             mLastLine++;
             newLines++;
             x = 0;
@@ -462,6 +504,8 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     std::queue<std::deque<TChar *> > queue;
     QStringList tempList;
     QStringList timeList;
+    QList<QList<QColor> > fgList;
+    QList<QList<QColor> > bgList;
     int lineCount = 0;
     
     for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
@@ -470,6 +514,8 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         std::deque<TChar *> newLine;
         QString lineText;
         QString time = timeBuffer[i];
+        QList<QColor> fgColorList = fgColorBuffer[i];
+        QList<QColor> bgColorList = bgColorBuffer[i];
         int indent = 0;
         if( static_cast<int>(buffer[i].size()) >= screenWidth )
         {
@@ -533,6 +579,8 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
             queue.push( newLine );
             tempList.append( lineText );
             timeList.append( time );
+            fgList.append( fgColorList );
+            bgList.append( bgColorList );
             newLine.clear();
             lineText.clear();
             indent = 0;
@@ -545,6 +593,8 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         buffer.pop_back();    
         lineBuffer.pop_back();
         timeBuffer.pop_back();
+        bgColorBuffer.pop_back();
+        fgColorBuffer.pop_back();
     }
     
     newLines -= lineCount;
@@ -560,7 +610,9 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     for( int i=0; i<tempList.size(); i++ )
     {
         lineBuffer.append( tempList[i] );
-        timeBuffer.append( timeList[i] );//QTime::currentTime().toString("hh:mm:ss.zzz")+"   " );
+        timeBuffer.append( timeList[i] );
+        fgColorBuffer.append( fgList[i] );
+        bgColorBuffer.append( bgList[i] );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -655,6 +707,8 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     buffer.erase( buffer.begin()+startLine );
     lineBuffer.removeAt( startLine );
     timeBuffer.removeAt( startLine );
+    bgColorBuffer.removeAt( startLine );
+    fgColorBuffer.removeAt( startLine );
 
     int insertedLines = queue.size()-1;
 
@@ -670,6 +724,8 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     {
         lineBuffer.insert( startLine+i, tempList[i] );
         timeBuffer.insert( startLine+i, QTime::currentTime().toString("hh:mm:ss.zzz")+"   " );
+        bgColorBuffer.insert( startLine+i, QList<QColor>() );
+        fgColorBuffer.insert( startLine+i, QList<QColor>() );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }

@@ -1133,6 +1133,7 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
 
 int TLuaInterpreter::closeUserWindow( lua_State *L )
 {
+
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
@@ -1146,7 +1147,8 @@ int TLuaInterpreter::closeUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->closeWindow( pHost, text );
+    //FIXME: currently disabled because of potential crashes
+    //mudlet::self()->closeWindow( pHost, text );
 
     return 0;
 }

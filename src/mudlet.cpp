@@ -71,7 +71,7 @@ mudlet::mudlet()
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet Beta 10pre6 - built: May-19-2009");
+    setWindowTitle("Mudlet Beta 10pre8 - built: May-23-2009");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
@@ -183,7 +183,7 @@ mudlet::mudlet()
     QAction * actionCloseProfile = new QAction(QIcon(":/icons/window-close.png"), tr("Close"), this);
     actionScripts->setEnabled( true );
     actionScripts->setStatusTip(tr("close connection"));
-    mpMainToolBar->addAction( actionCloseProfile );
+    //mpMainToolBar->addAction( actionCloseProfile );
 
     disableToolbarButtons();
 
@@ -426,8 +426,9 @@ void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
     }
 }
 
-void mudlet::disableToolbarButtons() {
-	mpMainToolBar->actions()[1]->setEnabled( false );
+void mudlet::disableToolbarButtons()
+{
+    mpMainToolBar->actions()[1]->setEnabled( false );
     mpMainToolBar->actions()[2]->setEnabled( false );
     mpMainToolBar->actions()[3]->setEnabled( false );
     mpMainToolBar->actions()[4]->setEnabled( false );
@@ -435,11 +436,12 @@ void mudlet::disableToolbarButtons() {
     mpMainToolBar->actions()[6]->setEnabled( false );
     mpMainToolBar->actions()[8]->setEnabled( false );
     mpMainToolBar->actions()[9]->setEnabled( false );
-    mpMainToolBar->actions()[11]->setEnabled( false );
+//    mpMainToolBar->actions()[11]->setEnabled( false );
 }
 
-void mudlet::enableToolbarButtons() {
-	mpMainToolBar->actions()[1]->setEnabled( true );
+void mudlet::enableToolbarButtons()
+{
+    mpMainToolBar->actions()[1]->setEnabled( true );
     mpMainToolBar->actions()[2]->setEnabled( true );
     mpMainToolBar->actions()[3]->setEnabled( true );
     mpMainToolBar->actions()[4]->setEnabled( true );
@@ -447,7 +449,7 @@ void mudlet::enableToolbarButtons() {
     mpMainToolBar->actions()[6]->setEnabled( true );
     mpMainToolBar->actions()[8]->setEnabled( true );
     mpMainToolBar->actions()[9]->setEnabled( true );
-    mpMainToolBar->actions()[11]->setEnabled( true );
+//    mpMainToolBar->actions()[11]->setEnabled( true );
 }
 
 bool mudlet::openWindow( Host * pHost, QString & name )
@@ -755,8 +757,6 @@ bool mudlet::pasteWindow( Host * pHost, QString & name )
 
 bool mudlet::appendBuffer( Host * pHost, QString & name )
 {
-    for(int i=0;i<dockWindowConsoleMap.size();i++)
-        qDebug()<<"window "<<i;
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->appendBuffer( mConsoleMap[pHost]->mClipboard );
@@ -778,7 +778,6 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 void mudlet::slot_userToolBar_triggered( QAction* pA )
 {
-    qDebug()<<"slot_muserToolBar_triggered()";
     if( pA->isChecked() )
     {
         ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 2;

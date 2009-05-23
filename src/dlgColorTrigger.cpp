@@ -56,6 +56,7 @@ dlgColorTrigger::dlgColorTrigger( QWidget * pF, TTrigger * pT, int mode )
 void dlgColorTrigger::setColorBlack()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -72,6 +73,7 @@ void dlgColorTrigger::setColorBlack()
 void dlgColorTrigger::setColorLightBlack()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -88,6 +90,7 @@ void dlgColorTrigger::setColorLightBlack()
 void dlgColorTrigger::setColorRed()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -104,6 +107,7 @@ void dlgColorTrigger::setColorRed()
 void dlgColorTrigger::setColorLightRed()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -119,7 +123,8 @@ void dlgColorTrigger::setColorLightRed()
 
 void dlgColorTrigger::setColorGreen()
 {
-   if( ! mpTrigger ) return;
+    if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -135,6 +140,7 @@ void dlgColorTrigger::setColorGreen()
 void dlgColorTrigger::setColorLightGreen()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -151,6 +157,7 @@ void dlgColorTrigger::setColorLightGreen()
 void dlgColorTrigger::setColorBlue()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -166,6 +173,7 @@ void dlgColorTrigger::setColorBlue()
 void dlgColorTrigger::setColorLightBlue()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -182,6 +190,7 @@ void dlgColorTrigger::setColorLightBlue()
 void dlgColorTrigger::setColorYellow()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -197,6 +206,7 @@ void dlgColorTrigger::setColorYellow()
 void dlgColorTrigger::setColorLightYellow()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -213,6 +223,7 @@ void dlgColorTrigger::setColorLightYellow()
 void dlgColorTrigger::setColorCyan()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -228,6 +239,7 @@ void dlgColorTrigger::setColorCyan()
 void dlgColorTrigger::setColorLightCyan()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -244,6 +256,7 @@ void dlgColorTrigger::setColorLightCyan()
 void dlgColorTrigger::setColorMagenta()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -259,6 +272,7 @@ void dlgColorTrigger::setColorMagenta()
 void dlgColorTrigger::setColorLightMagenta()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -275,6 +289,7 @@ void dlgColorTrigger::setColorLightMagenta()
 void dlgColorTrigger::setColorWhite()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
@@ -290,6 +305,7 @@ void dlgColorTrigger::setColorWhite()
 void dlgColorTrigger::setColorLightWhite()
 {
     if( ! mpTrigger ) return;
+    mpTrigger->mColorTrigger = true;
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;

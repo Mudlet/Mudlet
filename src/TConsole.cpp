@@ -1158,7 +1158,6 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         mUserCursor.setX( 0 );
         mCurrentLine = buffer.line( i );
         mCurrentLine.replace( QChar( 0x21af ), QChar('\n') );
-        //qDebug()<<"line<"<<mCurrentLine<<">";
         mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
         if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
         mpHost->incomingStreamProcessor( mCurrentLine, prompt, i );
@@ -1602,9 +1601,7 @@ QStringList TConsole::getLines( int from, int to )
 
 void TConsole::selectCurrentLine()
 {
-    //FIXME: size-1
     selectSection(0, buffer.line( mUserCursor.y() ).size()-1 );
-    qDebug()<<"line under cursor<"<<buffer.line(mUserCursor.y());
 }
 
 void TConsole::selectCurrentLine( std::string & buf )
@@ -1831,7 +1828,6 @@ TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width,
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
     {
-        qDebug()<<"creating new mini console: name="<<name;
         TConsole * pC = new TConsole(mpHost, false, mpMainFrame );
         if( ! pC )
         {

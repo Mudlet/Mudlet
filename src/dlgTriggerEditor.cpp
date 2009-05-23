@@ -99,7 +99,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 {
     // init generated dialog
     setupUi(this);
-
+    setUnifiedTitleAndToolBarOnMac( true ); //MAC OSX: make window moveable
     mIsGrabKey = false;
     QVBoxLayout * pVB1 = new QVBoxLayout(mainArea);
     
@@ -1883,7 +1883,10 @@ void dlgTriggerEditor::saveTrigger()
             qDebug()<<"saving trigger old name="<<pT->getName()<<" new name="<<name;
             pT->setName( name );
             pT->setCommand( command );
-            pT->setRegexCodeList( regexList, regexPropertyList );
+            //pT->mColorTrigger = mpTriggersMainArea->colorTrigger->isChecked();//muss hier gesetzt werden, damit es keinen error gibt
+            bool check = pT->setRegexCodeList( regexList, regexPropertyList );
+            qDebug()<<"after setting RegexList check ="<<check;
+
             pT->setTriggerType( mpTriggersMainArea->comboBox_regexstyle->currentIndex() );
             pT->setScript( script );
             pT->setIsMultiline( isMultiline );
@@ -1892,7 +1895,7 @@ void dlgTriggerEditor::saveTrigger()
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
             pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
             pT->setSound( mpTriggersMainArea->lineEdit_soundFile->text() );
-            pT->mColorTrigger = mpTriggersMainArea->colorTrigger->isChecked();
+
             QPalette FgColorPalette;
             QPalette BgColorPalette;
             FgColorPalette = mpTriggersMainArea->pushButtonFgColor->palette();

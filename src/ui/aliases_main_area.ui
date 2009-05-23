@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>619</width>
+    <width>510</width>
     <height>100</height>
    </rect>
   </property>
@@ -39,7 +39,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
+   <item row="0" column="1" colspan="3">
     <widget class="QLineEdit" name="lineEdit_alias_name">
      <property name="minimumSize">
       <size>
@@ -101,6 +101,30 @@
      </property>
     </widget>
    </item>
+   <item row="1" column="2">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Type:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="3">
+    <widget class="QComboBox" name="comboBox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <item>
+      <property name="text">
+       <string>Regex</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Plain</string>
+      </property>
+     </item>
+    </widget>
+   </item>
    <item row="2" column="0">
     <widget class="QLabel" name="label_3">
      <property name="sizePolicy">
@@ -120,7 +144,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
+   <item row="2" column="1" colspan="3">
     <widget class="QLineEdit" name="substitution">
      <property name="minimumSize">
       <size>
