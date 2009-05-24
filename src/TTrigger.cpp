@@ -1127,7 +1127,6 @@ bool TTrigger::registerTrigger()
 {
     if( ! mpHost )
     {
-        qDebug() << "ERROR: TTrigger::registerTrigger() mpHost=0";
         return false;
     }
     return mpHost->getTriggerUnit()->registerTrigger(this);    

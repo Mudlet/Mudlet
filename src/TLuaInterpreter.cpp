@@ -2768,10 +2768,10 @@ int TLuaInterpreter::startTempTimer( double timeout, QString function )
     TTimer * pT;
     pT = new TTimer( "a", time2, mpHost );
     pT->setTime( time2 );
-    pT->setScript( function );
     pT->setIsFolder( false );
     pT->setIsTempTimer( true );
     pT->registerTimer();    
+    pT->setScript( function );
     int id = pT->getID();
     pT->setName( QString::number( id ) );
     pT->setIsActive( true );
@@ -2787,11 +2787,11 @@ int TLuaInterpreter::startTempTrigger( QString regex, QString function )
     QList<int> propertyList;
     propertyList << REGEX_SUBSTRING;// substring trigger is default
     pT = new TTrigger("a", sList, propertyList, false, mpHost );
-    pT->setScript( function );
     pT->setIsFolder( false );
     pT->setIsActive( true );
     pT->setIsTempTrigger( true );
     pT->registerTrigger();    
+    pT->setScript( function );
     int id = pT->getID();
     pT->setName( QString::number( id ) );
     return id;                  
@@ -2805,7 +2805,6 @@ int TLuaInterpreter::startTempLineTrigger( int from, int howmany, QString functi
 //    propertyList << REGEX_SUBSTRING;// substring trigger is default
 //    pT = new TTrigger("a", sList, propertyList, false, mpHost );
     pT = new TTrigger( 0, mpHost );
-    pT->setScript( function );
     pT->setIsFolder( false );
     pT->setIsActive( true );
     pT->setIsTempTrigger( true );
@@ -2813,6 +2812,7 @@ int TLuaInterpreter::startTempLineTrigger( int from, int howmany, QString functi
     pT->setStartOfLineDelta( from );
     pT->setLineDelta( howmany );
     pT->registerTrigger();    
+    pT->setScript( function );
     int id = pT->getID();
     pT->setName( QString::number( id ) );
     return id;                  
@@ -2828,11 +2828,11 @@ int TLuaInterpreter::startTempRegexTrigger( QString regex, QString function )
     QList<int> propertyList;
     propertyList << REGEX_PERL;// substring trigger is default
     pT = new TTrigger("a", sList, propertyList, false, mpHost );
-    pT->setScript( function );
     pT->setIsFolder( false );
     pT->setIsActive( true );
     pT->setIsTempTrigger( true );
     pT->registerTrigger();    
+    pT->setScript( function );
     int id = pT->getID();
     pT->setName( QString::number( id ) );
     return id;                  
