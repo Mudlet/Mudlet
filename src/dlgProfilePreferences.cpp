@@ -88,6 +88,8 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         MainIconSize->setValue(mudlet::self()->mMainIconSize);
         TEFolderIconSize->setValue(mudlet::self()->mTEFolderIconSize);
         showMenuBar->setChecked( mudlet::self()->mShowMenuBar );
+        mRawStreamDump->setChecked( pHost->mRawStreamDump );
+        mNoAntiAlias->setChecked( ! pHost->mNoAntiAlias );
     }
 }
 
@@ -498,6 +500,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setIcoSize(MainIconSize->value());
     pHost->mpEditorDialog->setTBIconSize( 0 );
     mudlet::self()->mShowMenuBar = showMenuBar->isChecked();
+    pHost->mRawStreamDump = mRawStreamDump->isChecked();
+    pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
+    pHost->mpConsole->changeColors();
 
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {

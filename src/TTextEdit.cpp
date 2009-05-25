@@ -382,9 +382,9 @@ void TTextEdit::drawCharacters( QPainter & painter,
             painter.setFont( mpHost->mDisplayFont );
         else
             painter.setFont( mDisplayFont );
-        //mPainterInit = true;
+        mPainterInit = true;
     }
-    
+
     if( ( font.bold() != isBold ) || ( font.underline() != isUnderline ) || (font.italic() != isItalics) )
     {
         font.setBold( isBold );
@@ -392,7 +392,7 @@ void TTextEdit::drawCharacters( QPainter & painter,
         font.setItalic( isItalics );
         painter.setFont( font );
     }
-    
+
     QPen pen = painter.pen();
     if ( pen.color() != fgColor )
     {

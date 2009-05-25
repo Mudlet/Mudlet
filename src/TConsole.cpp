@@ -45,6 +45,8 @@
 #include "XMLexport.h"
 #include <QShortcut>
 #include "TLabel.h"
+#include "TSplitter.h"
+#include "TSplitterHandle.h"
 
 //#define NDEBUG
 #include <assert.h>
@@ -146,6 +148,12 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mainPalette.setColor( QPalette::Text, QColor(0,0,0) );
     mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     mainPalette.setColor( QPalette::Window, QColor(0,0,0,255) );
+    QPalette splitterPalette;
+    splitterPalette = mainPalette;
+    splitterPalette.setColor( QPalette::Button, QColor(0,0,255,255) );
+    splitterPalette.setColor( QPalette::Window, QColor(0,255,0));//,255) );
+    splitterPalette.setColor( QPalette::Base, QColor(255,0,0,255) );
+    splitterPalette.setColor( QPalette::Window, QColor(255,255,255) );
     //setPalette( mainPalette );
 
     //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
@@ -255,11 +263,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         
     mpScrollBar->setFixedWidth( 15 );
     
-    QSplitter * splitter = new QSplitter( Qt::Vertical, layer );
+    splitter = new TSplitter( Qt::Vertical );//, layer );
     splitter->setContentsMargins(0,0,0,0);
     splitter->setSizePolicy( sizePolicy );
     splitter->setOrientation( Qt::Vertical );
     splitter->setHandleWidth( 3 );
+    splitter->setPalette( splitterPalette );
+    splitter->setParent( layer );
     setFocusProxy( mpCommandLine );
     
     console = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole, false );
@@ -565,7 +575,7 @@ void TConsole::changeColors()
 {
     if( mIsDebugConsole )
     {
-        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
+        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality) );
         console->setFont( mDisplayFont );
         console2->setFont( mDisplayFont );
         QPalette palette;
@@ -577,7 +587,7 @@ void TConsole::changeColors()
     }
     else if( mIsSubConsole )
     {
-        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
+        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality ) );
         console->setFont( mDisplayFont );
         console2->setFont( mDisplayFont );
         QPalette palette;
@@ -591,7 +601,10 @@ void TConsole::changeColors()
     }
     else
     {
-        mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality) );
+        if( mpHost->mNoAntiAlias )
+            mpHost->mDisplayFont.setStyleStrategy( QFont::NoAntialias );
+        else
+            mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
         console->setFont( mpHost->mDisplayFont );
         console2->setFont( mpHost->mDisplayFont );
         QPalette palette;
@@ -603,6 +616,12 @@ void TConsole::changeColors()
         console->setPalette( palette );
         console2->setPalette( palette );
     }
+    QPalette palette;
+    palette.setColor( QPalette::Button, QColor(0,0,255) );
+    palette.setColor( QPalette::Window, QColor(0,255,0) );
+    palette.setColor( QPalette::Base, QColor(255,0,0) );
+
+    splitter->setPalette( palette );
 }
 
 void TConsole::setConsoleBgColor( int r, int g, int b )

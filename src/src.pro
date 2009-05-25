@@ -76,7 +76,9 @@ SOURCES += TConsole.cpp \
     mudlet.cpp \
     TLabel.cpp \
     TEasyButtonBar.cpp \
-    dlgColorTrigger.cpp
+    dlgColorTrigger.cpp \
+    TSplitter.cpp \
+    TSplitterHandle.cpp
 HEADERS += mudlet.h \
     TTimer.h \
     EAction.h \
@@ -130,7 +132,9 @@ HEADERS += mudlet.h \
     Tree.h \
     TLabel.h \
     TEasyButtonBar.h \
-    dlgColorTrigger.h
+    dlgColorTrigger.h \
+    TSplitter.h \
+    TSplitterHandle.h
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
     ui/trigger_editor.ui \
