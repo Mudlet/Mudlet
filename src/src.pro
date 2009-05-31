@@ -74,15 +74,11 @@ SOURCES += TConsole.cpp \
     TToolBar.cpp \
     TLabel.cpp \
     TEasyButtonBar.cpp \
-<<<<<<< HEAD:src/src.pro
     TForkedProcess.cpp \
     dlgColorTrigger.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
     mudlet.cpp
-=======
-    dlgColorTrigger.cpp
->>>>>>> 95e13c0... misc:src/src.pro
 HEADERS += mudlet.h \
     TTimer.h \
     EAction.h \
@@ -134,15 +130,11 @@ HEADERS += mudlet.h \
     TriggerUnit.h \
     TLabel.h \
     TEasyButtonBar.h \
-<<<<<<< HEAD:src/src.pro
     TForkedProcess.h \
     dlgColorTrigger.h \
     TSplitter.h \
     TSplitterHandle.h \
     Tree.h
-=======
-    dlgColorTrigger.h
->>>>>>> 95e13c0... misc:src/src.pro
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
     ui/main_window.ui \
