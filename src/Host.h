@@ -187,8 +187,6 @@ public:
     //////////////////////////////////////////
     bool               mUSE_IRE_DRIVER_BUGFIX;
     bool               mUSE_FORCE_LF_AFTER_PROMPT;
-    bool               mNoAntiAlias;
-    bool               mRawStreamDump;
     
     //private:
    

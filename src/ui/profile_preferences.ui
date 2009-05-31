@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>623</width>
+    <width>571</width>
     <height>567</height>
    </rect>
   </property>
@@ -252,60 +252,24 @@
       <widget class="QGroupBox" name="groupBox_6">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>10</y>
-         <width>581</width>
+         <x>9</x>
+         <y>9</y>
+         <width>531</width>
          <height>66</height>
         </rect>
        </property>
        <property name="title">
         <string>Font</string>
        </property>
-       <widget class="QPushButton" name="pushButton_display_font">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>117</width>
-          <height>25</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Chose Display Font</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="mNoAntiAlias">
-        <property name="geometry">
-         <rect>
-          <x>160</x>
-          <y>20</y>
-          <width>16</width>
-          <height>21</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_32">
-        <property name="geometry">
-         <rect>
-          <x>180</x>
-          <y>20</y>
-          <width>381</width>
-          <height>41</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
-        </property>
-        <property name="scaledContents">
-         <bool>true</bool>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
+       <layout class="QGridLayout" name="gridLayout_15">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="pushButton_display_font">
+          <property name="text">
+           <string>Chose Display Font</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QGroupBox" name="groupBox_10">
        <property name="geometry">
@@ -405,7 +369,7 @@
         <rect>
          <x>10</x>
          <y>310</y>
-         <width>581</width>
+         <width>531</width>
          <height>111</height>
         </rect>
        </property>
@@ -417,7 +381,7 @@
          <rect>
           <x>12</x>
           <y>22</y>
-          <width>251</width>
+          <width>509</width>
           <height>21</height>
          </rect>
         </property>
@@ -435,7 +399,7 @@ from getting appended to the previous prompt line</string>
          <rect>
           <x>12</x>
           <y>46</y>
-          <width>281</width>
+          <width>509</width>
           <height>21</height>
          </rect>
         </property>
@@ -452,7 +416,7 @@ or some other computer model that has a small screen.</string>
          <rect>
           <x>12</x>
           <y>70</y>
-          <width>231</width>
+          <width>491</width>
           <height>21</height>
          </rect>
         </property>
@@ -464,45 +428,13 @@ or some other computer model that has a small screen.</string>
          <string>Force new line on empty commands</string>
         </property>
        </widget>
-       <widget class="QCheckBox" name="mRawStreamDump">
-        <property name="geometry">
-         <rect>
-          <x>320</x>
-          <y>20</y>
-          <width>16</width>
-          <height>21</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_36">
-        <property name="geometry">
-         <rect>
-          <x>340</x>
-          <y>20</y>
-          <width>231</width>
-          <height>71</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
-        </property>
-        <property name="scaledContents">
-         <bool>true</bool>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_9">
        <property name="geometry">
         <rect>
          <x>10</x>
          <y>80</y>
-         <width>581</width>
+         <width>531</width>
          <height>111</height>
         </rect>
        </property>
@@ -723,7 +655,7 @@ or some other computer model that has a small screen.</string>
         <rect>
          <x>329</x>
          <y>206</y>
-         <width>261</width>
+         <width>211</width>
          <height>96</height>
         </rect>
        </property>

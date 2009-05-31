@@ -47,7 +47,6 @@ class mudlet;
 class TTextEdit;
 class TBuffer;
 class TLabel;
-class TSplitter;
 
 
 class TFontSpecsLogger
@@ -181,7 +180,6 @@ public:
       std::map<std::string, TLabel *> mLabelMap;
       //QMap<QString, TButton *> mButtonMap;
       int               mButtonState;
-      TSplitter *       splitter;
 
 private:
 

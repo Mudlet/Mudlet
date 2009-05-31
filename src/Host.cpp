@@ -94,8 +94,6 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mMainIconSize( 3 )
 , mTEFolderIconSize( 3 )
 , mIsGoingDown( false )
-, mNoAntiAlias( true )
-, mRawStreamDump( false )
 {
 }
 
