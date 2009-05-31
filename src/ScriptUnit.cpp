@@ -180,51 +180,6 @@ qint64 ScriptUnit::getNewID()
     return ++mMaxID;
 }
 
-bool ScriptUnit::serialize( QDataStream & ofs )
-{
-    bool ret = true;
-    ofs << (qint64)mMaxID;
-    ofs << (qint64)mScriptRootNodeList.size();
-    typedef list<TScript *>::const_iterator I;
-    for( I it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
-    {
-        TScript * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
-    
-}
-
-
-bool ScriptUnit::restore( QDataStream & ifs, bool initMode )
-{
-    ifs >> mMaxID;
-    qint64 children;
-    ifs >> children;
-    
-    bool ret1 = false;
-    bool ret2 = true;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret1 = true;
-    
-    mMaxID = 0;
-    for( qint64 i=0; i<children; i++ )
-    {
-        TScript * pChild = new TScript( 0, mpHost );
-        ret2 = pChild->restore( ifs, initMode );
-        
-        if( ! initMode ) 
-        {
-            delete pChild;
-        }
-        else 
-            registerScript( pChild );
-    }
-    
-    return ret1 && ret2;
-}
-
 void ScriptUnit::compileAll()
 {
     typedef list<TScript *>::const_iterator I;

@@ -87,10 +87,7 @@ public:
     bool             isPushDownButton()                        { return mIsPushDownButton; }
     void             setIsPushDownButton( bool b )             { mIsPushDownButton = b; }
     void             setIsFolder( bool b )                     { mIsFolder = b; }
-    bool             match( QString & toMatch );
     bool             registerAction();
-    bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs, bool );
     void             insertActions( mudlet * pMainWindow,
                                     TToolBar * pT,
                                     QMenu * menu );

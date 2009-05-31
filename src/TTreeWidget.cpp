@@ -282,7 +282,7 @@ void TTreeWidget::startDrag( Qt::DropActions supportedActions )
 
 bool TTreeWidget::dropMimeData ( QTreeWidgetItem * parent, int index, const QMimeData * data, Qt::DropAction action )
 {
-    QTreeWidget::dropMimeData( parent, index, data, action );
+    return QTreeWidget::dropMimeData( parent, index, data, action );
 }
 
 

@@ -248,7 +248,7 @@ bool HostPool::serialize( QString directory )
 
 bool HostPool::restore( QString directory )
 {
-    QString filename = directory + "/HostPool.dat";
+    /*QString filename = directory + "/HostPool.dat";
     QFile file( filename );
     file.open(QIODevice::ReadOnly);
     QDataStream ifs(&file); 
@@ -272,34 +272,18 @@ bool HostPool::restore( QString directory )
         }
     }
     
-    file.close();
+    file.close();*/
     return true;
 }
 
 Host * HostPool::importHost( QString path )
 {
-    QString nothing = "";
-    Host * pH = new Host( 0, nothing, nothing, nothing, createNewHostID() );    
-    
-    if( ! pH->importHost( path ) )
-    {
-        return 0;
-    }
-    mHostPool[pH->getName()] = pH;
-    return pH;
+    return 0;
 }
 
 Host * HostPool::loadHostProfile( QString path, int profileHistory )
 {
-    QString nothing = "";
-    Host * pH = new Host( 0, nothing, nothing, nothing, createNewHostID() );    
-    
-    if( ! pH->restore( path, profileHistory ) )
-    {
-        return 0;
-    }
-    mHostPool[pH->getName()] = pH;
-    return pH;
+    return 0;
 }
 
 

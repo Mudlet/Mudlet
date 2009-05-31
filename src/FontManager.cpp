@@ -25,6 +25,8 @@
 #include "FontManager.h"
 #include "TDebug.h"
 #include <QStringList>
+#include <QtCore>
+#include <QDir>
 
 void FontManager::addFonts()
 {

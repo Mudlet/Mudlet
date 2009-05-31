@@ -359,14 +359,6 @@ TTimer * TTimer::killTimer( QString & name )
     return 0;
 }
 
-bool TTimer::serialize( QDataStream & ofs )
-{
-} 
-
-
-bool TTimer::restore( QDataStream & ifs, bool initMode )
-{
-}
 
 TTimer& TTimer::clone(const TTimer & b)
 {

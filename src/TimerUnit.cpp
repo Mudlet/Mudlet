@@ -252,23 +252,6 @@ qint64 TimerUnit::getNewID()
     return ++mMaxID;
 }
 
-bool TimerUnit::serialize( QDataStream & ofs )
-{
-    bool ret = true;
-    int tempTimer = 0;
-    ofs << (qint64)mMaxID;
-    ofs << (qint64)mTimerRootNodeList.size();
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-
-    return ret;
-    
-}
-
 void TimerUnit::doCleanup()
 {
     typedef list<TTimer *>::iterator I;
@@ -284,34 +267,5 @@ void TimerUnit::markCleanup( TTimer * pT )
     mCleanupList.push_back( pT );
 }
 
-bool TimerUnit::restore( QDataStream & ifs, bool initMode )
-{
-    ifs >> mMaxID;
-    qint64 children;
-    ifs >> children;
-    bool ret1 = false;
-    bool ret2 = true; 
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret1 = true;
-    
-    mMaxID = 0;
-    
-    for( qint64 i=0; i<children; i++ )
-    {
-        TTimer * pChild = new TTimer( 0, mpHost );
-        ret2 = pChild->restore( ifs, initMode );
-        if( ( pChild->isTempTimer() ) || ( ! initMode ) ) 
-        {
-            delete pChild;
-        }
-        else 
-        {
-            registerTimer( pChild );
-        }
-    }
-    
-    return ret1 && ret2;
-}
 
 

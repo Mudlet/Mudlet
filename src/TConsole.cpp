@@ -26,7 +26,7 @@
 #include <QScrollBar>
 #include "TCommandLine.h"
 #include <QVBoxLayout>
-#include <sys/time.h>
+//#include <sys/time.h>
 #include <stdio.h>
 #include <iostream>
 #include <string>
@@ -47,6 +47,7 @@
 #include "TLabel.h"
 #include "TSplitter.h"
 #include "TSplitterHandle.h"
+#include <QDir>
 
 //#define NDEBUG
 #include <assert.h>
@@ -664,9 +665,6 @@ void TConsole::setConsoleFgColor( int r, int g, int b )
 } */
 
 
-QString TConsole::translate( QString & s )
-{
-}
 
 void TConsole::loadRawFile( std::string n )
 {
@@ -681,7 +679,9 @@ void TConsole::loadRawFile( std::string n )
     {
         QString te = ifs.read(50000000);
         if( te.isNull() ) break;
+        qDebug()<<QTime::currentTime()<<": read packet from file sending data to Mudlet ... ";
         printOnDisplay( te );
+        qDebug()<<QTime::currentTime()<<": Mudlet processing finished";
     }
     while(true);
 
@@ -701,11 +701,13 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
                 mLogStream << logger_translate( log );
         }
     }
+    qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE translate";
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = true;
     mDeletedLines = 0;
     int lastLineNumber = buffer.getLastLineNumber();
+    qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time after translate lines="<<lastLineNumber-lineBeforeNewContent;
     mProcessingTime.restart();
     for( int i=lineBeforeNewContent; i<=lastLineNumber; i++ )
     {
@@ -728,7 +730,9 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     }
     double processT = mProcessingTime.elapsed();
     mTriggerEngineMode = false;    
+    qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE wrap";
     buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mStandardFormat );
+    qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time after wrap";
     console->showNewLines();
     console2->showNewLines();
     moveCursorEnd();
@@ -1053,7 +1057,7 @@ void TConsole::insertText( QString text, QPoint P )
                 int x_neu = 0;
                 if( x_adjust != -1 )
                 {
-                    x_neu = text.size()-x_adjust-1 > 0 ? : 0;
+                    x_neu = text.size()-x_adjust-1 > 0 ? text.size()-x_adjust-1 : 0;
                 }
                 moveCursor( x_neu, y_neu );
             }

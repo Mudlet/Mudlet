@@ -210,48 +210,4 @@ qint64 AliasUnit::getNewID()
     return ++mMaxID;
 }
 
-bool AliasUnit::serialize( QDataStream & ofs )
-{
-    bool ret = true;
-    ofs << (qint64)mMaxID;
-    ofs << (qint64)mAliasRootNodeList.size();
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
-    {
-        TAlias * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
-    
-}
-
-
-bool AliasUnit::restore( QDataStream & ifs, bool initMode )
-{
-    ifs >> mMaxID;
-    qint64 children;
-    ifs >> children;
-    
-    bool ret1 = false;
-    bool ret2 = true;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret1 = true;
-    
-    mMaxID = 0;
-    for( qint64 i=0; i<children; i++ )
-    {
-        TAlias * pChild = new TAlias( 0, mpHost );
-        ret2 = pChild->restore( ifs, initMode );
-        
-        if( ! initMode )
-        {
-            delete pChild;
-        }
-        else 
-            registerAlias( pChild );
-    }
-    
-    return ret1 && ret2;
-}
 

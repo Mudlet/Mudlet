@@ -77,8 +77,7 @@ public:
     void             enableTimer( qint64 );
     void             disableTimer( qint64 );
     TTimer *         killTimer( QString & );
-    bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs, bool );
+    
     bool             isClone(TTimer &b) const;
     bool             isOffsetTimer();
     

@@ -34,6 +34,7 @@ TDebug & TDebug::operator>>( const int code)
 { 
     msg.prepend( "\n["+QDateTime::currentDateTime().toString() + "] " );
     mudlet::mpDebugConsole->printDebug( msg );
+	return *this;
 }
 
 TDebug::~TDebug()

@@ -96,7 +96,6 @@ void TTreeWidgetItem::addChildren( const QList<QTreeWidgetItem *> & children )
 
 void TTreeWidgetItem::addChildren( const QList<TTreeWidgetItem *> & children )
 {
-    qDebug()<<"addChildren 2 called";
     //QTreeWidgetItem::addChildren( children );
 }
 
@@ -104,14 +103,11 @@ void TTreeWidgetItem::addChildren( const QList<TTreeWidgetItem *> & children )
 
 TTreeWidgetItem * TTreeWidgetItem::takeChild ( int index )
 {
-    qDebug()<<"TAKE_CHILD called";
-    QTreeWidgetItem::takeChild( index );
+    return static_cast<TTreeWidgetItem *>(QTreeWidgetItem::takeChild( index ));
 }
 
 void TTreeWidgetItem::addChild( QTreeWidgetItem * child )
 {
-    qDebug()<<"ADDING CHILD";
     QTreeWidgetItem::addChild( child );
-    
 }
 

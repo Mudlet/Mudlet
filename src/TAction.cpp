@@ -87,10 +87,6 @@ TAction::~TAction()
     
 }
 
-bool TAction::match( QString & toMatch )
-{
-}
-
 
 bool TAction::registerAction()
 {
@@ -298,13 +294,6 @@ void TAction::insertActions( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
 
 
 
-bool TAction::serialize( QDataStream & ofs )
-{
-} 
-
-bool TAction::restore( QDataStream & ifs, bool initMode )
-{
-}
 
 TAction& TAction::clone(const TAction& b)
 {

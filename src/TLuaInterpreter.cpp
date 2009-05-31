@@ -598,9 +598,7 @@ int TLuaInterpreter::resetStopWatch( lua_State * L )
 }
 
 
-int TLuaInterpreter::userWindowLineWrap( lua_State * L )
-{
-}
+
 
 // cusorPositionInLine = selectSection( from_cursorPos, to_cursorPos ) -1 on not found
 int TLuaInterpreter::selectSection( lua_State * L )
@@ -2658,7 +2656,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "cut", TLuaInterpreter::cut );
     lua_register( pGlobalLua, "paste", TLuaInterpreter::paste );
     lua_register( pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow );
-    lua_register( pGlobalLua, "userWindowLineWrap", TLuaInterpreter::userWindowLineWrap );
+    //lua_register( pGlobalLua, "userWindowLineWrap", TLuaInterpreter::userWindowLineWrap );
     lua_register( pGlobalLua, "debug", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );

@@ -25,7 +25,7 @@
 #include <QMainWindow>
 #include <QCloseEvent>
 #include "ui_console.h"
-#include <QtWebKit>
+//#include <QtWebKit>
 #include <iostream>
 #include "ctelnet.h"
 #include "TCommandLine.h"

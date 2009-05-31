@@ -371,11 +371,4 @@ void TAlias::execute()
     mpLua->call( mFuncName, mName );
 }
 
-bool TAlias::serialize( QDataStream & ofs )
-{
-} 
-
-bool TAlias::restore( QDataStream & ifs, bool initMode )
-{
-}
 

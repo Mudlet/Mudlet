@@ -46,8 +46,6 @@ public:
     void                  killTimer( QString & name );
     bool                  registerTimer( TTimer * pT );
     void                  unregisterTimer( TTimer * pT );
-    bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream &, bool );
     void                  reParentTimer( int childID, int oldParentID, int newParentID );
     void                  stopAllTriggers();
     void                  reenableAllTriggers();

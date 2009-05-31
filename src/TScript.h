@@ -65,8 +65,8 @@ public:
     bool             isFolder()                                        { return mIsFolder; }
     void             setIsFolder( bool b )                             { mIsFolder = b; }
     bool             registerScript();
-    bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs, bool );
+    //bool             serialize( QDataStream & );
+    //bool             restore( QDataStream & fs, bool );
     void             callEventHandler( TEvent * );
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()                             { return mEventHandlerList; }

@@ -81,7 +81,6 @@ public:
    bool                          moveWindow( QString & name, int, int );
    bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
    QString                       readProfileData( QString profile, QString item ); 
-   EAction *                     generateAction( QString name, QString icon, QToolBar * );
    bool                          setWindowWrap( Host * pHost, QString & name, int & wrap );
    bool                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
    void                          bindMenu( QMenu *, EAction * ); 

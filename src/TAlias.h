@@ -67,8 +67,6 @@ public:
     void             setIsFolder( bool b )           { mIsFolder = b; }
     bool             match( QString & toMatch );
     bool             registerAlias();
-    bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs, bool );
     bool             isClone(TAlias &b) const;
     
 private:

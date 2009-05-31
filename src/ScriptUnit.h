@@ -43,8 +43,6 @@ public:
     void                  compileAll();
     bool                  registerScript( TScript * pT );
     void                  unregisterScript( TScript * pT );
-    bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream &, bool );
     void                  reParentScript( int childID, int oldParentID, int newParentID );
     void                  stopAllTriggers();
     

@@ -23,6 +23,8 @@
 
 #include "ui_profile_preferences.h"
 #include <QDialog>
+#include <QtCore>
+#include <QDir>
 
 class Host;
 

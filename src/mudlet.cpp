@@ -812,10 +812,6 @@ void mudlet::addSubWindow( TConsole* pConsole )
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
 }
 
-EAction * mudlet::generateAction( QString name, QString icon, QToolBar * pT )
-{
-}
-
 void mudlet::closeEvent(QCloseEvent *event)
 {
     goingDown();

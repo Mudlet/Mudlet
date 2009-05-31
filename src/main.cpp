@@ -27,6 +27,8 @@
 #include "FontManager.h"
 #include <QSplashScreen>
 #include <QFontDatabase>
+#include <QtCore>
+#include <qdir.h>
 
 #define MUDLET_HOME "/usr/local/share/mudlet/"
 

@@ -31,7 +31,7 @@
 #include <QMainWindow>
 #include <QCloseEvent>
 #include "ui_console.h"
-#include <QtWebKit>
+//#include <QtWebKit>
 #include <iostream>
 #include "ctelnet.h"
 #include "TCommandLine.h"
@@ -192,7 +192,7 @@ private:
       TChar             mStandardFormat;
       //std::string       getCurrentTime();
       //void              translateToPlainText( QString & );
-      QString           translate( QString & );
+     
       QString           logger_translate( QString & );
       void              logger_set_text_properties( QString );
       //void              set_text_properties( int formatPropertyCode );

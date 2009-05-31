@@ -192,13 +192,7 @@ void TKey::execute()
     mpLua->call( mFuncName, mName );
 }
 
-bool TKey::serialize( QDataStream & ofs )
-{
-} 
 
-bool TKey::restore( QDataStream & ifs, bool initMode )
-{
-}
 
 TKey& TKey::clone(const TKey& b)
 {

@@ -65,7 +65,7 @@ public:
     void expandLine( int y, int count, TChar * pC );
     int wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
-    int size(){ return buffer.size(); }
+    int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
     int find( int line, QString what, int pos );
     QStringList split( int line, QString splitter );

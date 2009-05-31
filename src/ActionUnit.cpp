@@ -35,20 +35,6 @@
 
 using namespace std;
 
-void ActionUnit::processDataStream( QString & data )
-{
-    TLuaInterpreter * Lua = mpHost->getLuaInterpreter();
-    QString lua_command_string = "command";
-    Lua->set_lua_string( lua_command_string, data );
-    typedef list<TAction *>::const_iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
-    {
-        TAction * pChild = *it;
-        pChild->match( data );
-    }
-    //data = Lua->get_lua_string( lua_command_string );
-}
-
 
 void ActionUnit::addActionRootNode( TAction * pT )
 {
@@ -389,47 +375,4 @@ void ActionUnit::updateToolbar()
     getEasyButtonBarList();
 }
 
-bool ActionUnit::serialize( QDataStream & ofs )
-{
-    bool ret = true;
-    ofs << (qint64)mMaxID;
-    ofs << (qint64)mActionRootNodeList.size();
-    typedef list<TAction *>::const_iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
-    {
-        TAction * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
-    
-}
-
-bool ActionUnit::restore( QDataStream & ifs, bool initMode )
-{
-    ifs >> mMaxID;
-    qint64 children;
-    ifs >> children;
-    
-    bool ret1 = false;
-    bool ret2 = true;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret1 = true;
-    
-    mMaxID = 0;
-    for( qint64 i=0; i<children; i++ )
-    {
-        TAction * pChild = new TAction( 0, mpHost );
-        ret2 = pChild->restore( ifs, initMode );
-        
-        if( ! initMode ) 
-        {
-            delete pChild;
-        }
-        else 
-            registerAction( pChild );
-    }
-    
-    return ret1 && ret2;
-}
 

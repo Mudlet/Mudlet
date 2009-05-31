@@ -206,51 +206,6 @@ qint64 KeyUnit::getNewID()
     return ++mMaxID;
 }
 
-bool KeyUnit::serialize( QDataStream & ofs )
-{
-    bool ret = true;
-    ofs << (qint64)mMaxID;
-    ofs << (qint64)mKeyRootNodeList.size();
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
-    {
-        TKey * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
-    
-}
-
-
-bool KeyUnit::restore( QDataStream & ifs, bool initMode )
-{
-    ifs >> mMaxID;
-    qint64 children;
-    ifs >> children;
-    
-    bool ret1 = false;
-    bool ret2 = true;
-    
-    if( ifs.status() == QDataStream::Ok )
-        ret1 = true;
-    
-    mMaxID = 0;
-    for( qint64 i=0; i<children; i++ )
-    {
-        TKey * pChild = new TKey( 0, mpHost );
-        ret2 = pChild->restore( ifs, initMode );
-        
-        if( ! initMode ) 
-        {
-            delete pChild;
-        }
-        else 
-            registerKey( pChild );
-    }
-    
-    return ret1 && ret2;
-}
-
 QString KeyUnit::getKeyName( int keyCode, int modifierCode )
 {
     QString name;

@@ -23,8 +23,9 @@
 #include <QPalette>
 #include <QFontDialog>
 #include <QFont>
-
 #include "dlgProfilePreferences.h"
+#include <QtCore>
+#include <QDir>
 #include "Host.h"
 #include "mudlet.h"
 #include "TTextEdit.h"

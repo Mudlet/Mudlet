@@ -70,8 +70,8 @@ public:
     void             setIsFolder( bool b )              { mIsFolder = b; }
     bool             match( int, int );
     bool             registerKey();
-    bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs, bool );
+    //bool             serialize( QDataStream & );
+    //bool             restore( QDataStream & fs, bool );
     bool             isClone( TKey & ) const;
     
 private:

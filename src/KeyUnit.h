@@ -44,8 +44,6 @@ public:
     void                  disableKey( QString & name );
     bool                  registerKey( TKey * pT );
     void                  unregisterKey( TKey * pT );
-    bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream &, bool );
     void                  reParentKey( int childID, int oldParentID, int newParentID );
     qint64                getNewID();
     QString               getKeyName( int keyCode, int modifier );

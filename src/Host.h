@@ -110,33 +110,9 @@ public:
     //QString            getBufferLine( int );
     bool               serialize();
     bool               blockScripts() { return mBlockScriptCompile; }
-    void               serialize_options2( QString );
-    void               restore_options2( QString );
-    bool               restore( QString path, int );
-    int                loadProfileHistory( QString, int );
-    void               saveTriggerUnit( QString hostname );
-    void               loadTriggerUnit( QString hostname );
-    void               saveTimerUnit( QString hostname );
-    void               loadTimerUnit( QString hostname );
-    void               saveScriptUnit( QString hostname );
-    void               loadScriptUnit( QString hostname );
-    void               saveAliasUnit( QString hostname );
-    void               loadAliasUnit( QString hostname );
-    void               saveActionUnit( QString hostname );
-    void               loadActionUnit( QString hostname );
-    void               saveKeyUnit( QString hostname );
-    void               loadKeyUnit( QString hostname );
-    void               saveOptions( QString );
-    void               loadOptions( QString );
+    
     void               setIsAutologin( bool b ){ mIsAutologin = b; }
     bool               isAutologin(){ return mIsAutologin; }
-    QString            readProfileData( QString profile, QString item );
-    void               writeProfileData( QString profile, QString item, QString what );
-    void               writeProfileHistory( QString profile, QString item, QString what );
-    // QStringList        getLastBuffer();  
-    bool               exportHost( QString );
-    bool               importHost( QString );
-    bool               loadHostProfile( QString );
     void               setReplacementCommand( QString );
     void               registerEventHandler( QString, TScript * );
     void               unregisterEventHandler( QString, TScript * );

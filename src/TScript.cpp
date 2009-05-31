@@ -167,13 +167,7 @@ void TScript::execute()
 }
 
 
-bool TScript::serialize( QDataStream & ofs )
-{
-} 
 
-bool TScript::restore( QDataStream & ifs, bool initMode )
-{
-}
 
 TScript& TScript::clone(const TScript& b)
 {

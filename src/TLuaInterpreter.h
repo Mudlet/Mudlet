@@ -133,7 +133,7 @@ public:
     static int cut( lua_State * L );
     static int paste( lua_State * L );
     static int pasteWindow( lua_State * L );
-    static int userWindowLineWrap( lua_State * L );
+    
     static int enableKey( lua_State * );
     static int disableKey( lua_State * );
     static int debug( lua_State * L );
