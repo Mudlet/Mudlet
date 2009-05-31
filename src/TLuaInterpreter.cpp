@@ -338,6 +338,25 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::loadRawFile( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpConsole->loadRawFile( luaSendText );
+    return 0;
+}
+
 int TLuaInterpreter::getCurrentLine( lua_State * L )
 {
     string luaSendText="";
@@ -2676,6 +2695,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState );
     lua_register( pGlobalLua, "showToolBar", TLuaInterpreter::showToolBar );
     lua_register( pGlobalLua, "hideToolBar", TLuaInterpreter::hideToolBar );
+    lua_register( pGlobalLua, "loadRawFile", TLuaInterpreter::loadRawFile );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
@@ -2759,6 +2779,8 @@ void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString functio
     pT->setIsTempTimer( true );
     pT->registerTimer();    
 }
+
+
 
 int TLuaInterpreter::startTempTimer( double timeout, QString function )
 {

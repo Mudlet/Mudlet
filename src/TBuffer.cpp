@@ -27,8 +27,12 @@
 #include <queue>
 #include "TBuffer.h"
 #include "Host.h"
+#include "TConsole.h"
+
 
 using namespace std;
+
+class Host;
 
 const QColor TCharDefaultFgColor = QColor(255,255,255);
 const QColor TCharDefaultBgColor = QColor(0,0,0); 
@@ -79,6 +83,30 @@ TBuffer::TBuffer( Host * pH )
 , mCursorMoved( false )
 , mWrapAt( 100 )
 , mWrapIndent( 0 )
+, mFormatSequenceRest( QString("") )
+, mBold( false )
+, mItalics( false )
+, mUnderline( false )
+, mFgColorCode( 0 )
+, mBgColorCode( 0 )
+, mBlack             ( pH->mBlack )
+, mLightBlack        ( pH->mLightBlack )
+, mRed               ( pH->mRed )
+, mLightRed          ( pH->mLightRed )
+, mLightGreen        ( pH->mLightGreen )
+, mGreen             ( pH->mGreen )
+, mLightBlue         ( pH->mLightBlue )
+, mBlue              ( pH->mBlue )
+, mLightYellow       ( pH->mLightYellow )
+, mYellow            ( pH->mYellow )
+, mLightCyan         ( pH->mLightCyan )
+, mCyan              ( pH->mCyan )
+, mLightMagenta      ( pH->mLightMagenta )
+, mMagenta           ( pH->mMagenta )
+, mLightWhite        ( pH->mLightWhite )
+, mWhite             ( pH->mWhite )
+, mFgColor           ( pH->mFgColor )
+, mBgColor           ( pH->mBgColor )
 {   
     buffer.clear();
     lineBuffer.clear();
@@ -88,6 +116,95 @@ TBuffer::TBuffer( Host * pH )
     mTime.start();
 }
 
+void TBuffer::resetFontSpecs()
+{
+    fgColorR = mFgColorR;
+    fgColorG = mFgColorG;
+    fgColorB = mFgColorB;
+    bgColorR = mBgColorR;
+    bgColorG = mBgColorG;
+    bgColorB = mBgColorB;
+    mBold = false;
+    mItalics = false;
+    mUnderline = false;
+}
+
+void TBuffer::updateColors()
+{
+    Host * pH = mpHost;
+    mBlack = pH->mBlack;
+    mBlackR=mBlack.red();
+    mBlackG=mBlack.green();
+    mBlackB=mBlack.blue();
+    mLightBlack = pH->mLightBlack;
+    mLightBlackR = mLightBlack.red();
+    mLightBlackG=mLightBlack.green();
+    mLightBlackB=mLightBlack.blue();
+    mRed = pH->mRed;
+    mRedR=mRed.red();
+    mRedG=mRed.green();
+    mRedB=mRed.blue();
+    mLightRed = pH->mLightRed;
+    mLightRedR=mLightRed.red();
+    mLightRedG=mLightRed.green();
+    mLightRedB=mLightRed.blue();
+    mLightGreen = pH->mLightGreen;
+    mLightGreenR=mLightGreen.red();
+    mLightGreenG=mLightGreen.green();
+    mLightGreenB=mLightGreen.blue();
+    mGreen = pH->mGreen;
+    mGreenR=mGreen.red();
+    mGreenG=mGreen.green();
+    mGreenB=mGreen.blue();
+    mLightBlue = pH->mLightBlue;
+    mLightBlueR=mLightBlue.red();
+    mLightBlueG=mLightBlue.green();
+    mLightBlueB=mLightBlue.blue();
+    mBlue = pH->mBlue;
+    mBlueR=mBlue.red();
+    mBlueG=mBlue.green();
+    mBlueB=mBlue.blue();
+    mLightYellow  = pH->mLightYellow;
+    mLightYellowR=mLightYellow.red();
+    mLightYellowG=mLightYellow.green();
+    mLightYellowB=mLightYellow.blue();
+    mYellow = pH->mYellow;
+    mYellowR=mYellow.red();
+    mYellowG=mYellow.green();
+    mYellowB=mYellow.blue();
+    mLightCyan = pH->mLightCyan;
+    mLightCyanR=mLightCyan.red();
+    mLightCyanG=mLightCyan.green();
+    mLightCyanB=mLightCyan.blue();
+    mCyan = pH->mCyan;
+    mCyanR=mCyan.red();
+    mCyanG=mCyan.green();
+    mCyanB=mCyan.blue();
+    mLightMagenta = pH->mLightMagenta;
+    mLightMagentaR=mLightMagenta.red();
+    mLightMagentaG=mLightMagenta.green();
+    mLightMagentaB=mLightMagenta.blue();
+    mMagenta = pH->mMagenta;
+    mMagentaR=mMagenta.red();
+    mMagentaG=mMagenta.green();
+    mMagentaB=mMagenta.blue();
+    mLightWhite = pH->mLightWhite;
+    mLightWhiteR=mLightWhite.red();
+    mLightWhiteG=mLightWhite.green();
+    mLightWhiteB=mLightWhite.blue();
+    mWhite = pH->mWhite;
+    mWhiteR=mWhite.red();
+    mWhiteG=mWhite.green();
+    mWhiteB=mWhite.blue();
+    mFgColor = pH->mFgColor;
+    mBgColor = pH->mBgColor;
+    mFgColorR = mFgColor.red();
+    mFgColorG = mFgColor.green();
+    mFgColorB = mFgColor.blue();
+    mBgColorR = mBgColor.red();
+    mBgColorG = mBgColor.green();
+    mBgColorB = mBgColor.blue();
+}
 
 int TBuffer::getLastLineNumber()
 {
@@ -101,11 +218,547 @@ int TBuffer::getLastLineNumber()
     }
 }
 
+int speedTP;
 
-void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
+inline void TBuffer::set_text_properties(int tag)
 {
-    //fgColor.setAlpha(255);
-    //bgColor.setAlpha(255);
+    //qDebug()<<"tag="<<tag;
+    // are we dealing with 256 color mode enabled servers or standard ANSI colors?
+  //  QTime speed;
+    //speed.start();
+
+    if( mWaitingForHighColorCode )
+    {
+        if( mHighColorModeForeground )
+        {
+            if( tag < 16 )
+            {
+                mHighColorModeForeground = false;
+                mWaitingForHighColorCode = false;
+                mIsHighColorMode = false;
+                goto NORMAL_ANSI_COLOR_TAG;
+            }
+            if( tag < 232 )
+            {
+                tag-=16; // because color 1-15 behave like normal ANSI colors
+                // 6x6 RGB color space
+                int r = tag / 36;
+                int g = (tag-(r*36)) / 6;
+                int b = (tag-(r*36))-(g*6);
+                fgColorR = r*42;
+                fgColorG = g*42;
+                fgColorB = b*42;
+            }
+            else
+            {
+                // black + 23 tone grayscale from dark to light gray
+                tag -= 232;
+                fgColorR = tag*10;
+                fgColorG = tag*10;
+                fgColorB = tag*10;
+            }
+            mHighColorModeForeground = false;
+            mWaitingForHighColorCode = false;
+            mIsHighColorMode = false;
+//speedTP+=speed.elapsed();
+            return;
+        }
+        if( mHighColorModeBackground )
+        {
+            if( tag < 16 )
+            {
+                mHighColorModeBackground = false;
+                mWaitingForHighColorCode = false;
+                mIsHighColorMode = false;
+                goto NORMAL_ANSI_COLOR_TAG;
+            }
+            if( tag < 232 )
+            {
+                tag-=16;
+                int r = tag / 36;
+                int g = (tag-(r*36)) / 6;
+                int b = (tag-(r*36))-(g*6);
+                bgColorR = r*42;
+                bgColorG = g*42;
+                bgColorB = b*42;
+            }
+            else
+            {
+                // black + 23 tone grayscale from dark to light gray
+                tag -= 232;
+                fgColorR = tag*10;
+                fgColorG = tag*10;
+                fgColorB = tag*10;
+            }
+            mHighColorModeBackground = false;
+            mWaitingForHighColorCode = false;
+            mIsHighColorMode = false;
+//speedTP+=speed.elapsed();
+            return;
+        }
+    }
+
+    if( tag == 38 )
+    {
+        mIsHighColorMode = true;
+        mHighColorModeForeground = true;
+//speedTP+=speed.elapsed();
+        return;
+    }
+    if( tag == 48 )
+    {
+        mIsHighColorMode = true;
+        mHighColorModeBackground = true;
+    }
+    if( ( mIsHighColorMode ) && ( tag == 5 ) )
+    {
+        mWaitingForHighColorCode = true;
+//speedTP+=speed.elapsed();
+        return;
+    }
+
+    // we are dealing with standard ANSI colors
+NORMAL_ANSI_COLOR_TAG:
+
+    switch( tag )
+    {
+    case 0:
+        mHighColorModeForeground = false;
+        mHighColorModeBackground = false;
+        mWaitingForHighColorCode = false;
+        mIsHighColorMode = false;
+        mIsDefaultColor = true;
+        resetFontSpecs();
+        break;
+    case 1:
+        mBold = true;
+        break;
+    case 2:
+        mBold = false;
+        break;
+    case 3:
+        mItalics = true;
+        break;
+    case 4:
+        mUnderline = true;
+    case 5:
+        break; //FIXME support blinking
+    case 6:
+        break; //FIXME support fast blinking
+    case 7:
+        break; //FIXME support inverse
+    case 9:
+        break; //FIXME support strikethrough
+    case 22:
+        mBold = false;
+        break;
+    case 23:
+        mItalics = false;
+        break;
+    case 24:
+        mUnderline = false;
+        break;
+    case 27:
+        break; //FIXME inverse off
+    case 29:
+        break; //FIXME
+    case 30:
+        fgColorR = mBlackR;
+        fgColorG = mBlackG;
+        fgColorB = mBlackB;
+        fgColorLightR = mLightBlackR;
+        fgColorLightG = mLightBlackG;
+        fgColorLightB = mLightBlackB;
+        mIsDefaultColor = false;
+        break;
+    case 31:
+        fgColorR = mRedR;
+        fgColorG = mRedR;
+        fgColorB = mRedB;
+        fgColorLightR = mLightRedR;
+        fgColorLightG = mLightRedG;
+        fgColorLightB = mLightRedB;
+        mIsDefaultColor = false;
+        break;
+    case 32:
+        fgColorR = mGreenR;
+        fgColorG = mGreenG;
+        fgColorB = mGreenB;
+        fgColorLightR = mLightGreenR;
+        fgColorLightG = mLightGreenR;
+        fgColorLightB = mLightGreenB;
+        mIsDefaultColor = false;
+        break;
+    case 33:
+        fgColorR = mYellowR;
+        fgColorG = mYellowG;
+        fgColorB = mYellowB;
+        fgColorLightR = mLightYellowR;
+        fgColorLightG = mLightYellowG;
+        fgColorLightB = mLightYellowB;
+        mIsDefaultColor = false;
+        break;
+    case 34:
+        fgColorR = mBlueR;
+        fgColorG = mBlueG;
+        fgColorB = mBlueB;
+        fgColorLightR = mLightBlueR;
+        fgColorLightG = mLightBlueG;
+        fgColorLightB = mLightBlueB;
+        mIsDefaultColor = false;
+        break;
+    case 35:
+        fgColorR = mMagentaR;
+        fgColorG=mMagentaG;
+        fgColorB=mMagentaB;
+        fgColorLightR=mLightMagentaR;
+        fgColorLightG=mLightMagentaG;
+        fgColorLightB=mLightMagentaB;
+        mIsDefaultColor = false;
+        break;
+    case 36:
+        fgColorR = mCyanR;
+        fgColorG = mCyanG;
+        fgColorB = mCyanB;
+        fgColorLightR = mLightCyanR;
+        fgColorLightG = mLightCyanG;
+        fgColorLightB = mLightCyanB;
+        mIsDefaultColor = false;
+        break;
+    case 37:
+        fgColorR = mWhiteR;
+        fgColorG = mWhiteG;
+        fgColorB = mWhiteB;
+        fgColorLightR = mLightWhiteR;
+        fgColorLightG = mLightWhiteG;
+        fgColorLightB = mLightWhiteB;
+        mIsDefaultColor = false;
+        break;
+    case 39:
+        bgColorR = mBgColorR;
+        bgColorG = mBgColorG;
+        bgColorB = mBgColorB;
+        break;
+    case 40:
+        bgColorR = mBlackR;
+        bgColorG = mBlackG;
+        bgColorB = mBlackB;
+        break;
+    case 41:
+        bgColorR = mRedR;
+        bgColorG = mRedG;
+        bgColorB = mRedB;
+        break;
+    case 42:
+        bgColorR = mGreenR;
+        bgColorG = mGreenG;
+        bgColorB = mGreenB;
+        break;
+    case 43:
+        bgColorR = mYellowR;
+        bgColorG = mYellowG;
+        bgColorB = mYellowB;
+        break;
+    case 44:
+        bgColorR = mBlueR;
+        bgColorG = mBlueG;
+        bgColorB = mBlueB;
+        break;
+    case 45:
+        bgColorR = mMagentaR;
+        bgColorG = mMagentaG;
+        bgColorB = mMagentaB;
+        break;
+    case 46:
+        bgColorR = mCyanR;
+        bgColorG = mCyanG;
+        bgColorB = mCyanB;
+        break;
+    case 47:
+        bgColorR = mWhiteR;
+        bgColorG = mWhiteG;
+        bgColorB = mWhiteB;
+        break;
+    };
+//speedTP+=speed.elapsed();
+}
+
+
+/* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
+      -----------------------------------------
+      0 reset
+      1 intensity bold on
+      2 intensity faint
+      3 italics on
+      4 underline on
+      5 blink slow
+      6 blink fast
+      7 inverse on
+      9 strikethrough
+      22 intensity normal (not bold, not faint)
+      23 italics off
+      24 underline off
+      27 inverse off
+      28 strikethrough off
+      30 fg black
+      31 fg red
+      32 fg green
+      33 fg yellow
+      34 fg blue
+      35 fg magenta
+      36 fg cyan
+      37 fg white
+      39 bg default white
+      40 bg black
+      41 bg red
+      42 bg green
+      43 bg yellow
+      44 bg blue
+      45 bg magenta
+      46 bg cyan
+      47 bg white
+      49 bg black
+
+      sequences for 256 Color support:
+      38;5;0-256 foreground color
+      48;5;0-256 background color */
+
+int speedSequencer;
+int speedAppend;
+
+const QChar cESC = '\033';
+const QString cDigit = "0123456789";
+int msLength;
+int msPos;
+int mCode[3];
+
+inline int TBuffer::lookupColor( QString & s, int pos )
+{
+    //QTime speed;
+    //speed.start();
+
+    int ret = 0;
+    QString code;
+
+    if( s.indexOf('[', pos ) == -1 )
+    {
+        msPos = pos-1;
+        //speedSequencer+=speed.elapsed();
+        return -1;
+    }
+    else
+        pos++;
+
+
+    while( pos < msLength )
+    {
+        int digit = cDigit.indexOf( s[pos] );
+        if( digit > -1 )
+        {
+            code.append( s[pos] );
+            pos++;
+            continue;
+        }
+        else if( s[pos] == ';' )
+        {
+            ret++;
+            mCode[ret] = code.toInt();
+            pos++;
+            code.clear();
+            continue;
+        }
+        else if( s[pos] == 'm' )
+        {
+            ret++;
+            mCode[ret] = code.toInt();
+            /*cout << "color<";
+            for(int i=1; i< ret+1; i++)
+                cout << mCode[i]<<";";
+            cout << ">"<<endl;*/
+            msPos = ++pos;
+            //speedSequencer+=speed.elapsed();
+            return ret;
+        }
+        else
+        {
+            if( digit == -1 )
+            {
+                //qDebug()<<"sequence ERROR --> ignoring";
+                //speedSequencer+=speed.elapsed();
+                return 0; // unbekannte sequenz
+            }
+            else
+            {
+                //qDebug()<<"sequence im naechsten paket";
+                //speedSequencer+=speed.elapsed();
+                return -1; // unbeendete sequenz
+            }
+        }
+    }
+}
+
+void TBuffer::translateToPlainText( QString & s )
+{
+    speedAppend = 0;
+    speedTP = 0;
+    speedSequencer = 0;
+    //QTime speed;
+
+    if( mFormatSequenceRest.size() > 0 )
+    {
+        //qDebug()<<"#### prepending<"<<mFormatSequenceRest<<"> to s=<"<<s<<">";
+        s.prepend( mFormatSequenceRest );
+        mFormatSequenceRest.clear();
+    }
+    msLength = s.length();
+    mFormatSequenceRest="";
+    int sequence_begin = 0;
+    int sequence_end = 0;
+    msPos = 0;
+    std::list<int> posList;
+    int pos = -1;
+    //QTime speedESC;
+//speedESC.start();
+
+    while( (pos = s.indexOf( cESC, pos+1 )) > -1 )
+    {
+        //qDebug()<<"adding esc-seq at pos:"<<pos;
+        posList.push_back( pos );
+    }
+//qDebug()<<"ESC-parser: "<<speedESC.elapsed();
+    if( posList.size() == 0 )
+    {
+        //qDebug()<<"posList.size()==0 appending everything -> no control codes";
+        append( s, 0, msLength, fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, mBold, mItalics, mUnderline );
+      //  qDebug()<<"translate: "<<speed.elapsed()-speedAppend-speedSequencer<<" append: "<<speedAppend<<" sequencer: "<<speedSequencer;
+        return;
+    }
+    if( posList.front() > 0 )
+    {
+        //qDebug()<<"####danger:: unsafe append call in translate -- append assembeled sequence from 2 packets";
+        append( s, 0, posList.front(), fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, mBold, mItalics, mUnderline );
+    }
+//speed.start();
+    typedef std::list<int>::const_iterator IT;
+    for( IT it=posList.begin(); it!=posList.end();  )
+    {
+        int val = *it;
+        int nextVal;
+        if( ++it!= posList.end() )
+        {
+            nextVal = *it;
+        }
+        else
+            nextVal = -1;
+
+        int highCode = lookupColor( s , val+1 );
+        if( highCode > 0 )
+        {
+            for( int i=1; i<highCode+1; i++ )
+            {
+                set_text_properties( mCode[i] );
+            }
+
+            if( nextVal == -1 )
+            {
+                if( ! mBold || mIsDefaultColor )
+                {
+                    append( s,
+                            msPos,
+                            msLength-msPos,
+                            fgColorR,
+                            fgColorG,
+                            fgColorB,
+                            bgColorR,
+                            bgColorG,
+                            bgColorB,
+                            mIsDefaultColor ? mBold : false,
+                            mItalics,
+                            mUnderline );
+                }
+                else
+                {
+                    append( s,
+                            msPos,
+                            msLength-msPos,
+                            fgColorLightR,
+                            fgColorLightG,
+                            fgColorLightB,
+                            bgColorR,
+                            bgColorG,
+                            bgColorB,
+                            false,
+                            mItalics,
+                            mUnderline );
+                }
+  //              qDebug()<<"translate: "<<speed.elapsed()-speedAppend-speedSequencer-speedTP<<" append: "<<speedAppend<<" sequencer: "<<speedSequencer<<" TP: "<<speedTP;
+                return;
+            }
+            else
+            {
+                if( ! mBold || mIsDefaultColor )
+                {
+                    append( s,
+                            msPos,
+                            nextVal-msPos,
+                            fgColorR,
+                            fgColorG,
+                            fgColorB,
+                            bgColorR,
+                            bgColorG,
+                            bgColorB,
+                            mIsDefaultColor ? mBold : false,
+                            mItalics,
+                            mUnderline );
+                }
+                else
+                {
+                    append( s,
+                            msPos,
+                            nextVal-msPos,
+                            fgColorLightR,
+                            fgColorLightG,
+                            fgColorLightB,
+                            bgColorR,
+                            bgColorG,
+                            bgColorB,
+                            false,
+                            mItalics,
+                            mUnderline );
+                }
+                continue;
+            }
+        }
+        else if( highCode == -1 )
+        {
+            // sequence_end is in next TCP/IPpacket keep translation state
+            mFormatSequenceRest = s.mid( sequence_begin, -1 );
+//qDebug()<<"tranlate() adding mFormatSequenceRest <"<<mFormatSequenceRest<<">";
+    //        qDebug()<<"translate: "<<speed.elapsed()-speedAppend-speedSequencer-speedTP<<" append: "<<speedAppend<<" sequencer: "<<speedSequencer<<" TP: "<<speedTP;
+            return;
+        }
+    }//for
+    //qDebug()<<"translate: "<<speed.elapsed()-speedAppend-speedSequencer-speedTP<<" append: "<<speedAppend<<" sequencer: "<<speedSequencer<<" TP: "<<speedTP;
+}
+
+
+
+inline void TBuffer::append( QString & text,
+                             int sub_start,
+                             int sub_end,
+                             int fgColorR,
+                             int fgColorG,
+                             int fgColorB,
+                             int bgColorR,
+                             int bgColorG,
+                             int bgColorB,
+                             bool bold,
+                             bool italics,
+                             bool underline )
+{
+    //QTime speed;
+    //speed.start();
+
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
         while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
@@ -113,6 +766,144 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             deleteLine( 0 );
         }
     }
+//qDebug()<<"append()<"<<text.mid(sub_start, sub_end);
+    bool runOncePerLine = true;
+    for( int i=sub_start; i<sub_start+sub_end; i++ )
+    {
+        int last = buffer.size()-1;
+        if( last < 0 )
+        {
+            std::deque<TChar *> newLine;
+            TChar * pC = new TChar;
+            pC->fgColor = QColor(fgColorR,fgColorG,fgColorB);    // make the <LF>-marker invisible
+            pC->bgColor = QColor(bgColorR,bgColorG,bgColorB);
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;
+            newLine.push_back( pC );
+            buffer.push_back( newLine );
+            lineBuffer << QChar( 0x21af );
+            timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            QList<QColor> fgColorList;
+            QList<QColor> bgColorList;
+            fgColorBuffer << fgColorList;
+            bgColorBuffer << bgColorList;
+            last = 0;
+        }
+        if( mCursorMoved )
+        {
+            if(lineBuffer[last].size() == 1) // <LF> at beginning of new line marker
+            {
+                if( lineBuffer[last].at( 0 ) == QChar( 0x21af ) )
+                {
+                    if( text.at( i ) != QChar( '\n' ) )
+                    {
+                        mCursorMoved = false;
+                        lineBuffer[last].replace( 0, 1, text.at( i ) );
+                        TChar * pC = buffer[last][0];
+                        pC->fgColor = QColor(fgColorR,fgColorG,fgColorB);
+                        pC->bgColor = QColor(bgColorR,bgColorG,bgColorB);
+                        pC->italics = italics;
+                        pC->bold = bold;
+                        pC->underline = underline;
+                        //timeBuffer[last] = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+                        continue;
+                    }
+                }
+            }
+        }
+        else
+        {
+            lineBuffer[last].append( text.at( i ) );
+            TChar * pC = new TChar;
+            pC->fgColor = QColor(fgColorR,fgColorG,fgColorB);
+            pC->bgColor = QColor(bgColorR,bgColorG,bgColorB);
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;
+            buffer[last].push_back( pC );
+            if( runOncePerLine )
+            {
+                bool doublicate = false;
+                for( int k=0; k<fgColorBuffer[last].size(); k++ )
+                {
+                    if( fgColorBuffer[last][k].red() == fgColorR )
+                    {
+                        if( fgColorBuffer[last][k].green() == fgColorG )
+                        {
+                            if( fgColorBuffer[last][k].blue() == fgColorB )
+                            {
+                                doublicate = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if( ! doublicate )
+                {
+                    fgColorBuffer[last].append( QColor(fgColorR, fgColorG, fgColorB) );
+                }
+                doublicate = false;
+                for( int k=0; k<bgColorBuffer[last].size(); k++ )
+                {
+                    if( bgColorBuffer[last][k].red() == bgColorR )
+                    {
+                        if( bgColorBuffer[last][k].green() == bgColorG )
+                        {
+                            if( bgColorBuffer[last][k].blue() == bgColorB )
+                            {
+                                doublicate = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if( ! doublicate )
+                {
+                    bgColorBuffer[last] << QColor(bgColorR, bgColorG, bgColorB );
+                }
+                runOncePerLine = false;
+            }
+        }
+        if( text.at(i) == QChar('\n') )
+        {
+            std::deque<TChar *> newLine;
+            TChar * pC = new TChar;
+            pC->bgColor = QColor(fgColorR,fgColorG,fgColorB);
+            pC->fgColor = QColor(bgColorR,bgColorG,bgColorB);
+            pC->italics = italics;
+            pC->bold = bold;
+            pC->underline = underline;
+            newLine.push_back( pC );
+            buffer.push_back( newLine );
+            lineBuffer << QChar( 0x21af );
+            QString time = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            timeBuffer << time;
+            QList<QColor> fgColorList;
+            QList<QColor> bgColorList;
+            fgColorBuffer << fgColorList;
+            bgColorBuffer << bgColorList;
+            mLastLine++;
+            newLines++;
+            mCursorMoved = true;
+            runOncePerLine = true;
+        }
+    }
+    //speedAppend+=speed.elapsed();
+}
+
+
+inline void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
+{
+//    qDebug()<<"calling bad append text=<"<<text<<">";
+    if( static_cast<int>(buffer.size()) > mLinesLimit )
+    {
+        while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
+        {
+            deleteLine( 0 );
+        }
+    }
+
     bool runOncePerLine = true;
     for( int i=0; i<text.size(); i++ )
     {
@@ -223,7 +1014,8 @@ void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bol
             newLine.push_back( pC );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
-            timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            QString time = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            timeBuffer << time;
             QList<QColor> fgColorList;
             QList<QColor> bgColorList;
             fgColorBuffer << fgColorList;

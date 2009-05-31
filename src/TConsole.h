@@ -49,64 +49,6 @@ class TBuffer;
 class TLabel;
 class TSplitter;
 
-class TFontSpecs 
-{
-public:
-    TFontSpecs( Host * pH ){ mpHost = pH; init(); }
-    QString getFontWeight()
-    { 
-        if(bold)
-        { 
-            return QString("<b>"); 
-        }
-        else return QString("</b>"); 
-    }
-    QString getFontStyle(){ return (italics) ? QString("<i>") : QString("</i>");}
-    QString getFontDecoration(){ return (underline) ? QString("<u>") : QString("</u>");}
-    void init()
-    { 
-        bold = false;
-        italics = false;
-        underline = false;
-        m_reset = false;
-        m_bgColorHasChanged = false;
-        m_fgColorHasChanged = false;
-        m_bgColorHasChanged_old = false;
-        m_fgColorHasChanged_old = false;
-        bold_old = false;
-        italics_old = false;
-        underline_old = false;
-        fgColor = mpHost->mFgColor;
-        fgColorLight = mpHost->mLightBlue;
-        bgColor = mpHost->mBgColor;
-        isDefaultColor = true;
-    }
-    void reset()
-    {
-        init();
-    }
-    void bg_color_change(){ m_bgColorHasChanged=true; }
-    void fg_color_change(){ m_fgColorHasChanged=true; }
-    QColor fgColor;
-    QColor fgColorLight;
-    QColor fgColor_old;
-    QColor bgColor;
-    QColor bgColor_old;
-    bool m_bgColorHasChanged;
-    bool m_bgColorHasChanged_old;
-    bool m_fgColorHasChanged;
-    bool m_fgColorHasChanged_old;
-    bool bold;
-    bool bold_old;
-    bool italics;
-    bool italics_old;
-    bool underline;
-    bool underline_old;
-    bool m_reset;
-    QString text;
-    bool isDefaultColor;
-    Host * mpHost;
-};
 
 class TFontSpecsLogger
 {
@@ -174,6 +116,7 @@ public:
       int               getLineCount();
       bool              deleteLine( int );
       int               getColumnNumber();
+      void              loadRawFile( std::string );
       void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
       void              setIndentCount( int count ){ mIndentCount = count; buffer.setWrapIndent( count ); }
       void              echo( QString & );
@@ -248,11 +191,11 @@ private:
       QString           profile_name; 
       TChar             mStandardFormat;
       //std::string       getCurrentTime();
-      void              translateToPlainText( QString & );
+      //void              translateToPlainText( QString & );
       QString           translate( QString & );
       QString           logger_translate( QString & );
       void              logger_set_text_properties( QString );
-      void              set_text_properties( int formatPropertyCode );  
+      //void              set_text_properties( int formatPropertyCode );
       QString           assemble_html_font_specs();
       QString           mCurrentLine;
       QPoint            mUserCursor;
@@ -265,7 +208,7 @@ private:
       bool              mHighColorModeBackground;
       bool              mIsHighColorMode;
       bool              isUserScrollBack;
-      TFontSpecs        m_fontSpecs;
+      //TFontSpecs        m_fontSpecs;
       TFontSpecsLogger  m_LoggerfontSpecs;
       int               currentFgColorProperty;
       QString           mFormatSequenceRest;

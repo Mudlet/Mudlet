@@ -76,6 +76,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
             
             mScreenWidth = 100;//width()/mFontWidth;
         }
+        setFont( mpHost->mDisplayFont );
     }
     else
     {
@@ -84,6 +85,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );    
         mScreenWidth = 100;
+        setFont( mDisplayFont );
     }
     mScreenHeight = height() / mFontHeight;
     mScreenWidth = 100;
@@ -208,8 +210,8 @@ void TTextEdit::updateScreenView()
         mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
     }
-    mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
-    int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    mScreenHeight = height() / mFontHeight;
+    int currentScreenWidth = width()/mFontWidth;//visibleRegion().boundingRect().width() / mFontWidth;
     if( ! mIsDebugConsole && ! mIsMiniConsole )
     {
         if( mpHost->mScreenWidth > currentScreenWidth )
@@ -244,7 +246,11 @@ void TTextEdit::updateScreenView()
     else
     {
         mFontHeight = QFontMetrics( mDisplayFont ).height();
+        mFontWidth = QFontMetrics( mDisplayFont ).width(QChar('W'));
+        /*
+        mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
+        */
     }
 }
 
@@ -375,16 +381,18 @@ void TTextEdit::drawCharacters( QPainter & painter,
                                 QColor & fgColor,
                                 QColor & bgColor )
 {
-    QFont font = painter.font();
-    if( ! mPainterInit )
+    if( ! mIsDebugConsole && ! mIsMiniConsole )
     {
-        if( ! mIsDebugConsole && ! mIsMiniConsole )
-            painter.setFont( mpHost->mDisplayFont );
-        else
-            painter.setFont( mDisplayFont );
-        mPainterInit = true;
+        painter.setFont( mpHost->mDisplayFont );
+        painter.setRenderHint( QPainter::TextAntialiasing, !mpHost->mNoAntiAlias );
+    }
+    else
+    {
+        painter.setFont( mDisplayFont );
+        painter.setRenderHint( QPainter::TextAntialiasing, false );
     }
 
+    QFont font = painter.font();
     if( ( font.bold() != isBold ) || ( font.underline() != isUnderline ) || (font.italic() != isItalics) )
     {
         font.setBold( isBold );
@@ -400,12 +408,12 @@ void TTextEdit::drawCharacters( QPainter & painter,
         painter.setPen( fgColor );
     }
     //qDebug()<<"drawText: x1="<<rect.x()<<" y1="<<rect.top()<<" y2="<<rect.bottom()-5;
-    painter.drawText( rect.x(), rect.bottom()-5, text );
+    painter.drawText( rect.x(), rect.bottom(), text );
 }
 
 void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 {
-    if( ( mScrollVector >= mScreenHeight ) || mForceUpdate )
+    if( ( mScrollVector > mScreenHeight ) || mForceUpdate )
     {
         mScrollVector = 0;
         mForceUpdate = false;
@@ -416,7 +424,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     pixmap.fill( palette().base().color() );
     
     QPainter p( &pixmap );
-    p.setCompositionMode( QPainter::CompositionMode_Source );
+    //p.setCompositionMode( QPainter::CompositionMode_Source );
     
     QPoint P_topLeft  = rect.topLeft();
     QPoint P_bottomRight = rect.bottomRight();
@@ -484,8 +492,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                 bool isBold = false;
                 bool isUnderline = false;
                 bool isItalics = false;
-                QColor fgColor = mpHost->mFgColor;
-                QColor bgColor = mpHost->mBgColor;
+                QColor & fgColor = mpHost->mFgColor;
+                QColor & bgColor = mpHost->mBgColor;
                 QRect textRect = QRect( mFontWidth * i2, 
                                         mFontHeight * i, 
                                         mFontWidth * timeOffset, 
@@ -505,8 +513,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                 bool isBold = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bold;
                 bool isUnderline = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->underline;
                 bool isItalics = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->italics;
-                QColor fgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->fgColor;
-                QColor bgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bgColor;
+                QColor & fgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->fgColor;
+                QColor & bgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bgColor;
                 int delta = 1;
                 
                 while( i2+delta+timeOffset < lineLength )
@@ -535,7 +543,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                 {
                     if( invers )
                     {
-                        QColor tmpColor = bgColor;
+                        QColor & tmpColor = bgColor;
                         bgColor = fgColor;
                         fgColor = tmpColor;
                     }

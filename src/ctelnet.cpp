@@ -189,7 +189,7 @@ void cTelnet::handle_socket_signal_disconnected()
     QString err = "\nSocket got disconnected. " + socket.errorString();
     if( ! mpHost->mIsGoingDown )
     {
-        postMessage( err );
+        //postMessage( err );
     }
 }
 
@@ -206,6 +206,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     }
     else
     {
+        socket.connectToHost(hostInfo.hostName(), hostPort);
         QString msg = "\nHost name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.";
         postMessage( msg );
         return;

@@ -30,8 +30,10 @@
 #include <QStringList>
 #include <deque>
 #include <QTime>
+#include "Host.h"
 
 class Host;
+
 
 class TChar
 {
@@ -81,8 +83,14 @@ public:
     int getLastLineNumber();
     QStringList getEndLines( int );
     void clear();
+    void resetFontSpecs();
+    void translateToPlainText( QString & s );
+    void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
+    int lookupColor( QString & s, int pos );
+    void set_text_properties(int tag);
     void setWrapAt( int i ){ mWrapAt = i; }
     void setWrapIndent( int i ){ mWrapIndent = i; }
+    void updateColors();
     TBuffer copy( QPoint &, QPoint & );
     TBuffer cut( QPoint &, QPoint & );
     void paste( QPoint &, TBuffer );
@@ -101,17 +109,111 @@ private:
     inline int calcWrapPos( int line, int begin, int end );
     void handleNewLine();
     
-    Host * mpHost;
-    int maxx;
-    int maxy;
-    bool hadLF;
-    int mLastLine;
-    bool mCursorMoved;
-    int mWrapAt;
-    int mWrapIndent;
-    QTime mTime;
-    
-    
+    bool              mWaitingForHighColorCode;
+    bool              mHighColorModeForeground;
+    bool              mHighColorModeBackground;
+    bool              mIsHighColorMode;
+    bool              mIsDefaultColor;
+    bool              isUserScrollBack;
+    int               currentFgColorProperty;
+    QString           mFormatSequenceRest;
+    QColor            mBlack;
+    int               mBlackR;
+    int               mBlackG;
+    int               mBlackB;
+    QColor            mLightBlack;
+    int               mLightBlackR;
+    int               mLightBlackG;
+    int               mLightBlackB;
+    QColor            mRed;
+    int               mRedR;
+    int               mRedG;
+    int               mRedB;
+    QColor            mLightRed;
+    int               mLightRedR;
+    int               mLightRedG;
+    int               mLightRedB;
+    QColor            mLightGreen;
+    int               mLightGreenR;
+    int               mLightGreenG;
+    int               mLightGreenB;
+    QColor            mGreen;
+    int               mGreenR;
+    int               mGreenG;
+    int               mGreenB;
+    QColor            mLightBlue;
+    int               mLightBlueR;
+    int               mLightBlueG;
+    int               mLightBlueB;
+    QColor            mBlue;
+    int               mBlueR;
+    int               mBlueG;
+    int               mBlueB;
+    QColor            mLightYellow;
+    int               mLightYellowR;
+    int               mLightYellowG;
+    int               mLightYellowB;
+    QColor            mYellow;
+    int               mYellowR;
+    int               mYellowG;
+    int               mYellowB;
+    QColor            mLightCyan;
+    int               mLightCyanR;
+    int               mLightCyanG;
+    int               mLightCyanB;
+    QColor            mCyan;
+    int               mCyanR;
+    int               mCyanG;
+    int               mCyanB;
+    QColor            mLightMagenta;
+    int               mLightMagentaR;
+    int               mLightMagentaG;
+    int               mLightMagentaB;
+    QColor            mMagenta;
+    int               mMagentaR;
+    int               mMagentaG;
+    int               mMagentaB;
+    QColor            mLightWhite;
+    int               mLightWhiteR;
+    int               mLightWhiteG;
+    int               mLightWhiteB;
+    QColor            mWhite;
+    int               mWhiteR;
+    int               mWhiteG;
+    int               mWhiteB;
+    QColor            mFgColor;
+    int               fgColorR;
+    int               fgColorLightR;
+    int               fgColorG;
+    int               fgColorLightG;
+    int               fgColorB;
+    int               fgColorLightB;
+    int               bgColorR;
+    int               bgColorG;
+    int               bgColorB;
+    QColor            mBgColor;
+
+    Host *            mpHost;
+    int               maxx;
+    int               maxy;
+    bool              hadLF;
+    int               mLastLine;
+    bool              mCursorMoved;
+    int               mWrapAt;
+    int               mWrapIndent;
+    QTime             mTime;
+
+    bool              mBold;
+    bool              mItalics;
+    bool              mUnderline;
+    bool              mFgColorCode;
+    bool              mBgColorCode;
+    int               mFgColorR;
+    int               mFgColorG;
+    int               mFgColorB;
+    int               mBgColorR;
+    int               mBgColorG;
+    int               mBgColorB;
 };
 
 #endif

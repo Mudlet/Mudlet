@@ -1,5 +1,5 @@
-QT += webkit
-QT += network
+QT += webkit \
+    network
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 unix:LIBS += -lqscintilla2 \
@@ -7,16 +7,16 @@ unix:LIBS += -lqscintilla2 \
     $$LIBLUA
 win32:LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release \
     -lqscintilla2 \
-    -Lc:\lua-5.1.4\src \
+    -Lc:\lua-5.1.4 \
     -llua51 \
-    -Lc:\pcre-7.6\ \
+    -Lc:\pcre-7.6\build \
     -lpcre
 unix:INCLUDEPATH += /usr/include/Qsci \
     /usr/include/lua5.1
 win32:INCLUDEPATH += C:\Qscintilla-gpl-2.3.2\qt4 \
     c:\lua-5.1.4\src \
     c:\zlib-1.2.3 \
-    c:\pcre-7.6
+    c:\pcre-7.6\build
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: { 
     SHARE_DIR = /usr/local/share/mudlet
@@ -33,7 +33,6 @@ SOURCES += TConsole.cpp \
     TTrigger.cpp \
     TriggerUnit.cpp \
     TLuaInterpreter.cpp \
-    TForkedProcess.cpp \
     dlgTriggersMainArea.cpp \
     dlgOptionsAreaTriggers.cpp \
     dlgOptionsAreaTimers.cpp \
@@ -73,12 +72,13 @@ SOURCES += TConsole.cpp \
     FontManager.cpp \
     TFlipButton.cpp \
     TToolBar.cpp \
-    mudlet.cpp \
     TLabel.cpp \
     TEasyButtonBar.cpp \
+    TForkedProcess.cpp \
     dlgColorTrigger.cpp \
     TSplitter.cpp \
-    TSplitterHandle.cpp
+    TSplitterHandle.cpp \
+    mudlet.cpp
 HEADERS += mudlet.h \
     TTimer.h \
     EAction.h \
@@ -91,7 +91,6 @@ HEADERS += mudlet.h \
     dlgTriggerEditor.h \
     TTrigger.h \
     TLuaInterpreter.h \
-    TForkedProcess.h \
     dlgTriggers_main_area.h \
     dlgOptionsAreaTriggers.h \
     TCommandLine.h \
@@ -129,14 +128,16 @@ HEADERS += mudlet.h \
     TToolBar.h \
     TBuffer.h \
     TriggerUnit.h \
-    Tree.h \
     TLabel.h \
     TEasyButtonBar.h \
+    TForkedProcess.h \
     dlgColorTrigger.h \
     TSplitter.h \
-    TSplitterHandle.h
+    TSplitterHandle.h \
+    Tree.h
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
+    ui/main_window.ui \
     ui/trigger_editor.ui \
     ui/options_area_triggers.ui \
     ui/options_area_timers.ui \
@@ -154,8 +155,8 @@ FORMS += ui/connection_profiles.ui \
     ui/timers_main_area.ui \
     ui/about_dialog.ui \
     ui/keybindings_main_area.ui \
-    ui/profile_preferences.ui \
-    ui/color_trigger.ui
+    ui/color_trigger.ui \
+    ui/profile_preferences.ui
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc

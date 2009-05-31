@@ -170,6 +170,7 @@ public:
     static int getButtonState( lua_State * );
     static int showToolBar( lua_State * );
     static int hideToolBar( lua_State * );
+    static int loadRawFile( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

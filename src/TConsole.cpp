@@ -58,7 +58,7 @@ const QString TConsole::cmLuaLineVariable("line");
 TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 : QWidget( parent )
 , mpHost( pH )
-, m_fontSpecs( pH )
+//, m_fontSpecs( pH )
 , buffer( pH )
 , mIsDebugConsole( isDebugConsole )
 , mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
@@ -394,7 +394,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
   
     isUserScrollBack = false;
        
-    m_fontSpecs.init();
+    //m_fontSpecs.init();
     connect( mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
 
     //this->layout()->setContentsMargins(0,0,0,0);
@@ -538,6 +538,8 @@ void TConsole::closeEvent( QCloseEvent *event )
     }
 }
 
+
+
 int TConsole::getButtonState()
 {
     return mButtonState;
@@ -545,11 +547,17 @@ int TConsole::getButtonState()
 
 void TConsole::slot_toggleLogging()
 {
+    if( mIsDebugConsole ) return;
     mLogToLogFile = ! mLogToLogFile;
     if( mLogToLogFile )
     {
         QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".html";
+        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+        if( mpHost->mRawStreamDump )
+            mLogFileName.append(".raw");
+        else
+            mLogFileName.append(".html");
+
         QDir dirLogFile;
         if( ! dirLogFile.exists( directoryLogFile ) )
         {
@@ -622,6 +630,7 @@ void TConsole::changeColors()
     palette.setColor( QPalette::Base, QColor(255,0,0) );
 
     splitter->setPalette( palette );
+    buffer.updateColors();
 }
 
 void TConsole::setConsoleBgColor( int r, int g, int b )
@@ -654,505 +663,28 @@ void TConsole::setConsoleFgColor( int r, int g, int b )
     return time;
 } */
 
-void TConsole::set_text_properties(int tag)
-{
-    //qDebug()<<"tag="<<tag;
-    // are we dealing with 256 color mode enabled servers or standard ANSI colors?
-    if( mWaitingForHighColorCode )
-    {
-        if( mHighColorModeForeground )
-        {
-            if( tag < 16 )
-            {
-                mHighColorModeForeground = false;
-                mWaitingForHighColorCode = false;
-                mIsHighColorMode = false;
-                goto NORMAL_ANSI_COLOR_TAG;
-            }
-            if( tag < 232 )
-            {
-                tag-=16; // because color 1-15 behave like normal ANSI colors
-                // 6x6 RGB color space 
-                int r = tag / 36; 
-                int g = (tag-(r*36)) / 6; 
-                int b = (tag-(r*36))-(g*6); 
-                m_fontSpecs.fgColor = QColor( r*42, g*42, b*42 ); 
-            }
-            else
-            {
-                // black + 23 tone grayscale from dark to light gray
-                tag -= 232;
-                m_fontSpecs.fgColor = QColor( tag*10, tag*10, tag*10 );
-            }
-            mHighColorModeForeground = false;
-            mWaitingForHighColorCode = false;
-            mIsHighColorMode = false;
-            return;
-        }
-        if( mHighColorModeBackground )
-        {
-            if( tag < 16 )
-            {
-                mHighColorModeBackground = false;
-                mWaitingForHighColorCode = false;
-                mIsHighColorMode = false;
-                goto NORMAL_ANSI_COLOR_TAG;
-            }
-            if( tag < 232 )
-            {
-                tag-=16;
-                int r = tag / 36; 
-                int g = (tag-(r*36)) / 6; 
-                int b = (tag-(r*36))-(g*6); 
-                m_fontSpecs.bgColor = QColor( r*42, g*42, b*42 ); 
-            }
-            else
-            {
-                // black + 23 tone grayscale from dark to light gray
-                tag -= 232;
-                m_fontSpecs.fgColor = QColor( tag*10, tag*10, tag*10 );
-            }
-            mHighColorModeBackground = false;
-            mWaitingForHighColorCode = false;
-            mIsHighColorMode = false;
-            return;
-        }
-    }
-    
-    if( tag == 38 ) 
-    {
-        mIsHighColorMode = true; 
-        mHighColorModeForeground = true;
-        return;
-    }
-    if( tag == 48 )    
-    {
-        mIsHighColorMode = true;
-        mHighColorModeBackground = true;
-    }
-    if( ( mIsHighColorMode ) && ( tag == 5 ) )
-    {
-        mWaitingForHighColorCode = true;    
-        return;
-    }
-    
-    // we are dealing with standard ANSI colors
-NORMAL_ANSI_COLOR_TAG:
-    
-    switch( tag )
-    {
-    case 0: 
-        mHighColorModeForeground = false;
-        mHighColorModeBackground = false;
-        mWaitingForHighColorCode = false;
-        mIsHighColorMode = false;
-        m_fontSpecs.reset();
-        break;
-    case 1: 
-        m_fontSpecs.bold = true;
-        break;
-    case 2: 
-        m_fontSpecs.bold = false;
-        break;
-    case 3: 
-        m_fontSpecs.italics = true;
-        break;
-    case 4:
-        m_fontSpecs.underline = true;
-    case 5: 
-        break; //FIXME support blinking
-    case 6:
-        break; //FIXME support fast blinking
-    case 7:
-        break; //FIXME support inverse
-    case 9:
-        break; //FIXME support strikethrough
-    case 22:
-        m_fontSpecs.bold = false;
-        break;
-    case 23: 
-        m_fontSpecs.italics = false;
-        break;
-    case 24: 
-        m_fontSpecs.underline = false;
-        break;
-    case 27: 
-        break; //FIXME inverse off
-    case 29: 
-        break; //FIXME
-    case 30:
-        m_fontSpecs.fgColor = mpHost->mBlack;
-        m_fontSpecs.isDefaultColor = false;
-        m_fontSpecs.fgColorLight = mpHost->mLightBlack;
-        break;
-    case 31:
-        m_fontSpecs.fgColor = mpHost->mRed;
-        m_fontSpecs.fgColorLight = mpHost->mLightRed;
-        m_fontSpecs.isDefaultColor = false;
-        break;
-    case 32:
-        m_fontSpecs.fgColor = mpHost->mGreen;
-        m_fontSpecs.fgColorLight = mpHost->mLightGreen;
-        m_fontSpecs.isDefaultColor = false;
-        break;
-    case 33:
-        m_fontSpecs.fgColor = mpHost->mYellow;
-        m_fontSpecs.fgColorLight = mpHost->mLightYellow;
-        m_fontSpecs.isDefaultColor = false;
-        break;
-    case 34:
-        m_fontSpecs.fgColor = mpHost->mBlue;
-        m_fontSpecs.fgColorLight = mpHost->mLightBlue;
-        m_fontSpecs.isDefaultColor = false;
-        break;
-    case 35:
-        m_fontSpecs.fgColor = mpHost->mMagenta;
-        m_fontSpecs.fgColorLight = mpHost->mLightMagenta;
-        m_fontSpecs.isDefaultColor = false;
-        break;
-    case 36:
-        m_fontSpecs.fgColor = mpHost->mCyan; 
-        m_fontSpecs.fgColorLight = mpHost->mLightCyan;
-        m_fontSpecs.isDefaultColor = false;
-        break;
-    case 37:
-        m_fontSpecs.fgColor = mpHost->mWhite;
-        m_fontSpecs.fgColorLight = mpHost->mLightWhite;
-        m_fontSpecs.isDefaultColor = false;
-        break;
-    case 39:
-        m_fontSpecs.bgColor = mpHost->mBgColor;//mWhite
-        break;
-    case 40:
-        m_fontSpecs.bgColor = mpHost->mBlack;
-        break;
-    case 41:
-        m_fontSpecs.bgColor = mpHost->mRed;
-        break;
-    case 42:
-        m_fontSpecs.bgColor = mpHost->mGreen;
-        break;
-    case 43:
-        m_fontSpecs.bgColor = mpHost->mYellow;
-        break;
-    case 44:
-        m_fontSpecs.bgColor = mpHost->mBlue;
-        break;
-    case 45:
-        m_fontSpecs.bgColor = mpHost->mMagenta;
-        break;
-    case 46:
-        m_fontSpecs.bgColor = mpHost->mCyan;
-        break;
-    case 47:
-        m_fontSpecs.bgColor = mpHost->mWhite;
-        break;
-    };
-}
-
 
 QString TConsole::translate( QString & s )
 {
 }
 
-/*  QTextDocument *document = edit->document();
-   QTextCursor cursor(document);
-
-   cursor.movePosition(QTextCursor::Start);
-   cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
-
-   QTextCharFormat format;
-   format.setFontWeight(QFont::Bold); 
-   cursor.mergeCharFormat(format);
-*/
-
-/* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
-      -----------------------------------------
-      0 reset
-      1 intensity bold on 
-      2 intensity faint
-      3 italics on       
-      4 underline on     
-      5 blink slow
-      6 blink fast
-      7 inverse on       
-      9 strikethrough    
-      22 intensity normal (not bold, not faint)
-      23 italics off
-      24 underline off
-      27 inverse off
-      28 strikethrough off
-      30 fg black
-      31 fg red
-      32 fg green
-      33 fg yellow
-      34 fg blue
-      35 fg magenta
-      36 fg cyan
-      37 fg white
-      39 bg default white
-      40 bg black
-      41 bg red
-      42 bg green
-      43 bg yellow
-      44 bg blue
-      45 bg magenta
-      46 bg cyan
-      47 bg white
-      49 bg black    
-
-      sequences for 256 Color support:
-      38;5;0-256 foreground color
-      48;5;0-256 background color */
-
-void TConsole::translateToPlainText( QString & s )
+void TConsole::loadRawFile( std::string n )
 {
-    int cursorX=0, cursorY=0;
-    if( mFormatSequenceRest.size() > 0 ) 
+    QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
+    QString fileName = directoryLogFile + "/"+QString(n.c_str());
+    QFile file( fileName );
+    file.open( QIODevice::ReadOnly );
+    QTextStream ifs( &file );
+    int lines = 0;
+    qDebug()<<QTime::currentTime()<<": starting. Reading first packet from file ...";
+    do
     {
-        s.prepend( mFormatSequenceRest );
-        mFormatSequenceRest.clear();
+        QString te = ifs.read(50000000);
+        if( te.isNull() ) break;
+        printOnDisplay( te );
     }
-    mFormatSequenceRest="";
-    int sequence_begin = 0;
-    int sequence_end = 0;
-    int pos = 0;
-    QString sequence;
-    sequence_begin = s.indexOf(QString("\033["), 0);
-    if( ( sequence_begin == -1 ) || ( sequence_begin > 0 ) ) 
-    {
-        if( sequence_begin == -1 )
-        {
-            buffer.append( s, m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
-            return;
-        }
-        else
-        {
-            buffer.append( s.mid( 0, sequence_begin ), m_fontSpecs.fgColor, m_fontSpecs.bgColor, m_fontSpecs.bold, m_fontSpecs.italics, m_fontSpecs.underline );
-        }
-    }
-    while( sequence_begin != -1 )
-    {
-        int t1,t2,t3,t4;
-        t1=t2=t3=t4=0;
-        QTime time;
-        time.restart();
-        // what kind of control sequence is this?
-        bool isCursorMove = false;
-        QChar control_sequence_type = 'x';
-        int control_sequence_type_minor = -1;
-        for( int k=0; k<s.size(); k++ )
-        {
-            QChar c_k = s[sequence_begin+k];
-            if( c_k == QChar('m') )
-            {
-                control_sequence_type = QChar('m');
-                break;
-            }
-            if( c_k == QChar('H') )
-            {
-                isCursorMove = true;
-                control_sequence_type = QChar('H');
-                break;
-            }
-            if( c_k == QChar('J') )
-            {
-                isCursorMove = true;
-                control_sequence_type = QChar('J');
-                break;
-            }
-            if( c_k == QChar('f') )
-            {
-                isCursorMove = true;
-                control_sequence_type = QChar('H');
-                break;
-            }
-            if( c_k == QChar('A') )
-            {
-                isCursorMove = true;
-                control_sequence_type = QChar('A');
-                break;
-            }
-            if( c_k == QChar('B') )
-            {        
-                isCursorMove = true;
-                control_sequence_type = QChar('B');
-                break;
-            }
-            if( c_k == QChar('C') )
-            {
-                isCursorMove = true;
-                control_sequence_type = QChar('C');
-                break;
-            }
-            if( c_k == QChar('D') )
-            {
-                isCursorMove = true;
-                control_sequence_type = QChar('D');
-                break;
-            }
-           
-            if( c_k == QChar('K') )
-            {        
-                isCursorMove = true;
-                control_sequence_type = QChar('K');
-                break;
-            }
-        }
-        QStringList textPropertyList;
-        sequence_end = s.indexOf( control_sequence_type ,sequence_begin );
-        int sequence_length = abs(sequence_begin - sequence_end );
-        if( sequence_end != -1 )
-        {
-            sequence = s.mid(sequence_begin+2,sequence_length-2); // weil 3 elemente ausgelassen werden
-            if( sequence.indexOf(QChar(';'),0) != -1 )
-            {
-                if( control_sequence_type == QChar('m') )
-                {
-                    textPropertyList = sequence.split(QChar(';'),QString::SkipEmptyParts);
-                }
-                if( control_sequence_type == QChar('H') )
-                {
-                    textPropertyList = sequence.split(QChar(';'),QString::SkipEmptyParts);
-                } 
-            }
-            else
-            {
-                if( control_sequence_type == QChar('J') )
-                {
-                    control_sequence_type_minor = sequence.toInt();
-                    textPropertyList << sequence;
-                }
-                if( control_sequence_type == QChar('D') )
-                {
-                    control_sequence_type_minor = sequence.toInt();
-                    textPropertyList << sequence;
-                } 
-                if( control_sequence_type == QChar('m') )
-                {
-                    textPropertyList << sequence;
-                }
-            }            
-            if( textPropertyList.size() == 0 )
-            {
-                if( control_sequence_type == QChar('H') )
-                {
-                    cursorX=0;
-                    cursorY=0;
-                } 
-                if( control_sequence_type == QChar('D') )
-                {
-                   cursorX--;
-                } 
-                if( control_sequence_type == QChar('J') )
-                {
-                    // ESC[J or [0J -> clear screen from cursor downwards
-                    // clear screen from cursor down
-                    //FIXME
-                }    
-            } 
-            for( int i=0; i<textPropertyList.size(); i++ )
-            {
-                if( control_sequence_type == QChar('m') )
-                {
-                    set_text_properties( textPropertyList[i].toInt() );
-                    continue;
-                }
-                if( control_sequence_type == QChar('D') )
-                {
-                    cursorX-=textPropertyList[i].toInt();
-                } 
-                if( control_sequence_type == QChar('H') )
-                {
-                    if( textPropertyList.size()-i < 2 ) break;
-                    cursorY = textPropertyList[i].toInt();
-                    cursorX = textPropertyList[++i].toInt();
-                    break;
-                } 
-                if( control_sequence_type == QChar('J') )
-                {
-                    // ANSI(ESC[2J): clear screen -> our screen size is fixed at 80x25
-                    // other ESC[0J or ESC[1J or ESC[J are not ANSI but VT100 control sequences, but they are being used e.g. by LD-Driver Muds
-                    // ESC[J or [0J -> clear screen from cursor downwards
-                    // ESC[1J -> clear screen from cursor upwareds
-                    if( control_sequence_type_minor == 2 )
-                    {
-                        // clear screen (ESC[2J)
-                        cursorX = 0;
-                        cursorY = 0;
-                        //FIXME buffer.clearScreen();
-                    }
-                    if( control_sequence_type_minor ==  1 )
-                    {
-                        //FIXME buffer.clearScreenUpwards();
-                    }  
-                    if( control_sequence_type_minor ==  0 )
-                    {
-                        //FIXME buffer.clearSceenDownwards();
-                    }    
-                }
-            }
-            pos = sequence_begin + sequence_length;
-            sequence_begin = s.indexOf( QString( "\033[" ), pos );
-            int dangling_esc = -1;
-            // retrieve dangling <ESC> sequence headers in case of package splits
-            if( sequence_begin == -1 )
-            {
-                dangling_esc = s.indexOf( QChar('\033'), pos );
-            }
-            if( (sequence_begin > pos + 1 ) || ( sequence_begin == -1 ) )
-            {
-                if( dangling_esc > -1 )
-                {
-                     // sequence_end is in next TCP/IPpacket keep translation state
-                     mFormatSequenceRest = QChar('\033');
-                     if( ! m_fontSpecs.bold || m_fontSpecs.isDefaultColor )
-                     {
-                         buffer.append( s.mid( pos+1, dangling_esc ),
-                                        m_fontSpecs.fgColor,
-                                        m_fontSpecs.bgColor,
-                                        m_fontSpecs.isDefaultColor ? m_fontSpecs.bold : false,
-                                        m_fontSpecs.italics,
-                                        m_fontSpecs.underline );
-                     }
-                     else
-                     {
-                          buffer.append( s.mid( pos+1, dangling_esc ),
-                                         m_fontSpecs.fgColorLight,
-                                         m_fontSpecs.bgColor,
-                                         false,
-                                         m_fontSpecs.italics,
-                                         m_fontSpecs.underline );
-                     }
-                     return;
-                }
-                if( ! m_fontSpecs.bold || m_fontSpecs.isDefaultColor )
-                {
-                    buffer.append( s.mid( pos+1, sequence_begin-pos-1 ),
-                                   m_fontSpecs.fgColor,
-                                   m_fontSpecs.bgColor,
-                                   m_fontSpecs.isDefaultColor ? m_fontSpecs.bold : false,
-                                   m_fontSpecs.italics,
-                                   m_fontSpecs.underline );
-                }
-                else
-                {
-                    buffer.append( s.mid( pos+1, sequence_begin-pos-1 ),
-                                   m_fontSpecs.fgColorLight,
-                                   m_fontSpecs.bgColor,
-                                   false,
-                                   m_fontSpecs.italics,
-                                   m_fontSpecs.underline );
-                }
-            }
-        }// is sequence_end included in this data packet?
-        else
-        {
-            // sequence_end is in next TCP/IPpacket keep translation state
-            mFormatSequenceRest = s.mid( sequence_begin, -1 );
-            return;
-        }
-    }//while
+    while(true);
+
 }
 
 void TConsole::printOnDisplay( QString & incomingSocketData )  
@@ -1161,11 +693,16 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     if( mLogToLogFile )
     {
         QString log = incomingSocketData;
-        mLogStream << logger_translate( log );
+        if( ! mIsDebugConsole )
+        {
+            if( mpHost->mRawStreamDump )
+                mLogStream << incomingSocketData;
+            else
+                mLogStream << logger_translate( log );
+        }
     }
     int lineBeforeNewContent = buffer.getLastLineNumber();
-    translateToPlainText( incomingSocketData );
-    
+    buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = true;
     mDeletedLines = 0;
     int lastLineNumber = buffer.getLastLineNumber();
