@@ -21,8 +21,6 @@
 
 
 
-#ifndef TBUFFER_H
-#define TBUFFER_H
 #include <QPoint>
 #include <QColor>
 #include <QChar>
@@ -31,6 +29,10 @@
 #include <deque>
 #include <QTime>
 #include "Host.h"
+
+
+#ifndef TBUFFER_H
+#define TBUFFER_H
 
 class Host;
 

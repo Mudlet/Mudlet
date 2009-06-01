@@ -92,6 +92,8 @@ public:
     int               mCursorY;
     bool              mIsTailMode;
     QFont             mDisplayFont;
+    int               mFontAscent;
+    int               mFontDescent;
 
 signals:
     

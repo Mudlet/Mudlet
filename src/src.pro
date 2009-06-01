@@ -68,7 +68,6 @@ SOURCES += TConsole.cpp \
     TTextEdit.cpp \
     XMLexport.cpp \
     XMLimport.cpp \
-    TBuffer.cpp \
     FontManager.cpp \
     TFlipButton.cpp \
     TToolBar.cpp \
@@ -78,7 +77,8 @@ SOURCES += TConsole.cpp \
     dlgColorTrigger.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
-    mudlet.cpp
+    mudlet.cpp \
+    TBuffer.cpp
 HEADERS += mudlet.h \
     TTimer.h \
     EAction.h \
