@@ -695,19 +695,19 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
         QString log = incomingSocketData;
         if( ! mIsDebugConsole )
         {
-            if( mpHost->mRawStreamDump )
-                mLogStream << incomingSocketData;
-            else
+            if( ! mpHost->mRawStreamDump )
+            {
                 mLogStream << logger_translate( log );
+            }
         }
     }
-    qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE translate";
+    //qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE translate";
     int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = true;
     mDeletedLines = 0;
     int lastLineNumber = buffer.getLastLineNumber();
-    qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time after translate lines="<<lastLineNumber-lineBeforeNewContent;
+    //qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time after translate lines="<<lastLineNumber-lineBeforeNewContent;
     mProcessingTime.restart();
     for( int i=lineBeforeNewContent; i<=lastLineNumber; i++ )
     {
@@ -730,9 +730,9 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     }
     double processT = mProcessingTime.elapsed();
     mTriggerEngineMode = false;    
-    qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE wrap";
+    //qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE wrap";
     buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mStandardFormat );
-    qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time after wrap";
+    //qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time after wrap";
     console->showNewLines();
     console2->showNewLines();
     moveCursorEnd();

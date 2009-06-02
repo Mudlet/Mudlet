@@ -182,6 +182,10 @@ public:
       //QMap<QString, TButton *> mButtonMap;
       int               mButtonState;
       TSplitter *       splitter;
+      QFile             mLogFile;
+      QTextStream       mLogStream;
+      bool              mLogToLogFile;
+      QString           mLogFileName;
 
 private:
 
@@ -225,10 +229,7 @@ private:
 
       TChar             mFormatBasic;
       TChar             mFormatSystemMessage;
-      QFile             mLogFile;
-      QTextStream       mLogStream;
-      bool              mLogToLogFile;
-      QString           mLogFileName;
+
       int               mDeletedLines;
       int               mEngineCursor;
 

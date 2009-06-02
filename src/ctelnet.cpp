@@ -783,7 +783,9 @@ void cTelnet::handle_socket_signal_readyRead()
     }
 
     char buffer[327690];
+READ_ALL:
     int amount = socket.read( buffer, 327680 );
+    if( amount == 0 ) return;
     buffer[amount+1] = '\0';
     //cout << "RAW_BUFFER_BEGIN<"<<buffer<<">RAW_BUFFER_END"<<endl;
     if( amount == -1 ) return; 
@@ -796,6 +798,19 @@ void cTelnet::handle_socket_signal_readyRead()
         datalen = decompressBuffer( pBuffer, amount );
     }
     buffer[datalen] = '\0';
+
+    if( mpHost->mpConsole->mLogToLogFile )
+    {
+        if( mpHost->mRawStreamDump )
+        {
+           ofstream myfile;
+           myfile.open( "/home/heiko/stream.raw", ios::out | ios::app | ios::binary );
+           myfile << buffer;
+           myfile.close();
+
+        }
+    }
+
     string cleandata = "";
     recvdGA = false;
     for( unsigned int i = 0; i < (unsigned int) datalen; i++ )
@@ -961,6 +976,7 @@ MAIN_LOOP_END: ;
     {
         gotRest( cleandata );
     }
+    goto READ_ALL;
 }
 
 

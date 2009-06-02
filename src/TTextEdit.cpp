@@ -346,7 +346,6 @@ void TTextEdit::drawBackground( QPainter & painter,
                                const QColor & bgColor )
 {
     QRect bR = rect;
-    qDebug()<<"descent="<<mFontDescent<<" ascent="<<mFontAscent<<" mFontHeight="<<mFontHeight<<" RectWidth="<<bR.width()<<" RectHeight="<<bR.height();
     painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor);//QColor(rand()%255,rand()%255,rand()%255));//bgColor);
 }
 
@@ -385,7 +384,6 @@ void TTextEdit::drawCharacters( QPainter & painter,
         pen.setColor( fgColor );
         painter.setPen( fgColor );
     }
-    //qDebug()<<"drawText: x1="<<rect.x()<<" y1="<<rect.top()<<" y2="<<rect.bottom()-5;
     painter.drawText( rect.x(), rect.bottom()-mFontDescent, text );
 }
 
@@ -491,8 +489,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                 bool isBold = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bold;
                 bool isUnderline = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->underline;
                 bool isItalics = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->italics;
-                QColor & fgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->fgColor;
-                QColor & bgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bgColor;
+                QColor fgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->fgColor;
+                QColor bgColor = mpBuffer->buffer[i+lineOffset][i2-timeOffset]->bgColor;
                 int delta = 1;
                 
                 while( i2+delta+timeOffset < lineLength )
