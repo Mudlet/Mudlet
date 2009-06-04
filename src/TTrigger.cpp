@@ -678,202 +678,97 @@ bool TTrigger::match_colors( int line )
     bool canExecute = false;
     std::list<std::string> captureList;
     std::list<int> posList;
-    if( line < mpHost->mpConsole->buffer.fgColorBuffer.size() )
+    std::deque<TChar> & bufferLine = mpHost->mpConsole->buffer.buffer[line];
+    QString & lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
+    typedef std::deque<TChar>::iterator IT;
+    int pos = 0;
+    bool fgColorChange = false;
+    int matchBegin = -1;
+    bool matching = false;
+    //FIXME: schneller machen! das muss in den trigger rein
+    int mFgR = mColorTriggerFgColor.red();
+    int mFgG = mColorTriggerFgColor.green();
+    int mFgB = mColorTriggerFgColor.blue();
+    int mBgR = mColorTriggerBgColor.red();
+    int mBgG = mColorTriggerBgColor.green();
+    int mBgB = mColorTriggerBgColor.blue();
+    for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
     {
-        QList<QColor> & bgColorList = mpHost->mpConsole->buffer.bgColorBuffer[line];
-        for( int i=0; i<bgColorList.size(); i++ )
+        if( ( (*it).fgR == mFgR )
+         && ( (*it).fgG == mFgG )
+         && ( (*it).fgB == mFgB )
+         && ( (*it).bgR == mBgR )
+         && ( (*it).bgG == mBgG )
+         && ( (*it).bgB == mBgB ) )
         {
-            if( bgColorList[i] == mColorTriggerBgColor )
+            if( matchBegin == -1 )
+                matchBegin = pos;
+            matching = true;
+        }
+        else
+        {
+            matching = false;
+            if( matchBegin > -1 )
             {
-                bgColorMatch = true;
-                break;
+                std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
+                captureList.push_back( got );
+                posList.push_back( matchBegin );
+                matchBegin = -1;
+                canExecute = true;
             }
         }
-        QList<QColor> & fgColorList = mpHost->mpConsole->buffer.fgColorBuffer[line];
-        for( int i=0; i<fgColorList.size(); i++ )
+        if( ( ! matching ) || ( matching && ( pos+1 == bufferLine.size() ) ) )
         {
-            if( fgColorList[i] == mColorTriggerFgColor )
+            if( matchBegin > -1 )
             {
-                fgColorMatch = true;
-                break;
+                std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
+                captureList.push_back( got );
+                posList.push_back( matchBegin );
+                matchBegin = -1;
+                canExecute = true;
+                matching = false;
             }
         }
-        if( mColorTriggerFg && mColorTriggerBg )
-        {
-            if( bgColorMatch && fgColorMatch )
-            {
-                std::deque<TChar *> & bufferLine = mpHost->mpConsole->buffer.buffer[line];
-                QString & lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
-                typedef std::deque<TChar *>::iterator IT;
-                int pos = 0;
-                bool fgColorChange = false;
-                int matchBegin = -1;
-                bool matching = false;
-                for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
-                {
-                    if( ( (*it)->fgColor == mColorTriggerFgColor ) && ( (*it)->bgColor == mColorTriggerBgColor ) )
-                    {
-                        if( matchBegin == -1 )
-                            matchBegin = pos;
-                        matching = true;
-                    }
-                    else
-                    {
-                        matching = false;
-                        if( matchBegin > -1 )
-                        {
-                            std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
-                            captureList.push_back( got );
-                            posList.push_back( matchBegin );
-                            matchBegin = -1;
-                            canExecute = true;
-                        }
-                    }
-                    if( ( ! matching ) || ( matching && ( pos+1 == bufferLine.size() ) ) )
-                    {
-                        if( matchBegin > -1 )
-                        {
-                            std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
-                            captureList.push_back( got );
-                            posList.push_back( matchBegin );
-                            matchBegin = -1;
-                            canExecute = true;
-                            matching = false;
-                        }
-                    }
+    }
 
-                }
-            }
-        }
-        else if( mColorTriggerFg )
+    if( canExecute )
+    {
+        if( mIsColorizerTrigger )
         {
-            if( fgColorMatch )
+            int r1 = mBgColor.red();
+            int g1 = mBgColor.green();
+            int b1 = mBgColor.blue();
+            int r2 = mFgColor.red();
+            int g2 = mFgColor.green();
+            int b2 = mFgColor.blue();
+            TConsole * pC = mpHost->mpConsole;
+            pC->deselect();
+            std::list<std::string>::iterator its = captureList.begin();
+            std::list<int>::iterator iti = posList.begin();
+            for( int i=0; iti!=posList.end(); ++iti, ++its )
             {
-                std::deque<TChar *> & bufferLine = mpHost->mpConsole->buffer.buffer[line];
-                QString & lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
-                typedef std::deque<TChar *>::iterator IT;
-                int pos = 0;
-                bool fgColorChange = false;
-                int matchBegin = -1;
-                bool matching = false;
-                for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
-                {
-                    if( (*it)->fgColor == mColorTriggerFgColor )
-                    {
-                        if( matchBegin == -1 )
-                            matchBegin = pos;
-                        matching = true;
-                    }
-                    else
-                    {
-                        matching = false;
-                        if( matchBegin > -1 )
-                        {
-                            std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
-                            captureList.push_back( got );
-                            posList.push_back( matchBegin );
-                            matchBegin = -1;
-                            canExecute = true;
-                        }
-                    }
-                    if( matching && ( pos+1 >= bufferLine.size() ) )
-                    {
-                        if( matchBegin > -1 )
-                        {
-                            std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
-                            captureList.push_back( got );
-                            posList.push_back( matchBegin );
-                            matchBegin = -1;
-                            canExecute = true;
-                        }
-                    }
-                }
+                int begin = *iti;
+                std::string & s = *its;
+                int length = s.size();
+                int pos = pC->selectSection( begin, length );
+                pC->setBgColor( r1, g1, b1 );
+                pC->setFgColor( r2, g2, b2 );
             }
+            pC->reset();
         }
-        else if( mColorTriggerBg )
+        TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups( captureList, posList );
+        // call lua trigger function with number of matches and matches itselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+        if( mFilterTrigger )
         {
-            if( bgColorMatch )
+            if( captureList.size() > 0 )
             {
-                std::deque<TChar *> & bufferLine = mpHost->mpConsole->buffer.buffer[line];
-                QString & lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
-                typedef std::deque<TChar *>::iterator IT;
-                int pos = 0;
-                bool fgColorChange = false;
-                int matchBegin = -1;
-                bool matching = false;
-                for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
-                {
-                    if( (*it)->bgColor == mColorTriggerBgColor )
-                    {
-                        if( matchBegin == -1 )
-                            matchBegin = pos;
-                        matching = true;
-                    }
-                   else
-                    {
-                        matching = false;
-                        if( matchBegin > -1 )
-                        {
-                            std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
-                            captureList.push_back( got );
-                            posList.push_back( matchBegin );
-                            matchBegin = -1;
-                            canExecute = true;
-                        }
-                    }
-                    if( matching && ( pos+1 >= bufferLine.size() ) )
-                    {
-                        if( matchBegin > -1 )
-                        {
-                            std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
-                            captureList.push_back( got );
-                            posList.push_back( matchBegin );
-                            matchBegin = -1;
-                            canExecute = true;
-                        }
-                    }
-                }
+                filter( captureList.front(), posList.front() );
             }
         }
-        if( canExecute )
-        {
-            if( mIsColorizerTrigger )
-            {
-                int r1 = mBgColor.red();
-                int g1 = mBgColor.green();
-                int b1 = mBgColor.blue();
-                int r2 = mFgColor.red();
-                int g2 = mFgColor.green();
-                int b2 = mFgColor.blue();
-                TConsole * pC = mpHost->mpConsole;
-                pC->deselect();
-                std::list<std::string>::iterator its = captureList.begin();
-                std::list<int>::iterator iti = posList.begin();
-                for( int i=0; iti!=posList.end(); ++iti, ++its )
-                {
-                    int begin = *iti;
-                    std::string & s = *its;
-                    int length = s.size();
-                    int pos = pC->selectSection( begin, length );
-                    pC->setBgColor( r1, g1, b1 );
-                    pC->setFgColor( r2, g2, b2 );
-                }
-                pC->reset();
-            }
-            TLuaInterpreter * pL = mpHost->getLuaInterpreter();
-            pL->setCaptureGroups( captureList, posList );
-            // call lua trigger function with number of matches and matches itselves as arguments
-            execute();
-            pL->clearCaptureGroups();
-            if( mFilterTrigger )
-            {
-                if( captureList.size() > 0 )
-                {
-                    filter( captureList.front(), posList.front() );
-                }
-            }
-            return true;
-        }
+        return true;
     }
     return false;
 }

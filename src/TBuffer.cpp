@@ -34,43 +34,80 @@ using namespace std;
 
 class Host;
 
-const QColor TCharDefaultFgColor = QColor(255,255,255);
-const QColor TCharDefaultBgColor = QColor(0,0,0); 
-
 
 TChar::TChar()
 {
-    fgColor = QColor(255,255,255);
-    bgColor = QColor(0,0,0);
+    fgR = 255;
+    fgG = 255;
+    fgB = 255;
+    bgR = 0;
+    bgG = 0;
+    bgB = 0;
     italics = false;
     bold = false;
     underline = false;
 }
 
+TChar::TChar( int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bool u )
+: fgR(fR)
+, fgG(fG)
+, fgB(fB)
+, bgR(bR)
+, bgG(bG)
+, bgB(bB)
+, bold(b)
+, italics(i)
+, underline(u)
+{
+}
 
 TChar::TChar( Host * pH )
 {
     if( pH )
     {
-        fgColor = pH->mFgColor;
-        bgColor = pH->mBgColor;
+        fgR = pH->mFgColor.red();
+        fgG = pH->mFgColor.green();
+        fgB = pH->mFgColor.blue();
+        bgR = pH->mBgColor.red();
+        bgG = pH->mBgColor.green();
+        bgB = pH->mBgColor.blue();
     }
     else
     {
         
-        fgColor = TCharDefaultFgColor;
-        bgColor = TCharDefaultBgColor;   
+        fgR = 255;
+        fgG = 255;
+        fgB = 255;
+        bgR = 0;
+        bgG = 0;
+        bgB = 0;
     }
     italics = false;
     bold = false;
     underline = false;    
 }
 
-
-TChar::TChar( TChar const & copy )
+bool TChar::operator==( const TChar & c )
 {
-    fgColor = copy.fgColor;
-    bgColor = copy.bgColor;
+    if( fgR != c.fgR ) return false;
+    if( fgG != c.fgG ) return false;
+    if( fgB != c.fgB ) return false;
+    if( bgR != c.bgR ) return false;
+    if( bgB != c.bgB ) return false;
+    if( bold != c.bold ) return false;
+    if( italics != c.italics ) return false;
+    if( underline != c.underline ) return false;
+    return true;
+}
+
+TChar::TChar( const TChar & copy )
+{
+    fgR = copy.fgR;
+    fgG = copy.fgG;
+    fgB = copy.fgB;
+    bgR = copy.bgR;
+    bgG = copy.bgG;
+    bgB = copy.bgB;
     italics = copy.italics;
     bold = copy.bold;
     underline = copy.underline;     
@@ -107,6 +144,7 @@ TBuffer::TBuffer( Host * pH )
 , mWhite             ( pH->mWhite )
 , mFgColor           ( pH->mFgColor )
 , mBgColor           ( pH->mBgColor )
+, mUntriggered( 0 )
 {   
     buffer.clear();
     lineBuffer.clear();
@@ -741,7 +779,34 @@ void TBuffer::translateToPlainText( QString & s )
     //qDebug()<<"translate: "<<speed.elapsed()-speedAppend-speedSequencer-speedTP<<" append: "<<speedAppend<<" sequencer: "<<speedSequencer<<" TP: "<<speedTP;
 }
 
+std::deque<TChar> bufLine;
+    std::deque< std::deque<TChar> > buf;
+    QStringList timeBuf;
+    QStringList lineBuf;
 
+void TBuffer::messen()
+{
+    QTime speed;
+    qDebug()<<"start messen";
+
+    speed.start();
+    for( int i=0; i<1000; i++ )
+    {
+        lineBuf << QChar( 0x21af );
+         timeBuf << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+         std::deque<TChar> newLine;
+         for( int ii=0;ii<500;ii++)
+         {
+             TChar pC(i%250,i%20,i%27,i%200,i%120,i%200,true,false,false);
+             newLine.push_back( pC );
+             lineBuf[i].append( QChar(ii%255) );
+         }
+         buf.push_back( newLine );
+
+    }
+    qDebug()<<"buf.size="<<buf.size()<<" messen ende. zeit:"<<speed.elapsed();
+
+}
 
 inline void TBuffer::append( QString & text,
                              int sub_start,
@@ -766,134 +831,52 @@ inline void TBuffer::append( QString & text,
             deleteLine( 0 );
         }
     }
-//qDebug()<<"append()<"<<text.mid(sub_start, sub_end);
-    bool runOncePerLine = true;
+
+    int last = buffer.size()-1;
+    if( last < 0 )
+    {
+        std::deque<TChar> newLine;
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        newLine.push_back( c );
+        buffer.push_back( newLine );
+        lineBuffer << QChar( 0x21af );
+        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        last = 0;
+    }
+    bool firstChar = (lineBuffer[last].size() == 0);
+    int length = text.size();
+    if( length < 1 ) return;
+    if( sub_end >= length ) sub_end = text.size()-1;
+
     for( int i=sub_start; i<sub_start+sub_end; i++ )
     {
-        int last = buffer.size()-1;
-        if( last < 0 )
-        {
-            std::deque<TChar *> newLine;
-            TChar * pC = new TChar;
-            pC->fgColor = QColor(fgColorR,fgColorG,fgColorB);    // make the <LF>-marker invisible
-            pC->bgColor = QColor(bgColorR,bgColorG,bgColorB);
-            pC->italics = italics;
-            pC->bold = bold;
-            pC->underline = underline;
-            newLine.push_back( pC );
-            buffer.push_back( newLine );
-            lineBuffer << QChar( 0x21af );
-            timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-            QList<QColor> fgColorList;
-            QList<QColor> bgColorList;
-            fgColorBuffer << fgColorList;
-            bgColorBuffer << bgColorList;
-            last = 0;
-        }
-        if( mCursorMoved )
-        {
-            if(lineBuffer[last].size() == 1) // <LF> at beginning of new line marker
-            {
-                if( lineBuffer[last].at( 0 ) == QChar( 0x21af ) )
-                {
-                    if( text.at( i ) != QChar( '\n' ) )
-                    {
-                        mCursorMoved = false;
-                        lineBuffer[last].replace( 0, 1, text.at( i ) );
-                        TChar * pC = buffer[last][0];
-                        pC->fgColor = QColor(fgColorR,fgColorG,fgColorB);
-                        pC->bgColor = QColor(bgColorR,bgColorG,bgColorB);
-                        pC->italics = italics;
-                        pC->bold = bold;
-                        pC->underline = underline;
-                        //timeBuffer[last] = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-                        continue;
-                    }
-                }
-            }
-        }
-        else
-        {
-            lineBuffer[last].append( text.at( i ) );
-            TChar * pC = new TChar;
-            pC->fgColor = QColor(fgColorR,fgColorG,fgColorB);
-            pC->bgColor = QColor(bgColorR,bgColorG,bgColorB);
-            pC->italics = italics;
-            pC->bold = bold;
-            pC->underline = underline;
-            buffer[last].push_back( pC );
-            if( runOncePerLine )
-            {
-                bool doublicate = false;
-                for( int k=0; k<fgColorBuffer[last].size(); k++ )
-                {
-                    if( fgColorBuffer[last][k].red() == fgColorR )
-                    {
-                        if( fgColorBuffer[last][k].green() == fgColorG )
-                        {
-                            if( fgColorBuffer[last][k].blue() == fgColorB )
-                            {
-                                doublicate = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if( ! doublicate )
-                {
-                    fgColorBuffer[last].append( QColor(fgColorR, fgColorG, fgColorB) );
-                }
-                doublicate = false;
-                for( int k=0; k<bgColorBuffer[last].size(); k++ )
-                {
-                    if( bgColorBuffer[last][k].red() == bgColorR )
-                    {
-                        if( bgColorBuffer[last][k].green() == bgColorG )
-                        {
-                            if( bgColorBuffer[last][k].blue() == bgColorB )
-                            {
-                                doublicate = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if( ! doublicate )
-                {
-                    bgColorBuffer[last] << QColor(bgColorR, bgColorG, bgColorB );
-                }
-                runOncePerLine = false;
-            }
-        }
+
         if( text.at(i) == QChar('\n') )
         {
-            std::deque<TChar *> newLine;
-            TChar * pC = new TChar;
-            pC->bgColor = QColor(fgColorR,fgColorG,fgColorB);
-            pC->fgColor = QColor(bgColorR,bgColorG,bgColorB);
-            pC->italics = italics;
-            pC->bold = bold;
-            pC->underline = underline;
-            newLine.push_back( pC );
+            std::deque<TChar> newLine;
             buffer.push_back( newLine );
-            lineBuffer << QChar( 0x21af );
-            QString time = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            lineBuffer << QString("");
+            QString time = "-----";
             timeBuffer << time;
-            QList<QColor> fgColorList;
-            QList<QColor> bgColorList;
-            fgColorBuffer << fgColorList;
-            bgColorBuffer << bgColorList;
             mLastLine++;
             newLines++;
-            mCursorMoved = true;
-            runOncePerLine = true;
+            mpHost->mpConsole->runTriggers( mUntriggered, last );
+            mUntriggered = ++last;
+            firstChar = true;
+            continue;
+        }
+        lineBuffer[last].append( text.at( i ) );
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        buffer[last].push_back( c );
+        if( firstChar )
+        {
+            timeBuffer[last] = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
         }
     }
     //speedAppend+=speed.elapsed();
 }
 
-
-inline void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
+/*inline void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
 //    qDebug()<<"calling bad append text=<"<<text<<">";
     if( static_cast<int>(buffer.size()) > mLinesLimit )
@@ -921,10 +904,6 @@ inline void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, b
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
             timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-            QList<QColor> fgColorList;
-            QList<QColor> bgColorList;
-            fgColorBuffer << fgColorList;
-            bgColorBuffer << bgColorList;
             last = 0;
         }
         if( mCursorMoved ) 
@@ -959,48 +938,6 @@ inline void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, b
             pC->bold = bold;
             pC->underline = underline;
             buffer[last].push_back( pC );
-            if( runOncePerLine )
-            {
-                bool doublicate = false;
-                for( int k=0; k<fgColorBuffer[last].size(); k++ )
-                {
-                    if( fgColorBuffer[last][k].red() == fgColor.red() )
-                    {
-                        if( fgColorBuffer[last][k].green() == fgColor.green() )
-                        {
-                            if( fgColorBuffer[last][k].blue() == fgColor.blue() )
-                            {
-                                doublicate = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if( ! doublicate )
-                {
-                    fgColorBuffer[last].append( fgColor );
-                }
-                doublicate = false;
-                for( int k=0; k<bgColorBuffer[last].size(); k++ )
-                {
-                    if( bgColorBuffer[last][k].red() == bgColor.red() )
-                    {
-                        if( bgColorBuffer[last][k].green() == bgColor.green() )
-                        {
-                            if( bgColorBuffer[last][k].blue() == bgColor.blue() )
-                            {
-                                doublicate = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if( ! doublicate )
-                {
-                    bgColorBuffer[last] << bgColor;
-                }
-                runOncePerLine = false;
-            }
         }
         if( text.at(i) == QChar('\n') )
         {
@@ -1016,19 +953,15 @@ inline void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, b
             lineBuffer << QChar( 0x21af );
             QString time = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
             timeBuffer << time;
-            QList<QColor> fgColorList;
-            QList<QColor> bgColorList;
-            fgColorBuffer << fgColorList;
-            bgColorBuffer << bgColorList;
             mLastLine++;
             newLines++;
             mCursorMoved = true;
             runOncePerLine = true;
         }
     }
-}
+}*/
 
-QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
+QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline )
 {
     QPoint P(-1, -1);
     
@@ -1052,13 +985,8 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
                         mCursorMoved = false;
                         x = 0;
                         lineBuffer[y].replace( 0, 1, text.at( i ) );
-                        TChar * pC = new TChar;
-                        pC->fgColor = fgColor;
-                        pC->bgColor = bgColor;
-                        pC->italics = italics;
-                        pC->bold = bold;
-                        pC->underline = underline;
-                        buffer[y].push_back( pC );
+                        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+                        buffer[y].push_back( c );
                         buffer[y].pop_front();
                         continue;
                     }
@@ -1068,31 +996,19 @@ QPoint TBuffer::insert( QPoint & where, QString text, QColor & fgColor, QColor &
         else
         {
             lineBuffer[y].insert( x, text.at( i ) );
-            TChar * pC = new TChar;
-            pC->fgColor = fgColor;
-            pC->bgColor = bgColor;
-            pC->italics = italics;
-            pC->bold = bold;
-            pC->underline = underline;
-            typedef std::deque<TChar *>::iterator IT;
+            TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+            typedef std::deque<TChar>::iterator IT;
             IT it = buffer[y].begin();
-            buffer[y].insert( it+x, pC );
+            buffer[y].insert( it+x, c );
         }
         if( text.at(i) == QChar('\n') )
         {
-            std::deque<TChar *> newLine;
-            TChar * pC = new TChar;
-            pC->fgColor = fgColor;
-            pC->bgColor = bgColor;
-            pC->italics = italics;
-            pC->bold = bold;
-            pC->underline = underline;
-            newLine.push_back( pC );
+            std::deque<TChar> newLine;
+            TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+            newLine.push_back( c );
             buffer.push_back( newLine );
             lineBuffer << QChar( 0x21af );
             timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "-   ";
-            fgColorBuffer << QList<QColor>();
-            bgColorBuffer << QList<QColor>();
             mLastLine++;
             newLines++;
             x = 0;
@@ -1120,20 +1036,15 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
         if( x >= static_cast<int>(buffer[y].size()) )
         {
             TChar c;
-            expandLine( y, x-buffer[y].size(), & c );
+            expandLine( y, x-buffer[y].size(), c );
         }
         for( int i=0; i<text.size(); i++ )
         {
             lineBuffer[y].insert( x+i, text.at( i ) );
-            TChar * pC = new TChar;
-            pC->fgColor = format.fgColor;
-            pC->bgColor = format.bgColor;
-            pC->italics = format.italics;
-            pC->bold = format.bold;
-            pC->underline = format.underline;
-            typedef std::deque<TChar *>::iterator IT;
+            TChar c = format;
+            typedef std::deque<TChar>::iterator IT;
             IT it = buffer[y].begin();
-            buffer[y].insert( it+x+i, pC );
+            buffer[y].insert( it+x+i, c );
         }   
     }
     return true;
@@ -1161,12 +1072,19 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
         {
             continue;
         }
-        slice.append(QString(lineBuffer[y][x]), 
-                     buffer[y][x]->fgColor, 
-                     buffer[y][x]->bgColor, 
-                     (buffer[y][x]->bold == true), 
-                     (buffer[y][x]->italics == true), 
-                     (buffer[y][x]->underline == true) );
+        QString s(lineBuffer[y][x]);
+        slice.append(s,
+                     0,
+                     1,
+                     buffer[y][x].fgR,
+                     buffer[y][x].fgG,
+                     buffer[y][x].fgB,
+                     buffer[y][x].bgR,
+                     buffer[y][x].bgG,
+                     buffer[y][x].bgB,
+                     (buffer[y][x].bold == true),
+                     (buffer[y][x].italics == true),
+                     (buffer[y][x].underline == true) );
     }
     return slice;
 }
@@ -1208,29 +1126,28 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
     for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
     {
         QPoint P_current(cx, y);
-        if( chunk.buffer[0][cx] )
+        if( ( y < getLastLineNumber() ) && ( ! needAppend ) )
         {
-            if( ( y < getLastLineNumber() ) && ( ! needAppend ) )
-            {
-                TChar format;
-                format.fgColor = chunk.buffer[0][cx]->fgColor;
-                format.bgColor = chunk.buffer[0][cx]->bgColor;
-                format.bold = chunk.buffer[0][cx]->bold;
-                format.italics = chunk.buffer[0][cx]->italics;
-                format.underline = chunk.buffer[0][cx]->underline;
-                QString s = QString(chunk.lineBuffer[0][cx]);
-                insertInLine( P_current, s, format );
-            }
-            else
-            {
-                hasAppended = true;
-                append(QString(chunk.lineBuffer[0][cx]),
-                       chunk.buffer[0][cx]->fgColor,
-                       chunk.buffer[0][cx]->bgColor,
-                       (chunk.buffer[0][cx]->bold == true),
-                       (chunk.buffer[0][cx]->italics == true),
-                       (chunk.buffer[0][cx]->underline == true) );
-            }
+            TChar & format = chunk.buffer[0][cx];
+            QString s = QString(chunk.lineBuffer[0][cx]);
+            insertInLine( P_current, s, format );
+        }
+        else
+        {
+            hasAppended = true;
+            QString s(chunk.lineBuffer[0][cx]);
+            append(s,
+                   0,
+                   1,
+                   chunk.buffer[0][cx].fgR,
+                   chunk.buffer[0][cx].fgG,
+                   chunk.buffer[0][cx].fgB,
+                   chunk.buffer[0][cx].bgR,
+                   chunk.buffer[0][cx].bgG,
+                   chunk.buffer[0][cx].bgB,
+                   (chunk.buffer[0][cx].bold == true),
+                   (chunk.buffer[0][cx].italics == true),
+                   (chunk.buffer[0][cx].underline == true) );
         }
     }
     if( hasAppended )
@@ -1253,21 +1170,25 @@ void TBuffer::appendBuffer( TBuffer chunk )
     {
         return;
     }
-    int startLine = getLastLineNumber() > 0 ? getLastLineNumber() : 0;
+    //int startLine = getLastLineNumber() > 0 ? getLastLineNumber() : 0;
     for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
     {
-        if( chunk.buffer[0][cx] )
-        {
-            append(QString(chunk.lineBuffer[0][cx]),
-                   chunk.buffer[0][cx]->fgColor,
-                   chunk.buffer[0][cx]->bgColor,
-                   (chunk.buffer[0][cx]->bold == true),
-                   (chunk.buffer[0][cx]->italics == true),
-                   (chunk.buffer[0][cx]->underline == true) );
-        }
+        QString s(chunk.lineBuffer[0][cx]);
+        append(s,
+               0,
+               1,
+               chunk.buffer[0][cx].fgR,
+               chunk.buffer[0][cx].fgG,
+               chunk.buffer[0][cx].fgB,
+               chunk.buffer[0][cx].bgR,
+               chunk.buffer[0][cx].bgG,
+               chunk.buffer[0][cx].bgB,
+               (chunk.buffer[0][cx].bold == true),
+               (chunk.buffer[0][cx].italics == true),
+               (chunk.buffer[0][cx].underline == true) );
     }
-    TChar format;
-    wrap( startLine, mWrapAt, mWrapIndent, format );
+    //TChar format;
+    //wrap( startLine, mWrapAt, mWrapIndent, format );
 }
 
 int TBuffer::calcWrapPos( int line, int begin, int end )
@@ -1293,32 +1214,23 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
 {
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
-    std::queue<std::deque<TChar *> > queue;
+    std::queue<std::deque<TChar> > queue;
     QStringList tempList;
     QStringList timeList;
-    QList<QList<QColor> > fgList;
-    QList<QList<QColor> > bgList;
     int lineCount = 0;
     
     for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
     {
         assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
-        std::deque<TChar *> newLine;
+        std::deque<TChar> newLine;
         QString lineText;
         QString time = timeBuffer[i];
-        QList<QColor> fgColorList = fgColorBuffer[i];
-        QList<QColor> bgColorList = bgColorBuffer[i];
         int indent = 0;
         if( static_cast<int>(buffer[i].size()) >= screenWidth )
         {
             for( int i3=0; i3<indentSize; i3++ )
             {
-                TChar * pSpace = new TChar;
-                pSpace->fgColor = format.fgColor;
-                pSpace->bgColor = format.bgColor;
-                pSpace->italics = format.italics;
-                pSpace->bold = format.bold;
-                pSpace->underline = format.underline;
+                TChar pSpace = format;
                 newLine.push_back( pSpace );
                 lineText.append( " " );
             }
@@ -1371,8 +1283,6 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
             queue.push( newLine );
             tempList.append( lineText );
             timeList.append( time );
-            fgList.append( fgColorList );
-            bgList.append( bgColorList );
             newLine.clear();
             lineText.clear();
             indent = 0;
@@ -1385,8 +1295,6 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         buffer.pop_back();    
         lineBuffer.pop_back();
         timeBuffer.pop_back();
-        bgColorBuffer.pop_back();
-        fgColorBuffer.pop_back();
     }
     
     newLines -= lineCount;
@@ -1403,8 +1311,6 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     {
         lineBuffer.append( tempList[i] );
         timeBuffer.append( timeList[i] );
-        fgColorBuffer.append( fgList[i] );
-        bgColorBuffer.append( bgList[i] );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -1414,7 +1320,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
 {
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) <= startLine ) return 0;
-    std::queue<std::deque<TChar *> > queue;
+    std::queue<std::deque<TChar> > queue;
     QStringList tempList;
     int lineCount = 0;
 
@@ -1423,7 +1329,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         if( i > startLine ) break; //only wrap one line of text
 
         assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
-        std::deque<TChar *> newLine;
+        std::deque<TChar> newLine;
         QString lineText;
 
         int indent = 0;
@@ -1431,12 +1337,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         {
             for( int i3=0; i3<indentSize; i3++ )
             {
-                TChar * pSpace = new TChar;
-                pSpace->fgColor = format.fgColor;
-                pSpace->bgColor = format.bgColor;
-                pSpace->italics = format.italics;
-                pSpace->bold = format.bold;
-                pSpace->underline = format.underline;
+                TChar pSpace = format;
                 newLine.push_back( pSpace );
                 lineText.append( " " );
             }
@@ -1499,8 +1400,6 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     buffer.erase( buffer.begin()+startLine );
     lineBuffer.removeAt( startLine );
     timeBuffer.removeAt( startLine );
-    bgColorBuffer.removeAt( startLine );
-    fgColorBuffer.removeAt( startLine );
 
     int insertedLines = queue.size()-1;
 
@@ -1516,8 +1415,6 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     {
         lineBuffer.insert( startLine+i, tempList[i] );
         timeBuffer.insert( startLine+i, QTime::currentTime().toString("hh:mm:ss.zzz")+"   " );
-        bgColorBuffer.insert( startLine+i, QList<QColor>() );
-        fgColorBuffer.insert( startLine+i, QList<QColor>() );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -1533,7 +1430,7 @@ bool TBuffer::moveCursor( QPoint & where )
     if( static_cast<int>(buffer[y].size())-1 >  x )
     {
         TChar c;
-        expandLine( y, x-buffer[y].size()-1, & c );
+        expandLine( y, x-buffer[y].size()-1, c );
     }
     return true;
 }
@@ -1571,12 +1468,11 @@ QStringList TBuffer::split( int line, QRegExp splitter )
 }
 
 
-void TBuffer::expandLine( int y, int count, TChar * pC )
+void TBuffer::expandLine( int y, int count, TChar & pC )
 {
     int size = buffer[y].size()-1;
     for( int i=size; i<size+count; i++ )
     {
-        if( ! pC ) pC = new TChar;
         buffer[y].push_back( pC );
         lineBuffer[y].append( " " );
     }
@@ -1629,7 +1525,7 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
             x_end = xe;
         }
         lineBuffer[y].remove( x, x_end-x );
-        typedef std::deque<TChar *>::iterator IT;
+        typedef std::deque<TChar>::iterator IT;
         IT it1 = buffer[y].begin()+x;
         IT it2 = buffer[y].begin()+x_end;
         buffer[y].erase( it1, it2 );
@@ -1655,12 +1551,12 @@ bool TBuffer::replace( int line, QString what, QString with )
     {
         for( int i=0; i<delta; i++ )
         {
-            TChar * pC = new TChar( mpHost ); // cloning default char format according to profile
-                                              // because a lookup would be too expensive as
-                                              // this is a very often used function and this standard
-                                              // behaviour is acceptable. If the user wants special colors
-                                              // he can apply format changes
-            buffer[line].push_back( pC );    
+            TChar c( mpHost ); // cloning default char format according to profile
+                               // because a lookup would be too expensive as
+                               // this is a very often used function and this standard
+                               // behaviour is acceptable. If the user wants special colors
+                               // he can apply format changes
+            buffer[line].push_back( c );
         }
     }
     else if( delta < 0 )
@@ -1704,19 +1600,13 @@ bool TBuffer::deleteLines( int from, int to )
         {
             lineBuffer.removeAt( i ); 
             timeBuffer.removeAt( i );
-            fgColorBuffer.removeAt( i );
-            bgColorBuffer.removeAt( i );
-            for( int k=0; k<static_cast<int>(buffer[i].size()); k++ )
-            {
-                delete buffer[i][k];    
-            }
         }
         
         int i = (int)buffer.size();
         // we do reverse lookup as the wanted lines are usually at the end of the buffer
         // std::reverse_iterator is not defined for usage in erase()
         
-        typedef std::deque<std::deque<TChar *> >::iterator IT;
+        typedef std::deque<std::deque<TChar> >::iterator IT;
         for( IT it=buffer.end(); it!=buffer.begin(); )
         {
             it--;
@@ -1761,7 +1651,7 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
                     }
                 }
             
-                *buffer[y][x] = format;
+                buffer[y][x] = format;
                 x++;
             }
         }
@@ -1771,7 +1661,7 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
         return false;            
 }
 
-bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, QColor & fgColor )
+bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int fgColorG, int fgColorB )
 {
     if( ( P_begin.x() >= 0 )
         && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
@@ -1794,7 +1684,9 @@ bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, QColor & fgColor )
                     }
                 }
 
-                buffer[y][x]->fgColor = fgColor;
+                buffer[y][x].fgR = fgColorR;
+                buffer[y][x].fgG = fgColorG;
+                buffer[y][x].fgB = fgColorB;
                 x++;
             }
         }
@@ -1804,7 +1696,7 @@ bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, QColor & fgColor )
         return false;
 }
 
-bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, QColor & bgColor )
+bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, int bgColorR, int bgColorG, int bgColorB )
 {
     if( ( P_begin.x() >= 0 )
         && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
@@ -1827,7 +1719,9 @@ bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, QColor & bgColor )
                     }
                 }
 
-                buffer[y][x]->bgColor = bgColor;
+                (buffer[y][x]).bgR = bgColorR;
+                (buffer[y][x]).bgG = bgColorG;
+                (buffer[y][x]).bgB = bgColorB;
                 x++;
             }
         }

@@ -41,10 +41,16 @@ class TChar
 {
 public:
            TChar();
+           TChar( int, int, int, int, int, int, bool, bool, bool );
            TChar( Host * );
-           TChar( TChar const & copy );
-    QColor fgColor;
-    QColor bgColor;
+           TChar( const TChar & copy );
+    bool   operator==( const TChar & c );
+    int    fgR;
+    int    fgG;
+    int    fgB;
+    int    bgR;
+    int    bgG;
+    int    bgB;
     bool   italics;
     bool   bold;
     bool   underline;
@@ -61,10 +67,9 @@ class TBuffer
 public: 
     
     TBuffer( Host * pH );
-    void append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
-    QPoint insert( QPoint &, QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline );
+    QPoint insert( QPoint &, QString text, int,int,int, int, int, int, bool bold, bool italics, bool underline );
     bool insertInLine( QPoint & cursor, QString & what, TChar & format );
-    void expandLine( int y, int count, TChar * pC );
+    void expandLine( int y, int count, TChar & );
     int wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
     int size(){ return static_cast<int>(buffer.size()); }
@@ -77,8 +82,8 @@ public:
     bool deleteLine( int );
     bool deleteLines( int from, int to );
     bool applyFormat( QPoint &, QPoint &, TChar & format );
-    bool applyFgColor( QPoint &, QPoint &, QColor & );
-    bool applyBgColor( QPoint &, QPoint &, QColor & );
+    bool applyFgColor( QPoint &, QPoint &, int, int, int );
+    bool applyBgColor( QPoint &, QPoint &, int, int, int );
     void appendBuffer( TBuffer chunk );
     bool moveCursor( QPoint & where );
     QPoint & insertText( QString & what, QPoint & where );
@@ -96,15 +101,15 @@ public:
     TBuffer copy( QPoint &, QPoint & );
     TBuffer cut( QPoint &, QPoint & );
     void paste( QPoint &, TBuffer );
-    std::deque<TChar *> bufferLine;
-    std::deque< std::deque<TChar*> > buffer; 
+    std::deque<TChar> bufferLine;
+    std::deque< std::deque<TChar> > buffer;
     QStringList timeBuffer;
     QStringList lineBuffer;
-    QList<QList<QColor> > fgColorBuffer;
-    QList<QList<QColor> > bgColorBuffer;
     int mLinesLimit;
     int newLines;
+    int mUntriggered;
 
+    void messen();
     
 private:  
     

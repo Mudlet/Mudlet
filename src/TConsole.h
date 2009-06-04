@@ -130,7 +130,7 @@ public:
       void              changeColors();
       void              scrollDown( int lines );
       void              scrollUp( int lines );
-      void              print( QString &, QColor &, QColor & );
+      void              print( QString &, int, int, int, int, int, int );
       void              print( QString & msg );
       void              print( const char * );
       void              printDebug( QString & );
@@ -152,8 +152,8 @@ public:
       QString           getCurrentLine( std::string & );
       void              selectCurrentLine( std::string & );
       bool              setMiniConsoleFontSize( std::string &, int );
-
-
+      void              finalize();
+      void              runTriggers( int from, int to );
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 

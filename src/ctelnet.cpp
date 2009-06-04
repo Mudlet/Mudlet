@@ -629,7 +629,7 @@ void cTelnet::gotPrompt( string & mud_data )
         mIsTimerPosting = true;
     }*/
     //qDebug()<<"GA posting";
-    mpPostingTimer->stop();
+    //mpPostingTimer->stop();
     mMudData += mud_data;
     
     if( mUSE_IRE_DRIVER_BUGFIX )
@@ -674,7 +674,7 @@ void cTelnet::gotPrompt( string & mud_data )
     
     postData();
     mMudData = "";
-    mIsTimerPosting = false;
+    //mIsTimerPosting = false;
 }
 
 void cTelnet::gotRest( string & mud_data )
@@ -683,15 +683,15 @@ void cTelnet::gotRest( string & mud_data )
     {
         return;
     }
-    if( mud_data[mud_data.size()-1] == '\n' )
-    {
-        mpPostingTimer->stop();
+    //if( mud_data[mud_data.size()-1] == '\n' )
+   // {
+     //   mpPostingTimer->stop();
         mMudData += mud_data;
         
         postData();
         mMudData = "";
-        mIsTimerPosting = false;
-    }
+       // mIsTimerPosting = false;
+    /*}
     else
     {
         mMudData += mud_data;
@@ -700,11 +700,12 @@ void cTelnet::gotRest( string & mud_data )
             mpPostingTimer->start();
             mIsTimerPosting = true;
         }
-    }
+    }*/
 }
 
 void cTelnet::slot_timerPosting()
 {
+qDebug()<<"ERROR: timer posting called";
     if( ! mIsTimerPosting ) return;
     postData();
     mMudData = "";
@@ -746,16 +747,16 @@ void cTelnet::initStreamDecompressor()
 
 int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
 {
-    char cleanBuffer[327690]; //clean data after decompression
+    char cleanBuffer[100001]; //clean data after decompression
     
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef *) dirtyBuffer;
     
-    mZstream.avail_out = 327680;
+    mZstream.avail_out = 100000;
     mZstream.next_out = (Bytef *) cleanBuffer;
     
     int zval = inflate( & mZstream, Z_SYNC_FLUSH );
-    int outSize = 327680 - mZstream.avail_out;
+    int outSize = 100000 - mZstream.avail_out;
     
     if (zval == Z_STREAM_END)
     {
@@ -773,6 +774,8 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
     return outSize;
 }
 
+
+
 void cTelnet::handle_socket_signal_readyRead()
 {
     if( mWaitingForResponse )
@@ -782,10 +785,11 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char buffer[327690];
-READ_ALL:
-    int amount = socket.read( buffer, 327680 );
-    if( amount == 0 ) return;
+    char buffer[100001];
+    bool gotData = false;
+
+    int amount = socket.read( buffer, 100000 );
+
     buffer[amount+1] = '\0';
     //cout << "RAW_BUFFER_BEGIN<"<<buffer<<">RAW_BUFFER_END"<<endl;
     if( amount == -1 ) return; 
@@ -799,7 +803,7 @@ READ_ALL:
     }
     buffer[datalen] = '\0';
 
-    if( mpHost->mpConsole->mLogToLogFile )
+    /*if( mpHost->mpConsole->mLogToLogFile )
     {
         if( mpHost->mRawStreamDump )
         {
@@ -809,7 +813,7 @@ READ_ALL:
            myfile.close();
 
         }
-    }
+    }*/
 
     string cleandata = "";
     recvdGA = false;
@@ -943,11 +947,10 @@ READ_ALL:
         }
         else
         {
-            if( ch != '\r' ) 
-                cleandata += ch;
+            if( ch != '\r' ) cleandata += ch;
         }
 MAIN_LOOP_END: ;
-        if(recvdGA)
+        if( recvdGA )
         {
             mGA_Driver = true;
             //cout << " GOT telnet command TN_GA" << "cleandata="<<cleandata<<endl;
@@ -974,9 +977,10 @@ MAIN_LOOP_END: ;
   
     if( cleandata.size() > 0 ) 
     {
-        gotRest( cleandata );
+       gotRest( cleandata );
     }
-    goto READ_ALL;
+
+    mpHost->mpConsole->finalize();
 }
 
 
