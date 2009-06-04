@@ -987,7 +987,8 @@ void mudlet::slot_show_about_dialog()
 
 void mudlet::printOnDisplay( Host * pH, QString & s )
 {
-    mConsoleMap[pH]->printOnDisplay(s);
+    //FIXME: wichtig! wer ruft das auf?
+    //mConsoleMap[pH]->printOnDisplay(s);
 }
 
 void mudlet::printSystemMessage( Host * pH, QString & s )

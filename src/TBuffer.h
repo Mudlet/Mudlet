@@ -91,7 +91,7 @@ public:
     QStringList getEndLines( int );
     void clear();
     void resetFontSpecs();
-    void translateToPlainText( QString & s );
+    void translateToPlainText( std::string & s );
     void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
     int lookupColor( QString & s, int pos );
     void set_text_properties(int tag);
@@ -115,7 +115,10 @@ private:
     
     inline int calcWrapPos( int line, int begin, int end );
     void handleNewLine();
-    
+    bool              gotESC;
+    bool              gotHeader;
+    QString           code;
+    int               codeRet;
     bool              mWaitingForHighColorCode;
     bool              mHighColorModeForeground;
     bool              mHighColorModeBackground;

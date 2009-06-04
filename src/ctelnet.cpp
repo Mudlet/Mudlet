@@ -716,7 +716,7 @@ void cTelnet::postData()
 {
     //cout << mMudData << endl;
     //qDebug()<<"postData packet size="<<mMudData.size();
-    QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
+    //QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
     //qDebug()<<"\n------- posting rest <"<<cd<<">-------";
     /*for( int i=0; i<cd.size(); i++ )
     {
@@ -731,7 +731,7 @@ void cTelnet::postData()
             cd.remove( i, 1 );
         } 
     } */
-    mpHost->gotRest( cd ); 
+    mpHost->mpConsole->printOnDisplay( mMudData );
 }
 
 void cTelnet::initStreamDecompressor()

@@ -312,31 +312,31 @@ void Host::raiseEvent( TEvent * pE )
 
 void Host::gotRest( QString & data )
 {
-
+/*
     mRest = data; 
     if( mpConsole )
     {
         mpConsole->printOnDisplay( data );
-    }
+    }*/
 }
 
 void Host::gotLine( QString & data )
 {
-    if( mpConsole )
+   /* if( mpConsole )
     {
         mpConsole->printOnDisplay( data );
-    }
+    }*/
 }
 
 void Host::gotPrompt( QString & data )
 {
-    mPrompt = data;
+    /*mPrompt = data;
     QString promptVar("prompt");
     mLuaInterpreter.set_lua_string( promptVar, mPrompt ); 
     if( mpConsole )
     {
         mpConsole->printOnDisplay( data );
-    }
+    }*/
 }
 
 void Host::enableTimer( QString & name )

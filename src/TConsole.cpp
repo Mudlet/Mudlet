@@ -693,14 +693,15 @@ void TConsole::loadRawFile( std::string n )
         if( te.isNull() ) break;
         QTime speed;
         speed.start();;
-        buffer.translateToPlainText( te );;
+        std::string data(te.toLatin1().data());
+        buffer.translateToPlainText( data );;
         qDebug()<<"zeit:"<<speed.elapsed()<<": Mudlet processing finished";
     }
     while(true);
 
 }
 
-void TConsole::printOnDisplay( QString & incomingSocketData )  
+void TConsole::printOnDisplay( std::string & incomingSocketData )
 {
 
     //buffer.messen();
@@ -708,7 +709,7 @@ void TConsole::printOnDisplay( QString & incomingSocketData )
     QString prompt ="";//FIXME
     if( mLogToLogFile )
     {
-        QString log = incomingSocketData;
+        QString log = incomingSocketData.c_str();
         if( ! mIsDebugConsole )
         {
             if( ! mpHost->mRawStreamDump )
