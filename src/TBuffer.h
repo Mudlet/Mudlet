@@ -119,6 +119,7 @@ private:
     bool              gotHeader;
     QString           code;
     int               codeRet;
+    std::string       tempLine;
     bool              mWaitingForHighColorCode;
     bool              mHighColorModeForeground;
     bool              mHighColorModeBackground;

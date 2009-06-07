@@ -261,11 +261,6 @@ int speedTP;
 
 inline void TBuffer::set_text_properties(int tag)
 {
-    //qDebug()<<"tag="<<tag;
-    // are we dealing with 256 color mode enabled servers or standard ANSI colors?
-  //  QTime speed;
-    //speed.start();
-
     if( mWaitingForHighColorCode )
     {
         if( mHighColorModeForeground )
@@ -299,7 +294,6 @@ inline void TBuffer::set_text_properties(int tag)
             mHighColorModeForeground = false;
             mWaitingForHighColorCode = false;
             mIsHighColorMode = false;
-//speedTP+=speed.elapsed();
             return;
         }
         if( mHighColorModeBackground )
@@ -332,7 +326,6 @@ inline void TBuffer::set_text_properties(int tag)
             mHighColorModeBackground = false;
             mWaitingForHighColorCode = false;
             mIsHighColorMode = false;
-//speedTP+=speed.elapsed();
             return;
         }
     }
@@ -341,7 +334,6 @@ inline void TBuffer::set_text_properties(int tag)
     {
         mIsHighColorMode = true;
         mHighColorModeForeground = true;
-//speedTP+=speed.elapsed();
         return;
     }
     if( tag == 48 )
@@ -352,7 +344,6 @@ inline void TBuffer::set_text_properties(int tag)
     if( ( mIsHighColorMode ) && ( tag == 5 ) )
     {
         mWaitingForHighColorCode = true;
-//speedTP+=speed.elapsed();
         return;
     }
 
@@ -519,7 +510,6 @@ NORMAL_ANSI_COLOR_TAG:
         bgColorB = mWhiteB;
         break;
     };
-//speedTP+=speed.elapsed();
 }
 
 
@@ -573,9 +563,6 @@ int mCode[3];
 
 inline int TBuffer::lookupColor( QString & s, int pos )
 {
-    //QTime speed;
-    //speed.start();
-
     int ret = 0;
     QString code;
 
@@ -601,11 +588,6 @@ inline int TBuffer::lookupColor( QString & s, int pos )
         {
             ret++;
             mCode[ret] = code.toInt();
-            /*cout << "color<";
-            for(int i=1; i< ret+1; i++)
-                cout << mCode[i]<<";";
-            cout << ">"<<endl;*/
-            //speedSequencer+=speed.elapsed();
             msPos++;
             return ret;
         }
@@ -632,7 +614,6 @@ void TBuffer::translateToPlainText( std::string & s )
     speedTP = 0;
     int numCodes=0;
     speedSequencer = 0;
-
     int last = buffer.size()-1;
     if( last < 0 )
     {
@@ -644,24 +625,16 @@ void TBuffer::translateToPlainText( std::string & s )
         timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
         last = 0;
     }
-    QTime speed;
-speed.start();
 
-std::string tempLine = "";
     msLength = s.length();
     mFormatSequenceRest="";
     int sequence_begin = 0;
     int sequence_end = 0;
-    //msPos = 0;
-    //std::list<int> posList;
     int msPos = 0;
     int highCode = 0;
     int numNull = 0;
-    //QTime speedESC;
-//speedESC.start();
 
-    bool firstChar = (lineBuffer[last].size() == 0); //FIXME
-//qDebug()<<"size="<<msLength;
+    bool firstChar = (lineBuffer.back().size() == 0); //FIXME
     if( msLength < 1 ) return;
 
     while( true )
@@ -669,7 +642,6 @@ std::string tempLine = "";
         DECODE:
         if( msPos >= msLength )
         {
-            cout<<"length:"<<msLength<<" zeit:"<<speed.elapsed()<<" codes:"<<numCodes<<" davon 0:"<<numNull<<endl;
             return;
         }
         const char & ch = s[msPos];
@@ -756,7 +728,6 @@ std::string tempLine = "";
                                 mHighColorModeForeground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
-                    //speedTP+=speed.elapsed();
                                 return;
                             }
                             if( mHighColorModeBackground )
@@ -789,7 +760,6 @@ std::string tempLine = "";
                                 mHighColorModeBackground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
-                    //speedTP+=speed.elapsed();
                                 return;
                             }
                         }
@@ -798,7 +768,6 @@ std::string tempLine = "";
                         {
                             mIsHighColorMode = true;
                             mHighColorModeForeground = true;
-                    //speedTP+=speed.elapsed();
                             return;
                         }
                         if( tag == 48 )
@@ -809,7 +778,6 @@ std::string tempLine = "";
                         if( ( mIsHighColorMode ) && ( tag == 5 ) )
                         {
                             mWaitingForHighColorCode = true;
-                    //speedTP+=speed.elapsed();
                             return;
                         }
 
@@ -819,7 +787,6 @@ std::string tempLine = "";
                         switch( tag )
                         {
                         case 0:
-      numNull++;
                             mHighColorModeForeground = false;
                             mHighColorModeBackground = false;
                             mWaitingForHighColorCode = false;
@@ -1001,14 +968,12 @@ std::string tempLine = "";
             // sequenz ist im naechsten tcp paket keep decoder state
             return;
         }
-
+        const QString nothing = "";
         if( ch == '\n' )
         {
-            lineBuffer[last] = tempLine.c_str();
-            tempLine = "";
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
-            lineBuffer << QString("");
+            lineBuffer << nothing;
             QString time = "-----";
             timeBuffer << time;
             mLastLine++;
@@ -1019,51 +984,122 @@ std::string tempLine = "";
             msPos++;
             continue;
         }
-        tempLine += ch;
+        if( lineBuffer.back().size() >= mWrapAt )
+        {
+            assert(lineBuffer.back().size()==buffer.back().size());
+            const QString lineBreaks = ",.- ";
+            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
+            {
+                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
+                {
+                    QString tmp = lineBuffer.back().mid(0,i+1);
+                    QString lineRest = lineBuffer.back().mid(i+1);
+                    lineBuffer.back() = tmp;
+                    std::deque<TChar> newLine;
 
+                    int k = lineRest.size();
+                    if( k > 0 )
+                    {
+                        while( k > 0 )
+                        {
+                            newLine.push_front(buffer.back().back());
+                            buffer.back().pop_back();
+                            k--;
+                        }
+                    }
+
+                    buffer.push_back( newLine );
+                    if( lineRest.size() > 0 )
+                        lineBuffer.append( lineRest );
+                    else
+                        lineBuffer.append( nothing );
+                    QString time = "-----";
+                    timeBuffer << time;
+                    mLastLine++;
+                    newLines++;
+                    mUntriggered = ++last;
+                    break;
+                }
+            }
+        }
+        lineBuffer.back().append( QChar(ch) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,mBold,mItalics,mUnderline);
-        buffer[last].push_back( c );
+        buffer.back().push_back( c );
         if( firstChar )
         {
-            timeBuffer[last] = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
             firstChar = false;
         }
         msPos++;
     }
-
-    //qDebug()<<"translate: "<<speed.elapsed()-speedAppend-speedSequencer-speedTP<<" append: "<<speedAppend<<" sequencer: "<<speedSequencer<<" TP: "<<speedTP;
 }
 
-std::deque<TChar> bufLine;
-    std::deque< std::deque<TChar> > buf;
-    QStringList timeBuf;
-    QStringList lineBuf;
+
+void TBuffer::append( QString & text,
+                             int sub_start,
+                             int sub_end,
+                             int fgColorR,
+                             int fgColorG,
+                             int fgColorB,
+                             int bgColorR,
+                             int bgColorG,
+                             int bgColorB,
+                             bool bold,
+                             bool italics,
+                             bool underline )
+{
+    if( static_cast<int>(buffer.size()) > mLinesLimit )
+    {
+        while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
+        {
+            deleteLine( 0 );
+        }
+    }
+    int last = buffer.size()-1;
+    if( last < 0 )
+    {
+        std::deque<TChar> newLine;
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        newLine.push_back( c );
+        buffer.push_back( newLine );
+        lineBuffer.push_back(QString());
+        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        last = 0;
+    }
+    bool firstChar = (lineBuffer.back().size() == 0);
+    int length = text.size();
+    if( length < 1 ) return;
+    if( sub_end >= length ) sub_end = text.size()-1;
+
+    for( int i=sub_start; i<=(sub_start+sub_end); i++ )
+    {
+        if( text.at(i) == '\n' )
+        {
+            std::deque<TChar> newLine;
+            buffer.push_back( newLine );
+            lineBuffer.push_back( QString() );
+            QString time = "-----";
+            timeBuffer << time;
+            mLastLine++;
+            newLines++;
+            firstChar = true;
+            continue;
+        }
+        lineBuffer.back().append( text.at( i ) );
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        buffer.back().push_back( c );
+        if( firstChar )
+        {
+            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        }
+    }
+}
 
 void TBuffer::messen()
 {
-    QTime speed;
-    qDebug()<<"start messen";
-
-    speed.start();
-    for( int i=0; i<1000; i++ )
-    {
-        lineBuf << QChar( 0x21af );
-         timeBuf << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-         std::deque<TChar> newLine;
-         for( int ii=0;ii<500;ii++)
-         {
-             TChar pC(i%250,i%20,i%27,i%200,i%120,i%200,true,false,false);
-             newLine.push_back( pC );
-             lineBuf[i].append( QChar(ii%255) );
-         }
-         buf.push_back( newLine );
-
-    }
-    qDebug()<<"buf.size="<<buf.size()<<" messen ende. zeit:"<<speed.elapsed();
-
 }
 
-inline void TBuffer::append( QString & text,
+/*inline void TBuffer::append( QString & text,
                              int sub_start,
                              int sub_end,
                              int fgColorR,
@@ -1129,7 +1165,7 @@ inline void TBuffer::append( QString & text,
         }
     }
     //speedAppend+=speed.elapsed();
-}
+}*/
 
 /*inline void TBuffer::append( QString text, QColor & fgColor, QColor & bgColor, bool bold, bool italics, bool underline )
 {
@@ -1467,6 +1503,9 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
 {
+    qDebug()<<"TBuffer::wrap() called #### ERROR ####";
+    return 0;
+
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
     std::queue<std::deque<TChar> > queue;
@@ -1573,6 +1612,8 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & format )
 {
+    qDebug()<<"TBuffer::wrapLine() called ### ERROR ###";
+
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) <= startLine ) return 0;
     std::queue<std::deque<TChar> > queue;

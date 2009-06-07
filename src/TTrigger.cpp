@@ -117,7 +117,12 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
     mLuaConditionMap.clear();
     mTriggerContainsPerlRegex = false;
 
-    assert( propertyList.size() == regexList.size() );
+    if( propertyList.size() != regexList.size() )
+    {
+        //FIXME: ronny hat das irgendwie geschafft
+        qDebug()<<"[CRITICAL ERROR (plz report):] Trigger name="<<mName<<" aborting reason: propertyList.size() != regexList.size()";
+        //assert( propertyList.size() == regexList.size() );
+    }
 
     if( ( propertyList.size() < 1 ) && ( ! isFolder() ) && ( ! mColorTrigger ) )
     {
