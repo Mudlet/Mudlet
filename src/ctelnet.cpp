@@ -142,7 +142,7 @@ void cTelnet::disconnect ()
 
 void cTelnet::handle_socket_signal_error()
 {
-    QString err = "TCP/IP socket ERROR:" + socket.errorString();
+    QString err = "TCP/IP socket ERROR:" + socket.errorString() + "\n";
     postMessage( err );
 }
 
@@ -159,7 +159,7 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
-    QString msg = "A connection has been established successfully.";
+    QString msg = "A connection has been established successfully.\n";
     postMessage( msg );
     
     if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0) )
@@ -186,7 +186,7 @@ void cTelnet::handle_socket_signal_disconnected()
 {
     mNeedDecompression = false;
     reset();
-    QString err = "\nSocket got disconnected. " + socket.errorString();
+    QString err = "\nSocket got disconnected. " + socket.errorString() + "\n";
     if( ! mpHost->mIsGoingDown )
     {
         //postMessage( err );
@@ -207,7 +207,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     else
     {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = "\nHost name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.";
+        QString msg = "Host name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.\n";
         postMessage( msg );
         return;
     }
@@ -705,7 +705,6 @@ void cTelnet::gotRest( string & mud_data )
 
 void cTelnet::slot_timerPosting()
 {
-qDebug()<<"ERROR: timer posting called";
     if( ! mIsTimerPosting ) return;
     postData();
     mMudData = "";

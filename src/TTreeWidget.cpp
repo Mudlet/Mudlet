@@ -261,7 +261,7 @@ void TTreeWidget::dropEvent(QDropEvent *event)
     }
     else
     {
-        TDebug()<<"ERROR pItem im drop = 0">>0;
+        TDebug(QColor(Qt::white),QColor(Qt::red))<<"Mudlet system ERROR: pItem im drop = 0 Please send a bug report!\n">>0;
         event->ignore();
         return;
     }

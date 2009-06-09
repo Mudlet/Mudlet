@@ -54,7 +54,6 @@ public:
    static                        mudlet * self();
    void                          addSubWindow(TConsole* p); 
    void                          printSystemMessage( Host * pH, QString & s ); 
-   void                          printOnDisplay( Host * pH, QString & s );
    void                          print( Host *, QString & );
    void                          addConsoleForNewHost( Host * pH );
    void							 disableToolbarButtons();

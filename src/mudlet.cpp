@@ -683,7 +683,7 @@ int mudlet::getLastLineNumber( QString & name )
     {
         return dockWindowConsoleMap[name]->getLastLineNumber();
     }
-    else TDebug()<<"ERROR: window doesnt exit" >> 0;
+    else TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesnt exit\n" >> 0;
     return -1;
 }
 
@@ -973,9 +973,6 @@ void mudlet::show_options_dialog()
 void mudlet::show_help_dialog()
 {
     QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/wordpress/?page_id=40"));
-   /* dlgHelpDialog * pDlg = new dlgHelpDialog(this);
-    pDlg->raise();
-    pDlg->show();*/
 }
 
 void mudlet::slot_show_about_dialog()
@@ -983,12 +980,6 @@ void mudlet::slot_show_about_dialog()
     dlgAboutDialog * pDlg = new dlgAboutDialog(this);
     pDlg->raise();
     pDlg->show();
-}
-
-void mudlet::printOnDisplay( Host * pH, QString & s )
-{
-    //FIXME: wichtig! wer ruft das auf?
-    //mConsoleMap[pH]->printOnDisplay(s);
 }
 
 void mudlet::printSystemMessage( Host * pH, QString & s )
@@ -1006,8 +997,7 @@ QString mudlet::readProfileData( QString profile, QString item )
 {
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
     file.open( QIODevice::ReadOnly );
-    if( ! file.exists() )
-        return "";
+    if( ! file.exists() ) return "";
     
     QDataStream ifs( & file ); 
     QString ret;
@@ -1020,7 +1010,6 @@ QString mudlet::readProfileData( QString profile, QString item )
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    TDebug() << "[ AUTOLOGIN BEGIN ] checking if there are any autologin profiles";
     QList<QString> hostList = HostManager::self()->getHostList();
     for( int i=0; i<hostList.size(); i++ )
     {
@@ -1032,7 +1021,6 @@ void mudlet::startAutoLogin()
             continue;
         }
             
-        TDebug()<<"----> verifying autoloader status: "<<profile;
         QString item = "autologin";
         QString val = readProfileData( profile, item );
         if( val.toInt() == Qt::Checked )

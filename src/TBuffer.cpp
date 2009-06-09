@@ -149,10 +149,10 @@ TBuffer::TBuffer( Host * pH )
 , gotHeader( false )
 , codeRet( 0 )
 {   
-    buffer.clear();
-    lineBuffer.clear();
+    clear();
     newLines = 0;
     mLastLine = 0;
+    updateColors();
 }
 
 void TBuffer::resetFontSpecs()
@@ -238,11 +238,21 @@ void TBuffer::updateColors()
     mFgColor = pH->mFgColor;
     mBgColor = pH->mBgColor;
     mFgColorR = mFgColor.red();
+    fgColorR = mFgColorR;
+    fgColorLightR = fgColorR;
     mFgColorG = mFgColor.green();
+    fgColorG = mFgColorG;
+    fgColorLightG = fgColorG;
     mFgColorB = mFgColor.blue();
+    fgColorB = mFgColorB;
+    fgColorLightB = fgColorB;
     mBgColorR = mBgColor.red();
+    bgColorR = mBgColorR;
     mBgColorG = mBgColor.green();
+    bgColorG = mBgColorG;
     mBgColorB = mBgColor.blue();
+    bgColorB = mBgColorB;
+
 }
 
 int TBuffer::getLastLineNumber()
@@ -615,17 +625,8 @@ void TBuffer::translateToPlainText( std::string & s )
     int numCodes=0;
     speedSequencer = 0;
     int last = buffer.size()-1;
-    if( last < 0 )
-    {
-        std::deque<TChar> newLine;
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,mBold,mItalics,mUnderline);
-        newLine.push_back( c );
-        buffer.push_back( newLine );
-        lineBuffer << QChar( 0x21af );
-        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-        last = 0;
-    }
 
+    mUntriggered = lineBuffer.size()-1;
     msLength = s.length();
     mFormatSequenceRest="";
     int sequence_begin = 0;
@@ -968,22 +969,7 @@ void TBuffer::translateToPlainText( std::string & s )
             // sequenz ist im naechsten tcp paket keep decoder state
             return;
         }
-        const QString nothing = "";
-        if( ch == '\n' )
-        {
-            std::deque<TChar> newLine;
-            buffer.push_back( newLine );
-            lineBuffer << nothing;
-            QString time = "-----";
-            timeBuffer << time;
-            mLastLine++;
-            newLines++;
-            mpHost->mpConsole->runTriggers( mUntriggered, last );
-            mUntriggered = ++last;
-            firstChar = true;
-            msPos++;
-            continue;
-        }
+       /*
         if( lineBuffer.back().size() >= mWrapAt )
         {
             assert(lineBuffer.back().size()==buffer.back().size());
@@ -1017,14 +1003,40 @@ void TBuffer::translateToPlainText( std::string & s )
                     timeBuffer << time;
                     mLastLine++;
                     newLines++;
-                    mUntriggered = ++last;
                     break;
                 }
             }
-        }
+        }*/
         lineBuffer.back().append( QChar(ch) );
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,mBold,mItalics,mUnderline);
+        TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
+                 ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                 ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                 bgColorR,
+                 bgColorG,
+                 bgColorB,
+                 mIsDefaultColor ? mBold : false,
+                 mItalics,
+                 mUnderline );
         buffer.back().push_back( c );
+        const QString nothing = "";
+        TChar stdCh;
+        if( ch == '\n' )
+        {
+            mpHost->mpConsole->runTriggers( lineBuffer.size()-1, lineBuffer.size()-1 );
+            newLines += 1+ wrapLine(lineBuffer.size()-1,mWrapAt,mWrapIndent, stdCh );
+            std::deque<TChar> newLine;
+            buffer.push_back( newLine );
+            lineBuffer << nothing;
+            QString time = "-----";
+            timeBuffer << time;
+            //mLastLine++;
+
+            //mUntriggered = lineBuffer.size()-1;
+
+            firstChar = true;
+            //msPos++;
+            //continue;
+        }
         if( firstChar )
         {
             timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
@@ -1084,6 +1096,45 @@ void TBuffer::append( QString & text,
             newLines++;
             firstChar = true;
             continue;
+        }
+        if( lineBuffer.back().size() >= mWrapAt )
+        {
+            //qDebug()<<"append():lB.size()="<<lineBuffer.size()<<" buf.size="<<buffer.size()<<" lB="<<lineBuffer.back().size()<<" buf="<<buffer.back().size();
+            //assert(lineBuffer.back().size()==buffer.back().size());
+            const QString lineBreaks = ",.- ";
+            const QString nothing = "";
+            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
+            {
+                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
+                {
+                    QString tmp = lineBuffer.back().mid(0,i+1);
+                    QString lineRest = lineBuffer.back().mid(i+1);
+                    lineBuffer.back() = tmp;
+                    std::deque<TChar> newLine;
+
+                    int k = lineRest.size();
+                    if( k > 0 )
+                    {
+                        while( k > 0 )
+                        {
+                            newLine.push_front(buffer.back().back());
+                            buffer.back().pop_back();
+                            k--;
+                        }
+                    }
+
+                    buffer.push_back( newLine );
+                    if( lineRest.size() > 0 )
+                        lineBuffer.append( lineRest );
+                    else
+                        lineBuffer.append( nothing );
+                    QString time = "-----";
+                    timeBuffer << time;
+                    mLastLine++;
+                    newLines++;
+                    break;
+                }
+            }
         }
         lineBuffer.back().append( text.at( i ) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
@@ -1265,47 +1316,26 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
     
     for( int i=0; i<text.size(); i++ )
     {
-        if( mCursorMoved ) 
-        {
-            if(lineBuffer[y].size() == 1) // <LF> at beginning of new line marker
-            {
-                if( lineBuffer[y][0] == QChar( 0x21af ) )
-                {
-                    if( text.at( i ) != QChar( '\n' ) )
-                    {
-                        mCursorMoved = false;
-                        x = 0;
-                        lineBuffer[y].replace( 0, 1, text.at( i ) );
-                        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
-                        buffer[y].push_back( c );
-                        buffer[y].pop_front();
-                        continue;
-                    }
-                }
-            }
-        }
-        else
-        {
-            lineBuffer[y].insert( x, text.at( i ) );
-            TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
-            typedef std::deque<TChar>::iterator IT;
-            IT it = buffer[y].begin();
-            buffer[y].insert( it+x, c );
-        }
         if( text.at(i) == QChar('\n') )
         {
             std::deque<TChar> newLine;
             TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
             newLine.push_back( c );
             buffer.push_back( newLine );
-            lineBuffer << QChar( 0x21af );
+            const QString nothing = "";
+            lineBuffer.insert(y, nothing );
             timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "-   ";
             mLastLine++;
             newLines++;
             x = 0;
             y++;
-            mCursorMoved = true;
+            continue;
         }
+        lineBuffer[y].insert( x, text.at( i ) );
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        typedef std::deque<TChar>::iterator IT;
+        IT it = buffer[y].begin();
+        buffer[y].insert( it+x, c );
     }
     P.setX( x );
     P.setY( y );
@@ -1359,10 +1389,6 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
     }
     for( ; x<P2.x(); x++ )
     {
-        if( lineBuffer[y][x] == QChar( 0x21af ) )
-        {
-            continue;
-        }
         QString s(lineBuffer[y][x]);
         slice.append(s,
                      0,
@@ -1461,6 +1487,7 @@ void TBuffer::appendBuffer( TBuffer chunk )
     {
         return;
     }
+
     //int startLine = getLastLineNumber() > 0 ? getLastLineNumber() : 0;
     for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
     {
@@ -1478,6 +1505,19 @@ void TBuffer::appendBuffer( TBuffer chunk )
                (chunk.buffer[0][cx].italics == true),
                (chunk.buffer[0][cx].underline == true) );
     }
+    QString lf = "\n";
+    append( lf,
+               0,
+               1,
+               0,
+               0,
+               0,
+               0,
+               0,
+               0,
+               false,
+               false,
+               false );
     //TChar format;
     //wrap( startLine, mWrapAt, mWrapIndent, format );
 }
@@ -1504,7 +1544,7 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
 int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
 {
     qDebug()<<"TBuffer::wrap() called #### ERROR ####";
-    return 0;
+return 0;
 
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
@@ -1612,8 +1652,6 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & format )
 {
-    qDebug()<<"TBuffer::wrapLine() called ### ERROR ###";
-
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) <= startLine ) return 0;
     std::queue<std::deque<TChar> > queue;
@@ -1867,13 +1905,17 @@ bool TBuffer::replace( int line, QString what, QString with )
 
 void TBuffer::clear()
 {
-    while( (getLastLineNumber() > -1 ) )   
+    while( buffer.size() > 0 )
     {
         if( ! deleteLines( 0, 0 ) )
         {
             break;
         }
     }
+    std::deque<TChar> newLine;
+    buffer.push_back( newLine );
+    lineBuffer << QString();
+    timeBuffer << "   ";
 }
 
 bool TBuffer::deleteLine( int y )

@@ -137,7 +137,7 @@ void TKey::compile()
     {
         if( ! compileScript() )
         {
-            if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of key binding:"<<mName>>0;
+            if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of key binding:"<<mName<<"\n">>0;
             mOK_code = false;
         }
     }

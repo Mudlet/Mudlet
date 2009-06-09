@@ -602,7 +602,7 @@ void TConsole::changeColors()
         QPalette palette;
         palette.setColor( QPalette::Text, mFgColor );
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
-        palette.setColor( QPalette::Base, mBgColor );
+        palette.setColor( QPalette::Base, QColor(0,0,0) );
         console->setPalette( palette );
         console2->setPalette( palette );    
     }
@@ -718,19 +718,13 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
             }
         }
     }
-    //qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE translate";
-    //int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.translateToPlainText( incomingSocketData );
-    //qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time AFTER translate";
 }
 
 void TConsole::runTriggers( int from, int to )
 {
     mTriggerEngineMode = true;
     mDeletedLines = 0;
-    //int lastLineNumber = buffer.getLastLineNumber();
-    //qDebug()<<QTime::currentTime().toString("ss.zzz")<<" time after translate lines="<<lastLineNumber-lineBeforeNewContent;
-
     //mProcessingTime.restart();
     mUserCursor.setY( from );
     mEngineCursor = from;
@@ -740,22 +734,20 @@ void TConsole::runTriggers( int from, int to )
     {
         mCurrentLine.append( buffer.line( i ) );
     }
-    mCurrentLine.append("\n");
-    //mCurrentLine.replace( QChar( 0x21af ), QChar('\n') );
     mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
-    if( mudlet::debugMode ) TDebug() << "new line = " << mCurrentLine;
+    if( mudlet::debugMode ) TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;
     QString prompt;
     mpHost->incomingStreamProcessor( mCurrentLine, prompt, from );
 
     //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
     //       ansonsten einfach löschen
-    /*if( mDeletedLines > 0 )
+    if( mDeletedLines > 0 )
     {
-        i = i - mDeletedLines;
-        mDeletedLines = 0;
+        //i = i - mDeletedLines;
+        //mDeletedLines = 0;
         buffer.newLines--;
-        continue;
-    }*/
+        //continue;
+    }
     //double processT = mProcessingTime.elapsed();
     mTriggerEngineMode = false;    
     //qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE wrap";
@@ -1310,7 +1302,7 @@ void TConsole::setUserWindow()
 int TConsole::select( QString text, int numOfMatch )
 {
     if( mudlet::debugMode ) 
-        TDebug() << "\nline under current user cursor: "<<mUserCursor.y()<<"#:" << buffer.line( mUserCursor.y() ) << "\n" >> 0;
+        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nline under current user cursor: ">>0; TDebug(QColor(Qt::red),QColor(Qt::black))<<mUserCursor.y()<<"#:">>0; TDebug(QColor(Qt::gray),QColor(Qt::black)) << buffer.line( mUserCursor.y() ) << "\n" >> 0;
     
     int begin = -1;
     for( int i=0;i<numOfMatch; i++ )
@@ -1334,7 +1326,7 @@ int TConsole::select( QString text, int numOfMatch )
     P_end.setY( mUserCursor.y() );
     
     if( mudlet::debugMode ) 
-        TDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
+        TDebug(QColor(Qt::darkRed),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
     return begin;
 }
 
@@ -1343,7 +1335,7 @@ bool TConsole::selectSection( int from, int to )
     if( mudlet::debugMode )
     {
         if( mudlet::debugMode ) 
-            TDebug() <<"\nselectSection("<<from<<","<<to<<"): line under current user cursor: " << buffer.line( mUserCursor.y() ) << "\n" >> 0;
+            TDebug(QColor(Qt::darkMagenta),QColor(Qt::black)) <<"\nselectSection("<<from<<","<<to<<"): line under current user cursor: " << buffer.line( mUserCursor.y() ) << "\n" >> 0;
     }
     if( from < 0 ) 
         return false;
@@ -1358,7 +1350,7 @@ bool TConsole::selectSection( int from, int to )
     P_end.setY( mUserCursor.y() );
     
     if( mudlet::debugMode ) 
-        TDebug()<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
+        TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
     
     return true;
 }
@@ -1422,25 +1414,35 @@ void TConsole::print( const char * txt )
     console->showNewLines();
 }
 
-void TConsole::printDebug( QString & msg )
+void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
 {
-    QColor fgColor = QColor(0,0,0);
-    QColor bgColor = QColor(255,255,255);
-    int lineBeforeNewContent = buffer.getLastLineNumber();
-    buffer.append( msg, 
+    buffer.append( msg,
                    0,
                    msg.size(),
-                   mFormatCurrent.fgR,
-                   mFormatCurrent.fgG,
-                   mFormatCurrent.fgB,
-                   mFormatCurrent.bgR,
-                   mFormatCurrent.bgG,
-                   mFormatCurrent.bgB,
+                   c.red(),
+                   c.green(),
+                   c.blue(),
+                   d.red(),
+                   d.green(),
+                   d.blue(),
                    false,
                    false,
                    false );
-    buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatCurrent );
+    /*QString lf = "\n";
+    buffer.append( lf,
+                   0,
+                   1,
+                   0,
+                   0,
+                   0,
+                   0,
+                   0,
+                   0,
+                   false,
+                   false,
+                   false );*/
     console->showNewLines();
+    console2->showNewLines();
 }
 
 TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width, int height )

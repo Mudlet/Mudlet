@@ -25,22 +25,21 @@
 #include "mudlet.h"
 #include "TDebug.h"
 
-TDebug::TDebug()
+TDebug::TDebug(QColor c, QColor d)
 { 
+    fgColor = c;
+    bgColor = d;
     msg = "";
 }
 
 TDebug & TDebug::operator>>( const int code) 
 { 
-    msg.prepend( "\n["+QDateTime::currentDateTime().toString() + "] " );
-    mudlet::mpDebugConsole->printDebug( msg );
-	return *this;
+    mudlet::mpDebugConsole->printDebug( fgColor, bgColor, msg );
+    return *this;
 }
 
 TDebug::~TDebug()
 {
-    //msg.append( QChar('\n') );
-    //mudlet::mpDebugConsole->print( msg );    
 }
 
 TDebug & TDebug::operator<<( const QString & t )

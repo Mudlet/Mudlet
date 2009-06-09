@@ -133,7 +133,7 @@ public:
       void              print( QString &, int, int, int, int, int, int );
       void              print( QString & msg );
       void              print( const char * );
-      void              printDebug( QString & );
+      void              printDebug( QColor &, QColor &, QString & );
       void              printSystemMessage( QString & msg );
       void              printOnDisplay( std::string & );
       void              printCommand( QString & );

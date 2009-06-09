@@ -28,10 +28,11 @@
 class TDebug
 {
     QString msg;
-
+    QColor fgColor;
+    QColor bgColor;
 public:
         
-    TDebug();
+    TDebug( QColor, QColor );
    ~TDebug();
     TDebug & operator>>( const int ); 
     TDebug & operator<<( const QString & t );
@@ -43,6 +44,8 @@ public:
     TDebug & operator<<( const QMap<int, int> &map );
     TDebug & operator<<( const QList<QString> &list );
     TDebug & operator<<( const QList<int> &list );
+private:
+    TDebug(){};
 };
 
 #endif

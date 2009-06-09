@@ -120,7 +120,7 @@ bool TAlias::match( QString & toMatch )
     }
     if( rc > 0 )
     {
-        if( mudlet::debugMode ) TDebug()<<"Alias name="<<mName<<"("<<mRegexCode<<") matched!">>0;    
+        if( mudlet::debugMode ) TDebug(QColor(Qt::cyan),QColor(Qt::black))<<"Alias name="<<mName<<"("<<mRegexCode<<") matched.\n">>0;
     }
     
     if( rc == 0 )
@@ -144,7 +144,7 @@ bool TAlias::match( QString & toMatch )
         match.append( substring_start, substring_length );
         captureList.push_back( match );
         posList.push_back( ovector[2*i] );
-        if( mudlet::debugMode ) TDebug()<<"Alias: capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
+        if( mudlet::debugMode ) TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"Alias: capture group #"<<i<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;
     }
     (void)pcre_fullinfo( re,                                              
                          NULL,
@@ -224,7 +224,7 @@ bool TAlias::match( QString & toMatch )
             match.append( substring_start, substring_length );
             captureList.push_back( match );
             posList.push_back( ovector[2*i] );
-            if( mudlet::debugMode ) TDebug()<<"capture group #"<<i<<" = <"<<match.c_str()<<">">>0;
+            if( mudlet::debugMode ) TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"capture group #"<<i<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;
         }
     }      
 
@@ -316,7 +316,7 @@ void TAlias::compile()
     {
         if( ! compileScript() )
         {
-            if( mudlet::debugMode ) TDebug()<<"ERROR: Lua compile error. compiling script of alias:"<<mName>>0;
+            if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;
             mOK_code = false;
         }
     }
