@@ -52,6 +52,7 @@ public:
     
     void              paintEvent( QPaintEvent* );
     void              drawForeground(QPainter &, const QRect & );
+    void              drawFrame(QPainter &, const QRect & );
     void              drawBackground( QPainter &, const QRect &, const QColor & );
     void              drawCharacters( QPainter & painter,
                                       const QRect & rect,
@@ -94,6 +95,8 @@ public:
     QFont             mDisplayFont;
     int               mFontAscent;
     int               mFontDescent;
+    int               mWrapAt;
+    int               mWrapIndentCount;
 
 signals:
     
@@ -115,8 +118,7 @@ private:
 
     QFont             mCommandLineFont;
     QFont             mCommandSeperator;
-    int               mWrapAt;    
-    int               mWrapIndentCount;
+
     bool              mIsDebugConsole;    
     
     int               mLeftMargin;

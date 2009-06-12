@@ -83,6 +83,9 @@ public:
   void                setDisplayDimensions();
   void                encodingChanged(QString encoding);
   void                set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
+  bool                recordReplay( QString & );
+  bool                loadReplay( QString & );
+  void                readPipe( int, char *, int );
 
   bool                mResponseProcessed;
   QTime               networkLatencyTime;
@@ -125,7 +128,7 @@ private:
   QTextEncoder *      outgoingDataDecoder;
   QString             hostName;
   int                 hostPort;
-
+  QDataStream         mOfs;
   double              networkLatencyMin;
   double              networkLatencyMax;
   bool                mWaitingForResponse;
@@ -152,6 +155,8 @@ private:
   bool                mIsTimerPosting;
   QTimer *            mTimerLogin;
   QTimer *            mTimerPass;
+  QTime               timeOffset;
+  int                 lastTimeOffset;
 };
 
 #endif

@@ -75,6 +75,7 @@ public:
     int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
     int find( int line, QString what, int pos );
+    int wrap( int );
     QStringList split( int line, QString splitter );
     QStringList split( int line, QRegExp splitter );
     bool replace( int line, QString what, QString with );
@@ -108,6 +109,8 @@ public:
     int mLinesLimit;
     int newLines;
     int mUntriggered;
+    int               mWrapAt;
+    int               mWrapIndent;
 
     void messen();
     
@@ -210,8 +213,7 @@ private:
     bool              hadLF;
     int               mLastLine;
     bool              mCursorMoved;
-    int               mWrapAt;
-    int               mWrapIndent;
+
     QTime             mTime;
 
     bool              mBold;

@@ -67,6 +67,8 @@ TFlipButton.cpp
 TBuffer.cpp
 TEasyButtonBar.cpp
 dlgColorTrigger.cpp
+TSplitter.cpp
+TSplitterHandle.cpp
 TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
@@ -124,6 +126,8 @@ TToolBar.h
 TTextEdit.h
 TEasyButtonBar.h
 dlgColorTrigger.h
+TSplitter.h
+TSplitterHandle.h
 TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)

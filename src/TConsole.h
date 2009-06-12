@@ -153,7 +153,7 @@ public:
       void              selectCurrentLine( std::string & );
       bool              setMiniConsoleFontSize( std::string &, int );
       void              finalize();
-      void              runTriggers( int from, int to );
+      void              runTriggers( int );
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 
@@ -183,7 +183,7 @@ public:
       int               mButtonState;
       TSplitter *       splitter;
       QFile             mLogFile;
-      QTextStream       mLogStream;
+      QDataStream       mLogStream;
       bool              mLogToLogFile;
       QString           mLogFileName;
 

@@ -44,7 +44,7 @@ void debugOutput(QtMsgType type, const char *msg)
         cout << msg << endl;
         if( mudlet::mpDebugConsole )
         {
-            mudlet::mpDebugConsole->print( msg );
+            //mudlet::mpDebugConsole->print( msg );
         }
         else
         {

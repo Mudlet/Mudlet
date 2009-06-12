@@ -567,7 +567,9 @@ void TConsole::slot_toggleLogging()
         QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
         QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         if( mpHost->mRawStreamDump )
-            mLogFileName.append(".raw");
+        {
+            mLogFileName.append(".dat");
+        }
         else
             mLogFileName.append(".html");
 
@@ -579,13 +581,16 @@ void TConsole::slot_toggleLogging()
         mLogFile.setFileName( mLogFileName );
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
-        mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
+        if( mpHost->mRawStreamDump )
+            mpHost->mTelnet.recordReplay( mLogFileName );
+        else
+            mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
         QString message = QString("Logging has started. Log file is ") + mLogFile.fileName();
         printSystemMessage( message );
     }
     else
     {
-        mLogStream << "</pre></body></html>";
+        if( ! mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
         mLogFile.close();
         QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() ;
         printSystemMessage( message );
@@ -642,8 +647,16 @@ void TConsole::changeColors()
     palette.setColor( QPalette::Window, QColor(0,255,0) );
     palette.setColor( QPalette::Base, QColor(255,0,0) );
 
+    console->mWrapAt = mWrapAt;
+    console2->mWrapAt = mWrapAt;
     splitter->setPalette( palette );
+
     buffer.updateColors();
+    if( ! mIsDebugConsole && ! mIsSubConsole )
+    {
+        buffer.mWrapAt = mpHost->mWrapAt;
+        buffer.mWrapIndent = mpHost->mWrapIndentCount;
+    }
 }
 
 void TConsole::setConsoleBgColor( int r, int g, int b )
@@ -682,28 +695,15 @@ void TConsole::loadRawFile( std::string n )
 {
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
     QString fileName = directoryLogFile + "/"+QString(n.c_str());
-    QFile file( fileName );
-    file.open( QIODevice::ReadOnly );
-    QTextStream ifs( &file );
-    int lines = 0;
     qDebug()<<QTime::currentTime()<<": starting. Reading first packet from file ...";
-    do
-    {
-        QString te = ifs.read(50000000);
-        if( te.isNull() ) break;
-        QTime speed;
-        speed.start();;
-        std::string data(te.toLatin1().data());
-        buffer.translateToPlainText( data );;
-        qDebug()<<"zeit:"<<speed.elapsed()<<": Mudlet processing finished";
-    }
-    while(true);
-
+    QTime speed;
+    speed.start();
+    mpHost->mTelnet.loadReplay( fileName );
+    qDebug()<<"zeit:"<<speed.elapsed()<<": Mudlet processing finished";
 }
 
 void TConsole::printOnDisplay( std::string & incomingSocketData )
 {
-
     //buffer.messen();
 
     QString prompt ="";//FIXME
@@ -721,40 +721,32 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     buffer.translateToPlainText( incomingSocketData );
 }
 
-void TConsole::runTriggers( int from, int to )
+void TConsole::runTriggers( int line )
 {
     mTriggerEngineMode = true;
     mDeletedLines = 0;
     //mProcessingTime.restart();
-    mUserCursor.setY( from );
-    mEngineCursor = from;
+    mUserCursor.setY( line );
+    mEngineCursor = line;
     mUserCursor.setX( 0 );
-    mCurrentLine.clear();
-    for( int i=from; i<=to; i++ )
-    {
-        mCurrentLine.append( buffer.line( i ) );
-    }
+    mCurrentLine = buffer.line( line );
     mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
-    if( mudlet::debugMode ) TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;
+    if( mudlet::debugMode )
+    {
+        TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;
+    }
     QString prompt;
-    mpHost->incomingStreamProcessor( mCurrentLine, prompt, from );
+    mpHost->incomingStreamProcessor( mCurrentLine, prompt, line );
 
     //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
     //       ansonsten einfach löschen
     if( mDeletedLines > 0 )
     {
-        //i = i - mDeletedLines;
-        //mDeletedLines = 0;
+        mDeletedLines = 0;
         buffer.newLines--;
-        //continue;
     }
     //double processT = mProcessingTime.elapsed();
     mTriggerEngineMode = false;    
-    //qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time BEFORE wrap";
-    //buffer.wrap( lineBeforeNewContent, mpHost->mWrapAt, mpHost->mWrapIndentCount, mStandardFormat );
-    //qDebug()<<"----> "<<QTime::currentTime().toString("ss.zzz")<<" time after wrap";
-
-    //moveCursorEnd();
     //networkLatency->setText( QString("net:%1 sys:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
     //                                                 .arg(processT/1000,0,'f',3));
 }
@@ -1076,6 +1068,7 @@ void TConsole::insertText( QString text, QPoint P )
                            false,
                            false );
             console->showNewLines();
+            console2->showNewLines();
         }
         else
         {
@@ -1412,6 +1405,7 @@ void TConsole::print( const char * txt )
                    false );
     //buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatCurrent );
     console->showNewLines();
+    console2->showNewLines();
 }
 
 void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
@@ -1610,6 +1604,7 @@ void TConsole::print( QString & msg )
                     mFormatCurrent.italics );
     //buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatCurrent );
     console->showNewLines();
+    console2->showNewLines();
 }
 
 void TConsole::print( QString & msg, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB )
@@ -1629,6 +1624,7 @@ void TConsole::print( QString & msg, int fgColorR, int fgColorG, int fgColorB, i
                     false );
     //buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatCurrent );
     console->showNewLines();
+    console2->showNewLines();
 }
 
 
@@ -1665,6 +1661,7 @@ void TConsole::printSystemMessage( QString & msg )
                     false );
     //buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatSystemMessage );
     console->showNewLines();
+    console2->showNewLines();
 }
 
 void TConsole::echoUserWindow( QString & msg )
@@ -1686,6 +1683,7 @@ void TConsole::paste()
 {
     buffer.paste( mUserCursor, mClipboard );     //TODO: P_begin & P_end to replace selection
     console->showNewLines();
+    console2->showNewLines();
 }
 
 void TConsole::pasteWindow( TBuffer bufferSlice )
@@ -1698,12 +1696,14 @@ void TConsole::appendBuffer()
 {
     buffer.appendBuffer( mClipboard );
     console->showNewLines();
+    console2->showNewLines();
 }
 
 void TConsole::appendBuffer( TBuffer bufferSlice )
 {
     buffer.appendBuffer( bufferSlice );
     console->showNewLines();
+    console2->showNewLines();
 }
 
 void TConsole::slot_user_scrolling( int action )

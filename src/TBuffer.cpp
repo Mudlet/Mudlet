@@ -969,44 +969,23 @@ void TBuffer::translateToPlainText( std::string & s )
             // sequenz ist im naechsten tcp paket keep decoder state
             return;
         }
-       /*
-        if( lineBuffer.back().size() >= mWrapAt )
+        const QString nothing = "";
+        TChar stdCh;
+        if( ch == '\n' )
         {
-            assert(lineBuffer.back().size()==buffer.back().size());
-            const QString lineBreaks = ",.- ";
-            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
-            {
-                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
-                {
-                    QString tmp = lineBuffer.back().mid(0,i+1);
-                    QString lineRest = lineBuffer.back().mid(i+1);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
+            int line = lineBuffer.size()-1;
+            mpHost->mpConsole->runTriggers( line );
+            newLines += 1+wrap( line );
+            std::deque<TChar> newLine;
+            buffer.push_back( newLine );
+            lineBuffer << nothing;
+            QString time = "-----";
+            timeBuffer << time;
+            firstChar = true;
+            msPos++;
+            continue;
+        }
 
-                    int k = lineRest.size();
-                    if( k > 0 )
-                    {
-                        while( k > 0 )
-                        {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            k--;
-                        }
-                    }
-
-                    buffer.push_back( newLine );
-                    if( lineRest.size() > 0 )
-                        lineBuffer.append( lineRest );
-                    else
-                        lineBuffer.append( nothing );
-                    QString time = "-----";
-                    timeBuffer << time;
-                    mLastLine++;
-                    newLines++;
-                    break;
-                }
-            }
-        }*/
         lineBuffer.back().append( QChar(ch) );
         TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
                  ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
@@ -1018,25 +997,7 @@ void TBuffer::translateToPlainText( std::string & s )
                  mItalics,
                  mUnderline );
         buffer.back().push_back( c );
-        const QString nothing = "";
-        TChar stdCh;
-        if( ch == '\n' )
-        {
-            mpHost->mpConsole->runTriggers( lineBuffer.size()-1, lineBuffer.size()-1 );
-            newLines += 1+ wrapLine(lineBuffer.size()-1,mWrapAt,mWrapIndent, stdCh );
-            std::deque<TChar> newLine;
-            buffer.push_back( newLine );
-            lineBuffer << nothing;
-            QString time = "-----";
-            timeBuffer << time;
-            //mLastLine++;
 
-            //mUntriggered = lineBuffer.size()-1;
-
-            firstChar = true;
-            //msPos++;
-            //continue;
-        }
         if( firstChar )
         {
             timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
@@ -1539,6 +1500,112 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
     }
     return -1;
 }
+
+inline int TBuffer::wrap( int startLine )
+{
+    if( buffer[startLine].size() <= mWrapAt ) return 0;
+    if( static_cast<int>(buffer.size()) < startLine ) return 0;
+    std::queue<std::deque<TChar> > queue;
+    QStringList tempList;
+    QStringList timeList;
+    int lineCount = 0;
+
+    for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
+    {
+        assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
+        std::deque<TChar> newLine;
+        QString lineText;
+        QString time = timeBuffer[i];
+        int indent = 0;
+        if( static_cast<int>(buffer[i].size()) >= mWrapAt )
+        {
+            for( int i3=0; i3<mWrapIndent; i3++ )
+            {
+                TChar pSpace;
+                newLine.push_back( pSpace );
+                lineText.append( " " );
+            }
+            indent = mWrapIndent;
+        }
+        int lastSpace = -1;
+        int wrapPos = -1;
+        int length = buffer[i].size();
+        for( int i2=0; i2<static_cast<int>(buffer[i].size());  )
+        {
+            if( length-i2 > mWrapAt-indent )
+            {
+                wrapPos = calcWrapPos( i, i2, i2+mWrapAt-indent );
+                if( wrapPos > -1 )
+                {
+                    lastSpace = wrapPos;
+                }
+                else
+                {
+                    lastSpace = -1;
+                }
+            }
+            else
+            {
+                lastSpace = -1;
+            }
+            for( int i3=0; i3<mWrapAt-indent; i3++ )
+            {
+                if( lastSpace > 0 )
+                {
+                    if( i2 >= lastSpace )
+                    {
+                        i2++;
+                        break;
+                    }
+                }
+                if( i2 >= static_cast<int>(buffer[i].size()) )
+                {
+                    break;
+                }
+                if( lineBuffer[i][i2] == QChar('\n') )
+                {
+                    i2++;
+                    break;
+                }
+                newLine.push_back( buffer[i][i2] );
+                lineText.append( lineBuffer[i].at(i2) );
+                i2++;
+            }
+            queue.push( newLine );
+            tempList.append( lineText );
+            timeList.append( time );
+            newLine.clear();
+            lineText.clear();
+            indent = 0;
+        }
+        lineCount++;
+    }
+
+    for( int i=0; i<lineCount; i++ )
+    {
+        buffer.pop_back();
+        lineBuffer.pop_back();
+        timeBuffer.pop_back();
+    }
+
+    newLines -= lineCount;
+    newLines += queue.size();
+    int insertedLines = queue.size()-1;
+
+    while( ! queue.empty() )
+    {
+        buffer.push_back( queue.front() );
+        queue.pop();
+    }
+
+    for( int i=0; i<tempList.size(); i++ )
+    {
+        lineBuffer.append( tempList[i] );
+        timeBuffer.append( timeList[i] );
+    }
+    return insertedLines > 0 ? insertedLines : 0;
+}
+
 
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )

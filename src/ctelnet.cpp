@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <QDebug>
+#include <QDir>
 #include <QTcpSocket>
 #include "mudlet.h"
 
@@ -622,14 +623,7 @@ void cTelnet::gotLine( string & mud_data )
 
 void cTelnet::gotPrompt( string & mud_data )
 {
-    //mMudData.append("\n");
-    /*if( ! mIsTimerPosting )
-    {
-        mpPostingTimer->start();
-        mIsTimerPosting = true;
-    }*/
-    //qDebug()<<"GA posting";
-    //mpPostingTimer->stop();
+    mpPostingTimer->stop();
     mMudData += mud_data;
     
     if( mUSE_IRE_DRIVER_BUGFIX )
@@ -674,7 +668,7 @@ void cTelnet::gotPrompt( string & mud_data )
     
     postData();
     mMudData = "";
-    //mIsTimerPosting = false;
+    mIsTimerPosting = false;
 }
 
 void cTelnet::gotRest( string & mud_data )
@@ -683,15 +677,16 @@ void cTelnet::gotRest( string & mud_data )
     {
         return;
     }
-    //if( mud_data[mud_data.size()-1] == '\n' )
-   // {
-     //   mpPostingTimer->stop();
+
+    if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
+    {
+        mpPostingTimer->stop();
         mMudData += mud_data;
         
         postData();
         mMudData = "";
-       // mIsTimerPosting = false;
-    /*}
+        mIsTimerPosting = false;
+    }
     else
     {
         mMudData += mud_data;
@@ -700,7 +695,7 @@ void cTelnet::gotRest( string & mud_data )
             mpPostingTimer->start();
             mIsTimerPosting = true;
         }
-    }*/
+    }
 }
 
 void cTelnet::slot_timerPosting()
@@ -713,23 +708,7 @@ void cTelnet::slot_timerPosting()
 
 void cTelnet::postData()
 {
-    //cout << mMudData << endl;
-    //qDebug()<<"postData packet size="<<mMudData.size();
     //QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
-    //qDebug()<<"\n------- posting rest <"<<cd<<">-------";
-    /*for( int i=0; i<cd.size(); i++ )
-    {
-        qDebug()<<"i="<<i<<" unicode="<<cd[i].unicode()<<" print="<<cd[i];
-        int unicode = cd[i].unicode();
-        if( (unicode < 32) || (unicode == 127) )
-        {
-            if( unicode == 27 ) continue;   // unicode 27 = escape
-            //if( unicode == 13 ) continue;   // unicode 10 = line feed
-            if( unicode == 10 ) continue;
-            qDebug() << "deleting control character unicode="<<unicode;
-            cd.remove( i, 1 );
-        } 
-    } */
     mpHost->mpConsole->printOnDisplay( mMudData );
 }
 
@@ -774,6 +753,159 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
 }
 
 
+bool cTelnet::recordReplay( QString & file )
+{
+    lastTimeOffset = 0;
+    timeOffset.start();
+    return true;
+}
+
+bool cTelnet::loadReplay( QString & name )
+{
+    QFile file( name );
+    qDebug()<<"trying to load replay file<"<<name<<">";
+    file.open( QIODevice::ReadOnly );
+    QDataStream ifs( &file );
+    while( ! ifs.atEnd() )
+    {
+        int offset;
+        int amount;
+        ifs >> offset;
+        ifs >> amount;
+        char buf[100001];
+        char * pB = buf;
+        int a_check = ifs.readRawData ( pB, amount );
+        qDebug()<<"read:"<<a_check<<"/"<<amount<<" bytes";
+        buf[a_check+1] = '\0';
+        readPipe( offset, &buf[0], a_check );
+    }
+    file.close();
+    return true;
+}
+
+
+void cTelnet::readPipe( int t_Offset, char * buffer, int amount )
+{
+    bool gotData = false;
+
+    //cout << "RAW_BUFFER_BEGIN<"<<buffer<<">RAW_BUFFER_END"<<endl;
+
+    QTime delay;
+    delay.start();
+    while( delay.elapsed() < t_Offset ){;}//TODO: thread sleep
+    qDebug()<<"waited for "<<t_Offset<<" milliseconds";
+    int datalen = amount;
+    string cleandata = "";
+    recvdGA = false;
+    for( unsigned int i = 0; i < (unsigned int) datalen; i++ )
+    {
+        unsigned char ch = buffer[i];
+
+        if( iac || iac2 || insb || (ch == (unsigned char)TN_IAC) )
+        {
+            unsigned char _ch = ch;
+            #ifdef DEBUG
+                cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
+            #endif
+            if (! (iac || iac2 || insb) && ( ch == (unsigned char)TN_IAC ) )
+            {
+                iac = true;
+                command += ch;
+            }
+            else if (iac && (ch == (unsigned char)TN_IAC) && (!insb))
+            {
+                //2. seq. of two IACs
+                iac = false;
+                cleandata += ch;
+                command = "";
+            }
+            else if(iac && (!insb) && ((ch == (unsigned char)TN_WILL) || (ch == (unsigned char)TN_WONT) || (ch == (unsigned char)TN_DO) || (ch == (unsigned char)TN_DONT)))
+            {
+                //3. IAC DO/DONT/WILL/WONT
+                iac = false;
+                iac2 = true;
+                command += ch;
+            }
+            else if(iac2)
+            {
+                //4. IAC DO/DONT/WILL/WONT <command code>
+                iac2 = false;
+                command += ch;
+                processTelnetCommand( command );
+                command = "";
+            }
+            else if(iac && (!insb) && (ch == (unsigned char)TN_SB))
+            {
+                //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
+                //5. IAC SB
+                iac = false;
+                insb = true;
+                command += ch;
+            }
+            else if(iac && (!insb) && (ch == (unsigned char)TN_SE))
+            {
+                //6. IAC SE without IAC SB - error - ignored
+                command = "";
+                iac = false;
+            }
+            else if( insb )
+            {
+                //7. inside IAC SB
+                command += ch;
+                if(iac && (ch == (unsigned char)TN_SE))  //IAC SE - end of subcommand
+                {
+                    processTelnetCommand( command );
+                    command = "";
+                    iac = false;
+                    insb = false;
+                }
+                if(iac) iac = false;
+                else if( ch == (unsigned char)TN_IAC ) iac = true;
+            }
+            else
+            //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
+            {
+                iac = false;
+                command += ch;
+                processTelnetCommand( command );
+                //this could have set receivedGA to true; we'll handle that later
+                command = "";
+            }
+        }
+        else
+        {
+            if( ch != '\r' ) cleandata += ch;
+        }
+MAIN_LOOP_END: ;
+        if( recvdGA )
+        {
+            mGA_Driver = true;
+            if( mCommands > 0 )
+            {
+                mCommands--;
+                if( networkLatencyTime.elapsed() > 2000 )
+                {
+                    mCommands = 0;
+                }
+            }
+
+            if( mUSE_IRE_DRIVER_BUGFIX )
+            {
+                cleandata.push_back('\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
+            }
+            recvdGA = false;
+            gotPrompt( cleandata );
+            cleandata = "";
+        }
+    }//for
+
+    if( cleandata.size() > 0 )
+    {
+       gotRest( cleandata );
+    }
+
+    mpHost->mpConsole->finalize();
+}
 
 void cTelnet::handle_socket_signal_readyRead()
 {
@@ -802,17 +934,20 @@ void cTelnet::handle_socket_signal_readyRead()
     }
     buffer[datalen] = '\0';
 
-    /*if( mpHost->mpConsole->mLogToLogFile )
+    if( mpHost->mpConsole->mLogToLogFile )
     {
         if( mpHost->mRawStreamDump )
         {
-           ofstream myfile;
-           myfile.open( "/home/heiko/stream.raw", ios::out | ios::app | ios::binary );
-           myfile << buffer;
-           myfile.close();
-
+            /*ofstream myfile;
+            myfile.open( "/home/heiko/stream.raw", ios::out | ios::app | ios::binary );
+            myfile << buffer;
+            myfile.close();*/
+            qDebug()<<"writing packet. offset ="<<timeOffset.elapsed()-lastTimeOffset<<" bytes="<<strlen(&buffer[0]);
+            mpHost->mpConsole->mLogStream << timeOffset.elapsed()-lastTimeOffset;
+            mpHost->mpConsole->mLogStream << datalen;
+            mpHost->mpConsole->mLogStream.writeRawData( &buffer[0], datalen );
         }
-    }*/
+    }
 
     string cleandata = "";
     recvdGA = false;
@@ -952,9 +1087,6 @@ MAIN_LOOP_END: ;
         if( recvdGA )
         {
             mGA_Driver = true;
-            //cout << " GOT telnet command TN_GA" << "cleandata="<<cleandata<<endl;
-            //we got a prompt
-
             if( mCommands > 0 )
             {
                 mCommands--;
@@ -980,6 +1112,7 @@ MAIN_LOOP_END: ;
     }
 
     mpHost->mpConsole->finalize();
+    lastTimeOffset = timeOffset.elapsed();
 }
 
 
