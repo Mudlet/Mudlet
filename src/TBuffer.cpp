@@ -1309,7 +1309,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
     if( text.size() < 1 ) return false;
     int x = P.x();
     int y = P.y();
-    if( ( y > 0 ) && ( y <= (int)buffer.size()-1 ) )
+    if( ( y > 0 ) && ( y <= static_cast<int>(buffer.size())-1 ) )
     {
         if( x < 0 )
         {

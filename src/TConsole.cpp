@@ -705,7 +705,6 @@ void TConsole::loadRawFile( std::string n )
 void TConsole::printOnDisplay( std::string & incomingSocketData )
 {
     //buffer.messen();
-
     QString prompt ="";//FIXME
     if( mLogToLogFile )
     {
@@ -718,14 +717,18 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
             }
         }
     }
+    mProcessingTime.restart();
+    mTriggerEngineMode = true;
     buffer.translateToPlainText( incomingSocketData );
+    mTriggerEngineMode = false;
+    double processT = mProcessingTime.elapsed();
+    networkLatency->setText( QString("net:%1 sys:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
+                                                     .arg(processT/1000,0,'f',3));
 }
 
 void TConsole::runTriggers( int line )
 {
-    mTriggerEngineMode = true;
     mDeletedLines = 0;
-    //mProcessingTime.restart();
     mUserCursor.setY( line );
     mEngineCursor = line;
     mUserCursor.setX( 0 );
@@ -745,10 +748,6 @@ void TConsole::runTriggers( int line )
         mDeletedLines = 0;
         buffer.newLines--;
     }
-    //double processT = mProcessingTime.elapsed();
-    mTriggerEngineMode = false;    
-    //networkLatency->setText( QString("net:%1 sys:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
-    //                                                 .arg(processT/1000,0,'f',3));
 }
 
 void TConsole::finalize()
@@ -1379,7 +1378,7 @@ void TConsole::echo( QString & msg )
     if( mTriggerEngineMode )
     {
         P.setY( mEngineCursor );
-        P.setX( (buffer.line(mEngineCursor)).size()-1 );
+        P.setX( (buffer.line(mEngineCursor)).size() );
         insertText( msg, P );
     }
     else
