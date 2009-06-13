@@ -1294,13 +1294,17 @@ void TConsole::setUserWindow()
 
 int TConsole::select( QString text, int numOfMatch )
 {
-    if( mudlet::debugMode ) 
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nline under current user cursor: ">>0; TDebug(QColor(Qt::red),QColor(Qt::black))<<mUserCursor.y()<<"#:">>0; TDebug(QColor(Qt::gray),QColor(Qt::black)) << buffer.line( mUserCursor.y() ) << "\n" >> 0;
-    
+    if( mUserCursor.y()<0 ) return -1;
+    if( mUserCursor.y()>=buffer.size() ) return -1;
+
+    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nline under current user cursor: ">>0; TDebug(QColor(Qt::red),QColor(Qt::black))<<mUserCursor.y()<<"#:">>0; TDebug(QColor(Qt::gray),QColor(Qt::black)) << buffer.line( mUserCursor.y() ) << "\n" >> 0;}
+
     int begin = -1;
     for( int i=0;i<numOfMatch; i++ )
     {
-        begin = buffer.line( mUserCursor.y() ).indexOf( text, begin+1 );
+        QString li = buffer.line( mUserCursor.y() );
+        if( li.size() < 1 ) continue;
+        begin = li.indexOf( text, begin+1 );
         
         if( begin == -1 )
         {
@@ -1318,8 +1322,7 @@ int TConsole::select( QString text, int numOfMatch )
     P_end.setX( end );
     P_end.setY( mUserCursor.y() );
     
-    if( mudlet::debugMode ) 
-        TDebug(QColor(Qt::darkRed),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
+    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkRed),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;}
     return begin;
 }
 
@@ -1327,8 +1330,7 @@ bool TConsole::selectSection( int from, int to )
 {
     if( mudlet::debugMode )
     {
-        if( mudlet::debugMode ) 
-            TDebug(QColor(Qt::darkMagenta),QColor(Qt::black)) <<"\nselectSection("<<from<<","<<to<<"): line under current user cursor: " << buffer.line( mUserCursor.y() ) << "\n" >> 0;
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::darkMagenta),QColor(Qt::black)) <<"\nselectSection("<<from<<","<<to<<"): line under current user cursor: " << buffer.line( mUserCursor.y() ) << "\n" >> 0;}
     }
     if( from < 0 ) 
         return false;
@@ -1342,8 +1344,7 @@ bool TConsole::selectSection( int from, int to )
     P_end.setX( from + to );
     P_end.setY( mUserCursor.y() );
     
-    if( mudlet::debugMode ) 
-        TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;
+    if( mudlet::debugMode ){ TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;}
     
     return true;
 }

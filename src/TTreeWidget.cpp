@@ -246,22 +246,8 @@ void TTreeWidget::dropEvent(QDropEvent *event)
 {
     QTreeWidgetItem * pItem = itemAt( event->pos() );
     
-    if( pItem )
+    if( ! pItem )
     {
-        /*if( ! pItem->parent() )
-        {
-            TDebug()<<"DROP IN ROOT_ITEMS_LIST verhindert";
-            event->ignore();
-            return;
-        }
-        else
-        {
-            TDebug()<<"DROP OK -> kein root item">>0;
-        }*/
-    }
-    else
-    {
-        TDebug(QColor(Qt::white),QColor(Qt::red))<<"Mudlet system ERROR: pItem im drop = 0 Please send a bug report!\n">>0;
         event->ignore();
         return;
     }

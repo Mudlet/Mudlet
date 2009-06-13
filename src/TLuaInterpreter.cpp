@@ -249,7 +249,7 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
         std::string & s = *its;
         int length = s.size();
         //cout << "selectSection("<<begin<<", "<<length<<")"<<endl;
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"selectCaptureGroup("<<begin<<", "<<length<<")\n">>0;
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"selectCaptureGroup("<<begin<<", "<<length<<")\n">>0;}
         int pos = pHost->mpConsole->selectSection( begin, length ); 
         lua_pushnumber( L, pos );
     }
@@ -1945,7 +1945,6 @@ int TLuaInterpreter::debug( lua_State *L )
     {
         luaDebugText += (nbargs > 1 ? " [" + QString::number(i) + "] " : " ") + lua_tostring( L, i+1 );
     }
-    TDebug(QColor(Qt::yellow),QColor(Qt::blue)) << "Debug:" << luaDebugText >>0;
     return 0;
 }
 
@@ -2155,11 +2154,11 @@ bool TLuaInterpreter::compileScript( QString & code )
             e = "Lua error:";
             e+=lua_tostring( L, 1 );
         }
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: code did not compile: ERROR:"<<e.c_str()<<"\n">>0;
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: code did not compile: ERROR:"<<e.c_str()<<"\n">>0;}
     }
     else 
     {
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA: code compiled without errors. OK\n">>0;
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA: code compiled without errors. OK\n">>0;}
     }
     lua_pop( L, lua_gettop( L ) );
     
@@ -2186,11 +2185,11 @@ bool TLuaInterpreter::compile( QString & code )
             e = "Lua error:";
             e+=lua_tostring( L, 1 );
         }
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: code did not compile: ERROR:"<<e.c_str()<<"\n">>0;
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: code did not compile: ERROR:"<<e.c_str()<<"\n">>0;}
     }
     else
     {
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA: code compiled without errors. OK\n" >> 0;
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA: code compiled without errors. OK\n" >> 0;}
     }
     lua_pop( L, lua_gettop( L ) );
     
@@ -2219,11 +2218,11 @@ bool TLuaInterpreter::compile( QString & code, QString & errorMsg )
         errorMsg = "<b><font color='blue'>";
         errorMsg.append( e.c_str() );
         errorMsg.append("</b></font>");
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"\n "<<e.c_str()<<"\n">>0;
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"\n "<<e.c_str()<<"\n">>0;}
     }
     else
     {
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"\nLUA: code compiled without errors. OK\n" >> 0;
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"\nLUA: code compiled without errors. OK\n" >> 0;}
     }
     lua_pop( L, lua_gettop( L ) );
 
@@ -2340,13 +2339,13 @@ bool TLuaInterpreter::call( QString & function, QString & mName )
                 e = "Lua error:";
                 e+=lua_tostring( L, i );
 
-                if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()>>0;
+                if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()>>0;}
             }
         }
     }
     else
     {
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK script "<<mName << " (" << function <<") ran without errors\n">>0;
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK script "<<mName << " (" << function <<") ran without errors\n">>0;}
     }
     lua_pop( L, lua_gettop( L ) );
     if( error == 0 ) return true;
@@ -2375,13 +2374,13 @@ bool TLuaInterpreter::callConditionFunction( std::string & function, QString & m
                 e = "Lua error:";
                 e+=lua_tostring( L, i );
 
-                if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function.c_str() <<") ERROR:"<<e.c_str()<<"\n">>0;
+                if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function.c_str() <<") ERROR:"<<e.c_str()<<"\n">>0;}
             }
         }
     }
     else
     {
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK script "<<mName << " (" << function.c_str() <<") ran without errors\n">>0;
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK script "<<mName << " (" << function.c_str() <<") ran without errors\n">>0;}
     }
 
     int ret = 0;
@@ -2450,13 +2449,13 @@ bool TLuaInterpreter::callMulti( QString & function, QString & mName )
                 e = "Lua error:";
                 e+=lua_tostring( L, i );
 
-                if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()<<"\n">>0;
+                if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()<<"\n">>0;}
             }
         }
     }
     else
     {
-        if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK script "<<mName << " (" << function <<") ran without errors\n">>0;
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK script "<<mName << " (" << function <<") ran without errors\n">>0;}
     }
     lua_pop( L, lua_gettop( L ) );
     if( error == 0 ) return true;

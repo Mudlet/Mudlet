@@ -83,16 +83,16 @@ public:
   void                setDisplayDimensions();
   void                encodingChanged(QString encoding);
   void                set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
-  bool                recordReplay( QString & );
-  bool                loadReplay( QString & );
-  void                readPipe( int, char *, int );
-
+  void                recordReplay( QString & );
+  void                loadReplay( QString & );
+  void                _loadReplay();
   bool                mResponseProcessed;
   QTime               networkLatencyTime;
   double              networkLatency;
 
 protected slots:
   
+  void                readPipe();
   void                handle_socket_signal_hostFound(QHostInfo);
   void                handle_socket_signal_connected();
   void                handle_socket_signal_disconnected();

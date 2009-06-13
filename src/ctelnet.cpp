@@ -753,53 +753,60 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
 }
 
 
-bool cTelnet::recordReplay( QString & file )
+void cTelnet::recordReplay( QString & file )
 {
     lastTimeOffset = 0;
     timeOffset.start();
-    return true;
 }
 
-bool cTelnet::loadReplay( QString & name )
+char loadBuffer[100001];
+int loadedBytes;
+QDataStream replayStream;
+bool loadingReplay;
+QFile replayFile;
+
+void cTelnet::loadReplay( QString & name )
 {
-    QFile file( name );
+    replayFile.setFileName( name );
     qDebug()<<"trying to load replay file<"<<name<<">";
-    file.open( QIODevice::ReadOnly );
-    QDataStream ifs( &file );
-    while( ! ifs.atEnd() )
+    replayFile.open( QIODevice::ReadOnly );
+    replayStream.setDevice( &replayFile );
+    loadingReplay = true;
+    _loadReplay();
+}
+
+void cTelnet::_loadReplay()
+{
+    if( ! replayStream.atEnd() )
     {
         int offset;
         int amount;
-        ifs >> offset;
-        ifs >> amount;
-        char buf[100001];
-        char * pB = buf;
-        int a_check = ifs.readRawData ( pB, amount );
-        qDebug()<<"read:"<<a_check<<"/"<<amount<<" bytes";
-        buf[a_check+1] = '\0';
-        readPipe( offset, &buf[0], a_check );
+        replayStream >> offset;
+        replayStream >> amount;
+
+        char * pB = &loadBuffer[0];
+        loadedBytes = replayStream.readRawData ( pB, amount );
+        qDebug()<<"loaded:"<<loadedBytes<<"/"<<amount<<" bytes"<<" waiting for "<<offset<<" milliseconds";
+        loadBuffer[loadedBytes+1] = '\0';
+        QTimer::singleShot( offset, this, SLOT(readPipe()));
     }
-    file.close();
-    return true;
+    else
+    {
+        loadingReplay = false;
+        replayFile.close();
+    }
 }
 
 
-void cTelnet::readPipe( int t_Offset, char * buffer, int amount )
+void cTelnet::readPipe()
 {
     bool gotData = false;
-
-    //cout << "RAW_BUFFER_BEGIN<"<<buffer<<">RAW_BUFFER_END"<<endl;
-
-    QTime delay;
-    delay.start();
-    while( delay.elapsed() < t_Offset ){;}//TODO: thread sleep
-    qDebug()<<"waited for "<<t_Offset<<" milliseconds";
-    int datalen = amount;
+    int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
     for( unsigned int i = 0; i < (unsigned int) datalen; i++ )
     {
-        unsigned char ch = buffer[i];
+        unsigned char ch = loadBuffer[i];
 
         if( iac || iac2 || insb || (ch == (unsigned char)TN_IAC) )
         {
@@ -905,6 +912,7 @@ MAIN_LOOP_END: ;
     }
 
     mpHost->mpConsole->finalize();
+    if( loadingReplay ) _loadReplay();
 }
 
 void cTelnet::handle_socket_signal_readyRead()
@@ -922,7 +930,6 @@ void cTelnet::handle_socket_signal_readyRead()
     int amount = socket.read( buffer, 100000 );
 
     buffer[amount+1] = '\0';
-    //cout << "RAW_BUFFER_BEGIN<"<<buffer<<">RAW_BUFFER_END"<<endl;
     if( amount == -1 ) return; 
     if( amount == 0 ) return; 
   
@@ -938,11 +945,6 @@ void cTelnet::handle_socket_signal_readyRead()
     {
         if( mpHost->mRawStreamDump )
         {
-            /*ofstream myfile;
-            myfile.open( "/home/heiko/stream.raw", ios::out | ios::app | ios::binary );
-            myfile << buffer;
-            myfile.close();*/
-            qDebug()<<"writing packet. offset ="<<timeOffset.elapsed()-lastTimeOffset<<" bytes="<<strlen(&buffer[0]);
             mpHost->mpConsole->mLogStream << timeOffset.elapsed()-lastTimeOffset;
             mpHost->mpConsole->mLogStream << datalen;
             mpHost->mpConsole->mLogStream.writeRawData( &buffer[0], datalen );

@@ -683,7 +683,10 @@ int mudlet::getLastLineNumber( QString & name )
     {
         return dockWindowConsoleMap[name]->getLastLineNumber();
     }
-    else TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesnt exit\n" >> 0;
+    else
+    {
+        TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesnt exit\n" >> 0;
+    }
     return -1;
 }
 

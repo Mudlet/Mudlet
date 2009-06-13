@@ -117,7 +117,7 @@ void TScript::compile()
     {
         if( ! compileScript() )
         {
-            if( mudlet::debugMode ) TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of script:"<<mName<<"\n">>0;
+            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of script:"<<mName<<"\n">>0;}
             mOK_code = false;
         }
     }
