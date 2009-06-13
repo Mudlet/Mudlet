@@ -647,9 +647,12 @@ void TConsole::changeColors()
     palette.setColor( QPalette::Window, QColor(0,255,0) );
     palette.setColor( QPalette::Base, QColor(255,0,0) );
 
-    console->mWrapAt = mWrapAt;
-    console2->mWrapAt = mWrapAt;
-    splitter->setPalette( palette );
+    if( ! mIsSubConsole )
+    {
+        console->mWrapAt = mWrapAt;
+        console2->mWrapAt = mWrapAt;
+        splitter->setPalette( palette );
+    }
 
     buffer.updateColors();
     if( ! mIsDebugConsole && ! mIsSubConsole )

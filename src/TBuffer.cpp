@@ -118,7 +118,7 @@ TBuffer::TBuffer( Host * pH )
 : mLinesLimit( 100000 )
 , mpHost( pH )
 , mCursorMoved( false )
-, mWrapAt( 100 )
+, mWrapAt( 99999999 )
 , mWrapIndent( 0 )
 , mFormatSequenceRest( QString("") )
 , mBold( false )
@@ -1448,8 +1448,6 @@ void TBuffer::appendBuffer( TBuffer chunk )
     {
         return;
     }
-
-    //int startLine = getLastLineNumber() > 0 ? getLastLineNumber() : 0;
     for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
     {
         QString s(chunk.lineBuffer[0][cx]);
@@ -1479,8 +1477,6 @@ void TBuffer::appendBuffer( TBuffer chunk )
                false,
                false,
                false );
-    //TChar format;
-    //wrap( startLine, mWrapAt, mWrapIndent, format );
 }
 
 int TBuffer::calcWrapPos( int line, int begin, int end )
