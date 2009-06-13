@@ -679,12 +679,12 @@ bool TTrigger::match_colors( int line )
 {
 
     if( line == -1 ) return false;
-qDebug()<<"match_colors enter...";
     bool bgColorMatch = false;
     bool fgColorMatch = false;
     bool canExecute = false;
     std::list<std::string> captureList;
     std::list<int> posList;
+    if( line >= mpHost->mpConsole->buffer.buffer.size() ) return false;
     std::deque<TChar> & bufferLine = mpHost->mpConsole->buffer.buffer[line];
     QString & lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
     typedef std::deque<TChar>::iterator IT;
@@ -775,10 +775,8 @@ qDebug()<<"match_colors enter...";
                 filter( captureList.front(), posList.front() );
             }
         }
-        qDebug()<<"----> leaving match_colors";
         return true;
     }
-    qDebug()<<"----> leaving match_colors";
     return false;
 }
 

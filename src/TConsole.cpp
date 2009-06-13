@@ -1423,19 +1423,7 @@ void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
                    false,
                    false,
                    false );
-    /*QString lf = "\n";
-    buffer.append( lf,
-                   0,
-                   1,
-                   0,
-                   0,
-                   0,
-                   0,
-                   0,
-                   0,
-                   false,
-                   false,
-                   false );*/
+
     console->showNewLines();
     console2->showNewLines();
 }

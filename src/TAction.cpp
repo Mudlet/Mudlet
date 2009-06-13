@@ -95,7 +95,6 @@ bool TAction::registerAction()
         qDebug() << "ERROR: TAction::registerTrigger() pHost=0";
         return false;
     }
-    qDebug()<<"calling ActionUnit->registerAlias(this) ...";
     return mpHost->getActionUnit()->registerAction( this );    
 }
 
