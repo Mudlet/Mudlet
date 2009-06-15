@@ -94,6 +94,7 @@ public:
     void resetFontSpecs();
     void translateToPlainText( std::string & s );
     void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
+    void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
     int lookupColor( QString & s, int pos );
     void set_text_properties(int tag);
     void setWrapAt( int i ){ mWrapAt = i; }

@@ -25,6 +25,10 @@
 
 #include "ui_trigger_editor.h"
 #include <QDialog>
+#include <QListWidgetItem>
+#include <QListWidget>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include "TTrigger.h"
 #include "TAction.h"
 #include <Qsci/qsciscintilla.h>
@@ -78,6 +82,7 @@ signals:
     void                        update();
     
 public slots:
+    void                        slot_set_pattern_type_color( int );
     void                        slot_soundTrigger();
     void                        slot_colorizeTriggerSetBgColor();
     void                        slot_colorizeTriggerSetFgColor();
@@ -140,10 +145,10 @@ public slots:
     void                        slot_deleteKey();
     void                        slot_save_edit();
     void                        slot_chose_action_icon();
-    void                        slot_trigger_main_area_edit_regex(QListWidgetItem*);
-    void                        slot_trigger_main_area_add_regex();
+    //void                        slot_trigger_main_area_edit_regex(QListWidgetItem*);
+    //void                        slot_trigger_main_area_add_regex();
     void                        slot_show_search_area();
-    void                        slot_trigger_main_area_delete_regex();
+    //void                        slot_trigger_main_area_delete_regex();
     void                        slot_script_main_area_delete_handler();
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
@@ -230,8 +235,8 @@ private:
     dlgOptionsAreaAction *      mpOptionsAreaActions;
     dlgOptionsAreaAlias *       mpOptionsAreaAlias;
     dlgOptionsAreaTimers *      mpOptionsAreaTimers;
-    bool                        mIsTriggerMainAreaEditRegex;
-    QListWidgetItem *           mpTriggerMainAreaEditRegexItem;
+    //bool                        mIsTriggerMainAreaEditRegex;
+    //QListWidgetItem *           mpTriggerMainAreaEditRegexItem;
     bool                        mIsScriptsMainAreaEditHandler;
     QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
     bool                        mIsGrabKey;

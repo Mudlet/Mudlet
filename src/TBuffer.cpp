@@ -1060,7 +1060,6 @@ void TBuffer::append( QString & text,
         }
         if( lineBuffer.back().size() >= mWrapAt )
         {
-            //qDebug()<<"append():lB.size()="<<lineBuffer.size()<<" buf.size="<<buffer.size()<<" lB="<<lineBuffer.back().size()<<" buf="<<buffer.back().size();
             //assert(lineBuffer.back().size()==buffer.back().size());
             const QString lineBreaks = ",.- ";
             const QString nothing = "";
@@ -1106,6 +1105,55 @@ void TBuffer::append( QString & text,
         }
     }
 }
+
+void TBuffer::appendLine( QString & text,
+                          int sub_start,
+                          int sub_end,
+                          int fgColorR,
+                          int fgColorG,
+                          int fgColorB,
+                          int bgColorR,
+                          int bgColorG,
+                          int bgColorB,
+                          bool bold,
+                          bool italics,
+                          bool underline )
+{
+    if( static_cast<int>(buffer.size()) > mLinesLimit )
+    {
+        while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
+        {
+            deleteLine( 0 );
+        }
+    }
+    int last = buffer.size()-1;
+    if( last < 0 )
+    {
+        std::deque<TChar> newLine;
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        newLine.push_back( c );
+        buffer.push_back( newLine );
+        lineBuffer.push_back(QString());
+        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        last = 0;
+    }
+    bool firstChar = (lineBuffer.back().size() == 0);
+    int length = text.size();
+    if( length < 1 ) return;
+    if( sub_end >= length ) sub_end = text.size()-1;
+
+    for( int i=sub_start; i<=(sub_start+sub_end); i++ )
+    {
+        lineBuffer.back().append( text.at( i ) );
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        buffer.back().push_back( c );
+        if( firstChar )
+        {
+            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        }
+    }
+}
+
 
 void TBuffer::messen()
 {
@@ -1306,6 +1354,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
 
 bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
 {
+    qDebug()<<"TBuffer::insertInLine() pos:"<<P.x()<<" text<"<<text<<">";
     if( text.size() < 1 ) return false;
     int x = P.x();
     int y = P.y();

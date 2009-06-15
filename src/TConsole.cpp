@@ -1356,7 +1356,6 @@ void TConsole::setFgColor( int r, int g, int b )
     mFormatCurrent.fgR = r;
     mFormatCurrent.fgG = g;
     mFormatCurrent.fgB = b;
-    //buffer.applyFormat( P_begin, P_end, mFormatCurrent );
     buffer.applyFgColor( P_begin, P_end, r,g,b );
 }
 
@@ -1365,7 +1364,6 @@ void TConsole::setBgColor( int r, int g, int b )
     mFormatCurrent.bgR = r;
     mFormatCurrent.bgG = g;
     mFormatCurrent.bgB = b;
-    //buffer.applyFormat( P_begin, P_end, mFormatCurrent );
     buffer.applyBgColor( P_begin, P_end, r,g,b );
 }
 
@@ -1377,12 +1375,20 @@ void TConsole::printCommand( QString & msg )
 
 void TConsole::echo( QString & msg )
 {
-    QPoint P;
     if( mTriggerEngineMode )
     {
-        P.setY( mEngineCursor );
-        P.setX( (buffer.line(mEngineCursor)).size() );
-        insertText( msg, P );
+        buffer.appendLine( msg,
+                           0,
+                           msg.size(),
+                           mFormatCurrent.fgR,
+                           mFormatCurrent.fgG,
+                           mFormatCurrent.fgB,
+                           mFormatCurrent.bgR,
+                           mFormatCurrent.bgG,
+                           mFormatCurrent.bgB,
+                           false,
+                           false,
+                           false );
     }
     else
     {
@@ -1392,7 +1398,6 @@ void TConsole::echo( QString & msg )
 
 void TConsole::print( const char * txt )
 {
-    //int lineBeforeNewContent = buffer.getLastLineNumber();
     QString msg = txt;
     buffer.append( msg, 
                    0,
@@ -1406,7 +1411,6 @@ void TConsole::print( const char * txt )
                    false, 
                    false,
                    false );
-    //buffer.wrap( lineBeforeNewContent, mWrapAt, mIndentCount, mFormatCurrent );
     console->showNewLines();
     console2->showNewLines();
 }

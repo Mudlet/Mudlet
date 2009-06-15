@@ -121,11 +121,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpTriggersMainArea->setSizePolicy( sizePolicy );
     pVB1->addWidget( mpTriggersMainArea );
-    mIsTriggerMainAreaEditRegex = false;
-    mpTriggerMainAreaEditRegexItem = 0;
+    //mIsTriggerMainAreaEditRegex = false;
+    //mpTriggerMainAreaEditRegexItem = 0;
     mpTriggersMainArea->lineEdit_soundFile->hide();
-    connect(mpTriggersMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_trigger_main_area_add_regex()));
-    connect(mpTriggersMainArea->listWidget_regex_list, SIGNAL(itemClicked ( QListWidgetItem *)), this, SLOT(slot_trigger_main_area_edit_regex(QListWidgetItem*)));
+    //connect(mpTriggersMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_trigger_main_area_add_regex()));
+    //connect(mpTriggersMainArea->listWidget_regex_list, SIGNAL(itemClicked ( QListWidgetItem *)), this, SLOT(slot_trigger_main_area_edit_regex(QListWidgetItem*)));
     connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
     connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
     connect(mpTriggersMainArea->pushButtonSound, SIGNAL(clicked()), this, SLOT(slot_soundTrigger()));
@@ -442,11 +442,17 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( saveMenu );
     toolBar->addAction( showDebugAreaAction );
     
-      
-    mpLuaLexer = new QsciLexerLua;
+    mpSourceEditorArea->script_scintilla->setUtf8( true );
+    setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
+    mpSourceEditorArea->script_scintilla->setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
+    mpLuaLexer = new QsciLexerLua(this);
+    mpLuaLexer->setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
     mpSourceEditorArea->script_scintilla->setLexer( mpLuaLexer );
-    mpSourceEditorArea->script_scintilla->setAutoCompletionFillupsEnabled(true);
-    mpSourceEditorArea->script_scintilla->SendScintilla( 2240,0,33 );
+    mpSourceEditorArea->script_scintilla->setAutoCompletionThreshold( 3 );
+    mpSourceEditorArea->script_scintilla->setAutoCompletionSource( QsciScintilla::AcsAll );
+    mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 1, true );
+    mpSourceEditorArea->script_scintilla->setMarginWidth( 1, 40 );
+
     connect( comboBox_search_triggers, SIGNAL( currentIndexChanged( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_clicked( QTreeWidgetItem *, int) ) );
@@ -458,9 +464,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     connect( mpSearchArea->tree_widget_search_results_main_2, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
-    connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
-    connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
-    connect( mpTriggersMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_trigger_main_area_delete_regex()));
+    //connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
+    //connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
+    //connect( mpTriggersMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_trigger_main_area_delete_regex()));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
     
@@ -493,6 +499,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     
     readSettings();
     setTBIconSize( 0 );
+    connect( mpTriggersMainArea->listWidget_regex_list, SIGNAL(cellChanged(int,int)), this, SLOT(slot_set_pattern_type_color(int,int)));
 }
 
 
@@ -1839,42 +1846,21 @@ void dlgTriggerEditor::saveTrigger()
 
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     QString command = mpTriggersMainArea->trigger_command->text();
-    mpTriggersMainArea->lineEdit->clear();
     bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
-    QList<QListWidgetItem*> itemList;
-    for( int i=0; i<mpTriggersMainArea->listWidget_regex_list->count(); i++ )
-    {
-        QListWidgetItem * pItem = mpTriggersMainArea->listWidget_regex_list->item(i);
-        itemList << pItem;
-    }
     QStringList regexList;
     QList<int> regexPropertyList;
-    for( int i=0; i<itemList.size(); i++ )
+    for( int i=0; i<100; i++ )
     {
-        if( itemList[i]->text().size() < 1 ) continue;
-        regexList << itemList[i]->text();
-        QColor fgColor = itemList[i]->foreground().color();
-        QColor bgColor = itemList[i]->background().color();
-        if( (fgColor == QColor(0,0,0)) && (bgColor == QColor(255,255,255)) )
-        {
-            regexPropertyList << REGEX_SUBSTRING;
-        }
-        if( (fgColor == QColor(0,0,255)) && (bgColor == QColor(255,255,255)) )
-        {
-            regexPropertyList << REGEX_PERL;
-        }
-        if( (fgColor == QColor(195,0,0)) && (bgColor == QColor(55,55,55)) )
-        {
-            regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
-        }
-        if( (fgColor == QColor(0,155,0)) && (bgColor == QColor(255,255,255)) )
-        {
-            regexPropertyList << REGEX_EXACT_MATCH;
-        }
-        if( (fgColor == QColor(155,155,0)) && (bgColor == QColor(0,0,0)) )
-        {
-            regexPropertyList << REGEX_LUA_CODE;
-        }
+        QString pattern = ((QLineEdit *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 0 ))->text();
+        if( pattern.size() < 1 ) continue;
+        regexList << pattern;
+        if( ! mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ) ) break;
+        int _type = ((QComboBox *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ))->currentIndex();
+        if( _type == 0 ) regexPropertyList << REGEX_SUBSTRING;
+        else if( _type == 1 ) regexPropertyList << REGEX_PERL;
+        else if( _type == 2 ) regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+        else if( _type == 3 ) regexPropertyList << REGEX_EXACT_MATCH;
+        else if( _type == 4 ) regexPropertyList << REGEX_LUA_CODE;
     }
     QString script = mpSourceEditorArea->script_scintilla->text();
 
@@ -1884,14 +1870,11 @@ void dlgTriggerEditor::saveTrigger()
         TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
         if( pT )
         {
-            qDebug()<<"saving trigger old name="<<pT->getName()<<" new name="<<name;
             pT->setName( name );
             pT->setCommand( command );
-            //pT->mColorTrigger = mpTriggersMainArea->colorTrigger->isChecked();//muss hier gesetzt werden, damit es keinen error gibt
+            pT->mColorTrigger = mpTriggersMainArea->colorTrigger->isChecked();//muss hier gesetzt werden, damit es keinen error gibt
             bool check = pT->setRegexCodeList( regexList, regexPropertyList );
-            qDebug()<<"after setting RegexList check ="<<check;
 
-            pT->setTriggerType( mpTriggersMainArea->comboBox_regexstyle->currentIndex() );
             pT->setScript( script );
             pT->setIsMultiline( isMultiline );
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
@@ -1963,7 +1946,6 @@ void dlgTriggerEditor::saveTrigger()
     {
         showError("Error: No item selected! Which item do you want to save?");
     }
-    mpTriggerMainAreaEditRegexItem = 0;
 }
 
 void dlgTriggerEditor::slot_saveTimerAfterEdit()
@@ -2751,6 +2733,34 @@ void dlgTriggerEditor::slot_deleteProfile()
 {
 }
 
+void dlgTriggerEditor::slot_set_pattern_type_color( int type )
+{
+    QComboBox * pBox = (QComboBox *) sender();
+    if( ! pBox ) return;
+    int row = pBox->itemData( 0 ).toInt();
+    QLineEdit * pItem = (QLineEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    if( ! pItem ) return;
+    QPalette palette;
+    switch( type )
+    {
+    case 0:
+        palette.setColor( QPalette::Text, QColor(0,0,0) );
+        break;
+    case 1:
+        palette.setColor( QPalette::Text, QColor(0,0,255) );
+        break;
+    case 2:
+        palette.setColor( QPalette::Text, QColor(195,0,0) );
+        break;
+    case 3:
+        palette.setColor( QPalette::Text, QColor(0,195,0) );
+        break;
+    case 4:
+        palette.setColor( QPalette::Text, QColor(0,155,155) );
+    }
+    pItem->setPalette( palette );
+}
+
 void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column )
 {
     if( ! pItem ) return;
@@ -2782,41 +2792,91 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
             qDebug()<<"CRITICAL ERROR: dlgTriggerEditor::slot_trigger_clicked(): patternList.size() != propertyList.size()";
             return;
         }
-                
+
         for( int i=0; i<patternList.size(); i++ )
         {
-            QListWidgetItem * pItem = new QListWidgetItem( mpTriggersMainArea->listWidget_regex_list );
+            QLineEdit * pItem = new QLineEdit( mpTriggersMainArea->listWidget_regex_list );
+            QComboBox * pBox = new QComboBox( mpTriggersMainArea->listWidget_regex_list );
+            pItem->setFixedHeight( 20 );
+            pBox->setFixedHeight( 20 );
+            pBox->setFixedWidth(150);
+
+            QStringList _patternList;
+            _patternList << "substring"
+                         << "perl regex"
+                         << "begin of line substring"
+                         << "exact match"
+                         << "Lua function";
+            pBox->addItems( _patternList );
+            pBox->setItemData(0, QVariant(i) );
+            QPalette palette;
             switch( propertyList[i] )
             {
             case REGEX_SUBSTRING:
-                pItem->setForeground(QColor(0,0,0));
-                pItem->setBackground(QColor(255,255,255));
+                palette.setColor( QPalette::Text, QColor(0,0,0) );
+                pBox->setCurrentIndex( 0 );
                 break;
             case REGEX_PERL:
-                pItem->setForeground(QColor(0,0,255));
-                pItem->setBackground(QColor(255,255,255));
+                palette.setColor( QPalette::Text, QColor(0,0,255) );
+                pBox->setCurrentIndex( 1 );
                 break;
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                pItem->setForeground(QColor(195,0,0));
-                pItem->setBackground(QColor(55,55,55));
+                palette.setColor( QPalette::Text, QColor(195,0,0) );
+                pBox->setCurrentIndex( 2 );
                 break;
             case REGEX_EXACT_MATCH:
-                pItem->setForeground(QColor(0,155,0));
-                pItem->setBackground(QColor(255,255,255));
+                palette.setColor( QPalette::Text, QColor(0,195,0) );
+                pBox->setCurrentIndex( 3 );
                 break;
             case REGEX_LUA_CODE:
-                pItem->setForeground(QColor(155,155,0));
-                pItem->setBackground(QColor(0,0,0));
+                palette.setColor( QPalette::Text, QColor(0,155,155) );
+                pBox->setCurrentIndex( 4 );
             }
-
             pItem->setText( patternList[i] );
-            mpTriggersMainArea->listWidget_regex_list->addItem( pItem );
+            pItem->setPalette( palette );
+            pItem->setFrame( false );
+            pItem->setFont(QFont("Bitstream Vera Sans Mono", 9, QFont::Courier ));
+            mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 0, pItem );
+            mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 1, pBox );
+            mpTriggersMainArea->listWidget_regex_list->setColumnCount( 2 );
+            connect( pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
+
         }
-        
+
+        for( int i=patternList.size(); i<100; i++)
+        {
+            QLineEdit * pItem = new QLineEdit( mpTriggersMainArea->listWidget_regex_list );
+            pItem->setFixedHeight( 20 );
+            pItem->setFrame( false );
+            pItem->setFont(QFont("Bitstream Vera Sans Mono", 9, QFont::Courier ));
+            QComboBox * pBox = new QComboBox( mpTriggersMainArea->listWidget_regex_list );
+            pBox->setFixedHeight( 20 );
+            pBox->setFixedWidth(150);
+            pBox->setFrame( false );
+
+            QStringList _patternList;
+            _patternList << "substring"
+                         << "perl regex"
+                         << "begin of line substring"
+                         << "exact match"
+                         << "Lua function";
+            pBox->addItems( _patternList );
+            pBox->setItemData(0, QVariant(i) );
+
+            mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 0, pItem );
+            mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 1, pBox );
+            connect( pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
+        }
+        QStringList headers;
+        headers << "pattern" << "pattern type";
+        mpTriggersMainArea->listWidget_regex_list->setHorizontalHeaderLabels( headers );
+        mpTriggersMainArea->listWidget_regex_list->setColumnWidth( 0, mpTriggersMainArea->listWidget_regex_list->width()-200 );
+        mpTriggersMainArea->listWidget_regex_list->setColumnWidth( 1, 150 );
+        mpTriggersMainArea->listWidget_regex_list->resizeRowsToContents();
+
         QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
         mpTriggersMainArea->trigger_command->setText( command );
-        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex( REGEX_SUBSTRING );
         mpTriggersMainArea->checkBox_multlinetrigger->setChecked( pT->isMultiline() );
         mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
         mpTriggersMainArea->filterTrigger->setChecked( pT->mFilterTrigger );
@@ -2866,7 +2926,6 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
 
         if( ! pT->state() ) showError( pT->getError() );
     }
-    mpTriggerMainAreaEditRegexItem = 0;
 }
 
 void dlgTriggerEditor::slot_alias_clicked( QTreeWidgetItem *pItem, int column )
@@ -3960,7 +4019,6 @@ void dlgTriggerEditor::slot_show_timers()
 {
 
     saveOpenChanges();
-    mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmTimerView;
     
     mpTriggersMainArea->hide();
@@ -3996,7 +4054,6 @@ void dlgTriggerEditor::slot_show_triggers()
 {
     saveOpenChanges();
 
-    mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmTriggerView;
     
     mpTriggersMainArea->hide();
@@ -4023,7 +4080,6 @@ void dlgTriggerEditor::slot_show_triggers()
     mpSourceEditorArea->show();
     //mpOptionsAreaTriggers->show();
     treeWidget->show();
-    mpTriggerMainAreaEditRegexItem = 0;
 
     slot_trigger_clicked( treeWidget->currentItem(), 0 );
 }
@@ -4032,7 +4088,6 @@ void dlgTriggerEditor::slot_show_scripts()
 {
     saveOpenChanges();
 
-    mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmScriptView;
     
     mpTriggersMainArea->hide();
@@ -4066,7 +4121,6 @@ void dlgTriggerEditor::slot_show_keys()
 {
     saveOpenChanges();
 
-    mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmKeysView;
     
     mpTriggersMainArea->hide();
@@ -4101,7 +4155,6 @@ void dlgTriggerEditor::slot_show_aliases()
 {
     saveOpenChanges();
 
-    mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmAliasView;
     
     mpTriggersMainArea->hide();
@@ -4165,7 +4218,6 @@ void dlgTriggerEditor::slot_show_actions()
 {
     saveOpenChanges();
 
-    mIsTriggerMainAreaEditRegex = false;
     mCurrentView = cmActionView;
     
     mpTriggersMainArea->hide();
@@ -4199,7 +4251,6 @@ void dlgTriggerEditor::slot_show_actions()
     mpSourceEditorArea->show();
     //mpOptionsAreaActions->show();
     treeWidget_actions->show();
-    mIsTriggerMainAreaEditRegex = false;
     slot_action_clicked( treeWidget_actions->currentItem(), 0 );
 }
 
@@ -4367,123 +4418,6 @@ void dlgTriggerEditor::slot_itemClicked( QTreeWidgetItem * pItem, int column )
 
 }
 
-void dlgTriggerEditor::slot_trigger_main_area_edit_regex(QListWidgetItem*)
-{
-    QListWidgetItem * pItem = mpTriggersMainArea->listWidget_regex_list->currentItem();
-    if( ! pItem ) return;
-    mIsTriggerMainAreaEditRegex = true;
-    mpTriggerMainAreaEditRegexItem = pItem;
-    QString regex = pItem->text();
-    if( regex.size() < 1 )
-    {
-        mIsTriggerMainAreaEditRegex = false;
-        return;
-    }
-    mpTriggersMainArea->lineEdit->setText( regex );
-    QColor fgColor = pItem->foreground().color();
-    QColor bgColor = pItem->background().color();
-    if( (fgColor == QColor(0,0,0)) && (bgColor == QColor(255,255,255)) )
-    {
-        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_SUBSTRING);
-    }
-    if( (fgColor == QColor(0,0,255)) && (bgColor == QColor(255,255,255)) )
-    {
-        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_PERL);;
-    }
-    if( (fgColor == QColor(195,0,0)) && (bgColor == QColor(55,55,55)) )
-    {
-        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_BEGIN_OF_LINE_SUBSTRING);
-    }
-    if( (fgColor == QColor(0,155,0)) && (bgColor == QColor(255,255,255)) )
-    {
-        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_EXACT_MATCH);
-    }
-    if( (fgColor == QColor(155,155,0)) && (bgColor == QColor(0,0,0)) )
-    {
-        mpTriggersMainArea->comboBox_regexstyle->setCurrentIndex(REGEX_LUA_CODE);
-    }
-}
-                       
-void dlgTriggerEditor::slot_trigger_main_area_delete_regex()
-{
-    mpTriggersMainArea->listWidget_regex_list->takeItem( mpTriggersMainArea->listWidget_regex_list->currentRow() );     
-}
-
-void dlgTriggerEditor::slot_trigger_main_area_add_regex()
-{
-    if( mIsTriggerMainAreaEditRegex )
-    {
-        if( ! mpTriggerMainAreaEditRegexItem )
-        {
-            mIsTriggerMainAreaEditRegex = false;
-            goto LAZY;
-            return;
-        }
-        QListWidgetItem * pItem = mpTriggersMainArea->listWidget_regex_list->currentItem();
-        if( ! pItem ) return;
-        pItem->setText( mpTriggersMainArea->lineEdit->text() );
-        int idx = mpTriggersMainArea->comboBox_regexstyle->currentIndex();
-        switch( idx )
-        {
-            case REGEX_SUBSTRING:
-                pItem->setForeground(QColor(0,0,0));
-                pItem->setBackground(QColor(255,255,255));
-                break;
-            case REGEX_PERL:
-                pItem->setForeground(QColor(0,0,255));
-                pItem->setBackground(QColor(255,255,255));
-                break;
-            case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                pItem->setForeground(QColor(195,0,0));
-                pItem->setBackground(QColor(55,55,55));
-                break;
-            case REGEX_EXACT_MATCH:
-                pItem->setForeground(QColor(0,155,0));
-                pItem->setBackground(QColor(255,255,255));
-                break;
-            case REGEX_LUA_CODE:
-                pItem->setForeground(QColor(155,155,0));
-                pItem->setBackground(QColor(0,0,0));
-        }
-
-        mIsTriggerMainAreaEditRegex = false;
-        mpTriggerMainAreaEditRegexItem = 0;
-    }
-    else
-    {
-    LAZY:
-        if( mpTriggersMainArea->lineEdit->text().size() < 1 ) return;
-        QListWidgetItem * pItem = new QListWidgetItem;
-        pItem->setText( mpTriggersMainArea->lineEdit->text() );
-        int idx = mpTriggersMainArea->comboBox_regexstyle->currentIndex();
-        switch( idx )
-        {
-        case REGEX_SUBSTRING:
-            pItem->setForeground(QColor(0,0,0));
-            pItem->setBackground(QColor(255,255,255));
-            break;
-        case REGEX_PERL:
-            pItem->setForeground(QColor(0,0,255));
-            pItem->setBackground(QColor(255,255,255));
-            break;
-        case REGEX_BEGIN_OF_LINE_SUBSTRING:
-            pItem->setForeground(QColor(195,0,0));
-            pItem->setBackground(QColor(55,55,55));
-            break;
-        case REGEX_EXACT_MATCH:
-            pItem->setForeground(QColor(0,155,0));
-            pItem->setBackground(QColor(255,255,255));
-            break;
-        case REGEX_LUA_CODE:
-            pItem->setForeground(QColor(155,155,0));
-            pItem->setBackground(QColor(0,0,0));
-        }    
-        mpTriggersMainArea->listWidget_regex_list->addItem( pItem );
-    
-    }
-    mpTriggersMainArea->lineEdit->clear();
-}    
-    
 void dlgTriggerEditor::slot_script_main_area_edit_handler(QListWidgetItem*)
 {
     QListWidgetItem * pItem = mpScriptsMainArea->listWidget_registered_event_handlers->currentItem();
