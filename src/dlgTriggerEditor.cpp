@@ -1225,6 +1225,41 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
     mpTriggersMainArea->colorTrigger->setChecked( false );
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
+
+    for( int i=0; i<100; i++)
+    {
+        QLineEdit * pItem = new QLineEdit( mpTriggersMainArea->listWidget_regex_list );
+        pItem->setFixedHeight( 20 );
+        pItem->setFrame( false );
+        pItem->setFont(QFont("Bitstream Vera Sans Mono", 9, QFont::Courier ));
+        QComboBox * pBox = new QComboBox( mpTriggersMainArea->listWidget_regex_list );
+        pBox->setFixedHeight( 20 );
+        pBox->setFixedWidth(150);
+        pBox->setFrame( false );
+
+        QStringList _patternList;
+        _patternList << "substring"
+                     << "perl regex"
+                     << "begin of line substring"
+                     << "exact match"
+                     << "Lua function";
+        pBox->addItems( _patternList );
+        pBox->setItemData(0, QVariant(i) );
+
+        mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 0, pItem );
+        mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 1, pBox );
+        connect( pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
+    }
+
+    QStringList headers;
+    headers << "pattern" << "pattern type";
+    mpTriggersMainArea->listWidget_regex_list->setHorizontalHeaderLabels( headers );
+    mpTriggersMainArea->listWidget_regex_list->setColumnWidth( 0, mpTriggersMainArea->listWidget_regex_list->width()-200 );
+    mpTriggersMainArea->listWidget_regex_list->setColumnWidth( 1, 150 );
+    mpTriggersMainArea->listWidget_regex_list->resizeRowsToContents();
+
+
+
     treeWidget->setCurrentItem( pNewItem );
     mCurrentTrigger = pNewItem;
     showInfo( msgInfoAddTrigger );
