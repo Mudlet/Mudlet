@@ -1839,10 +1839,7 @@ void dlgTriggerEditor::slot_saveTriggerAfterEdit()
 void dlgTriggerEditor::saveTrigger()
 {
     QTreeWidgetItem * pItem = mCurrentTrigger;
-    if( ! pItem )
-    {
-        return;
-    }
+    if( ! pItem ) return;
 
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     QString command = mpTriggersMainArea->trigger_command->text();
@@ -1854,7 +1851,7 @@ void dlgTriggerEditor::saveTrigger()
         QString pattern = ((QLineEdit *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 0 ))->text();
         if( pattern.size() < 1 ) continue;
         regexList << pattern;
-        if( ! mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ) ) break;
+        if( ! mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ) ) continue;
         int _type = ((QComboBox *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ))->currentIndex();
         if( _type == 0 ) regexPropertyList << REGEX_SUBSTRING;
         else if( _type == 1 ) regexPropertyList << REGEX_PERL;
@@ -2764,6 +2761,7 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
 void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column )
 {
     if( ! pItem ) return;
+
     mCurrentTrigger = pItem;
 
     mpSystemMessageArea->hide();
@@ -2776,22 +2774,15 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
     mpTriggersMainArea->colorTrigger->setChecked( false );
 
-    if( (pItem == 0) || (column != 0) )
-    {
-        return;
-    }
-    int ID = pItem->data(0,Qt::UserRole).toInt();
-    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger(ID);
+    if( (pItem == 0) || (column != 0) ) return;
+    int ID = pItem->data( 0, Qt::UserRole ).toInt();
+    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( ID );
     if( pT )
     {
         QStringList patternList = pT->getRegexCodeList();
         QList<int> propertyList = pT->getRegexCodePropertyList();
 
-        if( patternList.size() != propertyList.size() )
-        {
-            qDebug()<<"CRITICAL ERROR: dlgTriggerEditor::slot_trigger_clicked(): patternList.size() != propertyList.size()";
-            return;
-        }
+        if( patternList.size() != propertyList.size() ) return;
 
         for( int i=0; i<patternList.size(); i++ )
         {
@@ -2832,13 +2823,15 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
                 palette.setColor( QPalette::Text, QColor(0,155,155) );
                 pBox->setCurrentIndex( 4 );
             }
-            pItem->setText( patternList[i] );
+            
             pItem->setPalette( palette );
             pItem->setFrame( false );
+            mpTriggersMainArea->listWidget_regex_list->setColumnCount( 2 );
             pItem->setFont(QFont("Bitstream Vera Sans Mono", 9, QFont::Courier ));
             mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 0, pItem );
             mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 1, pBox );
-            mpTriggersMainArea->listWidget_regex_list->setColumnCount( 2 );
+            
+            pItem->setText( patternList[i] );
             connect( pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
 
         }
