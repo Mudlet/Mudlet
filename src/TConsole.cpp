@@ -725,8 +725,15 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = false;
     double processT = mProcessingTime.elapsed();
-    networkLatency->setText( QString("net:%1 sys:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
-                                                     .arg(processT/1000,0,'f',3));
+    if( mpHost->mTelnet.mGA_Driver )
+    {
+        networkLatency->setText( QString("net:%1 sys:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
+                                                         .arg(processT/1000,0,'f',3));
+    }
+    else
+    {
+        networkLatency->setText( QString("net:<no GA> sys:%1").arg(processT/1000,0,'f',3));
+    }
 }
 
 void TConsole::runTriggers( int line )

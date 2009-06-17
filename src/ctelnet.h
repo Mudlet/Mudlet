@@ -89,6 +89,7 @@ public:
   bool                mResponseProcessed;
   QTime               networkLatencyTime;
   double              networkLatency;
+  bool                mGA_Driver;
 
 protected slots:
   
@@ -146,7 +147,7 @@ private:
   bool                heAnnouncedState[256];
   bool                triedToEnable[256];
   bool                recvdGA;
-  bool                mGA_Driver;
+
   int                 curX, curY;
   QString             termType;
   QString             encoding;
