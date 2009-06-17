@@ -452,6 +452,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->script_scintilla->setAutoCompletionSource( QsciScintilla::AcsAll );
     mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 1, true );
     mpSourceEditorArea->script_scintilla->setMarginWidth( 1, 40 );
+    mpSourceEditorArea->script_scintilla->setMarginWidth( 2, 20 );
+    mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 2, false );
 
     connect( comboBox_search_triggers, SIGNAL( currentIndexChanged( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
@@ -1875,6 +1877,7 @@ void dlgTriggerEditor::saveTrigger()
 {
     QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem ) return;
+    if( ! pItem->parent() ) return;
 
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     QString command = mpTriggersMainArea->trigger_command->text();
