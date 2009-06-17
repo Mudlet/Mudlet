@@ -846,7 +846,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             break;
                         case 31:
                             fgColorR = mRedR;
-                            fgColorG = mRedR;
+                            fgColorG = mRedG;
                             fgColorB = mRedB;
                             fgColorLightR = mLightRedR;
                             fgColorLightG = mLightRedG;
@@ -858,7 +858,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             fgColorG = mGreenG;
                             fgColorB = mGreenB;
                             fgColorLightR = mLightGreenR;
-                            fgColorLightG = mLightGreenR;
+                            fgColorLightG = mLightGreenG;
                             fgColorLightB = mLightGreenB;
                             mIsDefaultColor = false;
                             break;
@@ -882,11 +882,11 @@ void TBuffer::translateToPlainText( std::string & s )
                             break;
                         case 35:
                             fgColorR = mMagentaR;
-                            fgColorG=mMagentaG;
-                            fgColorB=mMagentaB;
-                            fgColorLightR=mLightMagentaR;
-                            fgColorLightG=mLightMagentaG;
-                            fgColorLightB=mLightMagentaB;
+                            fgColorG = mMagentaG;
+                            fgColorB = mMagentaB;
+                            fgColorLightR = mLightMagentaR;
+                            fgColorLightG = mLightMagentaG;
+                            fgColorLightB = mLightMagentaB;
                             mIsDefaultColor = false;
                             break;
                         case 36:
