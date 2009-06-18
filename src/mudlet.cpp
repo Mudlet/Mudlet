@@ -597,6 +597,7 @@ bool mudlet::showWindow( Host * pHost, QString & name )
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->console->show();
+        dockWindowConsoleMap[name]->console->forceUpdate();
         return true;
     }
     else if( mLabelMap.contains( name ) )
