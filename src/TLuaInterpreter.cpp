@@ -1399,10 +1399,27 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
         luaName = lua_tostring( L, 2 );
     }
 
+    TEvent * pE = new TEvent;
+
+    int n = lua_gettop( L );
+    for( int i=3; i<=n; i++)
+    {
+        if( lua_isnumber( L, i ) )
+        {
+            pE->mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
+            pE->mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) )
+        {
+            pE->mArgumentList.append( QString(lua_tostring( L, i )) );
+            pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+    }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
     QString name(luaName.c_str());
-    mudlet::self()->setLabelClickCallback( pHost, text, name );
+    mudlet::self()->setLabelClickCallback( pHost, text, name, pE );
 
     return 0;
 }
@@ -1420,7 +1437,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-     double x1;
+    double x1;
     if( ! lua_isnumber( L, 2 ) )
     {
         lua_pushstring( L, "wrong argument type" );
@@ -2472,7 +2489,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
     {
         if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
         {
-            lua_pushnumber( L, i ); 
+            lua_pushnumber( L, pE->mArgumentList[i].toInt() );
         }
         else
         {

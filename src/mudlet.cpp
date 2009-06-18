@@ -667,11 +667,11 @@ bool mudlet::closeWindow( Host * pHost, QString & name )
         return false;
 }
 
-bool mudlet::setLabelClickCallback( Host * pHost, QString & name, QString & func )
+bool mudlet::setLabelClickCallback( Host * pHost, QString & name, QString & func, TEvent * pA )
 {
     if( mLabelMap.contains( name ) )
     {
-        mLabelMap[name]->setScript( pHost, func );
+        mLabelMap[name]->setScript( pHost, func, pA );
         return true;
     }
     else

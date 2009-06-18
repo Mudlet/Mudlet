@@ -76,7 +76,7 @@ public:
    bool                          setBackgroundColor( QString & name, int r, int g, int b, int alpha );
    bool                          setBackgroundImage( QString & name, QString & path );
    bool                          setTextFormat( QString & name, int, int, int, int, int, int, bool, bool, bool );
-   bool                          setLabelClickCallback( Host *, QString &, QString & );
+   bool                          setLabelClickCallback( Host *, QString &, QString &, TEvent * );
    bool                          moveWindow( QString & name, int, int );
    bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
    QString                       readProfileData( QString profile, QString item ); 

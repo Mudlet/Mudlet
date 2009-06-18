@@ -38,7 +38,7 @@ void TLabel::mousePressEvent( QMouseEvent * event )
     {
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->call( mScript, nothing );
+            mpHost->getLuaInterpreter()->callEventHandler( mScript, mpParameters );
         }
         event->accept();
         return;

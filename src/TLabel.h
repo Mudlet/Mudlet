@@ -25,6 +25,9 @@
 #include "mudlet.h"
 #include "Host.h"
 #include <QLabel>
+#include "TEvent.h"
+
+class TEvent;
 
 class TLabel : public QLabel
 {
@@ -33,12 +36,12 @@ Q_OBJECT
 public:
 
                   TLabel( QWidget * pW=0 );
-void              setScript( Host * pHost, QString & func ){ mpHost = pHost; mScript = func; }
+void              setScript( Host * pHost, QString & func, TEvent * args ){ mpHost = pHost; mScript = func; mpParameters = args; }
 void              mousePressEvent( QMouseEvent *  );
 
 Host *            mpHost;
 QString           mScript;
-
+TEvent *          mpParameters;
 public slots:
 
 signals:
