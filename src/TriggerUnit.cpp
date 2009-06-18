@@ -181,6 +181,9 @@ void TriggerUnit::processDataStream( QString & data, int line )
         for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
         {
             TTrigger * pChild = *it;
+            //QFuture<bool> future = QtConcurrent::run( pChild, &TTrigger::match, subject, data, line, 0 );
+            //future.waitForFinished();
+
             pChild->match( subject, data, line );
         }
         free( subject );
