@@ -571,9 +571,9 @@ bool mudlet::setTextFormat( QString & name, int r1, int g1, int b1, int r2, int 
         pC->mFormatCurrent.fgR = r2;
         pC->mFormatCurrent.fgG = r2;
         pC->mFormatCurrent.fgB = r2;
-        pC->mFormatCurrent.bold = true;
-        pC->mFormatCurrent.underline = true;
-        pC->mFormatCurrent.italics = true;
+        pC->mFormatCurrent.bold = bold;
+        pC->mFormatCurrent.underline = underline;
+        pC->mFormatCurrent.italics = italics;
         return true;
     }
     else

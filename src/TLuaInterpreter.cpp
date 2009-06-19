@@ -1538,7 +1538,22 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->setTextFormat( text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<bool>(y2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
+    if( text == "main" )
+    {
+        TConsole * pC = pHost->mpConsole;
+        pC->mFormatCurrent.bgR = x1;
+        pC->mFormatCurrent.bgG = y1;
+        pC->mFormatCurrent.bgB = x2;
+        pC->mFormatCurrent.fgR = y2;
+        pC->mFormatCurrent.fgG = g2;
+        pC->mFormatCurrent.fgB = b2;
+        pC->mFormatCurrent.bold = bold;
+        pC->mFormatCurrent.underline = underline;
+        pC->mFormatCurrent.italics = italics;
+        return true;
+    }
+    else
+        mudlet::self()->setTextFormat( text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<bool>(y2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
 
     return 0;
 }
