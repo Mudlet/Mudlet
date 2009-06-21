@@ -812,15 +812,18 @@ int TLuaInterpreter::replace( lua_State * L )
 int TLuaInterpreter::deleteLine( lua_State * L )
 {
     string name="";
-    if( ! lua_isstring( L, 1 ) )
+    if( lua_gettop( L ) == 1 )
     {
-        lua_pushstring( L, "wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        name = lua_tostring( L, 1 );
+        if( ! lua_isstring( L, 1 ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            name = lua_tostring( L, 1 );
+        }
     }
 
     QString _name( name.c_str() );
