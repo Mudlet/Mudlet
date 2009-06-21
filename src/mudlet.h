@@ -78,6 +78,16 @@ public:
    bool                          setTextFormat( QString & name, int, int, int, int, int, int, bool, bool, bool );
    bool                          setLabelClickCallback( Host *, QString &, QString &, TEvent * );
    bool                          moveWindow( QString & name, int, int );
+   void                          deleteLine( QString & name );
+   void                          insertText( QString & name, QString );
+   void                          replace( QString & name, QString );
+   int                           selectString( QString & name, QString what, int );
+   int                           selectSection( QString & name, int, int );
+   void                          setBold( QString & name, bool );
+   void                          setItalics( QString & name, bool );
+   void                          setUnderline( QString & name, bool );
+   void                          setFgColor( QString & name, int, int, int );
+   void                          setBgColor( QString & name, int, int, int );
    bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
    QString                       readProfileData( QString profile, QString item ); 
    bool                          setWindowWrap( Host * pHost, QString & name, int & wrap );
@@ -113,6 +123,9 @@ public slots:
    void                          slot_timer_fires();   
    void                          slot_send_login();
    void                          slot_send_pass();
+   void                          slot_replay();
+   void                          slot_notes();
+   void                          slot_reconnect();
    void                          startAutoLogin();
     
 protected:

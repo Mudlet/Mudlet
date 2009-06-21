@@ -157,11 +157,20 @@ mudlet::mudlet()
     actionOptions->setStatusTip(tr("Settings, Options and Preferences"));
     mpMainToolBar->addAction( actionOptions );
     
-    QAction * actionNotes = new QAction(QIcon(":/icons/view-pim-notes.png"), tr("Notepad"), this);
+    QAction * actionNotes = new QAction(QIcon(":/icons/applications-accessories.png"), tr("Notepad"), this);
     actionNotes->setStatusTip(tr("take notes"));
-   // mpMainToolBar->addAction( actionNotes );
+    mpMainToolBar->addAction( actionNotes );
     
-        
+    QAction * actionReplay = new QAction(QIcon(":/icons/media-optical.png"), tr("Replay"), this);
+    actionNotes->setStatusTip(tr("load replay"));
+    mpMainToolBar->addAction( actionReplay );
+
+    QAction * actionReconnect = new QAction(QIcon(":/icons/system-restart.png"), tr("Reconnect"), this);
+    actionNotes->setStatusTip(tr("reconnect"));
+    mpMainToolBar->addAction( actionReconnect );
+
+
+
     QAction * actionMultiView = new QAction(QIcon(":/icons/view-split-left-right.png"), tr("MultiView"), this);
     actionMultiView->setStatusTip(tr("MultiView"));
     mpMainToolBar->addAction( actionMultiView );
@@ -230,7 +239,9 @@ mudlet::mudlet()
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
     connect(actionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(actionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
-
+    connect(actionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
+    connect(actionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
+    connect(actionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
 
     QAction * mactionConnect = new QAction(tr("Connect"), this);
     QAction * mactionTriggers = new QAction(tr("Triggers"), this);
@@ -436,7 +447,9 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[6]->setEnabled( false );
     mpMainToolBar->actions()[8]->setEnabled( false );
     mpMainToolBar->actions()[9]->setEnabled( false );
-//    mpMainToolBar->actions()[11]->setEnabled( false );
+    mpMainToolBar->actions()[10]->setEnabled( false );
+    mpMainToolBar->actions()[11]->setEnabled( false );
+    mpMainToolBar->actions()[12]->setEnabled( false );
 }
 
 void mudlet::enableToolbarButtons()
@@ -449,7 +462,9 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[6]->setEnabled( true );
     mpMainToolBar->actions()[8]->setEnabled( true );
     mpMainToolBar->actions()[9]->setEnabled( true );
-//    mpMainToolBar->actions()[11]->setEnabled( true );
+    mpMainToolBar->actions()[10]->setEnabled( true );
+    mpMainToolBar->actions()[11]->setEnabled( true );
+    mpMainToolBar->actions()[12]->setEnabled( true );
 }
 
 bool mudlet::openWindow( Host * pHost, QString & name )
@@ -712,6 +727,102 @@ bool mudlet::moveCursor( QString & name, int x, int y )
         return false;
 }
 
+void mudlet::deleteLine( QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->skipLine();
+    }
+}
+
+void mudlet::insertText( QString & name, QString text )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->insertText( text );
+    }
+}
+
+void mudlet::replace( QString & name, QString text )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->replace( text );
+    }
+}
+
+
+void mudlet::setBold( QString & name, bool b )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->mFormatCurrent.bold = b;
+    }
+}
+
+void mudlet::setItalics( QString & name, bool b )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->mFormatCurrent.italics = b;
+    }
+}
+
+void mudlet::setUnderline( QString & name, bool b )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->mFormatCurrent.underline = b;
+    }
+}
+
+void mudlet::setFgColor( QString & name, int r, int g, int b )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->mFormatCurrent.fgR = r;
+        pC->mFormatCurrent.fgG = g;
+        pC->mFormatCurrent.fgB = b;
+    }
+}
+
+void mudlet::setBgColor( QString & name, int r, int g, int b )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->mFormatCurrent.bgR = r;
+        pC->mFormatCurrent.bgG = g;
+        pC->mFormatCurrent.bgB = b;
+    }
+}
+
+int mudlet::selectString( QString & name, QString text, int num )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        return pC->select( text, num );
+    }
+    else
+        return -1;
+}
+
+int mudlet::selectSection( QString & name, int f, int t )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        return pC->selectSection( f, t );
+    }
+    else
+        return -1;
+}
+
 bool mudlet::setWindowWrap( Host * pHost, QString & name, int & wrap )
 {
     QString wn = name;
@@ -895,7 +1006,7 @@ void mudlet::connectToServer()
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
     pDlg->fillout_form();
     pDlg->exec();
-	enableToolbarButtons();
+    enableToolbarButtons();
 }
 
 void mudlet::show_trigger_dialog()
@@ -981,9 +1092,52 @@ void mudlet::show_help_dialog()
 
 void mudlet::slot_show_about_dialog()
 {
-    dlgAboutDialog * pDlg = new dlgAboutDialog(this);
+    dlgAboutDialog * pDlg = new dlgAboutDialog( this );
     pDlg->raise();
     pDlg->show();
+}
+
+void mudlet::slot_notes()
+{
+    /*Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+    dlgNotes * pNotes = pHost->mpNotes;
+    if( ! pNotes ) return;
+    pNotes->raise();
+    pNotes->show();*/
+}
+
+void mudlet::slot_reconnect()
+{
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+    pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
+}
+
+void mudlet::slot_replay()
+{
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+    QString home = QDir::homePath() + ".config/mudlet/profiles/";
+    home.append( pHost->getName() );
+    home.append( "/log/" );
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
+                                                    home,
+                                                    tr("*.dat"));
+    if( fileName.isEmpty() ) return;
+
+    QFile file(fileName);
+    if( ! file.open(QFile::ReadOnly | QFile::Text) )
+    {
+        QMessageBox::warning(this, tr("Import Mudlet Package:"),
+                             tr("Cannot read file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(file.errorString()));
+        return;
+    }
+    //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
+    //QString fileName = directoryLogFile + "/"+QString(n.c_str());
+    pHost->mTelnet.loadReplay( fileName );
 }
 
 void mudlet::printSystemMessage( Host * pH, QString & s )

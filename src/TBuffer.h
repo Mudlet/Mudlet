@@ -92,6 +92,7 @@ public:
     QStringList getEndLines( int );
     void clear();
     void resetFontSpecs();
+    QPoint & getEndPos();
     void translateToPlainText( std::string & s );
     void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
     void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );

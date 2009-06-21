@@ -255,6 +255,18 @@ void TBuffer::updateColors()
 
 }
 
+QPoint & TBuffer::getEndPos()
+{
+    int x = 0;
+    int y = 0;
+    if( buffer.size() > 0 )
+        y = buffer.size()-1;
+    if( buffer[y].size() > 0 )
+        x = buffer[y].size()-1;
+    QPoint P_end( x, y );
+    return P_end;
+}
+
 int TBuffer::getLastLineNumber()
 {
     if( static_cast<int>(buffer.size()) > 0 )
@@ -1119,6 +1131,7 @@ void TBuffer::appendLine( QString & text,
                           bool italics,
                           bool underline )
 {
+    if( sub_end < 0 ) return;
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
         while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
@@ -1354,11 +1367,10 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
 
 bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
 {
-    qDebug()<<"TBuffer::insertInLine() pos:"<<P.x()<<" text<"<<text<<">";
     if( text.size() < 1 ) return false;
     int x = P.x();
     int y = P.y();
-    if( ( y > 0 ) && ( y <= static_cast<int>(buffer.size())-1 ) )
+    if( ( y >= 0 ) && ( y <= static_cast<int>(buffer.size()) ) )
     {
         if( x < 0 )
         {
@@ -1548,7 +1560,6 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
 
 inline int TBuffer::wrap( int startLine )
 {
-    if( buffer[startLine].size() <= mWrapAt ) return 0;
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
     std::queue<std::deque<TChar> > queue;
     QStringList tempList;
@@ -1607,7 +1618,7 @@ inline int TBuffer::wrap( int startLine )
                 {
                     break;
                 }
-                if( lineBuffer[i][i2] == QChar('\n') )
+                if( lineBuffer[i].at(i2) == '\n' )
                 {
                     i2++;
                     break;
@@ -1655,8 +1666,7 @@ inline int TBuffer::wrap( int startLine )
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & format )
 {
-    qDebug()<<"TBuffer::wrap() called #### ERROR ####";
-return 0;
+    return 0;
 
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) < startLine ) return 0;

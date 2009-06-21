@@ -49,7 +49,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mPainterInit( false )
 , mpScrollBar( 0 )
 , mInit_OK( false )
-, mShowTimeStamps( false )
+, mShowTimeStamps( isDebugConsole )
 , mForceUpdate( false )
 , mIsMiniConsole( false )
 {    

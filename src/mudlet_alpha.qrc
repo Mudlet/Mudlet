@@ -7,17 +7,11 @@
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-on.png</file>
         <file>icons/edit-bomb.png</file>
-        <file>icons/view-restore.png</file>
         <file>icons/view-split-left-right.png</file>
-        <file>icons/utilities-file-archiver.png</file>
         <file>icons/badge.png</file>
         <file>Mudlet_splashscreen_main</file>
         <file>icons/accessories-text-editor.png</file>
         <file>icons/application-exit.png</file>
-        <file>icons/application-x-bzip-compressed-tar.png</file>
-        <file>icons/application-x-compressed-tar.png</file>
-        <file>icons/application-x-cpio.png</file>
-        <file>icons/application-x-lha.png</file>
         <file>icons/bookmarks.png</file>
         <file>icons/chronometer.png</file>
         <file>icons/configure.png</file>
@@ -34,8 +28,6 @@
         <file>icons/document-save-as.png</file>
         <file>icons/edit-delete-shred.png</file>
         <file>icons/edit-find-user.png</file>
-        <file>icons/emblem-important.png</file>
-        <file>icons/feed-subscribe.png</file>
         <file>icons/folder-blue-locked.png</file>
         <file>icons/folder-blue.png</file>
         <file>icons/folder-bookmarks.png</file>
@@ -47,29 +39,21 @@
         <file>icons/folder-green-locked.png</file>
         <file>icons/folder-green.png</file>
         <file>icons/folder-grey.png</file>
-        <file>icons/folder-important.png</file>
         <file>icons/folder-lightblue-locked.png</file>
         <file>icons/folder-new.png</file>
-        <file>icons/folder-orange-disabled2.png</file>
-        <file>icons/folder-orange-disabled.png</file>
-        <file>icons/folder-orange-enabled2.png</file>
-        <file>icons/folder-orange-enabled.png</file>
         <file>icons/folder-orange-locked.png</file>
         <file>icons/folder-orange.png</file>
         <file>icons/folder.png</file>
         <file>icons/folder-red-locked.png</file>
         <file>icons/folder-red.png</file>
-        <file>icons/folder-txt.png</file>
         <file>icons/folder-violet-locked.png</file>
         <file>icons/folder-violet.png</file>
         <file>icons/folder-yellow-locked.png</file>
         <file>icons/folder-yellow.png</file>
         <file>icons/games-solve.png</file>
         <file>icons/head.png</file>
-        <file>icons/help-contents.png</file>
         <file>icons/help-hint.png</file>
         <file>icons/list-add_small.png</file>
-        <file>icons/mail-mark-task.png</file>
         <file>icons/mudlet_main_16px.png</file>
         <file>icons/mudlet_main_32px.png</file>
         <file>icons/mudlet_main_48px.png</file>
@@ -81,8 +65,6 @@
         <file>icons/tag_checkbox.png</file>
         <file>icons/tools-report-bug.png</file>
         <file>icons/tools-wizard.png</file>
-        <file>icons/utilities-file-archiver.png</file>
-        <file>icons/view-pim-notes.png</file>
         <file>icons/window-close.png</file>
         <file>LuaGlobal.lua</file>
         <file>mudlet_documentation.html</file>
@@ -103,5 +85,10 @@
         <file>icons/red-bomb.png</file>
         <file>icons/export.png</file>
         <file>icons/import.png</file>
+        <file>icons/media-tape.png</file>
+        <file>icons/system-restart.png</file>
+        <file>icons/applications-accessories.png</file>
+        <file>icons/applications-engineering.png</file>
+        <file>icons/media-optical.png</file>
     </qresource>
 </RCC>

@@ -768,7 +768,8 @@ QFile replayFile;
 void cTelnet::loadReplay( QString & name )
 {
     replayFile.setFileName( name );
-    qDebug()<<"trying to load replay file<"<<name<<">";
+    QString msg = "loading replay " + name;
+    postMessage( msg );
     replayFile.open( QIODevice::ReadOnly );
     replayStream.setDevice( &replayFile );
     loadingReplay = true;
@@ -794,6 +795,8 @@ void cTelnet::_loadReplay()
     {
         loadingReplay = false;
         replayFile.close();
+        QString msg = "The replay has ended.\n";
+        postMessage( msg );
     }
 }
 

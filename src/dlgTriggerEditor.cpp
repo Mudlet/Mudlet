@@ -4776,8 +4776,8 @@ void dlgTriggerEditor::slot_import()
     }
 
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
-        QDir::currentPath(),
-        tr("*.xml"));
+                                                    QDir::currentPath(),
+                                                    tr("*.xml"));
     if( fileName.isEmpty() ) return;
     
     QFile file(fileName);
