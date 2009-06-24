@@ -970,6 +970,36 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                     pL->setMultiCaptureGroups( (*it).second->multiCaptureList, (*it).second->multiCapturePosList );
                     execute();
                     pL->clearCaptureGroups();
+                    if( mFilterTrigger )
+                    {
+                        std::list< std::list<std::string> > multiCaptureList;
+                        multiCaptureList = (*it).second->multiCaptureList;
+                        if( multiCaptureList.size() > 0 )
+                        {
+                            std::list< std::list<std::string> >::iterator mit = multiCaptureList.begin();
+                            for( ; mit!=multiCaptureList.end(); mit++, k++ )
+                            {
+                                int total = (*mit).size();
+                                std::list<std::string>::iterator its = (*mit).begin();
+                                for( int i=1; its!=(*mit).end(); ++its, i++ )
+                                {
+                                    std::string s = *its;
+                                    int p = 0;
+                                    if( total > 1 )
+                                    {
+                                        if( i % total != 1 )
+                                        {
+                                            filter( s, p );
+                                        }
+                                    }
+                                    else
+                                    {
+                                        filter( s, p );
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             
                 if( ! (*it).second->newLine() )
