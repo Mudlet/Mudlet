@@ -238,8 +238,10 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped = "";
-
-    selectAll();
+    if( mpHost->mAutoClearCommandLineAfterSend )
+        clear();
+    else
+        selectAll();
 }
 
 void TCommandLine::slot_sendCommand(const char * pS)
