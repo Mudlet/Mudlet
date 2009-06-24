@@ -849,16 +849,15 @@ bool mudlet::setWindowWrapIndent( Host * pHost, QString & name, int & wrap )
 
 bool mudlet::echoWindow( Host * pHost, QString & name, QString & text )
 {
-    QString wn = name;
-    QString t=text;
+    QString t = text;
     if( dockWindowConsoleMap.contains( name ) )
     { 
-        dockWindowConsoleMap[wn]->echoUserWindow( t );
+        dockWindowConsoleMap[name]->echoUserWindow( t );
         return true;
     }
     else if( mLabelMap.contains( name ) )
     {
-        mLabelMap[wn]->setText( t );
+        mLabelMap[name]->setText( t );
         return true;
     }
     else return false;

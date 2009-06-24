@@ -1648,14 +1648,7 @@ void TConsole::printSystemMessage( QString & msg )
 
 void TConsole::echoUserWindow( QString & msg )
 {
-    if( mUserCursor != buffer.getEndPos() )
-    {
-        insertText( msg );
-    }
-    else
-    {
-        print( msg );
-    }
+    print( msg );
 }
 
 void TConsole::copy()
