@@ -71,7 +71,7 @@ mudlet::mudlet()
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet Beta 10pre8 - built: May-23-2009");
+    setWindowTitle("Mudlet Beta 12 - built: June-26-2009");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );

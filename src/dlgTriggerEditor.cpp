@@ -4871,10 +4871,24 @@ bool dlgTriggerEditor::event( QEvent * event )
         if( event->type() == QEvent::KeyPress ) 
         {
             QKeyEvent * ke = static_cast<QKeyEvent *>( event );
-            grab_key_callback( ke->key(), ke->modifiers() );
-            mIsGrabKey = false;
-            ke->accept();
-            return true;
+            switch( ke->key() )
+            {
+                case 0x01000000:
+                    mIsGrabKey = false;
+                    ke->accept();
+                    return true;
+                case 0x01000020:
+                case 0x01000021:
+                case 0x01000022:
+                case 0x01000023:
+                case 0x01001103:
+                    break;
+                default:
+                    grab_key_callback( ke->key(), ke->modifiers() );
+                    mIsGrabKey = false;
+                    ke->accept();
+                    return true;
+            }
         }
     }
     return QMainWindow::event( event );
