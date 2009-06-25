@@ -1370,7 +1370,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
     if( text.size() < 1 ) return false;
     int x = P.x();
     int y = P.y();
-    if( ( y >= 0 ) && ( y <= static_cast<int>(buffer.size()) ) )
+    if( ( y >= 0 ) && ( y < static_cast<int>(buffer.size()) ) )
     {
         if( x < 0 )
         {
@@ -1389,6 +1389,10 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
             IT it = buffer[y].begin();
             buffer[y].insert( it+x+i, c );
         }   
+    }
+    else
+    {
+        appendLine( text, 0, text.size(), format.fgR, format.fgG, format.fgB, format.bgR, format.bgG, format.bgB, format.bold, format.italics, format.underline );
     }
     return true;
 }
@@ -1943,6 +1947,10 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
+    if( ( y1 >= static_cast<int>(buffer.size()) ) || ( y2 >= static_cast<int>(buffer.size()) ) )
+    {
+        return false;
+    }
     if( ( x2 > static_cast<int>(buffer[y2].size()) ) || ( x1 > static_cast<int>(buffer[y1].size()) ) )
     {
         return false;
