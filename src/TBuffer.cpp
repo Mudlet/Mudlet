@@ -2129,6 +2129,105 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
         return false;            
 }
 
+bool TBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
+{
+    if( ( P_begin.x() >= 0 )
+        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    {
+        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        {
+            int x = 0;
+            if( y == P_begin.y() )
+            {
+                x = P_begin.x();
+            }
+            while( x < static_cast<int>(buffer[y].size()) )
+            {
+                if( y >= P_end.y() )
+                {
+                    if( x >= P_end.x() )
+                    {
+                        return true;
+                    }
+                }
+
+                buffer[y][x].bold = bold;
+                x++;
+            }
+        }
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
+{
+    if( ( P_begin.x() >= 0 )
+        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    {
+        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        {
+            int x = 0;
+            if( y == P_begin.y() )
+            {
+                x = P_begin.x();
+            }
+            while( x < static_cast<int>(buffer[y].size()) )
+            {
+                if( y >= P_end.y() )
+                {
+                    if( x >= P_end.x() )
+                    {
+                        return true;
+                    }
+                }
+
+                buffer[y][x].italics = bold;
+                x++;
+            }
+        }
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
+{
+    if( ( P_begin.x() >= 0 )
+        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
+        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    {
+        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        {
+            int x = 0;
+            if( y == P_begin.y() )
+            {
+                x = P_begin.x();
+            }
+            while( x < static_cast<int>(buffer[y].size()) )
+            {
+                if( y >= P_end.y() )
+                {
+                    if( x >= P_end.x() )
+                    {
+                        return true;
+                    }
+                }
+
+                buffer[y][x].underline = bold;
+                x++;
+            }
+        }
+        return true;
+    }
+    else
+        return false;
+}
+
 bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int fgColorG, int fgColorB )
 {
     if( ( P_begin.x() >= 0 )

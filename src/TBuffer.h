@@ -83,6 +83,9 @@ public:
     bool deleteLine( int );
     bool deleteLines( int from, int to );
     bool applyFormat( QPoint &, QPoint &, TChar & format );
+    bool applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold );
+    bool applyBold( QPoint & P_begin, QPoint & P_end, bool bold );
+    bool applyItalics( QPoint & P_begin, QPoint & P_end, bool bold );
     bool applyFgColor( QPoint &, QPoint &, int, int, int );
     bool applyBgColor( QPoint &, QPoint &, int, int, int );
     void appendBuffer( TBuffer chunk );

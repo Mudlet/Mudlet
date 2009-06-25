@@ -1341,6 +1341,24 @@ bool TConsole::selectSection( int from, int to )
     return true;
 }
 
+void TConsole::setBold( bool b )
+{
+    mFormatCurrent.bold = b;
+    buffer.applyBold( P_begin, P_end, b );
+}
+
+void TConsole::setItalics( bool b )
+{
+    mFormatCurrent.italics = b;
+    buffer.applyItalics( P_begin, P_end, b );
+}
+
+void TConsole::setUnderline( bool b )
+{
+    mFormatCurrent.underline = b;
+    buffer.applyUnderline( P_begin, P_end, b );
+}
+
 void TConsole::setFgColor( int r, int g, int b )
 {
     mFormatCurrent.fgR = r;

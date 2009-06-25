@@ -1783,7 +1783,22 @@ int TLuaInterpreter::setBold( lua_State *L )
 {
     string luaWindowName;
     bool b;
-    if( ! lua_isstring( L, 1 ) )
+    int s = 1;
+    if( lua_gettop( L ) > 1 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaWindowName = lua_tostring( L, s );
+            s++;
+        }
+    }
+    if( ! lua_isboolean( L, s ) )
     {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
@@ -1791,29 +1806,37 @@ int TLuaInterpreter::setBold( lua_State *L )
     }
     else
     {
-        luaWindowName = lua_tostring( L, 1 );
-    }
-    if( ! lua_isboolean( L, 2 ) )
-    {
-        lua_pushstring( L, "wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        b = lua_toboolean( L, 2 );
+        b = lua_toboolean( L, s );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
-    mudlet::self()->setBold( windowName, b );
+    if( windowName.size() > 0 )
+        mudlet::self()->setBold( windowName, b );
+    else
+        pHost->mpConsole->setBold( b );
     return 0;
 }
 int TLuaInterpreter::setItalics( lua_State *L )
 {
-    string luaWindowName;
+        string luaWindowName;
     bool b;
-    if( ! lua_isstring( L, 1 ) )
+    int s = 1;
+    if( lua_gettop( L ) > 1 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaWindowName = lua_tostring( L, s );
+            s++;
+        }
+    }
+    if( ! lua_isboolean( L, s ) )
     {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
@@ -1821,29 +1844,37 @@ int TLuaInterpreter::setItalics( lua_State *L )
     }
     else
     {
-        luaWindowName = lua_tostring( L, 1 );
-    }
-    if( ! lua_isboolean( L, 2 ) )
-    {
-        lua_pushstring( L, "wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        b = lua_toboolean( L, 2 );
+        b = lua_toboolean( L, s );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
-    mudlet::self()->setItalics( windowName, b );
+    if( windowName.size() > 0 )
+        mudlet::self()->setItalics( windowName, b );
+    else
+        pHost->mpConsole->setItalics( b );
     return 0;
 }
 int TLuaInterpreter::setUnderline( lua_State *L )
 {
-    string luaWindowName;
+        string luaWindowName;
     bool b;
-    if( ! lua_isstring( L, 1 ) )
+    int s = 1;
+    if( lua_gettop( L ) > 1 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaWindowName = lua_tostring( L, s );
+            s++;
+        }
+    }
+    if( ! lua_isboolean( L, s ) )
     {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
@@ -1851,22 +1882,15 @@ int TLuaInterpreter::setUnderline( lua_State *L )
     }
     else
     {
-        luaWindowName = lua_tostring( L, 1 );
-    }
-    if( ! lua_isboolean( L, 2 ) )
-    {
-        lua_pushstring( L, "wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        b = lua_toboolean( L, 2 );
+        b = lua_toboolean( L, s );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
-    mudlet::self()->setUnderline( windowName, b );
+    if( windowName.size() > 0 )
+        mudlet::self()->setUnderline( windowName, b );
+    else
+        pHost->mpConsole->setUnderline( b );
     return 0;
 }
 

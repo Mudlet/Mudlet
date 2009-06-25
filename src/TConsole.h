@@ -152,6 +152,9 @@ public:
       QString           getCurrentLine( std::string & );
       void              selectCurrentLine( std::string & );
       bool              setMiniConsoleFontSize( std::string &, int );
+      void              setBold( bool );
+      void              setItalics( bool );
+      void              setUnderline( bool );
       void              finalize();
       void              runTriggers( int );
       TTextEdit *       console;
