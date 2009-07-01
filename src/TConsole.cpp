@@ -727,6 +727,7 @@ void TConsole::runTriggers( int line )
     mUserCursor.setX( 0 );
     mCurrentLine = buffer.line( line );
     mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
+    mCurrentLine.append('\n');
     if( mudlet::debugMode )
     {
         TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;

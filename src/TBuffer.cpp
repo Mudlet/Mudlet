@@ -987,7 +987,18 @@ void TBuffer::translateToPlainText( std::string & s )
         {
             int line = lineBuffer.size()-1;
             mpHost->mpConsole->runTriggers( line );
-            newLines += 1+wrap( line );
+	    if( lineBuffer.size()-1 == line )
+            {
+                if( lineBuffer[line] == "" )
+		{
+                    newLines++;
+                }
+                else
+                    newLines += 1+wrap( line );
+            }
+	    else
+                newLines += 1+wrap( line );
+
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer << nothing;
