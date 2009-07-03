@@ -754,18 +754,10 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 
 void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
-    if( event->button() == Qt::MidButton )
-    {
-        mpConsole->console->mCursorY = mpBuffer->size()-1;
-        mpConsole->console->mIsTailMode = true;
-        mpConsole->console2->mCursorY = mpBuffer->size()-1;
-        mpConsole->console2->hide();    
-        event->accept();
-        return;
-    }
-    
+    qDebug()<<"trace#1: button pressed button="<<event->button();
     if( event->button() == Qt::LeftButton )
     {
+        qDebug()<<"trace#2: left button press detected";
         mMouseTracking = true;
         int x = event->x() / mFontWidth;
         int y = ( event->y() / mFontHeight ) + imageTopLine();
@@ -780,6 +772,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     
     if( event->button() == Qt::RightButton )
     {
+        qDebug()<<"trace#3: right button press detected";
         QAction * action = new QAction("copy", this );
         action->setStatusTip(tr("copy selected text to clipboard"));
         connect( action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
@@ -789,6 +782,16 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         event->accept();
         return;
         
+    }
+
+    if( event->button() == Qt::MidButton )
+    {
+        mpConsole->console->mCursorY = mpBuffer->size()-1;
+        mpConsole->console->mIsTailMode = true;
+        mpConsole->console2->mCursorY = mpBuffer->size()-1;
+        mpConsole->console2->hide();
+        event->accept();
+        return;
     }
     QWidget::mousePressEvent( event );
 }
@@ -835,8 +838,10 @@ void TTextEdit::copySelectionToClipboard()
 
 void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
 {
+    qDebug()<<"trace#4: button *release* event detected button="<<event->button();
     if( event->button() == Qt::LeftButton )
     {
+        qDebug()<<"trace#5: left button released!";
         mMouseTracking = false;
     }
 }
