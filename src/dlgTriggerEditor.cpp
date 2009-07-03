@@ -4974,6 +4974,8 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     if( ! pT ) return;
 
     dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 0 );
+     pD->show();
+    pD->raise();
     pD->exec();
     if( pT->mColorTriggerFg )
     {
@@ -4997,6 +4999,8 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     if( ! pT ) return;
 
     dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 1 );
+    pD->show();
+    pD->raise();
     pD->exec();
     if( pT->mColorTriggerBg )
     {
