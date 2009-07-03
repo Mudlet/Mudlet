@@ -541,6 +541,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     
     if( mHighlight_on && mInversOn ) 
     {
+        qDebug()<<"invers mode on";
         invers = true;
     }
     
@@ -611,6 +612,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                 QColor bgColor;
                 if( invers )
                 {
+                    qDebug()<<"setting invers colors";
                     bgColor = QColor(f.fgR, f.fgG, f.fgB );
                     fgColor = QColor(f.bgR, f.bgG, f.bgB );
                 }
@@ -639,6 +641,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                                         mFontHeight );
                 if( invers || ( bgColor != mBgColor ) )
                 {
+                    qDebug()<<"drawing invers colors";
                     drawBackground( p, textRect, bgColor );
                 }
                 drawCharacters( p, textRect, text, f.bold, f.underline, f.italics, fgColor, bgColor );
@@ -700,6 +703,7 @@ void TTextEdit::highlight()
     mSelectedRegion = newRegion;
     foreach( const QRect & rect, mSelectedRegion.rects()  )
     {
+        qDebug()<<"hilite rectangle:"<<rect;
         repaint( rect );
     }
     
@@ -712,6 +716,7 @@ void TTextEdit::unHighlight( QRegion & region )
     mInversOn = false;
     foreach( const QRect & rect, region.rects()  )
     {
+        qDebug()<<"un-hilite rectangle:"<<rect;
         repaint( rect );
     }
 }
