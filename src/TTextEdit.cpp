@@ -83,7 +83,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     cursor.setShape(Qt::IBeamCursor);
     setCursor( cursor );
     setAutoFillBackground( true ); //experimental
-    setAttribute( Qt::WA_InputMethodEnabled, true );
+    //setAttribute( Qt::WA_InputMethodEnabled, true );
     setAttribute( Qt::WA_OpaquePaintEvent );
     setAttribute( Qt::WA_DeleteOnClose );
     
@@ -93,6 +93,8 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     palette.setColor( QPalette::Base, mBgColor );
     setPalette(palette);
     showNewLines();
+    setMouseTracking( true ); // test fix for MAC
+    setEnabled( true ); //test fix for MAC
 }
 
 void TTextEdit::forceUpdate()
