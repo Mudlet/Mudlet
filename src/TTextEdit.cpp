@@ -661,6 +661,7 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     drawBackground( painter, rect, mBgColor );
     drawForeground( painter, rect );
     qDebug()<<"pE rect:"<<rect;
+    mInversOn = false;
 }
 
 void TTextEdit::highlight()
@@ -701,11 +702,12 @@ void TTextEdit::highlight()
     mInversOn = true;
     mSelectedRegion = newRegion;
     qDebug()<<"---->hilite rects start";
-    foreach( const QRect & rect, mSelectedRegion.rects()  )
+    repaint( mSelectedRegion );
+    /*foreach( const QRect & rect, mSelectedRegion.rects()  )
     {
         repaint( rect );
-    }
-    mInversOn = false;
+    }*/
+    //mInversOn = false;
     qDebug()<<"---->hilite rects end";
 }
 
@@ -713,11 +715,13 @@ void TTextEdit::unHighlight( QRegion & region )
 {
     mHighlight_on = false;
     mInversOn = false;
+
     qDebug()<<"------------------->un-hilite rects start";
-    foreach( const QRect & rect, region.rects()  )
+    repaint( region );
+    /*foreach( const QRect & rect, region.rects()  )
     {
         repaint( rect );
-    }
+    }*/
     qDebug()<<"------------------->un-hilite rects end";
 }
 
