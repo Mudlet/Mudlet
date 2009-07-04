@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>color_trigger_dlg</class>
  <widget class="QDialog" name="color_trigger_dlg">
+  <property name="windowModality">
+   <enum>Qt::ApplicationModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -12,6 +15,9 @@
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
   </property>
   <widget class="QPushButton" name="closeButton">
    <property name="geometry">

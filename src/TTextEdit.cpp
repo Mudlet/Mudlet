@@ -612,7 +612,6 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                 QColor bgColor;
                 if( invers )
                 {
-                    qDebug()<<"setting invers colors";
                     bgColor = QColor(f.fgR, f.fgG, f.fgB );
                     fgColor = QColor(f.bgR, f.bgG, f.bgB );
                 }
@@ -641,7 +640,6 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
                                         mFontHeight );
                 if( invers || ( bgColor != mBgColor ) )
                 {
-                    qDebug()<<"drawing invers colors";
                     drawBackground( p, textRect, bgColor );
                 }
                 drawCharacters( p, textRect, text, f.bold, f.underline, f.italics, fgColor, bgColor );
@@ -662,6 +660,7 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     const QRect & rect = e->rect();
     drawBackground( painter, rect, mBgColor );
     drawForeground( painter, rect );
+    qDebug()<<"pE rect:"<<rect;
 }
 
 void TTextEdit::highlight()
@@ -701,24 +700,25 @@ void TTextEdit::highlight()
     mHighlight_on = true;
     mInversOn = true;
     mSelectedRegion = newRegion;
+    qDebug()<<"---->hilite rects start";
     foreach( const QRect & rect, mSelectedRegion.rects()  )
     {
-        qDebug()<<"hilite rectangle:"<<rect;
         repaint( rect );
     }
-    
-    mInversOn = false; 
+    mInversOn = false;
+    qDebug()<<"---->hilite rects end";
 }
 
 void TTextEdit::unHighlight( QRegion & region )
 {
     mHighlight_on = false;
     mInversOn = false;
+    qDebug()<<"------------------->un-hilite rects start";
     foreach( const QRect & rect, region.rects()  )
     {
-        qDebug()<<"un-hilite rectangle:"<<rect;
         repaint( rect );
     }
+    qDebug()<<"------------------->un-hilite rects end";
 }
 
 void TTextEdit::swap( QPoint & p1, QPoint & p2 )
@@ -759,7 +759,6 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 
 void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
-    qDebug()<<"trace#1: button pressed button="<<event->button();
     if( event->button() == Qt::LeftButton )
     {
         qDebug()<<"trace#2: left button press detected";
