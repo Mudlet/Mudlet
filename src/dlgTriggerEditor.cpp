@@ -4974,6 +4974,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     if( ! pT ) return;
 
     dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 0 );
+    pD->setModal( true );
     pD->exec();
     if( pT->mColorTriggerFg )
     {
