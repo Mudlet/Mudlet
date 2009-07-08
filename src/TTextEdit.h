@@ -51,6 +51,7 @@ public:
                                  bool isSplitScreen );
     
     void              paintEvent( QPaintEvent* );
+    void              contextMenuEvent ( QContextMenuEvent * event );
     void              drawForeground(QPainter &, const QRect & );
     void              drawFrame(QPainter &, const QRect & );
     void              drawBackground( QPainter &, const QRect &, const QColor & );

@@ -541,7 +541,6 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     
     if( mHighlight_on && mInversOn ) 
     {
-        qDebug()<<"invers mode on";
         invers = true;
     }
     
@@ -660,7 +659,6 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     const QRect & rect = e->rect();
     drawBackground( painter, rect, mBgColor );
     drawForeground( painter, rect );
-    qDebug()<<"pE rect:"<<rect;
     mInversOn = false;
 }
 
@@ -701,28 +699,14 @@ void TTextEdit::highlight()
     mHighlight_on = true;
     mInversOn = true;
     mSelectedRegion = newRegion;
-    qDebug()<<"---->hilite rects start";
     repaint( mSelectedRegion );
-    /*foreach( const QRect & rect, mSelectedRegion.rects()  )
-    {
-        repaint( rect );
-    }*/
-    //mInversOn = false;
-    qDebug()<<"---->hilite rects end";
 }
 
 void TTextEdit::unHighlight( QRegion & region )
 {
     mHighlight_on = false;
     mInversOn = false;
-
-    qDebug()<<"------------------->un-hilite rects start";
     repaint( region );
-    /*foreach( const QRect & rect, region.rects()  )
-    {
-        repaint( rect );
-    }*/
-    qDebug()<<"------------------->un-hilite rects end";
 }
 
 void TTextEdit::swap( QPoint & p1, QPoint & p2 )
@@ -761,11 +745,22 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
     highlight();
 }
 
+void TTextEdit::contextMenuEvent ( QContextMenuEvent * event )
+{
+    QAction * action = new QAction("copy", this );
+    action->setStatusTip(tr("copy selected text to clipboard"));
+    connect( action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
+    QMenu * popup = new QMenu( this );
+    popup->addAction( action );
+    popup->popup( mapToGlobal( event->pos() ), action );
+    event->accept();
+    return;
+}
+
 void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
     if( event->button() == Qt::LeftButton )
     {
-        qDebug()<<"trace#2: left button press detected";
         mMouseTracking = true;
         int x = event->x() / mFontWidth;
         int y = ( event->y() / mFontHeight ) + imageTopLine();
@@ -780,7 +775,6 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     
     if( event->button() == Qt::RightButton )
     {
-        qDebug()<<"trace#3: right button press detected";
         QAction * action = new QAction("copy", this );
         action->setStatusTip(tr("copy selected text to clipboard"));
         connect( action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
