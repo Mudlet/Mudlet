@@ -4975,6 +4975,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
 
     dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 0 );
     pD->setModal( true );
+    pD->setWindowModality( Qt::ApplicationModal );
     pD->exec();
     if( pT->mColorTriggerFg )
     {
