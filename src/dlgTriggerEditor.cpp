@@ -4964,27 +4964,20 @@ void dlgTriggerEditor::slot_soundTrigger()
 
 void dlgTriggerEditor::slot_color_trigger_fg()
 {
-qDebug()<<"slot_color_trigger_fg() trace#1";
     QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem )
     {
         return;
     }
-qDebug()<<"fg-trace#2";
     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
     if( ! pT ) return;
-qDebug()<<"fg-trace#3";
     dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 0 );
-qDebug()<<"fg-trace#4";
     pD->setModal( true );
     pD->setWindowModality( Qt::ApplicationModal );
-qDebug()<<"fg-trace#5";
     pD->exec();
-qDebug()<<"fg-trace#6";
     if( pT->mColorTriggerFg )
     {
-qDebug()<<"fg-trace#7";
         QPalette palette;
         QColor color = pT->mColorTriggerFgColor;
         palette.setColor( QPalette::Button, color );
