@@ -840,10 +840,8 @@ void TTextEdit::copySelectionToClipboard()
 
 void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
 {
-    qDebug()<<"trace#4: button *release* event detected button="<<event->button();
     if( event->button() == Qt::LeftButton )
     {
-        qDebug()<<"trace#5: left button released!";
         mMouseTracking = false;
     }
 }
