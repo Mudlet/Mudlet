@@ -65,6 +65,9 @@ mudlet::mudlet()
 , mIsGoingDown( false )
 , mpCurrentActiveHost( 0 )
 , mShowMenuBar( false )
+, mReplaySpeed( 1 )
+, actionReplaySpeedUp( 0 )
+, actionReplaySpeedDown( 0 )
 {
     setUnifiedTitleAndToolBarOnMac( true );
     setContentsMargins(0,0,0,0);
@@ -193,6 +196,8 @@ mudlet::mudlet()
     actionScripts->setEnabled( true );
     actionScripts->setStatusTip(tr("close connection"));
     //mpMainToolBar->addAction( actionCloseProfile );
+
+
 
     disableToolbarButtons();
 
@@ -1270,6 +1275,70 @@ void mudlet::toggleFullScreenView()
         showFullScreen();
 }
 
+QLabel * replaySpeedDisplay = 0;
+QAction * actionSpeedDisplay = 0;
 
+void mudlet::replayStart()
+{
+    if( ! mpMainToolBar ) return;
+    mReplaySpeed = 1;
+    actionReplaySpeedUp = new QAction(QIcon(":/icons/export.png"), tr("faster"), this);
+    actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
+    mpMainToolBar->addAction( actionReplaySpeedUp );
+
+    actionReplaySpeedDown = new QAction(QIcon(":/icons/import.png"), tr("slower"), this);
+    actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
+    mpMainToolBar->addAction( actionReplaySpeedDown );
+    replaySpeedDisplay = new QLabel( this );
+    actionSpeedDisplay = mpMainToolBar->addWidget(replaySpeedDisplay);
+    connect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+    connect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+
+    QString txt = "<font size=25><b>speed:";
+    txt.append( QString::number( mReplaySpeed ) );
+    txt.append(" X</b></font>");
+    replaySpeedDisplay->setText(txt);
+    replaySpeedDisplay->show();
+}
+
+void mudlet::replayOver()
+{
+    if( ! mpMainToolBar ) return;
+    if( actionReplaySpeedUp )
+    {
+        disconnect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+        disconnect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+        mpMainToolBar->removeAction( actionReplaySpeedUp );
+        mpMainToolBar->removeAction( actionReplaySpeedDown );
+        mpMainToolBar->removeAction( actionSpeedDisplay );
+        actionReplaySpeedUp = 0;
+        actionReplaySpeedDown = 0;
+        actionSpeedDisplay = 0;
+    }
+
+}
+
+
+
+void mudlet::slot_replaySpeedUp()
+{
+    mReplaySpeed = mReplaySpeed * 2;
+    QString txt = "<font size=25><b>speed:";
+    txt.append( QString::number( mReplaySpeed ) );
+    txt.append(" X</b></font>");
+    replaySpeedDisplay->setText(txt);
+    replaySpeedDisplay->show();
+}
+
+void mudlet::slot_replaySpeedDown()
+{
+    mReplaySpeed = mReplaySpeed / 2;
+    if( mReplaySpeed < 1 ) mReplaySpeed = 1;
+    QString txt = "<font size=25><b>speed:";
+    txt.append( QString::number( mReplaySpeed ) );
+    txt.append(" X</b></font>");
+    replaySpeedDisplay->setText(txt);
+    replaySpeedDisplay->show();
+}
 
 

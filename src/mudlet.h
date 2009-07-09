@@ -109,9 +109,15 @@ public:
    int                           mMainIconSize;
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
+   void                          replayStart();
+   void                          replayOver();
+
+   int                           mReplaySpeed;
 
 public slots:      
-    
+
+   void                          slot_replaySpeedUp();
+   void                          slot_replaySpeedDown();
    void                          toggleFullScreenView(); 
    void                          slot_userToolBar_orientation_changed(Qt::Orientation); 
    void                          slot_show_about_dialog();
@@ -167,6 +173,8 @@ private:
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
    Host *                        mpCurrentActiveHost;
+   QAction *                     actionReplaySpeedDown;
+   QAction *                     actionReplaySpeedUp;
 };
 
 #endif

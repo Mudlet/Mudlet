@@ -773,6 +773,7 @@ void cTelnet::loadReplay( QString & name )
     replayFile.open( QIODevice::ReadOnly );
     replayStream.setDevice( &replayFile );
     loadingReplay = true;
+    mudlet::self()->replayStart();
     _loadReplay();
 }
 
@@ -789,7 +790,7 @@ void cTelnet::_loadReplay()
         loadedBytes = replayStream.readRawData ( pB, amount );
         qDebug()<<"loaded:"<<loadedBytes<<"/"<<amount<<" bytes"<<" waiting for "<<offset<<" milliseconds";
         loadBuffer[loadedBytes+1] = '\0';
-        QTimer::singleShot( offset, this, SLOT(readPipe()));
+        QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
     }
     else
     {
@@ -797,6 +798,7 @@ void cTelnet::_loadReplay()
         replayFile.close();
         QString msg = "The replay has ended.\n";
         postMessage( msg );
+        mudlet::self()->replayOver();
     }
 }
 
