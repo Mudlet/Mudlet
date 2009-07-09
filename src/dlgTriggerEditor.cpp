@@ -1260,11 +1260,10 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->listWidget_regex_list->setColumnWidth( 1, 150 );
     mpTriggersMainArea->listWidget_regex_list->resizeRowsToContents();
 
-
-
     treeWidget->setCurrentItem( pNewItem );
     mCurrentTrigger = pNewItem;
     showInfo( msgInfoAddTrigger );
+    slot_trigger_clicked( treeWidget->currentItem(), 0 );
 }  
 
 
@@ -1358,6 +1357,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     treeWidget_timers->setCurrentItem( pNewItem );
     mCurrentTimer = pNewItem;
     showInfo( msgInfoAddTimer );
+    slot_timer_clicked( treeWidget_timers->currentItem(), 0 );
 }  
 
 void dlgTriggerEditor::addKey( bool isFolder )
@@ -1447,6 +1447,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     treeWidget_keys->setCurrentItem( pNewItem );
     mCurrentKey = pNewItem;
     showInfo( msgInfoAddKey );
+    slot_key_clicked( treeWidget_keys->currentItem(), 0 );
 }  
 
 
@@ -1545,6 +1546,7 @@ ROOT_ALIAS:
     treeWidget_alias->setCurrentItem( pNewItem );
     mCurrentAlias = pNewItem;
     showInfo(msgInfoAddAlias);
+    slot_alias_clicked( treeWidget_alias->currentItem(), 0 );
 }  
 
 void dlgTriggerEditor::addAction( bool isFolder )
@@ -1648,6 +1650,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     mpCurrentActionItem = pNewItem;
     mCurrentAction = pNewItem;
     showInfo( msgInfoAddButton );
+    slot_action_clicked( treeWidget_actions->currentItem(), 0 );
 }  
 
 
@@ -1742,6 +1745,7 @@ void dlgTriggerEditor::addScript( bool isFolder )
     mpSourceEditorArea->script_scintilla->setText( script );
     mCurrentScript = pNewItem;
     treeWidget_scripts->setCurrentItem( pNewItem );
+    slot_scripts_clicked( treeWidget_scripts->currentItem(), 0 );
 }  
 
 
@@ -2801,7 +2805,8 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     if( ! pItem ) return;
 
     mCurrentTrigger = pItem;
-
+    mpTriggersMainArea->show();
+    mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
     mpSourceEditorArea->script_scintilla->setText( "" );
@@ -2963,7 +2968,8 @@ void dlgTriggerEditor::slot_alias_clicked( QTreeWidgetItem *pItem, int column )
 {
     if( ! pItem ) return;
     mCurrentAlias = pItem;
-
+    mpAliasMainArea->show();
+    mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
@@ -3001,7 +3007,8 @@ void dlgTriggerEditor::slot_key_clicked( QTreeWidgetItem *pItem, int column )
 {
     if( ! pItem ) return;
     mCurrentKey = pItem;
-
+    mpKeysMainArea->show();
+    mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
@@ -3106,7 +3113,8 @@ void dlgTriggerEditor::slot_scripts_clicked( QTreeWidgetItem *pItem, int column 
 {
     if( ! pItem ) return;
     mCurrentScript = pItem;
-
+    mpScriptsMainArea->show();
+    mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpSourceEditorArea->script_scintilla->setText( "" );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
@@ -3141,7 +3149,8 @@ void dlgTriggerEditor::slot_timer_clicked( QTreeWidgetItem *pItem, int column )
 {
     if( ! pItem ) return;
     mCurrentTimer = pItem;
-
+    mpTimersMainArea->show();
+    mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpSourceEditorArea->script_scintilla->setText( "" );
     mpTimersMainArea->lineEdit_command->clear();
@@ -3986,7 +3995,6 @@ void dlgTriggerEditor::slot_show_search_area()
 
 void dlgTriggerEditor::saveOpenChanges()
 {
-    qDebug()<<"saveOpenChanges() called";
     switch( mCurrentView )
     {
     case cmTriggerView:
@@ -4073,12 +4081,29 @@ void dlgTriggerEditor::slot_show_timers()
     treeWidget_scripts->hide();
     treeWidget_actions->hide();
     treeWidget_keys->hide();
-    
-    mpTimersMainArea->show();
-    mpSourceEditorArea->show();
-    //mpOptionsAreaTimers->show();
-    treeWidget_timers->show(); 
-    slot_timer_clicked( treeWidget_timers->currentItem(), 0 );
+
+    QTreeWidgetItem * pI = treeWidget_timers->topLevelItem( 0 );
+    if( pI )
+    {
+        if( pI->childCount() > 0 )
+        {
+            mpTimersMainArea->show();
+            mpSourceEditorArea->show();
+            slot_timer_clicked( treeWidget_timers->currentItem(), 0 );
+        }
+        else
+        {
+            mpTimersMainArea->hide();
+            mpSystemMessageArea->show();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+            mpSystemMessageArea->notificationAreaIconLabelError->hide();
+            mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+            QString msg = "To add a timer click on the 'Add' icon above.";
+            mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
+        }
+    }
+    treeWidget_timers->show();
 }
 
 void dlgTriggerEditor::slot_show_triggers()
@@ -4107,12 +4132,30 @@ void dlgTriggerEditor::slot_show_triggers()
     treeWidget_scripts->hide();
     treeWidget_actions->hide();   
     treeWidget_keys->hide();
-    mpTriggersMainArea->show();
-    mpSourceEditorArea->show();
-    //mpOptionsAreaTriggers->show();
-    treeWidget->show();
 
-    slot_trigger_clicked( treeWidget->currentItem(), 0 );
+
+    QTreeWidgetItem * pI = treeWidget->topLevelItem( 0 );
+    if( pI )
+    {
+        if( pI->childCount() > 0 )
+        {
+            mpTriggersMainArea->show();
+            mpSourceEditorArea->show();
+            slot_trigger_clicked( treeWidget->currentItem(), 0 );
+        }
+        else
+        {
+            mpTriggersMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+            mpSystemMessageArea->notificationAreaIconLabelError->hide();
+            mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+            QString msg = "To add a trigger click on the 'Add' icon above.";
+            mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
+        }
+    }
+    treeWidget->show();
 }
 
 void dlgTriggerEditor::slot_show_scripts()
@@ -4140,12 +4183,32 @@ void dlgTriggerEditor::slot_show_scripts()
     treeWidget_timers->hide();
     treeWidget_scripts->hide();
     treeWidget_actions->hide();
-    mpScriptsMainArea->show();
+    mpScriptsMainArea->hide();
     treeWidget_keys->hide();
-    mpSourceEditorArea->show();
-    //mpOptionsAreaScripts->show();
+
+
+    QTreeWidgetItem * pI = treeWidget_scripts->topLevelItem( 0 );
+    if( pI )
+    {
+        if( pI->childCount() > 0 )
+        {
+            mpScriptsMainArea->show();
+            mpSourceEditorArea->show();
+            slot_scripts_clicked( treeWidget_scripts->currentItem(), 0 );
+        }
+        else
+        {
+            mpScriptsMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+            mpSystemMessageArea->notificationAreaIconLabelError->hide();
+            mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+            QString msg = "To make a new general purpose script click on the 'Add' icon above.";
+            mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
+        }
+    }
     treeWidget_scripts->show();
-    slot_scripts_clicked( treeWidget_scripts->currentItem(), 0 );
 }
 
 void dlgTriggerEditor::slot_show_keys()
@@ -4174,11 +4237,31 @@ void dlgTriggerEditor::slot_show_keys()
     treeWidget_scripts->hide();
     treeWidget_actions->hide();
     treeWidget_keys->hide();
-    mpKeysMainArea->show();
-    mpSourceEditorArea->show();
-    //mpOptionsAreaScripts->show();
+
+
+    QTreeWidgetItem * pI = treeWidget_keys->topLevelItem( 0 );
+    if( pI )
+    {
+        if( pI->childCount() > 0 )
+        {
+            mpKeysMainArea->show();
+            mpSourceEditorArea->show();
+            slot_key_clicked( treeWidget_keys->currentItem(), 0 );
+        }
+        else
+        {
+            mpKeysMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+            mpSystemMessageArea->notificationAreaIconLabelError->hide();
+            mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+            QString msg = "To make a new key binding click on the 'Add' icon above.";
+            mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
+        }
+    }
+
     treeWidget_keys->show();
-    slot_key_clicked( treeWidget_keys->currentItem(), 0 );
 }
 
 
@@ -4211,11 +4294,29 @@ void dlgTriggerEditor::slot_show_aliases()
     treeWidget_actions->hide();
     treeWidget_keys->hide();
     
-    mpAliasMainArea->show();
-    mpSourceEditorArea->show();
-    //mpOptionsAreaAlias->show();
+    QTreeWidgetItem * pI = treeWidget_alias->topLevelItem( 0 );
+    if( pI )
+    {
+        if( pI->childCount() > 0 )
+        {
+            mpAliasMainArea->show();
+            mpSourceEditorArea->show();
+            slot_alias_clicked( treeWidget_alias->currentItem(), 0 );
+        }
+        else
+        {
+            mpAliasMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+            mpSystemMessageArea->notificationAreaIconLabelError->hide();
+            mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+            QString msg = "To make a new alias click on the 'Add' icon above.";
+            mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
+        }
+    }
+
     treeWidget_alias->show();
-    slot_alias_clicked( treeWidget_alias->currentItem(), 0 );
 }
 
 void dlgTriggerEditor::showError( QString error )
@@ -4257,9 +4358,8 @@ void dlgTriggerEditor::slot_show_actions()
     mpAliasMainArea->hide();
     mpActionsMainArea->hide();
     mpKeysMainArea->hide();
-    
     mpSourceEditorArea->hide();
-    
+
     mpSystemMessageArea->hide();
     mpOptionsAreaTriggers->hide();
     mpOptionsAreaAlias->hide();
@@ -4272,17 +4372,29 @@ void dlgTriggerEditor::slot_show_actions()
     treeWidget_timers->hide();
     treeWidget_scripts->hide();
     treeWidget_keys->hide();
-    
-    if( treeWidget_actions->currentItem() )
+    QTreeWidgetItem * pI = treeWidget_actions->topLevelItem( 0 );
+    if( pI )
     {
-        mpActionsMainArea->show();
+        if( pI->childCount() > 0 )
+        {
+            mpActionsMainArea->show();
+            mpSourceEditorArea->show();
+            slot_action_clicked( treeWidget_actions->currentItem(), 0 );
+        }
+        else
+        {
+            mpActionsMainArea->hide();
+            mpSystemMessageArea->show();
+            mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+            mpSystemMessageArea->notificationAreaIconLabelError->hide();
+            mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+            QString msg = "To make a new button, you have to add a button bar first and then add buttons to the group. Click on the 'Add Group' icon above to make a button bar.";
+            mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
+        }
     }
-    else
-        mpActionsMainArea->hide();
-    mpSourceEditorArea->show();
-    //mpOptionsAreaActions->show();
+
     treeWidget_actions->show();
-    slot_action_clicked( treeWidget_actions->currentItem(), 0 );
+
 }
 
 void dlgTriggerEditor::slot_save_edit()
@@ -4422,7 +4534,6 @@ void dlgTriggerEditor::slot_delete_item()
 
 void dlgTriggerEditor::slot_itemClicked( QTreeWidgetItem * pItem, int column )
 {
-    qDebug()<<"slot_itemClicked()";
     if( ! pItem ) return;
 
     switch( mCurrentView )

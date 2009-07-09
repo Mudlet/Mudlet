@@ -819,7 +819,7 @@ void TTextEdit::copySelectionToClipboard()
     {
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
-        while( x < (int) mpBuffer->buffer[y].size() )
+        while( x < static_cast<int>( mpBuffer->buffer[y].size() ) )
         {
             text.append( mpBuffer->lineBuffer[y].at(x) );
             if( y >= mPB.y() )
