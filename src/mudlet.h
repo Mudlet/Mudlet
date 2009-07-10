@@ -112,10 +112,12 @@ public:
    void                          replayStart();
    void                          replayOver();
 
+   QTime                         mReplayTime;
    int                           mReplaySpeed;
 
 public slots:      
 
+   void                          slot_replayTimeChanged();
    void                          slot_replaySpeedUp();
    void                          slot_replaySpeedDown();
    void                          toggleFullScreenView(); 
@@ -175,6 +177,7 @@ private:
    Host *                        mpCurrentActiveHost;
    QAction *                     actionReplaySpeedDown;
    QAction *                     actionReplaySpeedUp;
+
 };
 
 #endif

@@ -791,6 +791,7 @@ void cTelnet::_loadReplay()
         qDebug()<<"loaded:"<<loadedBytes<<"/"<<amount<<" bytes"<<" waiting for "<<offset<<" milliseconds";
         loadBuffer[loadedBytes+1] = '\0';
         QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
+        mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
     }
     else
     {
