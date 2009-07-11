@@ -37,24 +37,116 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     // init generated dialog
     setupUi(this);
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
-    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
+     connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
+    QPalette palette;
+    QString styleSheet;
+    QColor color;
+    color = mpHost->mBlack;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_black->setStyleSheet( styleSheet );
+
     connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
+    color = mpHost->mLightBlack;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lblack->setStyleSheet( styleSheet );
+
     connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
+    color = mpHost->mGreen;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_green->setStyleSheet( styleSheet );
+
     connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
+    color = mpHost->mLightGreen;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lgreen->setStyleSheet( styleSheet );
+
     connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
+    color = mpHost->mRed;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_red->setStyleSheet( styleSheet );
+
     connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
+    color = mpHost->mLightRed;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lred->setStyleSheet( styleSheet );
+
     connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
+    color = mpHost->mBlue;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_blue->setStyleSheet( styleSheet );
+
     connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
+    color = mpHost->mLightBlue;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lblue->setStyleSheet( styleSheet );
+
     connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
+    color = mpHost->mYellow;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_yellow->setStyleSheet( styleSheet );
+
     connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
+    color = mpHost->mLightYellow;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lyellow->setStyleSheet( styleSheet );
+
     connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
+    color = mpHost->mCyan;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_cyan->setStyleSheet( styleSheet );
+
     connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
+    color = mpHost->mLightCyan;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lcyan->setStyleSheet( styleSheet );
+
     connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
+    color = mpHost->mMagenta;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_magenta->setStyleSheet( styleSheet );
+
     connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+    color = mpHost->mLightMagenta;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lmagenta->setStyleSheet( styleSheet );
+
     connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
+    color = mpHost->mWhite;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_white->setStyleSheet( styleSheet );
+
     connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
+    color = mpHost->mLightWhite;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_Lwhite->setStyleSheet( styleSheet );
     connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
+    color = mpHost->mFgColor;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_foreground_color->setStyleSheet( styleSheet );
+
     connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
+    color = mpHost->mBgColor;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_background_color->setStyleSheet( styleSheet );
+
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
     connect(pushButton_display_font, SIGNAL(clicked()), this, SLOT(setDisplayFont()));
     connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));

@@ -771,6 +771,13 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( profile_name.size() < 1 ) 
         return;
     
+    Host * pOH = HostManager::self()->getHost( profile_name );
+    if( pOH )
+    {
+        pOH->mTelnet.connectIt( pOH->getUrl(), pOH->getPort() );
+        QDialog::accept();
+        return;
+    }
     // load an old profile if there is any
     HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
     Host * pHost = HostManager::self()->getHost( profile_name );
