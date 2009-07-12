@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>635</width>
+    <width>558</width>
     <height>230</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -25,7 +25,7 @@
   <property name="maximumSize">
    <size>
     <width>16777215</width>
-    <height>237</height>
+    <height>16777215</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -41,7 +41,7 @@
    <item>
     <widget class="QWidget" name="widget_6" native="true">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -115,19 +115,10 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_5">
       <property name="spacing">
-       <number>9</number>
+       <number>6</number>
       </property>
-      <property name="leftMargin">
-       <number>9</number>
-      </property>
-      <property name="topMargin">
-       <number>5</number>
-      </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
-       <number>5</number>
+      <property name="margin">
+       <number>6</number>
       </property>
       <item>
        <widget class="QLabel" name="label_4">
@@ -206,7 +197,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
-       <number>0</number>
+       <number>6</number>
       </property>
       <property name="margin">
        <number>0</number>
@@ -295,6 +286,12 @@
          </property>
          <item>
           <widget class="QWidget" name="widget_9" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <property name="spacing">
              <number>0</number>
@@ -570,7 +567,7 @@
                <item>
                 <widget class="QWidget" name="widget_8" native="true">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -655,7 +652,7 @@
          <item>
           <widget class="QWidget" name="widget_4" native="true">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -743,7 +740,7 @@
             <item>
              <widget class="QGroupBox" name="colorizerTrigger">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -772,18 +769,18 @@
               <property name="checked">
                <bool>false</bool>
               </property>
-              <layout class="QGridLayout" name="gridLayout_2">
+              <layout class="QFormLayout" name="formLayout">
+               <property name="horizontalSpacing">
+                <number>6</number>
+               </property>
+               <property name="verticalSpacing">
+                <number>2</number>
+               </property>
                <property name="topMargin">
                 <number>3</number>
                </property>
                <property name="bottomMargin">
                 <number>3</number>
-               </property>
-               <property name="horizontalSpacing">
-                <number>0</number>
-               </property>
-               <property name="verticalSpacing">
-                <number>2</number>
                </property>
                <item row="0" column="0">
                 <widget class="QLabel" name="label_9">
@@ -828,28 +825,6 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="1">
-                <widget class="QPushButton" name="pushButtonBgColor">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>22</width>
-                   <height>11</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="flat">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
                <item row="1" column="0">
                 <widget class="QLabel" name="label_10">
                  <property name="sizePolicy">
@@ -874,13 +849,35 @@
                  </property>
                 </widget>
                </item>
+               <item row="1" column="1">
+                <widget class="QPushButton" name="pushButtonBgColor">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>22</width>
+                   <height>11</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="flat">
+                  <bool>false</bool>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>
             <item>
              <widget class="QGroupBox" name="soundTrigger">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -909,12 +906,12 @@
               <property name="checked">
                <bool>false</bool>
               </property>
-              <layout class="QGridLayout" name="gridLayout_3">
+              <layout class="QFormLayout" name="formLayout_2">
                <property name="horizontalSpacing">
-                <number>0</number>
+                <number>6</number>
                </property>
                <property name="verticalSpacing">
-                <number>-1</number>
+                <number>6</number>
                </property>
                <property name="margin">
                 <number>3</number>
@@ -932,6 +929,12 @@
                    <width>0</width>
                    <height>11</height>
                   </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>Sans Serif</family>
+                   <pointsize>7</pointsize>
+                  </font>
                  </property>
                  <property name="text">
                   <string>chose file:</string>
@@ -957,7 +960,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="0" colspan="2">
+               <item row="1" column="0">
                 <widget class="QLineEdit" name="lineEdit_soundFile">
                  <property name="maximumSize">
                   <size>
@@ -974,6 +977,19 @@
                </item>
               </layout>
              </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </widget>
@@ -1083,10 +1099,7 @@
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_12">
-         <property name="spacing">
-          <number>0</number>
-         </property>
+        <layout class="QGridLayout" name="gridLayout_5">
          <property name="leftMargin">
           <number>3</number>
          </property>
@@ -1099,7 +1112,7 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
+         <item row="0" column="0">
           <widget class="QGroupBox" name="checkBox_multlinetrigger">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1195,14 +1208,11 @@
            <property name="checked">
             <bool>false</bool>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_6">
-            <property name="spacing">
-             <number>0</number>
-            </property>
+           <layout class="QGridLayout" name="gridLayout_4">
             <property name="margin">
              <number>3</number>
             </property>
-            <item>
+            <item row="0" column="0">
              <widget class="QLabel" name="label_3">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1212,7 +1222,8 @@
               </property>
               <property name="font">
                <font>
-                <pointsize>9</pointsize>
+                <family>Sans Serif</family>
+                <pointsize>7</pointsize>
                </font>
               </property>
               <property name="text">
@@ -1229,7 +1240,7 @@
               </property>
              </widget>
             </item>
-            <item>
+            <item row="0" column="1">
              <widget class="QSpinBox" name="spinBox_linemargin">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1317,10 +1328,7 @@
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_10">
-         <property name="spacing">
-          <number>0</number>
-         </property>
+        <layout class="QGridLayout" name="gridLayout_9">
          <property name="leftMargin">
           <number>5</number>
          </property>
@@ -1333,10 +1341,10 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
+         <item row="0" column="0">
           <widget class="QGroupBox" name="filterTrigger">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1347,6 +1355,9 @@
              <height>0</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>act as filter, i.e. only pass matches to its children to trigger on</string>
+           </property>
            <property name="title">
             <string>filter</string>
            </property>
@@ -1356,14 +1367,11 @@
            <property name="checked">
             <bool>false</bool>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_3">
-            <property name="spacing">
-             <number>0</number>
-            </property>
+           <layout class="QGridLayout" name="gridLayout_6">
             <property name="margin">
              <number>1</number>
             </property>
-            <item>
+            <item row="0" column="0">
              <widget class="QLabel" name="label_15">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1522,14 +1530,11 @@
            <property name="checked">
             <bool>false</bool>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
-            <property name="spacing">
-             <number>0</number>
-            </property>
+           <layout class="QGridLayout" name="gridLayout_7">
             <property name="margin">
              <number>1</number>
             </property>
-            <item>
+            <item row="0" column="0">
              <widget class="QLabel" name="label_17">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1558,7 +1563,7 @@
                <string>Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)</string>
               </property>
               <property name="text">
-               <string>match all occurances of the pattern in the line</string>
+               <string>match all occurences of the pattern in the line</string>
               </property>
               <property name="scaledContents">
                <bool>true</bool>
@@ -1655,10 +1660,7 @@
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_8">
-         <property name="spacing">
-          <number>0</number>
-         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
          <property name="leftMargin">
           <number>5</number>
          </property>
@@ -1678,12 +1680,6 @@
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>130</width>
-             <height>0</height>
-            </size>
            </property>
            <property name="maximumSize">
             <size>
@@ -1743,6 +1739,31 @@
               </property>
              </widget>
             </item>
+            <item row="0" column="1">
+             <widget class="QPushButton" name="colorTriggerFg">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>22</horstretch>
+                <verstretch>11</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>22</width>
+                <height>11</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>22</width>
+                <height>11</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_12">
               <property name="sizePolicy">
@@ -1792,31 +1813,6 @@
               </property>
               <property name="flat">
                <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="colorTriggerFg">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>22</horstretch>
-                <verstretch>11</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>22</width>
-                <height>11</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>11</height>
-               </size>
-              </property>
-              <property name="text">
-               <string/>
               </property>
              </widget>
             </item>

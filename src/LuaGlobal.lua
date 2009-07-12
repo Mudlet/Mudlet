@@ -575,3 +575,85 @@ function replaceWildcard(what, replacement)
     replace(replacement)
 end
 
+----------------------------------------------------------------------------------
+-- function by Ryan: pretty print function for tables
+----------------------------------------------------------------------------------
+-- usage: display( mytable )
+----------------------------------------
+-- pretty display function
+function display(what, numformat, recursion)
+  recursion = recursion or 0
+
+  if recursion == 0 then
+    echo("\n")
+--    echo("-------------------------------------------------------\n")
+  end
+  echo(printable(what, numformat))
+
+  -- Do all the stuff inside a table
+  if type(what) == 'table' then
+    echo(" {")
+
+    local firstline = true   -- a kludge so empty tables print on one line
+    for k, v in pairs(what) do
+      if firstline then echo("\n"); firstline = false end
+      echo(indent(recursion))
+      echo(printable(k))
+      echo(": ")
+      display(v, numformat, recursion + 1)
+    end
+
+    -- so empty tables print as {} instead of {..indent..}
+    if not firstline then echo(indent(recursion - 1)) end
+    echo("}")
+  end
+
+  echo("\n")
+  if recursion == 0 then
+--    echo ("-------------------------------------------------------\n")
+  end
+end
+
+-- Basically like tostring(), except takes a numformat
+-- and is a little better suited for working with display()
+function printable(what, numformat)
+  local ret
+
+  if type(what) == 'string' then
+    ret = "'"..what.."'"
+--    ret = string.format("%q", what)    -- this was ugly
+
+  elseif type(what) == 'number' then
+    if numformat then ret = string.format(numformat, what)
+    else ret = what end
+
+  elseif type(what) == 'boolean' then
+    ret = tostring(what)
+
+  elseif type(what) == 'table' then
+    ret = what.__customtype or type(what)
+
+  else
+    ret = type(what)
+--    ret = tostring(what)               -- this was ugly
+  end
+
+  return ret
+end
+
+
+-- Handles indentation
+do local indents = {}  -- simulate a static variable
+function indent(num)
+
+  if not indents[num] then
+    indents[num] = ""
+    for i = 0, num do
+      indents[num] = indents[num].."  "
+    end
+  end
+
+  return indents[num]
+end
+end
+-----------------------------------------------------------------------------------------------------------

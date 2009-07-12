@@ -947,14 +947,11 @@ void cTelnet::handle_socket_signal_readyRead()
     }
     buffer[datalen] = '\0';
 
-    if( mpHost->mpConsole->mLogToLogFile )
+    if( mpHost->mpConsole->mRecordReplay )
     {
-        if( mpHost->mRawStreamDump )
-        {
-            mpHost->mpConsole->mLogStream << timeOffset.elapsed()-lastTimeOffset;
-            mpHost->mpConsole->mLogStream << datalen;
-            mpHost->mpConsole->mLogStream.writeRawData( &buffer[0], datalen );
-        }
+        mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;
+        mpHost->mpConsole->mReplayStream << datalen;
+        mpHost->mpConsole->mReplayStream.writeRawData( &buffer[0], datalen );
     }
 
     string cleandata = "";

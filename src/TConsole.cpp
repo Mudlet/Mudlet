@@ -89,6 +89,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mMainFrameBottomHeight( 0 )
 , mMainFrameLeftWidth( 0 )
 , mMainFrameRightWidth( 0 )
+, mRecordReplay( false )
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -320,6 +321,16 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QIcon icon(":/icons/dialog-information.png");
     timeStampButton->setIcon( icon );
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
+
+
+    QToolButton * replayButton = new QToolButton;
+    replayButton->setCheckable( true );
+    replayButton->setFocusPolicy( Qt::NoFocus );
+    replayButton->setToolTip("start logging MUD output to log file");
+    QIcon icon4(":/icons/media-tape.png");
+    replayButton->setIcon( icon4 );
+    connect( replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
+
     QToolButton * logButton = new QToolButton;
     logButton->setCheckable( true );
     logButton->setFocusPolicy( Qt::NoFocus );
@@ -376,6 +387,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 
     layoutLayer2->addWidget( mpCommandLine );
     layoutLayer2->addWidget( timeStampButton );
+    layoutLayer2->addWidget( replayButton );
     layoutLayer2->addWidget( logButton );
     layoutLayer2->addWidget( emergencyStop );
     layoutLayer2->addWidget( networkLatency );
@@ -554,10 +566,10 @@ void TConsole::slot_toggleLogging()
         QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         if( mpHost->mRawStreamDump )
         {
-            mLogFileName.append(".dat");
+            mLogFileName.append(".html");
         }
         else
-            mLogFileName.append(".html");
+            mLogFileName.append(".txt");
 
         QDir dirLogFile;
         if( ! dirLogFile.exists( directoryLogFile ) )
@@ -567,10 +579,7 @@ void TConsole::slot_toggleLogging()
         mLogFile.setFileName( mLogFileName );
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
-        if( mpHost->mRawStreamDump )
-            mpHost->mTelnet.recordReplay( mLogFileName );
-        else
-            mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
+        if( mpHost->mRawStreamDump ) mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
         QString message = QString("Logging has started. Log file is ") + mLogFile.fileName();
         printSystemMessage( message );
     }
@@ -579,6 +588,35 @@ void TConsole::slot_toggleLogging()
         if( ! mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
         mLogFile.close();
         QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() ;
+        printSystemMessage( message );
+    }
+}
+
+void TConsole::slot_toggleReplayRecording()
+{
+    if( mIsDebugConsole ) return;
+    mRecordReplay = ! mRecordReplay;
+    if( mRecordReplay )
+    {
+        QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
+        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+        mLogFileName.append(".dat");
+        QDir dirLogFile;
+        if( ! dirLogFile.exists( directoryLogFile ) )
+        {
+            dirLogFile.mkpath( directoryLogFile );
+        }
+        mReplayFile.setFileName( mLogFileName );
+        mReplayFile.open( QIODevice::WriteOnly );
+        mReplayStream.setDevice( &mReplayFile );
+        mpHost->mTelnet.recordReplay( mLogFileName );
+        QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName();
+        printSystemMessage( message );
+    }
+    else
+    {
+        mReplayFile.close();
+        QString message = QString("Replay recording has been stopped. File: ") + mLogFile.fileName() ;
         printSystemMessage( message );
     }
 }

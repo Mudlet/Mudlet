@@ -186,9 +186,13 @@ public:
       int               mButtonState;
       TSplitter *       splitter;
       QFile             mLogFile;
-      QDataStream       mLogStream;
+      QFile             mReplayFile;
+      QTextStream       mLogStream;
+      QDataStream       mReplayStream;
       bool              mLogToLogFile;
+      bool              mRecordReplay;
       QString           mLogFileName;
+
 
 private:
 
@@ -248,6 +252,7 @@ signals:
     
 public slots:    
       
+      void              slot_toggleReplayRecording();
       void              slot_stop_all_triggers( bool );
       void              slot_toggleLogging();
       void              slot_user_scrolling( int );

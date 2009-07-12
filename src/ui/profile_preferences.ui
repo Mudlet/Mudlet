@@ -651,7 +651,7 @@ or some other computer model that has a small screen.</string>
              <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
             </property>
             <property name="text">
-             <string>Log in Mudlet replay format</string>
+             <string>Save log files in html format instead of text only.</string>
             </property>
            </widget>
           </item>
