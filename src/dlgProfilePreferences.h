@@ -36,10 +36,13 @@ public:
 
     dlgProfilePreferences( QWidget *, Host * );
 
+    int mFontSize;
+
 signals:
 
 
 public slots:
+    void setFontSize();
     void setColorBlack(); 
     void setColorLightBlack();
     void setColorRed();

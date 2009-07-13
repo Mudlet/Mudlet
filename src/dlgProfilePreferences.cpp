@@ -33,6 +33,7 @@
 dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 : QDialog( pF )
 , mpHost( pH )
+, mFontSize( 10 )
 {
     // init generated dialog
     setupUi(this);
@@ -148,7 +149,11 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     pushButton_background_color->setStyleSheet( styleSheet );
 
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
-    connect(pushButton_display_font, SIGNAL(clicked()), this, SLOT(setDisplayFont()));
+    connect(fontComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(setDisplayFont()));
+    QStringList sizeList;
+    for( int i=1; i<40; i++ ) sizeList << QString::number(i);
+    fontSize->insertItems( 1, sizeList );
+    connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
     connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
     connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBoderColor()));
     connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBoderImage()));
@@ -156,6 +161,9 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     Host * pHost = mpHost;
     if( pHost )
     {
+        mFontSize = pHost->mDisplayFont.pixelSize();
+        fontComboBox->setCurrentFont( pHost->mDisplayFont );
+        if( mFontSize <= 40 ) fontSize->setCurrentIndex( mFontSize );
         setColors();
 
         wrap_at_spinBox->setValue(pHost->mWrapAt);    
@@ -325,12 +333,18 @@ void dlgProfilePreferences::setBgColor()
     }
 }
 
+void dlgProfilePreferences::setFontSize()
+{
+    mFontSize = fontSize->currentIndex();
+    setDisplayFont();
+}
+
 void dlgProfilePreferences::setDisplayFont()
 {
     Host * pHost = mpHost;
     if( ! pHost ) return;    
-    bool ok;
-    QFont font = QFontDialog::getFont(&ok, pHost->mDisplayFont, this);
+    QFont font = fontComboBox->currentFont();
+    font.setPixelSize( mFontSize );
     pHost->mDisplayFont = font;
     if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
     {

@@ -735,9 +735,11 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
         QString log = incomingSocketData.c_str();
         if( ! mIsDebugConsole )
         {
-            if( ! mpHost->mRawStreamDump )
+            if( mpHost->mRawStreamDump )
             {
-                mLogStream << logger_translate( log );
+                QString toLog = logger_translate( log );
+                toLog.replace('\n', "<\\ br>");
+                mLogStream << toLog;
             }
         }
     }
@@ -766,6 +768,16 @@ void TConsole::runTriggers( int line )
     mCurrentLine = buffer.line( line );
     mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
     mCurrentLine.append('\n');
+    if( mLogToLogFile )
+    {
+        if( ! mIsDebugConsole )
+        {
+            if( ! mpHost->mRawStreamDump )
+            {
+                mLogStream << mCurrentLine;
+            }
+        }
+    }
     if( mudlet::debugMode )
     {
         TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;
