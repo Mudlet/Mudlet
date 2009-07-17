@@ -190,7 +190,7 @@ void cTelnet::handle_socket_signal_disconnected()
     QString err = "\nSocket got disconnected. " + socket.errorString() + "\n";
     if( ! mpHost->mIsGoingDown )
     {
-        //postMessage( err );
+        postMessage( err );
     }
 }
 
@@ -946,7 +946,9 @@ void cTelnet::handle_socket_signal_readyRead()
         datalen = decompressBuffer( pBuffer, amount );
     }
     buffer[datalen] = '\0';
-
+    #ifdef DEBUG
+        cout<<"got<";
+    #endif
     if( mpHost->mpConsole->mRecordReplay )
     {
         mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;
@@ -1047,6 +1049,7 @@ void cTelnet::handle_socket_signal_readyRead()
                     }
                 }
                 //7. inside IAC SB
+
                 command += ch;
                 if(iac && (ch == (unsigned char)TN_SE))  //IAC SE - end of subcommand
                 {
@@ -1086,11 +1089,17 @@ void cTelnet::handle_socket_signal_readyRead()
         }
         else
         {
+            #ifdef DEBUG
+            cout << ch;
+            #endif
             if( ch != '\r' ) cleandata += ch;
         }
 MAIN_LOOP_END: ;
         if( recvdGA )
         {
+            #ifdef DEBUG
+            cout<<"**** ----> GOT: GA_EVENT"<<endl;
+            #endif
             mGA_Driver = true;
             if( mCommands > 0 )
             {
@@ -1115,7 +1124,7 @@ MAIN_LOOP_END: ;
     {
        gotRest( cleandata );
     }
-
+//cout << ">packet_end"<<endl;
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();
 }

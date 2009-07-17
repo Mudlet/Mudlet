@@ -2424,7 +2424,7 @@ int TLuaInterpreter::sendRaw( lua_State * L )
         luaSendText = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    pHost->sendRaw( QString(luaSendText.c_str()) );    
+    pHost->send( QString(luaSendText.c_str()), true );
     return 0;
 }
 

@@ -84,7 +84,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     setCursor( cursor );
     setAutoFillBackground( true ); //experimental
     //setAttribute( Qt::WA_InputMethodEnabled, true );
-    setAttribute( Qt::WA_OpaquePaintEvent );
+    //setAttribute( Qt::WA_OpaquePaintEvent );
     setAttribute( Qt::WA_DeleteOnClose );
     
     QPalette palette;

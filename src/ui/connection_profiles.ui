@@ -617,7 +617,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-warning.png</pixmap>
+               <pixmap>:/icons/dialog-warning.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -1066,7 +1066,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-error.png</pixmap>
+               <pixmap>:/icons/dialog-error.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -1515,7 +1515,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-information.png</pixmap>
+               <pixmap>:/icons/dialog-information.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -2113,7 +2113,7 @@
                <string>Remove</string>
               </property>
               <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
+               <iconset>
                 <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png</iconset>
               </property>
              </widget>
@@ -2142,7 +2142,7 @@
                <string>Copy</string>
               </property>
               <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
+               <iconset>
                 <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
               </property>
              </widget>
@@ -2171,7 +2171,7 @@
                <string>New</string>
               </property>
               <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
+               <iconset>
                 <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
               </property>
              </widget>
@@ -2214,76 +2214,6 @@
              </widget>
             </item>
            </layout>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QTreeWidget" name="mud_list_treewidget">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>150</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="sizeIncrement">
-            <size>
-             <width>0</width>
-             <height>150</height>
-            </size>
-           </property>
-           <property name="baseSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="editTriggers">
-            <set>QAbstractItemView::DoubleClicked</set>
-           </property>
-           <property name="showDropIndicator" stdset="0">
-            <bool>false</bool>
-           </property>
-           <property name="alternatingRowColors">
-            <bool>true</bool>
-           </property>
-           <property name="rootIsDecorated">
-            <bool>false</bool>
-           </property>
-           <property name="itemsExpandable">
-            <bool>false</bool>
-           </property>
-           <property name="expandsOnDoubleClick">
-            <bool>false</bool>
-           </property>
-           <property name="columnCount">
-            <number>2</number>
-           </property>
-           <column>
-            <property name="text">
-             <string>1</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>1</string>
-            </property>
-           </column>
           </widget>
          </item>
         </layout>
@@ -2685,12 +2615,9 @@ p, li { white-space: pre-wrap; }
  </widget>
  <tabstops>
   <tabstop>profiles_tree_widget</tabstop>
-  <tabstop>mud_list_treewidget</tabstop>
   <tabstop>dialog_buttonbox</tabstop>
   <tabstop>remove_profile_button</tabstop>
  </tabstops>
- <resources>
-  <include location="../mudlet_alpha.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

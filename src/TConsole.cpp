@@ -448,8 +448,17 @@ void TConsole::resizeEvent( QResizeEvent * event )
     int x = event->size().width();
     int y = event->size().height();
     mpMainFrame->resize( x, y );
-    mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
-                           y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
+    if( ! mIsSubConsole && ! mIsDebugConsole )
+    {
+        mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
+                               y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
+    }
+    else
+    {
+        mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
+                               y - mMainFrameTopHeight - mMainFrameBottomHeight );
+
+    }
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
 
     if( mIsSubConsole || mIsDebugConsole )

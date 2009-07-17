@@ -90,5 +90,6 @@
         <file>icons/applications-accessories.png</file>
         <file>icons/applications-engineering.png</file>
         <file>icons/media-optical.png</file>
+        <file>icons/avalon.png</file>
     </qresource>
 </RCC>

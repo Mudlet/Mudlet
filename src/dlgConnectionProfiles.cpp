@@ -43,11 +43,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     abort->setIcon(QIcon(":/icons/dialog-close.png"));
     QPushButton *connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setIcon(QIcon(":/icons/dialog-ok-apply.png"));
-    
-    QStringList headerList;
-    headerList << "MUD name" << "Language";
-    mud_list_treewidget->setHeaderLabels( headerList );
-    
+
+
+
     connect( browseProfileHistoryButton, SIGNAL( pressed() ), this, SLOT(slot_chose_history()));
     connect( connect_button, SIGNAL(clicked()), this, SLOT(slot_connectToServer()));
     connect( abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
@@ -733,6 +731,44 @@ void dlgConnectionProfiles::fillout_form()
             toselect = pItem;
         }
     }
+    /*QStringList headerList;
+    headerList << "Game" << "MUD name" << "Language" << "Location";*/
+
+    //profiles_tree_widget->setHeaderLabels( headerList );*/
+
+   /* profiles_tree_widget->setColumnWidth( 0, 130 );
+    profiles_tree_widget->setColumnWidth( 1, 70 );
+    profiles_tree_widget->setColumnWidth( 2, 65 );
+    profiles_tree_widget->setColumnWidth( 3, 65 );
+    profiles_tree_widget->setColumnCount( 4 );*/
+    profiles_tree_widget->setIconSize(QSize(120,30));
+    //connect( mudList, SIGNAL(itemClicked ( QTreeWidgetItem *, int )), this, SLOT(slot_mud_clicked()));
+    //connect( mudList, SIGNAL(itemDoubleClicked ( QTreeWidgetItem *, int )), this, SLOT(slot_mud_connectToServer()));
+    profiles_tree_widget->setRootIsDecorated( false );
+    QStringList muds;
+    muds << "Avalon";
+    QTreeWidgetItem * pM = new QTreeWidgetItem( muds );
+    profiles_tree_widget->addTopLevelItem( pM );
+    QIcon mi( ":/icons/avalon.png" );
+    pM->setIcon(0,mi);
+    pM->setSizeHint(0,QSize(120,30));
+
+    QStringList muds2;
+    muds2 << "BatMUD";
+    QTreeWidgetItem * pM2 = new QTreeWidgetItem( muds2 );
+    profiles_tree_widget->addTopLevelItem( pM2 );
+    QIcon mi2( ":/icons/avalon.png" );
+    pM2->setIcon(0,mi2);
+    pM2->setSizeHint(0,QSize(120,30));
+
+    QStringList muds3;
+    muds3 << "Aardmud";
+    QTreeWidgetItem * pM3 = new QTreeWidgetItem( muds3 );
+    profiles_tree_widget->addTopLevelItem( pM3 );
+    QIcon mi3( ":/icons/avalon.png" );
+    pM3->setIcon(0,mi3);
+    pM3->setSizeHint(0,QSize(120,30));
+
     if( toselect )
         profiles_tree_widget->setCurrentItem( toselect );
 }
