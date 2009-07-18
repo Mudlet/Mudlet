@@ -1439,11 +1439,16 @@ void TConsole::setBgColor( int r, int g, int b )
 void TConsole::printCommand( QString & msg )
 {
     msg.append("\n");
-    int lineBeforeNewContent = buffer.getLastLineNumber();
-    if( lineBeforeNewContent >= 0 )
-        if( buffer.lineBuffer[lineBeforeNewContent].size() > 0 ) msg.prepend("\n");
     if( mTriggerEngineMode )
     {
+        int lineBeforeNewContent = buffer.getLastLineNumber();
+        if( lineBeforeNewContent >= 0 )
+        {
+            if( buffer.lineBuffer[lineBeforeNewContent].right(1) != "\n" )
+            {
+                msg.prepend("\n");
+            }
+        }
         buffer.appendLine( msg,
                            0,
                            msg.size()-1,
