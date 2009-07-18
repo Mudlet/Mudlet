@@ -33,7 +33,7 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    QFont font("Courier New", 10, QFont::Courier);
+    QFont font = mpHost->mDisplayFont;
     setFont(font);
     
     mRegularPalette.setColor(QPalette::Text,QColor(0,0,192));

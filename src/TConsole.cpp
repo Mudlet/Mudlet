@@ -1438,6 +1438,9 @@ void TConsole::setBgColor( int r, int g, int b )
 void TConsole::printCommand( QString & msg )
 {
     msg.append("\n");
+    int lineBeforeNewContent = buffer.getLastLineNumber();
+    if( lineBeforeNewContent >= 0 )
+        if( buffer.lineBuffer[lineBeforeNewContent].size() > 0 ) msg.prepend("\n");
     print( msg, mCommandFgColor.red(), mCommandFgColor.green(), mCommandFgColor.blue(), mCommandBgColor.red(), mCommandBgColor.green(), mCommandBgColor.blue() );
 }
 
@@ -1671,7 +1674,6 @@ void TConsole::print( QString & msg )
 
 void TConsole::print( QString & msg, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB )
 {
-    int lineBeforeNewContent = buffer.getLastLineNumber();
     buffer.append(  msg, 
                     0,
                     msg.size(),

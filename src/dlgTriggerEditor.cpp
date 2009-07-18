@@ -449,7 +449,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpLuaLexer->setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
     mpSourceEditorArea->script_scintilla->setLexer( mpLuaLexer );
     mpSourceEditorArea->script_scintilla->setAutoCompletionThreshold( 3 );
-    mpSourceEditorArea->script_scintilla->setAutoCompletionSource( QsciScintilla::AcsAll );
+    if( mpHost->mNoAntiAlias ) mpSourceEditorArea->script_scintilla->setAutoCompletionSource( QsciScintilla::AcsAll );
     mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 1, true );
     mpSourceEditorArea->script_scintilla->setMarginWidth( 1, 40 );
     mpSourceEditorArea->script_scintilla->setMarginWidth( 2, 20 );

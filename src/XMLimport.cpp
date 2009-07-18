@@ -321,6 +321,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
     pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
     pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
+    pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
 
     while( ! atEnd() ) 
     {

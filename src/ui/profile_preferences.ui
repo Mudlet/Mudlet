@@ -26,7 +26,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="input_line_tab">
       <attribute name="title">
@@ -127,28 +127,6 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_7">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="title">
-          <string>Input Completion</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_11">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="disable_auto_completion_checkbox">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Disable input completion</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
         <widget class="QGroupBox" name="groupBox_5">
          <property name="title">
           <string>Font</string>
@@ -167,7 +145,7 @@
          </layout>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="3" column="0">
         <widget class="QGroupBox" name="groupBox_2">
          <property name="enabled">
           <bool>false</bool>
@@ -1082,7 +1060,7 @@ or some other computer model that has a small screen.</string>
       <attribute name="title">
        <string>Script Editor Options</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_6">
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QGroupBox" name="groupBox_12">
          <property name="title">
@@ -1206,6 +1184,28 @@ or some other computer model that has a small screen.</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_7">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="title">
+          <string>Code Completion</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_11">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="disable_auto_completion_checkbox">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>Disable code completion (requires restart of Mudlet to take effect)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_4">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -1258,7 +1258,6 @@ or some other computer model that has a small screen.</string>
   <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>enable_spellchecking_checkbox</tabstop>
-  <tabstop>disable_auto_completion_checkbox</tabstop>
   <tabstop>encoding_combobox</tabstop>
   <tabstop>pushButton_black</tabstop>
   <tabstop>pushButton_red</tabstop>

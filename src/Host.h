@@ -165,6 +165,7 @@ public:
     bool               mUSE_FORCE_LF_AFTER_PROMPT;
     bool               mNoAntiAlias;
     bool               mRawStreamDump;
+    bool               mCodeCompletion;
     
     //private:
    

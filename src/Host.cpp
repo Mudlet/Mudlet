@@ -96,6 +96,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mIsGoingDown( false )
 , mNoAntiAlias( true )
 , mRawStreamDump( false )
+, mCodeCompletion( true )
 {
 }
 

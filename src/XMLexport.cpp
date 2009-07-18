@@ -100,6 +100,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "USE_IRE_DRIVER_BUGFIX", pT->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no" );
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
     writeAttribute( "mUSE_UNIX_EOL", pT->mUSE_UNIX_EOL ? "yes" : "no" );
+    writeAttribute( "mNoAntiAlias", pT->mNoAntiAlias ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );

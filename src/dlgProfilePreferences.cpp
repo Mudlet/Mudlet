@@ -163,7 +163,12 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     {
         mFontSize = pHost->mDisplayFont.pixelSize();
         fontComboBox->setCurrentFont( pHost->mDisplayFont );
+        if( mFontSize < 0 )
+        {
+            mFontSize = 10;
+        }
         if( mFontSize <= 40 ) fontSize->setCurrentIndex( mFontSize );
+
         setColors();
 
         wrap_at_spinBox->setValue(pHost->mWrapAt);    
