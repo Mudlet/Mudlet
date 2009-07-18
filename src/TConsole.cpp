@@ -65,7 +65,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mBgColor( QColor( 255, 255, 255 ) )
 , mCommandFgColor( QColor( 213, 195, 0 ) )
-, mCommandBgColor( mBgColor )
+, mCommandBgColor( QColor( 0, 0, 0 ) )
 , mSystemMessageFgColor( QColor( 255,0,0 ) )
 , mSystemMessageBgColor( mBgColor )
 , mWrapAt( 100 )
@@ -126,6 +126,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
             mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
             mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
             mMainFrameRightWidth = mpHost->mBorderRightWidth;
+            mCommandBgColor = mpHost->mBgColor;
         }
         mStandardFormat.bgR = mpHost->mBgColor.red();
         mStandardFormat.bgG = mpHost->mBgColor.green();
@@ -1441,7 +1442,23 @@ void TConsole::printCommand( QString & msg )
     int lineBeforeNewContent = buffer.getLastLineNumber();
     if( lineBeforeNewContent >= 0 )
         if( buffer.lineBuffer[lineBeforeNewContent].size() > 0 ) msg.prepend("\n");
-    print( msg, mCommandFgColor.red(), mCommandFgColor.green(), mCommandFgColor.blue(), mCommandBgColor.red(), mCommandBgColor.green(), mCommandBgColor.blue() );
+    if( mTriggerEngineMode )
+    {
+        buffer.appendLine( msg,
+                           0,
+                           msg.size()-1,
+                           mCommandFgColor.red(),
+                           mCommandFgColor.green(),
+                           mCommandFgColor.blue(),
+                           mCommandBgColor.red(),
+                           mCommandBgColor.green(),
+                           mCommandBgColor.blue(),
+                           false,
+                           false,
+                           false );
+    }
+    else
+        print( msg, mCommandFgColor.red(), mCommandFgColor.green(), mCommandFgColor.blue(), mCommandBgColor.red(), mCommandBgColor.green(), mCommandBgColor.blue() );
 }
 
 void TConsole::echo( QString & msg )
