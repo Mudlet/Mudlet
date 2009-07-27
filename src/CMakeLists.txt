@@ -69,6 +69,7 @@ TEasyButtonBar.cpp
 dlgColorTrigger.cpp
 TSplitter.cpp
 TSplitterHandle.cpp
+dlgNotepad.cpp
 TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
@@ -92,6 +93,7 @@ ui/timers_main_area.ui
 ui/about_dialog.ui
 ui/keybindings_main_area.ui
 ui/color_trigger.ui
+ui/notes_editor.ui
 ui/profile_preferences.ui)
 
 SET(mudlet_MOC_HDRS mudlet.h
@@ -128,6 +130,7 @@ TEasyButtonBar.h
 dlgColorTrigger.h
 TSplitter.h
 TSplitterHandle.h
+dlgNotepad.h
 TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)

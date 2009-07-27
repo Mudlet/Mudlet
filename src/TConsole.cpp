@@ -48,7 +48,7 @@
 #include "TSplitter.h"
 #include "TSplitterHandle.h"
 #include <QDir>
-
+#include "dlgNotepad.h"
 //#define NDEBUG
 #include <assert.h>
 
@@ -509,6 +509,8 @@ void TConsole::closeEvent( QCloseEvent *event )
             return;
         }
     }
+
+
 
     if( profile_name != "default_host" )
     {

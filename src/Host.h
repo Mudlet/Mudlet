@@ -46,7 +46,7 @@ class TLuaInterpreter;
 
 class dlgTriggerEditor;
 class TConsole;
-
+class dlgNotepad;
 
 
 class Host  : public QObject
@@ -166,6 +166,7 @@ public:
     bool               mNoAntiAlias;
     bool               mRawStreamDump;
     bool               mCodeCompletion;
+    dlgNotepad *       mpNotePad;
     
     //private:
    

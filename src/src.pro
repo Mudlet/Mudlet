@@ -78,6 +78,7 @@ SOURCES += TConsole.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
     mudlet.cpp \
+    dlgNotepad.cpp \
     TBuffer.cpp
 HEADERS += mudlet.h \
     TTimer.h \
@@ -134,6 +135,7 @@ HEADERS += mudlet.h \
     dlgColorTrigger.h \
     TSplitter.h \
     TSplitterHandle.h \
+    dlgNotepad.h \
     Tree.h
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
@@ -156,6 +158,7 @@ FORMS += ui/connection_profiles.ui \
     ui/about_dialog.ui \
     ui/keybindings_main_area.ui \
     ui/color_trigger.ui \
+    ui/notes_editor.ui \
     ui/profile_preferences.ui
 TEMPLATE = app
 TARGET = mudlet

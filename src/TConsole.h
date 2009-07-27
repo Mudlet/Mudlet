@@ -48,6 +48,7 @@ class TTextEdit;
 class TBuffer;
 class TLabel;
 class TSplitter;
+class dlgNotepad;
 
 
 class TFontSpecsLogger
@@ -192,6 +193,7 @@ public:
       bool              mLogToLogFile;
       bool              mRecordReplay;
       QString           mLogFileName;
+      dlgNotepad *      mpNotePad;
 
 
 private:

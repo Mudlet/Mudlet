@@ -36,6 +36,8 @@
 #include "mudlet.h"
 #include "TEvent.h"
 #include <QMessageBox>
+#include "dlgNotepad.h"
+
 
 Host::Host( int port, QString hostname, QString login, QString pass, int id ) 
 : mHostName          ( hostname )
@@ -97,11 +99,13 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mNoAntiAlias( true )
 , mRawStreamDump( false )
 , mCodeCompletion( true )
+, mpNotePad( 0 )
 {
 }
 
 Host::~Host()
 {
+
 }
 
 void Host::adjustNAWS()

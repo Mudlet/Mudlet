@@ -39,8 +39,11 @@
 #include "XMLimport.h"
 #include "EAction.h"
 #include "TTextEdit.h"
+#include "dlgNotepad.h"
+
 //#define NDEBUG
 #include <assert.h>
+
 
 using namespace std;
 
@@ -952,6 +955,13 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpEditorDialog->close();    
             }
+            if( pC->mpHost->mpNotePad )
+            {
+                qDebug()<<"saving notepad";
+                pC->mpHost->mpNotePad->save();
+                pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
+                pC->mpHost->mpNotePad->close();
+            }
             
             // close console
             pC->close();
@@ -1101,14 +1111,26 @@ void mudlet::slot_show_about_dialog()
     pDlg->show();
 }
 
+#include <QTextCharFormat>
+
 void mudlet::slot_notes()
 {
-    /*Host * pHost = getActiveHost();
+    Host * pHost = getActiveHost();
     if( ! pHost ) return;
-    dlgNotes * pNotes = pHost->mpNotes;
-    if( ! pNotes ) return;
+    dlgNotepad * pNotes = pHost->mpNotePad;
+    if( ! pNotes )
+    {
+        pHost->mpNotePad = new dlgNotepad( pHost );
+        pNotes = pHost->mpNotePad;
+
+        QTextCharFormat format;
+        format.setFont( pHost->mDisplayFont );
+        pNotes->notesEdit->setCurrentCharFormat( format );
+        pNotes->restore();
+        pNotes->setWindowTitle(pHost->getName()+" notes" );
+    }
     pNotes->raise();
-    pNotes->show();*/
+    pNotes->show();
 }
 
 void mudlet::slot_reconnect()
