@@ -24,8 +24,10 @@
 #include "ui_source_editor_area.h"
 #include <QWidget>
 
-#include <Qsci/qsciscintilla.h>
-#include <Qsci/qscilexerlua.h>
+class THighlighter;
+
+//#include <Qsci/qsciscintilla.h>
+//#include <Qsci/qscilexerlua.h>
 
 class dlgSourceEditorArea : public QWidget , public Ui::source_editor_area
 {
@@ -34,7 +36,8 @@ class dlgSourceEditorArea : public QWidget , public Ui::source_editor_area
         public:
         
         dlgSourceEditorArea(QWidget*);
-    QsciLexerLua * mpLuaLexer;
+        THighlighter * highlighter;
+    //QsciLexerLua * mpLuaLexer;
     
 signals:
     

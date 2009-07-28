@@ -442,7 +442,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( saveMenu );
     toolBar->addAction( showDebugAreaAction );
     
-    mpSourceEditorArea->script_scintilla->setUtf8( true );
+    /*mpSourceEditorArea->script_scintilla->setUtf8( true );
     setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
     mpSourceEditorArea->script_scintilla->setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
     mpLuaLexer = new QsciLexerLua(this);
@@ -453,7 +453,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 1, true );
     mpSourceEditorArea->script_scintilla->setMarginWidth( 1, 40 );
     mpSourceEditorArea->script_scintilla->setMarginWidth( 2, 20 );
-    mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 2, false );
+    mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 2, false );*/
 
     connect( comboBox_search_triggers, SIGNAL( currentIndexChanged( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
@@ -1214,7 +1214,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->listWidget_regex_list->clear();
-    mpSourceEditorArea->script_scintilla->clear();
+    mpSourceEditorArea->editor->clear();
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
 
@@ -1353,7 +1353,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
-    mpSourceEditorArea->script_scintilla->clear();
+    mpSourceEditorArea->editor->clear();
     treeWidget_timers->setCurrentItem( pNewItem );
     mCurrentTimer = pNewItem;
     showInfo( msgInfoAddTimer );
@@ -1443,7 +1443,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
-    mpSourceEditorArea->script_scintilla->clear();
+    mpSourceEditorArea->editor->clear();
     treeWidget_keys->setCurrentItem( pNewItem );
     mCurrentKey = pNewItem;
     showInfo( msgInfoAddKey );
@@ -1539,7 +1539,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorArea->script_scintilla->clear();
+    mpSourceEditorArea->editor->clear();
     
     mpAliasMainArea->lineEdit_alias_name->setText( name );
     
@@ -1642,7 +1642,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     mpActionsMainArea->lineEdit_action_button_up->clear();
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
-    mpSourceEditorArea->script_scintilla->clear();
+    mpSourceEditorArea->editor->clear();
     
     mpHost->getActionUnit()->updateToolbar();
     
@@ -1742,7 +1742,7 @@ void dlgTriggerEditor::addScript( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
-    mpSourceEditorArea->script_scintilla->setText( script );
+    mpSourceEditorArea->editor->setPlainText( script );
     mCurrentScript = pNewItem;
     treeWidget_scripts->setCurrentItem( pNewItem );
     slot_scripts_clicked( treeWidget_scripts->currentItem(), 0 );
@@ -1901,7 +1901,7 @@ void dlgTriggerEditor::saveTrigger()
         else if( _type == 3 ) regexPropertyList << REGEX_EXACT_MATCH;
         else if( _type == 4 ) regexPropertyList << REGEX_LUA_CODE;
     }
-    QString script = mpSourceEditorArea->script_scintilla->text();
+    QString script = mpSourceEditorArea->editor->toPlainText();
 
     if( pItem )
     {
@@ -2083,7 +2083,7 @@ void dlgTriggerEditor::saveTimer()
     }
 
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
-    QString script = mpSourceEditorArea->script_scintilla->text();
+    QString script = mpSourceEditorArea->editor->toPlainText();
 
     if( pItem )
     {
@@ -2249,7 +2249,7 @@ void dlgTriggerEditor::saveAlias()
         name = regex;
     }
     QString substitution = mpAliasMainArea->substitution->text();
-    QString script = mpSourceEditorArea->script_scintilla->text();
+    QString script = mpSourceEditorArea->editor->toPlainText();
     if( pItem )
     {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -2402,7 +2402,7 @@ void dlgTriggerEditor::saveAction()
     QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
     QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
-    QString script = mpSourceEditorArea->script_scintilla->text();
+    QString script = mpSourceEditorArea->editor->toPlainText();
     QColor color = mpActionsMainArea->pushButton_color->palette().color(QPalette::Button);
     int sizeX = mpActionsMainArea->buttonSizeX->text().toInt();
     int sizeY = mpActionsMainArea->buttonSizeY->text().toInt();
@@ -2565,7 +2565,7 @@ void dlgTriggerEditor::saveScript()
 
     bool state = true;
     QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
-    QString script = mpSourceEditorArea->script_scintilla->text();
+    QString script = mpSourceEditorArea->editor->toPlainText();
 
     QList<QListWidgetItem*> itemList;
     for( int i=0; i<mpScriptsMainArea->listWidget_registered_event_handlers->count(); i++ )
@@ -2713,7 +2713,7 @@ void dlgTriggerEditor::saveKey()
         name = mpKeysMainArea->lineEdit_key->text();
     }
     QString command = mpKeysMainArea->lineEdit_command->text();
-    QString script = mpSourceEditorArea->script_scintilla->text();
+    QString script = mpSourceEditorArea->editor->toPlainText();
     if( pItem )
     {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -2809,7 +2809,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
-    mpSourceEditorArea->script_scintilla->setText( "" );
+    mpSourceEditorArea->editor->setPlainText( "" );
     mpTriggersMainArea->listWidget_regex_list->clear();
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
@@ -2940,7 +2940,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->pushButtonBgColor->setPalette( BgColorPalette );
         mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
         QString script = pT->getScript();
-        mpSourceEditorArea->script_scintilla->setText( script );
+        mpSourceEditorArea->editor->setPlainText( script );
 
         mpTriggersMainArea->colorTrigger->setChecked( pT->mColorTrigger );
         if( pT->mColorTriggerBg )
@@ -2974,7 +2974,7 @@ void dlgTriggerEditor::slot_alias_clicked( QTreeWidgetItem *pItem, int column )
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorArea->script_scintilla->setText( "" );
+    mpSourceEditorArea->editor->setPlainText( "" );
 
     if( (pItem == 0) || (column != 0) )
     {
@@ -2998,7 +2998,7 @@ void dlgTriggerEditor::slot_alias_clicked( QTreeWidgetItem *pItem, int column )
         mpAliasMainArea->lineEdit_alias_name->setText( name );
         
         QString script = pT->getScript();
-        mpSourceEditorArea->script_scintilla->setText( script );
+        mpSourceEditorArea->editor->setPlainText( script );
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -3013,7 +3013,7 @@ void dlgTriggerEditor::slot_key_clicked( QTreeWidgetItem *pItem, int column )
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
     mpKeysMainArea->lineEdit_name->clear();
-    mpSourceEditorArea->script_scintilla->setText( "" );
+    mpSourceEditorArea->editor->setPlainText( "" );
     if( (pItem == 0) || (column != 0) )
     {
         return;
@@ -3031,7 +3031,7 @@ void dlgTriggerEditor::slot_key_clicked( QTreeWidgetItem *pItem, int column )
         QString keyName = mpHost->getKeyUnit()->getKeyName( pT->getKeyCode(), pT->getKeyModifiers() );
         mpKeysMainArea->lineEdit_key->setText( keyName );
         QString script = pT->getScript();
-        mpSourceEditorArea->script_scintilla->setText( script );
+        mpSourceEditorArea->editor->setPlainText( script );
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -3044,7 +3044,7 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
 
     mpSystemMessageArea->hide();
     mpActionsMainArea->lineEdit_action_button_down->clear();
-    mpSourceEditorArea->script_scintilla->setText( "" );
+    mpSourceEditorArea->editor->setPlainText( "" );
     mpActionsMainArea->lineEdit_action_button_up->clear();
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
@@ -3074,7 +3074,7 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpActionsMainArea->lineEdit_action_button_down->setText( pT->getCommandButtonDown() );
         mpActionsMainArea->lineEdit_action_button_up->setText( pT->getCommandButtonUp() );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
-        mpSourceEditorArea->script_scintilla->setText( pT->getScript() );
+        mpSourceEditorArea->editor->setPlainText( pT->getScript() );
         mpActionsMainArea->comboBox_location->setCurrentIndex( pT->mLocation );
         mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
         QColor color = pT->getButtonColor();
@@ -3116,7 +3116,7 @@ void dlgTriggerEditor::slot_scripts_clicked( QTreeWidgetItem *pItem, int column 
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorArea->script_scintilla->setText( "" );
+    mpSourceEditorArea->editor->setPlainText( "" );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
     if( (pItem == 0) || (column != 0) )
@@ -3139,7 +3139,7 @@ void dlgTriggerEditor::slot_scripts_clicked( QTreeWidgetItem *pItem, int column 
         }
         mpScriptsMainArea->lineEdit_scripts_name->clear();
         QString script = pT->getScript();
-        mpSourceEditorArea->script_scintilla->setText( script );
+        mpSourceEditorArea->editor->setPlainText( script );
         mpScriptsMainArea->lineEdit_scripts_name->setText( name );
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -3152,7 +3152,7 @@ void dlgTriggerEditor::slot_timer_clicked( QTreeWidgetItem *pItem, int column )
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorArea->script_scintilla->setText( "" );
+    mpSourceEditorArea->editor->setPlainText( "" );
     mpTimersMainArea->lineEdit_command->clear();
     mpTimersMainArea->lineEdit_timer_name->clear();
     mpTimersMainArea->timeEdit_hours->clear();
@@ -3195,7 +3195,7 @@ void dlgTriggerEditor::slot_timer_clicked( QTreeWidgetItem *pItem, int column )
         mpTimersMainArea->timeEdit_msecs->setTime(t5);
         
         QString script = pT->getScript();
-        mpSourceEditorArea->script_scintilla->setText( script );
+        mpSourceEditorArea->editor->setPlainText( script );
         if( ! pT->state() ) showError( pT->getError() );
     }
 }

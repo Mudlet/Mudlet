@@ -1127,7 +1127,7 @@ void mudlet::slot_notes()
         format.setFont( pHost->mDisplayFont );
         pNotes->notesEdit->setCurrentCharFormat( format );
         pNotes->restore();
-        pNotes->setWindowTitle(pHost->getName()+" notes" );
+        pNotes->setWindowTitle( pHost->getName()+" notes" );
     }
     pNotes->raise();
     pNotes->show();

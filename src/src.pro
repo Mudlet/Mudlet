@@ -79,6 +79,7 @@ SOURCES += TConsole.cpp \
     TSplitterHandle.cpp \
     mudlet.cpp \
     dlgNotepad.cpp \
+    THighlighter.cpp \
     TBuffer.cpp
 HEADERS += mudlet.h \
     TTimer.h \
@@ -136,6 +137,7 @@ HEADERS += mudlet.h \
     TSplitter.h \
     TSplitterHandle.h \
     dlgNotepad.h \
+    THighlighter.h \
     Tree.h
 FORMS += ui/connection_profiles.ui \
     ui/console.ui \
