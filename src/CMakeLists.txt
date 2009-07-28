@@ -70,6 +70,7 @@ dlgColorTrigger.cpp
 TSplitter.cpp
 TSplitterHandle.cpp
 dlgNotepad.cpp
+THighlighter.cpp
 TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
@@ -131,6 +132,7 @@ dlgColorTrigger.h
 TSplitter.h
 TSplitterHandle.h
 dlgNotepad.h
+THighlighter.h
 TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)
