@@ -327,7 +327,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QToolButton * replayButton = new QToolButton;
     replayButton->setCheckable( true );
     replayButton->setFocusPolicy( Qt::NoFocus );
-    replayButton->setToolTip("start logging MUD output to log file");
+    replayButton->setToolTip("record a replay");
     QIcon icon4(":/icons/media-tape.png");
     replayButton->setIcon( icon4 );
     connect( replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));

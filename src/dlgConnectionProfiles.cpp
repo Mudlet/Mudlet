@@ -634,9 +634,27 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
         
         QString item = "url";
         QString val = readProfileData( profile, item );
+        if( val.size() < 1 )
+        {
+            if( profile_name == "Avalon" )
+                val = "avalon.mud.de";
+            if( profile_name == "BatMUD" )
+                val = "batmud.bat.org";
+            if( profile_name == "Aardwolf" )
+                val = "aardmud.org";
+        }
         host_name_entry->setText( val );
         item = "port";
         val = readProfileData( profile, item );
+        if( val.size() < 1 )
+        {
+            if( profile_name == "Avalon" )
+                val = "23";
+            if( profile_name == "BatMUD" )
+                val = "23";
+            if( profile_name == "Aardwolf" )
+                val = "4000";
+        }
         port_entry->setText( val );
         item = "password";
         val = readProfileData( profile, item );
@@ -757,15 +775,15 @@ void dlgConnectionProfiles::fillout_form()
     muds2 << "BatMUD";
     QTreeWidgetItem * pM2 = new QTreeWidgetItem( muds2 );
     profiles_tree_widget->addTopLevelItem( pM2 );
-    QIcon mi2( ":/icons/avalon.png" );
+    QIcon mi2( ":/icons/batmud_mud.jpg" );
     pM2->setIcon(0,mi2);
     pM2->setSizeHint(0,QSize(120,30));
 
     QStringList muds3;
-    muds3 << "Aardmud";
+    muds3 << "Aardwolf";
     QTreeWidgetItem * pM3 = new QTreeWidgetItem( muds3 );
     profiles_tree_widget->addTopLevelItem( pM3 );
-    QIcon mi3( ":/icons/avalon.png" );
+    QIcon mi3( ":/icons/aardwolf_mud.jpg" );
     pM3->setIcon(0,mi3);
     pM3->setSizeHint(0,QSize(120,30));
 
