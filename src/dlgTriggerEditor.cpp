@@ -442,6 +442,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( saveMenu );
     toolBar->addAction( showDebugAreaAction );
     
+    mpSourceEditorArea->editor->setFont( mpHost->mDisplayFont );
     /*mpSourceEditorArea->script_scintilla->setUtf8( true );
     setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
     mpSourceEditorArea->script_scintilla->setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );

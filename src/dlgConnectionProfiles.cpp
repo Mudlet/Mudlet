@@ -775,7 +775,7 @@ void dlgConnectionProfiles::fillout_form()
     muds2 << "BatMUD";
     QTreeWidgetItem * pM2 = new QTreeWidgetItem( muds2 );
     profiles_tree_widget->addTopLevelItem( pM2 );
-    QIcon mi2( ":/icons/batmud_mud.jpg" );
+    QIcon mi2( ":/icons/batmud_mud.png" );
     pM2->setIcon(0,mi2);
     pM2->setSizeHint(0,QSize(120,30));
 
@@ -783,7 +783,7 @@ void dlgConnectionProfiles::fillout_form()
     muds3 << "Aardwolf";
     QTreeWidgetItem * pM3 = new QTreeWidgetItem( muds3 );
     profiles_tree_widget->addTopLevelItem( pM3 );
-    QIcon mi3( ":/icons/aardwolf_mud.jpg" );
+    QIcon mi3( ":/icons/aardwolf_mud.png" );
     pM3->setIcon(0,mi3);
     pM3->setSizeHint(0,QSize(120,30));
 

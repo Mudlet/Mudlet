@@ -30,13 +30,6 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget * pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
-    QFont font;
-    font.setFamily("Courier");
-    font.setFixedPitch(true);
-    font.setPointSize(10);
-
-    editor->setFont(font);
-
     highlighter = new THighlighter(editor->document());
 
 }

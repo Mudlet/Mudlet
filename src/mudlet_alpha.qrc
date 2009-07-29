@@ -92,7 +92,7 @@
         <file>icons/media-optical.png</file>
         <file>icons/avalon.png</file>
         <file>icons/generic_mud.jpg</file>
-        <file>icons/aardwolf_mud.jpg</file>
-        <file>icons/batmud_mud.jpg</file>
+        <file>icons/batmud_mud.png</file>
+        <file>icons/aardwolf_mud.png</file>
     </qresource>
 </RCC>
