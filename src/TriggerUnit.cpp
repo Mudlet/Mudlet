@@ -46,6 +46,7 @@ void TriggerUnit::addTriggerRootNode( TTrigger * pT )
     
     mTriggerRootNodeList.push_back( pT );
     mTriggerMap.insert( pT->getID(), pT );
+    
 }
 
 void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID )
@@ -146,8 +147,6 @@ void TriggerUnit::unregisterTrigger( TTrigger * pT )
 void TriggerUnit::addTrigger( TTrigger * pT )
 {
     if( ! pT ) return;
-    
-    QMutexLocker locker(& mTriggerUnitLock); 
     
     if( ! pT->getID() )
     {
@@ -266,26 +265,50 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
 
 void TriggerUnit::enableTrigger( QString & name )
 {
-    QMutexLocker locker(& mTriggerUnitLock); 
+    /*QMutexLocker locker(& mTriggerUnitLock);
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->enableTrigger( name );
-    } 
+    }*/
+    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TTrigger * pT = it.value();
+        pT->setIsActive( true );
+        ++it;
+    }
 }
 
 void TriggerUnit::disableTrigger( QString & name )
 {
-    QMutexLocker locker(& mTriggerUnitLock); 
+    /*QMutexLocker locker(& mTriggerUnitLock);
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->disableTrigger( name );
-    } 
+    } */
+    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TTrigger * pT = it.value();
+        pT->setIsActive( false );
+        ++it;
+    }
 }
 
+void TriggerUnit::setTriggerStayOpen( QString name, int lines )
+{
+    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TTrigger * pT = it.value();
+        pT->mKeepFiring = lines;
+        ++it;
+    }
+}
 
 void TriggerUnit::killTrigger( QString & name )
 {

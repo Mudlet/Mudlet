@@ -1550,7 +1550,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    double x1;
+    double r1;
     if( ! lua_isnumber( L, 2 ) )
     {
         lua_pushstring( L, "wrong argument type" );
@@ -1559,9 +1559,9 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     }
     else
     {
-        x1 = lua_tonumber( L, 2 );
+        r1 = lua_tonumber( L, 2 );
     }
-    double y1;
+    double g1;
     if( ! lua_isnumber( L, 3 ) )
     {
         lua_pushstring( L, "wrong argument type" );
@@ -1570,9 +1570,9 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     }
     else
     {
-        y1 = lua_tonumber( L, 3 );
+        g1 = lua_tonumber( L, 3 );
     }
-    double x2;
+    double b1;
     if( ! lua_isnumber( L, 4 ) )
     {
         lua_pushstring( L, "wrong argument type" );
@@ -1581,9 +1581,9 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     }
     else
     {
-        x2 = lua_tonumber( L, 4 );
+        b1 = lua_tonumber( L, 4 );
     }
-    double y2;
+    double r2;
     if( ! lua_isnumber( L, 5 ) )
     {
         lua_pushstring( L, "wrong argument type" );
@@ -1592,7 +1592,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     }
     else
     {
-        y2 = lua_tonumber( L, 5 );
+        r2 = lua_tonumber( L, 5 );
     }
     double g2;
     if( ! lua_isnumber( L, 6 ) )
@@ -1654,10 +1654,10 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     if( text == "main" )
     {
         TConsole * pC = pHost->mpConsole;
-        pC->mFormatCurrent.bgR = x1;
-        pC->mFormatCurrent.bgG = y1;
-        pC->mFormatCurrent.bgB = x2;
-        pC->mFormatCurrent.fgR = y2;
+        pC->mFormatCurrent.bgR = r1;
+        pC->mFormatCurrent.bgG = g1;
+        pC->mFormatCurrent.bgB = b1;
+        pC->mFormatCurrent.fgR = r2;
         pC->mFormatCurrent.fgG = g2;
         pC->mFormatCurrent.fgB = b2;
         pC->mFormatCurrent.bold = bold;
@@ -1666,7 +1666,9 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
         return true;
     }
     else
-        mudlet::self()->setTextFormat( text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<bool>(y2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
+    {
+        mudlet::self()->setTextFormat( text, static_cast<int>(r1), static_cast<int>(g1), static_cast<int>(b1), static_cast<int>(r2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
+    }
 
     return 0;
 }
@@ -1779,6 +1781,68 @@ int TLuaInterpreter::getLastLineNumber( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::getMudletHomeDir( lua_State * L )
+{
+    QString home = QDir::homePath();
+    home.append( "/.config/mudlet/profiles/" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name = pHost->getName();
+    home.append( name );
+    QString erg = QDir::toNativeSeparators( home );
+    lua_pushstring( L, erg.toLatin1().data() );
+    return 1;
+}
+
+int TLuaInterpreter::disconnect( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.disconnect();
+    return 0;
+}
+
+int TLuaInterpreter::reconnect( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
+    return 0;
+}
+
+int TLuaInterpreter::setTriggerStayOpen( lua_State *L )
+{
+    string luaWindowName;
+    double b;
+    int s = 1;
+    if( lua_gettop( L ) > 1 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaWindowName = lua_tostring( L, s );
+            s++;
+        }
+    }
+    if( ! lua_isnumber( L, s ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        b = lua_tonumber( L, s );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString windowName(luaWindowName.c_str());
+    pHost->getTriggerUnit()->setTriggerStayOpen( QString( luaWindowName.c_str() ), static_cast<int>(b) );
+    return 0;
+}
+
 int TLuaInterpreter::setBold( lua_State *L )
 {
     string luaWindowName;
@@ -1817,6 +1881,7 @@ int TLuaInterpreter::setBold( lua_State *L )
         pHost->mpConsole->setBold( b );
     return 0;
 }
+
 int TLuaInterpreter::setItalics( lua_State *L )
 {
         string luaWindowName;
@@ -3044,6 +3109,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBold", TLuaInterpreter::setBold );
     lua_register( pGlobalLua, "setItalics", TLuaInterpreter::setItalics );
     lua_register( pGlobalLua, "setUnderline", TLuaInterpreter::setUnderline );
+    lua_register( pGlobalLua, "disconnect", TLuaInterpreter::disconnect );
+    lua_register( pGlobalLua, "reconnect", TLuaInterpreter::reconnect );
+    lua_register( pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir );
+    lua_register( pGlobalLua, "setTriggerStayOpen", TLuaInterpreter::setTriggerStayOpen );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";

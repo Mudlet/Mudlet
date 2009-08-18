@@ -174,6 +174,10 @@ public:
     static int setBold( lua_State * );
     static int setItalics( lua_State * );
     static int setUnderline( lua_State * );
+    static int disconnect( lua_State * );
+    static int reconnect( lua_State * );
+    static int getMudletHomeDir( lua_State * );
+    static int setTriggerStayOpen( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;

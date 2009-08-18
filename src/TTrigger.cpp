@@ -63,6 +63,8 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mColorTriggerFg( false )
 , mColorTriggerBg( false )
 , mColorTrigger( false )
+, mStayOpen( 0 )
+, mKeepFiring( 0 )
 {
 } 
 
@@ -90,6 +92,8 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 , mColorTriggerFg( false )
 , mColorTriggerBg( false )
 , mColorTrigger( false )
+, mStayOpen( 0 )
+, mKeepFiring( 0 )
 {
     setRegexCodeList( regexList, regexProperyList );
 }
@@ -106,6 +110,12 @@ TTrigger::~TTrigger()
         mpHost->getTriggerUnit()->unregisterTrigger( this );     
     }
         
+}
+
+void TTrigger::setName( QString name )
+{
+    mName = name;
+    mpHost->getTriggerUnit()->mLookupTable.insertMulti( name, this );
 }
 
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
@@ -157,14 +167,21 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             
             if (re == 0)
             {
-                if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"REGEX COMPILE ERROR:">>0; TDebug(QColor(Qt::red),QColor(Qt::gray))<<pattern<<"\n">>0;}
+                if( mudlet::debugMode )
+                {
+                    TDebug(QColor(Qt::white),QColor(Qt::red))<<"REGEX COMPILE ERROR:">>0;
+                    TDebug(QColor(Qt::red),QColor(Qt::gray))<<pattern<<"\n">>0;
+                }
                 setError( QString( "Pattern '" )+QString(pattern)+QString( "' failed to compile. Correct the pattern.") );
                 state = false;
                 //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
             else
             {
-                if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"[OK]: REGEX_COMPILE OK\n">>0;}
+                if( mudlet::debugMode )
+                {
+                    TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"[OK]: REGEX_COMPILE OK\n">>0;
+                }
             }
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
@@ -402,7 +419,10 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
             match.append( substring_start, substring_length );
             captureList.push_back( match );
             posList.push_back( ovector[2*i] + posOffset );
-            if( mudlet::debugMode ){ TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"<regex mode: match all> capture group #"<<i<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
+            if( mudlet::debugMode )
+            {
+                TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"<regex mode: match all> capture group #"<<i<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;
+            }
         }
     }      
 
@@ -569,7 +589,10 @@ inline void TTrigger::updateMultistates( int regexNumber,
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back( captureList );
         pCondition->multiCapturePosList.push_back( posList );
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::black)) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] <<"\n" >> 0;}
+        if( mudlet::debugMode )
+        {
+            TDebug(QColor(Qt::darkYellow),QColor(Qt::black)) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] <<"\n" >> 0;
+        }
     }
     else
     {
@@ -579,7 +602,10 @@ inline void TTrigger::updateMultistates( int regexNumber,
             k++;
             if( (*it).second->nextCondition() == regexNumber )
             {
-                if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::black)) << "match state " << k << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] <<"\n" >> 0;}
+                if( mudlet::debugMode )
+                {
+                    TDebug(QColor(Qt::darkYellow),QColor(Qt::black)) << "match state " << k << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] <<"\n" >> 0;
+                }
                 (*it).second->conditionMatched();
                 (*it).second->multiCaptureList.push_back( captureList );
                 (*it).second->multiCapturePosList.push_back( posList );
@@ -593,7 +619,9 @@ inline void TTrigger::filter( std::string & capture, int & posOffset )
     if( capture.size() < 1 ) return;
     char * filterSubject = (char *) malloc( capture.size() + 2048 );
     if( filterSubject )
-       strcpy( filterSubject, capture.c_str() );
+    {
+        strcpy( filterSubject, capture.c_str() );
+    }
     else
     {
         return;
@@ -863,6 +891,21 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
     bool ret = false;
     if( isActive() )
     {
+        if( mKeepFiring > 0 )
+        {
+            mKeepFiring--;
+            execute();
+            bool conditionMet = false;
+            typedef list<TTrigger *>::const_iterator I;
+            for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+            {
+                TTrigger * pChild = *it;
+                ret = pChild->match( subject, toMatch, line );
+                if( ret ) conditionMet = true;
+            }
+            return true;
+        }
+
         if( mIsLineTrigger )
         {
             if( --mStartOfLineDelta < 0 )
@@ -940,6 +983,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                 if( ret )
                 {
                     conditionMet = true;
+                    mKeepFiring = mStayOpen;
                     break; 
                 }
             }
@@ -963,6 +1007,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                 //qDebug()<<"TMatchState #"<<k<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
                 if( (*it).second->isComplete() )
                 {
+                    mKeepFiring = mStayOpen;
                     if( mudlet::debugMode ){ TDebug(QColor(Qt::yellow),QColor(Qt::darkMagenta))<<"multiline trigger name="<<mName<<" *FIRES* all conditons are fullfilled. Executing script.\n">>0;}
                     removeList.push_back( (*it).first );
                     conditionMet = true;

@@ -69,7 +69,7 @@ public:
     QString          getCommand()                    { return mCommand; }
     void             setCommand( QString b )         { mCommand = b; }
     QString          getName()                       { return mName; }
-    void             setName( QString name )         { mName = name; }
+    void             setName( QString name );
     QStringList &    getRegexCodeList()              { return mRegexCodeList; }
     QList<int>       getRegexCodePropertyList()      { return mRegexCodePropertyList; }
     QColor           getFgColor()                    { return mFgColor; }
@@ -119,11 +119,13 @@ public:
     bool             mFilterTrigger;
     bool             mSoundTrigger;
     QString          mSoundFile;
+    int              mStayOpen;
     bool             mColorTrigger;
     bool             mColorTriggerFg;
     bool             mColorTriggerBg;
     QColor           mColorTriggerFgColor;
     QColor           mColorTriggerBgColor;
+    int                                    mKeepFiring;
     bool             isClone( TTrigger & ) const;
     Host *                                 mpHost;
 
@@ -160,6 +162,7 @@ private:
     QColor                                 mFgColor;
     QColor                                 mBgColor;
     bool                                   mIsColorizerTrigger;
+
 
 };
 

@@ -316,6 +316,7 @@ inline void TBuffer::set_text_properties(int tag)
             mHighColorModeForeground = false;
             mWaitingForHighColorCode = false;
             mIsHighColorMode = false;
+
             return;
         }
         if( mHighColorModeBackground )
@@ -348,6 +349,7 @@ inline void TBuffer::set_text_properties(int tag)
             mHighColorModeBackground = false;
             mWaitingForHighColorCode = false;
             mIsHighColorMode = false;
+
             return;
         }
     }
@@ -741,7 +743,7 @@ void TBuffer::translateToPlainText( std::string & s )
                                 mHighColorModeForeground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
-                                return;
+                                continue;
                             }
                             if( mHighColorModeBackground )
                             {
@@ -773,7 +775,7 @@ void TBuffer::translateToPlainText( std::string & s )
                                 mHighColorModeBackground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
-                                return;
+                                continue;
                             }
                         }
 
@@ -781,7 +783,7 @@ void TBuffer::translateToPlainText( std::string & s )
                         {
                             mIsHighColorMode = true;
                             mHighColorModeForeground = true;
-                            return;
+                            continue;
                         }
                         if( tag == 48 )
                         {
@@ -791,7 +793,7 @@ void TBuffer::translateToPlainText( std::string & s )
                         if( ( mIsHighColorMode ) && ( tag == 5 ) )
                         {
                             mWaitingForHighColorCode = true;
-                            return;
+                            continue;
                         }
 
                         // we are dealing with standard ANSI colors

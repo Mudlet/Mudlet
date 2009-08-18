@@ -1198,6 +1198,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     pT->setIsFolder( isFolder );
     pT->setIsActive( false );
     pT->setIsMultiline( false );
+    pT->mStayOpen = 0;
     pT->registerTrigger();
     int childID = pT->getID();    
     pNewItem->setData( 0, Qt::UserRole, childID );
@@ -1218,6 +1219,8 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpSourceEditorArea->editor->clear();
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
+    mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
+    mpTriggersMainArea->spinBox_linemargin->setValue( 0 );
 
     QPalette pal = palette();
     QColor color =  pal.color( QPalette::Button );
@@ -1920,6 +1923,7 @@ void dlgTriggerEditor::saveTrigger()
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
             pT->mFilterTrigger = mpTriggersMainArea->filterTrigger->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
+            pT->mStayOpen = mpTriggersMainArea->spinBox_stayOpen->value();
             pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
             pT->setSound( mpTriggersMainArea->lineEdit_soundFile->text() );
 
@@ -2918,6 +2922,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
         mpTriggersMainArea->filterTrigger->setChecked( pT->mFilterTrigger );
         mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );
+        mpTriggersMainArea->spinBox_stayOpen->setValue( pT->mStayOpen );
         mpTriggersMainArea->soundTrigger->setChecked( pT->mSoundTrigger );
         mpTriggersMainArea->lineEdit_soundFile->setText( pT->mSoundFile );
 

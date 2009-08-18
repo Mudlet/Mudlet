@@ -50,24 +50,27 @@ public:
     void                  reParentTrigger( int childID, int oldParentID, int newParentID );
     void                  processDataStream( QString &, int );
     void                  dump();
+    void                  setTriggerStayOpen( QString, int );
     void                  stopAllTriggers();
     void                  reenableAllTriggers();
     std::list<TTrigger *> mCleanupList;
     qint64                getNewID();
+    QMap<QString, TTrigger *> mLookupTable;
     QMutex                mTriggerUnitLock;
   
 private: 
-                          TriggerUnit(){;}
-    TTrigger *            getTriggerPrivate( int id );
-    void                  addTriggerRootNode( TTrigger * pT );
-    void                  addTrigger( TTrigger * pT );
-    void                  removeTriggerRootNode( TTrigger * pT );
-    void                  removeTrigger( TTrigger *);
+                              TriggerUnit(){;}
+    TTrigger *                getTriggerPrivate( int id );
+    void                      addTriggerRootNode( TTrigger * pT );
+    void                      addTrigger( TTrigger * pT );
+    void                      removeTriggerRootNode( TTrigger * pT );
+    void                      removeTrigger( TTrigger *);
     
-    Host *                mpHost;
-    QMap<int, TTrigger *> mTriggerMap;
-    std::list<TTrigger *> mTriggerRootNodeList;
-    qint64                mMaxID;
+    Host *                    mpHost;
+    QMap<int, TTrigger *>     mTriggerMap;
+    std::list<TTrigger *>     mTriggerRootNodeList;
+
+    qint64                    mMaxID;
    
    
 };

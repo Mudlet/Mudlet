@@ -1494,6 +1494,7 @@ void TConsole::echo( QString & msg )
 void TConsole::print( const char * txt )
 {
     QString msg = txt;
+    qDebug()<<"1BUG:fgR="<<mFormatCurrent.fgR<<" bgR="<<mFormatCurrent.bgR;
     buffer.append( msg, 
                    0,
                    msg.size(),
@@ -1503,9 +1504,9 @@ void TConsole::print( const char * txt )
                    mFormatCurrent.bgR,
                    mFormatCurrent.bgG,
                    mFormatCurrent.bgB,
-                   false, 
-                   false,
-                   false );
+                   mFormatCurrent.bold,
+                   mFormatCurrent.italics,
+                   mFormatCurrent.underline );
     console->showNewLines();
     console2->showNewLines();
 }

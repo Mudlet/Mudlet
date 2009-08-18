@@ -526,7 +526,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
         {
             if( name() == "name" )
             {
-                pT->mName = readElementText();
+                pT->setName( readElementText() );
                 continue;
             }
             else if( name() == "script")
@@ -542,6 +542,11 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             else if( name() == "conditonLineDelta" )
             {
                 pT->mConditionLineDelta = readElementText().toInt();
+                continue;
+            }
+            else if( name() == "mStayOpen" )
+            {
+                pT->mStayOpen = readElementText().toInt();
                 continue;
             }
             else if( name() == "mCommand" )

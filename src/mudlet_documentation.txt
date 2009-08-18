@@ -606,6 +606,17 @@ In the two balance detection triggers we now write myBalance=false and myBalance
 NOTE: .
 
 We could now add a call deleteLine() to the prompt detection trigger to erase the prompt from the screen if we don't want to see it as we have computed all relevant information.
+
+=== Chains and Filters
+== Chains
+"Chains" and "filters" are different entities in Mudlet and serve completely different ends. A chain is defined in Mudlet by making a trigger group and adding a trigger pattern to the group. A group without a pattern is a simple trigger group that serves no other purposes than adding structure to your trigger system. Such a normal trigger group will always grant access to its children unless it has been explicitely disabled either manually or by a script. A trigger group with a defined trigger pattern, however, will behave like a normal trigger and match if the pattern matches. Such a trigger group is called "chain head". A chain head will only grant access to its children if the trigger pattern has matched and the chain has been enabled. Thus, chains can be looked at as a mechanism to automatically enable and disable triggers or groups of triggers when a certain condition has been met i. e. the trigger pattern of the chain head has been matched. (However, technically this is not correct as disabled child triggers will not be invoked if the chain head matches. In other words, in chains you can still enabled/disabled elements. The idea of a chain can better be described by necessary and sufficient condition - both of which need to be met before a child trigger is being run.)
+
+Adding child triggers to this group will add eleements to the trigger chain. These chain elements will only be activated if the chain head has matched before and thus opened the trigger chain. The chain stays open until the "keep chain open for x lines" value has been reached. The default is 0 which means that the chain only stays open for the current line. When access to the chain has been granted all child triggers will be tested against the content of the current line.. Consequently, trigger chains are a means to automatically enable/disable trigger groups without the hassle of enabling and disabling trigger groups manually. This has 2 important advantages: Chains are faster than conventional solutions and chains reduce the complexity of your scripts and greatly reduce the usual system bugs that inevitably go along with enable/disable trigger xy function calls as it's very difficult and error prone to enable and disable your triggers correctly in large complex trigger systems. This is one of the most powerful features in Mudlet and should be used whenever possible.
+
+== Filters
+You can turn a trigger chain head into a filter by checking the "filter" option. This changes the content of what is forwarded as trigger text to the children triggers in the chain. Chains forward the content of the current line as trigger text whereas filters forward the matched pattern instead of the current line. In other words, the text of the current line is filtered according to the pattern of the filter. For example:
+You want to know the exits in the current room. The simplest solution is a simple filter on "You see exits to: (.*)" Then you simply add triggers to the filter chain such as "north", "south", "west", "east" etc. The direction triggers will only be called if the filter head has matched.
+
 *************
 [[multilineTriggers]]
 === Multi-Line Triggers and Multi-Condition Triggers
@@ -1069,7 +1080,8 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 |===================================================
 |Function|Description
 |send( command )|This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
-|echo( text )|prints text to the main window
+|echo( text )|appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
+|echo( windowName, text )|appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()
 |listPrint( listName )|prints the content of list listName on the screen e.g. listPrint( myEnnemies )
 |listAdd( listName, what )|adds a new element what to the list listName e.g. listAdd( myEnnemies, "Tom" )
 |listRemove( listName, what )|removes item what from the list listName e.g. listRemove( myEnnemies, "Bert" )
@@ -1082,18 +1094,23 @@ NOTE: to prevent selection of random data use the error return if not found like
 |timer_id = tempTimer( seconds, lua_code )|Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 |enableTrigger( name )|enables a Trigger. see enableTimer() for more details.
 |disableTrigger( name )|Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
-|insertText( string )|Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.
+|insertText( text )|inserts text at the current cursor position in the main window; if the cursor has not been explicitely moved this function will always print at the beginning of the line whereas the echo() function will always print at the end of the line
+|insertText( windowName, text )|inserts text at cursor position in window windowName
 |suffix( what )|prints "what" at the end of the line when used in a trigger script
 |prefix( what )|prints "what" at the beginning of a line when used in a trigger script
 |boolean = selectSection( from, length_of_string )|Absolute column number for start of selection and length of selection
+|selectSection( windowName, from, length )|just like selectSection() but does not operate on the main window, but on window windowName. See selectSection() for a detailed description
 |selectCaptureGroup( groupNumber ) with first group = 0|Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)
 |replace( with )|replaces the selected text with "with". To delete text use replace("")
+|replace( windowName, with )|replaces the selected text with "with". This function operates on window windowName
 |replaceAll( what, with )|replaces all occurrences of what in the current line with with 
 |fg( color_name )|Sets the current selection foreground color to color_name. You can find the pre-defined color names <<colortable, here>> 
 |bg( color_name )|same as fg( color_name ) just for the background color.
 |resetFormat()|Resets the character format to default. This should be used after you have colorized some text, but don't want to keep using these colors for further prints.
-|setBgColor( r,g,b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
-|setFgColor( r, g, b )|Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
+|setBgColor( r,g,b )|Sets the current text background color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
+|setBgColor( windowName, r, g, b )|set current text background color in window windowName
+|setFgColor( r, g, b )|Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
+|setFgColor( windowName, r, g, b )|Sets the current text foreground color in window windowName
 |openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
 |===================================================
 
@@ -1222,6 +1239,10 @@ This script would create a mini text console and write with yellow foreground co
 |state = getButtonState() with state = 1 button is checked and state = 0, button is not checked|this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example: checked = getButtonStated(); if checked == 1 then hideExits() else showExits() end;
 |showToolBar( name )|shows tool bar name on the screen
 |hideToolBar( name )|hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.
+|disconnect()|close network connection to the server *without* a proper logout
+|reconnect()|reconnects to the current server after a call to disconnect()
+|setTriggerStayOpen( name )|set for how many more lines a trigger script should fire or a chain should stay open *after* the trigger has matched. The main use of this function is to close a chain when a certain condition has been met.
+|homedir = getMudletHomeDir()|returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files
 |===================================================
 
 

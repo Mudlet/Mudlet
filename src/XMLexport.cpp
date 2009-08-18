@@ -135,6 +135,7 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );    
     writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() ); 
 
+
     writeEndElement(); // end Host tag
     writeEndElement(); // end HostPackage tag
 
@@ -252,6 +253,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeTextElement( "script", pT->mScript );
     writeTextElement( "triggerType", QString::number( pT->mTriggerType ) );
     writeTextElement( "conditonLineDelta", QString::number( pT->mConditionLineDelta ) );
+    writeTextElement( "mStayOpen", QString::number( pT->mStayOpen ) );
     writeTextElement( "mCommand", pT->mCommand );
     writeTextElement( "mFgColor", pT->mFgColor.name() );
     writeTextElement( "mBgColor", pT->mBgColor.name() );
