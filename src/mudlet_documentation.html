@@ -8134,6 +8134,16 @@ OR-Triggers execute when <strong>any</strong> one of their conditions is true.
 To make OR-Triggers you simply have to add a few conditions to the conditions list e.g. in our example: "pond", "frog", "Plop". The trigger will now also execute on lines like this: "A frog is green" or "You hear a loud Plop!" However, it will not execute on "With a loud plop the frog dived into the water." because "plop" in the line is in lower case letters and your condition specified a "P" in upper case.
 The simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains, whatever you&#8217;d like to call it.</p></div>
 <h3 id="triggerChains">Trigger Chains - Filter Chains</h3>
+</div>
+<h2 id="_chains">Chains</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>"Chains" and "filters" are different entities in Mudlet and serve completely different ends. A chain is defined in Mudlet by making a trigger group and adding a trigger pattern to the group. A group without a pattern is a simple trigger group that serves no other purposes than adding structure to your trigger system. Such a normal trigger group will always grant access to its children unless it has been explicitely disabled either manually or by a script. A trigger group with a defined trigger pattern, however, will behave like a normal trigger and match if the pattern matches. Such a trigger group is called "chain head". A chain head will only grant access to its children if the trigger pattern has matched and the chain has been enabled. Thus, chains can be looked at as a mechanism to automatically enable and disable triggers or groups of triggers when a certain condition has been met i. e. the trigger pattern of the chain head has been matched. (However, technically this is not correct as disabled child triggers will not be invoked if the chain head matches. In other words, in chains you can still enabled/disabled elements. The idea of a chain can better be described by necessary and sufficient condition - both of which need to be met before a child trigger is being run.)</p></div>
+<div class="paragraph"><p>Adding child triggers to this group will add eleements to the trigger chain. These chain elements will only be activated if the chain head has matched before and thus opened the trigger chain. The chain stays open until the "keep chain open for x lines" value has been reached. The default is 0 which means that the chain only stays open for the current line. When access to the chain has been granted all child triggers will be tested against the content of the current line.. Consequently, trigger chains are a means to automatically enable/disable trigger groups without the hassle of enabling and disabling trigger groups manually. This has 2 important advantages: Chains are faster than conventional solutions and chains reduce the complexity of your scripts and greatly reduce the usual system bugs that inevitably go along with enable/disable trigger xy function calls as it&#8217;s very difficult and error prone to enable and disable your triggers correctly in large complex trigger systems. This is one of the most powerful features in Mudlet and should be used whenever possible.</p></div>
+</div>
+<h2 id="_filters">Filters</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>You can turn a trigger chain head into a filter by checking the "filter" option. This changes the content of what is forwarded as trigger text to the children triggers in the chain. Chains forward the content of the current line as trigger text whereas filters forward the matched pattern instead of the current line. In other words, the text of the current line is filtered according to the pattern of the filter. For example:
+You want to know the exits in the current room. The simplest solution is a simple filter on "You see exits to: (.*)" Then you simply add triggers to the filter chain such as "north", "south", "west", "east" etc. The direction triggers will only be called if the filter head has matched.</p></div>
 <div class="paragraph"><p>Imagine the following scenario: You want to collect some berries. You know that the room contains some berries if the room description contains the words "You are inside a forrest." You make a new substring trigger for this line, but instead of chosing a regular trigger, you chose to add a new trigger group. Now you add "You are inside a forrest" to the expression list of the trigger group. <strong>When adding condions to a trigger group, the trigger group turns from an organizational unit into a filter unit.</strong> From now on this folder is a filter and will only let data pass through that matches it&#8217;s condition.
 In our case this is exactly what we want, because we don&#8217;t want to collect all sorts of berries, but we only want 2 particular kinds, namely, strawberries and blackberries, and we know that these berries can only be trusted if they are picked inside a forrest as other areas may contain contaminated berries. Now you add two regular triggers to our berry-in-the-forrest filter - one containing the condition: "strawberries" and the other one "blackberries". Then we add the commands to pick the particular kind of berry to both triggers (send field).
 Now what happens is that as soon as a room description reads "You are inside a forrest." the filter will let the line containing the room description pass through to our two berry triggers and they will issue commands to pick berries, if there are such berries. However, in any other situation the words "strawberries" and "blackberries" will <strong>NOT</strong> trigger a pick - only in the above scenario when the filter parent&#8217;s condition is met. This is a very nice way to solve complicated problems with a few easy filter chains. This example is trivial, but using filter chains will rapidly show you how formerly complicated things that could only be solved with very complicated regular expressions can be solved easily now with a couple of filter chains.
@@ -17309,7 +17319,11 @@ cellspacing="0" cellpadding="4">
 </tr>
 <tr>
 <td align="left"><p class="table">echo( text )</p></td>
-<td align="left"><p class="table">prints text to the main window</p></td>
+<td align="left"><p class="table">appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">echo( windowName, text )</p></td>
+<td align="left"><p class="table">appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">listPrint( listName )</p></td>
@@ -17348,8 +17362,12 @@ NOTE: to prevent selection of random data use the error return if not found like
 <td align="left"><p class="table">Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable.</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">insertText( string )</p></td>
-<td align="left"><p class="table">Insertion takes place at the current position of the user cursor or replaces the current selection. Use deselect() to unselect unwanted selections to prevent overwriting.</p></td>
+<td align="left"><p class="table">insertText( text )</p></td>
+<td align="left"><p class="table">inserts text at the current cursor position in the main window; if the cursor has not been explicitely moved this function will always print at the beginning of the line whereas the echo() function will always print at the end of the line</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">insertText( windowName, text )</p></td>
+<td align="left"><p class="table">inserts text at cursor position in window windowName</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">suffix( what )</p></td>
@@ -17364,12 +17382,20 @@ NOTE: to prevent selection of random data use the error return if not found like
 <td align="left"><p class="table">Absolute column number for start of selection and length of selection</p></td>
 </tr>
 <tr>
+<td align="left"><p class="table">selectSection( windowName, from, length )</p></td>
+<td align="left"><p class="table">just like selectSection() but does not operate on the main window, but on window windowName. See selectSection() for a detailed description</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">selectCaptureGroup( groupNumber ) with first group = 0</p></td>
 <td align="left"><p class="table">Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">replace( with )</p></td>
 <td align="left"><p class="table">replaces the selected text with "with". To delete text use replace("")</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">replace( windowName, with )</p></td>
+<td align="left"><p class="table">replaces the selected text with "with". This function operates on window windowName</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">replaceAll( what, with )</p></td>
@@ -17389,11 +17415,19 @@ NOTE: to prevent selection of random data use the error return if not found like
 </tr>
 <tr>
 <td align="left"><p class="table">setBgColor( r,g,b )</p></td>
-<td align="left"><p class="table">Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)</p></td>
+<td align="left"><p class="table">Sets the current text background color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setBgColor( windowName, r, g, b )</p></td>
+<td align="left"><p class="table">set current text background color in window windowName</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">setFgColor( r, g, b )</p></td>
-<td align="left"><p class="table">Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)</p></td>
+<td align="left"><p class="table">Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setFgColor( windowName, r, g, b )</p></td>
+<td align="left"><p class="table">Sets the current text foreground color in window windowName</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">openUserWindow( name )</p></td>
@@ -17795,6 +17829,22 @@ This script would create a mini text console and write with yellow foreground co
 <td align="left"><p class="table">hideToolBar( name )</p></td>
 <td align="left"><p class="table">hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.</p></td>
 </tr>
+<tr>
+<td align="left"><p class="table">disconnect()</p></td>
+<td align="left"><p class="table">close network connection to the server <strong>without</strong> a proper logout</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">reconnect()</p></td>
+<td align="left"><p class="table">reconnects to the current server after a call to disconnect()</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">setTriggerStayOpen( name )</p></td>
+<td align="left"><p class="table">set for how many more lines a trigger script should fire or a chain should stay open <strong>after</strong> the trigger has matched. The main use of this function is to close a chain when a certain condition has been met.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">homedir = getMudletHomeDir()</p></td>
+<td align="left"><p class="table">returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -18007,7 +18057,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-05-14 21:58:40 CEST
+Last updated 2009-08-18 18:20:46 CEST
 </div>
 </div>
 </body>
