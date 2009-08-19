@@ -894,7 +894,10 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
         if( mKeepFiring > 0 )
         {
             mKeepFiring--;
-            execute();
+            if( mKeepFiring == mStayOpen )
+            {
+                execute();
+            }
             bool conditionMet = false;
             typedef list<TTrigger *>::const_iterator I;
             for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
