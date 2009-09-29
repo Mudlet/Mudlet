@@ -352,9 +352,9 @@ void Host::disableTimer( QString & name )
     mTimerUnit.disableTimer( name );
 }
 
-void Host::killTimer( QString & name )
+bool Host::killTimer( QString & name )
 {
-    mTimerUnit.killTimer( name );    
+    return mTimerUnit.killTimer( name );
 }
 
 void Host::enableKey( QString & name )

@@ -56,6 +56,7 @@ public:
     QGridLayout *    mpLayout;
     int              mItemCount;
     QWidget *        mpBar;
+    std::list<TFlipButton *> mButtonList;
 
 signals:
 

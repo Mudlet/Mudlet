@@ -17521,8 +17521,8 @@ will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 <td align="left"><p class="table">temorary trigger using perl regex pattern matching</p></td>
 </tr>
 <tr>
-<td align="left"><p class="table">killTimer( name )</p></td>
-<td align="left"><p class="table">Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.</p></td>
+<td align="left"><p class="table">boolean = killTimer( name )</p></td>
+<td align="left"><p class="table">Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn&#8217;t exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.</p></td>
 </tr>
 <tr>
 <td align="left"><p class="table">killTrigger( name )</p></td>
@@ -17806,6 +17806,10 @@ This script would create a mini text console and write with yellow foreground co
 <td align="left"><p class="table">Gets the actual size of a non-numerical table</p></td>
 </tr>
 <tr>
+<td align="left"><p class="table">myTableSize = # myTable</p></td>
+<td align="left"><p class="table">is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.</p></td>
+</tr>
+<tr>
 <td align="left"><p class="table">io.exists(file)</p></td>
 <td align="left"><p class="table">Checks to see if a file exists</p></td>
 </tr>
@@ -17844,6 +17848,14 @@ This script would create a mini text console and write with yellow foreground co
 <tr>
 <td align="left"><p class="table">homedir = getMudletHomeDir()</p></td>
 <td align="left"><p class="table">returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">display( myTable )</p></td>
+<td align="left"><p class="table">generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.</p></td>
+</tr>
+<tr>
+<td align="left"><p class="table">display( myVariable )</p></td>
+<td align="left"><p class="table">generic pretty print function to diplay the content of any Lua variable or table on the main screen</p></td>
 </tr>
 </tbody>
 </table>
@@ -18057,7 +18069,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-08-18 18:20:46 CEST
+Last updated 2009-09-29 17:41:40 CEST
 </div>
 </div>
 </body>

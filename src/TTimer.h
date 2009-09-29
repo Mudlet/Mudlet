@@ -76,7 +76,7 @@ public:
     void             disableTimer( QString & );
     void             enableTimer( qint64 );
     void             disableTimer( qint64 );
-    TTimer *         killTimer( QString & );
+    void             killTimer();
     
     bool             isClone(TTimer &b) const;
     bool             isOffsetTimer();

@@ -894,7 +894,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
         if( mKeepFiring > 0 )
         {
             mKeepFiring--;
-            if( mKeepFiring == mStayOpen )
+            if( ( mKeepFiring == mStayOpen ) || ( mpMyChildrenList->size() == 0 ) )
             {
                 execute();
             }

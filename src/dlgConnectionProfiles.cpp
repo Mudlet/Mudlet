@@ -525,8 +525,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     
     QString profile = profiles_tree_widget->currentItem()->text( 0 );
-    if ( QMessageBox::question(this, tr("Confirmation"), tr("Are you sure you want to delete %1 ?").arg( profile ), QMessageBox::Yes|QMessageBox::No, QMessageBox::No) == QMessageBox::No )
-        return;
+    if( QMessageBox::question(this, tr("Confirmation"), tr("Are you sure you want to delete %1 ?").arg( profile ), QMessageBox::Yes|QMessageBox::No, QMessageBox::No) != QMessageBox::Yes ) return;
     
     profiles_tree_widget->takeTopLevelItem( profiles_tree_widget->currentIndex().row() );
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );

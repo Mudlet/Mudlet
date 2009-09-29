@@ -404,7 +404,8 @@ void mudlet::addConsoleForNewHost( Host * pH )
 
 void mudlet::bindMenu( QMenu * menu, EAction * action )
 {
-    connect( menu, SIGNAL( triggered( QAction * ) ), this, SLOT( slot_userToolBar_triggered( QAction * ) ) );        
+    //qDebug()<<"ERROR: mudlet::bindMenu() called menu="<<menu;
+    //connect( menu, SIGNAL( triggered(QAction *) ), this, SLOT( slot_userToolBar_triggered( QAction * ) ) );
 }
 
 void mudlet::slot_timer_fires()
@@ -904,6 +905,7 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 void mudlet::slot_userToolBar_triggered( QAction* pA )
 {
+    /*
     if( pA->isChecked() )
     {
         ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 2;
@@ -914,6 +916,7 @@ void mudlet::slot_userToolBar_triggered( QAction* pA )
     }
     QStringList sL;
     ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->execute(sL);
+    */
 }
 
 void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )

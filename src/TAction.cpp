@@ -143,7 +143,12 @@ bool TAction::compileScript()
     }
 }
 
-void TAction::execute(QStringList & list)
+void TAction::execute(QStringList & list )
+{
+    qDebug()<<"TAction::execute() called: depricated!";
+}
+
+void TAction::_execute(QStringList & list)
 {
     if( ( mCommandButtonUp.size() > 0 ) && ( mButtonState == 1 ) )
     {
@@ -162,6 +167,7 @@ void TAction::execute(QStringList & list)
             return;
         }
     }
+    qDebug()<<"***LUA_CALL button Lua function call mFuncName="<<mFuncName<<" this="<<this;
     mpLua->call( mFuncName, mName );
     // move focus back to the active console / command line
     mpHost->mpConsole->activateWindow();
@@ -207,7 +213,8 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
     action->mpHost = mpHost;
     action->setStatusTip( mName );
     menu->addAction( action );
-    mudlet::self()->bindMenu( menu, action );
+    //mudlet::self()->bindMenu( menu, action );
+
     
     if( mIsFolder )
     {
@@ -273,7 +280,7 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
            action->setMenu( newMenu );
            newMenu->setStyleSheet( css );
            pChild->fillMenu( pT, newMenu );
-           mudlet::self()->bindMenu( menu, action );
+           //mudlet::self()->bindMenu( menu, action );
         }
     }
 }
@@ -288,7 +295,7 @@ void TAction::insertActions( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
     action->mpHost = mpHost;
     action->setStatusTip( mName );
     menu->addAction( action );
-    mudlet::self()->bindMenu( menu, action );
+    //mudlet::self()->bindMenu( menu, action );
 }
 
 

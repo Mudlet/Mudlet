@@ -29,6 +29,21 @@ EAction::EAction( QIcon & icon, QString & name, mudlet * parent )
     setText( name );
     setObjectName( name );
     setIcon( icon );
+    connect(this, SIGNAL(triggered(bool)), this, SLOT(slot_execute(bool)));
+}
+
+void EAction::slot_execute(bool checked)
+{
+    if( checked )
+    {
+        mpHost->getActionUnit()->getAction( mID )->mButtonState = 2;
+    }
+    else
+    {
+        mpHost->getActionUnit()->getAction( mID )->mButtonState = 1;
+    }
+    QStringList sL;
+    mpHost->getActionUnit()->getAction( mID )->_execute( sL );
 }
 
 

@@ -39,8 +39,11 @@ public:
     
 public slots:
 
+    void            slot_execute( bool checked );
+
 signals:
-    void triggered(QAction*);
+
+    void            triggered( QAction * );
     
     
 };

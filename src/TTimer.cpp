@@ -58,17 +58,16 @@ TTimer::TTimer( QString name, QTime time, Host * pHost )
 
 TTimer::~TTimer()
 {
+    mTimer.stop();
     if( mpParent == 0 )
     {
         if( ! mpHost )
         {
-            qDebug() << "ERROR: TTimer::**UN**registerTrigger() mpHost=0";
             return;
         }
         mpHost->getTimerUnit()->unregisterTimer( this );
         mudlet::self()->unregisterTimer( this, &mTimer );
     }
-    mTimer.stop();
 }
 
 bool TTimer::registerTimer()
@@ -101,8 +100,8 @@ bool TTimer::isOffsetTimer()
         {
             return true;
         }
-		else
-		    return false;
+        else
+            return false;
     }
     else
     {
@@ -128,9 +127,9 @@ bool TTimer::setIsActive( bool b )
 void TTimer::start()
 {
     if( mIsTempTimer ) 
-	    mTimer.setSingleShot( true );
+        mTimer.setSingleShot( true );
     else
-	    mTimer.setSingleShot( false );
+        mTimer.setSingleShot( false );
     mTimer.start();
 }
 
@@ -341,22 +340,10 @@ void TTimer::disableTimer( QString & name )
 }
 
 
-TTimer * TTimer::killTimer( QString & name )
+void TTimer::killTimer()
 {
-    if( mName == name )
-    {
-        deactivate();
-        mTimer.stop();
-        return this;
-    }
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTimer * pChild = *it;
-        TTimer * ret = pChild->killTimer( name );
-        if( ret ) return ret;
-    }
-    return 0;
+    deactivate();
+    mTimer.stop();
 }
 
 

@@ -39,11 +39,11 @@ class TimerUnit
     
 public:
     TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    std::list<TTimer *>   getTimerRootNodeList()   { QMutexLocker locker(& mTimerUnitLock); return mTimerRootNodeList; }
+    std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
     TTimer *              getTimer( int id );
     void                  enableTimer( QString & );
     void                  disableTimer( QString & );
-    void                  killTimer( QString & name );
+    bool                  killTimer( QString & name );
     bool                  registerTimer( TTimer * pT );
     void                  unregisterTimer( TTimer * pT );
     void                  reParentTimer( int childID, int oldParentID, int newParentID );

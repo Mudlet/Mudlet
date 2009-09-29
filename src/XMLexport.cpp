@@ -145,6 +145,7 @@ bool XMLexport::writeHost( Host * pT )
     for( ItTriggerUnit it1 = pT->mTriggerUnit.mTriggerRootNodeList.begin(); it1 != pT->mTriggerUnit.mTriggerRootNodeList.end(); it1++)
     {
         TTrigger * pChildTrigger = *it1;
+        if( ! pChildTrigger ) continue;
         if( ! pChildTrigger->isTempTrigger() )
         {
             ret = writeTrigger( pChildTrigger );

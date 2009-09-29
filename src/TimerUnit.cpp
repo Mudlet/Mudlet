@@ -82,8 +82,6 @@ void TimerUnit::addTimerRootNode( TTimer * pT )
 
 void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID )
 {
-    QMutexLocker locker(& mTimerUnitLock);
-    
     TTimer * pOldParent = getTimerPrivate( oldParentID );
     TTimer * pNewParent = getTimerPrivate( newParentID );
     TTimer * pChild = getTimerPrivate( childID );
@@ -126,7 +124,6 @@ void TimerUnit::removeTimerRootNode( TTimer * pT )
 
 TTimer * TimerUnit::getTimer( int id )
 { 
-    QMutexLocker locker(& mTimerUnitLock); 
     if( mTimerMap.find( id ) != mTimerMap.end() )
     {
         return mTimerMap.value( id );
@@ -188,8 +185,6 @@ void TimerUnit::addTimer( TTimer * pT )
 {
     if( ! pT ) return;
     
-    QMutexLocker locker(& mTimerUnitLock); 
-    
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );
@@ -201,15 +196,12 @@ void TimerUnit::addTimer( TTimer * pT )
 void TimerUnit::removeTimer( TTimer * pT )
 {
     if( ! pT ) return;
-    
-    //FIXME: warning: race condition
-    //QMutexLocker locker(& mTriggerUnitLock); 
-    mTimerMap.remove( pT->getID() );    
+    mTimerMap.remove( pT->getID() );
+    markCleanup( pT );
 }
 
 void TimerUnit::enableTimer( QString & name )
 {
-    QMutexLocker locker(& mTimerUnitLock); 
     typedef list<TTimer *>::const_iterator I;
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
@@ -220,7 +212,6 @@ void TimerUnit::enableTimer( QString & name )
 
 void TimerUnit::disableTimer( QString & name )
 {
-    QMutexLocker locker(& mTimerUnitLock); 
     typedef list<TTimer *>::const_iterator I;
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
@@ -230,21 +221,22 @@ void TimerUnit::disableTimer( QString & name )
 }
 
 
-void TimerUnit::killTimer( QString & name )
+bool TimerUnit::killTimer( QString & name )
 {
-    QMutexLocker locker(& mTimerUnitLock); 
-    RERUN: TTimer * ret = 0;
     typedef list<TTimer *>::const_iterator I;
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
-        ret = pChild->killTimer( name );
-        if( ret )
+        if( pChild->getName() == name )
         {
-            delete ret;
-            goto RERUN;
+            // only temporary timers are allowed to be killed
+            if( ! pChild->isTempTimer() ) return false;
+            pChild->killTimer();
+            removeTimer( pChild );
+            return true;
         }
-    } 
+    }
+    return false;
 }
 
 qint64 TimerUnit::getNewID()
@@ -264,6 +256,14 @@ void TimerUnit::doCleanup()
 
 void TimerUnit::markCleanup( TTimer * pT )
 {
+    typedef list<TTimer *>::iterator I;
+    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    {
+        if( *it == pT )
+        {
+            return;
+        }
+    }
     mCleanupList.push_back( pT );
 }
 

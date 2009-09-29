@@ -162,11 +162,13 @@ void TToolBar::slot_pressed()
     else
         pA->mpHost->mpConsole->mButtonState = 0;
     QStringList sL;
+    qDebug()<<"TToolBAr::execute()";
     pA->execute( sL );
 }
 
 void TToolBar::clear()
 {
+    qDebug()<<"TToolBar::clear()";
     QWidget * pW = new QWidget( this );
     setWidget( pW );
     mpWidget->deleteLater();

@@ -75,6 +75,7 @@ public:
     void             compile();
     bool             compileScript();
     void             execute(QStringList &);
+    void             _execute(QStringList &);
     QString          getIcon()                                 { return mIcon; }
     void             setIcon( QString & icon )                 { mIcon = icon; }
     QString          getScript()                               { return mScript; }

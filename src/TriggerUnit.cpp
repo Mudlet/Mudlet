@@ -51,8 +51,6 @@ void TriggerUnit::addTriggerRootNode( TTrigger * pT )
 
 void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID )
 {
-    QMutexLocker locker(& mTriggerUnitLock);
-    
     TTrigger * pOldParent = getTriggerPrivate( oldParentID );
     TTrigger * pNewParent = getTriggerPrivate( newParentID );
     TTrigger * pChild = getTriggerPrivate( childID );
@@ -64,7 +62,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     {
         pOldParent->popChild( pChild );
     }
-    if( ! pOldParent )
+    else
     {
         removeTriggerRootNode( pChild );    
     }
@@ -75,7 +73,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     }
-    if( ! pNewParent )
+    else
     {
         addTriggerRootNode( pChild );
     }

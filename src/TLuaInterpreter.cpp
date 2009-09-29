@@ -973,9 +973,9 @@ int TLuaInterpreter::killTimer( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString text(luaSendText.c_str());
-    pHost->disableTimer( text );    
-    pHost->killTimer( text );    
-    return 0;
+    //pHost->disableTimer( text );
+    lua_pushboolean( L, pHost->killTimer( text ) );
+    return 1;
 }
 
 int TLuaInterpreter::killTrigger( lua_State *L )

@@ -112,7 +112,7 @@ end
 
 function listPrint( map )
 	echo("-------------------------------------------------------\n");
-	for k,v in ipairs(myEnnemies) do
+	for k,v in ipairs( map ) do
 		echo( k .. ". ) "..v .. "\n" );
 	end
 	echo("-------------------------------------------------------\n");

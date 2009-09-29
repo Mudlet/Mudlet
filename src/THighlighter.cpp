@@ -19,7 +19,7 @@ THighlighter::THighlighter(QTextDocument *parent)
                     << "\\bthen\\b" << "\\belse\\b" << "\\bwhile\\b"
                     << "\\brepeat\\b" << "\\bfor\\b" << "\\bpairs\\b"
                     << "\\bipairs\\b" << "\\bin\\b" << "\\buntil\\b"
-                    << "\\bbreak\\b" << "\\breturn\\b";
+                    << "\\bbreak\\b" << "\\breturn\\b" << "\\belseif\\b";
     foreach (QString pattern, keywordPatterns)
     {
         rule.pattern = QRegExp(pattern);
