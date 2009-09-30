@@ -139,8 +139,14 @@ bool TAlias::match( QString & toMatch )
     {
         char * substring_start = subject + ovector[2*i];
         int substring_length = ovector[2*i+1] - ovector[2*i];
-        if( substring_length < 1 ) continue;
+
         std::string match;
+        if( substring_length < 1 )
+        {
+            captureList.push_back( match );
+            posList.push_back( -1 );
+            continue;
+        }
         match.append( substring_start, substring_length );
         captureList.push_back( match );
         posList.push_back( ovector[2*i] );
@@ -219,8 +225,14 @@ bool TAlias::match( QString & toMatch )
         {
             char * substring_start = subject + ovector[2*i];
             int substring_length = ovector[2*i+1] - ovector[2*i];
-            if( substring_length < 1 ) continue;
+            //if( substring_length < 1 ) continue;
             std::string match;
+            if( substring_length < 1 )
+            {
+                captureList.push_back( match );
+                posList.push_back( -1 );
+                continue;
+            }
             match.append( substring_start, substring_length );
             captureList.push_back( match );
             posList.push_back( ovector[2*i] );
