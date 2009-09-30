@@ -1331,6 +1331,9 @@
              </disabled>
             </palette>
            </property>
+           <property name="toolTip">
+            <string>The trigger will only fire if all conditions on the list have been met within the specified line margin. If this option is not set the trigger will fire if any conditon on the list has been met. Read more about the additional implications in the manual as this is a complex topic.</string>
+           </property>
            <property name="autoFillBackground">
             <bool>true</bool>
            </property>

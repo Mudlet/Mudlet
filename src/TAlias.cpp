@@ -225,7 +225,6 @@ bool TAlias::match( QString & toMatch )
         {
             char * substring_start = subject + ovector[2*i];
             int substring_length = ovector[2*i+1] - ovector[2*i];
-            //if( substring_length < 1 ) continue;
             std::string match;
             if( substring_length < 1 )
             {
