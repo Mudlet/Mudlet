@@ -116,6 +116,7 @@ void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID )
     }
     if( ! pNewParent )
     {
+        pChild->Tree<TKey>::setParent( 0 );
         addKeyRootNode( pChild );
     }
 }

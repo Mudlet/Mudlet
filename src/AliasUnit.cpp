@@ -117,6 +117,7 @@ void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID )
     }
     if( ! pNewParent )
     {
+        pChild->Tree<TAlias>::setParent( 0 );
         addAliasRootNode( pChild );
     }
 }

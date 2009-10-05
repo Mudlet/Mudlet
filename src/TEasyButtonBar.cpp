@@ -123,7 +123,6 @@ void TEasyButtonBar::addButton( TFlipButton * pB )
     {
         pB->move( pB->mpTAction->mPosX, pB->mpTAction->mPosY );
     }
-    qDebug()<<"new connecting button";
     connect( pB, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
     mButtonList.push_back( pB );
 }
@@ -171,23 +170,17 @@ void TEasyButtonBar::slot_pressed()
     else
         pA->mpHost->mpConsole->mButtonState = 0;
     QStringList sL;
-    qDebug()<<"executing button script pB="<<pB;
     pA->_execute( sL );
-    qDebug()<<"DONE executing button script pB="<<pB;
-
 }
 
 void TEasyButtonBar::clear()
 {
     QWidget * pW = new QWidget;
-
-    typedef std::list<TFlipButton *>::iterator IT;
+       typedef std::list<TFlipButton *>::iterator IT;
     for( IT it = mButtonList.begin(); it != mButtonList.end(); it++ )
     {
         disconnect( *it, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
-        qDebug()<<"disconnecting Button";
     }
-    qDebug()<<"*** disconnected list";
     mButtonList.clear();
     mpWidget->deleteLater();
     mpWidget = pW;

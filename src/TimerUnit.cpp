@@ -109,6 +109,7 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID )
     }
     if( ! pNewParent )
     {
+        pChild->Tree<TTimer>::setParent( 0 );
         addTimerRootNode( pChild );
     }
     

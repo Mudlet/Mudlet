@@ -50,8 +50,6 @@ void ActionUnit::addActionRootNode( TAction * pT )
 
 void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID )
 {
-    QMutexLocker locker(& mActionUnitLock);
-    
     TAction * pOldParent = getActionPrivate( oldParentID );
     TAction * pNewParent = getActionPrivate( newParentID );
     TAction * pChild = getActionPrivate( childID );
@@ -70,13 +68,32 @@ void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID )
     if( pNewParent ) 
     {
         pNewParent->addChild( pChild );
-        if( pChild ) pChild->Tree<TAction>::setParent( pNewParent );
-        //cout << "dumping family of newParent:"<<endl;
-        //pNewParent->Dump();
+        if( pChild )
+            pChild->Tree<TAction>::setParent( pNewParent );
     }
     if( ! pNewParent )
     {
+        pChild->Tree<TAction>::setParent( 0 );
         addActionRootNode( pChild );
+
+    }
+
+    if( ( ! pOldParent ) && ( pNewParent ) )
+    {
+        if( pChild->mpEasyButtonBar )
+        {
+            if( pChild->mLocation == 0 ) mpHost->mpConsole->mpTopToolBar->layout()->removeWidget( pChild->mpEasyButtonBar );
+            if( pChild->mLocation == 2 ) mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget( pChild->mpEasyButtonBar );
+            if( pChild->mLocation == 3 ) mpHost->mpConsole->mpRightToolBar->layout()->removeWidget( pChild->mpEasyButtonBar );
+            if( pChild->mLocation == 4 )
+            {
+                if( pChild->mpToolBar )
+                {
+                    pChild->mpToolBar->setFloating( false );
+                    mudlet::self()->removeDockWidget( pChild->mpToolBar );
+                }
+            }
+        }
     }
 }
 
@@ -146,8 +163,6 @@ void ActionUnit::addAction( TAction * pT )
 {
     if( ! pT ) return;
     
-    QMutexLocker locker(& mActionUnitLock); 
-    
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );
@@ -174,7 +189,6 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        if( (*it)->mLocation != 4 ) continue;
         bool found = false;
         TToolBar * pTB;
         typedef list<TToolBar *>::iterator I2;
@@ -228,7 +242,9 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
             pTB = new TEasyButtonBar( *it, (*it)->getName(), mpHost->mpConsole->mpTopToolBar );
             mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB );
             mEasyButtonBarList.push_back( pTB );
+            (*it)->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
         }
+
         if( (*it)->mOrientation == 1 )
         {
             pTB->setVerticalOrientation();
@@ -271,7 +287,8 @@ void ActionUnit::showToolBar( QString & name )
     {
         if( (*it)->mpTAction->mName == name )
         {
-            (*it)->show();
+            (*it)->mpTAction->setIsActive( true );
+            updateToolbar();
         }
     }
 }
@@ -283,26 +300,33 @@ void ActionUnit::hideToolBar( QString & name )
     {
         if( (*it)->mpTAction->mName == name )
         {
-            (*it)->hide();
+            (*it)->mpTAction->setIsActive( false );
+            updateToolbar();
         }
     }
 }
     
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
 {
-    if( pA->mLocation != 4 ) return;
     pTB->clear();
+    if( ( pA->mLocation != 4 ) || ( ! pA->isActive() ) )
+    {
+        pTB->setFloating( false );
+        mudlet::self()->removeDockWidget( pTB );
+        return;
+    }
+
     if( pA->mLocation == 4 )
     {
         pA->expandToolbar( pMainWindow, pTB, 0 );
         pTB->setTitleBarWidget( 0 );
     }
-    else
+    /*else
     {
         pA->expandToolbar( pMainWindow, pTB, 0 );
         QWidget * test = new QWidget;
         pTB->setTitleBarWidget( test );
-    }
+    }*/
     
     pTB->finalize();
       
@@ -349,8 +373,10 @@ TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
 
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButtonBar * pTB )
 {
-    if( pA->mLocation == 4 ) return;
     pTB->clear();
+    if( pA->mLocation == 4 ) return; //floating toolbars are handled differently
+    if( ! pA->isActive() ) return;
+
     pA->expandToolbar( pMainWindow, pTB, 0 );
     pTB->finalize();
     if( pA->mOrientation == 0 )

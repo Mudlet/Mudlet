@@ -167,7 +167,6 @@ void TAction::_execute(QStringList & list)
             return;
         }
     }
-    qDebug()<<"***LUA_CALL button Lua function call mFuncName="<<mFuncName<<" this="<<this;
     mpLua->call( mFuncName, mName );
     // move focus back to the active console / command line
     mpHost->mpConsole->activateWindow();
@@ -238,7 +237,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
        TAction * pChild = *it;
-
+       if( ! pChild->isActive() ) continue;
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
@@ -266,6 +265,7 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAction * pChild = *it;
+        if( ! pChild->isActive() ) continue;
         mpEasyButtonBar = pT;
         QIcon icon( mIcon );
         EAction * action = new EAction( icon, pChild->mName, mudlet::self() );

@@ -45,6 +45,7 @@
 #define REGEX_BEGIN_OF_LINE_SUBSTRING 2
 #define REGEX_EXACT_MATCH 3
 #define REGEX_LUA_CODE 4
+#define REGEX_LINE_SPACER 5
 
 #define OVECCOUNT 30    // should be a multiple of 3 
 
@@ -108,6 +109,7 @@ public:
     bool             match_exact_match( QString &, QString &, int, int posOffset = 0 );
     bool             match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset = 0 );
     bool             match_lua_code( int );
+    bool             match_line_spacer( int regexNumber );
     void             setConditionLineDelta( int delta )  { mConditionLineDelta = delta; }
     int              getConditionLineDelta() { return mConditionLineDelta; }
     bool             registerTrigger();

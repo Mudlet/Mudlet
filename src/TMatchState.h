@@ -28,10 +28,11 @@ public:
     
     TMatchState( int NumberOfConditions, int delta )
     {
-        mNumberOfConditions=NumberOfConditions; 
-        mNextCondition=1; // first condition was true when the state was created 
-        mDelta=delta; 
-        mLineCount=1;
+        mNumberOfConditions = NumberOfConditions;
+        mNextCondition = 1; // first condition was true when the state was created
+        mDelta = delta;
+        mLineCount = 1;
+        mSpacer = 0;
     }
     
     TMatchState( const TMatchState &ms )
@@ -68,7 +69,15 @@ public:
         }
     }
 
+    bool lineSpacerMatch( int lines )
+    {
+        if( ++mSpacer >= lines )
+            return true;
+        else
+            return false;
+    }
 
+    int                                 mSpacer;
     std::list< std::list<std::string> > multiCaptureList;
     std::list< std::list<int> >         multiCapturePosList;
     int                                 mNumberOfConditions;

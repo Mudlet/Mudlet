@@ -1248,7 +1248,8 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
                      << "perl regex"
                      << "begin of line substring"
                      << "exact match"
-                     << "Lua function";
+                     << "Lua function"
+                     << "line spacer";
         pBox->addItems( _patternList );
         pBox->setItemData(0, QVariant(i) );
 
@@ -1556,10 +1557,9 @@ ROOT_ALIAS:
 void dlgTriggerEditor::addAction( bool isFolder )
 {
     saveAction();
-    qDebug()<<"dlgTriggerEditor::addAction()";
     QString name;
-    if( isFolder ) name = "New Action Button Group";
-    else name = "New Action Button";
+    if( isFolder ) name = "new menu";
+    else name = "new button";
     QString cmdButtonUp = "";
     QString cmdButtonDown = "";
     QString script = "";
@@ -1609,10 +1609,13 @@ void dlgTriggerEditor::addAction( bool isFolder )
     else
     {
         //insert a new root item
-    ROOT_ACTION:   
+    ROOT_ACTION:
+        name = "new toolbar";
         pT = new TAction( name, mpHost );
         pT->setCommandButtonUp( cmdButtonUp );
-        pNewItem = new QTreeWidgetItem( mpActionBaseItem, nameL );
+        QStringList nl;
+        nl << name;
+        pNewItem = new QTreeWidgetItem( mpActionBaseItem, nl );
         treeWidget_actions->insertTopLevelItem( 0, pNewItem );    
     }
     
@@ -1904,6 +1907,7 @@ void dlgTriggerEditor::saveTrigger()
         else if( _type == 2 ) regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
         else if( _type == 3 ) regexPropertyList << REGEX_EXACT_MATCH;
         else if( _type == 4 ) regexPropertyList << REGEX_LUA_CODE;
+        else if( _type == 5 ) regexPropertyList << REGEX_LINE_SPACER;
     }
     QString script = mpSourceEditorArea->editor->toPlainText();
 
@@ -2417,7 +2421,10 @@ void dlgTriggerEditor::saveAction()
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
     bool flatButton = mpActionsMainArea->buttonFlat->isChecked();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
+    // bottom location is no longer supported i.e. location = 1 = 0 = location top
     int location = mpActionsMainArea->comboBox_location->currentIndex();
+    if( location > 0 ) location++;
+
     int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
     bool useCustomLayout = mpActionsMainArea->useCustomLayout->isChecked();
     if( pItem )
@@ -2434,7 +2441,7 @@ void dlgTriggerEditor::saveAction()
             pT->setIsPushDownButton( isChecked );
             pT->mLocation = location;
             pT->mOrientation = orientation;
-            pT->setIsActive( true );
+            pT->setIsActive( pT->shouldBeActive() );
             pT->setButtonColor( color );
             pT->setButtonRotation( rotation );
             pT->setButtonColumns( columns );
@@ -2448,13 +2455,27 @@ void dlgTriggerEditor::saveAction()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( pT->isActive() )
+                if( ! pT->getParent() )
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
                 else
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
             }
             else
@@ -2801,6 +2822,8 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
         break;
     case 4:
         palette.setColor( QPalette::Text, QColor(0,155,155) );
+    case 5:
+        palette.setColor( QPalette::Text, QColor(137,0,205) );
     }
     pItem->setPalette( palette );
 }
@@ -2845,7 +2868,8 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
                          << "perl regex"
                          << "begin of line substring"
                          << "exact match"
-                         << "Lua function";
+                         << "Lua function"
+                         << "line spacer";
             pBox->addItems( _patternList );
             pBox->setItemData(0, QVariant(i) );
             QPalette palette;
@@ -2870,6 +2894,9 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
             case REGEX_LUA_CODE:
                 palette.setColor( QPalette::Text, QColor(0,155,155) );
                 pBox->setCurrentIndex( 4 );
+            case REGEX_LINE_SPACER:
+                palette.setColor( QPalette::Text, QColor(137,0,205) );
+                pBox->setCurrentIndex( 5 );
             }
             
             pItem->setPalette( palette );
@@ -2900,7 +2927,8 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
                          << "perl regex"
                          << "begin of line substring"
                          << "exact match"
-                         << "Lua function";
+                         << "Lua function"
+                         << "line spacer";
             pBox->addItems( _patternList );
             pBox->setItemData(0, QVariant(i) );
 
@@ -3081,7 +3109,10 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpActionsMainArea->lineEdit_action_button_up->setText( pT->getCommandButtonUp() );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
         mpSourceEditorArea->editor->setPlainText( pT->getScript() );
-        mpActionsMainArea->comboBox_location->setCurrentIndex( pT->mLocation );
+        // location = 1 = location = bottom is no longer supported
+        int location = pT->mLocation;
+        if( location > 0 ) location--;
+        mpActionsMainArea->comboBox_location->setCurrentIndex( location );
         mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
         QColor color = pT->getButtonColor();
         QPalette palette;
@@ -3487,7 +3518,7 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded( true );
     
     QStringList sL5;
-    sL5 << "Action Buttons & Display Labels";
+    sL5 << "Buttons";
     mpActionBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL5 );
     mpActionBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon5;
@@ -3515,13 +3546,27 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isFolder() )
             {
-                if( pT->isActive() )
+                if( ! pT->getParent() )
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
                 else
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
             }
             else

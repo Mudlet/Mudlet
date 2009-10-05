@@ -75,6 +75,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     }
     else
     {
+        pChild->Tree<TTrigger>::setParent( 0 );
         addTriggerRootNode( pChild );
     }
 }

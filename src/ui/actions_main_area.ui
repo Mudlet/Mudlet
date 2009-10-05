@@ -306,11 +306,6 @@
            </item>
            <item>
             <property name="text">
-             <string>Dock Area Bottom</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
              <string>Dock Area Left</string>
             </property>
            </item>
@@ -514,14 +509,6 @@
           </widget>
          </item>
         </layout>
-        <zorder>label_action_name_5</zorder>
-        <zorder>buttonRotation</zorder>
-        <zorder>label_4</zorder>
-        <zorder>buttonFlat</zorder>
-        <zorder>isLabel</zorder>
-        <zorder>buttonIconOnly</zorder>
-        <zorder>label_6</zorder>
-        <zorder>checkBox_pushdownbutton</zorder>
        </widget>
       </item>
       <item>

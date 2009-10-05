@@ -86,6 +86,7 @@ void ScriptUnit::reParentScript( int childID, int oldParentID, int newParentID )
     }
     if( ! pNewParent )
     {
+        pChild->Tree<TScript>::setParent( 0 );
         addScriptRootNode( pChild );
     }
 }

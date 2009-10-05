@@ -820,6 +820,36 @@ bool TTrigger::match_colors( int line )
     return false;
 }
 
+bool TTrigger::match_line_spacer( int regexNumber )
+{
+    if( mIsMultiline )
+    {
+        int k=0;
+        for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
+        {
+            k++;
+            if( (*it).second->nextCondition() == regexNumber )
+            {
+                if( (*it).second->lineSpacerMatch( mRegexCodeList.value(regexNumber).toInt() ) )
+                {
+                    if( mudlet::debugMode )
+                    {
+                        TDebug(QColor(Qt::yellow),QColor(Qt::black))<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") condition #"<<regexNumber<<"=true ">>0;
+                        TDebug(QColor(Qt::darkYellow),QColor(Qt::black)) << "match state " << k << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber+1 << "/" << mRegexCodeList.size() << ") line spacer=" << mRegexCodeList.value(regexNumber) <<"lines\n" >> 0;
+                    }
+                    (*it).second->conditionMatched();
+                    std::list<string> captureList;
+                    std::list<int> posList;
+                    (*it).second->multiCaptureList.push_back( captureList );
+                    (*it).second->multiCapturePosList.push_back( posList );
+                }
+            }
+        }
+    }
+    else
+        return true; //line spacers don't make sense outside of AND triggers -> ignore them
+}
+
 bool TTrigger::match_lua_code( int regexNumber )
 {
     if( mLuaConditionMap.find( regexNumber ) == mLuaConditionMap.end() ) return false;
@@ -989,6 +1019,9 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
 
                 case REGEX_LUA_CODE:
                     ret = match_lua_code( i );
+                    break;
+                case REGEX_LINE_SPACER:
+                    ret = match_line_spacer( i );
                     break;
             }
             // policy: one match is enough to fire on OR-trigger, but in the case of

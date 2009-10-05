@@ -28,43 +28,36 @@
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, const QStringList & strings, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, strings, type )
 {
-    qDebug()<<"constructor 1";
 }
 
 TTreeWidgetItem::TTreeWidgetItem( int type )
 : QTreeWidgetItem( type )
 {
-    qDebug()<<"constructor 2";
 }
 
 TTreeWidgetItem::TTreeWidgetItem( const QStringList & strings, int type )
 : QTreeWidgetItem( strings, type )
 {
-    qDebug()<<"constructor 3";
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidget * parent, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, type )
 {
-    qDebug()<<"constructor 4";
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidget * parent, const QStringList & strings, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, strings, type )
 {
-    qDebug()<<"constructor 5";
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidget * parent, TTreeWidgetItem * preceding, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, (QTreeWidgetItem*)preceding, type )
 {
-    qDebug()<<"constructor 6";
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, type )
 {
-    qDebug()<<"constructor 7";
 }
 
 
@@ -72,25 +65,21 @@ TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, int type )
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, TTreeWidgetItem * preceding, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, (QTreeWidgetItem*)preceding, type )
 {
-    qDebug()<<"constructor 8";
 }
     
 TTreeWidgetItem::TTreeWidgetItem( const TTreeWidgetItem & other )
 : QTreeWidgetItem( other )
 {
-    qDebug()<<"constructor 9";
 }
 
 
 void TTreeWidgetItem::removeChild( QTreeWidgetItem * child )
 {
-    qDebug()<<"REMOVING CHILD";
     QTreeWidgetItem::removeChild( child );
 }
 
 void TTreeWidgetItem::addChildren( const QList<QTreeWidgetItem *> & children )
 {
-    qDebug()<<"addChildren 1 called";
     QTreeWidgetItem::addChildren( children );
 }
 
