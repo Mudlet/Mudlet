@@ -35,7 +35,6 @@ TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
 , mpLayout( 0 )
 , mItemCount( 0 )
 , mpBar( pW )
-
 {
     mButtonList.clear();
     QVBoxLayout * layout = new QVBoxLayout;
@@ -123,8 +122,10 @@ void TEasyButtonBar::addButton( TFlipButton * pB )
     {
         pB->move( pB->mpTAction->mPosX, pB->mpTAction->mPosY );
     }
+
     connect( pB, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
     mButtonList.push_back( pB );
+    pB->setChecked( (pB->mpTAction->mButtonState==2) );
 }
 
 
@@ -157,13 +158,15 @@ void TEasyButtonBar::slot_pressed()
     TAction * pA = pB->mpTAction;
     pB->showMenu();
 
-    if( pB->isChecked() )
+    if( pA->mButtonState == 2 )
     {
-        pA->mButtonState = 2;
+        pA->mButtonState = 1;
+        pB->setChecked( false );
     }
     else
     {
-        pA->mButtonState = 1;
+        pA->mButtonState = 2;
+        pB->setChecked( true );
     }
     if( pB->isChecked() )
         pA->mpHost->mpConsole->mButtonState = 1;

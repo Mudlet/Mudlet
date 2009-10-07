@@ -53,6 +53,7 @@ TAction::TAction( TAction * parent, Host * pHost )
 , mPosY( 0 )
 , mButtonColor( QColor( 255,255,255) )
 , mpLua( pHost->getLuaInterpreter() )
+, mButtonState( 1 )
 {
 } 
 
@@ -70,6 +71,7 @@ TAction::TAction( QString name, Host * pHost )
 , mPosY( 0 )
 , mButtonColor( QColor( 255,255,255) )
 , mpLua( pHost->getLuaInterpreter() )
+, mButtonState( 1 )
 {
 }
 
@@ -186,6 +188,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
        button->setIcon( icon );
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
+       button->setChecked( (pChild->mButtonState==2) );
        button->setFlat( mButtonFlat );
        button->setStyleSheet( css );
 
@@ -246,6 +249,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
        button->setCheckable( pChild->mIsPushDownButton );
        button->setFlat( mButtonFlat );
        button->setStyleSheet( css );
+       button->setChecked( (pChild->mButtonState==2) );
 
        pT->addButton( button );
 

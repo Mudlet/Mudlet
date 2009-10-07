@@ -2806,6 +2806,7 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
     QLineEdit * pItem = (QLineEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
     if( ! pItem ) return;
     QPalette palette;
+    qDebug()<<"pattern type="<<type;
     switch( type )
     {
     case 0:
@@ -2822,8 +2823,10 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
         break;
     case 4:
         palette.setColor( QPalette::Text, QColor(0,155,155) );
+        break;
     case 5:
         palette.setColor( QPalette::Text, QColor(137,0,205) );
+        break;
     }
     pItem->setPalette( palette );
 }
@@ -2894,9 +2897,11 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
             case REGEX_LUA_CODE:
                 palette.setColor( QPalette::Text, QColor(0,155,155) );
                 pBox->setCurrentIndex( 4 );
+                break;
             case REGEX_LINE_SPACER:
                 palette.setColor( QPalette::Text, QColor(137,0,205) );
                 pBox->setCurrentIndex( 5 );
+                break;
             }
             
             pItem->setPalette( palette );
@@ -4978,7 +4983,7 @@ void dlgTriggerEditor::slot_import()
     mCurrentScript = 0;
     mCurrentAction = 0;
     mCurrentKey = 0;
-    mCurrentView = 0;
+    //mCurrentView = 0;
 }
 
 void dlgTriggerEditor::slot_profileSaveAction()
