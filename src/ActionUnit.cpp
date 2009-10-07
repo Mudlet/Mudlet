@@ -149,11 +149,27 @@ void ActionUnit::unregisterAction( TAction * pT )
     if( pT->getParent() )
     {
         removeAction( pT );
+        updateToolbar();
         return;
     }
     else
     {
+        if( pT->mpEasyButtonBar )
+        {
+            if( pT->mLocation == 0 ) mpHost->mpConsole->mpTopToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
+            if( pT->mLocation == 2 ) mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
+            if( pT->mLocation == 3 ) mpHost->mpConsole->mpRightToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
+            if( pT->mLocation == 4 )
+            {
+                if( pT->mpToolBar )
+                {
+                    pT->mpToolBar->setFloating( false );
+                    mudlet::self()->removeDockWidget( pT->mpToolBar );
+                }
+            }
+        }
         removeActionRootNode( pT );    
+        updateToolbar();
         return;
     }
 }
