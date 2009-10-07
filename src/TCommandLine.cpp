@@ -317,7 +317,7 @@ void TCommandLine::handleTabCompletion( bool direction )
                 QString proposal = filterList[mTabCompletionCount-1];
                 if( typedList.size() > 0 ) typedList.pop_back();
                 QString userWords = typedList.join(" ");
-                setText( QString( userWords + " " + proposal ).trimmed() );
+                setText( QString( userWords + " " + proposal ).trimmed().toLower() );
                 mTabCompletionOld = text();
             }
         }
@@ -347,7 +347,7 @@ void TCommandLine::handleAutoCompletion()
         {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
-            setText( mHistoryList[i] );
+            setText( mHistoryList[i].toLower() );
             setSelection( oldLength, text().size() );
             return;
         }
