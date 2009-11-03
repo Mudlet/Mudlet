@@ -141,12 +141,14 @@ void dlgColorTrigger::setColorBlack()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 2;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mBlack;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
-        mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mBlack;
+        mpTrigger->mColorTriggerBgAnsi = 2;
+        mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mBlack;
     }
     close();
 }
@@ -158,11 +160,13 @@ void dlgColorTrigger::setColorLightBlack()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 1;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightBlack;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 1;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightBlack;
     }
     close();
@@ -175,11 +179,13 @@ void dlgColorTrigger::setColorRed()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 4;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mRed;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 4;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mRed;
     }
     close();
@@ -192,11 +198,13 @@ void dlgColorTrigger::setColorLightRed()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 3;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightRed;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 3;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightRed;
     }
     close();
@@ -209,11 +217,13 @@ void dlgColorTrigger::setColorGreen()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 6;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mGreen;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 6;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mGreen;
     }
     close();
@@ -225,11 +235,13 @@ void dlgColorTrigger::setColorLightGreen()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 5;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightGreen;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 5;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightGreen;
     }
     close();
@@ -242,11 +254,13 @@ void dlgColorTrigger::setColorBlue()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 10;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mBlue;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 10;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mBlue;
     }
     close();
@@ -258,11 +272,13 @@ void dlgColorTrigger::setColorLightBlue()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 9;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightBlue;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 9;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightBlue;
     }
     close();
@@ -275,11 +291,13 @@ void dlgColorTrigger::setColorYellow()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 8;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mYellow;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 8;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mYellow;
     }
     close();
@@ -291,11 +309,13 @@ void dlgColorTrigger::setColorLightYellow()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 7;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightYellow;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 7;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightYellow;
     }
     close();
@@ -308,11 +328,13 @@ void dlgColorTrigger::setColorCyan()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
-        mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mCyan;
+        mpTrigger->mColorTriggerFgAnsi = 14;
+        mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mCyan;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 14;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mCyan;
     }
     close();
@@ -324,11 +346,13 @@ void dlgColorTrigger::setColorLightCyan()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 13;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightCyan;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 13;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightCyan;
     }
     close();
@@ -341,11 +365,13 @@ void dlgColorTrigger::setColorMagenta()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 12;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mMagenta;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 12;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mMagenta;
     }
     close();
@@ -357,11 +383,13 @@ void dlgColorTrigger::setColorLightMagenta()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 11;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightMagenta;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 11;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightMagenta;
     }
     close();
@@ -374,11 +402,13 @@ void dlgColorTrigger::setColorWhite()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
+        mpTrigger->mColorTriggerFgAnsi = 16;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mWhite;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 16;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mWhite;
     }
     close();
@@ -390,11 +420,13 @@ void dlgColorTrigger::setColorLightWhite()
     if( mMode == 0 )
     {
         mpTrigger->mColorTriggerFg = true;
-        mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightWhite;
+        mpTrigger->mColorTriggerFgAnsi = 15;
+        mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightWhite;
     }
     else
     {
         mpTrigger->mColorTriggerBg = true;
+        mpTrigger->mColorTriggerBgAnsi = 15;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightWhite;
     }
     close();

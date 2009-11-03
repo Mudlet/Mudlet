@@ -46,10 +46,21 @@
 #define REGEX_EXACT_MATCH 3
 #define REGEX_LUA_CODE 4
 #define REGEX_LINE_SPACER 5
+#define REGEX_COLOR_PATTERN 6
 
 #define OVECCOUNT 30    // should be a multiple of 3 
 
-
+struct TColorTable
+{
+    int ansiFg;
+    int ansiBg;
+    int fgR;
+    int fgG;
+    int fgB;
+    int bgR;
+    int bgG;
+    int bgB;
+};
 
 class TTrigger : public Tree<TTrigger>
 {
@@ -87,7 +98,7 @@ public:
     bool             setScript( QString & script );
     bool             compileScript();
     bool             match( char *, QString &, int line, int posOffset = 0 );
-    bool             match_colors( int );
+
     bool             isFolder()                      { return mIsFolder; }
     bool             isMultiline()                   { return mIsMultiline; }
     int              getTriggerType()                { return mTriggerType; }
@@ -110,12 +121,16 @@ public:
     bool             match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset = 0 );
     bool             match_lua_code( int );
     bool             match_line_spacer( int regexNumber );
+    bool             match_color_pattern( int, int );
     void             setConditionLineDelta( int delta )  { mConditionLineDelta = delta; }
     int              getConditionLineDelta() { return mConditionLineDelta; }
     bool             registerTrigger();
     void             setSound( QString file ){ mSoundFile = file; }
     bool             serialize( QDataStream & );
     bool             restore( QDataStream & fs, bool );
+    bool             setupColorTrigger( int, int );
+    bool             setupTmpColorTrigger( int ansiFg, int ansiBg );
+    TColorTable*     createColorPattern(int, int);
     bool             mTriggerContainsPerlRegex;
     bool             mPerlSlashGOption;
     bool             mFilterTrigger;
@@ -123,13 +138,16 @@ public:
     QString          mSoundFile;
     int              mStayOpen;
     bool             mColorTrigger;
+    QList<TColorTable *> mColorPatternList;
     bool             mColorTriggerFg;
     bool             mColorTriggerBg;
     QColor           mColorTriggerFgColor;
     QColor           mColorTriggerBgColor;
-    int                                    mKeepFiring;
+    int              mColorTriggerFgAnsi;
+    int              mColorTriggerBgAnsi;
+    int              mKeepFiring;
     bool             isClone( TTrigger & ) const;
-    Host *                                 mpHost;
+    Host *           mpHost;
 
 private:
     

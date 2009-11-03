@@ -1062,7 +1062,7 @@ What makes multiline triggers really shine is the ability to react to MUD output
 == Lua API
 Mudlet defines several global Lua variables that are accessible from anywhere.
 
-.Lua Variables
+.Built-in Lua Variables
 [width="100%",frame="topbot",options="header"]
 |===================================================
 |Variable Name|Description
@@ -1074,179 +1074,222 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 |multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
 |===================================================
 
-.Main Functions
-[width="100%",frame="topbot",options="header"]
-|===================================================
-|Function|Description
-|send( command )|This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
-|echo( text )|appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
-|echo( windowName, text )|appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()
-|listPrint( listName )|prints the content of list listName on the screen e.g. listPrint( myEnnemies )
-|listAdd( listName, what )|adds a new element what to the list listName e.g. listAdd( myEnnemies, "Tom" )
-|listRemove( listName, what )|removes item what from the list listName e.g. listRemove( myEnnemies, "Bert" )
-|int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error|Selects a substring from the line where the user cursor is currently 
+= Alphabetical Function Index
+
+= A
+<<appendBuffer,appendBuffer>>, 
+
+= B
+<<bg,bg>>, 
+
+= C
+<<createBuffer,createBuffer>>, 
+<<clearUserWindow,clearUserWindow>>, 
+<<copy,copy>>, 
+<<openUserWindow,openUserWindow>>, 
+
+= D
+<<deleteLine,deleteLine>>, 
+<<disableKey,disableKey>>, 
+<<disableTimer,disableTimer>>, 
+<<disableTrigger,disableTrigger>>, 
+
+
+= E
+<<echo,echo>>, 
+<<enableKey,enableKey>>, 
+<<enableTimer,enableTimer>>, 
+<<enableTrigger,enableTrigger>>, 
+<<expandAlias,expandAlias>>, 
+
+= F
+<<fg,fg>>, 
+
+
+= G
+<<getColumnNumber,getColumnNumber>>, 
+<<getLines,getLines>>, 
+<<getLineCount,getLineCount>>, 
+<<getLineNumber,getLineNumber>>, 
+
+
+= H
+<<hideWindow,hideWindow>>, 
+
+= I
+<<insertText,insertText>>, 
+
+
+= J
+
+
+= K
+
+
+= L
+
+
+
+= M
+<<moveCursor,moveCursor>>, 
+<<moveCursorEnd,moveCursorEnd>>, 
+<<moveWindow,moveWindow>>, 
+
+
+= N
+
+
+= O
+
+
+= P
+<<paste,paste>>, 
+<<pasteUserWindow,pasteUserWindow>>, 
+<<prefix,prefix>>, 
+
+
+= R
+<<raiseEvent,raiseEvent>>, 
+<<replace,replace>>, 
+<<replaceAll,replaceAll>>, 
+<<replaceWildcards,replaceWildcards>>, 
+<<resetFormat,resetFormat>>, 
+<<resizeWindow,resizeWindow>>, 
+
+
+
+= S
+<<selectCaptureGroup,selectCaptureGroup>>, 
+<<selectSection,selectSection>>, 
+<<selectString,selectString>>, 
+<<send,send>>, 
+<<sendAll,sendAll>>, 
+<<setBgColor,setBgColor>>, 
+<<setFgColor,setFgColor>>, 
+<<showCaptureGroups,showCaptureGroups>>, 
+<<showMultimatches,showMultimatches>>, 
+<<showWindow,showWindow>>, 
+<<suffix,suffix>>, 
+
+
+= T
+<<tableload,table.load>>, 
+<<tablesave,table.save>>, 
+<<tempColorTrigger,tempColorTrigger>>, 
+<<tempLineTrigger, tempLineTrigger>, 
+<<tempRegexTrigger,tempRegexTrigger>>, 
+<<tempTimer,tempTimer>>, 
+<<tempTrigger,tempTrigger>>, 
+
+
+
+
+
+=== Most Important Functions
+
+== send( command )
+This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
+
+
+[[echo]]
+== echo( text )
+appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
+
+== echo( windowName, text )
+appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()
+
+
+[[selectString]]
+== int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error
+Selects a substring from the line where the user cursor is currently 
 positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of 
 the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that 
 the cursor is in the correct line if you want to call one of the select functions. 
 NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) > -1 then setFgColor( 255,0,0) end"
-|deleteLine()|deletes the current Line under the user cursor. 
-|timer_id = tempTimer( seconds, lua_code )|Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
-|enableTrigger( name )|enables a Trigger. see enableTimer() for more details.
-|disableTrigger( name )|Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
-|insertText( text )|inserts text at the current cursor position in the main window; if the cursor has not been explicitely moved this function will always print at the beginning of the line whereas the echo() function will always print at the end of the line
-|insertText( windowName, text )|inserts text at cursor position in window windowName
-|suffix( what )|prints "what" at the end of the line when used in a trigger script
-|prefix( what )|prints "what" at the beginning of a line when used in a trigger script
-|boolean = selectSection( from, length_of_string )|Absolute column number for start of selection and length of selection
-|selectSection( windowName, from, length )|just like selectSection() but does not operate on the main window, but on window windowName. See selectSection() for a detailed description
-|selectCaptureGroup( groupNumber ) with first group = 0|Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)
-|replace( with )|replaces the selected text with "with". To delete text use replace("")
-|replace( windowName, with )|replaces the selected text with "with". This function operates on window windowName
-|replaceAll( what, with )|replaces all occurrences of what in the current line with with 
-|fg( color_name )|Sets the current selection foreground color to color_name. You can find the pre-defined color names <<colortable, here>> 
-|bg( color_name )|same as fg( color_name ) just for the background color.
-|resetFormat()|Resets the character format to default. This should be used after you have colorized some text, but don't want to keep using these colors for further prints.
-|setBgColor( r,g,b )|Sets the current text background color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
-|setBgColor( windowName, r, g, b )|set current text background color in window windowName
-|setFgColor( r, g, b )|Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
-|setFgColor( windowName, r, g, b )|Sets the current text foreground color in window windowName
-|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
-|===================================================
 
-.Trigger, Timer, Alias and Key Functions
-[width="100%",frame="topbot",options="header"]
-|===================================================
-| Function | Description
-|disableTimer( name )|Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.
-|disableTrigger( name )|Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
-|disableKey( name )|Uses trigger name as id or the id returned by tempTrigger()
-|echoUserWindow( window_name, text )|prints text to user dock window name
-|enableTimer( name )|enables or activates a timer that was previously disabled. The parameter "name" expects the timer ID that was returned by tempTimer() on creation of the timer or the name of the timer in case of a GUI timer
-|enableTrigger( name )|enables a Trigger. see enableTimer() for more details.
-|enableKey( name )|enable key or key group "name"
-|expandAlias( command )|like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.
-|raiseEvent( event_name, arg-1, ... arg-n )|Raises the event event_name. The event system will call the main function (the one that is called exactly like 
-the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with 
-the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without 
-having to care if the actual event handling has been implemented yet - or more specifically how it is implemented. Your triggers raise an event to 
-tell the system that they have detected a certain condition to be true or that a certain event has happened. How - and if - the system is going 
-to respond to this event is up to the system and your trigger scripts don't have to care about such details. 
-For small systems it will be more convienient to use regular function calls instead of events, however, the more complicated your system will get, 
-the more important events will become because they help reduce complexity very much.
 
-The corresponding event handlers that listen to the events raised with raiseEvent() need to use the script name as function name and take the correct 
-number of arguments. NOTE: If you raise an event with 5 arguments but your event handlers functions only take 2,10 or 0 arguments, the functions 
-will not be called. For exmaple: raiseEvent("fight") a correct event handler function would be: myScript( event_name ). In this example raiseEvent 
-uses minimal arguments, name the event name. There can only be one event handler function per script, but a script can still handle multiple events 
-as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you 
-should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees 
-and thus help reduce complexity on large systems.
-|timer_id = tempTimer( seconds, lua_code )|Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
-|trigger_id = tempTrigger( string, lua_code )|creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one.
-|trigger_id = tempLineTrigger( from, howMany, LuaCode )|Temporary trigger that will fire on n consecutive lines following the current line. This is useful 
-to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, [[send("shout Help")]] ) will fire 3 times starting with the line from the MUD.
-tempLineTrigger( 20, 2, [[send("shout Help")]] )
-will fire 20 lines after the current line and fire twice on 2 consecutive lines.
-|trigger_id = tempRegexTrigger( regex, lua_code )|temorary trigger using perl regex pattern matching
-|boolean = killTimer( name )|Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn't exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.
-|killTrigger( name )|See killTimer()
-|===================================================
+[[deleteLine]]
+== deleteLine()
+deletes the current Line under the user cursor. Note: This is a high speed gagging tool and it is very good at this task. It is meant to be used when the line can be omitted entirely in the output. If you want to replace this line with something else have a look at the replace() functions below. Note that scripts such as: deleteLine(); echo("this line is gone"); will not work because lines that have been gagged with deleteLine() will not be rendered even if there is text in the buffer. -> wrapLine() for details on how to force a rerender if this is necessary for some reason. This is not the recommended way of replacing text. <<replace,-> replace()>> and <<wrapLine, wrapLine()>>
 
-.Buffer, Screen and Mini Windows Functions
-[width="100%",frame="topbot",options="header"]
-|===================================================
-| Function | Description
-|openUserWindow( name )|Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
-|clearUserWindow( window_name )|Clears the user window with the name given as argument.
-|*userWindowLineWrap( window, boolean )*|turns line wrap mode on or off in user dock windows
-userWindowLineWrap( "chat", true ) turns on line wrap for window "chat" (*not implemented*)
-|copy()|Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.
-|cut()|Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )
-|*deselect()*|deselects the last selected text (*not implemented yet*)
-|lineNumber = getLineNumber()|to get the absolute line number of the current user cursor
-|number = getColumnNumber()|To get the absolute column number of the current user cursor
-|number = getLineCount()|To get the absolute amount of lines in the current console buffer
-|lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )|Returns a section of the content of the screen text buffer. Absolute line numbers are used
-|number_of_last_line = getLineCount()|number of the last line in the buffer
-|boolean = moveCursor( windowName, x, y )|Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.
-|moveCursorEnd( windowName )|Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
-|paste()|pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.
-|pasteWindow( name )|pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
-selectString( line, 1 )
-cut()
-pasteWindow( "chat" )
-|printTable( table_name )|Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the lua table "matches".
-This function is defined in luaglobal.lua.
-|showCaptureGroups()|Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua
-|showMultimatches()|Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers
-|table.load( file, table )|restores a Lua table from a data file that has been saved with table.save()
-|table.save( file, table )|saves the given table into the given file
-|showCaptureGroups()|a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (->trigger editor->bug symbol)
-|printTable( table )|another debug function that prints the content of a Lua table on the screen split in key and value.
-|sendAll( what )|sends a list of commands to the MUD
-|debug( arg1 ... argn )|prints out debug information to the user debug console
-|function replaceWildcard(what, replacement)|Replaces the given wildcard (as a number) with the given text.
-Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
-|resetFormat() |resets the user character format to the default.
-|===================================================
 
-.Miscellaneous Functions
-[width="100%",frame="topbot",options="header"]
-|===================================================
-| Function | Description
-|createBuffer( name )|creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work
-|appendBuffer( name )|like paste() but pastes at the end of the buffer/window and wraps new text automatically
-|showWindow( name )|shows user window name
-|hideWindow( name )|hides user window name
-|resizeWindow( name, x1, y1, x2, y2 )|resizes window name to x1/y1 and x2/y2 vectors
-|closeUserWindow( name )|closes a named window and delete it.
-|latency = getNetworkLatency()|returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)
-|watchID = createStopWatch() | return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
-|startStopWatch( watchID ) | start the stop watch
-|time = stopStopWatch( watchID ) | stops the stop watch and returns elapsed time in milliseconds in form of 0.001
-|resetStopWatch( watchID ) | resets the time to 0:0:0:0
-|time = getStopWatchTime( watchID ) | returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)
-|debug( text )|print text to debug console
-|appendBuffer( name, text )|append text at the end of temp buffer name (fast function)
-|setWindowWrap( windowName, wrapAt )|sets at what position in the line the console or miniconsole will start word wrap
-|createMiniConsole( name, posX, posY, width, height )|opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy/cut/paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing. 
-|createLabel( name, posX, posY, width, height, fillBackground)|labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. *DON'T* use labels for larger text displays because they are a lot slower than the highspeed mini consoles
-|hideWindow( name )| hides a user window, button or label
-|showWindow( name )| shows a window, button or label
-|resizeWindow( name, width, height )|resizes a user window, button or label
-|setMiniConsoleFontSize( name, fontSize )|Sets the font size of the mini console.
-|getCurrentLine()|returns the content of the current line under the user cursor in the buffer. The Lua variable line holds the content of getCurrentLine() before any triggers have been run on this line. When triggers change the content of the buffer, the variable line will not be adjusted and thus hold an outdated string. line = getCurrentLine() will update line to the real content of the current buffer. This is important if you want to copy the current line after it has been changed by some triggers. selectString( line,1 ) will return false and won't select anything because line no longer equals getCurrentLine(). Consequently, selectString( getCurrentLine(), 1 ) is what you need.
-|selectCurrentLine()|selects the content of the current buffer line
-|setBackgroundImage( labelName, imageFileName )|loads an image file (png) as a background image for a label. This can be used to display clickable images etc.
-|setBackgroundColor( red, green, blue, alpha )|sets rgb color values + an alpha channel for the level of transperancy of the background color 0=completely transparent, 255=no transparency values in between specify the level of transparency.
-|setLabelClickCallback( labelName, luaFunctionName )|specify a lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )
-|createButton( ... )|
-|echoUserWindow( windowName )|This function will print text to both mini console windows, dock windows and labels. Note that labels accept rich text formats (= html = very slow -> don't use this if the text is updated often! In this case use a mini console instead)
-|width, height = getMainWindowSize()|return window width and window height ( function with 2 return values ) to calculate the window dimensions and placement of custom gui toolkit items like labels, buttons, mini consoles etc.
-|setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )|sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
-example: 
+== tempTimer( seconds, lua_code )
+Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed. see <<tempTimer,here>> for details.
+
+
+== enableTrigger( name )
+Enables the Trigger name. <<enableTrigger, -> enableTrigger()>>
+
+
+
+== disableTrigger( name )
+Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. <<disableTrigger,-> disableTrigger( name )>>
+
+
+[[insertText]]
+== insertText( text )
+inserts text at the current cursor position in the main window; if the cursor has not been explicitely moved this function will always print at the beginning of the line whereas the echo() function will always print at the end of the line
+
+== insertText( windowName, text )
+inserts text at cursor position in window windowName
+
+
+[[suffix]]
+== suffix( what )
+prints "what" at the end of the line when used in a trigger script
+
+
+[[prefix]]
+== prefix( what )
+prints "what" at the beginning of a line when used in a trigger script
+
+
+
+[[selectSection]]
+== selectSection( from, length_of_string )
+Select text on the line under the current cursor postion. Use absolute column number for start of selection and length of selection
+The function returns true on success and false if the selection is not possible.
+
+== selectSection( windowName, from, length )
+just like selectSection() but does not operate on the main window, but on window windowName. See selectSection() for a detailed description
+
+
+
+[[selectCaptureGroup]]
+== selectCaptureGroup( groupNumber ) with first group = 0
+Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)
+
+
+
+[[replace]]
+== replace( with )
+Replaces the currently selected text with "with". To delete or gag the selected text use replace("")
+
+example:
 ----
-createMiniConsole( "con1", 0,0,300,100);
-setTextFormat("con1",0,0,255,255,255,0,1,1,1); 
-echoUserWindow("con1","This is a test")
+selectString("troll",1)
+replace("my friend the cute trolly")
 ----
-This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
-|table.size( tableName )|Gets the actual size of a non-numerical table
-|myTableSize = # myTable | is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.
-|io.exists(file)|Checks to see if a file exists
-|string:split(delimiter)|Splits a string
-|table.contains(t, value)|Determines if a table contains a value as a key or as a value (recursive)
-|state = getButtonState() with state = 1 button is checked and state = 0, button is not checked|this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example: checked = getButtonStated(); if checked == 1 then hideExits() else showExits() end;
-|showToolBar( name )|shows tool bar name on the screen
-|hideToolBar( name )|hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.
-|disconnect()|close network connection to the server *without* a proper logout
-|reconnect()|reconnects to the current server after a call to disconnect()
-|setTriggerStayOpen( name )|set for how many more lines a trigger script should fire or a chain should stay open *after* the trigger has matched. The main use of this function is to close a chain when a certain condition has been met.
-|homedir = getMudletHomeDir()|returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files
-|display( myTable )|generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.
-|display( myVariable )|generic pretty print function to diplay the content of any Lua variable or table on the main screen
-|===================================================
 
+To gag entire lines you can use the very fast function <<deleteLine, -> deleteLine()>>
+
+== replace( windowName, with )
+Replaces the currently selected text with "with". This function operates on window windowName <<replace, -> more>>
+
+
+
+[[replaceAll]]
+== replaceAll( what, with )
+replaces all occurrences of what in the current line with with  <<replace, -> replace()>>
+
+[[fg]]
+== fg( color_name )
+Sets the current selection foreground color to color_name. You can find the pre-defined color names <<colortable, here>>  <<resetFormat, ->resetFormat()>> <<setFgColor, -> setFgColor()>>
+
+
+[[bg]]
+== bg( color_name )
+same as fg( color_name ) just for the background color. <<fg,-> more>> <<setBgColor, -> setBgColor()>>
 
 [[colortable]]
 .Color Table (for use in the fg("colorname") and bg("colorname") functions)
@@ -1276,4 +1319,697 @@ This script would create a mini text console and write with yellow foreground co
 | violet_red| magenta| violet| plum | orchid | medium_orchid
 | dark_orchid| blue_violet| purple| medium_purple| thistle
 |===================================================
+
+
+[[resetFormat]]
+== resetFormat()
+Resets the character format to default. This should be used after you have colorized some text or changed the current foreground or background color, but you don't want to keep using these colors for further prints. If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
+
+
+
+[[setBgColor]]
+=setBgColor( r,g,b )
+Sets the current text background color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
+If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
+
+== setBgColor( windowName, r, g, b )
+Sets the current text background color in window windowName. If you have selected text prior to this call, the selection will be colorized otherwise the current text background color will be changed.
+If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
+
+example 1 colorizes the first occurance of the string "Tom" in the current line with a red background color.
+-----
+selectString( "Tom", 1 )
+setBgColor( 255,0,0 )
+-----
+exmaple 2 prints "Hello" on red background and "You" on blue.
+----
+setBgColor(255,0,0)
+echo("Hello")
+setBgColor(0,0,255)
+echo(" You!")
+resetFormat()
+-----
+
+
+[[setFgColor]]
+== setFgColor( r, g, b )
+Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)
+
+== setFgColor( windowName, r, g, b )
+Sets the current text foreground color in window windowName
+
+
+[[openUserWindow]]
+== openUserWindow( name )
+Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
+
+
+= Trigger, Timer, Alias and Key Functions
+
+
+[[disableTimer]]
+== disableTimer( name )
+Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.
+
+
+
+[[disableTrigger]]
+== disableTrigger( name )
+Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
+
+
+
+[[disableKey]]
+== disableKey( name )
+Uses trigger name as id or the id returned by tempTrigger()
+
+
+
+[[enableTimer]]
+== enableTimer( name )
+enables or activates a timer that was previously disabled. The parameter "name" expects the timer ID that was returned by tempTimer() on creation of the timer or the name of the timer in case of a GUI timer
+
+
+[[enableTrigger]]
+== enableTrigger( name )
+enables a Trigger. see enableTimer() for more details.
+
+
+
+[[enableKey]]
+== enableKey( name )
+enable key or key group "name" (hot keys or action keys). 
+
+
+
+[[expandAlias]]
+== expandAlias( command )
+like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.
+
+
+
+[[raiseEvent]]
+== raiseEvent( event_name, arg-1, ... arg-n )
+Raises the event event_name. The event system will call the main function (the one that is called exactly like 
+the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with 
+the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without 
+having to care if the actual event handling has been implemented yet - or more specifically how it is implemented. Your triggers raise an event to 
+tell the system that they have detected a certain condition to be true or that a certain event has happened. How - and if - the system is going 
+to respond to this event is up to the system and your trigger scripts don't have to care about such details. 
+For small systems it will be more convienient to use regular function calls instead of events, however, the more complicated your system will get, 
+the more important events will become because they help reduce complexity very much.
+
+The corresponding event handlers that listen to the events raised with raiseEvent() need to use the script name as function name and take the correct 
+number of arguments. NOTE: If you raise an event with 5 arguments but your event handlers functions only take 2,10 or 0 arguments, the functions 
+will not be called. For exmaple: raiseEvent("fight") a correct event handler function would be: myScript( event_name ). In this example raiseEvent 
+uses minimal arguments, name the event name. There can only be one event handler function per script, but a script can still handle multiple events 
+as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you 
+should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees 
+and thus help reduce complexity on large systems.
+
+
+
+[[tempTimer]]
+== tempTimer( seconds, lua_code )
+Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
+example:
+----
+tempTimer( 0.3, [[send("kill monster")]] )
+----
+This script will send the command "kill monster" 0.3 seconds after this function has been called. Note that this function does not wait until 0.3 seconds have been passed, but it will start a timer that will run the Lua script that you have provided as a second argument after 0.3 seconds.
+----
+ [[ ]] can be used to quote strings in Lua. The difference to the usual " " quote syntax is that [[ ]] also accepts the character ". Consequently, you don't have to escape the " character in the above script. The other advantage is that it can be used as a multiline quote.
+----
+Also note that the lua code that you provide as an argument is compiled from a string value when the timer fires. This means that if you want to pass any parameters by value e.g. you want to make a function call that uses the value of your variable myGold as a parameter you have to do things like this:
+----
+tempTimer( 3.8, [[echo("at the time of the tempTimer call I had ]] .. myGold .. [[ gold.")]] ); 
+----
+
+You can also use the global variable table, the so-called _G table, directly to get the value that is associated with the name of the variable. The _G table holds all global variables and all global function names as keys with the respective values as values.
+
+Here is yet another way to expand variables in Lua, posted in the Mudlet user forum:
+
+----
+Howto: expand variables
+
+Postby eraldo » Sat Aug 22, 2009 4:29 am
+Example:
+
+Global variable:
+MyNumber = 10
+
+function:
+
+            testFunction(a, b)
+                local VariableNameString = a .. b
+                local value = tonumber( VariableNameString )
+                echo( value )
+            end
+
+
+Function call:
+testFunction( "My", "Number" )
+
+Result:
+10
+-----
+
+
+
+[[tempTrigger]]
+== tempTrigger( string, lua_code )
+This function creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one. This is the second fastest trigger (with begin of line substring patterns being the fastest) and should be used instead of regex triggers whenever possible.
+
+
+
+
+[[tempLineTrigger]]
+== tempLineTrigger( from, howMany, LuaCode )
+Temporary trigger that will fire on n consecutive lines following the current line. This is useful 
+to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, [[send("shout Help")]] ) will fire 3 times starting with the line from the MUD.
+tempLineTrigger( 20, 2, [[send("shout Help")]] )
+will fire 20 lines after the current line and fire twice on 2 consecutive lines.
+The function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on.
+
+
+
+[[tempRegexTrigger]]
+== tempRegexTrigger( regex, lua_code )
+temorary trigger using perl regex pattern matching <<tempTrigger, This function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on. -> tempTrigger()
+
+
+
+[[killTimer]]
+== killTimer( name )
+Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn't exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.
+This function returns true or false on success.
+
+
+[[killTrigger]]
+== killTrigger( name )
+See killTimer()
+
+
+
+= Buffer, Screen and Mini Windows Functions
+
+
+
+[[openUserWindow]]
+== openUserWindow( name )
+Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
+
+
+
+
+[[clearUserWindow]]
+== clearUserWindow( window_name )
+Clears the user window with the name given as argument.
+
+
+
+[[copy]]
+== copy()
+Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.
+ in the clipboard until it gets overwritten by another copy operation. example:
+This script copies the current line on the main screen to a user window (mini console) named chat and gags the output on the main screen.
+-----
+selectString( line ); 
+copy(); 
+appendBuffer("chat"); 
+replace("This line has been moved to the chat window!") 
+-----
+
+
+
+[[getLineNumber]]
+== getLineNumber()
+Gets the absolute line number of the current user cursor.
+
+
+
+[[getColumnNumber]]
+== getColumnNumber()
+Gets the absolute column number of the current user cursor.
+
+
+
+[[getLineCount]]
+== getLineCount()
+Gets the absolute amount of lines in the current console buffer
+
+
+
+[[getLines]]
+==  getLines( from_line_number, to_line_number )
+Returns a section of the content of the screen text buffer. The form of the return value is: lua_table[relative_linenumber, content]
+Absolute line numbers are used.
+
+
+
+[[getLineCount]]
+== getLineCount()
+Returns the number of the last line in the buffer.
+
+
+
+[[moveCursor]]
+== boolean = moveCursor( windowName, x, y )
+Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. If you omit the windowName argument, the main screen will be used.
+
+
+
+[[moveCursorEnd]]
+== moveCursorEnd( windowName )
+Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
+
+
+
+[[paste]]
+== paste(windowName)
+pastes the previously copied text including all format codes like color, font etc. at the current user cursor position. The copy() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.
+
+
+
+[[appendBuffer]]
+== appendBuffer( name )
+Pastes the previously copied rich text (including text formats like color etc.) into user window name. example:
+-----
+selectString( line, 1 )
+copy()
+appendBuffer( "chat" )
+-----
+
+
+[[printTable]]
+== printTable( table_name )
+Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the lua table "matches".
+This function is defined in luaglobal.lua. NOTE: This function is old. Use the newer <<display, display( table_or_variable )>> instead.
+
+
+
+[[showCaptureGroups]]
+== showCaptureGroups()
+Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua
+
+
+[[showMultimatches]]
+== showMultimatches()
+Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers
+
+
+[[tableload]]
+== table.load( file, table )
+restores a Lua table from a data file that has been saved with table.save()
+
+
+[[tablesave]]
+== table.save( file, table )|saves the given table into the given file
+
+
+[[showCaptureGroups]]
+== showCaptureGroups()
+a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (->trigger editor->bug symbol)
+
+
+
+[[sendAll]]
+== sendAll( what )
+Sends a list of commands to the MUD.
+
+
+[[debug]]
+== debug( arg1 ... argn )
+Prints out debug information to the user debug console.
+
+
+
+[[replaceWildcard]]
+== replaceWildcard(what, replacement)
+Replaces the given wildcard (as a number) with the given text.
+Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
+
+
+[[resetFormat]]
+== resetFormat()
+resets the user character format to the default.
+
+= Miscellaneous Functions
+
+
+[[createBuffer]]
+== createBuffer( name )
+creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work
+
+
+[[appendBuffer]]
+== appendBuffer( name )
+like paste() but pastes at the end of the buffer/window and wraps new text automatically
+
+
+[[showWindow]]
+== showWindow( name )
+shows user window name
+
+
+[[hideWindow]]
+== hideWindow( name )
+hides user window name
+
+
+[[resizeWindow]]
+== resizeWindow( name, x1, y1, x2, y2 )
+resizes window name to x1/y1 and x2/y2 vectors
+
+
+
+[[getNetworkLatency]]
+== latency = getNetworkLatency()
+returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)
+
+
+
+[[createStopWatch]]
+== watchID = createStopWatch()
+return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
+
+
+
+[[startStopWatch]]
+== startStopWatch( watchID )
+start the stop watch
+
+
+
+[[stopStopWatch]]
+== time = stopStopWatch( watchID ) 
+stops the stop watch and returns elapsed time in milliseconds in form of 0.001
+
+
+
+[[resetStopWatch]]
+== resetStopWatch( watchID )
+resets the time to 0:0:0:0
+
+
+
+
+[[getStopWatchTime]]
+== time = getStopWatchTime( watchID )
+returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)
+
+
+[[debug]]
+== debug( text )
+print text to debug console
+
+
+
+[[appendBuffer]]
+== appendBuffer( name, text )
+append text at the end of temp buffer name (fast function)
+
+
+[[setWindowWrap]]
+== setWindowWrap( windowName, wrapAt )
+sets at what position in the line the console or miniconsole will start word wrap
+
+
+
+[[createMiniConsole]]
+== createMiniConsole( name, posX, posY, width, height )
+opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy & paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing. 
+
+
+
+
+[[createLabel]]
+== createLabel( name, posX, posY, width, height, fillBackground)
+labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. *DON'T* use labels for larger text displays because they are a lot slower than the highspeed mini consoles
+
+
+
+[[hideWindow]]
+== hideWindow( name )
+hides a user window, button or label
+
+
+
+[[showWindow]]
+== showWindow( name )
+shows a window, button or label
+
+
+
+
+[[resizeWindow]]
+== resizeWindow( name, width, height )
+resizes a user window, button or label
+
+
+
+[[setMiniConsoleFontSize]]
+== setMiniConsoleFontSize( name, fontSize )
+Sets the font size of the mini console.
+
+
+
+[[getCurrentLine]]
+== getCurrentLine()
+returns the content of the current line under the user cursor in the buffer. The Lua variable line holds the content of getCurrentLine() before any triggers have been run on this line. When triggers change the content of the buffer, the variable line will not be adjusted and thus hold an outdated string. line = getCurrentLine() will update line to the real content of the current buffer. This is important if you want to copy the current line after it has been changed by some triggers. selectString( line,1 ) will return false and won't select anything because line no longer equals getCurrentLine(). Consequently, selectString( getCurrentLine(), 1 ) is what you need.
+
+
+
+
+[[selectCurrentLine]]
+== selectCurrentLine()
+selects the content of the current buffer line
+
+
+
+[[setBackgroundImage]]
+== setBackgroundImage( labelName, imageFileName )
+loads an image file (png) as a background image for a label. This can be used to display clickable images etc.
+
+
+
+[[setBackgroundColor]]
+== setBackgroundColor( red, green, blue, alpha )
+sets rgb color values + an alpha channel for the level of transperancy of the background color 0=completely transparent, 255=no transparency values in between specify the level of transparency.
+
+
+
+[[setlabelClickCallback]]
+== setLabelClickCallback( labelName, luaFunctionName )
+specify a lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )
+UPDATE: this function can now pass any number of string or integer number values as additional parameters. These parameters are then used in the callback. Thus you can associate data with the label/button. check the forum for more information on how to use this.
+*** FIXME *** example
+
+
+
+[[echoUserWindow]]
+== echoUserWindow( windowName )
+This function will print text to both mini console windows, dock windows and labels. 
+
+
+
+[[getMainWindowSize]]
+== width, height = getMainWindowSize()
+return window width and window height ( function with 2 return values ) to calculate the window dimensions and placement of custom gui toolkit items like labels, buttons, mini consoles etc.
+
+
+
+[[setTextFormat]]
+== setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )
+sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
+example: 
+----
+createMiniConsole( "con1", 0,0,300,100);
+setTextFormat("con1",0,0,255,255,255,0,1,1,1); 
+echoUserWindow("con1","This is a test")
+----
+This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
+.table.size( tableName )
+Gets the actual size of a non-numerical table
+
+
+
+[[gettingTableSize]]
+== myTableSize = # myTable 
+This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.
+
+
+
+[[ioexists]]
+== io.exists(file)
+Checks to see if a file exists
+
+
+[[stringsplit]]
+== string:split( delimiter )
+Splits a string
+
+
+
+[[tablecontains]]
+== table.contains(t, value)
+Determines if a table contains a value as a key or as a value (recursive)
+
+
+
+[[getButtonState]]
+== state = getButtonState() with state = 1 button is checked and state = 0, button is not checked
+this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example:
+----
+checked = getButtonStated(); 
+if checked == 1 then 
+    hideExits() 
+else 
+    showExits() 
+end;
+----
+
+
+[[showToolBar]]
+== showToolBar( name )
+shows tool bar name on the screen
+
+
+[[hideToolBar]]
+== hideToolBar( name )
+hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.
+
+
+[[disconnect]]
+== disconnect()
+close network connection to the server *without* a proper logout
+
+
+[[reconnect]]
+== reconnect()
+reconnects to the current server after a call to disconnect()
+
+
+[[setTriggerStayOpen]]
+== setTriggerStayOpen( name )
+set for how many more lines a trigger script should fire or a chain should stay open *after* the trigger has matched. The main use of this function is to close a chain when a certain condition has been met.
+
+
+[[getMudletHomeDir]]
+== homedir = getMudletHomeDir()
+returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files
+
+
+[[display]]
+== display( myTable )
+generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.
+
+== display( myVariable )
+generic pretty print function to diplay the content of any Lua variable or table on the main screen
+
+
+[[tempColorTrigger]]
+== tempColorTrigger( foregroundColor, backgroundColor, function )
+Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be supplied in form of these simplified ANSI 16 color mode codes:
+.Color Codes:
+----
+0 = default text color
+1 = light black
+2 = dark black
+3 = light red
+4 = dark red
+5 = light green
+6 = dark green
+7 = light yellow
+8 = dark yellow
+9 = light blue
+10 = dark blue
+11 = light magenta
+12 = dark magenta
+13 = light cyan
+14 = dark cyan
+15 = light white
+16 = dark white
+----
+
+example: 
+----
+tempColorTrigger(9,2,[[selectString(matches[1],1); fg("red"); bg("blue");]] ); 
+----
+This script will re-colorize all text in blue foreground colors on a black background with a red foreground color on a blue background color until another color in the current line is being met. temporary color triggers do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors in a particular context.
+
+
+
+[[getFgColor]]
+== r,g,b = getFgColor( windowName )
+This function returns the rgb values of the color of the first character of the current selection on mini console (window) windowName. If windowName is ommitted Mudlet will use the main screen. example: 
+----
+local r,g,b;
+selectString("troll",1)
+r,g,b = getFgColor()
+if r == 255 and g == 0 and b == 0 then
+    echo("HELP! troll is written in red letters, the monster is aggressive!\n");
+end
+----
+
+
+[[getBgColor]]
+== r,g,b = getBgColor( windowName )
+get the rgb values of the first character of the current selection -> getFgColor() for more information
+
+[[wrapLine]]
+== wrapLine( windowName, lineNumber )
+wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters, apply word wrap and display the new lines on the screen. This function may be necessary if you use deleteLine() and thus erase the entire current line in the buffer, but you want to do some further echo() calls after calling deleteLine(). You will then need to re-wrap the last line of the buffer to actually see what you have echoed and get you \n interpreted as newline characters properly. Using this function is no good programming practice and should be avoided. There are better ways of handling situations where you would call deleteLine() and echo afterwards e.g.: 
+----
+selectString(line,1);
+replace(""); 
+----
+This will effectively have the same result as a call to deleteLine() but the buffer line will not be intrely removed. Consequently, further calls to echo() etc. sort of functions are possible without using wrapLine() uncessarily. 
+
+[[isAnsiFgColor]]
+== isAnsiFgColor( ansiFgColorCode )
+This function tests if the first character *of the current selection* has the foreground color specified by ansiFgColorCode. Codes are:
+.Color Codes:
+----
+0 = default text color
+1 = light black
+2 = dark black
+3 = light red
+4 = dark red
+5 = light green
+6 = dark green
+7 = light yellow
+8 = dark yellow
+9 = light blue
+10 = dark blue
+11 = light magenta
+12 = dark magenta
+13 = light cyan
+14 = dark cyan
+15 = light white
+16 = dark white
+----
+example:
+----
+selectString( matches[1], 1 )
+if isAnsiFgColor( 5 ) then
+    bg("red");
+    resetFormat();
+    echo("yes, the text is light green")
+else
+    echo( "no sorry, some other foreground color" )
+end
+----
+Note that matches[1] holds the matched trigger pattern - even in substring, exact match, begin of line substring trigger patterns or even color triggers that do not know about the concept of capture groups. Consequently, you can always test if the text that has fired the trigger has a certain color and react accordingly. This function is faster than using getFgColor() and then handling the color comparision in Lua.
+
+[[isAnsiBgColor]]
+== isAnsiBgColor( ansiBgColorCode )
+This function tests if the first character of the current selection has the background color specified by ansiBgColorCode. <<isAnsiFgColor, -> isAnsiFgColor for more details>>
+
+
+
+
+
+
+
 

@@ -48,6 +48,7 @@
 #include "XMLexport.h"
 #include "XMLimport.h"
 #include "dlgColorTrigger.h"
+#include "dlgTriggerPatternEdit.h"
 
 using namespace std;
 
@@ -129,8 +130,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
     connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
     connect(mpTriggersMainArea->pushButtonSound, SIGNAL(clicked()), this, SLOT(slot_soundTrigger()));
-    connect(mpTriggersMainArea->colorTriggerFg, SIGNAL(clicked()), this, SLOT(slot_color_trigger_fg()));
-    connect(mpTriggersMainArea->colorTriggerBg, SIGNAL(clicked()), this, SLOT(slot_color_trigger_bg()));
 
     mpTimersMainArea = new dlgTimersMainArea( mainArea );
     QSizePolicy sizePolicy7(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -1225,11 +1224,8 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     QPalette pal = palette();
     QColor color =  pal.color( QPalette::Button );
     QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
-    mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
     mpTriggersMainArea->pushButtonFgColor->setChecked( false );
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
-    mpTriggersMainArea->colorTrigger->setChecked( false );
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
 
     for( int i=0; i<100; i++)
@@ -1897,7 +1893,7 @@ void dlgTriggerEditor::saveTrigger()
     QList<int> regexPropertyList;
     for( int i=0; i<100; i++ )
     {
-        QString pattern = ((QLineEdit *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 0 ))->text();
+        QString pattern = ((dlgTriggerPatternEdit *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 0 ))->lineEdit->text();
         if( pattern.size() < 1 ) continue;
         regexList << pattern;
         if( ! mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ) ) continue;
@@ -1908,6 +1904,7 @@ void dlgTriggerEditor::saveTrigger()
         else if( _type == 3 ) regexPropertyList << REGEX_EXACT_MATCH;
         else if( _type == 4 ) regexPropertyList << REGEX_LUA_CODE;
         else if( _type == 5 ) regexPropertyList << REGEX_LINE_SPACER;
+        else if( _type == 6 ) regexPropertyList << REGEX_COLOR_PATTERN;
     }
     QString script = mpSourceEditorArea->editor->toPlainText();
 
@@ -1919,7 +1916,6 @@ void dlgTriggerEditor::saveTrigger()
         {
             pT->setName( name );
             pT->setCommand( command );
-            pT->mColorTrigger = mpTriggersMainArea->colorTrigger->isChecked();//muss hier gesetzt werden, damit es keinen error gibt
             bool check = pT->setRegexCodeList( regexList, regexPropertyList );
 
             pT->setScript( script );
@@ -2803,29 +2799,52 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
     QComboBox * pBox = (QComboBox *) sender();
     if( ! pBox ) return;
     int row = pBox->itemData( 0 ).toInt();
-    QLineEdit * pItem = (QLineEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    dlgTriggerPatternEdit * pItem = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
     if( ! pItem ) return;
     QPalette palette;
-    qDebug()<<"pattern type="<<type;
     switch( type )
     {
     case 0:
         palette.setColor( QPalette::Text, QColor(0,0,0) );
+        pItem->lineEdit->show();
+        pItem->fgB->hide();
+        pItem->bgB->hide();
         break;
     case 1:
         palette.setColor( QPalette::Text, QColor(0,0,255) );
+        pItem->lineEdit->show();
+        pItem->fgB->hide();
+        pItem->bgB->hide();
         break;
     case 2:
         palette.setColor( QPalette::Text, QColor(195,0,0) );
+        pItem->lineEdit->show();
+        pItem->fgB->hide();
+        pItem->bgB->hide();
         break;
     case 3:
         palette.setColor( QPalette::Text, QColor(0,195,0) );
+        pItem->lineEdit->show();
+        pItem->fgB->hide();
+        pItem->bgB->hide();
         break;
     case 4:
         palette.setColor( QPalette::Text, QColor(0,155,155) );
+        pItem->lineEdit->show();
+        pItem->fgB->hide();
+        pItem->bgB->hide();
         break;
     case 5:
         palette.setColor( QPalette::Text, QColor(137,0,205) );
+        pItem->lineEdit->show();
+        pItem->fgB->hide();
+        pItem->bgB->hide();
+        break;
+    case 6:
+        palette.setColor( QPalette::Text, QColor(100,100,100) );
+        pItem->lineEdit->hide();
+        pItem->fgB->show();
+        pItem->bgB->show();
         break;
     }
     pItem->setPalette( palette );
@@ -2846,7 +2865,6 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
-    mpTriggersMainArea->colorTrigger->setChecked( false );
 
     if( (pItem == 0) || (column != 0) ) return;
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
@@ -2860,7 +2878,11 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
 
         for( int i=0; i<patternList.size(); i++ )
         {
-            QLineEdit * pItem = new QLineEdit( mpTriggersMainArea->listWidget_regex_list );
+            if( i >= pT->mColorPatternList.size() )
+            {
+                break;
+            }
+            dlgTriggerPatternEdit * pItem = new dlgTriggerPatternEdit( mpTriggersMainArea->listWidget_regex_list );
             QComboBox * pBox = new QComboBox( mpTriggersMainArea->listWidget_regex_list );
             pItem->setFixedHeight( 20 );
             pBox->setFixedHeight( 20 );
@@ -2872,56 +2894,104 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
                          << "begin of line substring"
                          << "exact match"
                          << "Lua function"
-                         << "line spacer";
+                         << "line spacer"
+                         << "color trigger";
             pBox->addItems( _patternList );
             pBox->setItemData(0, QVariant(i) );
+            pItem->mRow = i;
             QPalette palette;
             switch( propertyList[i] )
             {
             case REGEX_SUBSTRING:
                 palette.setColor( QPalette::Text, QColor(0,0,0) );
                 pBox->setCurrentIndex( 0 );
+                pItem->fgB->hide();
+                pItem->bgB->hide();
+                pItem->lineEdit->show();
                 break;
             case REGEX_PERL:
                 palette.setColor( QPalette::Text, QColor(0,0,255) );
                 pBox->setCurrentIndex( 1 );
+                pItem->fgB->hide();
+                pItem->bgB->hide();
+                pItem->lineEdit->show();
                 break;
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
                 palette.setColor( QPalette::Text, QColor(195,0,0) );
                 pBox->setCurrentIndex( 2 );
+                pItem->fgB->hide();
+                pItem->bgB->hide();
+                pItem->lineEdit->show();
                 break;
             case REGEX_EXACT_MATCH:
                 palette.setColor( QPalette::Text, QColor(0,195,0) );
                 pBox->setCurrentIndex( 3 );
+                pItem->fgB->hide();
+                pItem->bgB->hide();
+                pItem->lineEdit->show();
                 break;
             case REGEX_LUA_CODE:
                 palette.setColor( QPalette::Text, QColor(0,155,155) );
                 pBox->setCurrentIndex( 4 );
+                pItem->fgB->hide();
+                pItem->bgB->hide();
+                pItem->lineEdit->show();
                 break;
             case REGEX_LINE_SPACER:
                 palette.setColor( QPalette::Text, QColor(137,0,205) );
                 pBox->setCurrentIndex( 5 );
+                pItem->fgB->hide();
+                pItem->bgB->hide();
+                pItem->lineEdit->show();
+                break;
+            case REGEX_COLOR_PATTERN:
+                palette.setColor( QPalette::Text, QColor(100,100,100) );
+                pBox->setCurrentIndex( 6 );
+                pItem->fgB->show();
+                pItem->bgB->show();
+                pItem->lineEdit->hide();
+                QPalette fgPal;
+                QPalette bgPal;
+
+                if( ! pT->mColorPatternList[i] ) break;
+                QColor fgC = QColor(pT->mColorPatternList[i]->fgR,
+                                    pT->mColorPatternList[i]->fgG,
+                                    pT->mColorPatternList[i]->fgB);
+                fgPal.setColor( QPalette::Button, fgC );
+                QString fgstyleSheet = QString("QPushButton{background-color:")+fgC.name()+QString(";}");
+                QColor bgC = QColor(pT->mColorPatternList[i]->bgR,
+                                    pT->mColorPatternList[i]->bgG,
+                                    pT->mColorPatternList[i]->bgB);
+                bgPal.setColor( QPalette::Button, bgC );
+                QString bgstyleSheet = QString("QPushButton{background-color:")+bgC.name()+QString(";}");
+                pItem->fgB->setStyleSheet( fgstyleSheet );
+                pItem->bgB->setStyleSheet( bgstyleSheet );
                 break;
             }
             
-            pItem->setPalette( palette );
-            pItem->setFrame( false );
+            pItem->lineEdit->setPalette( palette );
+            pItem->lineEdit->setFrame( false );
             mpTriggersMainArea->listWidget_regex_list->setColumnCount( 2 );
-            pItem->setFont(QFont("Bitstream Vera Sans Mono", 9, QFont::Courier ));
+            pItem->lineEdit->setFont(QFont("Bitstream Vera Sans Mono", 8, QFont::Courier ));
             mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 0, pItem );
             mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 1, pBox );
             
-            pItem->setText( patternList[i] );
+            pItem->lineEdit->setText( patternList[i] );
             connect( pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
 
+            connect(pItem->fgB, SIGNAL(clicked()), this, SLOT(slot_color_trigger_fg()));
+            connect(pItem->bgB, SIGNAL(clicked()), this, SLOT(slot_color_trigger_bg()));
         }
 
         for( int i=patternList.size(); i<100; i++)
         {
-            QLineEdit * pItem = new QLineEdit( mpTriggersMainArea->listWidget_regex_list );
+            dlgTriggerPatternEdit * pItem = new dlgTriggerPatternEdit( mpTriggersMainArea->listWidget_regex_list );
+            connect(pItem->fgB, SIGNAL(clicked()), this, SLOT(slot_color_trigger_fg()));
+            connect(pItem->bgB, SIGNAL(clicked()), this, SLOT(slot_color_trigger_bg()));
+
             pItem->setFixedHeight( 20 );
-            pItem->setFrame( false );
-            pItem->setFont(QFont("Bitstream Vera Sans Mono", 9, QFont::Courier ));
+            pItem->lineEdit->setFrame( false );
+            pItem->lineEdit->setFont(QFont("Bitstream Vera Sans Mono", 8, QFont::Courier ));
             QComboBox * pBox = new QComboBox( mpTriggersMainArea->listWidget_regex_list );
             pBox->setFixedHeight( 20 );
             pBox->setFixedWidth(150);
@@ -2933,10 +3003,14 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
                          << "begin of line substring"
                          << "exact match"
                          << "Lua function"
-                         << "line spacer";
+                         << "line spacer"
+                         << "color trigger";
             pBox->addItems( _patternList );
             pBox->setItemData(0, QVariant(i) );
-
+            pItem->mRow = i;
+            pItem->fgB->hide();
+            pItem->bgB->hide();
+            pItem->lineEdit->show();
             mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 0, pItem );
             mpTriggersMainArea->listWidget_regex_list->setCellWidget( i, 1, pBox );
             connect( pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
@@ -2962,8 +3036,6 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         QPalette pal = palette();
         QColor color =  pal.color( QPalette::Button );
         QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
-        mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
 
         QColor fgColor = pT->getFgColor();
         QColor bgColor = pT->getBgColor();
@@ -2981,7 +3053,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         QString script = pT->getScript();
         mpSourceEditorArea->editor->setPlainText( script );
 
-        mpTriggersMainArea->colorTrigger->setChecked( pT->mColorTrigger );
+        /*mpTriggersMainArea->colorTrigger->setChecked( pT->mColorTrigger );
         if( pT->mColorTriggerBg )
         {
             QPalette palette;
@@ -2997,7 +3069,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
             palette.setColor( QPalette::Button, color );
             QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
             mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
-        }
+        }*/
 
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -5143,14 +5215,18 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     pD->setModal( true );
     pD->setWindowModality( Qt::ApplicationModal );
     pD->exec();
-    if( pT->mColorTriggerFg )
-    {
-        QPalette palette;
-        QColor color = pT->mColorTriggerFgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
-    }
+    QPalette palette;
+    QColor color = pT->mColorTriggerFgColor;
+    palette.setColor( QPalette::Button, color );
+    QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+
+    QPushButton * pB = (QPushButton *) sender();
+    if( ! pB ) return;
+    int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
+    dlgTriggerPatternEdit * pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    if( ! pI ) return;
+    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
+    pB->setStyleSheet( styleSheet );
 }
 
 void dlgTriggerEditor::slot_color_trigger_bg()
@@ -5166,14 +5242,18 @@ void dlgTriggerEditor::slot_color_trigger_bg()
 
     dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 1 );
     pD->exec();
-    if( pT->mColorTriggerBg )
-    {
-        QPalette palette;
-        QColor color = pT->mColorTriggerBgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
-    }
+    QPalette palette;
+    QColor color = pT->mColorTriggerBgColor;
+    palette.setColor( QPalette::Button, color );
+    QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+
+    QPushButton * pB = (QPushButton *) sender();
+    if( ! pB ) return;
+    int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
+    dlgTriggerPatternEdit * pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    if( ! pI ) return;
+    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
+    pB->setStyleSheet( styleSheet );
 }
 
 

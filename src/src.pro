@@ -75,6 +75,7 @@ SOURCES += TConsole.cpp \
     TEasyButtonBar.cpp \
     TForkedProcess.cpp \
     dlgColorTrigger.cpp \
+    dlgTriggerPatternEdit.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
     mudlet.cpp \
@@ -95,6 +96,7 @@ HEADERS += mudlet.h \
     TLuaInterpreter.h \
     dlgTriggers_main_area.h \
     dlgOptionsAreaTriggers.h \
+    dlgTriggerPatternEdit.h \
     TCommandLine.h \
     TTreeWidget.h \
     TTreeWidgetItem.h \
@@ -161,6 +163,7 @@ FORMS += ui/connection_profiles.ui \
     ui/keybindings_main_area.ui \
     ui/color_trigger.ui \
     ui/notes_editor.ui \
+    ui/trigger_pattern_edit.ui \
     ui/profile_preferences.ui
 TEMPLATE = app
 TARGET = mudlet

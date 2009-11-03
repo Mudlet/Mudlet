@@ -235,6 +235,252 @@ int TLuaInterpreter::selectCurrentLine( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::isAnsiFgColor( lua_State * L )
+{
+    int ansiFg;
+
+    std::string console = "main";
+
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        ansiFg = lua_tointeger( L, 1 );
+    }
+
+    std::list<int> result;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    result = pHost->mpConsole->getFgColor( console );
+    typedef std::list<int>::iterator IT;
+    IT it=result.begin();
+    if( result.size() < 3 ) return 0;
+    if( ansiFg < 0 ) return 0;
+    if( ansiFg > 16 ) return 0;
+
+
+    QColor c;
+    switch( ansiFg )
+    {
+        case 0: c = pHost->mFgColor;  break;
+        case 1: c = pHost->mLightBlack; break;
+        case 2: c = pHost->mBlack; break;
+        case 3: c = pHost->mLightRed; break;
+        case 4: c = pHost->mRed; break;
+        case 5: c = pHost->mLightGreen; break;
+        case 6: c = pHost->mGreen; break;
+        case 7: c = pHost->mLightYellow; break;
+        case 8: c = pHost->mYellow; break;
+        case 9: c = pHost->mLightBlue; break;
+        case 10: c = pHost->mBlue; break;
+        case 11: c = pHost->mLightMagenta; break;
+        case 12: c = pHost->mMagenta; break;
+        case 13: c = pHost->mLightCyan; break;
+        case 14: c = pHost->mCyan; break;
+        case 15: c = pHost->mLightWhite; break;
+        case 16: c = pHost->mWhite; break;
+    }
+
+    int val = *it;
+    if( val == c.red() )
+    {
+        it++;
+        val = *it;
+        if( val == c.green() )
+        {
+            it++;
+            val = *it;
+            if( val == c.blue() )
+            {
+                lua_pushboolean( L, 1 );
+                return 1;
+            }
+        }
+    }
+
+    lua_pushboolean( L, 0 );
+    return 1;
+}
+
+int TLuaInterpreter::isAnsiBgColor( lua_State * L )
+{
+    int ansiFg;
+
+    std::string console = "main";
+
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        ansiFg = lua_tointeger( L, 1 );
+    }
+
+    std::list<int> result;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) return 0;
+    result = pHost->mpConsole->getBgColor( console );
+    typedef std::list<int>::iterator IT;
+    IT it=result.begin();
+    if( result.size() < 3 ) return 0;
+    if( ansiFg < 0 ) return 0;
+    if( ansiFg > 16 ) return 0;
+
+
+    QColor c;
+    switch( ansiFg )
+    {
+        case 0: c = pHost->mBgColor;  break;
+        case 1: c = pHost->mLightBlack; break;
+        case 2: c = pHost->mBlack; break;
+        case 3: c = pHost->mLightRed; break;
+        case 4: c = pHost->mRed; break;
+        case 5: c = pHost->mLightGreen; break;
+        case 6: c = pHost->mGreen; break;
+        case 7: c = pHost->mLightYellow; break;
+        case 8: c = pHost->mYellow; break;
+        case 9: c = pHost->mLightBlue; break;
+        case 10: c = pHost->mBlue; break;
+        case 11: c = pHost->mLightMagenta; break;
+        case 12: c = pHost->mMagenta; break;
+        case 13: c = pHost->mLightCyan; break;
+        case 14: c = pHost->mCyan; break;
+        case 15: c = pHost->mLightWhite; break;
+        case 16: c = pHost->mWhite; break;
+    }
+
+    int val = *it;
+    if( val == c.red() )
+    {
+        it++;
+        val = *it;
+        if( val == c.green() )
+        {
+            it++;
+            val = *it;
+            if( val == c.blue() )
+            {
+                lua_pushboolean( L, 1 );
+                return 1;
+            }
+        }
+    }
+
+    lua_pushboolean( L, 0 );
+    return 1;
+}
+
+int TLuaInterpreter::getFgColor( lua_State * L )
+{
+    string luaSendText="";
+    if( lua_gettop( L ) == 0 )
+    {
+        luaSendText = "main";
+    }
+    else
+    {
+        if( ! lua_isstring( L, 1 ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaSendText = lua_tostring( L, 1 );
+        }
+    }
+    QString _name(luaSendText.c_str());
+    std::list<int> result;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    result = pHost->mpConsole->getFgColor( luaSendText );
+    typedef std::list<int>::iterator IT;
+    for( IT it=result.begin(); it!=result.end(); it++ )
+    {
+        int pos = *it;
+        lua_pushnumber( L, pos );
+    }
+    return result.size();
+}
+
+int TLuaInterpreter::getBgColor( lua_State * L )
+{
+    string luaSendText="";
+    if( lua_gettop( L ) == 0 )
+    {
+        luaSendText = "main";
+    }
+    else
+    {
+        if( ! lua_isstring( L, 1 ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaSendText = lua_tostring( L, 1 );
+        }
+    }
+
+    std::list<int> result;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    result = pHost->mpConsole->getBgColor( luaSendText );
+    typedef std::list<int>::iterator IT;
+    for( IT it=result.begin(); it!=result.end(); it++ )
+    {
+        int pos = *it;
+        lua_pushnumber( L, pos );
+    }
+    return result.size();
+}
+
+int TLuaInterpreter::wrapLine( lua_State * L )
+{
+    int s = 1;
+    int n = lua_gettop( L );
+    string a1 = "main";
+    if( n > 1 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+          lua_pushstring( L, "wrong argument type" );
+          lua_error( L );
+          return 1;
+        }
+        else
+        {
+            a1 = lua_tostring( L, s );
+            s++;
+        }
+    }
+
+    int luaNumOfMatch;
+    if( ! lua_isnumber( L, s ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaNumOfMatch = lua_tointeger( L, s );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpConsole->luaWrapLine( a1, luaNumOfMatch );
+    return 0;
+}
+
+
+
 int TLuaInterpreter::spawn( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -1781,6 +2027,8 @@ int TLuaInterpreter::getLastLineNumber( lua_State *L )
     return 1;
 }
 
+
+
 int TLuaInterpreter::getMudletHomeDir( lua_State * L )
 {
     QString home = QDir::homePath();
@@ -2108,6 +2356,53 @@ int TLuaInterpreter::tempTrigger( lua_State *L )
     lua_pushnumber( L, timerID );
     return 1;
 }
+
+
+// temporary color trigger. args: ansiFGColorCode, ansiBgColorCode, luaCode
+int TLuaInterpreter::tempColorTrigger( lua_State *L )
+{
+    int luaFrom;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFrom = lua_tointeger( L, 1 );
+    }
+    int luaTo;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaTo = lua_tointeger( L, 2 );
+    }
+
+    string luaFunction;
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 3 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    int timerID = pLuaInterpreter->startTempColorTrigger( luaFrom, luaTo, QString(luaFunction.c_str()));
+    lua_pushnumber( L, timerID );
+    return 1;
+}
+
 
 // triggerID = tempLineTrigger( from, howmany, func )
 int TLuaInterpreter::tempLineTrigger( lua_State *L )
@@ -3114,6 +3409,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "reconnect", TLuaInterpreter::reconnect );
     lua_register( pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir );
     lua_register( pGlobalLua, "setTriggerStayOpen", TLuaInterpreter::setTriggerStayOpen );
+    lua_register( pGlobalLua, "wrapLine", TLuaInterpreter::wrapLine );
+    lua_register( pGlobalLua, "getFgColor", TLuaInterpreter::getFgColor );
+    lua_register( pGlobalLua, "getBgColor", TLuaInterpreter::getBgColor );
+    lua_register( pGlobalLua, "tempColorTrigger", TLuaInterpreter::tempColorTrigger );
+    lua_register( pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor );
+    lua_register( pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor );
+
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
@@ -3258,6 +3560,25 @@ int TLuaInterpreter::startTempLineTrigger( int from, int howmany, QString functi
     return id;                  
 }
 
+int TLuaInterpreter::startTempColorTrigger( int fg, int bg, QString function )
+{
+    TTrigger * pT;
+//    QStringList sList;
+//    QList<int> propertyList;
+//    propertyList << REGEX_SUBSTRING;// substring trigger is default
+//    pT = new TTrigger("a", sList, propertyList, false, mpHost );
+    pT = new TTrigger( 0, mpHost );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempTrigger( true );
+    pT->setupTmpColorTrigger( fg, bg );
+
+    pT->registerTrigger();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
+    return id;
+}
 
 int TLuaInterpreter::startTempRegexTrigger( QString regex, QString function )
 {

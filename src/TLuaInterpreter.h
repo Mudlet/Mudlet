@@ -92,7 +92,8 @@ public:
     int startTempTrigger( QString, QString );
     int startTempLineTrigger( int, int, QString );
     int startTempRegexTrigger( QString, QString );
-    
+    int startTempColorTrigger( int, int, QString );
+
     TGatekeeperThread * mpGatekeeperThread;
  
     static int Wait( lua_State * L );
@@ -178,7 +179,12 @@ public:
     static int reconnect( lua_State * );
     static int getMudletHomeDir( lua_State * );
     static int setTriggerStayOpen( lua_State * );
-
+    static int wrapLine( lua_State * );
+    static int getFgColor( lua_State * );
+    static int getBgColor( lua_State * );
+    static int tempColorTrigger( lua_State * );
+    static int isAnsiFgColor( lua_State * );
+    static int isAnsiBgColor( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

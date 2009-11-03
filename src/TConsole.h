@@ -116,6 +116,10 @@ public:
       int               getLineNumber();
       int               getLineCount();
       bool              deleteLine( int );
+      std::list<int>    getFgColor( std::string & buf );
+      std::list<int>    getBgColor( std::string & buf );
+      void              luaWrapLine( std::string & buf, int line );
+
       int               getColumnNumber();
       void              loadRawFile( std::string );
       void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
@@ -198,6 +202,9 @@ public:
 
 private:
 
+      std::list<int>    _getFgColor();
+      std::list<int>    _getBgColor();
+      void              _luaWrapLine( int );
       QTime             mProcessingTime;
       QString           getCurrentLine();
       void              selectCurrentLine();

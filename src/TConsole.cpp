@@ -1267,6 +1267,104 @@ void TConsole::selectCurrentLine( std::string & buf )
     }
 }
 
+std::list<int> TConsole::_getFgColor()
+{
+    std::list<int> result;
+    int x = P_begin.x();
+    int y = P_begin.y();
+    if( y < 0 ) return result;
+    if( y >= static_cast<int>(buffer.buffer.size()) ) return result;
+
+    if( static_cast<int>(buffer.buffer[y].size())-1 >=  x )
+    {
+        result.push_back( buffer.buffer[y][x].fgR );
+        result.push_back( buffer.buffer[y][x].fgG );
+        result.push_back( buffer.buffer[y][x].fgB );
+    }
+    return result;
+}
+
+std::list<int> TConsole::_getBgColor()
+{
+    std::list<int> result;
+    int x = P_begin.x();
+    int y = P_begin.y();
+    if( y < 0 ) return result;
+    if( y >= static_cast<int>(buffer.buffer.size()) ) return result;
+
+    if( static_cast<int>(buffer.buffer[y].size())-1 >=  x )
+    {
+        result.push_back( buffer.buffer[y][x].bgR );
+        result.push_back( buffer.buffer[y][x].bgG );
+        result.push_back( buffer.buffer[y][x].bgB );
+    }
+    return result;
+}
+
+std::list<int> TConsole::getFgColor( std::string & buf )
+{
+    std::list<int> result;
+    std::string key = buf;
+    if( buf == "main" )
+    {
+        return _getFgColor();
+    }
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        TConsole * pC = mSubConsoleMap[key];
+        if( ! pC ) return result;
+        return pC->_getFgColor();
+    }
+    else
+    {
+        return result;
+    }
+}
+
+std::list<int> TConsole::getBgColor( std::string & buf )
+{
+    std::list<int> result;
+    std::string key = buf;
+    if( buf == "main" )
+    {
+        return _getBgColor();
+    }
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        TConsole * pC = mSubConsoleMap[key];
+        if( ! pC ) return result;
+        return pC->_getBgColor();
+    }
+    else
+    {
+        return result;
+    }
+}
+
+void TConsole::luaWrapLine( std::string & buf, int line )
+{
+    std::string key = buf;
+    if( buf == "main" )
+    {
+        _luaWrapLine( line );
+        return;
+    }
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        TConsole * pC = mSubConsoleMap[key];
+        if( ! pC ) return;
+        pC->_luaWrapLine( line );
+        return;
+    }
+}
+
+void TConsole::_luaWrapLine( int line )
+{
+    if( !mpHost ) return;
+    TChar ch(mpHost);
+    buffer.wrapLine( line, mWrapAt, mIndentCount, ch );
+}
+
 bool TConsole::setMiniConsoleFontSize( std::string & buf, int size )
 {
     std::string key = buf;

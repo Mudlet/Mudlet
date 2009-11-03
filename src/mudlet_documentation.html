@@ -17268,7 +17268,7 @@ mySilver = mySilver + tonumber( multimatches[1][3] );</tt></pre>
 width="100%"
 frame="hsides"
 cellspacing="0" cellpadding="4">
-<caption class="title">Lua Variables</caption>
+<caption class="title">Built-in Lua Variables</caption>
 <col width="50%" />
 <col width="50%" />
 <thead valign="top">
@@ -17298,568 +17298,170 @@ cellspacing="0" cellpadding="4">
 </tbody>
 </table>
 </div>
-<div class="tableblock">
-<table rules="all"
-width="100%"
-frame="hsides"
-cellspacing="0" cellpadding="4">
-<caption class="title">Main Functions</caption>
-<col width="50%" />
-<col width="50%" />
-<thead valign="top">
-<tr>
-<th align="left">Function</th>
-<th align="left">Description</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr>
-<td align="left"><p class="table">send( command )</p></td>
-<td align="left"><p class="table">This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">echo( text )</p></td>
-<td align="left"><p class="table">appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">echo( windowName, text )</p></td>
-<td align="left"><p class="table">appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">listPrint( listName )</p></td>
-<td align="left"><p class="table">prints the content of list listName on the screen e.g. listPrint( myEnnemies )</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">listAdd( listName, what )</p></td>
-<td align="left"><p class="table">adds a new element what to the list listName e.g. listAdd( myEnnemies, "Tom" )</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">listRemove( listName, what )</p></td>
-<td align="left"><p class="table">removes item what from the list listName e.g. listRemove( myEnnemies, "Bert" )</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error</p></td>
-<td align="left"><p class="table">Selects a substring from the line where the user cursor is currently
+</div>
+<h1 id="_alphabetical_function_index">Alphabetical Function Index</h1>
+<h1 id="_a">A</h1>
+<div class="paragraph"><p><a href="#appendBuffer">appendBuffer</a>,</p></div>
+<h1 id="_b">B</h1>
+<div class="paragraph"><p><a href="#bg">bg</a>,</p></div>
+<h1 id="_c">C</h1>
+<div class="paragraph"><p><a href="#createBuffer">createBuffer</a>,
+<a href="#clearUserWindow">clearUserWindow</a>,
+<a href="#copy">copy</a>,
+<a href="#openUserWindow">openUserWindow</a>,</p></div>
+<h1 id="_d">D</h1>
+<div class="paragraph"><p><a href="#deleteLine">deleteLine</a>,
+<a href="#disableKey">disableKey</a>,
+<a href="#disableTimer">disableTimer</a>,
+<a href="#disableTrigger">disableTrigger</a>,</p></div>
+<h1 id="_e">E</h1>
+<div class="paragraph"><p><a href="#echo">echo</a>,
+<a href="#enableKey">enableKey</a>,
+<a href="#enableTimer">enableTimer</a>,
+<a href="#enableTrigger">enableTrigger</a>,
+<a href="#expandAlias">expandAlias</a>,</p></div>
+<h1 id="_f">F</h1>
+<div class="paragraph"><p><a href="#fg">fg</a>,</p></div>
+<h1 id="_g">G</h1>
+<div class="paragraph"><p><a href="#getColumnNumber">getColumnNumber</a>,
+<a href="#getLines">getLines</a>,
+<a href="#getLineCount">getLineCount</a>,
+<a href="#getLineNumber">getLineNumber</a>,</p></div>
+<h1 id="_h">H</h1>
+<div class="paragraph"><p><a href="#hideWindow">hideWindow</a>,</p></div>
+<h1 id="_i">I</h1>
+<div class="paragraph"><p><a href="#insertText">insertText</a>,</p></div>
+<h1 id="_j">J</h1>
+<h1 id="_k">K</h1>
+<h1 id="_l">L</h1>
+<h1 id="_m">M</h1>
+<div class="paragraph"><p><a href="#moveCursor">moveCursor</a>,
+<a href="#moveCursorEnd">moveCursorEnd</a>,
+<a href="#moveWindow">moveWindow</a>,</p></div>
+<h1 id="_n">N</h1>
+<h1 id="_o">O</h1>
+<h1 id="_p">P</h1>
+<div class="paragraph"><p><a href="#paste">paste</a>,
+<a href="#pasteUserWindow">pasteUserWindow</a>,
+<a href="#prefix">prefix</a>,</p></div>
+<h1 id="_r">R</h1>
+<div class="paragraph"><p><a href="#raiseEvent">raiseEvent</a>,
+<a href="#replace">replace</a>,
+<a href="#replaceAll">replaceAll</a>,
+<a href="#replaceWildcards">replaceWildcards</a>,
+<a href="#resetFormat">resetFormat</a>,
+<a href="#resizeWindow">resizeWindow</a>,</p></div>
+<h1 id="_s">S</h1>
+<div class="paragraph"><p><a href="#selectCaptureGroup">selectCaptureGroup</a>,
+<a href="#selectSection">selectSection</a>,
+<a href="#selectString">selectString</a>,
+<a href="#send">send</a>,
+<a href="#sendAll">sendAll</a>,
+<a href="#setBgColor">setBgColor</a>,
+<a href="#setFgColor">setFgColor</a>,
+<a href="#showCaptureGroups">showCaptureGroups</a>,
+<a href="#showMultimatches">showMultimatches</a>,
+<a href="#showWindow">showWindow</a>,
+<a href="#suffix">suffix</a>,</p></div>
+<h1 id="_t">T</h1>
+<div class="paragraph"><p><a href="#tableload">table.load</a>,
+<a href="#tablesave">table.save</a>,
+<a href="#tempColorTrigger">tempColorTrigger</a>,
+<a href="#tempLineTrigger">tempLineTrigger&gt;</a>,
+<a href="#tempTimer">tempTimer</a>,
+<a href="#tempTrigger">tempTrigger</a>,</p></div>
+<h3 id="_most_important_functions">Most Important Functions</h3>
+<h2 id="_send_command">send( command )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.</p></div>
+</div>
+<h2 id="echo">echo( text )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.</p></div>
+</div>
+<h2 id="_echo_windowname_text">echo( windowName, text )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()</p></div>
+</div>
+<h2 id="selectString">int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Selects a substring from the line where the user cursor is currently
 positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of
 the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that
 the cursor is in the correct line if you want to call one of the select functions.
-NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) &gt; -1 then setFgColor( 255,0,0) end"</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">deleteLine()</p></td>
-<td align="left"><p class="table">deletes the current Line under the user cursor.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">timer_id = tempTimer( seconds, lua_code )</p></td>
-<td align="left"><p class="table">Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">enableTrigger( name )</p></td>
-<td align="left"><p class="table">enables a Trigger. see enableTimer() for more details.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">disableTrigger( name )</p></td>
-<td align="left"><p class="table">Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">insertText( text )</p></td>
-<td align="left"><p class="table">inserts text at the current cursor position in the main window; if the cursor has not been explicitely moved this function will always print at the beginning of the line whereas the echo() function will always print at the end of the line</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">insertText( windowName, text )</p></td>
-<td align="left"><p class="table">inserts text at cursor position in window windowName</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">suffix( what )</p></td>
-<td align="left"><p class="table">prints "what" at the end of the line when used in a trigger script</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">prefix( what )</p></td>
-<td align="left"><p class="table">prints "what" at the beginning of a line when used in a trigger script</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">boolean = selectSection( from, length_of_string )</p></td>
-<td align="left"><p class="table">Absolute column number for start of selection and length of selection</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">selectSection( windowName, from, length )</p></td>
-<td align="left"><p class="table">just like selectSection() but does not operate on the main window, but on window windowName. See selectSection() for a detailed description</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">selectCaptureGroup( groupNumber ) with first group = 0</p></td>
-<td align="left"><p class="table">Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">replace( with )</p></td>
-<td align="left"><p class="table">replaces the selected text with "with". To delete text use replace("")</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">replace( windowName, with )</p></td>
-<td align="left"><p class="table">replaces the selected text with "with". This function operates on window windowName</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">replaceAll( what, with )</p></td>
-<td align="left"><p class="table">replaces all occurrences of what in the current line with with</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">fg( color_name )</p></td>
-<td align="left"><p class="table">Sets the current selection foreground color to color_name. You can find the pre-defined color names <a href="#colortable">here</a></p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">bg( color_name )</p></td>
-<td align="left"><p class="table">same as fg( color_name ) just for the background color.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">resetFormat()</p></td>
-<td align="left"><p class="table">Resets the character format to default. This should be used after you have colorized some text, but don&#8217;t want to keep using these colors for further prints.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setBgColor( r,g,b )</p></td>
-<td align="left"><p class="table">Sets the current text background color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setBgColor( windowName, r, g, b )</p></td>
-<td align="left"><p class="table">set current text background color in window windowName</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setFgColor( r, g, b )</p></td>
-<td align="left"><p class="table">Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setFgColor( windowName, r, g, b )</p></td>
-<td align="left"><p class="table">Sets the current text foreground color in window windowName</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">openUserWindow( name )</p></td>
-<td align="left"><p class="table">Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></td>
-</tr>
-</tbody>
-</table>
+NOTE: to prevent selection of random data use the error return if not found like this: "if selectString( "big monster", 1 ) &gt; -1 then setFgColor( 255,0,0) end"</p></div>
 </div>
-<div class="tableblock">
-<table rules="all"
-width="100%"
-frame="hsides"
-cellspacing="0" cellpadding="4">
-<caption class="title">Trigger, Timer, Alias and Key Functions</caption>
-<col width="50%" />
-<col width="50%" />
-<thead valign="top">
-<tr>
-<th align="left"> Function </th>
-<th align="left"> Description</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr>
-<td align="left"><p class="table">disableTimer( name )</p></td>
-<td align="left"><p class="table">Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">disableTrigger( name )</p></td>
-<td align="left"><p class="table">Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">disableKey( name )</p></td>
-<td align="left"><p class="table">Uses trigger name as id or the id returned by tempTrigger()</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">echoUserWindow( window_name, text )</p></td>
-<td align="left"><p class="table">prints text to user dock window name</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">enableTimer( name )</p></td>
-<td align="left"><p class="table">enables or activates a timer that was previously disabled. The parameter "name" expects the timer ID that was returned by tempTimer() on creation of the timer or the name of the timer in case of a GUI timer</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">enableTrigger( name )</p></td>
-<td align="left"><p class="table">enables a Trigger. see enableTimer() for more details.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">enableKey( name )</p></td>
-<td align="left"><p class="table">enable key or key group "name"</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">expandAlias( command )</p></td>
-<td align="left"><p class="table">like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">raiseEvent( event_name, arg-1, &#8230; arg-n )</p></td>
-<td align="left"><p class="table">Raises the event event_name. The event system will call the main function (the one that is called exactly like
-the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with
-the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without
-having to care if the actual event handling has been implemented yet - or more specifically how it is implemented. Your triggers raise an event to
-tell the system that they have detected a certain condition to be true or that a certain event has happened. How - and if - the system is going
-to respond to this event is up to the system and your trigger scripts don&#8217;t have to care about such details.
-For small systems it will be more convienient to use regular function calls instead of events, however, the more complicated your system will get,
-the more important events will become because they help reduce complexity very much.</p>
-<p class="table">The corresponding event handlers that listen to the events raised with raiseEvent() need to use the script name as function name and take the correct
-number of arguments. NOTE: If you raise an event with 5 arguments but your event handlers functions only take 2,10 or 0 arguments, the functions
-will not be called. For exmaple: raiseEvent("fight") a correct event handler function would be: myScript( event_name ). In this example raiseEvent
-uses minimal arguments, name the event name. There can only be one event handler function per script, but a script can still handle multiple events
-as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you
-should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees
-and thus help reduce complexity on large systems.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">timer_id = tempTimer( seconds, lua_code )</p></td>
-<td align="left"><p class="table">Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">trigger_id = tempTrigger( string, lua_code )</p></td>
-<td align="left"><p class="table">creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">trigger_id = tempLineTrigger( from, howMany, LuaCode )</p></td>
-<td align="left"><p class="table">Temporary trigger that will fire on n consecutive lines following the current line. This is useful
-to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, <a id="send("shout Help")"></a> ) will fire 3 times starting with the line from the MUD.
-tempLineTrigger( 20, 2, <a id="send("shout Help")"></a> )
-will fire 20 lines after the current line and fire twice on 2 consecutive lines.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">trigger_id = tempRegexTrigger( regex, lua_code )</p></td>
-<td align="left"><p class="table">temorary trigger using perl regex pattern matching</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">boolean = killTimer( name )</p></td>
-<td align="left"><p class="table">Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn&#8217;t exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">killTrigger( name )</p></td>
-<td align="left"><p class="table">See killTimer()</p></td>
-</tr>
-</tbody>
-</table>
+<h2 id="deleteLine">deleteLine()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>deletes the current Line under the user cursor. Note: This is a high speed gagging tool and it is very good at this task. It is meant to be used when the line can be omitted entirely in the output. If you want to replace this line with something else have a look at the replace() functions below. Note that scripts such as: deleteLine(); echo("this line is gone"); will not work because lines that have been gagged with deleteLine() will not be rendered even if there is text in the buffer. &#8594; wrapLine() for details on how to force a rerender if this is necessary for some reason. This is not the recommended way of replacing text. <a href="#replace">&#8594; replace()</a> and <a href="#wrapLine">wrapLine()</a></p></div>
 </div>
-<div class="tableblock">
-<table rules="all"
-width="100%"
-frame="hsides"
-cellspacing="0" cellpadding="4">
-<caption class="title">Buffer, Screen and Mini Windows Functions</caption>
-<col width="50%" />
-<col width="50%" />
-<thead valign="top">
-<tr>
-<th align="left"> Function </th>
-<th align="left"> Description</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr>
-<td align="left"><p class="table">openUserWindow( name )</p></td>
-<td align="left"><p class="table">Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">clearUserWindow( window_name )</p></td>
-<td align="left"><p class="table">Clears the user window with the name given as argument.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table"><strong>userWindowLineWrap( window, boolean )</strong></p></td>
-<td align="left"><p class="table">turns line wrap mode on or off in user dock windows
-userWindowLineWrap( "chat", true ) turns on line wrap for window "chat" (<strong>not implemented</strong>)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">copy()</p></td>
-<td align="left"><p class="table">Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">cut()</p></td>
-<td align="left"><p class="table">Cuts the current selection and stores it in the clipboard. This text remains available in the clipboard until it gets overwritten by another cut or copy operation. This function works on rich text ( see copy() )</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table"><strong>deselect()</strong></p></td>
-<td align="left"><p class="table">deselects the last selected text (<strong>not implemented yet</strong>)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">lineNumber = getLineNumber()</p></td>
-<td align="left"><p class="table">to get the absolute line number of the current user cursor</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">number = getColumnNumber()</p></td>
-<td align="left"><p class="table">To get the absolute column number of the current user cursor</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">number = getLineCount()</p></td>
-<td align="left"><p class="table">To get the absolute amount of lines in the current console buffer</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">lua_table[relative_linenumber, content] = getLines( from_line_number, to_line_number )</p></td>
-<td align="left"><p class="table">Returns a section of the content of the screen text buffer. Absolute line numbers are used</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">number_of_last_line = getLineCount()</p></td>
-<td align="left"><p class="table">number of the last line in the buffer</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">boolean = moveCursor( windowName, x, y )</p></td>
-<td align="left"><p class="table">Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don&#8217;t exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. Use "main" for the main window and the name you called your user window otherwise.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">moveCursorEnd( windowName )</p></td>
-<td align="left"><p class="table">Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">paste()</p></td>
-<td align="left"><p class="table">pastes the previously copied or cut text including all format codes like color, font etc. at the current user cursor position. The copy(), cut() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">pasteWindow( name )</p></td>
-<td align="left"><p class="table">pastes the previously copied or cut rich text (including text formats like color etc.) into user window (dock window) name.
-selectString( line, 1 )
-cut()
-pasteWindow( "chat" )</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">printTable( table_name )</p></td>
-<td align="left"><p class="table">Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the lua table "matches".
-This function is defined in luaglobal.lua.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">showCaptureGroups()</p></td>
-<td align="left"><p class="table">Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">showMultimatches()</p></td>
-<td align="left"><p class="table">Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">table.load( file, table )</p></td>
-<td align="left"><p class="table">restores a Lua table from a data file that has been saved with table.save()</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">table.save( file, table )</p></td>
-<td align="left"><p class="table">saves the given table into the given file</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">showCaptureGroups()</p></td>
-<td align="left"><p class="table">a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (&#8594;trigger editor&#8594;bug symbol)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">printTable( table )</p></td>
-<td align="left"><p class="table">another debug function that prints the content of a Lua table on the screen split in key and value.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">sendAll( what )</p></td>
-<td align="left"><p class="table">sends a list of commands to the MUD</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">debug( arg1 &#8230; argn )</p></td>
-<td align="left"><p class="table">prints out debug information to the user debug console</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">function replaceWildcard(what, replacement)</p></td>
-<td align="left"><p class="table">Replaces the given wildcard (as a number) with the given text.
-Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$</tt></p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">resetFormat()</p></td>
-<td align="left"><p class="table">resets the user character format to the default.</p></td>
-</tr>
-</tbody>
-</table>
+<h2 id="_temptimer_seconds_lua_code">tempTimer( seconds, lua_code )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed. see <a href="#tempTimer">here</a> for details.</p></div>
 </div>
-<div class="tableblock">
-<table rules="all"
-width="100%"
-frame="hsides"
-cellspacing="0" cellpadding="4">
-<caption class="title">Miscellaneous Functions</caption>
-<col width="50%" />
-<col width="50%" />
-<thead valign="top">
-<tr>
-<th align="left"> Function </th>
-<th align="left"> Description</th>
-</tr>
-</thead>
-<tbody valign="top">
-<tr>
-<td align="left"><p class="table">createBuffer( name )</p></td>
-<td align="left"><p class="table">creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">appendBuffer( name )</p></td>
-<td align="left"><p class="table">like paste() but pastes at the end of the buffer/window and wraps new text automatically</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">showWindow( name )</p></td>
-<td align="left"><p class="table">shows user window name</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">hideWindow( name )</p></td>
-<td align="left"><p class="table">hides user window name</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">resizeWindow( name, x1, y1, x2, y2 )</p></td>
-<td align="left"><p class="table">resizes window name to x1/y1 and x2/y2 vectors</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">closeUserWindow( name )</p></td>
-<td align="left"><p class="table">closes a named window and delete it.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">latency = getNetworkLatency()</p></td>
-<td align="left"><p class="table">returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">watchID = createStopWatch()</p></td>
-<td align="left"><p class="table">return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">startStopWatch( watchID )</p></td>
-<td align="left"><p class="table">start the stop watch</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">time = stopStopWatch( watchID )</p></td>
-<td align="left"><p class="table">stops the stop watch and returns elapsed time in milliseconds in form of 0.001</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">resetStopWatch( watchID )</p></td>
-<td align="left"><p class="table">resets the time to 0:0:0:0</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">time = getStopWatchTime( watchID )</p></td>
-<td align="left"><p class="table">returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">debug( text )</p></td>
-<td align="left"><p class="table">print text to debug console</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">appendBuffer( name, text )</p></td>
-<td align="left"><p class="table">append text at the end of temp buffer name (fast function)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setWindowWrap( windowName, wrapAt )</p></td>
-<td align="left"><p class="table">sets at what position in the line the console or miniconsole will start word wrap</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">createMiniConsole( name, posX, posY, width, height )</p></td>
-<td align="left"><p class="table">opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy/cut/paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">createLabel( name, posX, posY, width, height, fillBackground)</p></td>
-<td align="left"><p class="table">labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. <strong>DON&#8217;T</strong> use labels for larger text displays because they are a lot slower than the highspeed mini consoles</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">hideWindow( name )</p></td>
-<td align="left"><p class="table">hides a user window, button or label</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">showWindow( name )</p></td>
-<td align="left"><p class="table">shows a window, button or label</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">resizeWindow( name, width, height )</p></td>
-<td align="left"><p class="table">resizes a user window, button or label</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setMiniConsoleFontSize( name, fontSize )</p></td>
-<td align="left"><p class="table">Sets the font size of the mini console.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">getCurrentLine()</p></td>
-<td align="left"><p class="table">returns the content of the current line under the user cursor in the buffer. The Lua variable line holds the content of getCurrentLine() before any triggers have been run on this line. When triggers change the content of the buffer, the variable line will not be adjusted and thus hold an outdated string. line = getCurrentLine() will update line to the real content of the current buffer. This is important if you want to copy the current line after it has been changed by some triggers. selectString( line,1 ) will return false and won&#8217;t select anything because line no longer equals getCurrentLine(). Consequently, selectString( getCurrentLine(), 1 ) is what you need.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">selectCurrentLine()</p></td>
-<td align="left"><p class="table">selects the content of the current buffer line</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setBackgroundImage( labelName, imageFileName )</p></td>
-<td align="left"><p class="table">loads an image file (png) as a background image for a label. This can be used to display clickable images etc.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setBackgroundColor( red, green, blue, alpha )</p></td>
-<td align="left"><p class="table">sets rgb color values + an alpha channel for the level of transperancy of the background color 0=completely transparent, 255=no transparency values in between specify the level of transparency.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setLabelClickCallback( labelName, luaFunctionName )</p></td>
-<td align="left"><p class="table">specify a lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">createButton( &#8230; )</p></td>
-<td align="left"><p class="table"></p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">echoUserWindow( windowName )</p></td>
-<td align="left"><p class="table">This function will print text to both mini console windows, dock windows and labels. Note that labels accept rich text formats (= html = very slow &#8594; don&#8217;t use this if the text is updated often! In this case use a mini console instead)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">width, height = getMainWindowSize()</p></td>
-<td align="left"><p class="table">return window width and window height ( function with 2 return values ) to calculate the window dimensions and placement of custom gui toolkit items like labels, buttons, mini consoles etc.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )</p></td>
-<td align="left"><p class="table">sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
-example:
-----
-createMiniConsole( "con1", 0,0,300,100);
-setTextFormat("con1",0,0,255,255,255,0,1,1,1);
-echoUserWindow("con1","This is a test")
-----
-This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">table.size( tableName )</p></td>
-<td align="left"><p class="table">Gets the actual size of a non-numerical table</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">myTableSize = # myTable</p></td>
-<td align="left"><p class="table">is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">io.exists(file)</p></td>
-<td align="left"><p class="table">Checks to see if a file exists</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">string:split(delimiter)</p></td>
-<td align="left"><p class="table">Splits a string</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">table.contains(t, value)</p></td>
-<td align="left"><p class="table">Determines if a table contains a value as a key or as a value (recursive)</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">state = getButtonState() with state = 1 button is checked and state = 0, button is not checked</p></td>
-<td align="left"><p class="table">this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example: checked = getButtonStated(); if checked == 1 then hideExits() else showExits() end;</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">showToolBar( name )</p></td>
-<td align="left"><p class="table">shows tool bar name on the screen</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">hideToolBar( name )</p></td>
-<td align="left"><p class="table">hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">disconnect()</p></td>
-<td align="left"><p class="table">close network connection to the server <strong>without</strong> a proper logout</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">reconnect()</p></td>
-<td align="left"><p class="table">reconnects to the current server after a call to disconnect()</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">setTriggerStayOpen( name )</p></td>
-<td align="left"><p class="table">set for how many more lines a trigger script should fire or a chain should stay open <strong>after</strong> the trigger has matched. The main use of this function is to close a chain when a certain condition has been met.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">homedir = getMudletHomeDir()</p></td>
-<td align="left"><p class="table">returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">display( myTable )</p></td>
-<td align="left"><p class="table">generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.</p></td>
-</tr>
-<tr>
-<td align="left"><p class="table">display( myVariable )</p></td>
-<td align="left"><p class="table">generic pretty print function to diplay the content of any Lua variable or table on the main screen</p></td>
-</tr>
-</tbody>
-</table>
+<h2 id="_enabletrigger_name">enableTrigger( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Enables the Trigger name. <a href="#enableTrigger">&#8594; enableTrigger()</a></p></div>
 </div>
+<h2 id="_disabletrigger_name">disableTrigger( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. <a href="#disableTrigger">&#8594; disableTrigger( name )</a></p></div>
+</div>
+<h2 id="insertText">insertText( text )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>inserts text at the current cursor position in the main window; if the cursor has not been explicitely moved this function will always print at the beginning of the line whereas the echo() function will always print at the end of the line</p></div>
+</div>
+<h2 id="_inserttext_windowname_text">insertText( windowName, text )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>inserts text at cursor position in window windowName</p></div>
+</div>
+<h2 id="suffix">suffix( what )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>prints "what" at the end of the line when used in a trigger script</p></div>
+</div>
+<h2 id="prefix">prefix( what )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>prints "what" at the beginning of a line when used in a trigger script</p></div>
+</div>
+<h2 id="selectSection">selectSection( from, length_of_string )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Select text on the line under the current cursor postion. Use absolute column number for start of selection and length of selection
+The function returns true on success and false if the selection is not possible.</p></div>
+</div>
+<h2 id="_selectsection_windowname_from_length">selectSection( windowName, from, length )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>just like selectSection() but does not operate on the main window, but on window windowName. See selectSection() for a detailed description</p></div>
+</div>
+<h2 id="selectCaptureGroup">selectCaptureGroup( groupNumber ) with first group = 0</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Selects the content of the capture group number in your perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: selectCaptureGroup(1); setFgColor(0,255,0)</p></div>
+</div>
+<h2 id="replace">replace( with )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Replaces the currently selected text with "with". To delete or gag the selected text use replace("")</p></div>
+<div class="paragraph"><p>example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString("troll",1)
+replace("my friend the cute trolly")</tt></pre>
+</div></div>
+<div class="paragraph"><p>To gag entire lines you can use the very fast function <a href="#deleteLine">&#8594; deleteLine()</a></p></div>
+</div>
+<h2 id="_replace_windowname_with">replace( windowName, with )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Replaces the currently selected text with "with". This function operates on window windowName <a href="#replace">&#8594; more</a></p></div>
+</div>
+<h2 id="replaceAll">replaceAll( what, with )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>replaces all occurrences of what in the current line with with  <a href="#replace">&#8594; replace()</a></p></div>
+</div>
+<h2 id="fg">fg( color_name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the current selection foreground color to color_name. You can find the pre-defined color names <a href="#colortable">here</a>  <a href="#resetFormat">&#8594;resetFormat()</a> <a href="#setFgColor">&#8594; setFgColor()</a></p></div>
+</div>
+<h2 id="bg">bg( color_name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>same as fg( color_name ) just for the background color. <a href="#fg">&#8594; more</a> <a href="#setBgColor">&#8594; setBgColor()</a></p></div>
 <div class="tableblock" id="colortable">
 <table rules="all"
 width="100%"
@@ -18067,9 +17669,558 @@ cellspacing="0" cellpadding="4">
 </table>
 </div>
 </div>
+<h2 id="resetFormat">resetFormat()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Resets the character format to default. This should be used after you have colorized some text or changed the current foreground or background color, but you don&#8217;t want to keep using these colors for further prints. If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.</p></div>
+<div class="paragraph" id="setBgColor"><p>=setBgColor( r,g,b )
+Sets the current text background color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
+If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.</p></div>
+</div>
+<h2 id="_setbgcolor_windowname_r_g_b">setBgColor( windowName, r, g, b )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the current text background color in window windowName. If you have selected text prior to this call, the selection will be colorized otherwise the current text background color will be changed.
+If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.</p></div>
+<div class="paragraph"><p>example 1 colorizes the first occurance of the string "Tom" in the current line with a red background color.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString( "Tom", 1 )
+setBgColor( 255,0,0 )</tt></pre>
+</div></div>
+<div class="paragraph"><p>exmaple 2 prints "Hello" on red background and "You" on blue.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>setBgColor(255,0,0)
+echo("Hello")
+setBgColor(0,0,255)
+echo(" You!")
+resetFormat()</tt></pre>
+</div></div>
+</div>
+<h2 id="setFgColor">setFgColor( r, g, b )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for blue: setBgColor(0,0,255)</p></div>
+</div>
+<h2 id="_setfgcolor_windowname_r_g_b">setFgColor( windowName, r, g, b )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the current text foreground color in window windowName</p></div>
+</div>
+<h2 id="openUserWindow">openUserWindow( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></div>
+</div>
+<h1 id="_trigger_timer_alias_and_key_functions">Trigger, Timer, Alias and Key Functions</h1>
+<h2 id="disableTimer">disableTimer( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.</p></div>
+</div>
+<h2 id="disableTrigger">disableTrigger( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable.</p></div>
+</div>
+<h2 id="disableKey">disableKey( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Uses trigger name as id or the id returned by tempTrigger()</p></div>
+</div>
+<h2 id="enableTimer">enableTimer( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>enables or activates a timer that was previously disabled. The parameter "name" expects the timer ID that was returned by tempTimer() on creation of the timer or the name of the timer in case of a GUI timer</p></div>
+</div>
+<h2 id="enableTrigger">enableTrigger( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>enables a Trigger. see enableTimer() for more details.</p></div>
+</div>
+<h2 id="enableKey">enableKey( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>enable key or key group "name" (hot keys or action keys).</p></div>
+</div>
+<h2 id="expandAlias">expandAlias( command )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.</p></div>
+</div>
+<h2 id="raiseEvent">raiseEvent( event_name, arg-1, &#8230; arg-n )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Raises the event event_name. The event system will call the main function (the one that is called exactly like
+the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with
+the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without
+having to care if the actual event handling has been implemented yet - or more specifically how it is implemented. Your triggers raise an event to
+tell the system that they have detected a certain condition to be true or that a certain event has happened. How - and if - the system is going
+to respond to this event is up to the system and your trigger scripts don&#8217;t have to care about such details.
+For small systems it will be more convienient to use regular function calls instead of events, however, the more complicated your system will get,
+the more important events will become because they help reduce complexity very much.</p></div>
+<div class="paragraph"><p>The corresponding event handlers that listen to the events raised with raiseEvent() need to use the script name as function name and take the correct
+number of arguments. NOTE: If you raise an event with 5 arguments but your event handlers functions only take 2,10 or 0 arguments, the functions
+will not be called. For exmaple: raiseEvent("fight") a correct event handler function would be: myScript( event_name ). In this example raiseEvent
+uses minimal arguments, name the event name. There can only be one event handler function per script, but a script can still handle multiple events
+as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you
+should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees
+and thus help reduce complexity on large systems.</p></div>
+</div>
+<h2 id="tempTimer">tempTimer( seconds, lua_code )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
+example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>tempTimer( 0.3, [[send("kill monster")]] )</tt></pre>
+</div></div>
+<div class="paragraph"><p>This script will send the command "kill monster" 0.3 seconds after this function has been called. Note that this function does not wait until 0.3 seconds have been passed, but it will start a timer that will run the Lua script that you have provided as a second argument after 0.3 seconds.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt> [[ ]] can be used to quote strings in Lua. The difference to the usual " " quote syntax is that [[ ]] also accepts the character ". Consequently, you don't have to escape the " character in the above script. The other advantage is that it can be used as a multiline quote.</tt></pre>
+</div></div>
+<div class="paragraph"><p>Also note that the lua code that you provide as an argument is compiled from a string value when the timer fires. This means that if you want to pass any parameters by value e.g. you want to make a function call that uses the value of your variable myGold as a parameter you have to do things like this:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>tempTimer( 3.8, [[echo("at the time of the tempTimer call I had ]] .. myGold .. [[ gold.")]] );</tt></pre>
+</div></div>
+<div class="paragraph"><p>You can also use the global variable table, the so-called _G table, directly to get the value that is associated with the name of the variable. The _G table holds all global variables and all global function names as keys with the respective values as values.</p></div>
+<div class="paragraph"><p>Here is yet another way to expand variables in Lua, posted in the Mudlet user forum:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>Howto: expand variables
+
+Postby eraldo » Sat Aug 22, 2009 4:29 am
+Example:
+
+Global variable:
+MyNumber = 10
+
+function:
+
+            testFunction(a, b)
+                local VariableNameString = a .. b
+                local value = tonumber( VariableNameString )
+                echo( value )
+            end
+
+
+Function call:
+testFunction( "My", "Number" )
+
+Result:
+10</tt></pre>
+</div></div>
+</div>
+<h2 id="tempTrigger">tempTrigger( string, lua_code )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one. This is the second fastest trigger (with begin of line substring patterns being the fastest) and should be used instead of regex triggers whenever possible.</p></div>
+</div>
+<h2 id="tempLineTrigger">tempLineTrigger( from, howMany, LuaCode )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Temporary trigger that will fire on n consecutive lines following the current line. This is useful
+to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, <a id="send("shout Help")"></a> ) will fire 3 times starting with the line from the MUD.
+tempLineTrigger( 20, 2, <a id="send("shout Help")"></a> )
+will fire 20 lines after the current line and fire twice on 2 consecutive lines.
+The function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on.</p></div>
+</div>
+<h2 id="tempRegexTrigger">tempRegexTrigger( regex, lua_code )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>temorary trigger using perl regex pattern matching &lt;&lt;tempTrigger, This function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on. &#8594; tempTrigger()</p></div>
+</div>
+<h2 id="killTimer">killTimer( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn&#8217;t exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.
+This function returns true or false on success.</p></div>
+</div>
+<h2 id="killTrigger">killTrigger( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>See killTimer()</p></div>
+</div>
+<h1 id="_buffer_screen_and_mini_windows_functions">Buffer, Screen and Mini Windows Functions</h1>
+<h2 id="openUserWindow">openUserWindow( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></div>
+</div>
+<h2 id="clearUserWindow">clearUserWindow( window_name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Clears the user window with the name given as argument.</p></div>
+</div>
+<h2 id="copy">copy()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copies the current selection to the clipboard. This function operates on rich text, i. e. the selected text including all its format codes like colors, fonts etc.
+ in the clipboard until it gets overwritten by another copy operation. example:
+This script copies the current line on the main screen to a user window (mini console) named chat and gags the output on the main screen.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString( line );
+copy();
+appendBuffer("chat");
+replace("This line has been moved to the chat window!")</tt></pre>
+</div></div>
+</div>
+<h2 id="getLineNumber">getLineNumber()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Gets the absolute line number of the current user cursor.</p></div>
+</div>
+<h2 id="getColumnNumber">getColumnNumber()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Gets the absolute column number of the current user cursor.</p></div>
+</div>
+<h2 id="getLineCount">getLineCount()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Gets the absolute amount of lines in the current console buffer</p></div>
+</div>
+<h2 id="getLines">getLines( from_line_number, to_line_number )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Returns a section of the content of the screen text buffer. The form of the return value is: lua_table[relative_linenumber, content]
+Absolute line numbers are used.</p></div>
+</div>
+<h2 id="getLineCount">getLineCount()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Returns the number of the last line in the buffer.</p></div>
+</div>
+<h2 id="moveCursor">boolean = moveCursor( windowName, x, y )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don&#8217;t exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. If you omit the windowName argument, the main screen will be used.</p></div>
+</div>
+<h2 id="moveCursorEnd">moveCursorEnd( windowName )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.</p></div>
+</div>
+<h2 id="paste">paste(windowName)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>pastes the previously copied text including all format codes like color, font etc. at the current user cursor position. The copy() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc.</p></div>
+</div>
+<h2 id="appendBuffer">appendBuffer( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Pastes the previously copied rich text (including text formats like color etc.) into user window name. example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString( line, 1 )
+copy()
+appendBuffer( "chat" )</tt></pre>
+</div></div>
+</div>
+<h2 id="printTable">printTable( table_name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the lua table "matches".
+This function is defined in luaglobal.lua. NOTE: This function is old. Use the newer <a href="#display">display( table_or_variable )</a> instead.</p></div>
+</div>
+<h2 id="showCaptureGroups">showCaptureGroups()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua</p></div>
+</div>
+<h2 id="showMultimatches">showMultimatches()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers</p></div>
+</div>
+<h2 id="tableload">table.load( file, table )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>restores a Lua table from a data file that has been saved with table.save()</p></div>
+</div>
+<h2 id="tablesave">table.save( file, table )|saves the given table into the given file</h2>
+<div class="sectionbody">
+</div>
+<h2 id="showCaptureGroups">showCaptureGroups()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (&#8594;trigger editor&#8594;bug symbol)</p></div>
+</div>
+<h2 id="sendAll">sendAll( what )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sends a list of commands to the MUD.</p></div>
+</div>
+<h2 id="debug">debug( arg1 &#8230; argn )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Prints out debug information to the user debug console.</p></div>
+</div>
+<h2 id="replaceWildcard">replaceWildcard(what, replacement)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Replaces the given wildcard (as a number) with the given text.
+Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$</tt></p></div>
+</div>
+<h2 id="resetFormat">resetFormat()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>resets the user character format to the default.</p></div>
+</div>
+<h1 id="_miscellaneous_functions">Miscellaneous Functions</h1>
+<h2 id="createBuffer">createBuffer( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work</p></div>
+</div>
+<h2 id="appendBuffer">appendBuffer( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>like paste() but pastes at the end of the buffer/window and wraps new text automatically</p></div>
+</div>
+<h2 id="showWindow">showWindow( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>shows user window name</p></div>
+</div>
+<h2 id="hideWindow">hideWindow( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>hides user window name</p></div>
+</div>
+<h2 id="resizeWindow">resizeWindow( name, x1, y1, x2, y2 )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>resizes window name to x1/y1 and x2/y2 vectors</p></div>
+</div>
+<h2 id="getNetworkLatency">latency = getNetworkLatency()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)</p></div>
+</div>
+<h2 id="createStopWatch">watchID = createStopWatch()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines</p></div>
+</div>
+<h2 id="startStopWatch">startStopWatch( watchID )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>start the stop watch</p></div>
+</div>
+<h2 id="stopStopWatch">time = stopStopWatch( watchID )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>stops the stop watch and returns elapsed time in milliseconds in form of 0.001</p></div>
+</div>
+<h2 id="resetStopWatch">resetStopWatch( watchID )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>resets the time to 0:0:0:0</p></div>
+</div>
+<h2 id="getStopWatchTime">time = getStopWatchTime( watchID )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)</p></div>
+</div>
+<h2 id="debug">debug( text )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>print text to debug console</p></div>
+</div>
+<h2 id="appendBuffer">appendBuffer( name, text )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>append text at the end of temp buffer name (fast function)</p></div>
+</div>
+<h2 id="setWindowWrap">setWindowWrap( windowName, wrapAt )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>sets at what position in the line the console or miniconsole will start word wrap</p></div>
+</div>
+<h2 id="createMiniConsole">createMiniConsole( name, posX, posY, width, height )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy &amp; paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing.</p></div>
+</div>
+<h2 id="createLabel">createLabel( name, posX, posY, width, height, fillBackground)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. <strong>DON&#8217;T</strong> use labels for larger text displays because they are a lot slower than the highspeed mini consoles</p></div>
+</div>
+<h2 id="hideWindow">hideWindow( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>hides a user window, button or label</p></div>
+</div>
+<h2 id="showWindow">showWindow( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>shows a window, button or label</p></div>
+</div>
+<h2 id="resizeWindow">resizeWindow( name, width, height )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>resizes a user window, button or label</p></div>
+</div>
+<h2 id="setMiniConsoleFontSize">setMiniConsoleFontSize( name, fontSize )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the font size of the mini console.</p></div>
+</div>
+<h2 id="getCurrentLine">getCurrentLine()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns the content of the current line under the user cursor in the buffer. The Lua variable line holds the content of getCurrentLine() before any triggers have been run on this line. When triggers change the content of the buffer, the variable line will not be adjusted and thus hold an outdated string. line = getCurrentLine() will update line to the real content of the current buffer. This is important if you want to copy the current line after it has been changed by some triggers. selectString( line,1 ) will return false and won&#8217;t select anything because line no longer equals getCurrentLine(). Consequently, selectString( getCurrentLine(), 1 ) is what you need.</p></div>
+</div>
+<h2 id="selectCurrentLine">selectCurrentLine()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>selects the content of the current buffer line</p></div>
+</div>
+<h2 id="setBackgroundImage">setBackgroundImage( labelName, imageFileName )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>loads an image file (png) as a background image for a label. This can be used to display clickable images etc.</p></div>
+</div>
+<h2 id="setBackgroundColor">setBackgroundColor( red, green, blue, alpha )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>sets rgb color values + an alpha channel for the level of transperancy of the background color 0=completely transparent, 255=no transparency values in between specify the level of transparency.</p></div>
+</div>
+<h2 id="setlabelClickCallback">setLabelClickCallback( labelName, luaFunctionName )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>specify a lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )
+UPDATE: this function can now pass any number of string or integer number values as additional parameters. These parameters are then used in the callback. Thus you can associate data with the label/button. check the forum for more information on how to use this.
+<strong><strong> FIXME </strong></strong> example</p></div>
+</div>
+<h2 id="echoUserWindow">echoUserWindow( windowName )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function will print text to both mini console windows, dock windows and labels.</p></div>
+</div>
+<h2 id="getMainWindowSize">width, height = getMainWindowSize()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>return window width and window height ( function with 2 return values ) to calculate the window dimensions and placement of custom gui toolkit items like labels, buttons, mini consoles etc.</p></div>
+</div>
+<h2 id="setTextFormat">setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
+example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>createMiniConsole( "con1", 0,0,300,100);
+setTextFormat("con1",0,0,255,255,255,0,1,1,1);
+echoUserWindow("con1","This is a test")</tt></pre>
+</div></div>
+<div class="paragraph"><p>This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
+.table.size( tableName )
+Gets the actual size of a non-numerical table</p></div>
+</div>
+<h2 id="gettingTableSize">myTableSize = # myTable</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.</p></div>
+</div>
+<h2 id="ioexists">io.exists(file)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Checks to see if a file exists</p></div>
+</div>
+<h2 id="stringsplit">string:split( delimiter )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Splits a string</p></div>
+</div>
+<h2 id="tablecontains">table.contains(t, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Determines if a table contains a value as a key or as a value (recursive)</p></div>
+</div>
+<h2 id="getButtonState">state = getButtonState() with state = 1 button is checked and state = 0, button is not checked</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>checked = getButtonStated();
+if checked == 1 then
+    hideExits()
+else
+    showExits()
+end;</tt></pre>
+</div></div>
+</div>
+<h2 id="showToolBar">showToolBar( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>shows tool bar name on the screen</p></div>
+</div>
+<h2 id="hideToolBar">hideToolBar( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.</p></div>
+</div>
+<h2 id="disconnect">disconnect()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>close network connection to the server <strong>without</strong> a proper logout</p></div>
+</div>
+<h2 id="reconnect">reconnect()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>reconnects to the current server after a call to disconnect()</p></div>
+</div>
+<h2 id="setTriggerStayOpen">setTriggerStayOpen( name )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>set for how many more lines a trigger script should fire or a chain should stay open <strong>after</strong> the trigger has matched. The main use of this function is to close a chain when a certain condition has been met.</p></div>
+</div>
+<h2 id="getMudletHomeDir">homedir = getMudletHomeDir()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files</p></div>
+</div>
+<h2 id="display">display( myTable )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.</p></div>
+</div>
+<h2 id="_display_myvariable">display( myVariable )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>generic pretty print function to diplay the content of any Lua variable or table on the main screen</p></div>
+</div>
+<h2 id="tempColorTrigger">tempColorTrigger( foregroundColor, backgroundColor, function )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be supplied in form of these simplified ANSI 16 color mode codes:
+.Color Codes:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>0 = default text color
+1 = light black
+2 = dark black
+3 = light red
+4 = dark red
+5 = light green
+6 = dark green
+7 = light yellow
+8 = dark yellow
+9 = light blue
+10 = dark blue
+11 = light magenta
+12 = dark magenta
+13 = light cyan
+14 = dark cyan
+15 = light white
+16 = dark white</tt></pre>
+</div></div>
+<div class="paragraph"><p>example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>tempColorTrigger(9,2,[[selectString(matches[1],1); fg("red"); bg("blue");]] );</tt></pre>
+</div></div>
+<div class="paragraph"><p>This script will re-colorize all text in blue foreground colors on a black background with a red foreground color on a blue background color until another color in the current line is being met. temporary color triggers do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors in a particular context.</p></div>
+</div>
+<h2 id="getFgColor">r,g,b = getFgColor( windowName )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function returns the rgb values of the color of the first character of the current selection on mini console (window) windowName. If windowName is ommitted Mudlet will use the main screen. example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>local r,g,b;
+selectString("troll",1)
+r,g,b = getFgColor()
+if r == 255 and g == 0 and b == 0 then
+    echo("HELP! troll is written in red letters, the monster is aggressive!\n");
+end</tt></pre>
+</div></div>
+</div>
+<h2 id="getBgColor">r,g,b = getBgColor( windowName )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>get the rgb values of the first character of the current selection &#8594; getFgColor() for more information</p></div>
+</div>
+<h2 id="wrapLine">wrapLine( windowName, lineNumber )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters, apply word wrap and display the new lines on the screen. This function may be necessary if you use deleteLine() and thus erase the entire current line in the buffer, but you want to do some further echo() calls after calling deleteLine(). You will then need to re-wrap the last line of the buffer to actually see what you have echoed and get you \n interpreted as newline characters properly. Using this function is no good programming practice and should be avoided. There are better ways of handling situations where you would call deleteLine() and echo afterwards e.g.:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString(line,1);
+replace("");</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will effectively have the same result as a call to deleteLine() but the buffer line will not be intrely removed. Consequently, further calls to echo() etc. sort of functions are possible without using wrapLine() uncessarily.</p></div>
+</div>
+<h2 id="isAnsiFgColor">isAnsiFgColor( ansiFgColorCode )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function tests if the first character <strong>of the current selection</strong> has the foreground color specified by ansiFgColorCode. Codes are:
+.Color Codes:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>0 = default text color
+1 = light black
+2 = dark black
+3 = light red
+4 = dark red
+5 = light green
+6 = dark green
+7 = light yellow
+8 = dark yellow
+9 = light blue
+10 = dark blue
+11 = light magenta
+12 = dark magenta
+13 = light cyan
+14 = dark cyan
+15 = light white
+16 = dark white</tt></pre>
+</div></div>
+<div class="paragraph"><p>example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>selectString( matches[1], 1 )
+if isAnsiFgColor( 5 ) then
+    bg("red");
+    resetFormat();
+    echo("yes, the text is light green")
+else
+    echo( "no sorry, some other foreground color" )
+end</tt></pre>
+</div></div>
+<div class="paragraph"><p>Note that matches[1] holds the matched trigger pattern - even in substring, exact match, begin of line substring trigger patterns or even color triggers that do not know about the concept of capture groups. Consequently, you can always test if the text that has fired the trigger has a certain color and react accordingly. This function is faster than using getFgColor() and then handling the color comparision in Lua.</p></div>
+</div>
+<h2 id="isAnsiBgColor">isAnsiBgColor( ansiBgColorCode )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function tests if the first character of the current selection has the background color specified by ansiBgColorCode. <a href="#isAnsiFgColor">&#8594; isAnsiFgColor for more details</a></p></div>
+</div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-09-29 17:41:40 CEST
+Last updated 2009-11-03 18:22:17 CEST
 </div>
 </div>
 </body>

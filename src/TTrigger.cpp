@@ -125,6 +125,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
     mRegexMap.clear();
     mRegexCodePropertyList.clear();
     mLuaConditionMap.clear();
+    mColorPatternList.clear();
     mTriggerContainsPerlRegex = false;
 
     if( propertyList.size() != regexList.size() )
@@ -185,7 +186,6 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             }
             mRegexMap[i] = re; 
             mTriggerContainsPerlRegex = true;
-            continue;
         }
         if( propertyList[i] == REGEX_LUA_CODE )
         {
@@ -204,7 +204,37 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              {
                  mLuaConditionMap[i] = funcName;
              }
-             continue;
+        }
+        if( propertyList[i] == REGEX_COLOR_PATTERN )
+        {
+            QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
+            int _pos = regex.indexIn( regexList[i] );
+            if( _pos == -1 )
+            {
+                qDebug()<<"ERROR: cannot parse color trigger pattern";
+                mColorPatternList.push_back( 0 );
+                state = false;
+                continue;
+            }
+            qDebug()<<"pattern="<<regexList[i];
+            int ansiFg = regex.cap(1).toInt();
+            int ansiBg = regex.cap(2).toInt();
+
+            if( ! setupColorTrigger( ansiFg, ansiBg ) )
+            {
+                qDebug()<<"ERROR: cannot setup color trigger pattern";
+                mColorPatternList.push_back( 0 );
+                state = false;
+                continue;
+            }
+            else
+            {
+                qDebug()<<"[OK] color pattern initialized:"<<regexList[i];
+            }
+        }
+        else
+        {
+            mColorPatternList.push_back( 0 );
         }
     }
     if( ! state )
@@ -715,9 +745,9 @@ bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNum
     return false;
 }
 
-bool TTrigger::match_colors( int line )
+bool TTrigger::match_color_pattern( int line, int regexNumber )
 {
-
+    if( regexNumber >= mColorPatternList.size() ) return false;
     if( line == -1 ) return false;
     bool bgColorMatch = false;
     bool fgColorMatch = false;
@@ -732,13 +762,15 @@ bool TTrigger::match_colors( int line )
     bool fgColorChange = false;
     int matchBegin = -1;
     bool matching = false;
-    //FIXME: schneller machen! das muss in den trigger rein
-    int mFgR = mColorTriggerFgColor.red();
-    int mFgG = mColorTriggerFgColor.green();
-    int mFgB = mColorTriggerFgColor.blue();
-    int mBgR = mColorTriggerBgColor.red();
-    int mBgG = mColorTriggerBgColor.green();
-    int mBgB = mColorTriggerBgColor.blue();
+
+    TColorTable * pCT = mColorPatternList[regexNumber];
+    if( ! pCT ) return false; //no color pattern created
+    int mFgR = pCT->fgR;
+    int mFgG = pCT->fgG;
+    int mFgB = pCT->fgB;
+    int mBgR = pCT->bgR;
+    int mBgG = pCT->bgG;
+    int mBgB = pCT->bgB;
     for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
     {
         if( ( (*it).fgR == mFgR )
@@ -812,7 +844,14 @@ bool TTrigger::match_colors( int line )
         {
             if( captureList.size() > 0 )
             {
-                filter( captureList.front(), posList.front() );
+                typedef std::list<std::string>::iterator IT;
+                typedef std::list<int>::iterator IT2;
+                IT it1 = captureList.begin();
+                IT2 it2 = posList.begin();
+                for( ; it1!=captureList.end(); it1++, it2++ )
+                {
+                    filter( *it1, *it2 );
+                }
             }
         }
         return true;
@@ -973,10 +1012,10 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
 
         bool conditionMet = false;
 
-        if( mColorTrigger )
+/*        if( mColorTrigger )
         {
             conditionMet = match_colors( line );
-        }
+        }*/
        
         int highestCondition = 0;
         if( mIsMultiline )
@@ -1020,8 +1059,13 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                 case REGEX_LUA_CODE:
                     ret = match_lua_code( i );
                     break;
+
                 case REGEX_LINE_SPACER:
                     ret = match_line_spacer( i );
+                    break;
+
+                case REGEX_COLOR_PATTERN:
+                    ret = match_color_pattern( line, i );
                     break;
             }
             // policy: one match is enough to fire on OR-trigger, but in the case of
@@ -1134,6 +1178,187 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
         return conditionMet;
     }
     return false;
+}
+
+
+// Die Musternummer wird ID im color-pattern lookup table
+TColorTable * TTrigger::createColorPattern( int ansiFg, int ansiBg )
+{
+    /* Mudlet simplified ANSI color codes
+      -----------------------------------
+      0  default text color
+      1  light black
+      2  dark black
+      3  light red
+      4  dark red
+      5  light green
+      6  dark green
+      7  light yellow
+      8  dark yellow
+      9  light blue
+      10 dark blue
+      11 light magenta
+      12 dark magenta
+      13 light cyan
+      14 dark cyan
+      15 light white
+      16 dark white */
+
+    bool invalidColorCode = false;
+
+    int fgColorR = 0;
+    int fgColorG = 0;
+    int fgColorB = 0;
+    int bgColorR = 0;
+    int bgColorG = 0;
+    int bgColorB = 0;
+
+    int tag = ansiFg;
+    if( tag < 16 )
+    {
+        QColor c;
+        switch( tag )
+        {
+            case 0: c = mpHost->mFgColor;  break;
+            case 1: c = mpHost->mLightBlack; break;
+            case 2: c = mpHost->mBlack; break;
+            case 3: c = mpHost->mLightRed; break;
+            case 4: c = mpHost->mRed; break;
+            case 5: c = mpHost->mLightGreen; break;
+            case 6: c = mpHost->mGreen; break;
+            case 7: c = mpHost->mLightYellow; break;
+            case 8: c = mpHost->mYellow; break;
+            case 9: c = mpHost->mLightBlue; break;
+            case 10: c = mpHost->mBlue; break;
+            case 11: c = mpHost->mLightMagenta; break;
+            case 12: c = mpHost->mMagenta; break;
+            case 13: c = mpHost->mLightCyan; break;
+            case 14: c = mpHost->mCyan; break;
+            case 15: c = mpHost->mLightWhite; break;
+            case 16: c = mpHost->mWhite; break;
+        }
+        fgColorR = c.red();
+        fgColorG = c.green();
+        fgColorB = c.blue();
+    }
+    else
+    {
+        if( tag < 232 )
+        {
+            tag-=16; // because color 1-15 behave like normal ANSI colors
+            // 6x6 RGB color space
+            int r = tag / 36;
+            int g = (tag-(r*36)) / 6;
+            int b = (tag-(r*36))-(g*6);
+            fgColorR = r*42;
+            fgColorG = g*42;
+            fgColorB = b*42;
+        }
+        else if( tag < 256 )
+        {
+            // black + 23 tone grayscale from dark to light gray
+            tag -= 232;
+            fgColorR = tag*10;
+            fgColorG = tag*10;
+            fgColorB = tag*10;
+        }
+        else
+        {
+            //return invalid color error
+            invalidColorCode = true;
+        }
+    }
+
+    tag = ansiBg;
+    if( tag < 16 )
+    {
+        QColor c;
+        switch( tag )
+        {
+            case 0: c = mpHost->mBgColor;  break;
+            case 1: c = mpHost->mLightBlack; break;
+            case 2: c = mpHost->mBlack; break;
+            case 3: c = mpHost->mLightRed; break;
+            case 4: c = mpHost->mRed; break;
+            case 5: c = mpHost->mLightGreen; break;
+            case 6: c = mpHost->mGreen; break;
+            case 7: c = mpHost->mLightYellow; break;
+            case 8: c = mpHost->mYellow; break;
+            case 9: c = mpHost->mLightBlue; break;
+            case 10: c = mpHost->mBlue; break;
+            case 11: c = mpHost->mLightMagenta; break;
+            case 12: c = mpHost->mMagenta; break;
+            case 13: c = mpHost->mLightCyan; break;
+            case 14: c = mpHost->mCyan; break;
+            case 15: c = mpHost->mLightWhite; break;
+            case 16: c = mpHost->mWhite; break;
+        }
+        bgColorR = c.red();
+        bgColorG = c.green();
+        bgColorB = c.blue();
+    }
+    else
+    {
+        if( tag < 232 )
+        {
+            tag-=16; // because color 1-15 behave like normal ANSI colors
+            // 6x6 RGB color space
+            int r = tag / 36;
+            int g = (tag-(r*36)) / 6;
+            int b = (tag-(r*36))-(g*6);
+            bgColorR = r*42;
+            bgColorG = g*42;
+            bgColorB = b*42;
+        }
+        else if( tag < 256 )
+        {
+            // black + 23 tone grayscale from dark to light gray
+            tag -= 232;
+            bgColorR = tag*10;
+            bgColorG = tag*10;
+            bgColorB = tag*10;
+        }
+        else
+        {
+            //return invalid color error
+            invalidColorCode = true;
+        }
+    }
+
+    if( invalidColorCode ) return 0;
+
+    TColorTable * pCT = new TColorTable;
+    if( !pCT ) return 0;
+
+    pCT->ansiBg = ansiBg;
+    pCT->ansiFg = ansiFg;
+    pCT->bgB = bgColorB;
+    pCT->bgG = bgColorG;
+    pCT->bgR = bgColorR;
+    pCT->fgB = fgColorB;
+    pCT->fgG = fgColorG;
+    pCT->fgR = fgColorR;
+    return pCT;
+}
+
+bool TTrigger::setupColorTrigger( int ansiFg, int ansiBg )
+{
+    TColorTable * pCT = createColorPattern( ansiFg, ansiBg );
+    if( ! pCT ) return false;
+    mColorPatternList.push_back( pCT );
+    return true;
+}
+
+bool TTrigger::setupTmpColorTrigger( int ansiFg, int ansiBg )
+{
+    TColorTable * pCT = createColorPattern( ansiFg, ansiBg );
+    if( ! pCT ) return false;
+    QString code;
+    code = QString("FG%1BG%2").arg(ansiFg).arg(ansiBg);
+    mRegexCodeList << code;
+    mRegexCodePropertyList << REGEX_COLOR_PATTERN;
+    mColorPatternList.push_back( pCT );
+    return true;
 }
 
 bool TTrigger::isFilterChain()
