@@ -44,6 +44,7 @@ Mudlet Manual
 .. <<buttons,Scripting Buttons>>
 .. <<userGfxWindows,User Custom Graphics Windows>>
 . <<api,Lua API and Reference>>
+  <<apiIndex, Alphabetical Lua API Function Index>>
 ****************
 
 [[introduction]]
@@ -1074,133 +1075,163 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 |multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
 |===================================================
 
+[[apiIndex]]
 = Alphabetical Function Index
 
-= A
+== A
 <<appendBuffer,appendBuffer>>, 
 
-= B
+== B
 <<bg,bg>>, 
 
-= C
-<<createBuffer,createBuffer>>, 
+== C
+
 <<clearUserWindow,clearUserWindow>>, 
 <<copy,copy>>, 
-<<openUserWindow,openUserWindow>>, 
+<<createBuffer,createBuffer>>, 
+<<createLabel,createLabel>>, 
+<<createMiniConsole,createMiniConsole>>, 
+<<createStopWatch,createStopWatch>>, 
 
-= D
+== D
+<<debug,debug>>
 <<deleteLine,deleteLine>>, 
 <<disableKey,disableKey>>, 
 <<disableTimer,disableTimer>>, 
 <<disableTrigger,disableTrigger>>, 
+<<disconnect,disconnect>>, 
+<<display,display>>, 
 
 
-= E
+== E
 <<echo,echo>>, 
+<<echoUserWindow,echoUserWindow>>, 
 <<enableKey,enableKey>>, 
 <<enableTimer,enableTimer>>, 
 <<enableTrigger,enableTrigger>>, 
 <<expandAlias,expandAlias>>, 
 
-= F
+== F
 <<fg,fg>>, 
 
 
-= G
+== G
+<<getBgColor,getBgColor>>, 
+<<getButtonState,getButtonState>>, 
 <<getColumnNumber,getColumnNumber>>, 
+<<getCurrentLine,getCurrentLine>>, 
+<<getFgColor,getFgColor>>, 
 <<getLines,getLines>>, 
 <<getLineCount,getLineCount>>, 
 <<getLineNumber,getLineNumber>>, 
+<<getMainWindowSize,getMainWindowSize>>, 
+<<getMudletHomeDir,getMudletHomeDir>>, 
+<<getNetworkLatency,getNetworkLatency>>, 
+<<getStopWatchTime,getStopWatchTime>>, 
 
 
-= H
+== H
+<<hideToolBar,hideToolBar>>, 
 <<hideWindow,hideWindow>>, 
 
-= I
+== I
 <<insertText,insertText>>, 
+<<ioexists,io.exists>>, 
+<<isAnsiBgColor,isAnsiBgColor>>, 
+<<isAnsiFgColor,isAnsiFgColor>>, 
 
+== K
+<<killTimer,killTimer>>, 
+<<killTrigger,killTrigger>>, 
 
-= J
-
-
-= K
-
-
-= L
-
-
-
-= M
+== M
 <<moveCursor,moveCursor>>, 
 <<moveCursorEnd,moveCursorEnd>>, 
 <<moveWindow,moveWindow>>, 
 
+== O
+<<openUserWindow,openUserWindow>>, 
 
-= N
-
-
-= O
-
-
-= P
+== P
 <<paste,paste>>, 
 <<pasteUserWindow,pasteUserWindow>>, 
 <<prefix,prefix>>, 
 
-
-= R
+== R
 <<raiseEvent,raiseEvent>>, 
+<<reconnect,reconnect>>, 
 <<replace,replace>>, 
 <<replaceAll,replaceAll>>, 
 <<replaceWildcards,replaceWildcards>>, 
 <<resetFormat,resetFormat>>, 
+<<resetStopWatch,resetStopWatch>>, 
 <<resizeWindow,resizeWindow>>, 
 
-
-
-= S
+== S
 <<selectCaptureGroup,selectCaptureGroup>>, 
+<<selectCurrentLine,selectCurrentLine>>, 
 <<selectSection,selectSection>>, 
 <<selectString,selectString>>, 
 <<send,send>>, 
 <<sendAll,sendAll>>, 
+<<setBackgroundColor,setBackgroundColor>>, 
+<<setBackgroundImage,setBackgroundImage>>, 
 <<setBgColor,setBgColor>>, 
+<<setBold,setBold>>,
 <<setFgColor,setFgColor>>, 
+<<setItalics,setItalics>>, 
+<<setLabelClickCallback,setLabelClickCallback>>, 
+<<setMiniConsoleFontSize,setMiniConsoleFontSize>>, 
+<<setTextFormat,setTextFormat>>, 
+<<setTriggerStayOpen,setTriggerStayOpen>>, 
+<<setUnderline,setUnderline>>, 
+<<setWindowWrap,setWindowWrap>>, 
 <<showCaptureGroups,showCaptureGroups>>, 
 <<showMultimatches,showMultimatches>>, 
+<<showToolBar,showToolBar>>, 
 <<showWindow,showWindow>>, 
+<<startStopWatch,startStopWatch>>, 
+<<stopStopWatch,stopStopWatch>>, 
+<<stringsplit,string:split>>, 
 <<suffix,suffix>>, 
 
-
-= T
+== T
+<<tablecontains,table.contains>>, 
 <<tableload,table.load>>, 
 <<tablesave,table.save>>, 
+<<tableSize,tabel.size>>, 
 <<tempColorTrigger,tempColorTrigger>>, 
-<<tempLineTrigger, tempLineTrigger>, 
+<<tempLineTrigger, tempLineTrigger>>, 
 <<tempRegexTrigger,tempRegexTrigger>>, 
 <<tempTimer,tempTimer>>, 
 <<tempTrigger,tempTrigger>>, 
 
-
-
+== W
+<<wrapLine,wrapLine>>
 
 
 === Most Important Functions
 
+[[send]]
 == send( command )
 This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
 
 
 [[echo]]
-== echo( text )
-appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
-
 == echo( windowName, text )
-appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()
+This function appends text at the end of the current line. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
+If the first argument is ommitted the main console is used, otherwise the mini console windowName.
+=== Example 1: 
+---
+echo( "Hello world\n" ) -- writes "Hello world" to the main screen.
+echo( "info", "Hello this is the info window" ) -- writes text to the mini console named "info" if such a window exists
+---
+=== Example 2:
+
 
 
 [[selectString]]
-== int pos_begin_of_match_in_line = selectString( text, number_of_match ) or -1 on error
+== selectString( text, number_of_match ) returns position in line or -1 on error (text not found in line)
 Selects a substring from the line where the user cursor is currently 
 positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of 
 the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that 
@@ -1284,7 +1315,36 @@ replaces all occurrences of what in the current line with with  <<replace, -> re
 
 [[fg]]
 == fg( color_name )
-Sets the current selection foreground color to color_name. You can find the pre-defined color names <<colortable, here>>  <<resetFormat, ->resetFormat()>> <<setFgColor, -> setFgColor()>>
+Sets the current selection foreground color to color_name which is one of the pre defined colors in the table below. 
+see also: <<resetFormat, ->resetFormat()>> <<setFgColor, -> setFgColor()>>
+
+.Color Table (for use in the fg("colorname") and bg("colorname") functions)
+[frame="topbot",options="header"]
+|===================================================
+| snow| ghost_white| white_smoke|gainsboro|floral_white
+| old_lace| linen| antique_white| papaya_whip| blanched_almond
+| bisque| peach_puff| navajo_white| moccasin | cornsilk| ivory
+| lemon_chiffon| seashell| honeydew| mint_cream| azure| alice_blue
+| lavender| lavender_blush| misty_rose| white | black| dark_slate_gray 
+| dark_slate_grey| dim_gray   | dim_grey| slate_gray | slate_grey | light_slate_gray  
+| light_slate_grey| gray| grey| light_grey | light_gray | midnight_blue
+| navy| navy_blue | cornflower_blue| dark_slate_blue| slate_blue | medium_slate_blue 
+| light_slate_blue| medium_blue| royal_blue | blue  | dodger_blue| deep_sky_blue 
+| sky_blue| light_sky_blue| steel_blue| light_steel_blue| light_blue| powder_blue 
+| pale_turquoise| dark_turquoise | medium_turquoise| turquoise| cyan| light_cyan 
+| cadet_blue| medium_aquamarine| aquamarine| dark_green | dark_olive_green| dark_sea_green
+| sea_green | medium_sea_green| light_sea_green| pale_green | spring_green| lawn_green  
+| green| chartreuse | medium_spring_green| green_yellow| lime_green | yellow_green 
+| forest_green | olive_drab| dark_khaki| khaki | pale_goldenrod| light_goldenrod_yellow
+| light_yellow| yellow| gold   | light_goldenrod| goldenrod| dark_goldenrod
+| rosy_brown| indian_red| saddle_brown | sienna| peru | burlywood
+| beige| wheat| sandy_brown| tan| chocolate | firebrick
+| brown| dark_salmon| salmon | light_salmon| orange| dark_orange
+| coral| light_coral | tomato| orange_red | red | hot_pink 
+| deep_pink| pink| light_pink| pale_violet_red| maroon| medium_violet_red
+| violet_red| magenta| violet| plum | orchid | medium_orchid
+| dark_orchid| blue_violet| purple| medium_purple| thistle
+|===================================================
 
 
 [[bg]]
@@ -1328,7 +1388,7 @@ Resets the character format to default. This should be used after you have color
 
 
 [[setBgColor]]
-=setBgColor( r,g,b )
+== setBgColor( r,g,b )
 Sets the current text background color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. for red: setFgColor(255,0,0)
 If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
 
@@ -1357,7 +1417,22 @@ Sets the current text foreground color in the main window. Values are RGB: red, 
 
 == setFgColor( windowName, r, g, b )
 Sets the current text foreground color in window windowName
+If the windowName parameteris omitted, the main screen will be used.
 
+[[setBold]]
+== setBold( windowName, bool )
+Sets the current text font to bold (true) or non-bold (false) mode.
+If the windowName parameteris omitted, the main screen will be used.
+
+[[setItalics]]
+== setItalics( windowName, bool )
+Sets the current text font to italics/non-italics mode.
+If the windowName parameteris omitted, the main screen will be used.
+
+[[setUnderline]]
+== setUnderline( windowName, bool )
+Sets the current text font to underline/non-underline mode.
+If the windowName parameteris omitted, the main screen will be used.
 
 [[openUserWindow]]
 == openUserWindow( name )
@@ -1430,7 +1505,7 @@ and thus help reduce complexity on large systems.
 
 
 [[tempTimer]]
-== tempTimer( seconds, lua_code )
+== tempTimer( seconds, lua_code ) returns timer ID
 Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 example:
 ----
@@ -1477,14 +1552,14 @@ Result:
 
 
 [[tempTrigger]]
-== tempTrigger( string, lua_code )
+== tempTrigger( string, lua_code ) returns trigger ID
 This function creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one. This is the second fastest trigger (with begin of line substring patterns being the fastest) and should be used instead of regex triggers whenever possible.
 
 
 
 
 [[tempLineTrigger]]
-== tempLineTrigger( from, howMany, LuaCode )
+== tempLineTrigger( from, howMany, LuaCode ) returns trigger ID
 Temporary trigger that will fire on n consecutive lines following the current line. This is useful 
 to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, [[send("shout Help")]] ) will fire 3 times starting with the line from the MUD.
 tempLineTrigger( 20, 2, [[send("shout Help")]] )
@@ -1494,31 +1569,27 @@ The function returns the ID of the newly created temporary trigger. You can use 
 
 
 [[tempRegexTrigger]]
-== tempRegexTrigger( regex, lua_code )
+== tempRegexTrigger( regex, lua_code ) returns trigger ID
 temorary trigger using perl regex pattern matching <<tempTrigger, This function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on. -> tempTrigger()
 
 
 
 [[killTimer]]
-== killTimer( name )
+== killTimer( id ) returns true or false
 Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn't exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.
-This function returns true or false on success.
 
 
 [[killTrigger]]
-== killTrigger( name )
-See killTimer()
-
+== killTrigger( id ) returns true or false
+Deletes a tempTrigger according to trigger ID. -> <<killTimer,killTimer()>>
 
 
 = Buffer, Screen and Mini Windows Functions
 
 
-
 [[openUserWindow]]
 == openUserWindow( name )
 Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
-
 
 
 
@@ -1561,27 +1632,87 @@ Gets the absolute amount of lines in the current console buffer
 
 
 [[getLines]]
-==  getLines( from_line_number, to_line_number )
+==  getLines( from_line_number, to_line_number ) returns a lua table with the content of the lines on a per line basis
 Returns a section of the content of the screen text buffer. The form of the return value is: lua_table[relative_linenumber, content]
 Absolute line numbers are used.
 
 
-
 [[getLineCount]]
-== getLineCount()
+== getLineCount() returns number
 Returns the number of the last line in the buffer.
 
 
 
 [[moveCursor]]
-== boolean = moveCursor( windowName, x, y )
+== moveCursor( windowName, x, y ) returns true or false
 Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. If you omit the windowName argument, the main screen will be used.
 
+=== Example: 
+----
+-- set up the small system message window in the top right corner 
+
+-- determine the size of your screen
+WindowWidth=0;
+WindowHeight=0;
+WindowWidth, WindowHeight = getMainWindowSize();
+
+-- define a mini console named "sys" and set its background color
+createMiniConsole("sys",WindowWidth-650,0,650,300)
+setBackgroundColor("sys",85,55,0,255);
+
+-- you *must* set the font size, otherwise mini windows will not work properly
+setMiniConsoleFontSize("sys", 12);
+-- wrap lines in window "sys" at 65 characters per line
+setWindowWrap("sys", 60);
+-- set default font colors and font style for window "sys"
+setTextFormat("sys",0,35,255,50,50,50,0,0,0);
+-- clear the window
+clearUserWindow("sys")
+
+moveCursorEnd("sys")
+setFgColor("sys", 10,10,0)
+setBgColor("sys", 0,0,255)
+echo("sys", "test1---line1\n<this line is to be deleted>\n<this line is to be deleted also>\n")
+echo("sys", "test1---line2\n")
+echo("sys", "test1---line3\n")
+setTextFormat("sys",158,0,255,255,0,255,0,0,0);
+--setFgColor("sys",255,0,0);
+echo("sys", "test1---line4\n")
+echo("sys", "test1---line5\n")
+moveCursor("sys", 1,1)
+
+-- deleting lines 2+3
+deleteLine("sys"); 
+deleteLine("sys");
+
+-- inserting a line at pos 5,2
+moveCursor("sys", 5,2);
+setFgColor("sys", 100,100,0)
+setBgColor("sys", 255,100,0)
+insertText("sys","############## line inserted at pos 2/2 ##############");
+
+-- inserting a line at pos 0,0
+moveCursor("sys", 0,0)
+selectCurrentLine("sys");
+setFgColor("sys", 255,155,255);
+setBold( "sys", true );
+setUnderline( "sys", true );
+setItalics( "sys", true );
+insertText("sys", "------- line inserted at: 0/0 -----\n");
+
+setBold( "sys", true )
+setUnderline( "sys", false )
+setItalics( "sys", false )
+setFgColor("sys", 255,100,0)
+setBgColor("sys", 155,155,0)
+echo("sys", "*** This is the end. ***\n");
+----
 
 
 [[moveCursorEnd]]
-== moveCursorEnd( windowName )
+== moveCursorEnd( windowName ) returns true or false
 Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
+-> <<moveCursor,moveCursor>>
 
 
 
@@ -1677,52 +1808,61 @@ shows user window name
 hides user window name
 
 
-[[resizeWindow]]
-== resizeWindow( name, x1, y1, x2, y2 )
-resizes window name to x1/y1 and x2/y2 vectors
-
-
-
 [[getNetworkLatency]]
-== latency = getNetworkLatency()
+== getNetworkLatency() returns number
 returns the last measured response time between the sent command and the server reply e.g. 0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds)
 
 
 
 [[createStopWatch]]
-== watchID = createStopWatch()
-return the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
-
+== createStopWatch() returns number
+This function creates a stop watch. It is high resolution time measurement tool. Stop watches can be started, stopped, reset and asked how much time has passed since the stop watch has been started.
+Returns the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
+-> <<startStopWatch,startStopWatch>>, <<stopStopWatch,stopStopWatch>>, <<resetStopWatch,resetStopWatch>>, <<getStopWatchTime,getStopWatchTime>>
+example: 
+In a global script you create all stop watches that you need in your system and store the respective stopWatch-IDs in global variables:
+----
+fightStopWatch = createStopWatch(); -- you store the watchID in a global variable to access it from anywhere
+----
+Then you can start the stop watch in some trigger/alias/script with:
+----
+startStopWatch( fightStopWatch );
+----
+To stop the watch and measure its time in e.g. a trigger script you can write:
+----
+fightTime = stopStopWatch( fightStopWatchID )
+echo( "The fight lasted for " .. fightTime .. " seconds." )
+resetStopWatch( fightStopWatchID );
+----
+You can also measure the elapsed time without having to stop the stop watch with <<getStopWAtchTime,getStopWatchTime>>
 
 
 [[startStopWatch]]
 == startStopWatch( watchID )
-start the stop watch
-
+Starts the stop watch. -> <<createStopWatch,createStopWatch>>
 
 
 [[stopStopWatch]]
-== time = stopStopWatch( watchID ) 
-stops the stop watch and returns elapsed time in milliseconds in form of 0.001
-
+== stopStopWatch( watchID ) returns time as a number
+Stops the stop watch and returns the elapsed time in milliseconds in form of 0.001.
+-> <<createStopWatch,createStopWatch>>
 
 
 [[resetStopWatch]]
 == resetStopWatch( watchID )
-resets the time to 0:0:0:0
-
-
+This function resets the time to 0:0:0.0, but does not start the stop watch. You can start it with <<startStopWatch,startStopWatch>>
+-> <<createStopWatch,createStopWatch>>
 
 
 [[getStopWatchTime]]
-== time = getStopWatchTime( watchID )
-returns the time (milliseconds) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)
+== getStopWatchTime( watchID ) returns number
+Returns the time (milliseconds based) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped)
+-> <<createStopWatch,createStopWatch>>
 
 
 [[debug]]
 == debug( text )
 print text to debug console
-
 
 
 [[appendBuffer]]
@@ -1740,6 +1880,35 @@ sets at what position in the line the console or miniconsole will start word wra
 == createMiniConsole( name, posX, posY, width, height )
 opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy & paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing. 
 
+see also: <<createLabel,createLabel>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>
+
+=== Example 1: 
+----
+-- set up the small system message window in the top right corner 
+
+-- determine the size of your screen
+WindowWidth = 0;
+WindowHeight = 0;
+WindowWidth, WindowHeight = getMainWindowSize();
+
+createMiniConsole("sys",WindowWidth-650,0,650,300)
+setBackgroundColor("sys",85,55,0,255)
+setMiniConsoleFontSize("sys", 8)
+-- wrap lines in window "sys" at 65 characters per line
+setWindowWrap("sys", 40)
+-- set default font colors and font style for window "sys"
+setTextFormat("sys",0,35,255,50,50,50,0,0,0)
+
+echo("sys","Hello world!")
+----
+This script would create a mini text console called "sys" and write with yellow foreground color and blue background color "This is a test".
+
+=== Example 2:
+The next example is more advanced. The user Thylacine has written a tabbed chat widget on the basis of layered mini consoles and on screen buttons (labels). Each tab page holds the output of certain MUD channels e.g. All, Guild, Market, City etc.. You can click on the tab to change the tab page and read what was said in the respective channel. You can get the package here: http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=171
+[[diag_tabWidgetDemo]]
+[icon="./images/icons/tabWidgetDemo.png"]
+NOTE: .
+
 
 
 
@@ -1747,38 +1916,195 @@ opens a console window inside the main window of Mudlet at position posX/posY wi
 == createLabel( name, posX, posY, width, height, fillBackground)
 labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. *DON'T* use labels for larger text displays because they are a lot slower than the highspeed mini consoles
 
+Labels accept some HTML and CSS code for text formating.
 
+see also: <<createMiniConsole,createMiniConsole>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>
+
+=== Example 1: 
+[[diag_labelOverlayDemo]]
+[icon="./images/icons/labelOverlayDemo.png"]
+NOTE: . screenshot example 1
+
+This example creates a transparent overlay message box to show a big warning message "You are under attack!" in the middle of the screen. Because the background color has a transparency level of 150 (0-255, with 0 being completely transparent and 255 non-transparent) the background text can still be read through. The message box will disappear after 2.3 seconds.
+----
+local width, height = getMainWindowSize();
+createLabel("messageBox",(width/2)-300,(height/2)-100,250,150,1);
+resizeWindow("messageBox",500,70);
+moveWindow("messageBox", (width/2)-300,(height/2)-100 );
+setBackgroundColor("messageBox", 150,100,100,200);
+echo("messageBox", [[<p style="font-size:35px"><b><center><font color="red">You are under attack!</font></center></b></p>]] );
+showWindow("messageBox");
+tempTimer(2.3, [[hideWindow("messageBox")]] ) -- close the warning message box after 2.3 seconds
+----
+
+
+=== Example 2: 
+[[diag_a_gui_pack]]
+[icon="./images/icons/achaea_gui_pack_screen.png"]
+NOTE: . screenshot example 2
+
+This example creates a mouse clickable compass (taken from the GUI demo package. You can download this package with the image data etc. -> Mudlet forum -> packages section http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=95
+-----
+-- define the path to the location of the images
+-- this needs to be adapted to your own system e.g. "c:\images\mudimages"
+-- on my linux system the folder are in my home directory in the folder gfx 
+gfx_path = "/home/heiko/gfx";
+
+-- determine the size of your screen
+WindowWidth=0;
+WindowHeight=0;
+WindowWidth, WindowHeight = getMainWindowSize();
+
+-- create clickable compass with clickable images = labels with on click callback functions
+createLabel("north",82,WindowHeight-220,50,50,1);
+setBackgroundImage("north",gfx_path .. "/n.png" );
+setBackgroundColor("north", 0,0,0,0);
+setLabelClickCallback("north", "walk_north" )
+
+createLabel("south",82,WindowHeight-80,50,50,1);
+setBackgroundImage("south",gfx_path .. "/s.png" );
+setBackgroundColor("south", 0,0,0,0);
+setLabelClickCallback("south", "walk_south" )
+
+createLabel("west",0,WindowHeight-150,55,55,1);
+setBackgroundImage("west",gfx_path .. "/w.png" );
+setBackgroundColor("west", 0,0,0,0);
+setLabelClickCallback("west", "walk_west" )
+
+createLabel("east",150,WindowHeight-150,50,50,1);
+setBackgroundImage("east",gfx_path .. "/e.png" );
+setBackgroundColor("east", 0,0,0,0);
+setLabelClickCallback("east", "walk_east" )
+
+createLabel("northeast",125,WindowHeight-190,40,40,1);
+setBackgroundImage("northeast",gfx_path .. "/ne.png" );
+setBackgroundColor("northeast", 0,0,0,0);
+setLabelClickCallback("northeast", "walk_northeast" )
+
+createLabel("northwest",30,WindowHeight-190,40,40,1);
+setBackgroundImage("northwest",gfx_path .. "/nw.png" );
+setBackgroundColor("northwest", 0,0,0,0);
+setLabelClickCallback("northwest", "walk_northwest" )
+
+createLabel("southwest",30,WindowHeight-95,40,40,1);
+setBackgroundImage("southwest",gfx_path .. "/sw.png" );
+setBackgroundColor("southwest", 0,0,0,0);
+setLabelClickCallback("southwest", "walk_southwest" )
+
+createLabel("southeast",135,WindowHeight-95,40,40,1);
+setBackgroundImage("southeast",gfx_path .. "/se.png" );
+setBackgroundColor("southeast", 0,0,0,0);
+setLabelClickCallback("southeast", "walk_southeast" )
+
+createLabel("compass",64,WindowHeight-162,75,75,1)
+setBackgroundColor("compass",0,0,0,0);
+setBackgroundImage("compass",gfx_path .. "/compass.png");
+setLabelClickCallback("compass", "callbackTest", 1, "score", 94, 104, 99, "lastParameter" );
+--setLabelClickCallback("compass", "callbackTest", 948, "qw", 49, 52 )
+
+function callbackTest( p1, p2, p3, p4, p5, p6  )
+	echo("p1="..p1.." p2<"..p2.."> p3<"..p3.."> p4<"..p4..">p5="..p5.." p6<"..p6..">");
+	if p1 == 1 then
+		send( p2 );
+	else
+		send( p2 );
+	end
+end
+
+function walk_north()
+	expandAlias("n;map")
+	compileRoomDescription()
+end
+
+function walk_south()
+	expandAlias("s;map")
+	compileRoomDescription()
+end
+
+function walk_west()
+	expandAlias("w;map");
+	compileRoomDescription()
+end
+
+function walk_east()
+	expandAlias("e;map");
+	compileRoomDescription()
+end
+
+function walk_northeast()
+	expandAlias("ne;map");
+	compileRoomDescription()
+end
+
+function walk_northwest()
+	expandAlias("nw;map");
+	compileRoomDescription()
+end
+
+function walk_southwest()
+	expandAlias("sw;map");
+	compileRoomDescription()
+end
+
+function walk_southeast()
+	expandAlias("se;map");
+	compileRoomDescription()
+end
+
+-----
+
+
+=== Example 3 (advanced)
+[[diag_labelEraldoDemo]]
+[icon="./images/icons/eraldoDemo.png"]
+NOTE: . screenshot example 3
+
+This is yet a more advanced demo of interactive graphical user interface programming in Mudlet on the basis of labels.
+Eraldo has implemented interactive icon buttons, vertical & horizontal gauges for status reports and on screen mini buttons to show status information of his character in-game that is extracted invisibly by his system and reported to the user via interactive or non-interactive icons or other graphical or textual representations. You can download the full package in the package section of the Mudlet forum at
+http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=865
 
 [[hideWindow]]
 == hideWindow( name )
-hides a user window, button or label
-
-
+This function hides a mini console label. To show it again use <<showWindow,showWindow>>.
+<<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>
 
 [[showWindow]]
 == showWindow( name )
-shows a window, button or label
-
-
+This function shows a mini console or label. To hide it use <<hideWindow,hideWindow>>
+see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>
 
 
 [[resizeWindow]]
 == resizeWindow( name, width, height )
-resizes a user window, button or label
+resizes a mini console or label
+see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>
 
-
+[[moveWindow]]
+== moveWindow( name, x, y )
+This function moves window name to the given x/y coordinate. The main screen cannot be moved. Instead you'll have to set appropriate border values -> preferences to move the main screen e.g. to make room for chat or information mini consoles, or other GUI elements. In the future moveWindow() will set the border values automatically if the name paramter is omitted.
 
 [[setMiniConsoleFontSize]]
 == setMiniConsoleFontSize( name, fontSize )
 Sets the font size of the mini console.
+see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>
 
+[[setTextFormat]]
+== setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )
+sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
+*A more convenient way to control the text format in a mini console is to use setFgColor( windowName, r,g,b ), setBold( windowName, true ), setItalics( windowName, true ), setUnderline( windowName, true ) etc.*
+-> <<createMiniConsole,createMiniConsole>>, <<setBold,setBold>>, <<setBgColor,setBgColor>>, <<setFgColor,setFgColor>>, <<setItalics,setItalics>>, <<setUnderline,setUnderline>>
+=== Example: 
+----
+createMiniConsole( "con1", 0,0,300,100);
+setTextFormat("con1",0,0,255,255,255,0,1,1,1); 
+echo("con1","This is a test")
+----
+This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
 
 
 [[getCurrentLine]]
 == getCurrentLine()
 returns the content of the current line under the user cursor in the buffer. The Lua variable line holds the content of getCurrentLine() before any triggers have been run on this line. When triggers change the content of the buffer, the variable line will not be adjusted and thus hold an outdated string. line = getCurrentLine() will update line to the real content of the current buffer. This is important if you want to copy the current line after it has been changed by some triggers. selectString( line,1 ) will return false and won't select anything because line no longer equals getCurrentLine(). Consequently, selectString( getCurrentLine(), 1 ) is what you need.
-
-
 
 
 [[selectCurrentLine]]
@@ -1810,32 +2136,28 @@ UPDATE: this function can now pass any number of string or integer number values
 [[echoUserWindow]]
 == echoUserWindow( windowName )
 This function will print text to both mini console windows, dock windows and labels. 
+This function is outdated. Use echo( windowName, text ) instead -> <<echo,echo>>
 
 
 
 [[getMainWindowSize]]
-== width, height = getMainWindowSize()
+== getMainWindowSize() returns 2 numbers, width and height in pixels
 return window width and window height ( function with 2 return values ) to calculate the window dimensions and placement of custom gui toolkit items like labels, buttons, mini consoles etc.
-
-
-
-[[setTextFormat]]
-== setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )
-sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
-example: 
+example:
 ----
-createMiniConsole( "con1", 0,0,300,100);
-setTextFormat("con1",0,0,255,255,255,0,1,1,1); 
-echoUserWindow("con1","This is a test")
+mainWindowWidth, mainWindowHeight = getMainWindowSize();
 ----
-This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
-.table.size( tableName )
-Gets the actual size of a non-numerical table
 
 
 
-[[gettingTableSize]]
-== myTableSize = # myTable 
+
+
+[[tableSize]]
+== table.size( tableName )
+Gets the actual size of non-index based tables.
+
+For index based tables you can get the size with the # operator:
+myTableSize = # myTable 
 This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.
 
 
