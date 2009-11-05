@@ -1689,7 +1689,7 @@ deleteLine("sys");
 moveCursor("sys", 5,2);
 setFgColor("sys", 100,100,0)
 setBgColor("sys", 255,100,0)
-insertText("sys","############## line inserted at pos 2/2 ##############");
+insertText("sys","############## line inserted at pos 5/2 ##############");
 
 -- inserting a line at pos 0,0
 moveCursor("sys", 0,0)

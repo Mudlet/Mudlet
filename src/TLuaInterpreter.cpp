@@ -1981,16 +1981,12 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
 int TLuaInterpreter::moveCursorEnd( lua_State *L )
 {
     string luaWindowName="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
+    if( lua_isstring( L, 1 ) )
     {
         luaWindowName = lua_tostring( L, 1 );
     }
+    else
+        luaWindowName = "main";
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
