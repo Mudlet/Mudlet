@@ -36,19 +36,38 @@
 using namespace std;
 
 
-void ActionUnit::addActionRootNode( TAction * pT )
+void ActionUnit::addActionRootNode( TAction * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
     {
-        pT->setID( getNewID() );    
+        pT->setID( getNewID() );
     }
-    mActionRootNodeList.push_back( pT );
-        
+    if( ( parentPosition == -1 ) || ( childPosition >= mActionRootNodeList.size() ) )
+    {
+        mActionRootNodeList.push_back( pT );
+    }
+    else
+    {
+         // insert item at proper position
+        int cnt = 0;
+        typedef std::list<TAction *>::iterator IT;
+        for( IT it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
+        {
+            if( cnt >= childPosition )
+            {
+                mActionRootNodeList.insert( it, pT );
+                break;
+            }
+            cnt++;
+        }
+    }
+
     mActionMap.insert( pT->getID(), pT );
+
 }
 
-void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID )
+void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
     TAction * pOldParent = getActionPrivate( oldParentID );
     TAction * pNewParent = getActionPrivate( newParentID );
@@ -65,18 +84,22 @@ void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID )
     {
         removeActionRootNode( pChild );  
     }
-    if( pNewParent ) 
+
+    if( pNewParent )
     {
-        pNewParent->addChild( pChild );
+        pNewParent->Tree<TAction>::addChild( pChild, parentPosition, childPosition );
         if( pChild )
             pChild->Tree<TAction>::setParent( pNewParent );
+        //cout << "dumping family of newParent:"<<endl;
+        //pNewParent->Dump();
     }
-    if( ! pNewParent )
+    else
     {
         pChild->Tree<TAction>::setParent( 0 );
-        addActionRootNode( pChild );
-
+        addActionRootNode( pChild, parentPosition, childPosition );
     }
+
+
 
     if( ( ! pOldParent ) && ( pNewParent ) )
     {

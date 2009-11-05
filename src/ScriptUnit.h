@@ -43,7 +43,7 @@ public:
     void                  compileAll();
     bool                  registerScript( TScript * pT );
     void                  unregisterScript( TScript * pT );
-    void                  reParentScript( int childID, int oldParentID, int newParentID );
+    void                  reParentScript( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  stopAllTriggers();
     
     qint64                getNewID();
@@ -53,7 +53,7 @@ private:
     
     ScriptUnit(){;}
     TScript *             getScriptPrivate( int id );
-    void                  addScriptRootNode( TScript * pT );
+    void                  addScriptRootNode( TScript * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addScript( TScript * pT );
     void                  removeScriptRootNode( TScript * pT );
     void                  removeScript( TScript *);

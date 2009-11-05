@@ -43,7 +43,7 @@ public:
     void                  unregisterAlias( TAlias * pT );
     bool                  serialize( QDataStream & );
     bool                  restore( QDataStream &, bool );
-    void                  reParentAlias( int childID, int oldParentID, int newParentID );
+    void                  reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     qint64                getNewID();
     bool                  processDataStream( QString & );
     void                  stopAllTriggers();
@@ -52,7 +52,7 @@ public:
 private: 
     AliasUnit(){;}
     TAlias *              getAliasPrivate( int id );
-    void                  addAliasRootNode( TAlias * pT );
+    void                  addAliasRootNode( TAlias * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addAlias( TAlias * pT );
     void                  removeAliasRootNode( TAlias * pT );
     void                  removeAlias( TAlias *);

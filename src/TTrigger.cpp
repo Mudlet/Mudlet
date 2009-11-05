@@ -1012,11 +1012,6 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
 
         bool conditionMet = false;
 
-/*        if( mColorTrigger )
-        {
-            conditionMet = match_colors( line );
-        }*/
-       
         int highestCondition = 0;
         if( mIsMultiline )
         {

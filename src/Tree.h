@@ -48,7 +48,7 @@ public:
     bool               isFullyExpanded()           { return FullyExpanded; }
     qint64             getID()                     { return mID; }
     void               setID( qint64 id )          { mID=id; }
-    void               addChild( T * newChild );
+    void               addChild( T * newChild, int parentPostion = -1, int parentPosition = -1 );
     bool               popChild( T * removeChild );
     void               setParent( T * parent );
     void               enableFamily();
@@ -219,9 +219,27 @@ void Tree<T>::disableFamily()
 }
 
 template<class T>
-void Tree<T>::addChild( T * newChild )
+void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
 {
-    mpMyChildrenList->push_back( newChild );
+    if( ( parentPosition == -1 ) || ( childPosition >= mpMyChildrenList->size() ) )
+    {
+        mpMyChildrenList->push_back( newChild );
+    }
+    else
+    {
+        // insert item at proper position
+        int cnt = 0;
+        typedef typename std::list<T *>::iterator IT;
+        for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it ++ )
+        {
+            if( cnt >= childPosition )
+            {
+                mpMyChildrenList->insert( it, newChild );
+                break;
+            }
+            cnt++;
+        }
+    }
 }
 
 template<class T>

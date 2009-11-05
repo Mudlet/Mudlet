@@ -46,7 +46,7 @@ void ScriptUnit::stopAllTriggers()
     }
 }
 
-void ScriptUnit::addScriptRootNode( TScript * pT )
+void ScriptUnit::addScriptRootNode( TScript * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
@@ -54,14 +54,31 @@ void ScriptUnit::addScriptRootNode( TScript * pT )
         pT->setID( getNewID() );    
     }
     
-    mScriptRootNodeList.push_back( pT );
+    if( ( parentPosition == -1 ) || ( childPosition >= mScriptRootNodeList.size() ) )
+    {
+        mScriptRootNodeList.push_back( pT );
+    }
+    else
+    {
+        // insert item at proper position
+        int cnt = 0;
+        typedef std::list<TScript *>::iterator IT;
+        for( IT it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
+        {
+            if( cnt >= childPosition )
+            {
+                mScriptRootNodeList.insert( it, pT );
+                break;
+            }
+            cnt++;
+        }
+    }
+
     mScriptMap.insert( pT->getID(), pT );
 }
 
-void ScriptUnit::reParentScript( int childID, int oldParentID, int newParentID )
+void ScriptUnit::reParentScript( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
-    QMutexLocker locker(& mScriptUnitLock);
-    
     TScript * pOldParent = getScriptPrivate( oldParentID );
     TScript * pNewParent = getScriptPrivate( newParentID );
     TScript * pChild = getScriptPrivate( childID );
@@ -77,17 +94,17 @@ void ScriptUnit::reParentScript( int childID, int oldParentID, int newParentID )
     {
         removeScriptRootNode( pChild );    
     }
-    if( pNewParent ) 
+    if( pNewParent )
     {
-        pNewParent->addChild( pChild );
+        pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     }
-    if( ! pNewParent )
+    else
     {
         pChild->Tree<TScript>::setParent( 0 );
-        addScriptRootNode( pChild );
+        addScriptRootNode( pChild, parentPosition, childPosition );
     }
 }
 

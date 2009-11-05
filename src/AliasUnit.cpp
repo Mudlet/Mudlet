@@ -80,18 +80,41 @@ bool AliasUnit::processDataStream( QString & data )
 }
 
 
-void AliasUnit::addAliasRootNode( TAlias * pT )
+void AliasUnit::addAliasRootNode( TAlias * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );    
     }
-    mAliasRootNodeList.push_back( pT );
-    mAliasMap.insert( pT->getID(), pT );
+
+    if( ( parentPosition == -1 ) || ( childPosition >= mAliasRootNodeList.size() ) )
+    {
+        mAliasRootNodeList.push_back( pT );
+    }
+    else
+    {
+        // insert item at proper position
+        int cnt = 0;
+        typedef std::list<TAlias *>::iterator IT;
+        for( IT it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
+        {
+            if( cnt >= childPosition )
+            {
+                mAliasRootNodeList.insert( it, pT );
+                break;
+            }
+            cnt++;
+        }
+    }
+
+    if( mAliasMap.find( pT->getID() ) == mAliasMap.end() )
+    {
+        mAliasMap.insert( pT->getID(), pT );
+    }
 }
 
-void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID )
+void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
     TAlias * pOldParent = getAliasPrivate( oldParentID );
     TAlias * pNewParent = getAliasPrivate( newParentID );
@@ -108,17 +131,18 @@ void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID )
     {
         removeAliasRootNode( pChild );    
     }
-    if( pNewParent ) 
+
+    if( pNewParent )
     {
-        pNewParent->addChild( pChild );
+        pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     }
-    if( ! pNewParent )
+    else
     {
         pChild->Tree<TAlias>::setParent( 0 );
-        addAliasRootNode( pChild );
+        addAliasRootNode( pChild, parentPosition, childPosition );
     }
 }
 

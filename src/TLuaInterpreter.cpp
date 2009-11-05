@@ -1239,9 +1239,8 @@ int TLuaInterpreter::killTrigger( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString text(luaSendText.c_str());
-    pHost->disableTrigger( text );    
-    pHost->killTrigger( text );    
-    return 0;
+    lua_pushboolean( L, pHost->killTrigger( text ) );
+    return 1;
 }
 
 // openUserWindow( session, string window_name )

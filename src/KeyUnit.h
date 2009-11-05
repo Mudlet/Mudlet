@@ -44,7 +44,7 @@ public:
     void                  disableKey( QString & name );
     bool                  registerKey( TKey * pT );
     void                  unregisterKey( TKey * pT );
-    void                  reParentKey( int childID, int oldParentID, int newParentID );
+    void                  reParentKey( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     qint64                getNewID();
     QString               getKeyName( int keyCode, int modifier );
     void                  setupKeyNames();
@@ -54,7 +54,7 @@ public:
 private: 
     KeyUnit(){;}
     TKey *                getKeyPrivate( int id );
-    void                  addKeyRootNode( TKey * pT );
+    void                  addKeyRootNode( TKey * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addKey( TKey * pT );
     void                  removeKeyRootNode( TKey * pT );
     void                  removeKey( TKey *);

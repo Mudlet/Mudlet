@@ -99,7 +99,7 @@ public:
     void               enableKey( QString & );
     void               disableKey( QString & );
     bool               killTimer( QString & );
-    void               killTrigger( QString & );
+    bool               killTrigger( QString & );
     double             stopStopWatch( int );
     bool               resetStopWatch( int );
     bool               startStopWatch( int );

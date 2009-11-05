@@ -77,18 +77,41 @@ void KeyUnit::disableKey( QString & name )
     } 
 }
 
-void KeyUnit::addKeyRootNode( TKey * pT )
+void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );    
     }
-    mKeyRootNodeList.push_back( pT );
-    mKeyMap.insert( pT->getID(), pT );
+
+    if( ( parentPosition == -1 ) || ( childPosition >= mKeyRootNodeList.size() ) )
+    {
+        mKeyRootNodeList.push_back( pT );
+    }
+    else
+    {
+        // insert item at proper position
+        int cnt = 0;
+        typedef std::list<TKey *>::iterator IT;
+        for( IT it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
+        {
+            if( cnt >= childPosition )
+            {
+                mKeyRootNodeList.insert( it, pT );
+                break;
+            }
+            cnt++;
+        }
+    }
+
+    if( mKeyMap.find( pT->getID() ) == mKeyMap.end() )
+    {
+        mKeyMap.insert( pT->getID(), pT );
+    }
 }
 
-void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID )
+void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
     QMutexLocker locker(& mKeyUnitLock);
     
@@ -107,17 +130,17 @@ void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID )
     {
         removeKeyRootNode( pChild );    
     }
-    if( pNewParent ) 
+    if( pNewParent )
     {
-        pNewParent->addChild( pChild );
+        pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     }
-    if( ! pNewParent )
+    else
     {
         pChild->Tree<TKey>::setParent( 0 );
-        addKeyRootNode( pChild );
+        addKeyRootNode( pChild, parentPosition, childPosition );
     }
 }
 

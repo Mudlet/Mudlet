@@ -46,7 +46,7 @@ public:
     bool                  killTimer( QString & name );
     bool                  registerTimer( TTimer * pT );
     void                  unregisterTimer( TTimer * pT );
-    void                  reParentTimer( int childID, int oldParentID, int newParentID );
+    void                  reParentTimer( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  stopAllTriggers();
     void                  reenableAllTriggers();
     void                  markCleanup( TTimer * );
@@ -57,7 +57,7 @@ public:
 private: 
     TimerUnit(){;}
     TTimer *              getTimerPrivate( int id );
-    void                  addTimerRootNode( TTimer * pT );
+    void                  addTimerRootNode( TTimer * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addTimer( TTimer * pT );
     void                  removeTimerRootNode( TTimer * pT );
     void                  removeTimer( TTimer *);

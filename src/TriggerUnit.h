@@ -42,12 +42,12 @@ public:
     TTrigger *            getTrigger( int id );
     void                  enableTrigger( QString & );
     void                  disableTrigger( QString & );
-    void                  killTrigger( QString & name );
+    bool                  killTrigger( QString & name );
     bool                  registerTrigger( TTrigger * pT );
     void                  unregisterTrigger( TTrigger * pT );
     bool                  serialize( QDataStream & );
     bool                  restore( QDataStream &, bool );
-    void                  reParentTrigger( int childID, int oldParentID, int newParentID );
+    void                  reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  processDataStream( QString &, int );
     void                  dump();
     void                  setTriggerStayOpen( QString, int );
@@ -61,7 +61,7 @@ public:
 private: 
                               TriggerUnit(){;}
     TTrigger *                getTriggerPrivate( int id );
-    void                      addTriggerRootNode( TTrigger * pT );
+    void                      addTriggerRootNode( TTrigger * pT, int parentPosition = -1, int childPosition = -1 );
     void                      addTrigger( TTrigger * pT );
     void                      removeTriggerRootNode( TTrigger * pT );
     void                      removeTrigger( TTrigger *);

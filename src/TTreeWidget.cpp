@@ -153,22 +153,29 @@ void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, i
 
 void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
 {
+    // determin position in parent list
+
     if( mIsDropAction )
     {
         QModelIndex child = parent.child( start, 0 );
+        int parentPosition = parent.row();
+        int childPosition = child.row();
         if( mChildID == 0 )
         {
             mChildID = parent.model()->index( start, 0 ).data( Qt::UserRole ).toInt();
+            //qDebug()<<"item has parent: parent row="<<parent.row()<<" child.row="<<child.row()<<" pos="<<child.row()-parent.row();
         }
+        //else
+        //    qDebug()<<"iten has no parent: parent row="<<parent.row()<<" child.row="<<child.row()<<" pos="<<child.row()-parent.row();
         int newParentID = parent.data( Qt::UserRole ).toInt();
         //TDebug()<<"rowsInserted() newParentID="<<newParentID>>0;
         if( mIsTriggerTree ) 
-            mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID );
+            mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
         if( mIsAliasTree ) 
-            mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID );
+            mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
         if( mIsTimerTree )
         {
-            mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID );
+            mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             TTimer * pTChild = mpHost->getTimerUnit()->getTimer( mChildID );
             TTimer * pTnewParent = mpHost->getTimerUnit()->getTimer( newParentID );
             if( pTChild )
@@ -209,10 +216,10 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
             }
         }
         if( mIsScriptTree ) 
-            mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID );
+            mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
         if( mIsActionTree ) 
         {
-            mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID );
+            mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             mpHost->getActionUnit()->updateToolbar();
         }
         

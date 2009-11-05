@@ -1505,7 +1505,7 @@ and thus help reduce complexity on large systems.
 
 
 [[tempTimer]]
-== tempTimer( seconds, lua_code ) returns timer ID
+== tempTimer( seconds, lua_code ) returns timer ID, ID is a string and not a number.
 Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 example:
 ----
@@ -1552,14 +1552,14 @@ Result:
 
 
 [[tempTrigger]]
-== tempTrigger( string, lua_code ) returns trigger ID
+== tempTrigger( string, lua_code ) returns trigger ID, ID is a string and not a number.
 This function creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one. This is the second fastest trigger (with begin of line substring patterns being the fastest) and should be used instead of regex triggers whenever possible.
 
 
 
 
 [[tempLineTrigger]]
-== tempLineTrigger( from, howMany, LuaCode ) returns trigger ID
+== tempLineTrigger( from, howMany, LuaCode ) returns trigger ID, ID is a string and not a number.
 Temporary trigger that will fire on n consecutive lines following the current line. This is useful 
 to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, [[send("shout Help")]] ) will fire 3 times starting with the line from the MUD.
 tempLineTrigger( 20, 2, [[send("shout Help")]] )
@@ -1570,18 +1570,18 @@ The function returns the ID of the newly created temporary trigger. You can use 
 
 [[tempRegexTrigger]]
 == tempRegexTrigger( regex, lua_code ) returns trigger ID
-temorary trigger using perl regex pattern matching <<tempTrigger, This function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on. -> tempTrigger()
+temorary trigger using perl regex pattern matching <<tempTrigger, This function returns the ID of the newly created temporary trigger. *ID is a string and not a number.* You can use this ID to enable/disable or kill this trigger later on. -> tempTrigger()
 
 
 
 [[killTimer]]
 == killTimer( id ) returns true or false
-Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn't exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.
+Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. ID is a string and not a number. This function returns true on success and false if the timer id doesn't exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.
 
 
 [[killTrigger]]
 == killTrigger( id ) returns true or false
-Deletes a tempTrigger according to trigger ID. -> <<killTimer,killTimer()>>
+Deletes a tempTrigger according to trigger ID. ID is a string value, not a number. -> <<killTimer,killTimer()>>
 
 
 = Buffer, Screen and Mini Windows Functions
@@ -1589,13 +1589,13 @@ Deletes a tempTrigger according to trigger ID. -> <<killTimer,killTimer()>>
 
 [[openUserWindow]]
 == openUserWindow( name )
-Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
+Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them. Most often a mini console is more useful than a dockable window -> <<createMiniConsole,createMiniConsole>>
 
 
 
 [[clearUserWindow]]
 == clearUserWindow( window_name )
-Clears the user window with the name given as argument.
+Clears the user window or a mini console with the name given as argument.
 
 
 

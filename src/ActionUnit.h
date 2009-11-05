@@ -48,7 +48,7 @@ public:
     void                  unregisterAction( TAction * pT );
     bool                  serialize( QDataStream & );
     bool                  restore( QDataStream &, bool );
-    void                  reParentAction( int childID, int oldParentID, int newParentID );
+    void                  reParentAction( int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1 );
     qint64                getNewID();
     void                  updateToolbar();
     std::list<TToolBar *> getToolBarList();
@@ -66,7 +66,7 @@ public:
 private: 
                           ActionUnit(){;}
     TAction *             getActionPrivate( int id );
-    void                  addActionRootNode( TAction * pT );
+    void                  addActionRootNode( TAction * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addAction( TAction * pT );
     void                  removeActionRootNode( TAction * pT );
     void                  removeAction( TAction *);

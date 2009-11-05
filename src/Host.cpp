@@ -378,9 +378,9 @@ void Host::disableTrigger( QString & name )
     mTriggerUnit.disableTrigger( name );
 }
 
-void Host::killTrigger( QString & name )
+bool Host::killTrigger( QString & name )
 {
-    mTriggerUnit.killTrigger( name );    
+    return mTriggerUnit.killTrigger( name );
 }
 
 

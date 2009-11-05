@@ -57,7 +57,7 @@ void TimerUnit::reenableAllTriggers()
 }
 
 
-void TimerUnit::addTimerRootNode( TTimer * pT )
+void TimerUnit::addTimerRootNode( TTimer * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
@@ -66,21 +66,35 @@ void TimerUnit::addTimerRootNode( TTimer * pT )
     }
     
     mTimerRootNodeList.push_back( pT );
-    if( mTimerMap.find( pT->getID() ) == mTimerMap.end() )
+
+    if( ( parentPosition == -1 ) || ( childPosition >= mTimerRootNodeList.size() ) )
     {
-        mTimerMap.insert( pT->getID(), pT );
+        mTimerRootNodeList.push_back( pT );
     }
-    /*else
+    else
     {
-        map<int,TTimer*>::iterator it;
-        for( it=mTimerMap.begin(); it!=mTimerMap.end(); it++  ) 
+        // insert item at proper position
+        int cnt = 0;
+        typedef std::list<TTimer *>::iterator IT;
+        for( IT it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
         {
-            int id = it->first;
+            if( cnt >= childPosition )
+            {
+                mTimerRootNodeList.insert( it, pT );
+                break;
+            }
+            cnt++;
         }
-    }        */
+    }
+
+    // -> schneller; sicherheitsabfrage nicht noetig
+    //if( mTimerMap.find( pT->getID() ) == mTimerMap.end() )
+    //{
+    mTimerMap.insert( pT->getID(), pT );
+    //}
 }
 
-void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID )
+void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
     TTimer * pOldParent = getTimerPrivate( oldParentID );
     TTimer * pNewParent = getTimerPrivate( newParentID );
@@ -100,17 +114,17 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID )
     {
         removeTimerRootNode( pChild );    
     }
-    if( pNewParent ) 
+    if( pNewParent )
     {
-        pNewParent->addChild( pChild );
+        pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     }
-    if( ! pNewParent )
+    else
     {
         pChild->Tree<TTimer>::setParent( 0 );
-        addTimerRootNode( pChild );
+        addTimerRootNode( pChild, parentPosition, childPosition );
     }
     
     pChild->enableTimer( childID );

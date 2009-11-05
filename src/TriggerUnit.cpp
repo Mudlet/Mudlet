@@ -36,20 +36,38 @@
 
 using namespace std;
 
-void TriggerUnit::addTriggerRootNode( TTrigger * pT )
+void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );    
     }
-    
-    mTriggerRootNodeList.push_back( pT );
+    if( ( parentPosition == -1 ) || ( childPosition >= mTriggerRootNodeList.size() ) )
+    {
+        mTriggerRootNodeList.push_back( pT );
+    }
+    else
+    {
+         // insert item at proper position
+        int cnt = 0;
+        typedef std::list<TTrigger *>::iterator IT;
+        for( IT it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
+        {
+            if( cnt >= childPosition )
+            {
+                mTriggerRootNodeList.insert( it, pT );
+                break;
+            }
+            cnt++;
+        }
+    }
+
     mTriggerMap.insert( pT->getID(), pT );
     
 }
 
-void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID )
+void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
     TTrigger * pOldParent = getTriggerPrivate( oldParentID );
     TTrigger * pNewParent = getTriggerPrivate( newParentID );
@@ -68,7 +86,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     }
     if( pNewParent ) 
     {
-        pNewParent->addChild( pChild );
+        pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
@@ -76,7 +94,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     else
     {
         pChild->Tree<TTrigger>::setParent( 0 );
-        addTriggerRootNode( pChild );
+        addTriggerRootNode( pChild, parentPosition, childPosition );
     }
 }
 
@@ -159,7 +177,8 @@ void TriggerUnit::removeTrigger( TTrigger * pT )
 {
     if( ! pT ) return;
     
-    mTriggerMap.remove(pT->getID());    
+    mTriggerMap.remove(pT->getID());
+    delete pT;
 }
 
 
@@ -309,21 +328,21 @@ void TriggerUnit::setTriggerStayOpen( QString name, int lines )
     }
 }
 
-void TriggerUnit::killTrigger( QString & name )
+bool TriggerUnit::killTrigger( QString & name )
 {
-    QMutexLocker locker(& mTriggerUnitLock); 
-    RERUN: TTrigger * ret = 0;
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
-        ret = pChild->killTrigger( name );
-        if( ret )
+        if( pChild->getName() == name )
         {
-            delete ret;
-            goto RERUN;
+            // only temporary triggers can be killed
+            if( ! pChild->isTempTrigger() ) return false;
+            removeTrigger( pChild );
+            return true;
         }
-    } 
+    }
+    return false;
 }
 
 
