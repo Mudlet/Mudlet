@@ -1076,7 +1076,8 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 |===================================================
 
 [[apiIndex]]
-= Alphabetical Function Index
+== Alphabetical Function Index
+Click on the respective function to get more information
 
 == A
 <<appendBuffer,appendBuffer>>, 
@@ -1155,6 +1156,7 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 == P
 <<paste,paste>>, 
 <<pasteUserWindow,pasteUserWindow>>, 
+<<playSoundFile,playSoundFile>>, 
 <<prefix,prefix>>, 
 
 == R
@@ -1439,8 +1441,6 @@ If the windowName parameteris omitted, the main screen will be used.
 Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.
 
 
-= Trigger, Timer, Alias and Key Functions
-
 
 [[disableTimer]]
 == disableTimer( name )
@@ -1583,8 +1583,6 @@ Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter.
 == killTrigger( id ) returns true or false
 Deletes a tempTrigger according to trigger ID. ID is a string value, not a number. -> <<killTimer,killTimer()>>
 
-
-= Buffer, Screen and Mini Windows Functions
 
 
 [[openUserWindow]]
@@ -1785,7 +1783,14 @@ Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 == resetFormat()
 resets the user character format to the default.
 
-= Miscellaneous Functions
+
+[[playSoundFile]]
+== playSoundFile( fileName )
+This function plays a sound file. To make sound work on your operating system you may need to install additional packages:
+
+Microsoft Windows:   The underlying multimedia system is used; only WAVE format sound files are supported. (works out of the box)
+X11:	             The Network Audio System is used if available, otherwise all operations work silently. NAS supports WAVE and AU files.
+Mac OS X:	     NSSound is used. All formats that NSSound supports, including QuickTime formats, are supported by Qt for Mac OS X. (should work out of the box)
 
 
 [[createBuffer]]

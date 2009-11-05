@@ -1977,6 +1977,21 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     mudlet::self()->echoWindow( pHost, windowName, text );
     return 0;
 }
+int TLuaInterpreter::playSoundFile( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    QSound::play( QString( luaSendText.c_str() ) );
+}
 
 int TLuaInterpreter::moveCursorEnd( lua_State *L )
 {
@@ -3410,6 +3425,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempColorTrigger", TLuaInterpreter::tempColorTrigger );
     lua_register( pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor );
     lua_register( pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor );
+    lua_register( pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile );
 
 
     QString n;

@@ -185,6 +185,7 @@ public:
     static int tempColorTrigger( lua_State * );
     static int isAnsiFgColor( lua_State * );
     static int isAnsiBgColor( lua_State * );
+    static int playSoundFile( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

@@ -17300,7 +17300,10 @@ cellspacing="0" cellpadding="4">
 </table>
 </div>
 </div>
-<h1 id="apiIndex">Alphabetical Function Index</h1>
+<h2 id="apiIndex">Alphabetical Function Index</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Click on the respective function to get more information</p></div>
+</div>
 <h2 id="_a">A</h2>
 <div class="sectionbody">
 <div class="paragraph"><p><a href="#appendBuffer">appendBuffer</a>,</p></div>
@@ -17387,6 +17390,7 @@ cellspacing="0" cellpadding="4">
 <div class="sectionbody">
 <div class="paragraph"><p><a href="#paste">paste</a>,
 <a href="#pasteUserWindow">pasteUserWindow</a>,
+<a href="#playSoundFile">playSoundFile</a>,
 <a href="#prefix">prefix</a>,</p></div>
 </div>
 <h2 id="_r">R</h2>
@@ -17450,13 +17454,16 @@ cellspacing="0" cellpadding="4">
 <div class="sectionbody">
 <div class="paragraph"><p>This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.</p></div>
 </div>
-<h2 id="echo">echo( text )</h2>
+<h2 id="echo">echo( windowName, text )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>appends text at the end of the current line of the main window. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.</p></div>
-</div>
-<h2 id="_echo_windowname_text">echo( windowName, text )</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>appends text at the end of the current line to window windowName. The cursor position is ignored. If you want to print at a certain position use moveCursor() and insertText()</p></div>
+<div class="paragraph"><p>This function appends text at the end of the current line. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
+If the first argument is ommitted the main console is used, otherwise the mini console windowName.
+=== Example 1:
+---
+echo( "Hello world\n" )&#8201;&#8212;&#8201;writes "Hello world" to the main screen.
+echo( "info", "Hello this is the info window" )&#8201;&#8212;&#8201;writes text to the mini console named "info" if such a window exists
+---
+=== Example 2:</p></div>
 </div>
 <h2 id="selectString">selectString( text, number_of_match ) returns position in line or -1 on error (text not found in line)</h2>
 <div class="sectionbody">
@@ -18008,7 +18015,6 @@ If the windowName parameteris omitted, the main screen will be used.</p></div>
 <div class="sectionbody">
 <div class="paragraph"><p>Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></div>
 </div>
-<h1 id="_trigger_timer_alias_and_key_functions">Trigger, Timer, Alias and Key Functions</h1>
 <h2 id="disableTimer">disableTimer( name )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.</p></div>
@@ -18055,7 +18061,7 @@ as the first argument is always the event name. So you can call your own special
 should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees
 and thus help reduce complexity on large systems.</p></div>
 </div>
-<h2 id="tempTimer">tempTimer( seconds, lua_code ) returns timer ID</h2>
+<h2 id="tempTimer">tempTimer( seconds, lua_code ) returns timer ID, ID is a string and not a number.</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 example:</p></div>
@@ -18101,11 +18107,11 @@ Result:
 10</tt></pre>
 </div></div>
 </div>
-<h2 id="tempTrigger">tempTrigger( string, lua_code ) returns trigger ID</h2>
+<h2 id="tempTrigger">tempTrigger( string, lua_code ) returns trigger ID, ID is a string and not a number.</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>This function creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitely disabled or killed. Disabled tempTimers can be reenabled with enableTrigger(). This is much faster than killing the trigger and creating a new one. This is the second fastest trigger (with begin of line substring patterns being the fastest) and should be used instead of regex triggers whenever possible.</p></div>
 </div>
-<h2 id="tempLineTrigger">tempLineTrigger( from, howMany, LuaCode ) returns trigger ID</h2>
+<h2 id="tempLineTrigger">tempLineTrigger( from, howMany, LuaCode ) returns trigger ID, ID is a string and not a number.</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Temporary trigger that will fire on n consecutive lines following the current line. This is useful
 to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, <a id="send("shout Help")"></a> ) will fire 3 times starting with the line from the MUD.
@@ -18115,24 +18121,23 @@ The function returns the ID of the newly created temporary trigger. You can use 
 </div>
 <h2 id="tempRegexTrigger">tempRegexTrigger( regex, lua_code ) returns trigger ID</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>temorary trigger using perl regex pattern matching &lt;&lt;tempTrigger, This function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on. &#8594; tempTrigger()</p></div>
+<div class="paragraph"><p>temorary trigger using perl regex pattern matching &lt;&lt;tempTrigger, This function returns the ID of the newly created temporary trigger. <strong>ID is a string and not a number.</strong> You can use this ID to enable/disable or kill this trigger later on. &#8594; tempTrigger()</p></div>
 </div>
 <h2 id="killTimer">killTimer( id ) returns true or false</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. This function returns true on success and false if the timer id doesn&#8217;t exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.</p></div>
+<div class="paragraph"><p>Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. ID is a string and not a number. This function returns true on success and false if the timer id doesn&#8217;t exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off.</p></div>
 </div>
 <h2 id="killTrigger">killTrigger( id ) returns true or false</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Deletes a tempTrigger according to trigger ID. &#8594; <a href="#killTimer">killTimer()</a></p></div>
+<div class="paragraph"><p>Deletes a tempTrigger according to trigger ID. ID is a string value, not a number. &#8594; <a href="#killTimer">killTimer()</a></p></div>
 </div>
-<h1 id="_buffer_screen_and_mini_windows_functions">Buffer, Screen and Mini Windows Functions</h1>
 <h2 id="openUserWindow">openUserWindow( name )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them.</p></div>
+<div class="paragraph"><p>Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them. Most often a mini console is more useful than a dockable window &#8594; <a href="#createMiniConsole">createMiniConsole</a></p></div>
 </div>
 <h2 id="clearUserWindow">clearUserWindow( window_name )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Clears the user window with the name given as argument.</p></div>
+<div class="paragraph"><p>Clears the user window or a mini console with the name given as argument.</p></div>
 </div>
 <h2 id="copy">copy()</h2>
 <div class="sectionbody">
@@ -18171,6 +18176,67 @@ Absolute line numbers are used.</p></div>
 <h2 id="moveCursor">moveCursor( windowName, x, y ) returns true or false</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don&#8217;t exist. To determine tha correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. If you omit the windowName argument, the main screen will be used.</p></div>
+<h3 id="_example">Example:</h3>
+<div class="listingblock">
+<div class="content">
+<pre><tt>-- set up the small system message window in the top right corner
+
+-- determine the size of your screen
+WindowWidth=0;
+WindowHeight=0;
+WindowWidth, WindowHeight = getMainWindowSize();
+
+-- define a mini console named "sys" and set its background color
+createMiniConsole("sys",WindowWidth-650,0,650,300)
+setBackgroundColor("sys",85,55,0,255);
+
+-- you *must* set the font size, otherwise mini windows will not work properly
+setMiniConsoleFontSize("sys", 12);
+-- wrap lines in window "sys" at 65 characters per line
+setWindowWrap("sys", 60);
+-- set default font colors and font style for window "sys"
+setTextFormat("sys",0,35,255,50,50,50,0,0,0);
+-- clear the window
+clearUserWindow("sys")
+
+moveCursorEnd("sys")
+setFgColor("sys", 10,10,0)
+setBgColor("sys", 0,0,255)
+echo("sys", "test1---line1\n&lt;this line is to be deleted&gt;\n&lt;this line is to be deleted also&gt;\n")
+echo("sys", "test1---line2\n")
+echo("sys", "test1---line3\n")
+setTextFormat("sys",158,0,255,255,0,255,0,0,0);
+--setFgColor("sys",255,0,0);
+echo("sys", "test1---line4\n")
+echo("sys", "test1---line5\n")
+moveCursor("sys", 1,1)
+
+-- deleting lines 2+3
+deleteLine("sys");
+deleteLine("sys");
+
+-- inserting a line at pos 5,2
+moveCursor("sys", 5,2);
+setFgColor("sys", 100,100,0)
+setBgColor("sys", 255,100,0)
+insertText("sys","############## line inserted at pos 5/2 ##############");
+
+-- inserting a line at pos 0,0
+moveCursor("sys", 0,0)
+selectCurrentLine("sys");
+setFgColor("sys", 255,155,255);
+setBold( "sys", true );
+setUnderline( "sys", true );
+setItalics( "sys", true );
+insertText("sys", "------- line inserted at: 0/0 -----\n");
+
+setBold( "sys", true )
+setUnderline( "sys", false )
+setItalics( "sys", false )
+setFgColor("sys", 255,100,0)
+setBgColor("sys", 155,155,0)
+echo("sys", "*** This is the end. ***\n");</tt></pre>
+</div></div>
 </div>
 <h2 id="moveCursorEnd">moveCursorEnd( windowName ) returns true or false</h2>
 <div class="sectionbody">
@@ -18232,7 +18298,13 @@ Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$<
 <div class="sectionbody">
 <div class="paragraph"><p>resets the user character format to the default.</p></div>
 </div>
-<h1 id="_miscellaneous_functions">Miscellaneous Functions</h1>
+<h2 id="playSoundFile">playSoundFile( fileName )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function plays a sound file. To make sound work on your operating system you may need to install additional packages:</p></div>
+<div class="paragraph"><p>Microsoft Windows:   The underlying multimedia system is used; only WAVE format sound files are supported. (works out of the box)
+X11:                 The Network Audio System is used if available, otherwise all operations work silently. NAS supports WAVE and AU files.
+Mac OS X:            NSSound is used. All formats that NSSound supports, including QuickTime formats, are supported by Qt for Mac OS X. (should work out of the box)</p></div>
+</div>
 <h2 id="createBuffer">createBuffer( name )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>creates a named buffer for formatated text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work</p></div>
@@ -27707,7 +27779,7 @@ end</tt></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-04 17:07:31 CEST
+Last updated 2009-11-05 16:03:51 CEST
 </div>
 </div>
 </body>
