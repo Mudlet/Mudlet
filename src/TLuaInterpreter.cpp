@@ -951,42 +951,57 @@ int TLuaInterpreter::selectSection( lua_State * L )
 
 int TLuaInterpreter::moveCursor( lua_State * L )
 {
-    string luaWindowName="";
-    if( lua_isstring( L, 1 ) )
+    int s = 1;
+    int n = lua_gettop( L );
+    string a1;
+    if( n > 2 )
     {
-        luaWindowName = lua_tostring( L, 1 );
+        if( ! lua_isstring( L, s ) )
+        {
+          lua_pushstring( L, "wrong argument type" );
+          lua_error( L );
+          return 1;
+        }
+        else
+        {
+            a1 = lua_tostring( L, s );
+            s++;
+        }
     }
-    else
-        luaWindowName = "main";
     int luaFrom;
-    if( ! lua_isnumber( L, 2 ) )
+    if( ! lua_isnumber( L, s ) )
     {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
     else
-    { 
-        luaFrom = lua_tointeger( L, 2 );
-    }      
-    
+    {
+        luaFrom = lua_tointeger( L, s );
+        s++;
+    }
+
     int luaTo;
-    if( ! lua_isnumber( L, 3 ) )
+    if( ! lua_isnumber( L, s ) )
     {
         lua_pushstring( L, "wrong argument type" );
         lua_error( L );
         return 1;
     }
     else
-    { 
-        luaTo=lua_tointeger( L, 3 );
-    }      
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    QString windowName = luaWindowName.c_str();
-    if( luaWindowName == "main" )
+    {
+        luaTo=lua_tointeger( L, s );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
+    if( a1 == "main" || n < 3 )
         lua_pushboolean( L, pHost->mpConsole->moveCursor( luaFrom, luaTo ) );
     else
+    {
+        QString windowName = a1.c_str();
         lua_pushboolean( L, mudlet::self()->moveCursor( windowName, luaFrom, luaTo ) );
+    }
     return 1;
 }
 

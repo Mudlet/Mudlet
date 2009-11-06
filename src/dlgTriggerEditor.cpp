@@ -5272,7 +5272,7 @@ void dlgTriggerEditor::slot_cursorPositionChanged()
     }
     else
     {
-        line = QString("line number: %1/%2").arg( _line + 2 ).arg( _maxLines + 1 );
+        line = QString("current line number: %1/%2").arg( _line + 2 ).arg( _maxLines + 1 );
     }
     QMainWindow::statusBar()->showMessage( line );
 }
