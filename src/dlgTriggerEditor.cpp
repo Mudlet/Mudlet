@@ -172,6 +172,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->setSizePolicy( sizePolicy5 );
     pVB1->addWidget( mpSourceEditorArea );
     QPlainTextEdit * editp = mpSourceEditorArea->editor;
+    editp->setWordWrapMode( QTextOption::NoWrap );
     //QLineEdit * mpCursorPositionIndicator = new QLineEdit;
     //(QMainWindow::statusBar())->addWidget( mpCursorPositionIndicator  );
     connect(editp,SIGNAL(cursorPositionChanged()), this, SLOT(slot_cursorPositionChanged()));
@@ -5261,13 +5262,18 @@ void dlgTriggerEditor::slot_color_trigger_bg()
 
 void dlgTriggerEditor::slot_cursorPositionChanged()
 {
-
-    if( ! mpCursorPositionIndicator ) return;
     int _line = (mpSourceEditorArea->editor->textCursor()).blockNumber();
-    qDebug()<<"cursor moved to:"<<_line;
-    QString line = QString("line number: %1").arg(_line);
-    qDebug()<<"LINE="<<line;
-    //mpCursorPositionIndicator->setText( line );
+    int _maxLines = mpSourceEditorArea->editor->blockCount();
+    QString line;
+
+    if( mCurrentView == cmScriptView )
+    {
+        line = QString("current line number: %1/%2").arg( _line + 1 ).arg( _maxLines );
+    }
+    else
+    {
+        line = QString("line number: %1/%2").arg( _line + 2 ).arg( _maxLines + 1 );
+    }
     QMainWindow::statusBar()->showMessage( line );
 }
 
