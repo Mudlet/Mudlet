@@ -186,6 +186,12 @@ public:
     static int isAnsiFgColor( lua_State * );
     static int isAnsiBgColor( lua_State * );
     static int playSoundFile( lua_State * );
+    static int setBorderTop( lua_State * );
+    static int setBorderBottom( lua_State * );
+    static int setBorderLeft( lua_State * );
+    static int setBorderRight( lua_State * );
+
+
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

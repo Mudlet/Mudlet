@@ -1563,6 +1563,78 @@ int TLuaInterpreter::hideUserWindow( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setBorderTop( lua_State *L )
+{
+    int x1;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mBorderTopHeight = x1;
+    return 0;
+}
+
+int TLuaInterpreter::setBorderBottom( lua_State *L )
+{
+    int x1;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mBorderBottomHeight = x1;
+    return 0;
+}
+
+int TLuaInterpreter::setBorderLeft( lua_State *L )
+{
+    int x1;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mBorderLeftWidth = x1;
+    return 0;
+}
+
+int TLuaInterpreter::setBorderRight( lua_State *L )
+{
+    int x1;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mBorderRightWidth = x1;
+    return 0;
+}
+
 int TLuaInterpreter::resizeUserWindow( lua_State *L )
 {
     string luaSendText="";
@@ -1643,6 +1715,7 @@ int TLuaInterpreter::moveWindow( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
     QString text(luaSendText.c_str());
     mudlet::self()->moveWindow( text, static_cast<int>(x1), static_cast<int>(y1) );
 
@@ -3441,7 +3514,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor );
     lua_register( pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor );
     lua_register( pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile );
-
+    lua_register( pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop );
+    lua_register( pGlobalLua, "setBorderBottom", TLuaInterpreter::setBorderBottom );
+    lua_register( pGlobalLua, "setBorderLeft", TLuaInterpreter::setBorderLeft );
+    lua_register( pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
