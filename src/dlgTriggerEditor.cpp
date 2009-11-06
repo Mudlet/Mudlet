@@ -2419,7 +2419,7 @@ void dlgTriggerEditor::saveAction()
     int posY = mpActionsMainArea->buttonPosY->text().toInt();
     int rotation = mpActionsMainArea->buttonRotation->currentIndex();
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
-    bool flatButton = mpActionsMainArea->buttonFlat->isChecked();
+    //bool flatButton = mpActionsMainArea->buttonFlat->isChecked();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
     int location = mpActionsMainArea->comboBox_location->currentIndex();
@@ -2445,7 +2445,7 @@ void dlgTriggerEditor::saveAction()
             pT->setButtonColor( color );
             pT->setButtonRotation( rotation );
             pT->setButtonColumns( columns );
-            pT->setButtonFlat( flatButton );
+      //      pT->setButtonFlat( flatButton );
             pT->mUseCustomLayout = useCustomLayout;
             pT->mPosX = posX;
             pT->mPosY = posY;
@@ -3165,14 +3165,14 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
     mpActionsMainArea->lineEdit_action_name->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
     mpActionsMainArea->buttonColumns->clear();
-    mpActionsMainArea->isLabel->setChecked(false);
+    //mpActionsMainArea->isLabel->setChecked(false);
     mpActionsMainArea->useCustomLayout->setChecked(false);
     mpActionsMainArea->buttonPosX->setText("0");
     mpActionsMainArea->buttonPosY->setText("0");
     mpActionsMainArea->buttonSizeX->setText("80");
     mpActionsMainArea->buttonSizeY->setText("25");
-    mpActionsMainArea->buttonFlat->setChecked(false);
-    mpActionsMainArea->isLabel->setChecked(false);
+    //mpActionsMainArea->buttonFlat->setChecked(false);
+    //mpActionsMainArea->isLabel->setChecked(false);
     mpActionsMainArea->useCustomLayout->setChecked(false);
     mpActionsMainArea->css->clear();
     if( (pItem == 0) || (column != 0) )
@@ -3201,10 +3201,10 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpActionsMainArea->pushButton_color->setPalette( palette );
         mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
         mpActionsMainArea->buttonColumns->setText( QString::number(pT->getButtonColumns()) );
-        mpActionsMainArea->buttonFlat->setChecked( pT->getButtonFlat() );
+      //  mpActionsMainArea->buttonFlat->setChecked( pT->getButtonFlat() );
         mpActionsMainArea->buttonSizeX->setText(QString::number(pT->getSizeX()) );
         mpActionsMainArea->buttonSizeY->setText(QString::number(pT->getSizeY()) );
-        mpActionsMainArea->isLabel->setChecked( pT->mIsLabel );
+        //mpActionsMainArea->isLabel->setChecked( pT->mIsLabel );
         mpActionsMainArea->useCustomLayout->setChecked( pT->mUseCustomLayout );
         mpActionsMainArea->buttonPosX->setText( QString::number(pT->mPosX) );
         mpActionsMainArea->buttonPosY->setText( QString::number(pT->mPosY) );

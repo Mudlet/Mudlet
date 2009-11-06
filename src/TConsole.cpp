@@ -306,7 +306,9 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     
     layoutLayer->addWidget( splitter );
     layoutLayer->addWidget( mpScrollBar );
-    
+    layoutLayer->setContentsMargins(0,0,0,0);
+    layoutLayer->setSpacing(1);
+
     layerCommandLine = new QWidget( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0,0,0,0);
     layerCommandLine->setSizePolicy( sizePolicy2 );

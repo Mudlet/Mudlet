@@ -2582,6 +2582,52 @@ int TLuaInterpreter::tempRegexTrigger( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::setBorderColor( lua_State *L )
+{
+    int luaRed;
+    int luaGreen;
+    int luaBlue;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaRed = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaGreen=lua_tointeger( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaBlue = lua_tointeger( L, 3 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QPalette framePalette;
+    framePalette.setColor( QPalette::Text, QColor(0,0,0) );
+    framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
+    framePalette.setColor( QPalette::Window, QColor( luaRed, luaGreen, luaBlue, 255 ) );
+    pHost->mpConsole->mpMainFrame->setPalette( framePalette );
+    return 0;
+}
 
 int TLuaInterpreter::setFgColor( lua_State *L )
 {
@@ -3518,6 +3564,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBorderBottom", TLuaInterpreter::setBorderBottom );
     lua_register( pGlobalLua, "setBorderLeft", TLuaInterpreter::setBorderLeft );
     lua_register( pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight );
+    lua_register( pGlobalLua, "setBorderColor", TLuaInterpreter::setBorderColor );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";

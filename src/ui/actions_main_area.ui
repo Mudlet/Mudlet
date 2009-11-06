@@ -341,7 +341,7 @@
         <property name="title">
          <string>Button Appearance</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout_3">
+        <layout class="QFormLayout" name="formLayout">
          <item row="0" column="0">
           <widget class="QLabel" name="label_action_name_5">
            <property name="text">
@@ -374,89 +374,7 @@
            </item>
           </widget>
          </item>
-         <item row="0" column="2" colspan="2">
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>Flat Style Button:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="4">
-          <widget class="QCheckBox" name="buttonFlat">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="layoutDirection">
-            <enum>Qt::RightToLeft</enum>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0" colspan="3">
-          <widget class="QGroupBox" name="isLabel">
-           <property name="autoFillBackground">
-            <bool>false</bool>
-           </property>
-           <property name="title">
-            <string>Use Label instead of a Button</string>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="checked">
-            <bool>false</bool>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_3">
-            <item>
-             <widget class="QLabel" name="label_5">
-              <property name="font">
-               <font>
-                <pointsize>6</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>This is no Button, but this is a Label instead that can be used to display text or images, but cannot trigger any actions.</string>
-              </property>
-              <property name="scaledContents">
-               <bool>true</bool>
-              </property>
-              <property name="wordWrap">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="0" column="6">
-          <widget class="QCheckBox" name="buttonIconOnly">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="layoutDirection">
-            <enum>Qt::RightToLeft</enum>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="5">
-          <widget class="QLabel" name="label_6">
-           <property name="text">
-            <string>Icon only (no text)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="3" colspan="4">
+         <item row="1" column="0" colspan="2">
           <widget class="QGroupBox" name="checkBox_pushdownbutton">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">

@@ -1180,7 +1180,12 @@ Click on the respective function to get more information
 <<setBackgroundImage,setBackgroundImage>>, 
 <<setBgColor,setBgColor>>, 
 <<setBold,setBold>>,
+<<setBorderBottom,setBorderBottom>>, 
+<<setBorderLeft,setBorderLeft>>, 
+<<setBorderRight,setBorderRight>>, 
+<<setBorderTop,setBorderTop>>, 
 <<setFgColor,setFgColor>>, 
+<<setBorderColor,setBorderColor>>, 
 <<setItalics,setItalics>>, 
 <<setLabelClickCallback,setLabelClickCallback>>, 
 <<setMiniConsoleFontSize,setMiniConsoleFontSize>>, 
@@ -2333,9 +2338,25 @@ Note that matches[1] holds the matched trigger pattern - even in substring, exac
 == isAnsiBgColor( ansiBgColorCode )
 This function tests if the first character of the current selection has the background color specified by ansiBgColorCode. <<isAnsiFgColor, -> isAnsiFgColor for more details>>
 
+[[setBorderTop]]
+== setBorderTop( size )
+Sets the height of the top border to size pixel and thus effectively moves down the main console window by size pixels to make room for e.g. mini console windows, buttons etc..
 
+[[setBorderBottom]]
+== setBorderBottom( size )
+Sets the height of the bottom border to size pixels. <<setBorderTop,-> setBorderTop>>
 
+[[setBorderLeft]]
+== setBorderLeft( size )
+Sets the width of the left border. <<setBorderTop,-> setBorderTop>>
 
+[[setBorderRight]]
+== setBorderRight( size )
+Sets the width of the right border. <<setBorderTop,-> setBorderTop>>
+
+[[setBordercolor]]
+== setBorderColor( r, g, b )
+Sets the color of the border in RGB color e.g. setBorderColor( 255, 0, 0 ) sets the border to red.
 
 
 

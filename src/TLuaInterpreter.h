@@ -190,6 +190,7 @@ public:
     static int setBorderBottom( lua_State * );
     static int setBorderLeft( lua_State * );
     static int setBorderRight( lua_State * );
+    static int setBorderColor( lua_State * );
 
 
 

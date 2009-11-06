@@ -200,7 +200,7 @@ public:
       dlgNotepad *      mpNotePad;
 
 
-private:
+//private:
 
       std::list<int>    _getFgColor();
       std::list<int>    _getBgColor();
