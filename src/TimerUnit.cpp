@@ -65,8 +65,6 @@ void TimerUnit::addTimerRootNode( TTimer * pT, int parentPosition, int childPosi
         pT->setID( getNewID() );    
     }
     
-    mTimerRootNodeList.push_back( pT );
-
     if( ( parentPosition == -1 ) || ( childPosition >= mTimerRootNodeList.size() ) )
     {
         mTimerRootNodeList.push_back( pT );

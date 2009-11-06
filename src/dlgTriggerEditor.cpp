@@ -171,7 +171,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpSourceEditorArea->setSizePolicy( sizePolicy5 );
     pVB1->addWidget( mpSourceEditorArea );
-    
+    QPlainTextEdit * editp = mpSourceEditorArea->editor;
+    //QLineEdit * mpCursorPositionIndicator = new QLineEdit;
+    //(QMainWindow::statusBar())->addWidget( mpCursorPositionIndicator  );
+    connect(editp,SIGNAL(cursorPositionChanged()), this, SLOT(slot_cursorPositionChanged()));
     // option areas
     
     QHBoxLayout * pHB2 = new QHBoxLayout(popupArea);    
@@ -5256,7 +5259,17 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     pB->setStyleSheet( styleSheet );
 }
 
+void dlgTriggerEditor::slot_cursorPositionChanged()
+{
 
+    if( ! mpCursorPositionIndicator ) return;
+    int _line = (mpSourceEditorArea->editor->textCursor()).blockNumber();
+    qDebug()<<"cursor moved to:"<<_line;
+    QString line = QString("line number: %1").arg(_line);
+    qDebug()<<"LINE="<<line;
+    //mpCursorPositionIndicator->setText( line );
+    QMainWindow::statusBar()->showMessage( line );
+}
 
 
 

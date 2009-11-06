@@ -82,6 +82,7 @@ signals:
     void                        update();
     
 public slots:
+    void                        slot_cursorPositionChanged();
     void                        slot_set_pattern_type_color( int );
     void                        slot_soundTrigger();
     void                        slot_colorizeTriggerSetBgColor();
@@ -212,7 +213,7 @@ private:
     QTreeWidgetItem *           mpCurrentScriptItem;
     QTreeWidgetItem *           mpCurrentTriggerItem;
     QTreeWidgetItem *           mpCurrentAliasItem;
-    
+    QLineEdit *                 mpCursorPositionIndicator;
     int                         mCurrentView;
     static const int            cmTriggerView;
     static const int            cmTimerView;
