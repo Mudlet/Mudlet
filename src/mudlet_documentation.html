@@ -17361,7 +17361,8 @@ cellspacing="0" cellpadding="4">
 </div>
 <h2 id="_h">H</h2>
 <div class="sectionbody">
-<div class="paragraph"><p><a href="#hideToolBar">hideToolBar</a>,
+<div class="paragraph"><p><a href="#handleWindowResizeEvent">handleWindowResizeEvent</a>,
+<a href="#hideToolBar">hideToolBar</a>,
 <a href="#hideWindow">hideWindow</a>,</p></div>
 </div>
 <h2 id="_i">I</h2>
@@ -18388,8 +18389,11 @@ resetStopWatch( fightStopWatchID );</tt></pre>
 </div>
 <h2 id="createMiniConsole">createMiniConsole( name, posX, posY, width, height )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy &amp; paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing.</p></div>
-<div class="paragraph"><p>see also: <a href="#createLabel">createLabel</a>, <a href="#hideWindow">hideWindow</a>, <a href="#showWindow">showWindow</a>, <a href="#resizeWindow">resizeWindow</a>, <a href="#setLabelClickCallback">setLabelClickCallback</a>, <a href="#setTextFormat">setTextFormat</a>, <a href="#moveWindow">moveWindow</a>, <a href="#setMiniConsoleFontSize">setMiniConsoleFontSize</a></p></div>
+<div class="paragraph"><p>opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy &amp; paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing.
+To set word wrap see <a href="#setWindowWrap">setWindowWrap</a>.
+To move the main window to make room for miniconsole windows on your screen (if you want to do this as you can also layer mini console and label windows) see <a href="#setBorderTop">setBorderTop</a>, <a href="#setBordercolor">setBorderColor</a>
+To have your scren layout adjusted after the window size of the main screen gets resized see <a href="#handleWindowResizeEvent">handleWindowResizeEvent</a></p></div>
+<div class="paragraph"><p>see also: <a href="#createLabel">createLabel</a>, <a href="#hideWindow">hideWindow</a>, <a href="#showWindow">showWindow</a>, <a href="#resizeWindow">resizeWindow</a>, <a href="#setLabelClickCallback">setLabelClickCallback</a>, <a href="#setTextFormat">setTextFormat</a>, <a href="#moveWindow">moveWindow</a>, <a href="#setMiniConsoleFontSize">setMiniConsoleFontSize</a>, <a href="#handleWindowResizeEvent">handleWindowResizeEvent</a>, <a href="#setBorderTop">setBorderTop</a>, <a href="#setBorderColor">setBorderColor</a>, <a href="#setWindowWrap">setWindowWrap</a></p></div>
 <h3 id="_example_1">Example 1:</h3>
 <div class="listingblock">
 <div class="content">
@@ -20324,7 +20328,7 @@ AATAAiADSAD47weEEEIIIYTQMDIAVIAQQKh7JH04y0FfF/8DXEcTzpZXVTsAAAAASUVORK5CYII=" />
 <div class="sectionbody">
 <div class="paragraph"><p>labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. <strong>DON&#8217;T</strong> use labels for larger text displays because they are a lot slower than the highspeed mini consoles</p></div>
 <div class="paragraph"><p>Labels accept some HTML and CSS code for text formating.</p></div>
-<div class="paragraph"><p>see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#hideWindow">hideWindow</a>, <a href="#showWindow">showWindow</a>, <a href="#resizeWindow">resizeWindow</a>, <a href="#setLabelClickCallback">setLabelClickCallback</a>, <a href="#setTextFormat">setTextFormat</a>, <a href="#moveWindow">moveWindow</a>, <a href="#setMiniConsoleFontSize">setMiniConsoleFontSize</a></p></div>
+<div class="paragraph"><p>see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#hideWindow">hideWindow</a>, <a href="#showWindow">showWindow</a>, <a href="#resizeWindow">resizeWindow</a>, <a href="#setLabelClickCallback">setLabelClickCallback</a>, <a href="#setTextFormat">setTextFormat</a>, <a href="#moveWindow">moveWindow</a>, <a href="#setMiniConsoleFontSize">setMiniConsoleFontSize</a>, <a href="#handleWindowResizeEvent">handleWindowResizeEvent</a>, <a href="#setBorderTop">setBorderTop</a>, <a href="#setBorderColor">setBorderColor</a></p></div>
 <h3 id="_example_1_2">Example 1:</h3>
 <div class="admonitionblock" id="diag_labelOverlayDemo">
 <table><tr>
@@ -27557,11 +27561,12 @@ see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLa
 <h2 id="resizeWindow">resizeWindow( name, width, height )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>resizes a mini console or label
-see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLabel">createLabel</a></p></div>
+see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLabel">createLabel</a>, <a href="#handleWindowResizeEvent">handleWindowResizeEvent</a>, <a href="#resizeWindow">resizeWindow</a>, <a href="#setBorderTop">setBorderTop</a></p></div>
 </div>
 <h2 id="moveWindow">moveWindow( name, x, y )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>This function moves window name to the given x/y coordinate. The main screen cannot be moved. Instead you&#8217;ll have to set appropriate border values &#8594; preferences to move the main screen e.g. to make room for chat or information mini consoles, or other GUI elements. In the future moveWindow() will set the border values automatically if the name paramter is omitted.</p></div>
+<div class="paragraph"><p>This function moves window name to the given x/y coordinate. The main screen cannot be moved. Instead you&#8217;ll have to set appropriate border values &#8594; preferences to move the main screen e.g. to make room for chat or information mini consoles, or other GUI elements. In the future moveWindow() will set the border values automatically if the name paramter is omitted.
+see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLabel">createLabel</a>, <a href="#handleWindowResizeEvent">handleWindowResizeEvent</a>, <a href="#resizeWindow">resizeWindow</a>, <a href="#setBorderTop">setBorderTop</a></p></div>
 </div>
 <h2 id="setMiniConsoleFontSize">setMiniConsoleFontSize( name, fontSize )</h2>
 <div class="sectionbody">
@@ -27802,9 +27807,26 @@ end</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>Sets the color of the border in RGB color e.g. setBorderColor( 255, 0, 0 ) sets the border to red.</p></div>
 </div>
+<h2 id="handleWindowResizeEvent">handleWindowResizeEvent()</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The standard implementation of this function does nothing. However, this function gets called whenever the main window is being manually resized. You can overwrite this function in your own scripts to handle window resize events yourself and e. g. adjust the screen position and size of your mini console windows, labels or other relevant GUI elements in your scripts that depend on the size of the main Window. To override this function you can simply put a function with the same name in one of your scripts thus overwriting the original empty implementation of this function.
+example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>function handleWindowResizeEvent()
+   -- determine the size of your screen
+   WindowWidth=0;
+   WindowHeight=0;
+   WindowWidth, WindowHeight = getMainWindowSize();
+
+   -- move mini console "sys" to the far right side of the screen whenever the screen gets resized
+   moveWindow("sys",WindowWidth-300,0)
+end</tt></pre>
+</div></div>
+</div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-07 01:21:30 CEST
+Last updated 2009-11-07 17:01:00 CEST
 </div>
 </div>
 </body>
