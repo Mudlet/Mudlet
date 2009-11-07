@@ -218,9 +218,9 @@ mudlet::mudlet()
     QFont mainFont;
     if( file_use_smallscreen.exists() )
     {
-        mainFont = QFont("Bitstream Vera Sans Mono", 1, QFont::Courier);   
+        mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
         showFullScreen();   
-        QAction * actionFullScreeniew = new QAction(QIcon(":/icons/emblem-important.png"), tr("Toggle Full Screen View"), this);
+        QAction * actionFullScreeniew = new QAction(QIcon(":/icons/dialog-cancel.png"), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction( actionFullScreeniew );
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
@@ -663,6 +663,24 @@ bool mudlet::resizeWindow( Host * pHost, QString & name, int x1, int y1 )
     else
         return false;
 }
+
+bool mudlet::setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 )
+{
+    if( name == "main" )
+    {
+        pHost->mpConsole->buffer.setBufferSize( x1, y1 );
+        return true;
+    }
+
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        (dockWindowConsoleMap[name]->buffer).setBufferSize( x1, y1 );
+        return true;
+    }
+    else
+        return false;
+}
+
 
 bool mudlet::moveWindow( QString & name, int x1, int y1 )
 {

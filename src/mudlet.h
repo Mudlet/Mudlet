@@ -110,6 +110,7 @@ public:
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
    void                          replayStart();
+   bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
    void                          replayOver();
 
    QTime                         mReplayTime;

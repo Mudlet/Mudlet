@@ -116,6 +116,7 @@ TChar::TChar( const TChar & copy )
 
 TBuffer::TBuffer( Host * pH )
 : mLinesLimit( 100000 )
+, mBatchDeleteSize( 10000 )
 , mpHost( pH )
 , mCursorMoved( false )
 , mWrapAt( 99999999 )
@@ -153,6 +154,14 @@ TBuffer::TBuffer( Host * pH )
     newLines = 0;
     mLastLine = 0;
     updateColors();
+}
+
+void TBuffer::setBufferSize( int s, int batch )
+{
+    if( s < 100 ) s = 100;
+    if( batch >= s ) batch = s/10;
+    mLinesLimit = s;
+    mBatchDeleteSize = batch;
 }
 
 void TBuffer::resetFontSpecs()
@@ -1048,7 +1057,7 @@ void TBuffer::append( QString & text,
 {
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
-        while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
+        while( static_cast<int>(buffer.size()) > mLinesLimit-mBatchDeleteSize )//10000 )
         {
             deleteLine( 0 );
         }
@@ -1147,7 +1156,7 @@ void TBuffer::appendLine( QString & text,
     if( sub_end < 0 ) return;
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
-        while( static_cast<int>(buffer.size()) > mLinesLimit-10000 )
+        while( static_cast<int>(buffer.size()) > mLinesLimit-mBatchDeleteSize )
         {
             deleteLine( 0 );
         }

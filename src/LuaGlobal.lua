@@ -7,6 +7,13 @@
 -- They are described in the manual.
 ------------------------------------------------------------------------
 
+function handleResizeEvent()
+end
+
+function deselect()
+	selectString("",1);
+end
+
 -----------------------------------------------------------
 -- Functions written by John Dahlstrom November 2008
 -----------------------------------------------------------

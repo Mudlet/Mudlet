@@ -475,6 +475,14 @@ void TConsole::resizeEvent( QResizeEvent * event )
     }
 
     QWidget::resizeEvent( event );
+
+    if( ! mIsDebugConsole && ! mIsSubConsole )
+    {
+        TLuaInterpreter * pLua = mpHost->getLuaInterpreter();
+        QString func = "handleWindowResizeEvent";
+        QString n = "WindowResizeEvent";
+        pLua->call( func, n );
+    }
 }
 
 void TConsole::refresh()

@@ -1132,6 +1132,7 @@ Click on the respective function to get more information
 
 
 == H
+<<handleWindowResizeEvent,handleWindowResizeEvent>>, 
 <<hideToolBar,hideToolBar>>, 
 <<hideWindow,hideWindow>>, 
 
@@ -1889,8 +1890,11 @@ sets at what position in the line the console or miniconsole will start word wra
 [[createMiniConsole]]
 == createMiniConsole( name, posX, posY, width, height )
 opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy & paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing. 
+To set word wrap see <<setWindowWrap,setWindowWrap>>. 
+To move the main window to make room for miniconsole windows on your screen (if you want to do this as you can also layer mini console and label windows) see <<setBorderTop,setBorderTop>>, <<setBordercolor,setBorderColor>>
+To have your scren layout adjusted after the window size of the main screen gets resized see <<handleWindowResizeEvent,handleWindowResizeEvent>>
 
-see also: <<createLabel,createLabel>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>
+see also: <<createLabel,createLabel>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>, <<handleWindowResizeEvent,handleWindowResizeEvent>>, <<setBorderTop,setBorderTop>>, <<setBorderColor,setBorderColor>>, <<setWindowWrap,setWindowWrap>>
 
 === Example 1: 
 ----
@@ -1928,7 +1932,7 @@ labels are intended for very small variable or prompt displays or images. labels
 
 Labels accept some HTML and CSS code for text formating.
 
-see also: <<createMiniConsole,createMiniConsole>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>
+see also: <<createMiniConsole,createMiniConsole>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>, <<handleWindowResizeEvent,handleWindowResizeEvent>>, <<setBorderTop,setBorderTop>>, <<setBorderColor,setBorderColor>>
 
 === Example 1: 
 [[diag_labelOverlayDemo]]
@@ -2087,11 +2091,12 @@ see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>
 [[resizeWindow]]
 == resizeWindow( name, width, height )
 resizes a mini console or label
-see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>
+see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>, <<handleWindowResizeEvent,handleWindowResizeEvent>>, <<resizeWindow,resizeWindow>>, <<setBorderTop,setBorderTop>>
 
 [[moveWindow]]
 == moveWindow( name, x, y )
 This function moves window name to the given x/y coordinate. The main screen cannot be moved. Instead you'll have to set appropriate border values -> preferences to move the main screen e.g. to make room for chat or information mini consoles, or other GUI elements. In the future moveWindow() will set the border values automatically if the name paramter is omitted.
+see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>, <<handleWindowResizeEvent,handleWindowResizeEvent>>, <<resizeWindow,resizeWindow>>, <<setBorderTop,setBorderTop>>
 
 [[setMiniConsoleFontSize]]
 == setMiniConsoleFontSize( name, fontSize )
@@ -2358,6 +2363,21 @@ Sets the width of the right border. <<setBorderTop,-> setBorderTop>>
 == setBorderColor( r, g, b )
 Sets the color of the border in RGB color e.g. setBorderColor( 255, 0, 0 ) sets the border to red.
 
+[[handleWindowResizeEvent]]
+== handleWindowResizeEvent()
+The standard implementation of this function does nothing. However, this function gets called whenever the main window is being manually resized. You can overwrite this function in your own scripts to handle window resize events yourself and e. g. adjust the screen position and size of your mini console windows, labels or other relevant GUI elements in your scripts that depend on the size of the main Window. To override this function you can simply put a function with the same name in one of your scripts thus overwriting the original empty implementation of this function.
+example:
+-----
+function handleWindowResizeEvent()
+   -- determine the size of your screen
+   WindowWidth=0;
+   WindowHeight=0;
+   WindowWidth, WindowHeight = getMainWindowSize();
+   
+   -- move mini console "sys" to the far right side of the screen whenever the screen gets resized
+   moveWindow("sys",WindowWidth-300,0)
+end
 
+----
 
 

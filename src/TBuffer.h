@@ -112,11 +112,12 @@ public:
     QStringList timeBuffer;
     QStringList lineBuffer;
     int mLinesLimit;
+    int mBatchDeleteSize;
     int newLines;
     int mUntriggered;
     int               mWrapAt;
     int               mWrapIndent;
-
+    void setBufferSize( int s, int batch );
     void messen();
     
 private:  
