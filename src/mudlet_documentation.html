@@ -17416,7 +17416,12 @@ cellspacing="0" cellpadding="4">
 <a href="#setBackgroundImage">setBackgroundImage</a>,
 <a href="#setBgColor">setBgColor</a>,
 <a href="#setBold">setBold</a>,
+<a href="#setBorderBottom">setBorderBottom</a>,
+<a href="#setBorderLeft">setBorderLeft</a>,
+<a href="#setBorderRight">setBorderRight</a>,
+<a href="#setBorderTop">setBorderTop</a>,
 <a href="#setFgColor">setFgColor</a>,
+<a href="#setBorderColor">setBorderColor</a>,
 <a href="#setItalics">setItalics</a>,
 <a href="#setLabelClickCallback">setLabelClickCallback</a>,
 <a href="#setMiniConsoleFontSize">setMiniConsoleFontSize</a>,
@@ -27777,9 +27782,29 @@ end</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>This function tests if the first character of the current selection has the background color specified by ansiBgColorCode. <a href="#isAnsiFgColor">&#8594; isAnsiFgColor for more details</a></p></div>
 </div>
+<h2 id="setBorderTop">setBorderTop( size )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the height of the top border to size pixel and thus effectively moves down the main console window by size pixels to make room for e.g. mini console windows, buttons etc..</p></div>
+</div>
+<h2 id="setBorderBottom">setBorderBottom( size )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the height of the bottom border to size pixels. <a href="#setBorderTop">&#8594; setBorderTop</a></p></div>
+</div>
+<h2 id="setBorderLeft">setBorderLeft( size )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the width of the left border. <a href="#setBorderTop">&#8594; setBorderTop</a></p></div>
+</div>
+<h2 id="setBorderRight">setBorderRight( size )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the width of the right border. <a href="#setBorderTop">&#8594; setBorderTop</a></p></div>
+</div>
+<h2 id="setBordercolor">setBorderColor( r, g, b )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Sets the color of the border in RGB color e.g. setBorderColor( 255, 0, 0 ) sets the border to red.</p></div>
+</div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-05 16:53:14 CEST
+Last updated 2009-11-07 01:21:30 CEST
 </div>
 </div>
 </body>
