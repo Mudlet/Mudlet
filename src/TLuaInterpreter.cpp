@@ -1005,6 +1005,63 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
+{
+    int s = 1;
+    int n = lua_gettop( L );
+    string a1;
+    if( n > 2 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+          lua_pushstring( L, "wrong argument type" );
+          lua_error( L );
+          return 1;
+        }
+        else
+        {
+            a1 = lua_tostring( L, s );
+            s++;
+        }
+    }
+    int luaFrom;
+    if( ! lua_isnumber( L, s ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFrom = lua_tointeger( L, s );
+        s++;
+    }
+
+    int luaTo;
+    if( ! lua_isnumber( L, s ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaTo=lua_tointeger( L, s );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
+    if( a1 == "main" || n < 3 )
+    {
+        pHost->mpConsole->buffer.setBufferSize( luaFrom, luaTo );
+    }
+    else
+    {
+        QString windowName = a1.c_str();
+        mudlet::self()->setConsoleBufferSize( pHost, windowName, luaFrom, luaTo );
+    }
+    return 0;
+}
 
 int TLuaInterpreter::getBufferLine( lua_State * L )
 {
@@ -3565,6 +3622,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBorderLeft", TLuaInterpreter::setBorderLeft );
     lua_register( pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight );
     lua_register( pGlobalLua, "setBorderColor", TLuaInterpreter::setBorderColor );
+    lua_register( pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";

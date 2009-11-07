@@ -191,6 +191,7 @@ public:
     static int setBorderLeft( lua_State * );
     static int setBorderRight( lua_State * );
     static int setBorderColor( lua_State * );
+    static int setConsoleBufferSize( lua_State * );
 
 
 
