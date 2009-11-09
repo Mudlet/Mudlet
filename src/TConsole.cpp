@@ -1876,7 +1876,18 @@ void TConsole::cut()
 
 void TConsole::paste()
 {
-    buffer.paste( mUserCursor, mClipboard );     //TODO: P_begin & P_end to replace selection
+
+    if( buffer.size()-1 > mUserCursor.y() )
+    {
+        qDebug()<<"pasting...y="<<mUserCursor.y()<<" buf.size="<<buffer.size();
+        buffer.paste( mUserCursor, mClipboard );     //TODO: P_begin & P_end to replace selection
+        console->needUpdate( mUserCursor.y(), mUserCursor.y() );
+    }
+    else
+    {
+        qDebug()<<"appending";
+        buffer.appendBuffer( mClipboard );
+    }
     console->showNewLines();
     console2->showNewLines();
 }

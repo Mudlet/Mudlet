@@ -69,6 +69,7 @@ public:
    bool                          createBuffer( Host *, QString & );
    bool                          showWindow( Host *, QString & );
    bool                          hideWindow( Host *, QString & );
+   bool                          paste( Host *, QString & );
    bool                          closeWindow( Host *, QString & );
    bool                          resizeWindow( Host *, QString &, int, int );
    bool                          clearWindow( Host *, QString & );

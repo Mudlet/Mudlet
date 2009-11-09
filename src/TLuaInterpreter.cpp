@@ -728,9 +728,9 @@ int TLuaInterpreter::paste( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
     if( luaWindowName == "main" )
-        pHost->mpConsole->pasteWindow();
+        pHost->mpConsole->paste();
     else
-       mudlet::self()->pasteWindow( windowName );
+       mudlet::self()->pasteWindow( pHost, windowName );
     return 0;
 }
 

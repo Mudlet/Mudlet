@@ -632,6 +632,17 @@ bool mudlet::showWindow( Host * pHost, QString & name )
     else return false;
 }
 
+bool mudlet::paste( Host * pHost, QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->paste();
+        return true;
+    }
+    else
+        return false;
+}
+
 bool mudlet::hideWindow( Host * pHost, QString & name )
 {
     if( dockWindowConsoleMap.contains( name ) )
