@@ -78,7 +78,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     mScreenWidth = 100;
     
     setMouseTracking( true );
-    setFocusPolicy( Qt::WheelFocus );
+    setFocusPolicy( Qt::NoFocus );//Qt::WheelFocus );
     QCursor cursor;
     cursor.setShape(Qt::IBeamCursor);
     setCursor( cursor );
@@ -828,7 +828,7 @@ void TTextEdit::copySelectionToClipboard()
                 {
                     QClipboard * clipboard = QApplication::clipboard();
                     clipboard->setText( text );
-                    qDebug()<<"copied to clipboard: "<<text;
+                    mSelectedRegion = QRegion( 0, 0, 0, 0 );
                     return;
                 }
             }

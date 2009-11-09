@@ -141,16 +141,19 @@ bool TCommandLine::event( QEvent * event )
                 enterCommand(ke);
                 ke->accept();
                 return true;
+                break;
 
             case Qt::Key_Down:
                 historyDown(ke);
                 ke->accept();
                 return true;
+                break;
 
             case Qt::Key_Up:
                 historyUp(ke);
                 ke->accept();
                 return true;
+                break;
 
             case Qt::Key_Escape:
 
@@ -165,16 +168,32 @@ bool TCommandLine::event( QEvent * event )
                 setPalette( mRegularPalette );
                 ke->accept();
                 return true;
+                break;
 
             case Qt::Key_PageUp:
                 mpConsole->scrollUp( mpHost->mScreenHeight );
                 ke->accept();
                 return true;
+                break;
 
             case Qt::Key_PageDown:
                 mpConsole->scrollDown( mpHost->mScreenHeight );
                 ke->accept();
                 return true;
+                break;
+
+            case Qt::Key_C:
+                if( ke->modifiers() & Qt::ControlModifier )
+                {
+                     if( mpConsole->console->mSelectedRegion != QRegion( 0, 0, 0, 0 ) )
+                     {
+                         qDebug()<<"selected region="<<mpConsole->console->mSelectedRegion;
+                         mpConsole->console->copySelectionToClipboard();
+                         ke->accept();
+                         return true;
+                     }
+                }
+                break;
 
             default:
 
@@ -187,10 +206,10 @@ bool TCommandLine::event( QEvent * event )
                 {
                     QLineEdit::event( event );
 
-                    if( mTabCompletionOld.size() < text().size() )
+                    if( mTabCompletionOld != text() )
                     {
                         mUserKeptOnTyping = true;
-                        mAutoCompletionCount = 0;
+                        mAutoCompletionCount = -1;
                     }
                     else
                     {
@@ -265,13 +284,16 @@ void TCommandLine::handleTabCompletion( bool direction )
         mUserKeptOnTyping = false;
         mTabCompletionCount = 0;
     }
-    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( 200 );
+    int amount = mpHost->mpConsole->buffer.size();
+    if( amount > 1000 ) amount = 1000;
+
+    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( amount );
     QString buffer = bufferList.join(" ");
 
     buffer.replace(QChar( 0x21af ), "\n");
     buffer.replace(QChar('\n'), " " );
 
-    QStringList wordList = buffer.split( QChar(' '), QString::SkipEmptyParts );
+    QStringList wordList = buffer.split( QRegExp("\\b"), QString::SkipEmptyParts );
     if( direction )
     {
         mTabCompletionCount++;
@@ -283,20 +305,15 @@ void TCommandLine::handleTabCompletion( bool direction )
     if( wordList.size() > 0 )
     {
         if( mTabCompletionTyped.endsWith(" ") ) return;
-        QStringList typedList = mTabCompletionTyped.split( " ", QString::SkipEmptyParts );
         QString lastWord;
-        if( typedList.size() > 1 )
-        {
-            lastWord = typedList[typedList.size()-1];
-        }
+        QRegExp reg = QRegExp("\\b(\\w+)$");
+        int typePosition = reg.indexIn( mTabCompletionTyped );
+        if( reg.numCaptures() >= 1 )
+            lastWord = reg.cap( 1 );
         else
-        {
-            lastWord = mTabCompletionTyped;
-        }
-
+            lastWord = "";
         QStringList filterList = wordList.filter( QRegExp( "^"+lastWord+"\\w+",Qt::CaseInsensitive  ) );
-        if( filterList.size() <= 1 ) return;
-        //qDebug()<<"vor sortieren size="<<filterList.size()<<" filterList="<<filterList;
+        if( filterList.size() < 1 ) return;
         int offset = 0;
         for( ; ; )
         {
@@ -306,20 +323,15 @@ void TCommandLine::handleTabCompletion( bool direction )
             ++offset;
             if( offset >= filterList.size() ) break;
         }
-        //qDebug()<<"nachher size="<<filterList.size()<<" tab="<<mTabCompletionCount<<" filterList="<<filterList;
 
         if( filterList.size() > 0 )
         {
             if( mTabCompletionCount >= filterList.size() ) mTabCompletionCount = filterList.size()-1;
-            if( mTabCompletionCount < filterList.size() )
-            {
-                if( mTabCompletionCount < 1 ) mTabCompletionCount = 1;
-                QString proposal = filterList[mTabCompletionCount-1];
-                if( typedList.size() > 0 ) typedList.pop_back();
-                QString userWords = typedList.join(" ");
-                setText( QString( userWords + " " + proposal ).trimmed().toLower() );
-                mTabCompletionOld = text();
-            }
+            if( mTabCompletionCount < 0 ) mTabCompletionCount = 0;
+            QString proposal = filterList[mTabCompletionCount];
+            QString userWords = mTabCompletionTyped.left( typePosition );
+            setText( QString( userWords + proposal ).trimmed().toLower() );
+            mTabCompletionOld = text();
         }
     }
 }
@@ -336,21 +348,25 @@ void TCommandLine::handleAutoCompletion()
     neu.chop( selectedText().size() );
     setText( neu );
     mTabCompletionOld = neu;
-    qDebug()<<"after chop text=<"<<text()<<">";
+    qDebug()<<"after chop text=<"<<text()<<">"<<" Count="<<mAutoCompletionCount;
     int oldLength = text().size();
     qDebug()<<"historyList="<<mHistoryList;
     if( mAutoCompletionCount >= mHistoryList.size() ) mAutoCompletionCount = mHistoryList.size()-1;
-    if( mAutoCompletionCount <= 0 ) mAutoCompletionCount = 0;
+    if( mAutoCompletionCount < 0 ) mAutoCompletionCount = 0;
     for( int i=mAutoCompletionCount; i<mHistoryList.size(); i++ )
     {
-        if( text() == mHistoryList[i].mid( 0, text().size() ) )
+        QString h = mHistoryList[i].mid( 0, neu.size() );
+        if( neu == h )
         {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setText( mHistoryList[i].toLower() );
             setSelection( oldLength, text().size() );
+            qDebug()<<"auto="<<mAutoCompletionCount<<" PROPOSAL:"<<mHistoryList[i];
             return;
         }
+        else
+            qDebug()<<"i="<<i<<" --> passt nicht -->"<<mHistoryList[i];
     }
 }
 
@@ -370,13 +386,6 @@ void TCommandLine::historyDown(QKeyEvent *event)
             }
             selectAll();
         }
-        /*else
-        {
-            if( mHistoryBuffer < mHistoryList.size() )
-            { 
-                setText( mHistoryList[mHistoryBuffer] );
-            }
-        }*/
     }
     else
     {
@@ -400,15 +409,6 @@ void TCommandLine::historyUp(QKeyEvent *event)
             setText( mHistoryList[mHistoryBuffer] );
             selectAll();
         }
-        /*else
-        {
-            mHistoryBuffer = 0;
-            if( mHistoryList.size() > 0 )
-            {
-                setText( mHistoryList[mHistoryBuffer]);
-            }
-            selectAll();
-        }*/
     }
     else
     {

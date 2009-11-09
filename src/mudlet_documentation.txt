@@ -12,7 +12,7 @@ Mudlet Manual
 .. <<variables,Using Variables in Mudlet>>
 .. <<alias,Input Triggers - Mudlet's Alias Engine>>
 .. <<triggers,The Trigger Engine>>
-... <<simpleTriggers, Simple Triggers>>
+... <<simpleTriggerMatching, Simple Triggers>>
 ... <<simpleHighlighterTriggers, Simple Highlighter Triggers>>
 ... <<andandorTriggers, AND and OR Triggers>>
 ... <<triggerChains, Trigger Chains & Filter Chains>>
@@ -460,6 +460,9 @@ To be continued ...
 
 [[alias]]
 == Input Triggers - Mudlet's Alias Engine
+
+IMPORTANT: QUICKSTART: Here is a video tutorial on how to do basic aliases in Mudlet: http://blip.tv/file/2288749
+
 Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
 We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlet's alias engine. 
 When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit, in form of the Lua variable [red]+command+. This variable will be matched against all active alias in the hierarchy unless access to an alias branch is locked by the user or by a script. *If an input trigger matches, it will intercept the user command and the original command will be ignored*. Upon a match the clear text command is being send as a command to the MUD in replacement of the original command, if a clear text command has been specified by the user _and_ the attached alias script is being executed. However, the initial command that the user has typed in the command line will *not* be sent unless you do this as part of your script. Consequently, if you want your input trigger to send a command to the MUD, you'll either have to specify a clear text command for simple cases or send commands via the attached alias script e.g. send("kill monster"). You may argue that you feel that it is unnecessary work to be forced to send a command replacement yourself, but this very fact makes our alias system way more powerful because it gives you complete control about what is happening. Why is this so? The initial user command is being helt in the Lua variable [red]+command+. When this value changes within the alias unit processing chain, the initial user input that the input triggers work on can be rewritten and changed in the process. Consequently, you can substitute the user input step by step - or alias by alias - without that anything happens as far as sending commands is being concerned unless you explicitly decide to do so.
@@ -548,17 +551,26 @@ end
 
 [[triggers]]
 == Mudlet's Trigger Engine
+Unlike alias that define patterns that match on user input, triggers define patterns that match on MUD output. In other words, triggers react to text that has been sent by the MUD, whereas alias react to user commands that have been typed into the command line.
 
+[[simpleTriggerMatching]]
 === Simple Trigger Matching
+[icon="./images/icons/scriptEditorScreen.png"]
+NOTE: .script editor screenshot
 
-Type your trigger in the input line below the trigger conditions list box and then press add to add it to the list. You can edit an expression in the list by clicking on it and then edit it on the input line below. After your edit you have to press the return key to accept the changes.
-After editing is finished your changes will only become permanent if you press on the save icon on the upper middle. This is the same throughout the entire program. If you forget to save your current changes or new additions, they will not be usable until you save them or edit some other item, as chosing another item will trigger an automatic save. So adding multiple new triggers without saving them will autosave the previous item, but the current item will not be saved until you do it manually.
-After having chosen a trigger pattern, you have to tell Mudlet what type of pattern it is. Select the pattern type from the listbox below the expression line edit. Normal substring matching will do for most people and it is one of the fastest matching type available.
+IMPORTANT: QUICKSTART: Here is a simple *video tutorial* on how to make basic triggers in Mudlet: http://blip.tv/file/2288760
+
+To begin with, click on the "Add" button to create a new trigger. Then put the text pattern that you'd like to trigger on into the trigger conditions table on the right side of the screen above the script editor. Afterwards, chose the correct pattern type of your trigger pattern in the drop down list on the right side of the trigger pattern i.e. in the second column of the trigger pattern table. If you define multiple patterns in the same trigger, your trigger will run whenever any one of these patterns matches unless you chose the AND-trigger option, in which case the trigger will only fire if all patterns match within a specified amount of lines from the MUD. For more advanced information on AND and OR trigger see the corresponding AND/OR trigger section below.
+The next step is to define what should happen when the trigger matches. Usually, this will be done by a Lua script in the Lua editor below the table with the pattern list. In the beginning, you can simply chose the "colorizer trigger" option to make your trigger highlight the text that it has triggered on or send a clear text command to the MUD whenever the trigger fires until you have learned enough Lua to more meaningful scripts. Clear text command can be defined in the "send plain text" input box next to the trigger name above the pattern table.
+Finally, you need to save the new trigger and then activate it with the padlock icon button. By default, new triggers are deactivated and thus will do nothing unless you explicitely activate them. Activated triggers show a green tick in the little blue box on the left side of the trigger name in the trigger tree on the left side of the script editor dialog. There is three ways to save your changes. 1. click on the save icon 2. adding a new trigger 3. clicking on another trigger item. Triggers that have not been saved yet cannot be activated. If you see a bug icon instead of an activation box, there is some error that prevents to activate your trigger. Check the error message above the pattern table.
+
 ****
-Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is enter "pond" in the trigger expression input line and add it to the expression list. Then enter the command you like to send to the MUD if the trigger matches e.g. "drink water" and then you are done. The more advanced trigger types are explained below.
+Example: You want to trigger on the word "pond" in a line such as: "The frog swims in the pond. Plop." All you need to do is add "pond" as a pattern and chose "substring" as a pattern type. Then enter the command you like to send to the MUD if the trigger matches. For example enter "drink water" into the "send plain text" input box and activate your new trigger. Your new trigger will send the command "drink water" to the MUD any time it sees the word "pond" somewhere in the MUD output.
 ****
+
 [[simpleHighlighterTriggers]]
 === Simple Highlighter Triggers
+
 TIP: *Beginners should use Mudlet's automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text. 
 You don't have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
 
@@ -577,10 +589,13 @@ To make OR-Triggers you simply have to add a few conditions to the conditions li
 The simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains, whatever you'd like to call it.
 
 [[triggerChains]]
-=== Trigger Chains - Filter Chains
+=== Trigger Chains & Filter Chains
+"Chains" and "filters" are different trigger group entities in Mudlet and serve completely different ends. 
 
 == Chains
-"Chains" and "filters" are different entities in Mudlet and serve completely different ends. A chain is defined in Mudlet by making a trigger group and adding a trigger pattern to the group. A group without a pattern is a simple trigger group that serves no other purposes than adding structure to your trigger system. Such a normal trigger group will always grant access to its children unless it has been explicitely disabled either manually or by a script. A trigger group with a defined trigger pattern, however, will behave like a normal trigger and match if the pattern matches. Such a trigger group is called "chain head". A chain head will only grant access to its children if the trigger pattern has matched and the chain has been enabled. Thus, chains can be looked at as a mechanism to automatically enable and disable triggers or groups of triggers when a certain condition has been met i. e. the trigger pattern of the chain head has been matched. (However, technically this is not correct as disabled child triggers will not be invoked if the chain head matches. In other words, in chains you can still enabled/disabled elements. The idea of a chain can better be described by necessary and sufficient condition - both of which need to be met before a child trigger is being run.)
+A chain is defined in Mudlet by making a trigger group and adding a trigger pattern to the group. A group without a pattern is a simple trigger group that serves no other purposes than adding structure to your trigger system in order to organize your triggers better. Such a normal trigger group will always grant access to its children unless it has been explicitely disabled (= all access to itself or any of its children is locked) either manually or by a script. 
+
+A trigger group with a defined trigger pattern, however, will behave like a normal trigger and match if the pattern matches. Such a trigger group is called "chain head". A chain head will only grant access to its children if the trigger pattern has matched and the chain has been enabled. Thus, chains can be looked at as a mechanism to automatically enable and disable triggers or groups of triggers when a certain condition has been met i. e. the trigger pattern of the chain head has been matched. (However, technically this is not correct as disabled child triggers will not be invoked if the chain head matches. In other words, in chains you can still enabled/disabled elements. The idea of a chain can better be described by necessary and sufficient condition - both of which need to be met before a child trigger is being run.)
 
 Adding child triggers to this group will add eleements to the trigger chain. These chain elements will only be activated if the chain head has matched before and thus opened the trigger chain. The chain stays open until the "keep chain open for x lines" value has been reached. The default is 0 which means that the chain only stays open for the current line. When access to the chain has been granted all child triggers will be tested against the content of the current line.. Consequently, trigger chains are a means to automatically enable/disable trigger groups without the hassle of enabling and disabling trigger groups manually. This has 2 important advantages: Chains are faster than conventional solutions and chains reduce the complexity of your scripts and greatly reduce the usual system bugs that inevitably go along with enable/disable trigger xy function calls as it's very difficult and error prone to enable and disable your triggers correctly in large complex trigger systems. This is one of the most powerful features in Mudlet and should be used whenever possible.
 
@@ -1185,6 +1200,7 @@ Click on the respective function to get more information
 <<setBorderLeft,setBorderLeft>>, 
 <<setBorderRight,setBorderRight>>, 
 <<setBorderTop,setBorderTop>>, 
+<<setConsoleBufferSize,setConsoleBufferSize>>,  
 <<setFgColor,setFgColor>>, 
 <<setBorderColor,setBorderColor>>, 
 <<setItalics,setItalics>>, 
@@ -2379,5 +2395,14 @@ function handleWindowResizeEvent()
 end
 
 ----
+
+[[setConsoleBufferSize]]
+== setConsoleBufferSize( consoleName, linesLimit, sizeOfBatchDeletion )
+Set the scrollback buffer size to linesLimit and determine how many lines are deleted at once in case the lines limit is reached. The lower the limit the less memory being used. On machines with low RAM you should consider limiting the size of buffers that don't need a lot of scrollback e.g. system notification windows, chat windows etc..
+Default values are linesLimit = 100000 lines with 10000 lines of batch deletion. Minimum buffer size is 100 lines with 10 lines batch deletion.
+
+
+
+
 
 

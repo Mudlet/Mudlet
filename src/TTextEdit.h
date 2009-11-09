@@ -98,6 +98,7 @@ public:
     int               mFontDescent;
     int               mWrapAt;
     int               mWrapIndentCount;
+    QRegion           mSelectedRegion;
 
 signals:
     
@@ -141,7 +142,7 @@ private:
     bool              mInversOn;
     QPoint            mPA;
     QPoint            mPB;
-    QRegion           mSelectedRegion;
+
 
     bool              mPainterInit;
     QPixmap           mScreenMap;

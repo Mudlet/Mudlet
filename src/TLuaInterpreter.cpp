@@ -717,8 +717,20 @@ int TLuaInterpreter::cut( lua_State * L )
 }
 int TLuaInterpreter::paste( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    pHost->mpConsole->paste();
+    string luaWindowName="";
+    if( lua_isstring( L, 1 ) )
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
+    else
+        luaWindowName = "main";
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString windowName(luaWindowName.c_str());
+    if( luaWindowName == "main" )
+        pHost->mpConsole->pasteWindow();
+    else
+       mudlet::self()->pasteWindow( windowName );
     return 0;
 }
 
@@ -1580,7 +1592,6 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
 
 int TLuaInterpreter::closeUserWindow( lua_State *L )
 {
-
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
@@ -1594,8 +1605,7 @@ int TLuaInterpreter::closeUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    //FIXME: currently disabled because of potential crashes
-    //mudlet::self()->closeWindow( pHost, text );
+    mudlet::self()->hideWindow( pHost, text );
 
     return 0;
 }
