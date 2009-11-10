@@ -90,6 +90,10 @@ mudlet::mudlet()
     mpTabBar = new QTabBar( frame );
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy( Qt::NoFocus );
+#if QT_VERSION >= 0x040500
+    mpTabBar->setTabsClosable ( true );
+    connect( mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
+#endif
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);
@@ -298,6 +302,22 @@ mudlet::mudlet()
 
 }
 
+void mudlet::slot_close_profile_requested( int tab )
+{
+    QString name = mpTabBar->tabText( tab );
+    Host * pH = HostManager::self()->getHost( name );
+    if( ! pH ) return;
+    pH->mpEditorDialog->close();
+    mConsoleMap[pH]->close();
+    if( mTabMap.contains( pH->getName() ) )
+    {
+        mpTabBar->removeTab( tab );
+        mConsoleMap.remove( pH );
+        HostManager::self()->deleteHost( pH->getName() );
+        mTabMap.remove( pH->getName() );
+    }
+}
+
 void mudlet::slot_close_profile()
 {
     if( mpCurrentActiveHost )
@@ -315,8 +335,7 @@ void mudlet::slot_close_profile()
                 HostManager::self()->deleteHost( pH->getName() );
                 mTabMap.remove( pH->getName() );
             }
-			if( !mpCurrentActiveHost )
-				disableToolbarButtons();
+            if( !mpCurrentActiveHost ) disableToolbarButtons();
         }
     }
 }
@@ -401,6 +420,15 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pEditor->fillout_form();
     
     pH->getActionUnit()->updateToolbar();
+
+    mpCurrentActiveHost->mpConsole->show();
+    mpCurrentActiveHost->mpConsole->repaint();
+    mpCurrentActiveHost->mpConsole->refresh();
+    mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
+    mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
+    mpCurrentActiveHost->mpConsole->show();
+    mpTabBar->setCurrentIndex( newTabID );
+
 }
 
 void mudlet::bindMenu( QMenu * menu, EAction * action )

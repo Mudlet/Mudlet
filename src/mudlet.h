@@ -136,6 +136,7 @@ public slots:
    void                          slot_replay();
    void                          slot_notes();
    void                          slot_reconnect();
+   void                          slot_close_profile_requested(int);
    void                          startAutoLogin();
     
 protected:
