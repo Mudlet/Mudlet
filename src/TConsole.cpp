@@ -1254,7 +1254,7 @@ QStringList TConsole::getLines( int from, int to )
 
 void TConsole::selectCurrentLine()
 {
-    selectSection(0, buffer.line( mUserCursor.y() ).size()-1 );
+    selectSection(0, buffer.line( mUserCursor.y() ).size() );
 }
 
 void TConsole::selectCurrentLine( std::string & buf )
