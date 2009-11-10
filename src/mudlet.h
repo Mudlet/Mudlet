@@ -113,6 +113,10 @@ public:
    void                          replayStart();
    bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
    void                          replayOver();
+   //QString                       readProfileData( QString profile, QString item );
+   void                          doAutoLogin( QString & );
+
+
 
    QTime                         mReplayTime;
    int                           mReplaySpeed;

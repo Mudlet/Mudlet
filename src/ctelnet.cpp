@@ -149,11 +149,13 @@ void cTelnet::handle_socket_signal_error()
 
 void cTelnet::slot_send_login()
 {
+    qDebug()<<"telnet:: trace#1";
     sendData( mpHost->getLogin() );    
 }
 
 void cTelnet::slot_send_pass()
 {
+    qDebug()<<"telnet:: trace#1";
     sendData( mpHost->getPass() );
 }
 
@@ -162,9 +164,10 @@ void cTelnet::handle_socket_signal_connected()
     reset();
     QString msg = "A connection has been established successfully.\n";
     postMessage( msg );
-    
+    qDebug()<<"------------>telnet# trace 99: login="<<mpHost->getLogin()<<" pass="<<mpHost->getPass();
     if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0) )
     {
+        qDebug()<<"-------->telnet::on connected: starting login timers...";
         mTimerLogin->start(2000);
         mTimerPass->start(3000);
     }

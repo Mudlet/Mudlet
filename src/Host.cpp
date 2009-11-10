@@ -386,6 +386,7 @@ bool Host::killTrigger( QString & name )
 
 void Host::connectToServer()
 {
+    qDebug()<<"login="<<mLogin<<" pass="<<mPass;
     mTelnet.connectIt( mUrl, mPort );     
 }
 

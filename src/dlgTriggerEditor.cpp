@@ -5215,6 +5215,32 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
     if( ! pT ) return;
+
+    QPushButton * pB = (QPushButton *) sender();
+    int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
+    dlgTriggerPatternEdit * pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    if( ! pI ) return;
+
+    QString pattern = pI->lineEdit->text();
+    QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
+    int _pos = regex.indexIn( pattern );
+    int ansiFg, ansiBg;
+    if( _pos == -1 )
+    {
+        //setup default colors
+        ansiFg = 0;
+        ansiBg = 0;
+    }
+    else
+    {
+        // use user defined colors
+        ansiFg = regex.cap(1).toInt();
+        ansiBg = regex.cap(2).toInt();
+    }
+
+    pT->mColorTriggerFgAnsi = ansiFg;
+    pT->mColorTriggerBgAnsi = ansiBg;
+
     dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 0 );
     pD->setModal( true );
     pD->setWindowModality( Qt::ApplicationModal );
@@ -5224,10 +5250,10 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     palette.setColor( QPalette::Button, color );
     QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
 
-    QPushButton * pB = (QPushButton *) sender();
+
     if( ! pB ) return;
-    int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
-    dlgTriggerPatternEdit * pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
+    pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
     if( ! pI ) return;
     pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
     pB->setStyleSheet( styleSheet );
@@ -5236,6 +5262,56 @@ void dlgTriggerEditor::slot_color_trigger_fg()
 void dlgTriggerEditor::slot_color_trigger_bg()
 {
     QTreeWidgetItem * pItem = mCurrentTrigger;
+    if( ! pItem )
+    {
+        return;
+    }
+    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+    if( ! pT ) return;
+
+    QPushButton * pB = (QPushButton *) sender();
+    int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
+    dlgTriggerPatternEdit * pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    if( ! pI ) return;
+
+    QString pattern = pI->lineEdit->text();
+    QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
+    int _pos = regex.indexIn( pattern );
+    int ansiFg, ansiBg;
+    if( _pos == -1 )
+    {
+        //setup default colors
+        ansiFg = 0;
+        ansiBg = 0;
+    }
+    else
+    {
+        // use user defined colors
+        ansiFg = regex.cap(1).toInt();
+        ansiBg = regex.cap(2).toInt();
+    }
+
+    pT->mColorTriggerFgAnsi = ansiFg;
+    pT->mColorTriggerBgAnsi = ansiBg;
+
+    dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 1 );
+    pD->setModal( true );
+    pD->setWindowModality( Qt::ApplicationModal );
+    pD->exec();
+    QPalette palette;
+    QColor color = pT->mColorTriggerBgColor;
+    palette.setColor( QPalette::Button, color );
+    QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+
+    if( ! pB ) return;
+    row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
+    pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
+    if( ! pI ) return;
+    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
+    pB->setStyleSheet( styleSheet );
+
+    /*QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem )
     {
         return;
@@ -5257,7 +5333,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     dlgTriggerPatternEdit * pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
     if( ! pI ) return;
     pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
-    pB->setStyleSheet( styleSheet );
+    pB->setStyleSheet( styleSheet );*/
 }
 
 void dlgTriggerEditor::slot_cursorPositionChanged()

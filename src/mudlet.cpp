@@ -1255,6 +1255,75 @@ QString mudlet::readProfileData( QString profile, QString item )
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
+    QStringList hostList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
+    hostList.removeAll(".");
+    hostList.removeAll("..");
+    for( int i = 0; i< hostList.size(); i++ )
+    {
+        QString item = "autologin";
+        QString val = readProfileData( hostList[i], item );
+        if( val.toInt() == Qt::Checked )
+        {
+            doAutoLogin( hostList[i] );
+        }
+    }
+
+}
+/*
+QString mudlet::readProfileData( QString profile, QString item )
+{
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    file.open( QIODevice::ReadOnly );
+    QDataStream ifs( & file );
+    QString ret;
+    ifs >> ret;
+    file.close();
+    return ret;
+}*/
+
+void mudlet::doAutoLogin( QString & profile_name )
+{
+    if( profile_name.size() < 1 )
+        return;
+
+    Host * pOH = HostManager::self()->getHost( profile_name );
+    if( pOH )
+    {
+        pOH->mTelnet.connectIt( pOH->getUrl(), pOH->getPort() );
+        return;
+    }
+    // load an old profile if there is any
+    HostManager::self()->addHost( profile_name, "", "", "" );
+    Host * pHost = HostManager::self()->getHost( profile_name );
+
+    if( ! pHost ) return;
+
+    QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
+    QDir dir( folder );
+    dir.setSorting(QDir::Time);
+    QStringList entries = dir.entryList( QDir::Files, QDir::Time );
+    for( int i=0;i<entries.size(); i++ )
+        qDebug()<<i<<"#"<<entries[i];
+    if( entries.size() > 0 )
+    {
+        QFile file(folder+"/"+entries[0]);
+        file.open(QFile::ReadOnly | QFile::Text);
+        XMLimport importer( pHost );
+        qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
+        importer.importPackage( & file );
+    }
+
+    QString login = "login";
+    QString val1 = readProfileData( profile_name, login );
+    qDebug()<<"login=<"<<val1<<">";
+    pHost->setLogin( val1 );
+    QString pass = "password";
+    QString val2 = readProfileData( profile_name, pass );
+    qDebug()<<"pass=<"<<val2<<">";
+    pHost->setPass( val2 );
+    slot_connection_dlg_finnished( profile_name, 0 );
+}
+/*
     QList<QString> hostList = HostManager::self()->getHostList();
     for( int i=0; i<hostList.size(); i++ )
     {
@@ -1286,12 +1355,13 @@ void mudlet::startAutoLogin()
     else
         qDebug() << "----> [ OK ] autologin finished";
     qDebug()<<"[ AUTOLOGIN END ] currently loaded hosts after removal of non-autoloaders:"<<HostManager::self()->getHostList();
-}
+}*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // these two callbacks are called from cTelnet::handleConnectedToServer()
 void mudlet::slot_send_login()
 {
+    qDebug()<<"mudlet:: trace#1";
     if( tempHostQueue.isEmpty() )
         return;
     Host * pHost = tempHostQueue.dequeue();
@@ -1301,6 +1371,7 @@ void mudlet::slot_send_login()
 
 void mudlet::slot_send_pass()
 {
+    qDebug()<<"mudlet:: trace#2";
     if( tempHostQueue.isEmpty() )
         return;
     Host * pHost = tempHostQueue.dequeue();
@@ -1312,9 +1383,9 @@ void mudlet::slot_send_pass()
 
 void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion )
 {
+    qDebug()<<"mudlet:: trace#_0#slot_connection_finsihed";
     Host * pHost = HostManager::self()->getHost( profile );
-    if( ! pHost ) 
-        return;
+    if( ! pHost ) return;
     addConsoleForNewHost( pHost );
     pHost->mBlockScriptCompile = false;
     pHost->getScriptUnit()->compileAll();
@@ -1324,7 +1395,9 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
 
     tempHostQueue.enqueue( pHost );
     tempHostQueue.enqueue( pHost );
-    pHost->connectToServer();     
+    qDebug()<<"mudlet:: trace#3";
+    pHost->connectToServer();
+    qDebug()<<"mudlet:: trace#4";
 }
 
 void mudlet::slot_multi_view()
