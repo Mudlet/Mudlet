@@ -363,6 +363,7 @@ void mudlet::slot_tab_changed( int tabID )
         mpCurrentActiveHost->mpConsole->repaint();
         mpCurrentActiveHost->mpConsole->refresh();
         mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
+        mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
         mpCurrentActiveHost->mpConsole->show();
     }
     else
