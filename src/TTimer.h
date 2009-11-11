@@ -53,7 +53,7 @@ public:
                      TTimer( QString name, QTime time, Host * pHost ); 
                      TTimer& clone(const TTimer& );
     QString &        getName()                       { return mName; }
-    void             setName( QString name )         { mName = name; }
+    void             setName( QString name );
     QTime &          getTime()                       { return mTime; }
     void             compile();
     bool             compileScript();
@@ -72,6 +72,8 @@ public:
     bool             setIsActive( bool );
     void             stop();
     void             start();
+    void             enableTimer();
+    void             disableTimer();
     void             enableTimer( QString & );
     void             disableTimer( QString & );
     void             enableTimer( qint64 );

@@ -215,22 +215,114 @@ void TimerUnit::removeTimer( TTimer * pT )
 
 void TimerUnit::enableTimer( QString & name )
 {
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
     {
-        TTimer * pChild = *it;
-        pChild->enableTimer( name );
-    } 
+        TTimer * pT = it.value();
+
+        if( ! pT->isOffsetTimer() )
+            pT->setIsActive( true );
+        else
+            pT->setShouldBeActive( true );
+
+        if( pT->isFolder() )
+        {
+            // disable or enable all timers in the respective branch
+            // irrespective of the user defined state.
+            if( pT->shouldBeActive() )
+            {
+                pT->enableTimer();
+            }
+            else
+            {
+                pT->disableTimer();
+            }
+        }
+        else
+        {
+            if( pT->isOffsetTimer() )
+            {
+                // state of offset timers is managed by the trigger engine
+                if( pT->shouldBeActive() )
+                {
+                    pT->enableTimer();
+                }
+                else
+                {
+                    pT->disableTimer();
+                }
+            }
+            else
+            {
+                if( pT->shouldBeActive() )
+                {
+                    pT->enableTimer();
+                }
+                else
+                {
+                    pT->disableTimer();
+                }
+            }
+        }
+
+        ++it;
+    }
 }
 
 void TimerUnit::disableTimer( QString & name )
 {
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
     {
-        TTimer * pChild = *it;
-        pChild->disableTimer( name );
-    } 
+        TTimer * pT = it.value();
+
+        if( ! pT->isOffsetTimer() )
+            pT->setIsActive( false );
+        else
+            pT->setShouldBeActive( false );
+
+        if( pT->isFolder() )
+        {
+            // disable or enable all timers in the respective branch
+            // irrespective of the user defined state.
+            if( pT->shouldBeActive() )
+            {
+                pT->enableTimer();
+            }
+            else
+            {
+                pT->disableTimer();
+            }
+        }
+        else
+        {
+            if( pT->isOffsetTimer() )
+            {
+                // state of offset timers is managed by the trigger engine
+                if( pT->shouldBeActive() )
+                {
+                    pT->enableTimer();
+                }
+                else
+                {
+                    pT->disableTimer();
+                }
+            }
+            else
+            {
+                if( pT->shouldBeActive() )
+                {
+                    pT->enableTimer();
+                }
+                else
+                {
+                    pT->disableTimer();
+                }
+            }
+        }
+
+        ++it;
+    }
 }
 
 

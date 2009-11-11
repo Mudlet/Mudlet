@@ -283,13 +283,6 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
 
 void TriggerUnit::enableTrigger( QString & name )
 {
-    /*QMutexLocker locker(& mTriggerUnitLock);
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
-    {
-        TTrigger * pChild = *it;
-        pChild->enableTrigger( name );
-    }*/
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {
@@ -301,13 +294,6 @@ void TriggerUnit::enableTrigger( QString & name )
 
 void TriggerUnit::disableTrigger( QString & name )
 {
-    /*QMutexLocker locker(& mTriggerUnitLock);
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
-    {
-        TTrigger * pChild = *it;
-        pChild->disableTrigger( name );
-    } */
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {

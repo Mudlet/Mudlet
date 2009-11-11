@@ -2085,12 +2085,7 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
 void dlgTriggerEditor::saveTimer()
 {
     QTreeWidgetItem * pItem = mCurrentTimer;
-     if( ! pItem )
-    {
-        qDebug()<<"pItem==0!!!! ERROR";
-        return;
-    }
-
+    if( ! pItem ) return;
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
     QString script = mpSourceEditorArea->editor->toPlainText();
 

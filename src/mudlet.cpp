@@ -1315,11 +1315,9 @@ void mudlet::doAutoLogin( QString & profile_name )
 
     QString login = "login";
     QString val1 = readProfileData( profile_name, login );
-    qDebug()<<"login=<"<<val1<<">";
     pHost->setLogin( val1 );
     QString pass = "password";
     QString val2 = readProfileData( profile_name, pass );
-    qDebug()<<"pass=<"<<val2<<">";
     pHost->setPass( val2 );
     slot_connection_dlg_finnished( profile_name, 0 );
 }
@@ -1361,7 +1359,6 @@ void mudlet::doAutoLogin( QString & profile_name )
 // these two callbacks are called from cTelnet::handleConnectedToServer()
 void mudlet::slot_send_login()
 {
-    qDebug()<<"mudlet:: trace#1";
     if( tempHostQueue.isEmpty() )
         return;
     Host * pHost = tempHostQueue.dequeue();
@@ -1371,7 +1368,6 @@ void mudlet::slot_send_login()
 
 void mudlet::slot_send_pass()
 {
-    qDebug()<<"mudlet:: trace#2";
     if( tempHostQueue.isEmpty() )
         return;
     Host * pHost = tempHostQueue.dequeue();
@@ -1383,7 +1379,6 @@ void mudlet::slot_send_pass()
 
 void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion )
 {
-    qDebug()<<"mudlet:: trace#_0#slot_connection_finsihed";
     Host * pHost = HostManager::self()->getHost( profile );
     if( ! pHost ) return;
     addConsoleForNewHost( pHost );
@@ -1395,9 +1390,7 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
 
     tempHostQueue.enqueue( pHost );
     tempHostQueue.enqueue( pHost );
-    qDebug()<<"mudlet:: trace#3";
     pHost->connectToServer();
-    qDebug()<<"mudlet:: trace#4";
 }
 
 void mudlet::slot_multi_view()

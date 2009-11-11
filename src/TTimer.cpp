@@ -82,6 +82,12 @@ bool TTimer::registerTimer()
     return mpHost->getTimerUnit()->registerTimer( this );    
 }
 
+void TTimer::setName( QString name )
+{
+    mName = name;
+    mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );
+}
+
 void TTimer::setTime( QTime time )
 {
     QMutexLocker locker(& mLock); 
@@ -237,11 +243,12 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
         {
             return true;    
         }
-        return mpParent->canBeUnlocked( 0 );
+        else
+            return mpParent->canBeUnlocked( 0 );
     }
     else
     {
-        DumpFamily();
+        //DumpFamily();
         return false;
     }
     
@@ -292,6 +299,44 @@ void TTimer::disableTimer( qint64 id )
         pChild->disableTimer( pChild->getID() );
     }
 }
+
+void TTimer::enableTimer()
+{
+    if( canBeUnlocked( 0 ) )
+    {
+        if( activate() )
+        {
+            mTimer.start();
+        }
+        else
+        {
+            deactivate();
+            mTimer.stop();
+        }
+    }
+    if( ! isOffsetTimer() )
+    {
+        typedef list<TTimer *>::const_iterator I;
+        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        {
+            TTimer * pChild = *it;
+            if( ! pChild->isOffsetTimer() ) pChild->enableTimer();
+        }
+    }
+}
+
+void TTimer::disableTimer()
+{
+    deactivate();
+    mTimer.stop();
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TTimer * pChild = *it;
+        pChild->disableTimer();
+    }
+}
+
 
 
 void TTimer::enableTimer( QString & name )

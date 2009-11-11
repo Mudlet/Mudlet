@@ -669,7 +669,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         {
             if( name() == "name" )
             {
-                pT->mName = readElementText();
+                pT->setName( readElementText() );
                 continue;
             }
             else if( name() == "script")
