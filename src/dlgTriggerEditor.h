@@ -227,7 +227,8 @@ private:
     dlgSystemMessageArea *      mpSystemMessageArea;
     dlgSourceEditorArea *       mpSourceEditorArea;
     dlgOptionsAreaTriggers *    mpOptionsAreaTriggers;
-    dlgSearchArea *             mpSearchArea;
+    //dlgSearchArea *             mpSearchArea;
+    //QTreeWidget *               mpSearchArea;
     dlgAliasMainArea *          mpAliasMainArea;
     dlgActionMainArea *         mpActionsMainArea;
     dlgScriptsMainArea *        mpScriptsMainArea;

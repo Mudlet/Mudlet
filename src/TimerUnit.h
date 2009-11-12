@@ -55,7 +55,7 @@ public:
     QMap<QString, TTimer *> mLookupTable;
     QMutex                mTimerUnitLock;
     
-private: 
+private:
     TimerUnit(){;}
     TTimer *              getTimerPrivate( int id );
     void                  addTimerRootNode( TTimer * pT, int parentPosition = -1, int childPosition = -1 );

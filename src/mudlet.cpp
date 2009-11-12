@@ -1320,6 +1320,7 @@ void mudlet::doAutoLogin( QString & profile_name )
     QString val2 = readProfileData( profile_name, pass );
     pHost->setPass( val2 );
     slot_connection_dlg_finnished( profile_name, 0 );
+    enableToolbarButtons();
 }
 /*
     QList<QString> hostList = HostManager::self()->getHostList();

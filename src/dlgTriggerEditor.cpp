@@ -49,6 +49,7 @@
 #include "XMLimport.h"
 #include "dlgColorTrigger.h"
 #include "dlgTriggerPatternEdit.h"
+#include "THighlighter.h"
 
 using namespace std;
 
@@ -205,9 +206,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     
     
     
-    mpSearchArea = new dlgSearchArea( popupArea );
-    mpSearchArea->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpSearchArea );
+    mpSearchArea = tree_widget_search_results_main;//new dlgSearchArea( popupArea );
+    //mpSearchArea->setSizePolicy( sizePolicy2 );
+    //pHB2->addWidget( mpSearchArea );
     
     
     
@@ -468,7 +469,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_alias, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_clicked( QTreeWidgetItem *, int) ) );
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_clicked( QTreeWidgetItem *, int) ) );
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
-    connect( mpSearchArea->tree_widget_search_results_main_2, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
+    connect( mpSearchArea, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     //connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     //connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
@@ -565,24 +566,32 @@ void dlgTriggerEditor::slot_switchToExpertMonde()
 
 void dlgTriggerEditor::slot_item_clicked_search_list(QTreeWidgetItem* pItem, int mode )
 {
-    QList<QTreeWidgetItem *> foundItemsList = treeWidget->findItems( pItem->text( 0 ), Qt::MatchContains );
-    if( foundItemsList.size() == 0 )
+    if( pItem->text(0) == QString("Trigger") )
     {
-        qDebug() << "no Triggers found that match <"<<foundItemsList[0]->text(0)<<">";
-        return;    
+        QList<QTreeWidgetItem *> foundItemsList = treeWidget->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+
+        for( int i=0; i<foundItemsList.size(); i++ )
+        {
+            QTreeWidgetItem * pI = foundItemsList[i];
+            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idSearch = pItem->data(0, Qt::UserRole).toInt();
+            if( idTree == idSearch )
+            {
+                treeWidget->setCurrentItem( pI, 0 );
+                treeWidget->scrollToItem( pI );
+                slot_trigger_clicked( pI, 0 );
+                return;
+            }
+        }
+        qDebug()<<"ERROR: sorry TRIGGER ID not found in tree";
+        return;
     }
-    
-    pItem = foundItemsList.at(0);
-    
-    treeWidget->show();    
-    tree_widget_search_results_main->hide();
-    treeWidget->scrollToItem( pItem );
-    treeWidget->setCurrentItem( pItem, 0 );
+    qDebug()<<"ERROR: search result cannot be found in trees";
 }
 
 void dlgTriggerEditor::slot_search_triggers( const QString s )             
 {
-    tree_widget_search_results_main->clear();
+    /*tree_widget_search_results_main->clear();
     mpSearchArea->tree_widget_search_results_main_2->clear();
     QList<QTreeWidgetItem *> foundItemsList = treeWidget->findItems( s, Qt::MatchContains | Qt::MatchRecursive );
     if( foundItemsList.size() == 0 )
@@ -597,8 +606,80 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
         mpSearchArea->tree_widget_search_results_main_2->insertTopLevelItem(0, foundItemsList.at(i)->clone()); 
     }
     treeWidget->hide();
+    tree_widget_search_results_main->show();*/
+    QRegExp pattern = QRegExp( s );
+    mpSourceEditorArea->highlighter->setSearchPattern( s );
+    mpSourceEditorArea->highlighter->rehighlight();
+    tree_widget_search_results_main->clear();
     tree_widget_search_results_main->show();
-    mpSearchArea->show();
+    tree_widget_search_results_main->setColumnCount( 3 );
+    // type   | name | line number/pattern/name | found search pattern |
+    //-------------------------------------------------------------------------
+    //trigger | name | line 204: a la sd  akd
+    //trigger | asdf | pattern: ^alsd
+    //trigger | asdf | name     |
+    /*QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_timers->currentItem();
+    if( ! pItem ) return;
+    TTimer * pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
+    if( ! pT ) return;*/
+    if( true )
+    {
+        std::list<TTrigger *> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+        typedef list<TTrigger *>::const_iterator I;
+        for( I it = nodes.begin(); it != nodes.end(); it++)
+        {
+            QTreeWidgetItem * pItem;
+            QTreeWidgetItem * parent = 0;
+            TTrigger * pChild = *it;
+            QString n = pChild->getName();
+            if( pattern.indexIn( n ) != -1 )
+            {
+                QStringList sl;
+                sl << "Trigger" << pChild->getName() << "pattern found in trigger name";
+                if( ! parent )
+                {
+                    qDebug()<<"----->##### new parent ##########";
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    //tree_widget_search_results_main->addTopLevelItem( pItem );
+                }
+            }
+            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList resultList = scriptList.filter( pattern );
+ if( resultList.size()>0)qDebug()<<"resultList="<<resultList;
+            for( int i=0; i<resultList.size(); i++ )
+            {
+                QStringList sl;
+                sl << "Trigger" << pChild->getName() << resultList[i];
+                if( ! parent )
+                {
+                    qDebug()<<"SCRIPT----->##### new parent ##########";
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    qDebug()<<"SCRIPT*************** new child";
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    //tree_widget_search_results_main->addTopLevelItem( pItem );
+                }
+            }
+        }
+    }
 }
 
 void dlgTriggerEditor::slot_addActionGroup()
@@ -4110,13 +4191,16 @@ void dlgTriggerEditor::slot_update()
 
 void dlgTriggerEditor::slot_show_search_area()
 {
+    qDebug()<<"show search area";
     if( mpSearchArea->isVisible() )
     {
         mpSearchArea->hide();
+        popupArea->hide();
     }
     else 
     {
         mpSearchArea->show();
+        popupArea->show();
     }
 }
 
