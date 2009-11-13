@@ -118,6 +118,9 @@ public slots:
     void                        slot_addTrigger();
     void                        slot_addTriggerGroup();
     void                        slot_addTimer();
+    void                        recursiveSearchTriggers( TTrigger * pTriggerParent, const QString & );
+    void                        recursiveSearchAlias( TAlias * pTriggerParent, const QString & s );
+    void                        recursiveSearchScripts( TScript * pTriggerParent, const QString & s );
     void                        slot_addTimerGroup();
     void                        slot_addAlias();
     void                        slot_addAliasGroup();

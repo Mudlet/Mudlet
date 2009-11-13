@@ -129,12 +129,13 @@ void THighlighter::highlightBlock( const QString & text )
 
 
     QRegExp expression( highlightingRules.last().pattern );
-    int index = text.indexOf( expression );
+    int index = text.indexOf( mSearchPattern );//expression );
     while( index >= 0 )
     {
-        int length = expression.matchedLength();
+        int length = mSearchPattern.length();//expression.matchedLength();
         setFormat( index, length, highlightingRules.last().format );
-        index = text.indexOf( expression, index + length );
+        //index = text.indexOf( expression, index + length );
+        index = text.indexOf( mSearchPattern, index + length );
     }
 }
 
