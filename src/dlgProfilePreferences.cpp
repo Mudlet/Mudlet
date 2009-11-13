@@ -154,7 +154,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     for( int i=1; i<40; i++ ) sizeList << QString::number(i);
     fontSize->insertItems( 1, sizeList );
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
-    connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
+    //connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
     connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBoderColor()));
     connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBoderImage()));
 
@@ -177,7 +177,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
         auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
         command_separator_lineedit->setText( pHost->mCommandSeparator);
-        disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
+        //disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
         
         checkBox_USE_IRE_DRIVER_BUGFIX->setChecked( pHost->mUSE_IRE_DRIVER_BUGFIX );
         checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked( pHost->mUSE_FORCE_LF_AFTER_PROMPT );
@@ -598,7 +598,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
     pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
     pHost->mCommandSeparator = command_separator_lineedit->text();
-    pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
+    //pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
     pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
     pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();

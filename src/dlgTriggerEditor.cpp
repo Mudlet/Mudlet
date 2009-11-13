@@ -207,6 +207,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     
     
     mpSearchArea = tree_widget_search_results_main;//new dlgSearchArea( popupArea );
+    connect( messageAreaCloseButton, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
     //mpSearchArea->setSizePolicy( sizePolicy2 );
     //pHB2->addWidget( mpSearchArea );
     
@@ -460,7 +461,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->script_scintilla->setMarginWidth( 2, 20 );
     mpSourceEditorArea->script_scintilla->setMarginLineNumbers( 2, false );*/
 
-    connect( comboBox_search_triggers, SIGNAL( currentIndexChanged( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
+    connect( comboBox_search_triggers, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_clicked( QTreeWidgetItem *, int) ) );
     connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_clicked( QTreeWidgetItem *, int) ) );
@@ -629,7 +630,69 @@ void dlgTriggerEditor::slot_item_clicked_search_list(QTreeWidgetItem* pItem, int
         }
         return;
     }
-    qDebug()<<"ERROR: search result cannot be found in trees";
+
+    if( pItem->text(0) == QString("Button") )
+    {
+        QList<QTreeWidgetItem *> foundItemsList = treeWidget_actions->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+
+        for( int i=0; i<foundItemsList.size(); i++ )
+        {
+            QTreeWidgetItem * pI = foundItemsList[i];
+            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idSearch = pItem->data(0, Qt::UserRole).toInt();
+            if( idTree == idSearch )
+            {
+                treeWidget_actions->setCurrentItem( pI, 0 );
+                treeWidget_actions->scrollToItem( pI );
+                slot_show_actions();
+                slot_action_clicked( pI, 0 );
+                return;
+            }
+        }
+        return;
+    }
+
+    if( pItem->text(0) == QString("Timer") )
+    {
+        QList<QTreeWidgetItem *> foundItemsList = treeWidget_timers->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+
+        for( int i=0; i<foundItemsList.size(); i++ )
+        {
+            QTreeWidgetItem * pI = foundItemsList[i];
+            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idSearch = pItem->data(0, Qt::UserRole).toInt();
+            if( idTree == idSearch )
+            {
+                treeWidget_timers->setCurrentItem( pI, 0 );
+                treeWidget_timers->scrollToItem( pI );
+                slot_show_timers();
+                slot_timer_clicked( pI, 0 );
+                return;
+            }
+        }
+        return;
+    }
+
+    if( pItem->text(0) == QString("Key") )
+    {
+        QList<QTreeWidgetItem *> foundItemsList = treeWidget_keys->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+
+        for( int i=0; i<foundItemsList.size(); i++ )
+        {
+            QTreeWidgetItem * pI = foundItemsList[i];
+            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idSearch = pItem->data(0, Qt::UserRole).toInt();
+            if( idTree == idSearch )
+            {
+                treeWidget_keys->setCurrentItem( pI, 0 );
+                treeWidget_keys->scrollToItem( pI );
+                slot_show_keys();
+                slot_key_clicked( pI, 0 );
+                return;
+            }
+        }
+        return;
+    }
 }
 
 void dlgTriggerEditor::slot_search_triggers( const QString s )             
@@ -672,6 +735,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
             QStringList scriptList = pChild->getScript().split("\n");
@@ -693,6 +757,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
             QStringList regexList = pChild->getRegexCodeList();
@@ -714,6 +779,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
             recursiveSearchTriggers( pChild, s );
@@ -747,6 +813,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
             QStringList scriptList = pChild->getScript().split("\n");
@@ -768,6 +835,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
 
@@ -788,6 +856,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
             recursiveSearchAlias( pChild, s );
@@ -821,6 +890,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
             QStringList scriptList = pChild->getScript().split("\n");
@@ -842,10 +912,182 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     pItem->setFirstColumnSpanned( false );
                     pItem->setData(0, Qt::UserRole, pChild->getID() );
                     parent->addChild( pItem );
+                    parent->setExpanded( true );
                 }
             }
 
             recursiveSearchScripts( pChild, s );
+        }
+    }
+
+    if( true )
+    {
+        std::list<TAction *> nodes = mpHost->getActionUnit()->getActionRootNodeList();
+        typedef list<TAction *>::const_iterator I;
+        for( I it = nodes.begin(); it != nodes.end(); it++)
+        {
+            QTreeWidgetItem * pItem;
+            QTreeWidgetItem * parent = 0;
+            TAction * pChild = *it;
+            QString n = pChild->getName();
+            if( n.indexOf( s ) != -1 )
+            {
+                QStringList sl;
+                sl << "Button" << pChild->getName() << "name";
+                if( ! parent )
+                {
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    parent->setExpanded( true );
+                }
+            }
+            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList resultList = scriptList.filter( s );
+            for( int i=0; i<resultList.size(); i++ )
+            {
+                QStringList sl;
+                sl << "Button" << pChild->getName() << "script" << resultList[i];
+                if( ! parent )
+                {
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    parent->setExpanded( true );
+                }
+            }
+
+            recursiveSearchActions( pChild, s );
+        }
+    }
+
+    if( true )
+    {
+        std::list<TTimer *> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
+        typedef list<TTimer *>::const_iterator I;
+        for( I it = nodes.begin(); it != nodes.end(); it++)
+        {
+            QTreeWidgetItem * pItem;
+            QTreeWidgetItem * parent = 0;
+            TTimer * pChild = *it;
+            QString n = pChild->getName();
+            if( n.indexOf( s ) != -1 )
+            {
+                QStringList sl;
+                sl << "Timer" << pChild->getName() << "name";
+                if( ! parent )
+                {
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    parent->setExpanded( true );
+                }
+            }
+            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList resultList = scriptList.filter( s );
+            for( int i=0; i<resultList.size(); i++ )
+            {
+                QStringList sl;
+                sl << "Timer" << pChild->getName() << "script" << resultList[i];
+                if( ! parent )
+                {
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    parent->setExpanded( true );
+                }
+            }
+
+            recursiveSearchTimers( pChild, s );
+        }
+    }
+
+    if( true )
+    {
+        std::list<TKey *> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
+        typedef list<TKey *>::const_iterator I;
+        for( I it = nodes.begin(); it != nodes.end(); it++)
+        {
+            QTreeWidgetItem * pItem;
+            QTreeWidgetItem * parent = 0;
+            TKey * pChild = *it;
+            QString n = pChild->getName();
+            if( n.indexOf( s ) != -1 )
+            {
+                QStringList sl;
+                sl << "Key" << pChild->getName() << "name";
+                if( ! parent )
+                {
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    parent->setExpanded( true );
+                }
+            }
+            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList resultList = scriptList.filter( s );
+            for( int i=0; i<resultList.size(); i++ )
+            {
+                QStringList sl;
+                sl << "Key" << pChild->getName() << "script" << resultList[i];
+                if( ! parent )
+                {
+                    parent = new QTreeWidgetItem( sl );
+                    parent->setFirstColumnSpanned( false );
+                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    tree_widget_search_results_main->addTopLevelItem( parent );
+                }
+                else
+                {
+                    pItem = new QTreeWidgetItem( parent, sl );
+                    pItem->setFirstColumnSpanned( false );
+                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->addChild( pItem );
+                    parent->setExpanded( true );
+                }
+            }
+
+            recursiveSearchKeys( pChild, s );
         }
     }
 }
@@ -877,6 +1119,7 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
         QStringList scriptList = pChild->getScript().split("\n");
@@ -898,6 +1141,7 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
         QStringList regexList = pChild->getRegexCodeList();
@@ -919,6 +1163,7 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
         if( pChild->hasChildren() )
@@ -955,6 +1200,7 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
         QStringList scriptList = pChild->getScript().split("\n");
@@ -976,6 +1222,7 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
 
@@ -997,6 +1244,7 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
         if( pChild->hasChildren() )
@@ -1033,6 +1281,7 @@ void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const Q
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
         QStringList scriptList = pChild->getScript().split("\n");
@@ -1054,12 +1303,193 @@ void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const Q
                 pItem->setFirstColumnSpanned( false );
                 pItem->setData(0, Qt::UserRole, pChild->getID() );
                 parent->addChild( pItem );
+                parent->setExpanded( true );
             }
         }
 
         if( pChild->hasChildren() )
         {
             recursiveSearchScripts( pChild, s );
+        }
+    }
+}
+
+void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const QString & s )
+{
+    list<TAction *> * childrenList = pTriggerParent->getChildrenList();
+    typedef list<TAction *>::iterator I;
+    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    {
+        QTreeWidgetItem * pItem;
+        QTreeWidgetItem * parent = 0;
+        TAction * pChild = *it;
+        QString n = pChild->getName();
+        if( n.indexOf( s ) != -1 )
+        {
+            QStringList sl;
+            sl << "Button" << pChild->getName() << "name";
+            if( ! parent )
+            {
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, pChild->getID() );
+                tree_widget_search_results_main->addTopLevelItem( parent );
+            }
+            else
+            {
+                pItem = new QTreeWidgetItem( parent, sl );
+                pItem->setFirstColumnSpanned( false );
+                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                parent->addChild( pItem );
+                parent->setExpanded( true );
+            }
+        }
+        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList resultList = scriptList.filter( s );
+        for( int i=0; i<resultList.size(); i++ )
+        {
+            QStringList sl;
+            sl << "Button" << pChild->getName() << "script" << resultList[i];
+            if( ! parent )
+            {
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, pChild->getID() );
+                tree_widget_search_results_main->addTopLevelItem( parent );
+            }
+            else
+            {
+                pItem = new QTreeWidgetItem( parent, sl );
+                pItem->setFirstColumnSpanned( false );
+                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                parent->addChild( pItem );
+                parent->setExpanded( true );
+            }
+        }
+
+        if( pChild->hasChildren() )
+        {
+            recursiveSearchActions( pChild, s );
+        }
+    }
+}
+
+void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QString & s )
+{
+    list<TTimer *> * childrenList = pTriggerParent->getChildrenList();
+    typedef list<TTimer *>::iterator I;
+    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    {
+        QTreeWidgetItem * pItem;
+        QTreeWidgetItem * parent = 0;
+        TTimer * pChild = *it;
+        QString n = pChild->getName();
+        if( n.indexOf( s ) != -1 )
+        {
+            QStringList sl;
+            sl << "Timer" << pChild->getName() << "name";
+            if( ! parent )
+            {
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, pChild->getID() );
+                tree_widget_search_results_main->addTopLevelItem( parent );
+            }
+            else
+            {
+                pItem = new QTreeWidgetItem( parent, sl );
+                pItem->setFirstColumnSpanned( false );
+                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                parent->addChild( pItem );
+                parent->setExpanded( true );
+            }
+        }
+        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList resultList = scriptList.filter( s );
+        for( int i=0; i<resultList.size(); i++ )
+        {
+            QStringList sl;
+            sl << "Timer" << pChild->getName() << "script" << resultList[i];
+            if( ! parent )
+            {
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, pChild->getID() );
+                tree_widget_search_results_main->addTopLevelItem( parent );
+            }
+            else
+            {
+                pItem = new QTreeWidgetItem( parent, sl );
+                pItem->setFirstColumnSpanned( false );
+                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                parent->addChild( pItem );
+                parent->setExpanded( true );
+            }
+        }
+
+        if( pChild->hasChildren() )
+        {
+            recursiveSearchTimers( pChild, s );
+        }
+    }
+}
+
+void dlgTriggerEditor::recursiveSearchKeys( TKey * pTriggerParent, const QString & s )
+{
+    list<TKey *> * childrenList = pTriggerParent->getChildrenList();
+    typedef list<TKey *>::iterator I;
+    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    {
+        QTreeWidgetItem * pItem;
+        QTreeWidgetItem * parent = 0;
+        TKey * pChild = *it;
+        QString n = pChild->getName();
+        if( n.indexOf( s ) != -1 )
+        {
+            QStringList sl;
+            sl << "Key" << pChild->getName() << "name";
+            if( ! parent )
+            {
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, pChild->getID() );
+                tree_widget_search_results_main->addTopLevelItem( parent );
+            }
+            else
+            {
+                pItem = new QTreeWidgetItem( parent, sl );
+                pItem->setFirstColumnSpanned( false );
+                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                parent->addChild( pItem );
+                parent->setExpanded( true );
+            }
+        }
+        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList resultList = scriptList.filter( s );
+        for( int i=0; i<resultList.size(); i++ )
+        {
+            QStringList sl;
+            sl << "Key" << pChild->getName() << "script" << resultList[i];
+            if( ! parent )
+            {
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, pChild->getID() );
+                tree_widget_search_results_main->addTopLevelItem( parent );
+            }
+            else
+            {
+                pItem = new QTreeWidgetItem( parent, sl );
+                pItem->setFirstColumnSpanned( false );
+                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                parent->addChild( pItem );
+                parent->setExpanded( true );
+            }
+        }
+
+        if( pChild->hasChildren() )
+        {
+            recursiveSearchKeys( pChild, s );
         }
     }
 }

@@ -383,6 +383,9 @@
                </property>
                <item>
                 <widget class="QTableWidget" name="listWidget_regex_list">
+                 <property name="toolTip">
+                  <string>multi condition pattern list</string>
+                 </property>
                  <property name="selectionMode">
                   <enum>QAbstractItemView::SingleSelection</enum>
                  </property>
@@ -547,7 +550,7 @@
                  <row/>
                  <column>
                   <property name="text">
-                   <string>pattern</string>
+                   <string>condition pattern</string>
                   </property>
                   <property name="font">
                    <font>
@@ -816,7 +819,7 @@
                </palette>
               </property>
               <property name="toolTip">
-               <string>After the trigger/chain has matched keep firing the script for x more lines.</string>
+               <string>Keep firing the script for x more lines, after the trigger or chain has matched.</string>
               </property>
               <property name="autoFillBackground">
                <bool>true</bool>
@@ -868,13 +871,16 @@
                <item>
                 <widget class="QSpinBox" name="spinBox_stayOpen">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
                  <property name="toolTip">
                   <string>Within how many lines must all condition be true to fire the trigger?</string>
+                 </property>
+                 <property name="maximum">
+                  <number>1000</number>
                  </property>
                 </widget>
                </item>
@@ -902,7 +908,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>colorize text according to pattern</string>
+               <string>play a wave sound file if the trigger fires</string>
               </property>
               <property name="title">
                <string>play sound</string>
@@ -1368,7 +1374,7 @@ as this is a complex topic.</string>
             </size>
            </property>
            <property name="toolTip">
-            <string>act as filter, i.e. only pass matches to its children to trigger on</string>
+            <string>act as filter, i.e. only pass matches to its children to trigger on, instead of the original line from the MUD</string>
            </property>
            <property name="title">
             <string>filter</string>
@@ -1533,6 +1539,10 @@ as this is a complex topic.</string>
              <height>0</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Chose this option if you want to include all possible matches of the pattern in the line. 
+Without this option, the pattern matching will stop after the first successful match.</string>
+           </property>
            <property name="title">
             <string>match all</string>
            </property>
@@ -1572,7 +1582,7 @@ as this is a complex topic.</string>
                </font>
               </property>
               <property name="toolTip">
-               <string>Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)</string>
+               <string/>
               </property>
               <property name="text">
                <string>match all occurences of the pattern in the line</string>
@@ -1706,7 +1716,8 @@ as this is a complex topic.</string>
             </size>
            </property>
            <property name="toolTip">
-            <string>colorize text according to pattern</string>
+            <string>highlight the capture groups if there are any
+otherwise highlight the entire match</string>
            </property>
            <property name="title">
             <string>colorizer trigger</string>

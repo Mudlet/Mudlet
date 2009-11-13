@@ -789,7 +789,7 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
             matching = false;
             if( matchBegin > -1 )
             {
-                std::string got = lineBuffer.mid(matchBegin, pos-matchBegin+1).toLatin1().data();
+                std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
                 captureList.push_back( got );
                 posList.push_back( matchBegin );
                 matchBegin = -1;
@@ -800,7 +800,7 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
         {
             if( matchBegin > -1 )
             {
-                std::string got = lineBuffer.mid(matchBegin, pos-matchBegin+1).toLatin1().data();
+                std::string got = lineBuffer.mid(matchBegin, pos-matchBegin).toLatin1().data();
                 captureList.push_back( got );
                 posList.push_back( matchBegin );
                 matchBegin = -1;
