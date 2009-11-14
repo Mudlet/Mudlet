@@ -101,6 +101,8 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
 void TriggerUnit::removeTriggerRootNode( TTrigger * pT )
 {
     if( ! pT ) return;
+    mTriggerMap.remove( pT->getID() );
+    mLookupTable.remove( pT->getName() );
     mTriggerRootNodeList.remove( pT );
 }
 
@@ -176,7 +178,7 @@ void TriggerUnit::addTrigger( TTrigger * pT )
 void TriggerUnit::removeTrigger( TTrigger * pT )
 {
     if( ! pT ) return;
-    
+    mLookupTable.remove( pT->getName() );
     mTriggerMap.remove(pT->getID());
     delete pT;
 }

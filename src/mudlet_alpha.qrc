@@ -94,5 +94,7 @@
         <file>icons/generic_mud.jpg</file>
         <file>icons/batmud_mud.png</file>
         <file>icons/aardwolf_mud.png</file>
+        <file>icons/utilities-file-archiver.png</file>
+        <file>icons/view-statistics.png</file>
     </qresource>
 </RCC>

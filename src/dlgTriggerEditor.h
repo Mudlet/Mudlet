@@ -74,6 +74,8 @@ public:
     void                        focusOutEvent( QFocusEvent * );
 
     QsciLexerLua *              mpLuaLexer;
+    QToolBar *                  toolBar;
+    QToolBar *                  toolBar2;
 
 signals:
     

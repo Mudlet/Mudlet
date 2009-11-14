@@ -84,9 +84,17 @@ bool TTimer::registerTimer()
 
 void TTimer::setName( QString name )
 {
+    if( ! mIsTempTimer )
+    {
+        QString key;
+        key = mpHost->getTimerUnit()->mLookupTable.key( this );
+        if( key != "" )
+            mpHost->getTimerUnit()->mLookupTable.remove( key );
+    }
     mName = name;
     mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );
 }
+
 
 void TTimer::setTime( QTime time )
 {

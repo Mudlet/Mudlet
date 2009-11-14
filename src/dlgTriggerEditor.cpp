@@ -301,12 +301,19 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QAction * toggleActiveAction = new QAction(QIcon(":/icons/document-encrypt.png"), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
     connect( toggleActiveAction, SIGNAL(triggered()), this, SLOT( slot_toggle_active()));
-    
-    QAction * addTriggerAction = new QAction(QIcon(":/icons/document-new.png"), tr("Add"), this);
+    connect( treeWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)), SLOT( slot_toggle_active()));
+    connect( treeWidget_alias, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)), SLOT( slot_toggle_active()));
+    connect( treeWidget_timers, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)), SLOT( slot_toggle_active()));
+    connect( treeWidget_scripts, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)), SLOT( slot_toggle_active()));
+    connect( treeWidget_actions, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)), SLOT( slot_toggle_active()));
+    connect( treeWidget_keys, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)), SLOT( slot_toggle_active()));
+
+
+    QAction * addTriggerAction = new QAction(QIcon(":/icons/document-new.png"), tr("Add Item"), this);
     addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
     connect( addTriggerAction, SIGNAL(triggered()), this, SLOT( slot_add_new()));
     
-    QAction * deleteTriggerAction = new QAction(QIcon(":/icons/edit-delete-shred.png"), tr("Delete"), this);
+    QAction * deleteTriggerAction = new QAction(QIcon(":/icons/edit-delete-shred.png"), tr("Delete Item"), this);
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
     connect( deleteTriggerAction, SIGNAL(triggered()), this, SLOT( slot_delete_item()));
         
@@ -319,7 +326,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     showSearchAreaAction->setStatusTip(tr("Show Search Results List"));
     connect( showSearchAreaAction, SIGNAL(triggered()), this, SLOT( slot_show_search_area()));
     
-    QAction * saveAction = new QAction(QIcon(":/icons/document-save-as.png"), tr("Save"), this);
+    QAction * saveAction = new QAction(QIcon(":/icons/document-save-as.png"), tr("Save Item"), this);
     //saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setStatusTip(tr("Save Edited Trigger, Script, Alias etc. If information has been edited, it must be saved or the changes will be lost."));
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
@@ -340,14 +347,19 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     profileSaveAction->setEnabled( true );
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
     
-    QAction * saveProfileAsAction = new QAction(QIcon(":/icons/document-save-as.png"), tr("Save Profile As"), this);
-    profileSaveAction->setEnabled( true );
+    QAction * saveProfileAsAction = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Save Profile As"), this);
+    saveProfileAsAction->setEnabled( true );
     connect( saveProfileAsAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAsAction()));
     
-    QMenu * saveProfileMenu = new QMenu( this );
-    saveProfileMenu->addAction( profileSaveAction );
-    saveProfileMenu->addAction( saveProfileAsAction );
-    saveMenu->setMenu( saveProfileMenu );    
+    QAction * viewStatsAction = new QAction(QIcon(":/icons/view-statistics.png"), tr("Statistics"), this);
+    viewStatsAction->setEnabled( true );
+    connect( viewStatsAction, SIGNAL(triggered()), this, SLOT( slot_viewStatsAction()));
+
+
+    //Action * saveProfileMenu = new QMenu( this );
+    //saveProfileMenu->addAction( profileSaveAction );
+    //saveProfileMenu->addAction( saveProfileAsAction );
+    //saveMenu->setMenu( saveProfileMenu );
     
     /*QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
     actionProfileBackup->setStatusTip(tr("Backup Profile"));*/
@@ -389,7 +401,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addTriggerMenu->addAction( addAliasMenuAction );
     addTriggerMenu->addAction( addKeysMenuAction );
     
-    addTriggerAction->setMenu( addTriggerMenu );
+    //addTriggerAction->setMenu( addTriggerMenu );
     
     QAction * addTriggerGroupMenuAction = new QAction(QIcon(":/icons/tools-wizard.png"), tr("Triggers"), this);
     addTriggerGroupMenuAction->setStatusTip(tr("Add Trigger Group"));
@@ -422,19 +434,17 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addTriggerGroupMenu->addAction( addAliasGroupMenuAction );
     //addTriggerGroupMenu->addAction( addFiltersGroupMenuAction );
     
-    addFolderAction->setMenu( addTriggerGroupMenu );
-    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
-    toolBar->addAction( viewTriggerAction );
-    toolBar->addAction( viewAliasAction );
-    toolBar->addAction( viewScriptsAction );
-    toolBar->addAction( showTimersAction );
-    toolBar->addAction( viewKeysAction );
-    toolBar->addAction( viewActionAction );
-    toolBar->addSeparator();    
+    //addFolderAction->setMenu( addTriggerGroupMenu );
+
+    //toolBar->addSeparator();
     
+    toolBar = new QToolBar();
+    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    toolBar->setMovable(true);
     toolBar->addAction( toggleActiveAction );
     toolBar->addAction( saveAction );
-    toolBar->addAction( showSearchAreaAction );
+
     toolBar->addSeparator();
     
     toolBar->addAction( addTriggerAction );
@@ -444,9 +454,31 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( deleteTriggerAction );    
     toolBar->addAction( importAction );
     toolBar->addAction( exportAction );
-    toolBar->addAction( saveMenu );
-    toolBar->addAction( showDebugAreaAction );
+    toolBar->addAction( saveProfileAsAction );
+    toolBar->addAction( profileSaveAction );
+
     
+
+    toolBar2 = new QToolBar();
+    toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    toolBar2->addAction( viewTriggerAction );
+    toolBar2->addAction( viewAliasAction );
+    toolBar2->addAction( viewScriptsAction );
+    toolBar2->addAction( showTimersAction );
+    toolBar2->addAction( viewKeysAction );
+    toolBar2->addAction( viewActionAction );
+    toolBar2->addAction( showSearchAreaAction );
+    toolBar2->addAction( viewStatsAction );
+    toolBar2->addAction( showDebugAreaAction );
+
+    toolBar2->setMovable( true );
+
+    toolBar2->setOrientation(Qt::Vertical);
+
+    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2 );
+    QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar );
+
     mpSourceEditorArea->editor->setFont( mpHost->mDisplayFont );
     /*mpSourceEditorArea->script_scintilla->setUtf8( true );
     setFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) );
@@ -519,7 +551,18 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
 void dlgTriggerEditor::setTBIconSize( int s )
 {
+    if( mudlet::self()->mMainIconSize > 2 )
+    {
+        toolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+        toolBar2->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
+    }
+    else
+    {
+        toolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
+        toolBar2->setToolButtonStyle( Qt::ToolButtonIconOnly );
+    }
     toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
+    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
     treeWidget->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
     treeWidget_alias->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
     treeWidget_timers->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));

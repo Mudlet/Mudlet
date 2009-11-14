@@ -3732,7 +3732,7 @@ int TLuaInterpreter::startTempTimer( double timeout, QString function )
     pT->registerTimer();    
     pT->setScript( function );
     int id = pT->getID();
-    pT->setName( QString::number( id ) );
+    pT->setName( QString::number( id ) );//darf erst nach isTempTimer gesetzt werde, damit setName() schneller ist
     pT->setIsActive( true );
     pT->enableTimer( id );
     return id;                  

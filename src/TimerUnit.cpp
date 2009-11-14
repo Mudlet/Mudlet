@@ -131,7 +131,8 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
 void TimerUnit::removeTimerRootNode( TTimer * pT )
 {
     if( ! pT ) return;
-    
+    mTimerMap.remove( pT->getID() );
+    mLookupTable.remove( pT->getName() );
     mTimerRootNodeList.remove( pT );
 }
 
@@ -209,6 +210,7 @@ void TimerUnit::addTimer( TTimer * pT )
 void TimerUnit::removeTimer( TTimer * pT )
 {
     if( ! pT ) return;
+    mLookupTable.remove( pT->getName() );
     mTimerMap.remove( pT->getID() );
     markCleanup( pT );
 }
