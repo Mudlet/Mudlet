@@ -259,7 +259,6 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
     }
     else
     {
-        qDebug()<<"SORRY canBeUnlocked fails!";
         //DumpFamily();
         return false;
     }

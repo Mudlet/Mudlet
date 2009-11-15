@@ -90,6 +90,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mMainFrameLeftWidth( 0 )
 , mMainFrameRightWidth( 0 )
 , mRecordReplay( false )
+, mConsoleName( "main" )
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -267,17 +268,20 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     
     layer = new QWidget( mpMainDisplay );
     layer->setContentsMargins(0,0,0,0);
+    layer->setContentsMargins( 0, 0, 0, 0 );//neu rc1
     layer->setSizePolicy( sizePolicy );
     layer->setFocusPolicy( Qt::NoFocus );
         
     QHBoxLayout * layoutLayer = new QHBoxLayout;
     layer->setLayout( layoutLayer );
-    layoutLayer->setMargin(0);
+    layoutLayer->setMargin( 0 );//neu rc1
+    layoutLayer->setSpacing( 0 );//neu rc1
+    layoutLayer->setMargin( 0 );//neu rc1
     QSizePolicy sizePolicyLayer(QSizePolicy::Expanding, QSizePolicy::Expanding);
         
     mpScrollBar->setFixedWidth( 15 );
     
-    splitter = new TSplitter( Qt::Vertical );//, layer );
+    splitter = new TSplitter( Qt::Vertical );
     splitter->setContentsMargins(0,0,0,0);
     splitter->setSizePolicy( sizePolicy );
     splitter->setOrientation( Qt::Vertical );
@@ -1602,8 +1606,7 @@ void TConsole::echo( QString & msg )
 void TConsole::print( const char * txt )
 {
     QString msg = txt;
-    qDebug()<<"1BUG:fgR="<<mFormatCurrent.fgR<<" bgR="<<mFormatCurrent.bgR;
-    buffer.append( msg, 
+    buffer.append( msg,
                    0,
                    msg.size(),
                    mFormatCurrent.fgR,
@@ -1932,9 +1935,17 @@ void TConsole::slot_stop_all_triggers( bool b )
 
 void TConsole::showStatistics()
 {
-    print( "================================================\n" );
-    print( "            system statistics\n");
-    print( "================================================\n" );
+    print( "\n");
+    print( "+--------------------------------------------------------------+\n" );
+    print( "|               system statistics                              |\n");
+    print( "+--------------------------------------------------------------+\n" );
+
+    QString r = mpHost->getTriggerUnit()->assembleReport();
+    print( r );
+    //mpHost->getTimerUnit()->printReport();
+
+
+    print( "+--------------------------------------------------------------+\n" );
 
     //print( "20 triggers\n" );
 

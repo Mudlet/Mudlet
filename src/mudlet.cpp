@@ -536,6 +536,7 @@ bool mudlet::createMiniConsole( Host * pHost, QString & name, int x, int y, int 
     if( ! dockWindowConsoleMap.contains( name ) )
     {
         TConsole * pC = pHost->mpConsole->createMiniConsole( name, x, y, width, height );
+        pC->mConsoleName = name;
         if( pC )
         {
             dockWindowConsoleMap[name] = pC;

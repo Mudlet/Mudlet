@@ -29,12 +29,28 @@
 #include <string>
 #include "Host.h"
 #include "TLuaInterpreter.h"
-
+#include "TConsole.h"
 
 #include <QDebug>
 #include "TriggerUnit.h"
 
 using namespace std;
+
+void TriggerUnit::initStats()
+{
+    statsTriggerTotal = 0;
+    statsTempTriggers = 0;
+    statsActiveTriggers = 0;
+    statsActiveTriggersMax = 0;
+    statsActiveTriggersMin = 0;
+    statsActiveTriggersAverage = 0;
+    statsTempTriggersCreated = 0;
+    statsTempTriggersKilled = 0;
+    statsAverageLineProcessingTime = 0;
+    statsMaxLineProcessingTime = 0;
+    statsMinLineProcessingTime = 0;
+    statsRegexTriggers = 0;
+}
 
 void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int childPosition )
 {
@@ -347,6 +363,57 @@ void TriggerUnit::dump()
         pChild->DumpFamily();
     }
 }
+
+void TriggerUnit::_assembleReport( TTrigger * pChild )
+{
+    typedef list<TTrigger *>::const_iterator I;
+    list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TTrigger * pT = *it2;
+        _assembleReport( pT );
+        if( pT->isActive() ) statsActiveTriggers++;
+        if( pT->isTempTrigger() ) statsTempTriggers++;
+        statsTriggerTotal++;
+    }
+}
+
+QString TriggerUnit::assembleReport()
+{
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        if( pChild->isActive() ) statsActiveTriggers++;
+        if( pChild->isTempTrigger() ) statsTempTriggers++;
+        statsTriggerTotal++;
+        list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
+        for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        {
+            TTrigger * pT = *it2;
+            _assembleReport( pT );
+            if( pT->isActive() ) statsActiveTriggers++;
+            if( pT->isTempTrigger() ) statsTempTriggers++;
+            statsTriggerTotal++;
+        }
+    }
+    QStringList msg;
+    msg << "triggers current total: " << QString::number(statsTriggerTotal) << "\n"
+        << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
+        << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
+        /*<< "active triggers max this session: " << QString::number(statsActiveTriggersMax) << "\n"
+        << "active triggers min this session: " << QString::number(statsActiveTriggersMin) << "\n"
+        << "active triggers average this session: " << QString::number(statsActiveTriggersAverage) << "\n"*/
+        //<< "tempTriggers created this session: " << QString::number(statsTempTriggersCreated) << "\n"
+        //<< "tempTriggers killed this session: " << QString::number(statsTempTriggersKilled) << "\n"
+        //<< "current total regex triggers: " << QString::number(statsRegexTriggers) << "\n"
+        //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
+        //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
+        //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
+    return msg.join("");
+
+}
+
 
 
 

@@ -163,6 +163,7 @@ public:
       void              finalize();
       void              runTriggers( int );
       void              showStatistics();
+      QString           mConsoleName;
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 

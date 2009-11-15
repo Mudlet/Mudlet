@@ -84,7 +84,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     setCursor( cursor );
     setAutoFillBackground( true ); //experimental
     //setAttribute( Qt::WA_InputMethodEnabled, true );
-    //setAttribute( Qt::WA_OpaquePaintEvent );
+    setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
     setAttribute( Qt::WA_DeleteOnClose );
     
     QPalette palette;
@@ -352,7 +352,6 @@ inline void TTextEdit::drawBackground( QPainter & painter,
     painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor );//QColor(rand()%255,rand()%255,rand()%255));//bgColor);
 }
 
-int CCChange;
 
 inline void TTextEdit::drawCharacters( QPainter & painter,
                                 const QRect & rect,
@@ -563,7 +562,10 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     {
         from = mScreenHeight-mScrollVector-1;
     }
-    
+
+    QRect deleteRect = QRect( 0, from*mFontHeight, rect.width(), rect.height() );
+    drawBackground( p, deleteRect, mBgColor );
+
     for( int i=from; i<mScreenHeight; i++ )
     {
         if( mpBuffer->buffer.size() <= i+lineOffset ) 
@@ -655,9 +657,12 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 
 void TTextEdit::paintEvent( QPaintEvent* e )
 {
+    //qDebug()<<"console="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect();
     QPainter painter( this );
     const QRect & rect = e->rect();
-    drawBackground( painter, rect, mBgColor );
+
+    QRect borderRect = QRect( 0, mScreenHeight*mFontHeight, rect.width(), rect.height() );
+    drawBackground( painter, borderRect, mBgColor );
     drawForeground( painter, rect );
     mInversOn = false;
 }

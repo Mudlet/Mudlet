@@ -102,6 +102,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     // init generated dialog
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true ); //MAC OSX: make window moveable
+    setWindowTitle( mpHost->getName() );
     QStatusBar * statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled( true );
     setStatusBar( statusBar );
@@ -502,7 +503,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_alias, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_clicked( QTreeWidgetItem *, int) ) );
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_clicked( QTreeWidgetItem *, int) ) );
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
-    connect( mpSearchArea, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
+    //connect( mpSearchArea, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     //connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     //connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
@@ -550,7 +551,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 void dlgTriggerEditor::slot_viewStatsAction()
 {
     mpHost->mpConsole->showStatistics();
+    mudlet::self()->raise();
     mudlet::self()->activateWindow();
+    mudlet::self()->raise();
 }
 
 
@@ -620,6 +623,7 @@ void dlgTriggerEditor::slot_switchToExpertMonde()
 
 void dlgTriggerEditor::slot_item_clicked_search_list(QTreeWidgetItem* pItem, int mode )
 {
+    qDebug()<<"dlgTriggerEditor::slot_item_clicked_search_list item="<<pItem->text(0);
     if( pItem->text(0) == QString("Trigger") )
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
@@ -746,8 +750,8 @@ void dlgTriggerEditor::slot_item_clicked_search_list(QTreeWidgetItem* pItem, int
 void dlgTriggerEditor::slot_search_triggers( const QString s )             
 {
     QRegExp pattern = QRegExp( s );
-    mpSourceEditorArea->highlighter->setSearchPattern( s );
-    mpSourceEditorArea->highlighter->rehighlight();
+
+    //mpSourceEditorArea->highlighter->rehighlight();
     tree_widget_search_results_main->clear();
     tree_widget_search_results_main->show();
 
@@ -1138,6 +1142,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
             recursiveSearchKeys( pChild, s );
         }
     }
+    mpSourceEditorArea->highlighter->setSearchPattern( s );
 }
 
 void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const QString & s )
