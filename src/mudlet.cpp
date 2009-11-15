@@ -77,7 +77,7 @@ mudlet::mudlet()
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet Beta 16 - built: November-9-2009");
+    setWindowTitle("Mudlet 1.0");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
@@ -145,8 +145,8 @@ mudlet::mudlet()
     actionTimers->setStatusTip(tr("Show Timers"));
     mpMainToolBar->addAction( actionTimers );    
     
-    QAction * actionButtons = new QAction(QIcon(":/icons/bookmarks.png"), tr("Actions"), this);
-    actionButtons->setStatusTip(tr("Show Actions"));
+    QAction * actionButtons = new QAction(QIcon(":/icons/bookmarks.png"), tr("Buttons"), this);
+    actionButtons->setStatusTip(tr("Show Easy Buttons"));
     mpMainToolBar->addAction( actionButtons );
     
     QAction * actionScripts = new QAction(QIcon(":/icons/document-properties.png"), tr("Scripts"), this);

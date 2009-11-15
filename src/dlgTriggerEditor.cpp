@@ -273,8 +273,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
     connect(viewTriggerAction, SIGNAL(triggered()), this, SLOT(slot_show_triggers() ));
     
-    QAction * viewActionAction = new QAction(QIcon(":/icons/bookmarks.png"), tr("Actions"), this);
-    viewActionAction->setStatusTip(tr("Show Actions"));
+    QAction * viewActionAction = new QAction(QIcon(":/icons/bookmarks.png"), tr("Buttons"), this);
+    viewActionAction->setStatusTip(tr("Show Buttons"));
     connect(viewActionAction, SIGNAL(triggered()), this, SLOT(slot_show_actions() ));
     
     

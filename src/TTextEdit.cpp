@@ -834,6 +834,7 @@ void TTextEdit::copySelectionToClipboard()
                     QClipboard * clipboard = QApplication::clipboard();
                     clipboard->setText( text );
                     mSelectedRegion = QRegion( 0, 0, 0, 0 );
+                    forceUpdate();
                     return;
                 }
             }
