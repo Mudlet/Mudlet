@@ -25,8 +25,8 @@
 #include <QWidget>
 #include "TTrigger.h"
 
-#include <Qsci/qsciscintilla.h>
-#include <Qsci/qscilexerlua.h>
+//#include <Qsci/qsciscintilla.h>
+//#include <Qsci/qscilexerlua.h>
 
 class dlgTriggersMainArea : public QWidget , public Ui::trigger_main_area
 {
@@ -35,7 +35,7 @@ class dlgTriggersMainArea : public QWidget , public Ui::trigger_main_area
 public:
         
          dlgTriggersMainArea();
-    QsciLexerLua * mpLuaLexer;
+    //QsciLexerLua * mpLuaLexer;
 
 signals:
     

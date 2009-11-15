@@ -110,7 +110,8 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
     }
     if( ! pOldParent )
     {
-        removeTimerRootNode( pChild );    
+        //removeTimerRootNode( pChild );
+        mTimerRootNodeList.remove( pChild );
     }
     if( pNewParent )
     {
@@ -128,11 +129,22 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
     pChild->enableTimer( childID );
 }
 
-void TimerUnit::removeTimerRootNode( TTimer * pT )
+void TimerUnit::_removeTimerRootNode( TTimer * pT )
 {
     if( ! pT ) return;
+    // temp timers do not need to check for names referring to multiple different
+    // objects as names=ID -> much faster tempTimer creation
+    if( ! pT->mIsTempTimer )
+    {
+        QString key;
+        key = mpHost->getTimerUnit()->mLookupTable.key( pT );
+        if( key != "" )
+            mpHost->getTimerUnit()->mLookupTable.remove( key );
+    }
+    else
+        mLookupTable.remove( pT->getName() );
+
     mTimerMap.remove( pT->getID() );
-    mLookupTable.remove( pT->getName() );
     mTimerRootNodeList.remove( pT );
 }
 
@@ -183,12 +195,12 @@ void TimerUnit::unregisterTimer( TTimer * pT )
     if( ! pT ) return;
     if( pT->getParent() )
     {
-        removeTimer( pT );
+        _removeTimer( pT );
         return;
     }
     else
     {
-        removeTimerRootNode( pT );    
+        _removeTimerRootNode( pT );
         return;
     }
 }
@@ -207,13 +219,24 @@ void TimerUnit::addTimer( TTimer * pT )
     mTimerMap.insert( pT->getID(), pT );
 }
 
-void TimerUnit::removeTimer( TTimer * pT )
+void TimerUnit::_removeTimer( TTimer * pT )
 {
     if( ! pT ) return;
-    mLookupTable.remove( pT->getName() );
+
+    // temp timers do not need to check for names referring to multiple different
+    // objects as names=ID -> much faster tempTimer creation
+    if( ! pT->mIsTempTimer )
+    {
+        QString key;
+        key = mpHost->getTimerUnit()->mLookupTable.key( pT );
+        if( key != "" )
+            mpHost->getTimerUnit()->mLookupTable.remove( key );
+    }
+    else
+        mLookupTable.remove( pT->getName() );
     mTimerMap.remove( pT->getID() );
-    markCleanup( pT );
 }
+
 
 void TimerUnit::enableTimer( QString & name )
 {
@@ -222,11 +245,14 @@ void TimerUnit::enableTimer( QString & name )
     {
         TTimer * pT = it.value();
 
+        bool ret = false;
+
         if( ! pT->isOffsetTimer() )
-            pT->setIsActive( true );
+            ret = pT->setIsActive( true );
         else
             pT->setShouldBeActive( true );
 
+        qDebug()<<"trying to enable name="<<name<<" acutally using name="<<pT->getName()<<" setIsActive()="<<ret;
         if( pT->isFolder() )
         {
             // disable or enable all timers in the respective branch
@@ -254,7 +280,7 @@ void TimerUnit::enableTimer( QString & name )
                     pT->disableTimer();
                 }
             }
-            else
+            /*else
             {
                 if( pT->shouldBeActive() )
                 {
@@ -264,7 +290,7 @@ void TimerUnit::enableTimer( QString & name )
                 {
                     pT->disableTimer();
                 }
-            }
+            }*/
         }
 
         ++it;
@@ -339,7 +365,8 @@ bool TimerUnit::killTimer( QString & name )
             // only temporary timers are allowed to be killed
             if( ! pChild->isTempTimer() ) return false;
             pChild->killTimer();
-            removeTimer( pChild );
+            //removeTimer( pChild );
+            markCleanup( pChild );
             return true;
         }
     }

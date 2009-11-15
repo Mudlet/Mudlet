@@ -26,8 +26,8 @@
 #include "TTrigger.h"
 #include "TAction.h"
 #include <QHeaderView>
-#include <Qsci/qsciscintilla.h>
-#include <Qsci/qscilexerlua.h>
+//#include <Qsci/qsciscintilla.h>
+//#include <Qsci/qscilexerlua.h>
 #include <QtGui>
 #include <QMainWindow>
 #include <QListWidgetItem>

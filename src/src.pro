@@ -1,20 +1,14 @@
-QT += webkit \
-    network
+QT += network
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
-unix:LIBS += -lqscintilla2 \
-    -lpcre \
+unix:LIBS += -lpcre \
     $$LIBLUA
-win32:LIBS += -Lc:\Qscintilla-gpl-2.3.2\qt4\release \
-    -lqscintilla2 \
-    -Lc:\lua-5.1.4 \
+win32:LIBS += -Lc:\lua-5.1.4 \
     -llua51 \
     -Lc:\pcre-7.6\build \
     -lpcre
-unix:INCLUDEPATH += /usr/include/Qsci \
-    /usr/include/lua5.1
-win32:INCLUDEPATH += C:\Qscintilla-gpl-2.3.2\qt4 \
-    c:\lua-5.1.4\src \
+unix:INCLUDEPATH += /usr/include/lua5.1
+win32:INCLUDEPATH += c:\lua-5.1.4\src \
     c:\zlib-1.2.3 \
     c:\pcre-7.6\build
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
@@ -58,7 +52,6 @@ SOURCES += TConsole.cpp \
     dlgActionMainArea.cpp \
     dlgOptionsAreaAction.cpp \
     EAction.cpp \
-    dlgHelpDialog.cpp \
     dlgAboutDialog.cpp \
     TDebug.cpp \
     dlgKeysMainArea.cpp \
@@ -118,7 +111,6 @@ HEADERS += mudlet.h \
     ActionUnit.h \
     dlgActionMainArea.h \
     dlgOptionsAreaAction.h \
-    dlgHelpDialog.h \
     dlgAboutDialog.h \
     TMatchState.h \
     TEvent.h \
@@ -142,7 +134,6 @@ HEADERS += mudlet.h \
     THighlighter.h \
     Tree.h
 FORMS += ui/connection_profiles.ui \
-    ui/console.ui \
     ui/main_window.ui \
     ui/trigger_editor.ui \
     ui/options_area_triggers.ui \
@@ -157,7 +148,6 @@ FORMS += ui/connection_profiles.ui \
     ui/extended_search_area.ui \
     ui/actions_main_area.ui \
     ui/options_area_actions.ui \
-    ui/help_dialog.ui \
     ui/timers_main_area.ui \
     ui/about_dialog.ui \
     ui/keybindings_main_area.ui \

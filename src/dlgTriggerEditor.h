@@ -31,8 +31,8 @@
 #include <QTableWidgetItem>
 #include "TTrigger.h"
 #include "TAction.h"
-#include <Qsci/qsciscintilla.h>
-#include <Qsci/qscilexerlua.h>
+//#include <Qsci/qsciscintilla.h>
+//#include <Qsci/qscilexerlua.h>
 #include "dlgTriggersMainArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgSystemMessageArea.h"
@@ -73,7 +73,7 @@ public:
     void                        focusInEvent( QFocusEvent * );
     void                        focusOutEvent( QFocusEvent * );
 
-    QsciLexerLua *              mpLuaLexer;
+    //  QsciLexerLua *              mpLuaLexer;
     QToolBar *                  toolBar;
     QToolBar *                  toolBar2;
 
@@ -250,7 +250,7 @@ private:
     bool                        mIsScriptsMainAreaEditHandler;
     QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
     bool                        mIsGrabKey;
-    QsciDocument                mDocument;
+    //QsciDocument                mDocument;
     Host *                      mpHost;
 };
 

@@ -5,12 +5,8 @@ CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 SET(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
 SET(QT_USE_QTNETWORK 1)
-SET(QT_USE_QTPHONON 1 )
-SET(QT_USE_QTWEBKIT 1)
-SET(CMAKE_CONFIGURATION_TYPES "Debug;Release")
-
+SET(CMAKE_CONFIGURATION_TYPES "Release")
 SET(mudlet_RCCS mudlet_alpha.qrc)
-
 SET( mudlet_SRCS mudlet.cpp
 TConsole.cpp
 ctelnet.cpp
@@ -51,7 +47,6 @@ ActionUnit.cpp
 dlgActionMainArea.cpp
 dlgOptionsAreaAction.cpp
 EAction.cpp
-dlgHelpDialog.cpp
 dlgAboutDialog.cpp
 TDebug.cpp
 dlgKeysMainArea.cpp
@@ -75,7 +70,6 @@ dlgTriggerPatternEdit.cpp
 TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
-ui/console.ui
 ui/main_window.ui
 ui/trigger_editor.ui
 ui/options_area_triggers.ui
@@ -90,7 +84,6 @@ ui/source_editor_area.ui
 ui/extended_search_area.ui
 ui/actions_main_area.ui
 ui/options_area_actions.ui
-ui/help_dialog.ui
 ui/timers_main_area.ui
 ui/about_dialog.ui
 ui/keybindings_main_area.ui
@@ -123,7 +116,6 @@ dlgOptionsAreaTimers.h
 dlgSearchArea.h
 dlgActionMainArea.h
 dlgOptionsAreaAction.h
-dlgHelpDialog.h
 dlgAboutDialog.h
 dlgKeysMainArea.h
 dlgProfilePreferences.h
@@ -140,7 +132,6 @@ TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)
 FIND_PACKAGE(Lua51 REQUIRED)
-FIND_PACKAGE(QScintilla REQUIRED)
 FIND_PACKAGE(ZLIB REQUIRED)
 FIND_PACKAGE(PCRE REQUIRED)
 
@@ -155,7 +146,7 @@ QT4_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
 add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
 
-TARGET_LINK_LIBRARIES(mudlet ${QT_LIBRARIES} ${QSCINTILLA_LIBRARIES} ${LUA_LIBRARIES} ${ZLIB_LIBRARIES} ${PCRE_LIBRARIES})
+TARGET_LINK_LIBRARIES(mudlet ${QT_LIBRARIES} ${LUA_LIBRARIES} ${ZLIB_LIBRARIES} ${PCRE_LIBRARIES})
 
 install( PROGRAMS mudlet DESTINATION "/usr/local/bin" )
 install( FILES LuaGlobal.lua mudlet_documentation.html fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT fonts/ttf-bitstream-vera-1.10/local.conf fonts/ttf-bitstream-vera-1.10/README.TXT fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT fonts/ttf-bitstream-vera-1.10/VeraBd.ttf fonts/ttf-bitstream-vera-1.10/VeraBI.ttf fonts/ttf-bitstream-vera-1.10/VeraIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMono.ttf fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf fonts/ttf-bitstream-vera-1.10/VeraSe.ttf fonts/ttf-bitstream-vera-1.10/Vera.ttf DESTINATION "/usr/local/share/mudlet" )

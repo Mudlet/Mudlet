@@ -60,8 +60,8 @@ private:
     TTimer *              getTimerPrivate( int id );
     void                  addTimerRootNode( TTimer * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addTimer( TTimer * pT );
-    void                  removeTimerRootNode( TTimer * pT );
-    void                  removeTimer( TTimer *);
+    void                  _removeTimerRootNode( TTimer * pT );
+    void                  _removeTimer( TTimer *);
     Host *                mpHost;
     QMap<int, TTimer *>   mTimerMap;
     std::list<TTimer *>   mTimerRootNodeList;

@@ -39,7 +39,6 @@ Mudlet Manual
 .. <<silbermine,Auto Miner Bot Example - How to write a little Bot with Mudlet?>>
 . <<customGui,Custom GUI Elements>>
 .. <<userWindows,User Terminal Windows>>
-.. <<userWebkitWindows,User Webkit Webbrowser Windows>>
 .. <<labels,Custom Mini Text Displays - Scripting Labels>>
 .. <<buttons,Scripting Buttons>>
 .. <<userGfxWindows,User Custom Graphics Windows>>

@@ -25,7 +25,7 @@
 
 #include <QMainWindow>
 #include <QCloseEvent>
-#include "ui_console.h"
+//#include "ui_console.h"
 #include "TConsole.h"
 #include "mudlet.h"
 #include "ctelnet.h"

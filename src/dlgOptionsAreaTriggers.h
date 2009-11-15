@@ -25,8 +25,8 @@
 #include <QWidget>
 #include "TTrigger.h"
 
-#include <Qsci/qsciscintilla.h>
-#include <Qsci/qscilexerlua.h>
+//#include <Qsci/qsciscintilla.h>
+//#include <Qsci/qscilexerlua.h>
 
 class dlgOptionsAreaTriggers : public QWidget , public Ui::options_area_triggers
 {

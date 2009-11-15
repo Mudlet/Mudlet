@@ -84,6 +84,8 @@ bool TTimer::registerTimer()
 
 void TTimer::setName( QString name )
 {
+    // temp timers do not need to check for names referring to multiple
+    // timer objects as names=ID -> much faster tempTimer creation
     if( ! mIsTempTimer )
     {
         QString key;
@@ -125,8 +127,9 @@ bool TTimer::isOffsetTimer()
 
 bool TTimer::setIsActive( bool b )
 {
-    bool ret = Tree<TTimer>::setIsActive( b );
-    if( ret )
+    bool condition1 = Tree<TTimer>::setIsActive( b );
+    bool condition2 = canBeUnlocked(0);
+    if( condition1 && condition2 )
     {
         start(); 
     }
@@ -134,7 +137,7 @@ bool TTimer::setIsActive( bool b )
     {
         stop(); 
     }
-    return ret;
+    return condition1 && condition2;
 }
 
 
@@ -256,6 +259,7 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
     }
     else
     {
+        qDebug()<<"SORRY canBeUnlocked fails!";
         //DumpFamily();
         return false;
     }
