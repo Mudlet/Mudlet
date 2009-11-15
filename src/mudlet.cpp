@@ -33,7 +33,7 @@
 #include "dlgAboutDialog.h"
 #include "TCommandLine.h"
 #include "EAction.h"
-#include "dlgHelpDialog.h"
+//#include "dlgHelpDialog.h"
 #include "dlgProfilePreferences.h"
 #include "TDebug.h"
 #include "XMLimport.h"

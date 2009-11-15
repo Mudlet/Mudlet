@@ -1930,7 +1930,16 @@ void TConsole::slot_stop_all_triggers( bool b )
     }
 }
 
+void TConsole::showStatistics()
+{
+    print( "================================================\n" );
+    print( "            system statistics\n");
+    print( "================================================\n" );
 
+    //print( "20 triggers\n" );
+
+
+}
 
 
 

@@ -93,6 +93,7 @@ public slots:
     void                        slot_choseButtonColor();
     void                        slot_export();
     void                        slot_import();
+    void                        slot_viewStatsAction();
     void                        slot_debug_mode();
     void                        slot_saveTriggerAfterEdit();
     void                        slot_saveTimerAfterEdit();

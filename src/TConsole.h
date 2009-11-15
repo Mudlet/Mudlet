@@ -162,6 +162,7 @@ public:
       void              setUnderline( bool );
       void              finalize();
       void              runTriggers( int );
+      void              showStatistics();
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 

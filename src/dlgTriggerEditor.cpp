@@ -547,6 +547,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     tree_widget_search_results_main->setHeaderLabels( labelList );
 }
 
+void dlgTriggerEditor::slot_viewStatsAction()
+{
+    mpHost->mpConsole->showStatistics();
+    mudlet::self()->activateWindow();
+}
 
 
 void dlgTriggerEditor::setTBIconSize( int s )
