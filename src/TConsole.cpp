@@ -91,6 +91,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mMainFrameRightWidth( 0 )
 , mRecordReplay( false )
 , mConsoleName( "main" )
+, mWindowIsHidden( false )
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -1743,6 +1744,8 @@ bool TConsole::showWindow( QString & name )
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
+        mSubConsoleMap[key]->mWindowIsHidden = true;
+        //mSubConsoleMap[key]->move(mSubConsoleMap[key]->mOldX, mSubConsoleMap[key]->mOldY);
         mSubConsoleMap[key]->show();
         return true;
     }
@@ -1760,6 +1763,8 @@ bool TConsole::hideWindow( QString & name )
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
+        mSubConsoleMap[key]->mWindowIsHidden = true;
+        mSubConsoleMap[key]->move(999999,999999);
         mSubConsoleMap[key]->hide();
         return true;
     }

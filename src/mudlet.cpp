@@ -728,6 +728,8 @@ bool mudlet::moveWindow( QString & name, int x1, int y1 )
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->move( x1, y1 );
+        //dockWindowConsoleMap[name]->mOldX = x1;
+        //dockWindowConsoleMap[name]->mOldY = y1;
         return true;
     }
     else if( mLabelMap.contains( name ) )

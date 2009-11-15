@@ -82,7 +82,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     QCursor cursor;
     cursor.setShape(Qt::IBeamCursor);
     setCursor( cursor );
-    setAutoFillBackground( true ); //experimental
+    //setAutoFillBackground( true ); //experimental
     //setAttribute( Qt::WA_InputMethodEnabled, true );
     setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
     setAttribute( Qt::WA_DeleteOnClose );
@@ -151,7 +151,7 @@ void TTextEdit::slot_scrollBarMoved( int line )
 void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(255,255,255);
-    mBgColor = QColor(0,0,0);
+    mBgColor = QColor(50,0,0);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
     setFont( mDisplayFont );
     mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
@@ -196,6 +196,8 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics( mpHost->mDisplayFont ).descent();
         mFontAscent = QFontMetrics( mpHost->mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
+        mBgColor = mpHost->mBgColor;
+        mFgColor = mpHost->mFgColor;
     }
     else
     {
@@ -498,7 +500,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
 
 void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 {
-    if( ( mScrollVector > mScreenHeight ) || mForceUpdate )
+    if( ( mScrollVector >= mScreenHeight ) || mForceUpdate )
     {
         mScrollVector = 0;
         mForceUpdate = false;
@@ -547,12 +549,14 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     {
         if( mScrollUp )
         {
-            screenPixmap = mScreenMap.copy( 0, mScrollVector*mFontHeight, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
+            //screenPixmap = mScreenMap.copy( 0, mScrollVector*mFontHeight, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
+            screenPixmap = mScreenMap.copy( 0, mScrollVector*mFontHeight, mScreenWidth*mFontWidth, (mScreenHeight-mScrollVector)*mFontHeight );
             p.drawPixmap( 0, 0, screenPixmap );    
         }
         else
         {
-            screenPixmap = mScreenMap.copy( 0, 0, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
+            //screenPixmap = mScreenMap.copy( 0, 0, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
+            screenPixmap = mScreenMap.copy( 0, 0, mScreenWidth*mFontWidth, (mScreenHeight-mScrollVector)*mFontHeight );
             p.drawPixmap( 0, mScrollVector*mFontHeight, screenPixmap );
         }
     }
@@ -657,7 +661,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 
 void TTextEdit::paintEvent( QPaintEvent* e )
 {
-    //qDebug()<<"console="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect();
+    qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
     QPainter painter( this );
     const QRect & rect = e->rect();
 

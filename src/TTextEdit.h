@@ -99,6 +99,8 @@ public:
     int               mWrapAt;
     int               mWrapIndentCount;
     QRegion           mSelectedRegion;
+    QColor            mFgColor;
+    QColor            mBgColor;
 
 signals:
     
@@ -115,8 +117,7 @@ private:
     bool              mForceUpdate;
     void              initDefaultSettings();
     bool              mScrollUp;
-    QColor            mFgColor;
-    QColor            mBgColor;
+
 
     QFont             mCommandLineFont;
     QFont             mCommandSeperator;

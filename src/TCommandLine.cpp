@@ -98,7 +98,7 @@ bool TCommandLine::event( QEvent * event )
                 break;
 
             case Qt::Key_Backspace:
-                if( mTabCompletionTyped.size() > 1 )
+                if( mTabCompletionTyped.size() >= 1 )
                 {
                     mTabCompletionTyped.chop(1);
                     mAutoCompletionTyped.chop(1);
@@ -106,16 +106,33 @@ bool TCommandLine::event( QEvent * event )
                     mAutoCompletionCount = -1;
                     mLastCompletion = "";
                 }
+                else
+                {
+                    mTabCompletionCount = -1;
+                    mAutoCompletionCount = -1;
+                    mLastCompletion = "";
+                }
                 break;
 
             case Qt::Key_Delete:
-                if( mTabCompletionTyped.size() > 1 )
+                if( mTabCompletionTyped.size() >= 1 )
                 {
                     mTabCompletionTyped.chop(1);
                     mAutoCompletionTyped.chop(1);
                     mTabCompletionCount = -1;
                     mAutoCompletionCount = -1;
                     mLastCompletion = "";
+                }
+                else
+                {
+                    mTabCompletionCount = -1;
+                    mAutoCompletionCount = -1;
+                    mLastCompletion = "";
+                    mTabCompletionTyped = "";
+                    mAutoCompletionTyped = "";
+                    mUserKeptOnTyping = false;
+                    mTabCompletionCount = -1;
+                    mAutoCompletionCount = -1;
                 }
                 break;
 
@@ -132,6 +149,14 @@ bool TCommandLine::event( QEvent * event )
                 else
                 {
                     enterCommand(ke);
+                    mTabCompletionCount = -1;
+                    mAutoCompletionCount = -1;
+                    mLastCompletion = "";
+                    mTabCompletionTyped = "";
+                    mAutoCompletionTyped = "";
+                    mUserKeptOnTyping = false;
+                    mTabCompletionCount = -1;
+                    mAutoCompletionCount = -1;
                     ke->accept();
                     return true;
                 }
@@ -139,6 +164,14 @@ bool TCommandLine::event( QEvent * event )
 
             case Qt::Key_Enter:
                 enterCommand(ke);
+                mTabCompletionCount = -1;
+                mAutoCompletionCount = -1;
+                mLastCompletion = "";
+                mTabCompletionTyped = "";
+                mAutoCompletionTyped = "";
+                mUserKeptOnTyping = false;
+                mTabCompletionCount = -1;
+                mAutoCompletionCount = -1;
                 ke->accept();
                 return true;
                 break;
@@ -282,7 +315,7 @@ void TCommandLine::handleTabCompletion( bool direction )
         mTabCompletionTyped = text();
         if( mTabCompletionTyped.size() == 0 ) return;
         mUserKeptOnTyping = false;
-        mTabCompletionCount = 0;
+        mTabCompletionCount = -1;
     }
     int amount = mpHost->mpConsole->buffer.size();
     if( amount > 100 ) amount = 100;
@@ -348,9 +381,7 @@ void TCommandLine::handleAutoCompletion()
     neu.chop( selectedText().size() );
     setText( neu );
     mTabCompletionOld = neu;
-    qDebug()<<"after chop text=<"<<text()<<">"<<" Count="<<mAutoCompletionCount;
     int oldLength = text().size();
-    qDebug()<<"historyList="<<mHistoryList;
     if( mAutoCompletionCount >= mHistoryList.size() ) mAutoCompletionCount = mHistoryList.size()-1;
     if( mAutoCompletionCount < 0 ) mAutoCompletionCount = 0;
     for( int i=mAutoCompletionCount; i<mHistoryList.size(); i++ )
@@ -362,12 +393,10 @@ void TCommandLine::handleAutoCompletion()
             mLastCompletion = mHistoryList[i];
             setText( mHistoryList[i].toLower() );
             setSelection( oldLength, text().size() );
-            qDebug()<<"auto="<<mAutoCompletionCount<<" PROPOSAL:"<<mHistoryList[i];
             return;
         }
-        else
-            qDebug()<<"i="<<i<<" --> passt nicht -->"<<mHistoryList[i];
     }
+    mAutoCompletionCount = -1;
 }
 
 // cursor down: cycles chronologically through the command history.
@@ -377,15 +406,11 @@ void TCommandLine::historyDown(QKeyEvent *event)
     if( mHistoryList.size() < 1 ) return;
     if( (selectedText().size() == text().size()) || (text().size() == 0) )
     {
-        if( mHistoryBuffer >= 1 )
-        {
-            mHistoryBuffer--;
-            if( mHistoryBuffer >= 0 )
-            {
-                setText( mHistoryList[mHistoryBuffer] );
-            }
-            selectAll();
-        }
+        mHistoryBuffer--;
+        if( mHistoryBuffer >= mHistoryList.size() ) mHistoryBuffer = mHistoryList.size()-1;
+        if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
+        setText( mHistoryList[mHistoryBuffer] );
+        selectAll();
     }
     else
     {
@@ -403,12 +428,11 @@ void TCommandLine::historyUp(QKeyEvent *event)
     if( mHistoryList.size() < 1 ) return;
     if( (selectedText().size() == text().size()) || (text().size() == 0) )
     {
-        if( mHistoryBuffer < mHistoryList.size()-1 )
-        {
-            mHistoryBuffer++;
-            setText( mHistoryList[mHistoryBuffer] );
-            selectAll();
-        }
+        mHistoryBuffer++;
+        if( mHistoryBuffer >= mHistoryList.size() ) mHistoryBuffer = mHistoryList.size()-1;
+        if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
+        setText( mHistoryList[mHistoryBuffer] );
+        selectAll();
     }
     else
     {

@@ -164,6 +164,7 @@ public:
       void              runTriggers( int );
       void              showStatistics();
       QString           mConsoleName;
+      bool              mWindowIsHidden;
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 
