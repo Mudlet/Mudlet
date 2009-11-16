@@ -148,6 +148,8 @@ public:
     int              mKeepFiring;
     bool             isClone( TTrigger & ) const;
     Host *           mpHost;
+    QString                                mName;
+    bool                                   mIsTempTrigger;
 
 private:
     
@@ -156,13 +158,13 @@ private:
                                                               std::list<std::string> & captureList,
                                                               std::list<int> & posList );
     void                                   filter( std::string &, int & );
-    QString                                mName;
+
     QStringList                            mRegexCodeList;
     QList<int>                             mRegexCodePropertyList;
     QMap<int, pcre *>                      mRegexMap;
 
     QString                                mScript;
-    bool                                   mIsTempTrigger;
+
     bool                                   mIsFolder;
     bool                                   mNeedsToBeCompiled;
     int                                    mTriggerType;
