@@ -391,6 +391,9 @@ void TriggerUnit::_assembleReport( TTrigger * pChild )
 
 QString TriggerUnit::assembleReport()
 {
+    statsActiveTriggers = 0;
+    statsTriggerTotal = 0;
+    statsTempTriggers = 0;
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
