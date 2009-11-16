@@ -117,8 +117,13 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
 void TriggerUnit::removeTriggerRootNode( TTrigger * pT )
 {
     if( ! pT ) return;
+    if( ! pT->mIsTempTrigger )
+    {
+        mLookupTable.remove( pT->mName, pT );
+    }
+    else
+        mLookupTable.remove( pT->getName() );
     mTriggerMap.remove( pT->getID() );
-    mLookupTable.remove( pT->getName() );
     mTriggerRootNodeList.remove( pT );
 }
 
@@ -194,7 +199,13 @@ void TriggerUnit::addTrigger( TTrigger * pT )
 void TriggerUnit::removeTrigger( TTrigger * pT )
 {
     if( ! pT ) return;
-    mLookupTable.remove( pT->getName() );
+    if( ! pT->mIsTempTrigger )
+    {
+        mLookupTable.remove( pT->mName, pT );
+    }
+    else
+        mLookupTable.remove( pT->getName() );
+
     mTriggerMap.remove(pT->getID());
     delete pT;
 }
@@ -342,7 +353,7 @@ bool TriggerUnit::killTrigger( QString & name )
         {
             // only temporary triggers can be killed
             if( ! pChild->isTempTrigger() ) return false;
-            removeTrigger( pChild );
+            removeTriggerRootNode( pChild );
             return true;
         }
     }
