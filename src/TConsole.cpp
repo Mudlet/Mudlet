@@ -92,6 +92,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mRecordReplay( false )
 , mConsoleName( "main" )
 , mWindowIsHidden( false )
+, mOldX(0)
+, mOldY(0)
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -1657,6 +1659,8 @@ TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width,
         pC->console->setIsMiniConsole();
         pC->console2->setIsMiniConsole();
         pC->resize( width, height );
+        pC->mOldX = x;
+        pC->mOldY = y;
         pC->setContentsMargins(0,0,0,0);
         pC->move( x, y );
         pC->show();
@@ -1725,6 +1729,8 @@ bool TConsole::setBackgroundColor( QString & name, int r, int g, int b, int alph
         QPalette mainPalette;
         mainPalette.setColor( QPalette::Window, QColor(r, g, b, alpha) );
         mSubConsoleMap[key]->setPalette( mainPalette );
+        mSubConsoleMap[key]->console->mBgColor = QColor( r,g,b,alpha);
+        mSubConsoleMap[key]->console2->mBgColor = QColor( r,g,b,alpha);
         return true;
     }
     else if( mLabelMap.find( key ) != mLabelMap.end() )
@@ -1744,9 +1750,9 @@ bool TConsole::showWindow( QString & name )
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
-        mSubConsoleMap[key]->mWindowIsHidden = true;
-        //mSubConsoleMap[key]->move(mSubConsoleMap[key]->mOldX, mSubConsoleMap[key]->mOldY);
-        mSubConsoleMap[key]->show();
+        mSubConsoleMap[key]->console->updateScreenView();
+        //mSubConsoleMap[key]->show();
+        mSubConsoleMap[key]->move(mSubConsoleMap[key]->mOldX, mSubConsoleMap[key]->mOldY);
         return true;
     }
     else if( mLabelMap.find( key ) != mLabelMap.end() )
@@ -1763,9 +1769,8 @@ bool TConsole::hideWindow( QString & name )
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
-        mSubConsoleMap[key]->mWindowIsHidden = true;
-        mSubConsoleMap[key]->move(999999,999999);
-        mSubConsoleMap[key]->hide();
+        mSubConsoleMap[key]->move(9999,9999);
+        //mSubConsoleMap[key]->hide();
         return true;
     }
     else if( mLabelMap.find( key ) != mLabelMap.end() )

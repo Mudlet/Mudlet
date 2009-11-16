@@ -56,7 +56,7 @@ public:
     QString               assembleReport();
     std::list<TTrigger *> mCleanupList;
     qint64                getNewID();
-    QMap<QString, TTrigger *> mLookupTable;
+    QMultiMap<QString, TTrigger *> mLookupTable;
     QMutex                mTriggerUnitLock;
 
     int                   statsTriggerTotal;

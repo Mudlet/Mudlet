@@ -85,11 +85,8 @@ void TimerUnit::addTimerRootNode( TTimer * pT, int parentPosition, int childPosi
         }
     }
 
-    // -> schneller; sicherheitsabfrage nicht noetig
-    //if( mTimerMap.find( pT->getID() ) == mTimerMap.end() )
-    //{
     mTimerMap.insert( pT->getID(), pT );
-    //}
+    // kein lookup table eintrag siehe addTimer()
 }
 
 void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
@@ -136,10 +133,7 @@ void TimerUnit::_removeTimerRootNode( TTimer * pT )
     // objects as names=ID -> much faster tempTimer creation
     if( ! pT->mIsTempTimer )
     {
-        QString key;
-        key = mpHost->getTimerUnit()->mLookupTable.key( pT );
-        if( key != "" )
-            mpHost->getTimerUnit()->mLookupTable.remove( key );
+        mLookupTable.remove( pT->mName, pT );
     }
     else
         mLookupTable.remove( pT->getName() );
@@ -217,6 +211,7 @@ void TimerUnit::addTimer( TTimer * pT )
     }
     
     mTimerMap.insert( pT->getID(), pT );
+    // in den lookup table wird der timer erst dann eingetragen, wenn er auch einen namen hat -> setName()
 }
 
 void TimerUnit::_removeTimer( TTimer * pT )
@@ -227,10 +222,7 @@ void TimerUnit::_removeTimer( TTimer * pT )
     // objects as names=ID -> much faster tempTimer creation
     if( ! pT->mIsTempTimer )
     {
-        QString key;
-        key = mpHost->getTimerUnit()->mLookupTable.key( pT );
-        if( key != "" )
-            mpHost->getTimerUnit()->mLookupTable.remove( key );
+        mLookupTable.remove( pT->mName, pT );
     }
     else
         mLookupTable.remove( pT->getName() );
@@ -362,10 +354,9 @@ bool TimerUnit::killTimer( QString & name )
         TTimer * pChild = *it;
         if( pChild->getName() == name )
         {
-            // only temporary timers are allowed to be killed
+            // only temporary timers can be killed
             if( ! pChild->isTempTimer() ) return false;
             pChild->killTimer();
-            //removeTimer( pChild );
             markCleanup( pChild );
             return true;
         }

@@ -52,7 +52,7 @@ public:
     void                  markCleanup( TTimer * );
     void                  doCleanup();
     qint64                getNewID();
-    QMap<QString, TTimer *> mLookupTable;
+    QMultiMap<QString, TTimer *> mLookupTable;
     QMutex                mTimerUnitLock;
     
 private:

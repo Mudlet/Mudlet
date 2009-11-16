@@ -88,10 +88,7 @@ void TTimer::setName( QString name )
     // timer objects as names=ID -> much faster tempTimer creation
     if( ! mIsTempTimer )
     {
-        QString key;
-        key = mpHost->getTimerUnit()->mLookupTable.key( this );
-        if( key != "" )
-            mpHost->getTimerUnit()->mLookupTable.remove( key );
+        mpHost->getTimerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
     mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );

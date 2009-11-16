@@ -75,6 +75,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         setFont( mDisplayFont );
     }
     mScreenHeight = height() / mFontHeight;
+
     mScreenWidth = 100;
     
     setMouseTracking( true );
@@ -569,7 +570,6 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 
     QRect deleteRect = QRect( 0, from*mFontHeight, rect.width(), rect.height() );
     drawBackground( p, deleteRect, mBgColor );
-
     for( int i=from; i<mScreenHeight; i++ )
     {
         if( mpBuffer->buffer.size() <= i+lineOffset ) 
@@ -661,8 +661,14 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 
 void TTextEdit::paintEvent( QPaintEvent* e )
 {
-    qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
+    //qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
+    if( mScreenHeight <= 0 || mScreenWidth <= 0 )
+    {
+        mScreenHeight = e->rect().width();
+        mScreenWidth = e->rect().height();
+    }
     QPainter painter( this );
+    if( ! painter.isActive() ) return;
     const QRect & rect = e->rect();
 
     QRect borderRect = QRect( 0, mScreenHeight*mFontHeight, rect.width(), rect.height() );

@@ -165,6 +165,8 @@ public:
       void              showStatistics();
       QString           mConsoleName;
       bool              mWindowIsHidden;
+      int               mOldX;
+      int               mOldY;
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost; 

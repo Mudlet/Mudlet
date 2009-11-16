@@ -116,10 +116,7 @@ void TTrigger::setName( QString name )
 {
     if( ! mIsTempTrigger )
     {
-        QString key;
-        key = mpHost->getTriggerUnit()->mLookupTable.key( this );
-        if( key != "" )
-            mpHost->getTriggerUnit()->mLookupTable.remove( key );
+        mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
     mpHost->getTriggerUnit()->mLookupTable.insertMulti( name, this );

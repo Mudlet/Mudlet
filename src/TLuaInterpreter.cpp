@@ -1786,7 +1786,6 @@ int TLuaInterpreter::moveWindow( lua_State *L )
 
     QString text(luaSendText.c_str());
     mudlet::self()->moveWindow( text, static_cast<int>(x1), static_cast<int>(y1) );
-
     return 0;
 }
 
@@ -2089,9 +2088,8 @@ int TLuaInterpreter::showUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->showWindow( pHost, text );
-
-    return 0;
+    lua_pushboolean( L, pHost->mpConsole->showWindow( text ));
+    return 1;
 }
 
 int TLuaInterpreter::reset( lua_State *L )
