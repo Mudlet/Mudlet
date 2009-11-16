@@ -58,6 +58,8 @@ public:
     qint64                getNewID();
     QMultiMap<QString, TTrigger *> mLookupTable;
     QMutex                mTriggerUnitLock;
+    void                  markCleanup( TTrigger * pT );
+    void                  doCleanup();
 
     int                   statsTriggerTotal;
     int                   statsTempTriggers;
@@ -86,7 +88,6 @@ private:
     Host *                    mpHost;
     QMap<int, TTrigger *>     mTriggerMap;
     std::list<TTrigger *>     mTriggerRootNodeList;
-
     qint64                    mMaxID;
    
    

@@ -151,8 +151,8 @@ void TTextEdit::slot_scrollBarMoved( int line )
 
 void TTextEdit::initDefaultSettings()
 {
-    mFgColor = QColor(255,255,255);
-    mBgColor = QColor(50,0,0);
+    mFgColor = QColor(192,192,192);
+    mBgColor = QColor(0,0,0);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
     setFont( mDisplayFont );
     mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);

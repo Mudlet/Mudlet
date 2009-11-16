@@ -1945,18 +1945,21 @@ void TConsole::slot_stop_all_triggers( bool b )
 
 void TConsole::showStatistics()
 {
-    print( "\n");
-    print( "+--------------------------------------------------------------+\n" );
-    print( "|               system statistics                              |\n");
-    print( "+--------------------------------------------------------------+\n" );
+    QStringList header;
+    header << "\n"
+           << "+--------------------------------------------------------------+\n"
+           << "|               system statistics                              |\n"
+           << "+--------------------------------------------------------------+\n";
 
     QString r = mpHost->getTriggerUnit()->assembleReport();
-    print( r );
+    QString h = header.join("");
+
     //mpHost->getTimerUnit()->printReport();
 
 
-    print( "+--------------------------------------------------------------+\n" );
-
+    QString footer = QString("\n+--------------------------------------------------------------+\n" );
+    QString msg = h + r + footer;
+    printSystemMessage( msg );
     //print( "20 triggers\n" );
 
 

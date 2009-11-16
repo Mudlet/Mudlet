@@ -49,15 +49,22 @@ Mudlet Manual
 [[introduction]]
 == Introduction
 Welcome to *Mudlet*, a modern MUD client for GNU/Linux, Windows and Mac OSX that offers all the tools to get the most out of your gaming experience. 
+
 Throughout this document we hope to familiarize you with the basic aspects of Mudlet, from the interface to its _very_ powerful and feature rich scripting backend 
-The main focus in the development of Mudlet has been efficiency and performance, but we also try to make it as easily accessible as possible. However, keep in mind that this is a complex piece of software with a large set of tools that does require some deeper understanding of the underlying principles.
-To use Mudlet in any meaningful way, you have to take a closer look at the technical section in this manual. If you are not familiar with using modern MUD clients in general you should also take a look at the general introduction to MUD clients section at the beginning of this manual. 
+The main focus in the development of Mudlet has been efficiency and performance, but we also try to make it as easily accessible as possible. However, keep in mind that this is a complex piece of software with a large set of tools that does require some deeper understanding of the underlying principles. To use Mudlet in any meaningful way, you have to take a closer look at the technical section in this manual. 
+
+If you are not familiar with using modern MUD clients in general you should also take a look at the general introduction to MUD clients section at the beginning of this manual. 
 You are welcome to ask questions on the forum of our website. If you find a bug, please let us know.
+
+
+http://www.youtube.com/watch?v=c1Llvwy0Y_Y&feature=PlayList&p=A40A1E6E5AEB8874&index=0&playnext=1[Watch the introductory Mudlet 1.0 screencast by Vadim Peretokin.]
+
 [[diag_variables]]
 [icon="./images/icons/diag_variables.png"]
 NOTE: Everything is centered around the central Lua scripting unit. Everything shares the same variables & functions and everything is accessible from anywhere.
 
 === Quick Start
+
 To connect to the MUD of your choice, click on `Connections` → `Connection Profiles`. 
 
 * Create a new profile by clicking on `Add New Profile`.
@@ -182,7 +189,8 @@ To get started, go click on the `Aliases` button in Mudlet, and then on the `Add
 
 The `Alias name` field is optional - it's mainly used for the alias listing that you see on the left as an easy way to distintuish all of the aliases. 
 You can just name our alias `test` for now. 
-The `Regex` field is where you'd put in the alias command, i. e. the command that is being sent to the MUD instead of the alias. In other words, the alias is a front for a real command. We call this substitution process alias expansion.
+The `Pattern` field is where you put your regex pattern to describe on what command that you are typing in the command line, your new alias will spring into action. Let's say, we want our new alias to send the command "say hello" whenever we type "sh". The regex pattern would be "^sh$". Then we put "say hello" into the substitution field. After you have saved and activated your new alias "test", whenever you type "sh" Mudlet will not send "sh", but "say hello" instead. We call this substitution process alias expansion.
+
 Mudlet uses Perl regular expression aliases. Regexes are a special way of matching patterns of words. For the beginners it is enough to think of them as a general way to specify the words itself and their placement within the line. 
 For basic alias it is enough to know that the character ^ symbolizes the beginning of the line and the charachter $ symbolizes the end of the line.
 If you want to make an alias "tw" that sends the command "take weapon", you don't have to care about placement or pattern matching in general. 
@@ -201,7 +209,7 @@ When you want to stop hunting bunnies, you can simply select the bunny trigger a
 The trigger will stop firing until you re-enable it again via the padlock icon.
 If you lock a group of triggers or an entire trigger branch, all triggers in this branch will be locked until you remove the lock again. The locking starts from the root of the tree down to the end. As soon as a lock is met the trigger engine will skip the locked branch. Locking and unlocking branches is one of the most common actions you have to take care of when playing. You turn on your defensive triggers when engaging into a battle and you turn them off afterwards, or you turn on your harvesting triggers only when you are going to harvest.
 
-TIP: *Beginners should use Mudlet's automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don't have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
+TIP: *Beginners should use Mudlet's automated colorizer triggers in the beginning to highlight the text that has been triggered on to get the hang of the different trigger and pattern types. Click on the "colorizer trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don't have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
 
 ===== 1.10 Matching one unknown
 You can also set up a trigger to gather the scimitars, gold or whatever the skeletons could carry around with them. Since we do not know what the loot is, we will need to set up a trigger to match the line and take whatever was dropped. Examples:
@@ -271,20 +279,15 @@ Script: echo("I got " .. matches[2] .. " gold!")
 ===== More advanced example
 Here's an example by Heiko, which makes you talk like Yoda:
 ----
-Perl Style Regular Expression: say (\w+).*(\w*).*(.*)
-Script:  command = "say "..matches[4].." "..matches[2].." "..matches[3]
+Perl Style Regular Expression: ^say (\w+) *(\w*) .*?(.*)
+Script:  send( "say "..matches[4].." "..matches[2].." "..matches[3] )
 ----
 What it does here is save the +first word+, the +second word+ and then the +rest of the text+ into wildcards. It then says +rest of the text+ first, then the +first word+ and then the +second word+.
 
 ==== 1.14 How to highlight words
 
-To highlight something in Mudlet, you first use the `selectString()` function to select what you'd like to highlight, and then either the `fg` function to color the letters or `bg` to highlight the background of the letters. For example, the following code would highlight the word `pond` in a bluebackground and red letters:
-The first parameter to selectString() is the text you want to select and the second parameter tells the function which occurence of the word in the current line you want to select i.e. the first, the second, the third etc.
------
-selectString( "pond", 1 )
-fg( "red " )
-bg( "blue" )
-------
+To highlight something in the MUD output, make a trigger and use the "colorizer trigger" option to highlight the matched trigger pattern.
+
 ==== 1.15 Keybindings
 
 Keybindings, or hotkeys, are in many respects very similar to aliases, however, instead of typing in what you want to be done, you simply hit a key (or combination of keys) and let the Mudlet do the work.
@@ -330,46 +333,65 @@ Split screen usage is necessary when selecting text in order to copy it to trigg
 Mudlet's command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that take typical MUD playing situations into account. Normally, autocompletion works on the basis of alphabetic indexing, which isn't suitable for MUD playing as it wouldn't distinguish between the temporal proximity of words, which, in turn is closely related to the probability that the word is
 The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
 =======
-1. _Tab completion_ searches the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
+1. _Tab completion_ searches the last 100 lines in the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
 2. _Autocompletion_ tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
 3. _Command History_: If you haven't started to type anything yet, you can browse through your command history with the cursor up and cursor down keys. However, if you have started typing pressing cursor up will result in a shot at autocompletion.
 4. _ESC_:To get out of autocompletion you can press the ESC key any time. After pressing ESC the entire text gets selected and you can overwrite it or get back into command history mode.
 =======
 
 [[logging]]
-== Logging Output to HTML Log Files
-Press on the little button with the blue folder with the green arrow icon on the lower right side of the screen next to the command line.
+== Logging Output to text or HTML Log Files
+Press on the little button with the blue folder with the green arrow icon on the lower right side of the command line to turn on plain text logging. Click again to stop logging. This will inform you about the file name and path of the log file. If you want to log in color you can chose to log to files in html format, but note that due to the nature of HTML, these log files tend to get _very_ large quickly.
 
-Clicking it a second time stops logging. A red system message will tell you where you can find the log file. Just copy the the filename and open the log file in your web browser. The log files are html files that can be put on web pages without any further editing etc..
-Log files can be found at the mudlet home directory in your profile directory. The path is <path to mudlet home>/.config/mudlet/profiles/<name>/logs On Linux this would be: /home/username/.config/mudlet/profiles/profilename/logs
-
-On Windows the path prefix depends on your windows version and your language settings: On my system it's c:\Dokumente und Einstellungen\heiko\.config\mudlet\profiles\<name>\logs. Log files have a file name similar to the autosaved profiles: date#time.html
+Log files can be found at the mudlet home directory in your profile directory. To get the path to your mudlet home directory you can run a script like this one:
+-------
+echo( getMudletHomeDir() .. "\n" )
+-------
+Log files are stored in "<mudletHomeDir>/logs". Each profile has its own <mudletHomeDir> path.
+Log files have a similar naming convention to the autosaved profiles: date#time.txt or date#time.html
 
 [[export]]
 == Exporting and Importing Profiles or Packages
-Mudlet supports XML packages that can be imported and exported while playing. You can find a package section on the forum of http://mudlet.sourceforge.net where you can download ready made packages for your MUD or upload your own packages for other players to use. A package can contain anything ranging from a single trigger to hundrets of button groups, trigger groups alias - in other words, entire "systems". To import a package you simply have to open the trigger editor and click the import icon, select the xml package file and import it. Often package files will be compressed to save space. If the file is compressed, you'll need to uncompress it before importing it.
+Mudlet supports XML packages that can be imported and exported while playing. You can find a package section on the forum at http://mudlet.sourceforge.net where you can download demo packages or ready made packages for your MUD or upload your own packages to share your work with other players. A package can contain anything ranging from a single trigger to hundrets of button groups, trigger groups aliases - in other words, entire "systems". 
 
 === Importing Packages
-The imported package will be stored permanently in your profile when you safe the profile. If you don't like the imported package, delete its components manually or simply don't save the profile. Then the new content will be lost on restart. Automatic package removal is not yet supported in Mudlet.
+To import a package, open the script editor and click the import icon, select your xml package file and import it. Package files might be compressed to save space. If the file is compressed, you'll need to uncompress it before importing it.
+The imported package will be stored permanently in your profile when you safe the profile. If you don't like the imported package, delete its components manually or simply don't save the profile. Then the new content will be lost on restart. Good packages will be organized in such a way that they will be easy to update or remove.  
 
 Packages are nothing else, but profiles - or parts of profiles that can be exchanged, imported and exported between your own profiles and between different players. From a technical perspective a package and a profile xml file are the same thing.
+
 === Exporting Packages
-*Exporting* is also easy. Select your item in the script editor and then click on the "Export" button. You'll be prompted for a file name and that's it. You can send your cool trigger, buttons, timers etc. to your friends via email or use them in another profile of yours.
+Exporting items or groups is also easy. Select your item or a group containing many items or subgroups and then click on the "Export" button. You'll be prompted for a file name and that's it. Package file names should end with ".xml" to make import easier for users on all platforms. You can send your cool trigger, buttons, timers etc. to your friends or use them in another profile of yours.
 Exporting your good stuff is strongly recommended as it makes MUDding more enjoyable for everybody. Share your knowledge and help others!
-Mudlet stores your saved profiles as XML files in your home directory under [blue]+.config/mudlet/profiles/your_profile_name/current (note the leading dot)+.unless you have specified a different file name or location by using the "save profile as" profile button meant for creating generic packages to be shared with other profiles or other users.
-The file name of normally saved profiles ("save profile" button) consists of the date and time, the profile was written to disc. 
-You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You'll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder that e.g. is named after the package you'd like to make. You cannot mix items at the moment. Importing packages is straight forward and fully automatic.
-You can also import entire profiles as they are basically packages.
+Mudlet stores your saved profiles as XML files in your home directory under "<mudletHomeDir>/current". To get <mudletHomeDir> run a script like this:
+-------
+echo( getMudletHomeDir() .. "\n" )
+-------
+To export your entire profile e. g. to make a backup on a flash drive, use the "save profile as" button.
+You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You'll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder that e.g. is named after the package you'd like to make. 
+
 === Sharing your System with others - Making complex Packages
 If you have written a nice set of triggers, buttons, scripts etc. or maybe even a fully fledged "system" of some sort and you want to share it with others, you can make a nice packages that other people can import with a single mouse click.
-Of course, you can open your xml profile in a text editor and delete what is not needed for the package, but this is too much work. The simplest way is to arrange your modules in such a way that they all go into one main folder e.g. all triggers that belong to the package are put into a main trigger folder and named according to the intended package name. Then you export this trigger package by using the button "profiles save as" in the trigger editor. You are asked for a filename. Call it MySystemTriggerPackage.xml etc. Then you proceed with the Alias, the scripts, the buttons, the keys etc. and make packages for each and export them individually.
-Finally, you create a *new empty* profile in Mudlet and import all your sub packages. When everything is imported, export the whole thing via "profile save as" and give it the desired package name. Others can now import the entire system in a single package file. It's a good idea in the spirit of open source software to share your systems with others. Please use the forum on http://mudlet.sourceforge.net to share your finished packages with other users so that other users can learn from your work or improve it.
+The recommended procedure to make a large package that contains groups of all sorts of items e.g. trigger groups, individual triggers, scripts, buttons, aliases etc., is to export the entire profile with "save profile as". Then create a new empty profile e.g. with your package name. Don't give a server or port name in the connection dialog and "connect". Mudlet will load the new empty profile although you are offline. Open the script editor and import your previously exported profile and then delete all items that are not part of the package that you are making. Finally, make a folder (group) that is named after your package name and version number e.g. "Johnny's curing system 12-3-2009" and move all respective items into this folder and repeat the same procedure for all triggers/aliases/scripts etc.. This will make it much easier for other people to import your package and stay updated if you release a newer version. Then save your profile and use the "save profile as" button to create your package.
 
 [[variables]]
 == Using Variables in Mudlet
 Using Variables in Mudlet
 
-One of the major design goals in Mudlet was to integrate scripts and variables as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients, as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients. If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias key, an event handler, a free function, etc. It can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (connection) runs in its own dedicated Lua interpreter. Consequently, all scripts are compiled into the same Lua interpreter and thus their code runs in the same variable space.
+One of the major design goals in Mudlet was to integrate scripts and variables into triggers/aliases/buttons etc. as seemlessly as possible. The usage of variables in Mudlet is distinctly different from the other major clients, as native Lua scripting has been integrated into Mudlet from the ground up. As scripts are so closely intertwined with the core of Mudlet, variables do not need any special treatment as in other clients i.e. there is no need for code such as:
+----
+totalKills = getVariable("killedMonsters") + getVariable("killedVillains")
+echo( "kills=" .. totalKills )
+---- 
+In Mudlet, the above code translates into:
+----
+totalKills = killedMonsters + killedVillains
+echo( "kills=" .. totalKills )
+----
+
+If you define a variable in any given script in Mudlet, be it a trigger, a button, an alias key, an event handler, a free function, etc. It can be used from within any context without any special getVariable() type of function or any special variable symbols, such as @myVar etc.. In Mudlet all variables are native Lua variables. Each session (= profile/connection tab) runs in its own dedicated Lua interpreter. Consequently, all scripts of a profile are compiled into the same Lua interpreter and thus their code runs in the same variable space. All scripts from another simultaneously opened profile will not interfere because each profile uses its own Lua interpreter.
+
+
 [[diag_variables]]
 [icon="./images/icons/diag_variables.png"]
 NOTE: Everything shares the same variables & functions.
@@ -2381,19 +2403,18 @@ Sets the color of the border in RGB color e.g. setBorderColor( 255, 0, 0 ) sets 
 [[handleWindowResizeEvent]]
 == handleWindowResizeEvent()
 The standard implementation of this function does nothing. However, this function gets called whenever the main window is being manually resized. You can overwrite this function in your own scripts to handle window resize events yourself and e. g. adjust the screen position and size of your mini console windows, labels or other relevant GUI elements in your scripts that depend on the size of the main Window. To override this function you can simply put a function with the same name in one of your scripts thus overwriting the original empty implementation of this function.
-example:
------
+
+--------
 function handleWindowResizeEvent()
    -- determine the size of your screen
    WindowWidth=0;
    WindowHeight=0;
    WindowWidth, WindowHeight = getMainWindowSize();
-   
+
    -- move mini console "sys" to the far right side of the screen whenever the screen gets resized
    moveWindow("sys",WindowWidth-300,0)
 end
-
-----
+--------
 
 [[setConsoleBufferSize]]
 == setConsoleBufferSize( consoleName, linesLimit, sizeOfBatchDeletion )

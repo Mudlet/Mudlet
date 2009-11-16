@@ -122,7 +122,9 @@ void TriggerUnit::removeTriggerRootNode( TTrigger * pT )
         mLookupTable.remove( pT->mName, pT );
     }
     else
+    {
         mLookupTable.remove( pT->getName() );
+    }
     mTriggerMap.remove( pT->getID() );
     mTriggerRootNodeList.remove( pT );
 }
@@ -352,9 +354,16 @@ bool TriggerUnit::killTrigger( QString & name )
         if( pChild->getName() == name )
         {
             // only temporary triggers can be killed
-            if( ! pChild->isTempTrigger() ) return false;
-            removeTriggerRootNode( pChild );
-            return true;
+            if( ! pChild->isTempTrigger() )
+            {
+                return false;
+            }
+            else
+            {
+                pChild->setIsActive( false );
+                markCleanup( pChild );
+                return true;
+            }
         }
     }
     return false;
@@ -426,6 +435,29 @@ QString TriggerUnit::assembleReport()
         //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
     return msg.join("");
 
+}
+
+void TriggerUnit::doCleanup()
+{
+    typedef list<TTrigger *>::iterator I;
+    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    {
+        delete *it;
+    }
+    mCleanupList.clear();
+}
+
+void TriggerUnit::markCleanup( TTrigger * pT )
+{
+    typedef list<TTrigger *>::iterator I;
+    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    {
+        if( *it == pT )
+        {
+            return;
+        }
+    }
+    mCleanupList.push_back( pT );
 }
 
 
