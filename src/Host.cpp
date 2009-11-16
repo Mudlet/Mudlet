@@ -249,7 +249,7 @@ double Host::stopStopWatch( int watchID )
 {
     if( mStopWatchMap.contains( watchID ) )
     {
-        return static_cast<double>(mStopWatchMap[watchID].elapsed()/1000);
+        return static_cast<double>(mStopWatchMap[watchID].elapsed())/1000;
     }
     else
     {
