@@ -52,7 +52,7 @@ void TriggerUnit::initStats()
     statsRegexTriggers = 0;
 }
 
-void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int childPosition )
+void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int childPosition, bool moveTrigger )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
@@ -79,8 +79,10 @@ void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int chi
         }
     }
 
-    mTriggerMap.insert( pT->getID(), pT );
-    
+    if( ! moveTrigger )
+    {
+        mTriggerMap.insert( pT->getID(), pT );
+    }
 }
 
 void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
@@ -98,7 +100,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     }
     else
     {
-        removeTriggerRootNode( pChild );    
+        mTriggerRootNodeList.remove( pChild );
     }
     if( pNewParent ) 
     {
@@ -110,7 +112,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     else
     {
         pChild->Tree<TTrigger>::setParent( 0 );
-        addTriggerRootNode( pChild, parentPosition, childPosition );
+        addTriggerRootNode( pChild, parentPosition, childPosition, true );
     }
 }
 

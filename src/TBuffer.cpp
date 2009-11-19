@@ -658,6 +658,7 @@ void TBuffer::translateToPlainText( std::string & s )
     int highCode = 0;
     int numNull = 0;
 
+    QString packetTime = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
     bool firstChar = (lineBuffer.back().size() == 0); //FIXME
     if( msLength < 1 ) return;
 
@@ -1017,6 +1018,10 @@ void TBuffer::translateToPlainText( std::string & s )
             timeBuffer << time;
             firstChar = true;
             msPos++;
+            if( static_cast<int>(buffer.size()) > mLinesLimit )
+            {
+                shrinkBuffer();
+            }
             continue;
         }
 
@@ -1034,7 +1039,7 @@ void TBuffer::translateToPlainText( std::string & s )
 
         if( firstChar )
         {
-            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            timeBuffer.back() = packetTime;//(QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
             firstChar = false;
         }
         msPos++;
@@ -1057,10 +1062,7 @@ void TBuffer::append( QString & text,
 {
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
-        while( static_cast<int>(buffer.size()) > mLinesLimit-mBatchDeleteSize )//10000 )
-        {
-            deleteLine( 0 );
-        }
+        shrinkBuffer();
     }
     int last = buffer.size()-1;
     if( last < 0 )
@@ -2075,6 +2077,15 @@ bool TBuffer::deleteLine( int y )
     return deleteLines( y, y );
 }
 
+void TBuffer::shrinkBuffer()
+{
+    for( int i=0; i < mBatchDeleteSize; i++ )
+    {
+        lineBuffer.pop_front();
+        timeBuffer.pop_front();
+        buffer.pop_front();
+    }
+}
 
 bool TBuffer::deleteLines( int from, int to )
 {

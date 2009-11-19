@@ -157,6 +157,7 @@ private:
   QTimer *            mTimerLogin;
   QTimer *            mTimerPass;
   QTime               timeOffset;
+  QTime               mConnectionTime;
   int                 lastTimeOffset;
 };
 

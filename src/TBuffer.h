@@ -121,9 +121,9 @@ public:
     void messen();
     
 private:  
-    
-    inline int calcWrapPos( int line, int begin, int end );
-    void handleNewLine();
+    inline void       shrinkBuffer();
+    inline int        calcWrapPos( int line, int begin, int end );
+    void              handleNewLine();
     bool              gotESC;
     bool              gotHeader;
     QString           code;

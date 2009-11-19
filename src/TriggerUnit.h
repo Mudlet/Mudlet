@@ -80,7 +80,7 @@ private:
     void                      initStats();
     void                      _assembleReport( TTrigger * );
     TTrigger *                getTriggerPrivate( int id );
-    void                      addTriggerRootNode( TTrigger * pT, int parentPosition = -1, int childPosition = -1 );
+    void                      addTriggerRootNode( TTrigger * pT, int parentPosition = -1, int childPosition = -1, bool moveTrigger = false );
     void                      addTrigger( TTrigger * pT );
     void                      removeTriggerRootNode( TTrigger * pT );
     void                      removeTrigger( TTrigger *);

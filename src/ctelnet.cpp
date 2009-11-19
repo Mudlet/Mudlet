@@ -24,6 +24,7 @@
 #include <QDir>
 #include <QTcpSocket>
 #include "mudlet.h"
+#include "TDebug.h"
 
 #ifdef DEBUG
 #undef DEBUG
@@ -162,6 +163,7 @@ void cTelnet::handle_socket_signal_connected()
     reset();
     QString msg = "A connection has been established successfully.\n";
     postMessage( msg );
+    mConnectionTime.start();
     if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0) )
     {
         mTimerLogin->start(2000);
@@ -184,12 +186,22 @@ void cTelnet::handle_socket_signal_connected()
 
 void cTelnet::handle_socket_signal_disconnected()
 {
+    postData();
+    QString msg;
+    QTime timeDiff(0,0,0,0);
+    msg = QString("connection time: %1\n").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
     reset();
-    QString err = "\nSocket got disconnected. " + socket.errorString() + "\n";
+    QString lf = "\n\n";
+    QString err = "Socket got disconnected. " + socket.errorString() + "\n";
+    QString spacer = "-------------------------------------------------------------\n";
     if( ! mpHost->mIsGoingDown )
     {
+        postMessage( lf );
+        postMessage( spacer );
         postMessage( err );
+        postMessage( msg );
+        postMessage( spacer );
     }
 }
 
@@ -676,7 +688,6 @@ void cTelnet::gotRest( string & mud_data )
     {
         return;
     }
-
     if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
     {
         mpPostingTimer->stop();
@@ -922,6 +933,8 @@ MAIN_LOOP_END: ;
 
 void cTelnet::handle_socket_signal_readyRead()
 {
+    mpHost->mInsertedMissingLF = false;
+
     if( mWaitingForResponse )
     {
         double time = networkLatencyTime.elapsed();
@@ -929,11 +942,10 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char buffer[100001];
+    char buffer[1000100];
     bool gotData = false;
 
-    int amount = socket.read( buffer, 100000 );
-
+    int amount = socket.read( buffer, 1000000 );
     buffer[amount+1] = '\0';
     if( amount == -1 ) return; 
     if( amount == 0 ) return; 
@@ -957,29 +969,29 @@ void cTelnet::handle_socket_signal_readyRead()
 
     string cleandata = "";
     recvdGA = false;
-    for( unsigned int i = 0; i < (unsigned int) datalen; i++ )
+    for( int i = 0; i < datalen; i++ )
     {
-        unsigned char ch = buffer[i];
+        char ch = buffer[i];
                   
-        if( iac || iac2 || insb || (ch == (unsigned char)TN_IAC) )
+        if( iac || iac2 || insb || (ch == TN_IAC) )
         {
-            unsigned char _ch = ch;
+            char _ch = ch;
             #ifdef DEBUG
                 cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
             #endif
-            if (! (iac || iac2 || insb) && ( ch == (unsigned char)TN_IAC ) )
+            if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
                 iac = true;
                 command += ch;
             }
-            else if (iac && (ch == (unsigned char)TN_IAC) && (!insb)) 
+            else if( iac && (ch == TN_IAC) && (!insb) )
             {
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
                 command = "";
             }
-            else if(iac && (!insb) && ((ch == (unsigned char)TN_WILL) || (ch == (unsigned char)TN_WONT) || (ch == (unsigned char)TN_DO) || (ch == (unsigned char)TN_DONT)))
+            else if( iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT)))
             {
                 //3. IAC DO/DONT/WILL/WONT
                 iac = false;
@@ -994,7 +1006,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 processTelnetCommand( command );
                 command = "";
             }
-            else if(iac && (!insb) && (ch == (unsigned char)TN_SB))
+            else if( iac && (!insb) && (ch == TN_SB) )
             {
                 //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
@@ -1002,7 +1014,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 insb = true;
                 command += ch;
             }
-            else if(iac && (!insb) && (ch == (unsigned char)TN_SE))
+            else if( iac && (!insb) && (ch == TN_SE) )
             {
                 //6. IAC SE without IAC SB - error - ignored
                 command = "";
@@ -1015,10 +1027,10 @@ void cTelnet::handle_socket_signal_readyRead()
                     cout << " looking for MCCP to initialize"<<endl;
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
                     // IAC SB COMPRESS2 IAC SE for MCCP v2    
-                    if( i+1 < (unsigned int) datalen )
+                    if( i+1 < datalen )
                     {
-                        unsigned char _ch = buffer[i];   
-                        if( (_ch == (unsigned char)OPT_COMPRESS ) || (_ch == (unsigned char)OPT_COMPRESS2 ) )
+                        char _ch = buffer[i];
+                        if( (_ch == OPT_COMPRESS ) || (_ch == OPT_COMPRESS2 ) )
                         {
                             cout << "COMPRESSION START sequence found"<<endl;
                             for( int _i = i; _i<datalen; _i++ )
@@ -1026,7 +1038,7 @@ void cTelnet::handle_socket_signal_readyRead()
                                 mWaitingForCompressedStreamToStart = true;
                                 cout << "looking for end of compression start sequence"<<endl;
                                 _ch = buffer[_i];
-                                if( _ch == (unsigned char)TN_SE )
+                                if( _ch == TN_SE )
                                 {
                                     // start decompression MCCP version 1
                                     mNeedDecompression = true;
@@ -1050,7 +1062,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 //7. inside IAC SB
 
                 command += ch;
-                if(iac && (ch == (unsigned char)TN_SE))  //IAC SE - end of subcommand
+                if( iac && (ch == TN_SE) )  //IAC SE - end of subcommand
                 {
                     // start decompression MCCP version 2
                     if( mWaitingForCompressedStreamToStart )
@@ -1074,7 +1086,7 @@ void cTelnet::handle_socket_signal_readyRead()
                     insb = false;
                 }
                 if(iac) iac = false;
-                else if( ch == (unsigned char)TN_IAC ) iac = true;
+                else if( ch == TN_IAC ) iac = true;
             }
             else
             //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
@@ -1123,7 +1135,6 @@ MAIN_LOOP_END: ;
     {
        gotRest( cleandata );
     }
-//cout << ">packet_end"<<endl;
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();
 }

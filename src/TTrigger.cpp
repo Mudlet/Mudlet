@@ -1148,7 +1148,10 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                 if( mConditionMap.find( *it ) != mConditionMap.end() )
                 {
                     delete mConditionMap[*it];
-                    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkBlue),QColor(Qt::black))<< "removing condition from conditon table.\n";}
+                    if( mudlet::debugMode )
+                    {
+                        TDebug(QColor(Qt::darkBlue),QColor(Qt::black))<< "removing condition from conditon table.\n">>0;
+                    }
                     mConditionMap.erase( *it );
                 }
             }

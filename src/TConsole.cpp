@@ -101,6 +101,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 
     if( mIsDebugConsole )
     {
+        setWindowTitle("Debug Console");
+        mWrapAt = 50;
         mIsSubConsole = false;
         mStandardFormat.bgR = mBgColor.red();
         mStandardFormat.bgG = mBgColor.green();
@@ -114,6 +116,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     }
     else
     {
+        setWindowTitle("keine Debug Console");
         if( parent )
         {
             mIsSubConsole = true;
@@ -517,6 +520,8 @@ void TConsole::closeEvent( QCloseEvent *event )
         if( ! mudlet::self()->isGoingDown() )
         {
             hide();
+            mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
+            mudlet::debugMode = !mudlet::debugMode;
             event->ignore();
             return;
         }

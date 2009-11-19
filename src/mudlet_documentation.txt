@@ -298,10 +298,10 @@ You're participating in an in-game tea sipping contest. The winner is the first 
 ****
 ----
 HOTKEY: F1
-EXPAND TO: sip earl grey
+command on button down: sip earl grey
 
 HOTKEY: F2
-EXPAND TO: sip ceylon mint
+command on button down: sip ceylon mint
 ----
 Now you just have to listen, or rather read, carefully and hit either F1 or F2 to claim that prize.
 
@@ -323,15 +323,15 @@ Mudlet lets you play several simultaneous MUD sessions. However, currently we ha
 
 [[splitScreen]]
 == Split Screen
-Mudlet has a _split screen_. If you scroll up in the old text, the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.
+Mudlet has a _split screen_. If you scroll up in the MUD text screen (or any other mini console window), the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.
 
-Split screen can be activated via the page up / page down keys or with the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately as well as pressing control+return on the keyboard. The size of the 2 parts of the split screen can be modidfied when dragging the seperator bar with the mouse.
+Split screen can be activated via the scroll bar, page up / page down keys or the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately as well as pressing control+return on the keyboard. The size of the 2 parts of the split screen can be modified by dragging the seperator bar in the middle with the mouse.
 Split screen usage is necessary when selecting text in order to copy it to trigger editor e.g. when making triggers. If you don't use split screen when selecting text, new arriving text will upset your selection.
 
 [[commandLine]]
-== Command Line Auto-Completion, Tab-Completion and History
-Mudlet's command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that take typical MUD playing situations into account. Normally, autocompletion works on the basis of alphabetic indexing, which isn't suitable for MUD playing as it wouldn't distinguish between the temporal proximity of words, which, in turn is closely related to the probability that the word is
-The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).
+== Command Line Auto-Completion, Tab-Completion and Command History
+Mudlet's command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that are optimized for typical MUD playing situations.
+The command line offers tab completion (TAB key with or without shift) and autocompletion (cursor up and cursor down keys).
 =======
 1. _Tab completion_ searches the last 100 lines in the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
 2. _Autocompletion_ tries to match your current typing with your command history. Example: If you typed the same command a while ago, you only have to start typing the first couple of letters and then press the cursor up key until the proposal matches the command that you want to use.
@@ -1258,9 +1258,14 @@ Click on the respective function to get more information
 === Most Important Functions
 
 [[send]]
-== send( command )
-This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.
-
+== send( command, print=1 )
+This sends "command" directly to the network layer, bypassing the alias expansion unit. The optional second argument of type boolean (print) determins if the outgoing command is to be echoed on the screen.
+If you want your command to be expanded by the alias unit, call expandAlias() instead. 
+example:
+-------
+send( "Hello Jane" ) --echos the command on the screen
+send( "Hello Tom", 0 ) --does not echo the command on the screen
+-------
 
 [[echo]]
 == echo( windowName, text )
@@ -1521,8 +1526,11 @@ enable key or key group "name" (hot keys or action keys).
 
 
 [[expandAlias]]
-== expandAlias( command )
+== expandAlias( command, print=1 )
 like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.
+expandAlias( "Hello Tom" ) echos the command on the screen
+expandAlias( "Hello Jane" ) sends the command visually unnoticeably by the user
+<<send, send>>
 
 
 

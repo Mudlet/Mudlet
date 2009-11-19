@@ -83,7 +83,7 @@ public:
     KeyUnit *          getKeyUnit()                     { return & mKeyUnit; }
     ScriptUnit *       getScriptUnit()                  { return & mScriptUnit; }
     void               connectToServer();
-    void               send( QString cmd, bool dontExpandAliases = false );
+    void               send( QString cmd, bool wantPrint = true, bool dontExpandAliases = false );
     void               sendRaw( QString s );
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
@@ -126,7 +126,7 @@ public:
     class              Exception_NoConnectionAvailable{};
     TConsole *         mpConsole;
     dlgTriggerEditor * mpEditorDialog;
-    
+    bool               mInsertedMissingLF;
     QColor             mBlack;
     QColor             mLightBlack;
     QColor             mRed;

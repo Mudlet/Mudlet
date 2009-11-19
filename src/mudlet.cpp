@@ -212,9 +212,10 @@ mudlet::mudlet()
     HostManager::self()->addHost("default_host", "", "","" );  
     mpDefaultHost = HostManager::self()->getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
-    
+    mpDebugConsole->setWindowTitle("Central Debug Console");
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugArea->setCentralWidget( mpDebugConsole );
+
     QSize generalRule( qApp->desktop()->size() );
     generalRule -= QSize( 30, 30 );
     mpDebugArea->resize( QSize( 800, 600 ).boundedTo( generalRule ) );

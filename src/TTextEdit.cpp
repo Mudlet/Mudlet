@@ -248,6 +248,7 @@ void TTextEdit::showNewLines()
     }
     
     int lines = mpBuffer->newLines;
+    if( lines < 1 ) return;
     if( ! mIsSplitScreen )
     {
         if( ( lines <= 0 )

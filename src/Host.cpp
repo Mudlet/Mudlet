@@ -71,7 +71,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mMagenta           ( QColor(128,  0,128) )
 , mLightWhite        ( QColor(255,255,255) )
 , mWhite             ( QColor(192,192,192) )
-, mFgColor           ( QColor(255,255,255) )
+, mFgColor           ( QColor(192,192,192) )
 , mBgColor           ( QColor(  0,  0,  0) )
 , mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) )
 , mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//( QFont("Monospace", 10, QFont::Courier) )
@@ -100,6 +100,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mRawStreamDump( false )
 , mCodeCompletion( true )
 , mpNotePad( 0 )
+, mInsertedMissingLF( false )
 {
 }
 
@@ -132,21 +133,32 @@ void Host::reenableAllTriggers()
     mTimerUnit.reenableAllTriggers();
 }
 
-void Host::send( QString cmd, bool dontExpandAliases )
+void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
 {  
-    if( mPrintCommand )
+    if( wantPrint || mPrintCommand )
     {
-        if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
-        {
-            ;
-        }
-        else
-        {
-            mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
-                                            // this is important to get the cursor position right
-        }
-        mpConsole->update();
+        //if( mPrintCommand )
+        //{
+            mInsertedMissingLF = true;
+            if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
+            {
+                ;
+            }
+            else
+            {
+                mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
+                                                // this is important to get the cursor position right
+            }
+            mpConsole->update();
+        //}
     }
+    if( ! mInsertedMissingLF )
+    {
+        QString empty = "";
+        mpConsole->printCommand( empty );
+        mInsertedMissingLF = true;
+    }
+
 
     QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
     if( ! dontExpandAliases )

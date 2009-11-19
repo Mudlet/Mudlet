@@ -5688,7 +5688,8 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
 void dlgTriggerEditor::slot_debug_mode()
 {
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
-    mudlet::debugMode = !mudlet::debugMode;    
+    mudlet::debugMode = !mudlet::debugMode;
+    mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
 }
 
 void dlgTriggerEditor::exportTrigger( QFile & file )

@@ -252,8 +252,14 @@ void TTreeWidget::dragMoveEvent(QDragMoveEvent *event)
 void TTreeWidget::dropEvent(QDropEvent *event)
 {
     QTreeWidgetItem * pItem = itemAt( event->pos() );
-    
+
     if( ! pItem )
+    {
+        event->ignore();
+        return;
+    }
+
+    if( ! pItem->parent() )
     {
         event->ignore();
         return;

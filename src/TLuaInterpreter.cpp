@@ -2975,8 +2975,22 @@ int TLuaInterpreter::Send( lua_State * L )
     { 
         luaSendText = lua_tostring( L, 1 );
     }
+    bool wantPrint = true;
+    if( lua_gettop( L ) > 1 )
+    {
+        if( ! lua_isboolean( L, 2 ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            wantPrint = lua_toboolean( L, 2 );
+        }
+    }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    pHost->send( QString(luaSendText.c_str()) );    
+    pHost->send( QString( luaSendText.c_str() ), wantPrint, false );
     return 0;
 }
 
@@ -2993,8 +3007,22 @@ int TLuaInterpreter::sendRaw( lua_State * L )
     { 
         luaSendText = lua_tostring( L, 1 );
     }
+    bool wantPrint = true;
+    if( lua_gettop( L ) > 1 )
+    {
+        if( ! lua_isboolean( L, 2 ) )
+        {
+            lua_pushstring( L, "wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            wantPrint = lua_toboolean( L, 2 );
+        }
+    }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    pHost->send( QString(luaSendText.c_str()), true );
+    pHost->send( QString(luaSendText.c_str()), wantPrint, true );
     return 0;
 }
 
