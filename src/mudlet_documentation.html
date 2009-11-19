@@ -1745,10 +1745,10 @@ Script:  send( "say "..matches[4].." "..matches[2].." "..matches[3] )</tt></pre>
 <div class="listingblock">
 <div class="content">
 <pre><tt>HOTKEY: F1
-EXPAND TO: sip earl grey
+command on button down: sip earl grey
 
 HOTKEY: F2
-EXPAND TO: sip ceylon mint</tt></pre>
+command on button down: sip ceylon mint</tt></pre>
 </div></div>
 <div class="paragraph"><p>Now you just have to listen, or rather read, carefully and hit either F1 or F2 to claim that prize.</p></div>
 <div class="paragraph"><p>Another practical use for keybindings would be creating a so-called "targeting system", which is especially useful for grinding down armies of pumpkin-men in MUDs without auto-attack. See the Variables chapter for further details.</p></div>
@@ -1769,14 +1769,14 @@ EXPAND TO: sip ceylon mint</tt></pre>
 </div>
 <h2 id="splitScreen">Split Screen</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet has a <em>split screen</em>. If you scroll up in the old text, the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.</p></div>
-<div class="paragraph"><p>Split screen can be activated via the page up / page down keys or with the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately as well as pressing control+return on the keyboard. The size of the 2 parts of the split screen can be modidfied when dragging the seperator bar with the mouse.
+<div class="paragraph"><p>Mudlet has a <em>split screen</em>. If you scroll up in the MUD text screen (or any other mini console window), the screen will split in two parts. The lower part will follow the MUD output while the upper part will stay focused on your scrolling. This way you can read easier through old passages without missing what is going on at the moment.</p></div>
+<div class="paragraph"><p>Split screen can be activated via the scroll bar, page up / page down keys or the mouse wheel. Scrolling back to the end will close the split screen automatically. A click on the middle mouse button will close the split screen immediately as well as pressing control+return on the keyboard. The size of the 2 parts of the split screen can be modified by dragging the seperator bar in the middle with the mouse.
 Split screen usage is necessary when selecting text in order to copy it to trigger editor e.g. when making triggers. If you don&#8217;t use split screen when selecting text, new arriving text will upset your selection.</p></div>
 </div>
-<h2 id="commandLine">Command Line Auto-Completion, Tab-Completion and History</h2>
+<h2 id="commandLine">Command Line Auto-Completion, Tab-Completion and Command History</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet&#8217;s command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that take typical MUD playing situations into account. Normally, autocompletion works on the basis of alphabetic indexing, which isn&#8217;t suitable for MUD playing as it wouldn&#8217;t distinguish between the temporal proximity of words, which, in turn is closely related to the probability that the word is
-The command line offers Tab Completion (TAB key) and Autocompletion (cursor up key).</p></div>
+<div class="paragraph"><p>Mudlet&#8217;s command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that are optimized for typical MUD playing situations.
+The command line offers tab completion (TAB key with or without shift) and autocompletion (cursor up and cursor down keys).</p></div>
 <div class="exampleblock">
 <div class="content">
 <div class="olist arabic"><ol class="arabic">
@@ -20507,9 +20507,16 @@ cellspacing="0" cellpadding="4">
 <div class="paragraph"><p><a href="#wrapLine">wrapLine</a></p></div>
 <h3 id="_most_important_functions">Most Important Functions</h3>
 </div>
-<h2 id="send">send( command )</h2>
+<h2 id="send">send( command, print=1 )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>This sends data directly to the socket layer, bypassing the alias expansion unit. If you want your command to be expanded by the alias unit, call expandAlias() instead.</p></div>
+<div class="paragraph"><p>This sends "command" directly to the network layer, bypassing the alias expansion unit. The optional second argument of type boolean (print) determins if the outgoing command is to be echoed on the screen.
+If you want your command to be expanded by the alias unit, call expandAlias() instead.
+example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>send( "Hello Jane" ) --echos the command on the screen
+send( "Hello Tom", 0 ) --does not echo the command on the screen</tt></pre>
+</div></div>
 </div>
 <h2 id="echo">echo( windowName, text )</h2>
 <div class="sectionbody">
@@ -21096,9 +21103,12 @@ If the windowName parameteris omitted, the main screen will be used.</p></div>
 <div class="sectionbody">
 <div class="paragraph"><p>enable key or key group "name" (hot keys or action keys).</p></div>
 </div>
-<h2 id="expandAlias">expandAlias( command )</h2>
+<h2 id="expandAlias">expandAlias( command, print=1 )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.</p></div>
+<div class="paragraph"><p>like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion.
+expandAlias( "Hello Tom" ) echos the command on the screen
+expandAlias( "Hello Jane" ) sends the command visually unnoticeably by the user
+<a href="#send">send</a></p></div>
 </div>
 <h2 id="raiseEvent">raiseEvent( event_name, arg-1, &#8230; arg-n )</h2>
 <div class="sectionbody">
@@ -21438,7 +21448,7 @@ resetStopWatch( fightStopWatchID );</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>sets at what position in the line the console or miniconsole will start word wrap</p></div>
 </div>
-<h2 id="createMiniConsole">createMiniConsole( name, posX, posY, width, height )</h2>
+<h2 id="createMiniConsole">createMiniConsole( name, posX, posY, width, height ) returns true or false</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy &amp; paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing.
 To set word wrap see <a href="#setWindowWrap">setWindowWrap</a>.
@@ -23375,7 +23385,7 @@ AATAAiADSAD47weEEEIIIYTQMDIAVIAQQKh7JH04y0FfF/8DXEcTzpZXVTsAAAAASUVORK5CYII=" />
 </tr></table>
 </div>
 </div>
-<h2 id="createLabel">createLabel( name, posX, posY, width, height, fillBackground)</h2>
+<h2 id="createLabel">createLabel( name, posX, posY, width, height, fillBackground) returns true or false</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. <strong>DON&#8217;T</strong> use labels for larger text displays because they are a lot slower than the highspeed mini consoles</p></div>
 <div class="paragraph"><p>Labels accept some HTML and CSS code for text formating.</p></div>
@@ -30881,7 +30891,7 @@ Default values are linesLimit = 100000 lines with 10000 lines of batch deletion.
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-16 18:13:42 CEST
+Last updated 2009-11-19 19:27:32 CEST
 </div>
 </div>
 </body>
