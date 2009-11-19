@@ -547,7 +547,13 @@ bool mudlet::createMiniConsole( Host * pHost, QString & name, int x, int y, int 
             return false;
     }
     else
+    {
+        if( mudlet::debugMode )
+        {
+            TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR creating label "<< name << ", a label with such a name already exists">>0;
+        }
         return false;
+    }
 }
 
 bool mudlet::createLabel( Host * pHost, QString & name, int x, int y, int width, int height, bool fillBg )
@@ -564,7 +570,13 @@ bool mudlet::createLabel( Host * pHost, QString & name, int x, int y, int width,
             return false;
     }
     else
+    {
+        if( mudlet::debugMode )
+        {
+            TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR creating label "<< name << ", a label with such a name already exists">>0;
+        }
         return false;
+    }
 }
 
 

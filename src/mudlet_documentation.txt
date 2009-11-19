@@ -1933,7 +1933,7 @@ sets at what position in the line the console or miniconsole will start word wra
 
 
 [[createMiniConsole]]
-== createMiniConsole( name, posX, posY, width, height )
+== createMiniConsole( name, posX, posY, width, height ) returns true or false
 opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy & paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing. 
 To set word wrap see <<setWindowWrap,setWindowWrap>>. 
 To move the main window to make room for miniconsole windows on your screen (if you want to do this as you can also layer mini console and label windows) see <<setBorderTop,setBorderTop>>, <<setBordercolor,setBorderColor>>
@@ -1972,7 +1972,7 @@ NOTE: .
 
 
 [[createLabel]]
-== createLabel( name, posX, posY, width, height, fillBackground)
+== createLabel( name, posX, posY, width, height, fillBackground) returns true or false
 labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on screen buttons, micro display, etc. *DON'T* use labels for larger text displays because they are a lot slower than the highspeed mini consoles
 
 Labels accept some HTML and CSS code for text formating.
