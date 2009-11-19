@@ -820,36 +820,36 @@ void cTelnet::readPipe()
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
-    for( unsigned int i = 0; i < (unsigned int) datalen; i++ )
+    for( int i = 0; i < datalen; i++ )
     {
-        unsigned char ch = loadBuffer[i];
+        char ch = loadBuffer[i];
 
-        if( iac || iac2 || insb || (ch == (unsigned char)TN_IAC) )
+        if( iac || iac2 || insb || (ch == (char)TN_IAC) )
         {
-            unsigned char _ch = ch;
+            char _ch = ch;
             #ifdef DEBUG
                 cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
             #endif
-            if (! (iac || iac2 || insb) && ( ch == (unsigned char)TN_IAC ) )
+            if (! (iac || iac2 || insb) && ( ch == (char)TN_IAC ) )
             {
                 iac = true;
                 command += ch;
             }
-            else if (iac && (ch == (unsigned char)TN_IAC) && (!insb))
+            else if (iac && (ch == (char)TN_IAC) && (!insb))
             {
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
                 command = "";
             }
-            else if(iac && (!insb) && ((ch == (unsigned char)TN_WILL) || (ch == (unsigned char)TN_WONT) || (ch == (unsigned char)TN_DO) || (ch == (unsigned char)TN_DONT)))
+            else if( iac && ( ! insb) && ( (ch == (char)TN_WILL) || (ch == (char)TN_WONT) || (ch == (char)TN_DO) || (ch == (char)TN_DONT)))
             {
                 //3. IAC DO/DONT/WILL/WONT
                 iac = false;
                 iac2 = true;
                 command += ch;
             }
-            else if(iac2)
+            else if( iac2 )
             {
                 //4. IAC DO/DONT/WILL/WONT <command code>
                 iac2 = false;
@@ -857,7 +857,7 @@ void cTelnet::readPipe()
                 processTelnetCommand( command );
                 command = "";
             }
-            else if(iac && (!insb) && (ch == (unsigned char)TN_SB))
+            else if( iac && (!insb) && (ch == (char)TN_SB))
             {
                 //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
@@ -865,7 +865,7 @@ void cTelnet::readPipe()
                 insb = true;
                 command += ch;
             }
-            else if(iac && (!insb) && (ch == (unsigned char)TN_SE))
+            else if(iac && (!insb) && (ch == (char)TN_SE))
             {
                 //6. IAC SE without IAC SB - error - ignored
                 command = "";
@@ -875,15 +875,15 @@ void cTelnet::readPipe()
             {
                 //7. inside IAC SB
                 command += ch;
-                if(iac && (ch == (unsigned char)TN_SE))  //IAC SE - end of subcommand
+                if( iac && (ch == (char)TN_SE))  //IAC SE - end of subcommand
                 {
                     processTelnetCommand( command );
                     command = "";
                     iac = false;
                     insb = false;
                 }
-                if(iac) iac = false;
-                else if( ch == (unsigned char)TN_IAC ) iac = true;
+                if( iac ) iac = false;
+                else if( ch == (char)TN_IAC ) iac = true;
             }
             else
             //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
@@ -942,10 +942,10 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char buffer[1000100];
+    char buffer[100010];
     bool gotData = false;
 
-    int amount = socket.read( buffer, 1000000 );
+    int amount = socket.read( buffer, 100000 );
     buffer[amount+1] = '\0';
     if( amount == -1 ) return; 
     if( amount == 0 ) return; 
@@ -973,25 +973,25 @@ void cTelnet::handle_socket_signal_readyRead()
     {
         char ch = buffer[i];
                   
-        if( iac || iac2 || insb || (ch == TN_IAC) )
+        if( iac || iac2 || insb || (ch == (char)TN_IAC) )
         {
             char _ch = ch;
             #ifdef DEBUG
                 cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
             #endif
-            if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
+            if( ! (iac || iac2 || insb) && ( ch == (char)TN_IAC ) )
             {
                 iac = true;
                 command += ch;
             }
-            else if( iac && (ch == TN_IAC) && (!insb) )
+            else if( iac && (ch == (char)TN_IAC) && (!insb) )
             {
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
                 command = "";
             }
-            else if( iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT)))
+            else if( iac && (!insb) && ((ch == (char)TN_WILL) || (ch == (char)TN_WONT) || (ch == (char)TN_DO) || (ch == (char)TN_DONT)))
             {
                 //3. IAC DO/DONT/WILL/WONT
                 iac = false;
@@ -1006,7 +1006,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 processTelnetCommand( command );
                 command = "";
             }
-            else if( iac && (!insb) && (ch == TN_SB) )
+            else if( iac && (!insb) && (ch == (char)TN_SB) )
             {
                 //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
@@ -1014,7 +1014,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 insb = true;
                 command += ch;
             }
-            else if( iac && (!insb) && (ch == TN_SE) )
+            else if( iac && (!insb) && (ch == (char)TN_SE) )
             {
                 //6. IAC SE without IAC SB - error - ignored
                 command = "";
@@ -1038,7 +1038,7 @@ void cTelnet::handle_socket_signal_readyRead()
                                 mWaitingForCompressedStreamToStart = true;
                                 cout << "looking for end of compression start sequence"<<endl;
                                 _ch = buffer[_i];
-                                if( _ch == TN_SE )
+                                if( _ch == (char)TN_SE )
                                 {
                                     // start decompression MCCP version 1
                                     mNeedDecompression = true;
@@ -1086,7 +1086,7 @@ void cTelnet::handle_socket_signal_readyRead()
                     insb = false;
                 }
                 if(iac) iac = false;
-                else if( ch == TN_IAC ) iac = true;
+                else if( ch == (char)TN_IAC ) iac = true;
             }
             else
             //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
@@ -1100,17 +1100,11 @@ void cTelnet::handle_socket_signal_readyRead()
         }
         else
         {
-            #ifdef DEBUG
-            cout << ch;
-            #endif
             if( ch != '\r' ) cleandata += ch;
         }
 MAIN_LOOP_END: ;
         if( recvdGA )
         {
-            #ifdef DEBUG
-            cout<<"**** ----> GOT: GA_EVENT"<<endl;
-            #endif
             mGA_Driver = true;
             if( mCommands > 0 )
             {

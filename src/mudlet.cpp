@@ -214,6 +214,7 @@ mudlet::mudlet()
     mpDebugConsole = new TConsole( mpDefaultHost, true );
     mpDebugConsole->setWindowTitle("Central Debug Console");
     mpDebugConsole->setSizePolicy( sizePolicy );
+    mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget( mpDebugConsole );
 
     QSize generalRule( qApp->desktop()->size() );
