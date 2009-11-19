@@ -1403,7 +1403,7 @@ int TLuaInterpreter::createMiniConsole( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString name(luaSendText.c_str());
-    lua_pushboolean( mudlet::self()->createMiniConsole( pHost, name, x, y, width, height ) );
+    lua_pushboolean( L, mudlet::self()->createMiniConsole( pHost, name, x, y, width, height ) );
     return 1;
 }
 
@@ -1474,7 +1474,7 @@ int TLuaInterpreter::createLabel( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString name(luaSendText.c_str());
-    lua_pushboolean( mudlet::self()->createLabel( pHost, name, x, y, width, height, fillBackground ) );
+    lua_pushboolean( L, mudlet::self()->createLabel( pHost, name, x, y, width, height, fillBackground ) );
     return 1;
 }
 
