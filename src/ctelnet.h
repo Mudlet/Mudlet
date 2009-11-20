@@ -30,38 +30,40 @@ copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
 #include <zlib.h>
 #include <QTimer>
 #include <QTime>
-
-#define TN_SE 240
-#define TN_NOP 241
-#define TN_DM 242
-#define TN_B 243
-#define TN_IP 244
-#define TN_AO 245
-#define TN_AYT 246
-#define TN_EC 247
-#define TN_EL 248
-#define TN_GA 249
-#define TN_SB 250
-#define TN_WILL 251
-#define TN_WONT 252
-#define TN_DO 253
-#define TN_DONT 254
-#define TN_IAC 255
-#define OPT_ECHO 1
-#define OPT_SUPPRESS_GA 3
-#define OPT_STATUS 5
-#define OPT_TIMING_MARK 6
-#define OPT_TERMINAL_TYPE 24
-#define OPT_NAWS 31
-#define OPT_COMPRESS 85
-#define OPT_COMPRESS2 86
-#define OPT_MSP 90
-#define OPT_MXP 91
-#define TNSB_IS 0
-#define TNSB_SEND 1
-
-
 #include <QColor>
+
+const char TN_SE = 240;
+const char TN_NOP = 241;
+const char TN_DM = 242;
+const char TN_B = 243;
+const char TN_IP = 244;
+const char TN_AO = 245;
+const char TN_AYT = 246;
+const char TN_EC = 247;
+const char TN_EL = 248;
+const char TN_GA = 249;
+const char TN_SB = 250;
+const char TN_WILL = 251;
+const char TN_WONT = 252;
+const char TN_DO = 253;
+const char TN_DONT = 254;
+const char TN_IAC = 255;
+
+const char OPT_ECHO = 1;
+const char OPT_SUPPRESS_GA = 3;
+const char OPT_STATUS = 5;
+const char OPT_TIMING_MARK = 6;
+const char OPT_TERMINAL_TYPE = 24;
+const char OPT_NAWS = 31;
+const char OPT_COMPRESS = 85;
+const char OPT_COMPRESS2 = 86;
+const char OPT_MSP = 90;
+const char OPT_MXP = 91;
+const char TNSB_IS = 0;
+const char TNSB_SEND = 1;
+
+
+
 
 class mudlet;
 class Host;
@@ -83,7 +85,7 @@ public:
   void                setDisplayDimensions();
   void                encodingChanged(QString encoding);
   void                set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
-  void                recordReplay( QString & );
+  void                recordReplay();
   void                loadReplay( QString & );
   void                _loadReplay();
   bool                mResponseProcessed;
@@ -112,10 +114,9 @@ private:
   void                connectionFailed();
   bool                socketOutRaw(std::string & data);
   void                processTelnetCommand (const std::string &command);
-  void                sendTelnetOption(unsigned char type, unsigned char option);
+  void                sendTelnetOption( char type, char option);
   //string getCurrentTime(); //NOTE: not w32 compatible
   void                gotRest( std::string & );
-  void                gotLine( std::string & );
   void                gotPrompt( std::string & );
   void                postData();  
     

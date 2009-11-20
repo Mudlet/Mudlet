@@ -643,7 +643,7 @@ void TConsole::slot_toggleReplayRecording()
         mReplayFile.setFileName( mLogFileName );
         mReplayFile.open( QIODevice::WriteOnly );
         mReplayStream.setDevice( &mReplayFile );
-        mpHost->mTelnet.recordReplay( mLogFileName );
+        mpHost->mTelnet.recordReplay();
         QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName();
         printSystemMessage( message );
     }

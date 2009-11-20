@@ -295,43 +295,43 @@ void cTelnet::setDisplayDimensions()
 {
     int x = mpHost->mScreenWidth;
     int y = mpHost->mScreenHeight;
-    if(myOptionState[OPT_NAWS])
+    if(myOptionState[static_cast<int>(OPT_NAWS)])
     {
         //cout<<"TELNET: sending NAWS:"<<x<<"x"<<y<<endl;
         string s;
-        s = (char) TN_IAC;
-        s += (char) TN_SB;
-        s += (char) OPT_NAWS;
+        s = TN_IAC;
+        s += TN_SB;
+        s += OPT_NAWS;
         char x1, x2, y1, y2;
-        x1 = (char) x / 256;
-        x2 = (char) x % 256;
-        y1 = (char) y / 256;
-        y2 = (char) y % 256;
+        x1 = x / 256;
+        x2 = x % 256;
+        y1 = y / 256;
+        y2 = y % 256;
         //IAC must be doubled
-        s += (char) x1;
-        if (x1 == (char)TN_IAC)
-        s += (char) TN_IAC;
-        s += (char) x2; 
-        if (x2 == (char)TN_IAC)
-        s += (char) TN_IAC;
-        s += (char) y1;
-        if (y1 == (char)TN_IAC)
-        s += (char) TN_IAC;
-        s += (char) y2;
-        if (y2 == (char)TN_IAC)
-        s += (char) TN_IAC;
+        s += x1;
+        if(x1 == TN_IAC)
+        s += TN_IAC;
+        s += x2;
+        if (x2 == TN_IAC)
+        s += TN_IAC;
+        s += y1;
+        if (y1 == TN_IAC)
+        s += TN_IAC;
+        s += y2;
+        if (y2 == TN_IAC)
+        s += TN_IAC;
         
-        s += (char) TN_IAC;
-        s += (char) TN_SE;
+        s += TN_IAC;
+        s += TN_SE;
         socketOutRaw(s);
     }
 }
 
-void cTelnet::sendTelnetOption (unsigned char type, unsigned char option)
+void cTelnet::sendTelnetOption (char type, char option)
 {
     //cout << "CLIENT SENDING Telnet option: command<"<<(int)type<<"> option<"<<(int)option<<">"<<endl;		
     string cmd;
-    cmd += (unsigned char) TN_IAC;
+    cmd += TN_IAC;
     cmd += type;
     cmd += option;
     socketOutRaw(cmd);
@@ -342,8 +342,8 @@ void cTelnet::sendTelnetOption (unsigned char type, unsigned char option)
 void cTelnet::processTelnetCommand (const string &command)
 {
   string ayt_response = "delay\r\n";
-  unsigned char ch = command[1];
-  unsigned char option;
+  char ch = command[1];
+  int option;
   switch(ch) 
   {
       case TN_AYT: 
@@ -390,7 +390,7 @@ void cTelnet::processTelnetCommand (const string &command)
                    else if( ( option == OPT_COMPRESS ) || ( option == OPT_COMPRESS2 ) )
                    {
                        //these are handled separately, as they're a bit special
-                       if( ( option == OPT_COMPRESS ) && ( hisOptionState[OPT_COMPRESS2] ) )
+                       if( ( option == OPT_COMPRESS ) && ( hisOptionState[static_cast<int>(OPT_COMPRESS2)] ) )
                        {
                            //protocol says: reject MCCP v1 if you have previously accepted
                            //MCCP v2...
@@ -542,25 +542,25 @@ void cTelnet::processTelnetCommand (const string &command)
                           //send anything, as we do not request anything, but there are
                           //so many servers out there, that you can never be sure...)
                           string cmd;
-                          cmd += (char) TN_IAC;
-                          cmd += (char) TN_SB;
-                          cmd += (char) OPT_STATUS;
-                          cmd += (char) TNSB_IS;
+                          cmd +=  TN_IAC;
+                          cmd +=  TN_SB;
+                          cmd +=  OPT_STATUS;
+                          cmd +=  TNSB_IS;
                           for (short i = 0; i < 256; i++)
                           {
                               if (myOptionState[i])
                               {
-                                  cmd += (char) TN_WILL;
-                                  cmd += (char) i;
+                                  cmd +=  TN_WILL;
+                                  cmd +=  i;
                               }
                               if (hisOptionState[i])
                               {
-                                  cmd += (char) TN_DO;
-                                  cmd += (char) i;
+                                  cmd +=  TN_DO;
+                                  cmd +=  i;
                               }
                           }
-                          cmd += (char) TN_IAC;
-                          cmd += (char) TN_SE;
+                          cmd +=  TN_IAC;
+                          cmd +=  TN_SE;
                           socketOutRaw(cmd);
                       }
                   }
@@ -569,20 +569,20 @@ void cTelnet::processTelnetCommand (const string &command)
               case OPT_TERMINAL_TYPE:
    
                   cout << "server sends telnet option terminal type"<<endl;
-                  if( myOptionState[OPT_TERMINAL_TYPE] )
+                  if( myOptionState[static_cast<int>(OPT_TERMINAL_TYPE)] )
                   {
                       if(command[3] == TNSB_SEND )
                       {
                            //server wants us to send terminal type; he can send his own type
                            //too, but we just ignore it, as we have no use for it...
                            string cmd;
-                           cmd += (char) TN_IAC;
-                           cmd += (char) TN_SB;
-                           cmd += (char) OPT_TERMINAL_TYPE;
-                           cmd += (char) TNSB_IS;
+                           cmd +=  TN_IAC;
+                           cmd +=  TN_SB;
+                           cmd +=  OPT_TERMINAL_TYPE;
+                           cmd +=  TNSB_IS;
                            cmd += termType.toLatin1().data();
-                           cmd += (char) TN_IAC;
-                           cmd += (char) TN_SE;
+                           cmd +=  TN_IAC;
+                           cmd +=  TN_SE;
                            socketOutRaw( cmd );
                       }
                   }
@@ -620,17 +620,6 @@ void cTelnet::postMessage( QString msg )
 
 //forward data for further processing
 
-void cTelnet::gotLine( string & mud_data )
-{
-    return;
-    //QString cd = incomingDataDecoder->toUnicode( mud_data.data(), mud_data.size() );
-    /*qDebug()<<"\n------- recieved line <"<<cd<<"> -------";
-    for( int i=0; i<cd.size(); i++ )
-    {
-        qDebug()<<"i="<<i<<" unicode="<<cd[i].unicode()<<" print="<<cd[i];
-    } */
-    //mpHost->gotLine( cd ); 
-}
 
 void cTelnet::gotPrompt( string & mud_data )
 {
@@ -646,7 +635,6 @@ void cTelnet::gotPrompt( string & mud_data )
      
         int j = 0;
         int s = mMudData.size();
-        bool ok = true;
         while( j < s )
         {
             // search for leading <LF> but skip leading ANSI control sequences
@@ -763,7 +751,7 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
 }
 
 
-void cTelnet::recordReplay( QString & file )
+void cTelnet::recordReplay()
 {
     lastTimeOffset = 0;
     timeOffset.start();
@@ -816,7 +804,6 @@ void cTelnet::_loadReplay()
 
 void cTelnet::readPipe()
 {
-    bool gotData = false;
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
@@ -824,25 +811,24 @@ void cTelnet::readPipe()
     {
         char ch = loadBuffer[i];
 
-        if( iac || iac2 || insb || (ch == (char)TN_IAC) )
+        if( iac || iac2 || insb || (ch == TN_IAC) )
         {
-            char _ch = ch;
             #ifdef DEBUG
                 cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
             #endif
-            if (! (iac || iac2 || insb) && ( ch == (char)TN_IAC ) )
+            if (! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
                 iac = true;
                 command += ch;
             }
-            else if (iac && (ch == (char)TN_IAC) && (!insb))
+            else if (iac && (ch == TN_IAC) && (!insb))
             {
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
                 command = "";
             }
-            else if( iac && ( ! insb) && ( (ch == (char)TN_WILL) || (ch == (char)TN_WONT) || (ch == (char)TN_DO) || (ch == (char)TN_DONT)))
+            else if( iac && ( ! insb) && ( (ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT)))
             {
                 //3. IAC DO/DONT/WILL/WONT
                 iac = false;
@@ -857,7 +843,7 @@ void cTelnet::readPipe()
                 processTelnetCommand( command );
                 command = "";
             }
-            else if( iac && (!insb) && (ch == (char)TN_SB))
+            else if( iac && (!insb) && (ch == TN_SB))
             {
                 //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
@@ -865,7 +851,7 @@ void cTelnet::readPipe()
                 insb = true;
                 command += ch;
             }
-            else if(iac && (!insb) && (ch == (char)TN_SE))
+            else if(iac && (!insb) && (ch == TN_SE))
             {
                 //6. IAC SE without IAC SB - error - ignored
                 command = "";
@@ -875,7 +861,7 @@ void cTelnet::readPipe()
             {
                 //7. inside IAC SB
                 command += ch;
-                if( iac && (ch == (char)TN_SE))  //IAC SE - end of subcommand
+                if( iac && (ch == TN_SE))  //IAC SE - end of subcommand
                 {
                     processTelnetCommand( command );
                     command = "";
@@ -883,7 +869,7 @@ void cTelnet::readPipe()
                     insb = false;
                 }
                 if( iac ) iac = false;
-                else if( ch == (char)TN_IAC ) iac = true;
+                else if( ch == TN_IAC ) iac = true;
             }
             else
             //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
@@ -973,25 +959,25 @@ void cTelnet::handle_socket_signal_readyRead()
     {
         char ch = buffer[i];
                   
-        if( iac || iac2 || insb || (ch == (char)TN_IAC) )
+        if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             char _ch = ch;
             #ifdef DEBUG
                 cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
             #endif
-            if( ! (iac || iac2 || insb) && ( ch == (char)TN_IAC ) )
+            if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
                 iac = true;
                 command += ch;
             }
-            else if( iac && (ch == (char)TN_IAC) && (!insb) )
+            else if( iac && (ch == TN_IAC) && (!insb) )
             {
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
                 command = "";
             }
-            else if( iac && (!insb) && ((ch == (char)TN_WILL) || (ch == (char)TN_WONT) || (ch == (char)TN_DO) || (ch == (char)TN_DONT)))
+            else if( iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT)))
             {
                 //3. IAC DO/DONT/WILL/WONT
                 iac = false;
@@ -1006,7 +992,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 processTelnetCommand( command );
                 command = "";
             }
-            else if( iac && (!insb) && (ch == (char)TN_SB) )
+            else if( iac && (!insb) && (ch == TN_SB) )
             {
                 //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
@@ -1014,7 +1000,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 insb = true;
                 command += ch;
             }
-            else if( iac && (!insb) && (ch == (char)TN_SE) )
+            else if( iac && (!insb) && (ch == TN_SE) )
             {
                 //6. IAC SE without IAC SB - error - ignored
                 command = "";
@@ -1038,13 +1024,17 @@ void cTelnet::handle_socket_signal_readyRead()
                                 mWaitingForCompressedStreamToStart = true;
                                 cout << "looking for end of compression start sequence"<<endl;
                                 _ch = buffer[_i];
-                                if( _ch == (char)TN_SE )
+                                if( _ch == TN_SE )
                                 {
                                     // start decompression MCCP version 1
                                     mNeedDecompression = true;
                                     setDisplayDimensions();
                                     // from this position in stream onwards, data will be compressed by zlib
-                                    cout << "starting ZLIB decompression for MCCP version 1" << endl;
+                                    cout << "starting ZLIB decompression. ";
+                                    if( _ch == OPT_COMPRESS )
+                                        cout << "MCCP version 1" << endl;
+                                    else
+                                        cout << "MCCP version 2" << endl;
                                     gotRest( cleandata );
                                     cleandata = "";
                                     initStreamDecompressor();
@@ -1064,29 +1054,13 @@ void cTelnet::handle_socket_signal_readyRead()
                 command += ch;
                 if( iac && (ch == TN_SE) )  //IAC SE - end of subcommand
                 {
-                    // start decompression MCCP version 2
-                    if( mWaitingForCompressedStreamToStart )
-                    {
-                        mNeedDecompression = true;
-                        // from this position in stream onwards, data will be compressed by zlib
-                        cout << "starting ZLIB decompression for MCCP version 2" << endl;
-                        gotRest( cleandata );
-                        cleandata = "";
-                        initStreamDecompressor();
-                        pBuffer += i+1;
-                        mWaitingForCompressedStreamToStart = false;
-                        int restLength = datalen-i-1;
-                        if( restLength > 0 ) datalen = decompressBuffer( pBuffer, restLength );
-                        i = 0;
-                        goto MAIN_LOOP_END;
-                    }
                     processTelnetCommand( command );
                     command = "";
                     iac = false;
                     insb = false;
                 }
                 if(iac) iac = false;
-                else if( ch == (char)TN_IAC ) iac = true;
+                else if( ch == TN_IAC ) iac = true;
             }
             else
             //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
