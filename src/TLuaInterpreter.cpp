@@ -1854,6 +1854,39 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::calcFontWidth( int size )
+{
+    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+    return QFontMetrics( font ).width( QChar('W') );
+}
+
+int TLuaInterpreter::calcFontHeight( int size )
+{
+    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+    int fontDescent = QFontMetrics( font ).descent();
+    int fontAscent = QFontMetrics( font ).ascent();
+    return fontAscent + fontDescent;
+}
+
+int TLuaInterpreter::calcFontSize( lua_State *L )
+{
+    int x = 0;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x = lua_tonumber( L, 1 );
+    }
+
+    lua_pushnumber( L, calcFontWidth( x ) );
+    lua_pushnumber( L, calcFontHeight( x ) );
+    return 2;
+}
+
 int TLuaInterpreter::startLogging( lua_State *L )
 {
     bool logOn = true;
@@ -3682,6 +3715,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBorderColor", TLuaInterpreter::setBorderColor );
     lua_register( pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize );
     lua_register( pGlobalLua, "startLogging", TLuaInterpreter::startLogging );
+    lua_register( pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";

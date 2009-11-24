@@ -1122,7 +1122,7 @@ Click on the respective function to get more information
 <<bg,bg>>, 
 
 == C
-
+<<calcFontSize,calcFontSize>>, 
 <<clearUserWindow,clearWindow>>, 
 <<copy,copy>>, 
 <<createBuffer,createBuffer>>, 
@@ -2435,6 +2435,18 @@ Default values are linesLimit = 100000 lines with 10000 lines of batch deletion.
 == startLogging( true/false )
 Turns logging on or off. 
 
+[[calcFontSize]]
+== calcFontSize( fontSize ) : fontWidth, fontHeight
+This function can be used to determine what size a mini console needs to be to display a certain amount of caracters and lines on the respective system.
+example:
+-------
+createMiniConsole( "myConsole" ... )
+local x
+local y
+
+x,y = calcFontSize( 10 ) -- calculate how wide and high a font of size 10 will be
+resizeWindow( "myConsole", x*40, y*20 ) -- resize our console to take 40 characters per line and 20 lines overall
+-------
 
 
 

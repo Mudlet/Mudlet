@@ -1649,6 +1649,8 @@ void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
     console2->showNewLines();
 }
 
+
+
 TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width, int height )
 {
     std::string key = name.toLatin1().data();

@@ -193,6 +193,9 @@ public:
     static int setBorderColor( lua_State * );
     static int setConsoleBufferSize( lua_State * );
     static int startLogging( lua_State *L );
+    static int calcFontWidth( int size );
+    static int calcFontHeight( int size );
+    static int calcFontSize( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;
