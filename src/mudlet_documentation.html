@@ -20364,7 +20364,8 @@ cellspacing="0" cellpadding="4">
 </div>
 <h2 id="_c">C</h2>
 <div class="sectionbody">
-<div class="paragraph"><p><a href="#clearUserWindow">clearUserWindow</a>,
+<div class="paragraph"><p><a href="#calcFontSize">calcFontSize</a>,
+<a href="#clearUserWindow">clearWindow</a>,
 <a href="#copy">copy</a>,
 <a href="#createBuffer">createBuffer</a>,
 <a href="#createLabel">createLabel</a>,
@@ -20485,6 +20486,7 @@ cellspacing="0" cellpadding="4">
 <a href="#showMultimatches">showMultimatches</a>,
 <a href="#showToolBar">showToolBar</a>,
 <a href="#showWindow">showWindow</a>,
+<a href="#startLogging">startLogging</a>,
 <a href="#startStopWatch">startStopWatch</a>,
 <a href="#stopStopWatch">stopStopWatch</a>,
 <a href="#stringsplit">string:split</a>,
@@ -21202,7 +21204,7 @@ The function returns the ID of the newly created temporary trigger. You can use 
 <div class="sectionbody">
 <div class="paragraph"><p>Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them. Most often a mini console is more useful than a dockable window &#8594; <a href="#createMiniConsole">createMiniConsole</a></p></div>
 </div>
-<h2 id="clearUserWindow">clearUserWindow( window_name )</h2>
+<h2 id="clearUserWindow">clearWindow( window_name )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Clears the user window or a mini console with the name given as argument.</p></div>
 </div>
@@ -30889,9 +30891,25 @@ end</tt></pre>
 <div class="paragraph"><p>Set the scrollback buffer size to linesLimit and determine how many lines are deleted at once in case the lines limit is reached. The lower the limit the less memory being used. On machines with low RAM you should consider limiting the size of buffers that don&#8217;t need a lot of scrollback e.g. system notification windows, chat windows etc..
 Default values are linesLimit = 100000 lines with 10000 lines of batch deletion. Minimum buffer size is 100 lines with 10 lines batch deletion.</p></div>
 </div>
+<h2 id="startLogging">startLogging( true/false )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Turns logging on or off.</p></div>
+</div>
+<h2 id="calcFontSize">calcFontSize( fontSize ) : fontWidth, fontHeight</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function can be used to determine what size a mini console needs to be to display a certain amount of caracters and lines on the respective system.
+example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>createMiniConsole( "myConsole" ... )
+setMiniConsoleFontSize( 10 )
+x,y = calcFontSize( 10 ) -- calculate how wide and high a font of size 10 will be
+resizeWindow( "myConsole", x*40, y*20 ) -- resize our console to take 40 characters per line and 20 lines overall</tt></pre>
+</div></div>
+</div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-11-19 19:27:32 CEST
+Last updated 2009-11-24 22:19:37 CEST
 </div>
 </div>
 </body>

@@ -2441,9 +2441,7 @@ This function can be used to determine what size a mini console needs to be to d
 example:
 -------
 createMiniConsole( "myConsole" ... )
-local x
-local y
-
+setMiniConsoleFontSize( 10 )
 x,y = calcFontSize( 10 ) -- calculate how wide and high a font of size 10 will be
 resizeWindow( "myConsole", x*40, y*20 ) -- resize our console to take 40 characters per line and 20 lines overall
 -------
