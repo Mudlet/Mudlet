@@ -1854,6 +1854,26 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::startLogging( lua_State *L )
+{
+    bool logOn = true;
+    if( ! lua_isboolean( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        logOn = lua_toboolean( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpConsole->mLogToLogFile = ! logOn;
+    pHost->mpConsole->slot_toggleLogging();
+    return 0;
+}
+
 int TLuaInterpreter::setBackgroundImage( lua_State *L )
 {
     string luaSendText="";
@@ -3580,6 +3600,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "enableKey", TLuaInterpreter::enableKey );
     lua_register( pGlobalLua, "disableKey", TLuaInterpreter::disableKey );
     lua_register( pGlobalLua, "clearUserWindow", TLuaInterpreter::clearUserWindow );
+    lua_register( pGlobalLua, "clearWindow", TLuaInterpreter::clearUserWindow );
     lua_register( pGlobalLua, "killTimer", TLuaInterpreter::killTimer );
     lua_register( pGlobalLua, "moveCursor", TLuaInterpreter::moveCursor );
     lua_register( pGlobalLua, "getLines", TLuaInterpreter::getLines );
@@ -3660,6 +3681,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight );
     lua_register( pGlobalLua, "setBorderColor", TLuaInterpreter::setBorderColor );
     lua_register( pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize );
+    lua_register( pGlobalLua, "startLogging", TLuaInterpreter::startLogging );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";

@@ -77,7 +77,10 @@ bool TCommandLine::event( QEvent * event )
                 mAutoCompletionCount = -1;
                 mTabCompletionTyped = "";
                 mAutoCompletionTyped = "";
-                mHistoryBuffer = 0;
+                if( mpHost->mAutoClearCommandLineAfterSend )
+                    mHistoryBuffer = -1;
+                else
+                    mHistoryBuffer = 0;
                 mLastCompletion = "";
                 break;
 
@@ -98,6 +101,10 @@ bool TCommandLine::event( QEvent * event )
                 break;
 
             case Qt::Key_Backspace:
+                if( mpHost->mAutoClearCommandLineAfterSend )
+                    mHistoryBuffer = -1;
+                else
+                    mHistoryBuffer = 0;
                 if( mTabCompletionTyped.size() >= 1 )
                 {
                     mTabCompletionTyped.chop(1);
@@ -115,6 +122,10 @@ bool TCommandLine::event( QEvent * event )
                 break;
 
             case Qt::Key_Delete:
+                if( mpHost->mAutoClearCommandLineAfterSend )
+                    mHistoryBuffer = -1;
+                else
+                    mHistoryBuffer = 0;
                 if( mTabCompletionTyped.size() >= 1 )
                 {
                     mTabCompletionTyped.chop(1);
@@ -157,6 +168,10 @@ bool TCommandLine::event( QEvent * event )
                     mUserKeptOnTyping = false;
                     mTabCompletionCount = -1;
                     mAutoCompletionCount = -1;
+                    if( mpHost->mAutoClearCommandLineAfterSend )
+                        mHistoryBuffer = -1;
+                    else
+                        mHistoryBuffer = 0;
                     ke->accept();
                     return true;
                 }
@@ -172,6 +187,10 @@ bool TCommandLine::event( QEvent * event )
                 mUserKeptOnTyping = false;
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
+                if( mpHost->mAutoClearCommandLineAfterSend )
+                    mHistoryBuffer = -1;
+                else
+                    mHistoryBuffer = 0;
                 ke->accept();
                 return true;
                 break;
@@ -199,6 +218,10 @@ bool TCommandLine::event( QEvent * event )
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 setPalette( mRegularPalette );
+                if( mpHost->mAutoClearCommandLineAfterSend )
+                    mHistoryBuffer = -1;
+                else
+                    mHistoryBuffer = 0;
                 ke->accept();
                 return true;
                 break;
@@ -238,7 +261,10 @@ bool TCommandLine::event( QEvent * event )
                 else
                 {
                     QLineEdit::event( event );
-
+                    if( mpHost->mAutoClearCommandLineAfterSend )
+                        mHistoryBuffer = -1;
+                    else
+                        mHistoryBuffer = 0;
                     if( mTabCompletionOld != text() )
                     {
                         mUserKeptOnTyping = true;

@@ -20,6 +20,7 @@
 
 
 #include <QtGui>
+#include <QResizeEvent>
 #include "mudlet.h"
 #include "TConsole.h"
 
@@ -386,6 +387,12 @@ void mudlet::slot_tab_changed( int tabID )
         mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
         mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
         mpCurrentActiveHost->mpConsole->show();
+
+        int x = mpCurrentActiveHost->mpConsole->width();
+        int y = mpCurrentActiveHost->mpConsole->height();
+        QSize s = QSize(x,y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent( mpCurrentActiveHost->mpConsole, &event);
     }
     else
     {
@@ -430,7 +437,11 @@ void mudlet::addConsoleForNewHost( Host * pH )
     mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
     mpCurrentActiveHost->mpConsole->show();
     mpTabBar->setCurrentIndex( newTabID );
-
+    int x = mpCurrentActiveHost->mpConsole->width();
+    int y = mpCurrentActiveHost->mpConsole->height();
+    QSize s = QSize(x,y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent( mpCurrentActiveHost->mpConsole, &event);
 }
 
 void mudlet::bindMenu( QMenu * menu, EAction * action )

@@ -1123,7 +1123,7 @@ Click on the respective function to get more information
 
 == C
 
-<<clearUserWindow,clearUserWindow>>, 
+<<clearUserWindow,clearWindow>>, 
 <<copy,copy>>, 
 <<createBuffer,createBuffer>>, 
 <<createLabel,createLabel>>, 
@@ -1235,6 +1235,7 @@ Click on the respective function to get more information
 <<showMultimatches,showMultimatches>>, 
 <<showToolBar,showToolBar>>, 
 <<showWindow,showWindow>>, 
+<<startLogging,startLogging>>, 
 <<startStopWatch,startStopWatch>>, 
 <<stopStopWatch,stopStopWatch>>, 
 <<stringsplit,string:split>>, 
@@ -1643,7 +1644,7 @@ Opens a user dockable console window for user output e.g. statistics, chat etc. 
 
 
 [[clearUserWindow]]
-== clearUserWindow( window_name )
+== clearWindow( window_name )
 Clears the user window or a mini console with the name given as argument.
 
 
@@ -2429,6 +2430,10 @@ end
 Set the scrollback buffer size to linesLimit and determine how many lines are deleted at once in case the lines limit is reached. The lower the limit the less memory being used. On machines with low RAM you should consider limiting the size of buffers that don't need a lot of scrollback e.g. system notification windows, chat windows etc..
 Default values are linesLimit = 100000 lines with 10000 lines of batch deletion. Minimum buffer size is 100 lines with 10 lines batch deletion.
 
+
+[[startLogging]]
+== startLogging( true/false )
+Turns logging on or off. 
 
 
 

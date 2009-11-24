@@ -47,6 +47,7 @@ public:
     void setIsAliasTree();
     void setIsActionTree();
     void setIsKeyTree();
+    void beginInsertRows ( const QModelIndex & parent, int first, int last );
     
 private:
     

@@ -87,7 +87,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     //setAttribute( Qt::WA_InputMethodEnabled, true );
     setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
     setAttribute( Qt::WA_DeleteOnClose );
-    
+
     QPalette palette;
     palette.setColor( QPalette::Text, mFgColor );
     palette.setColor( QPalette::Highlight, QColor(55,55,255) );
@@ -248,7 +248,7 @@ void TTextEdit::showNewLines()
     }
     
     int lines = mpBuffer->newLines;
-    if( lines < 1 ) return;
+    if( ( lines < 1 ) && ( ! mIsSplitScreen ) ) return;
     if( ! mIsSplitScreen )
     {
         if( ( lines <= 0 )
@@ -674,6 +674,8 @@ void TTextEdit::paintEvent( QPaintEvent* e )
 
     QRect borderRect = QRect( 0, mScreenHeight*mFontHeight, rect.width(), rect.height() );
     drawBackground( painter, borderRect, mBgColor );
+    QRect borderRect2 = QRect( rect.width()-mScreenWidth, 0, rect.width(), rect.height() );
+    drawBackground( painter, borderRect2, mBgColor );
     drawForeground( painter, rect );
     mInversOn = false;
 }

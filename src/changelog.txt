@@ -1,0 +1,122 @@
+----------------------------------------------------------------------------------------------------------
+changelog
+----------------------------------------------------------------------------------------------------------
+
+---- 1.0.3 --------------------------------
+
+- Lua function: turn logging on and off. (startLogging(true/false)
+- "don't print commands" option fixed in conjunction with the new send() function accepts a 2nd paramter to print or not print
+  the command
+- command history: if you have the clear command line option turned on, cursor up should get the last command and not the one    
+- split screen fix
+- Lua function: add clearWindow() (current clearUserWindow()
+- all console windows need an initial onResizeWindow() init call to get proper default values
+- Using Mudlet 1.0.2 on Windows 7 32x I selected a trigger within a
+  Trigger Filter Folder, I dragged the trigger and dropped it into the
+  general Trigger section so that it would no longer belong to a trigger
+  filter or folder. Mudlet immediately froze.
+- windows crash: drag and drop: trigger drop trigger folder onto heading(triggers)->folder disappears-> crash if you click          on 1st trigger
+- crash on drag and drop: if your drop into an open trigger folder -> crash
+- drag & drop: crash if you drop above or below the trigger headline parent -> forbid such drops
+- scroll bar not positioned correctly
+- password problem: if GA MUD-drivers dont have turned on the ire patch unfinished 1-liners will not be rendered. with the          patch, solution: use patch as default for GA muds
+
+------ 1.0.2 ------------------------------
+
+- misc minor fixes
+
+------ 1.0.1 ------------------------------
+
+- fix broken tempTimer
+
+------ 1.0 --------------------------------
+
+- main window: Buttons instead of actions same for script editor
+- copy with control-c (mac: cmd-c) doesnt automatically deselect the selection
+- search function: syntax is highlighted multiple times recursively when searching
+- print statistics to console
+- dependencies updated for mac osx compile
+- set profile name as scripteditor window heading
+- core: check if deleted triggers and timers are properly removed from fast access map when changing name + remvoing items
+- trigger editor: split toolbar in 2 - item selection part on the left side rest top
+- script editor: search function
+- enableTimer()/disableTimer() doesnt work with GUI timers
+- 414946 	when opening world tab isnt changed
+- connection dialog: "Auto-connect on start" doesn't do anything
+- not possible to only set a foreground or background colorizer trigger -> no because color triggers test for both values, needs    more code -> workaround for 1.0 set default bg color = mBgColor
+- add close buttons to session tabs -> move to 4.5 no! => maybe via preprocessor + qt version check? => check
+- Clicking on different mud in multiview doesn't select that mud's command line
+- selectCurrentLine() vergisst letzten buchstaben
+- react to recieving \a (bell) or strip it -> currently this translates into a square -> can be handled by a simply \a replace
+  trigger in MUDs such as avalon that use bell characters in certain situations. A generl fix would needlessly slow down Mudlet.
+  The ready made Avalon profile will contain such a script
+- Calling closeUserWindow on a miniconsole several times causes a crash -> calls hideWindow(), func isn't includen in the api
+  documentation anymore, but can still be used for compatibility with old scripts -> deprecated
+- paste(), pasteWindow() -> pasteWindow() - 
+- majority of main window text disappears when miniconsole is selected and I then type into command line
+- add crtl+c keybinding for copy to clipboard
+- command line: Wrong History by Autoclear Inputline
+- command line: some words from the MUD buffer are not in the tab completion buffer
+- command line: tab completion: change regex to \b\w+\b to get rid of punctuation marks after words in tab completion
+- netbook mode: add icon to terminate full screen mode -> currently the button has no icon
+- netbook mode: bigger default font in netbook mode -> unreadable
+- netbook mode: default icon size = 2
+- Lua functions to set individual RAM usage limits for each user window seperately i.e. how many lines scrollback for the
+  particular window/buffer
+- add Lua deselect() function to Lua global	
+- Lua function: onResizeWindow() event
+- functions to set left, right, top and bottom border 
+- functions to set border color
+- moveCursor() akzeptiert leider doch nur "main", ohne = error
+- add line numbers to the Lua editor
+- Lua function: play sound files
+- Lua function: moveCursor() still needs "main" as default parameter for main screen access
+- guarantee in-parent trigger order when reorganizing folder items via drag and drop
+- documentation: remove closeUserWindow() function
+- netbook mode: options dialog: less height otherwise you can't use it on small screen netbooks
+- Lua function: tempColorTriggerANSI( ansiColor )
+- color trigger patterns
+- Lua function: r,g,b = getSelectionColor( console ) returns the first color code of the current selection
+- Lua function: ansiCode = getSelectionColorAnsi( console ) returns first ansi color code of current selection
+- change current color triggers to fully fledged multi state machine color trigger patterns
+- add 256 color mode ansi color triggers
+- tab completion: alles in lower case umsetzen, weil manchmal upper case nciht vom mud akzeptiert wird
+- crash u. nicht eleminieren gelöschter toolbars auf dem bildschirm -> crash bei click gelöschter
+  buttons 
+- tab completion noch buggy. login u. pass noch drin, neue befehle u.U. nicht
+  -> siehe reparentAction() fixen für destructor calls
+- dual state buttons: sendet nur upper state, nicht lower state, button aendert nicht den state - 
+  dual state change geht nur bei doppelclick - bei richtigen buttons, nicht bei checkboxen--cmd wird 
+  einmal gesendet pro click, aber der state ändert sich nur bei doppelclick, wobei 2 x cmd gesendet wird
+- nach import trigger kann man nix mehr machen i.e. nix loeschen nix aktivieren, bis man den trigger
+  editor schliesst und neu oeffnet oder ein neues view wählt e.g. aliase und dann wieder trigger
+- checken ob ich eine closeChain( name ) function habe, oder, ob ich die noch machen muss 
+  -> setTriggerOpen(0);
+- resynch toolbars after drag and drop actions in buttons to reorganize the toolbars
+- different folder color for button bars in buttons GUI
+- line spacer patterns for the multistate machine [define minimum delta between conditions 
+  (caled: #1<at least 1 line>#2; if they are on the same line it doesnt count! This is important 
+  for prompt matches etc)]
+- killTimer() schneller machen und bug fixen
+- buttens feuern ab dem 3. untermenu für jedes element des obermenus
+- new keep-open feature policy: chain heads only execute their script once and only grand access to
+  their children while they stay open. Single triggers without children, however, run their script on
+  each new line while the chain is still open.
+- feature: option to keep triggers firing for a specified amount of lines after the condition has been
+  met for the first time.
+- feature: keep trigger chains open for a specified amount of lines after the original patterns have
+  matched
+- A variable or a function with the location of the current profile.
+- syntax highlighter: elseif is missing
+- clear command line
+- disconnect()
+- reconnect()
+- getMudletHomeDir()
+- high speed version of enableTrigger() and disableTrigger() functions
+- color triggers
+- easy colorize triggers via 2 color chooser buttons -> c++ colorize ohne script
+- bug: caled: crash on save profile after complex profile reorganization (forgot to remove deleted
+  trigger root nodes from root node list)
+- bug: crash wenn ich killTimer() auf abgelaufene und nicht mehr existente timer ansetze
+- line spacer pattern (lila) und lua function pattern buggen. lua patterns werden zu line spacer im TE.
+

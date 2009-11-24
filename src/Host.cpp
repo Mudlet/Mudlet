@@ -135,22 +135,19 @@ void Host::reenableAllTriggers()
 
 void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
 {  
-    if( wantPrint || mPrintCommand )
+    if( wantPrint && mPrintCommand )
     {
-        //if( mPrintCommand )
-        //{
-            mInsertedMissingLF = true;
-            if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
-            {
-                ;
-            }
-            else
-            {
-                mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
-                                                // this is important to get the cursor position right
-            }
-            mpConsole->update();
-        //}
+        mInsertedMissingLF = true;
+        if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
+        {
+            ;
+        }
+        else
+        {
+            mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
+                                            // this is important to get the cursor position right
+        }
+        mpConsole->update();
     }
     if( ! mInsertedMissingLF )
     {
