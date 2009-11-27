@@ -244,7 +244,7 @@ void TimerUnit::enableTimer( QString & name )
         else
             pT->setShouldBeActive( true );
 
-        qDebug()<<"trying to enable name="<<name<<" acutally using name="<<pT->getName()<<" setIsActive()="<<ret;
+
         if( pT->isFolder() )
         {
             // disable or enable all timers in the respective branch
@@ -295,52 +295,12 @@ void TimerUnit::disableTimer( QString & name )
     while( it != mLookupTable.end() && it.key() == name )
     {
         TTimer * pT = it.value();
-
-        if( ! pT->isOffsetTimer() )
-            pT->setIsActive( false );
-        else
+        if( pT->isOffsetTimer() )
             pT->setShouldBeActive( false );
-
-        if( pT->isFolder() )
-        {
-            // disable or enable all timers in the respective branch
-            // irrespective of the user defined state.
-            if( pT->shouldBeActive() )
-            {
-                pT->enableTimer();
-            }
-            else
-            {
-                pT->disableTimer();
-            }
-        }
         else
-        {
-            if( pT->isOffsetTimer() )
-            {
-                // state of offset timers is managed by the trigger engine
-                if( pT->shouldBeActive() )
-                {
-                    pT->enableTimer();
-                }
-                else
-                {
-                    pT->disableTimer();
-                }
-            }
-            else
-            {
-                if( pT->shouldBeActive() )
-                {
-                    pT->enableTimer();
-                }
-                else
-                {
-                    pT->disableTimer();
-                }
-            }
-        }
+            pT->setIsActive( false );
 
+        pT->disableTimer();
         ++it;
     }
 }

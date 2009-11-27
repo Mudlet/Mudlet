@@ -18,6 +18,49 @@ end
 -- Functions written by John Dahlstrom November 2008
 -----------------------------------------------------------
   
+-- Make your very own customized gauge with this function.
+--
+-- Example: createGauge("healthBar", 300, 20, 30, 300, 0, 255, 0)
+-- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
+function createGauge(gaugeName, width, height, Xpos, Ypos, red, green, blue)
+	
+	-- make a nice background for our gauge
+	createLabel(gaugeName .. "_back",0,0,0,0,1)
+	setBackgroundColor(gaugeName .. "_back", red ,green, blue, 100)
+	moveWindow(gaugeName .. "_back", Xpos, Ypos)
+	resizeWindow(gaugeName .. "_back", width, height)
+	showWindow(gaugeName .. "_back")
+
+	-- make a nicer front for our gauge
+	createLabel(gaugeName,0,0,0,0,1)
+	setBackgroundColor(gaugeName, red ,green, blue, 255)
+	moveWindow(gaugeName, Xpos, Ypos)
+	resizeWindow(gaugeName, width, height)
+	showWindow(gaugeName)
+
+	-- store important data in a table
+	table.insert(gaugesTable, {name = gaugeName, width = width, height = height})
+	
+end
+
+-- Use this function when you want to change the gauges look according to your values.
+--
+-- Example: setGauge("healthBar", 200, 400)
+-- In that example, we'd change the looks of the gauge named healthBar and make it fill
+-- to half of its capacity. The height is always remembered.
+--
+-- Typical usage would be in a prompt with your current health or whatever value, and throw
+-- in some variables instead of the numbers.
+function setGauge(gaugeName, currentValue, maxValue)
+	
+	-- search through our gaugesTable for our name input and change according to the values
+	for _,v in pairs(gaugesTable) do
+		if v.name == gaugeName then
+			resizeWindow(gaugeName, v.width/100*((100/maxValue)*currentValue), v.height)
+		end
+	end
+end
+
 
 -- Send any amount of commands to the MUD
 -- Example: sendAll("smile", "dance", "laugh")

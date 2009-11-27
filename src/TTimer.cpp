@@ -337,6 +337,7 @@ void TTimer::disableTimer()
 {
     deactivate();
     mTimer.stop();
+    qDebug()<<"timer "<<mName<<" has been stopped stopping children...\n";
     typedef list<TTimer *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {

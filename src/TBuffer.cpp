@@ -115,8 +115,8 @@ TChar::TChar( const TChar & copy )
 
 
 TBuffer::TBuffer( Host * pH )
-: mLinesLimit( 100000 )
-, mBatchDeleteSize( 10000 )
+: mLinesLimit( 10000 )
+, mBatchDeleteSize( 100 )
 , mpHost( pH )
 , mCursorMoved( false )
 , mWrapAt( 99999999 )
