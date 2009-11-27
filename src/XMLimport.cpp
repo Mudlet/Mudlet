@@ -322,6 +322,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
     pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
     pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
+    pT->mRawStreamDump = ( attributes().value("mRawStreamDump") == "yes" );
 
     while( ! atEnd() ) 
     {
@@ -376,7 +377,7 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mWrapIndentCount = readElementText().toInt();
                 continue;
             }
-            else if( name() == "commandSeperator" )
+            else if( name() == "mCommandSeperator" )
             {
                 pT->mCommandSeperator = readElementText();
                 continue;
@@ -516,6 +517,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mColorTriggerBg = ( attributes().value("isColorTriggerBg") == "yes" );
     pT->mColorTriggerFg = ( attributes().value("isColorTriggerFg") == "yes" );
 
+
     while( ! atEnd() ) 
     {
         readNext();
@@ -554,6 +556,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 pT->mCommand = readElementText();
                 continue;
             }
+
             else if( name() == "mFgColor")
             {
                 pT->mFgColor.setNamedColor( readElementText() );

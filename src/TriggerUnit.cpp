@@ -211,7 +211,6 @@ void TriggerUnit::removeTrigger( TTrigger * pT )
         mLookupTable.remove( pT->getName() );
 
     mTriggerMap.remove(pT->getID());
-    delete pT;//FIXME: rekursions problem -> trig destructor
 }
 
 

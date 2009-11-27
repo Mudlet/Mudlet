@@ -101,6 +101,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
     writeAttribute( "mUSE_UNIX_EOL", pT->mUSE_UNIX_EOL ? "yes" : "no" );
     writeAttribute( "mNoAntiAlias", pT->mNoAntiAlias ? "yes" : "no" );
+    writeAttribute( "mRawStreamDump", pT->mRawStreamDump ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
@@ -134,6 +135,7 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mLightWhite", pT->mLightWhite.name() );    
     writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );    
     writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() ); 
+    writeTextElement( "mCommandSeperator", pT->mCommandSeperator );
 
 
     writeEndElement(); // end Host tag
@@ -249,6 +251,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeAttribute( "isColorTrigger", pT->mColorTrigger ? "yes" : "no" );
     writeAttribute( "isColorTriggerFg", pT->mColorTriggerFg ? "yes" : "no" );
     writeAttribute( "isColorTriggerBg", pT->mColorTriggerBg ? "yes" : "no" );
+
 
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );

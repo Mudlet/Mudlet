@@ -976,23 +976,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
     bool ret = false;
     if( isActive() )
     {
-        if( mKeepFiring > 0 )
-        {
-            mKeepFiring--;
-            if( ( mKeepFiring == mStayOpen ) || ( mpMyChildrenList->size() == 0 ) )
-            {
-                execute();
-            }
-            bool conditionMet = false;
-            typedef list<TTrigger *>::const_iterator I;
-            for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-            {
-                TTrigger * pChild = *it;
-                ret = pChild->match( subject, toMatch, line );
-                if( ret ) conditionMet = true;
-            }
-            return true;
-        }
+
 
         if( mIsLineTrigger )
         {
@@ -1177,6 +1161,26 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                 }
             }
         }
+
+        if( ( mKeepFiring > 0 ) && ( ! conditionMet ) )
+        {
+            mKeepFiring--;
+            if( ( mKeepFiring == mStayOpen ) || ( mpMyChildrenList->size() == 0 ) )
+            {
+                execute();
+            }
+            bool conditionMet = false;
+            typedef list<TTrigger *>::const_iterator I;
+            for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+            {
+                TTrigger * pChild = *it;
+                ret = pChild->match( subject, toMatch, line );
+                if( ret ) conditionMet = true;
+            }
+            return true;
+        }
+
+
         return conditionMet;
     }
     return false;
