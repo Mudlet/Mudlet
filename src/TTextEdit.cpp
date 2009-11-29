@@ -31,7 +31,6 @@
 #include "TTextEdit.h"
 #include <math.h>
 
-
 TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen ) 
 : QWidget( pW )
 , mpBuffer( pB )
@@ -248,7 +247,7 @@ void TTextEdit::showNewLines()
     }
     
     int lines = mpBuffer->newLines;
-    if( ( lines < 1 ) && ( ! mIsSplitScreen ) ) return;
+
     if( ! mIsSplitScreen )
     {
         if( ( lines <= 0 )

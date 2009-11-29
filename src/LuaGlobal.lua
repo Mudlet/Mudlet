@@ -7,12 +7,7 @@
 -- They are described in the manual.
 ------------------------------------------------------------------------
 
-function handleResizeEvent()
-end
 
-function deselect()
-	selectString("",1);
-end
 
 -----------------------------------------------------------
 -- Functions written by John Dahlstrom November 2008
@@ -22,45 +17,127 @@ end
 --
 -- Example: createGauge("healthBar", 300, 20, 30, 300, 0, 255, 0)
 -- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
-function createGauge(gaugeName, width, height, Xpos, Ypos, red, green, blue)
+-- Return the numbers of a RGB colour by using the names used in our color_table. 
+--
+-- Example: 
+--
+-- local red, green, blue = getRGB("green")
+-- echo(red .. "." .. green .. "." .. blue ) 
+--
+-- This would then display 0.255.0 on your screen.
+
+function getRGB(colorName)
+
+	local red = color_table[colorName][1]
+	local green = color_table[colorName][2]
+	local blue = color_table[colorName][3]
+
+	return red, green, blue
 	
+end
+
+
+-- Make your very own customized gauge with this function.
+--
+-- Example: 
+--
+-- createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0) 
+-- or 
+-- createGauge("healthBar", 300, 20, 30, 300, nil, "green")
+--
+-- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
+-- The second example is using the same names you'd use for something like fg() or bg().
+--
+-- If you wish to have some text on your label, you'll change the nil part and make it look like this:
+-- createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0) 
+-- or 
+-- createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
+
+gaugesTable = {} -- first we need to make this table which will be used later to store important data in...
+
+function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
+	
+
 	-- make a nice background for our gauge
 	createLabel(gaugeName .. "_back",0,0,0,0,1)
-	setBackgroundColor(gaugeName .. "_back", red ,green, blue, 100)
+	if color2 == nil then
+		local red, green, blue = getRGB(color1)
+		setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)		
+	else
+		setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
+	end
 	moveWindow(gaugeName .. "_back", Xpos, Ypos)
 	resizeWindow(gaugeName .. "_back", width, height)
 	showWindow(gaugeName .. "_back")
 
 	-- make a nicer front for our gauge
 	createLabel(gaugeName,0,0,0,0,1)
-	setBackgroundColor(gaugeName, red ,green, blue, 255)
+	if color2 == nil then
+		local red, green, blue = getRGB(color1)
+		setBackgroundColor(gaugeName, red , green, blue, 255)		
+	else
+		setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
+	end
 	moveWindow(gaugeName, Xpos, Ypos)
 	resizeWindow(gaugeName, width, height)
 	showWindow(gaugeName)
 
+	-- put some text on our label
+	if gaugeText ~= nil then
+		echo(gaugeName .. "_back", gaugeText)
+		echo(gaugeName, gaugeText)
+	else
+		-- just so that it'll get rid of the text if there already was a label like this
+		echo(gaugeName .. "_back", "")
+		echo(gaugeName, "")
+	end
+
 	-- store important data in a table
-	table.insert(gaugesTable, {name = gaugeName, width = width, height = height})
+	table.insert(gaugesTable, {name = gaugeName, width = width, height = height, color1 = color1, color2 = color2, color3 = color3})
 	
 end
 
+
 -- Use this function when you want to change the gauges look according to your values.
 --
--- Example: setGauge("healthBar", 200, 400)
+-- Example: 
+--
+-- setGauge("healthBar", 200, 400)
+--
 -- In that example, we'd change the looks of the gauge named healthBar and make it fill
 -- to half of its capacity. The height is always remembered.
 --
+-- If you wish to change the text on your gauge, you'd do the following:
+--
+-- setGauge("healthBar", 200, 400, "some text")
+--
 -- Typical usage would be in a prompt with your current health or whatever value, and throw
 -- in some variables instead of the numbers.
-function setGauge(gaugeName, currentValue, maxValue)
-	
+
+function setGauge(gaugeName, currentValue, maxValue, gaugeText)	
+
+
 	-- search through our gaugesTable for our name input and change according to the values
 	for _,v in pairs(gaugesTable) do
 		if v.name == gaugeName then
 			resizeWindow(gaugeName, v.width/100*((100/maxValue)*currentValue), v.height)
 		end
 	end
+
+	-- if we wanted to change the text, we do it
+	if gaugeText ~= nil then
+		echo(gaugeName .. "_back", gaugeText)
+		echo(gaugeName, gaugeText)
+	end
+	
 end
 
+
+-- Make a new console window with ease. The default background is black and text color white.
+--
+-- Example:
+-- -- createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
+-- -- This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width, -- hold a maximum of 20 lines and be place at 200x400 of your mudlet window. -- If you wish to change the color you can easily do this when updating your text or manually somewhere, using -- setFgColor() and setBackgroundColor(). function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos) createMiniConsole(consoleName,0,0,1,1) setMiniConsoleFontSize(consoleName, fontSize) local x,y = calcFontSize( fontSize ) resizeWindow(consoleName, x*charsPerLine, y*numberOfLines) setWindowWrap(consoleName, Xpos) moveWindow(consoleName, Xpos, Ypos) setBackgroundColor(consoleName,0,0,0,0) setFgColor(consoleName, 255,255,255) end 
 
 -- Send any amount of commands to the MUD
 -- Example: sendAll("smile", "dance", "laugh")
@@ -120,6 +197,15 @@ end
 -----------------------------------
 -- some functions from Heiko
 ----------------------------------
+
+-- default resizeEvent handler function.
+-- overwrite this function to make a custom event handler if the main window is being resized
+function handleResizeEvent()
+end
+
+function deselect()
+	selectString("",1);
+end
 
 -- Function shows the content of a Lua table on the screen
 function printTable( map )
