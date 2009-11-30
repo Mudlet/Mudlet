@@ -664,8 +664,8 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     //qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
     if( mScreenHeight <= 0 || mScreenWidth <= 0 )
     {
-        mScreenHeight = e->rect().width();
-        mScreenWidth = e->rect().height();
+        mScreenHeight = height()/mFontHeight;//e->rect().height();
+        mScreenWidth = 100;//e->rect().width();
     }
     QPainter painter( this );
     if( ! painter.isActive() ) return;

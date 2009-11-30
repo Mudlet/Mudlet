@@ -447,6 +447,9 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBaseHFrame->layout()->setMargin(0);
     mpBaseHFrame->layout()->setSpacing(0);
     changeColors();
+
+
+    setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
 }
 
 void TConsole::resizeEvent( QResizeEvent * event )
@@ -718,6 +721,8 @@ void TConsole::changeColors()
         buffer.mWrapAt = mpHost->mWrapAt;
         buffer.mWrapIndent = mpHost->mWrapIndentCount;
     }
+
+
 }
 
 void TConsole::setConsoleBgColor( int r, int g, int b )
