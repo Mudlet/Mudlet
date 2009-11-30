@@ -149,7 +149,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     pushButton_background_color->setStyleSheet( styleSheet );
 
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
-    connect(fontComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(setDisplayFont()));
+    connect(fontComboBox, SIGNAL( currentFontChanged( const QFont & ) ), this, SLOT(setDisplayFont()));
     QStringList sizeList;
     for( int i=1; i<40; i++ ) sizeList << QString::number(i);
     fontSize->insertItems( 1, sizeList );
@@ -161,7 +161,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     Host * pHost = mpHost;
     if( pHost )
     {
-        mFontSize = pHost->mDisplayFont.pixelSize();
+        mFontSize = pHost->mDisplayFont.pointSize();
         fontComboBox->setCurrentFont( pHost->mDisplayFont );
         if( mFontSize < 0 )
         {
@@ -349,7 +349,7 @@ void dlgProfilePreferences::setDisplayFont()
     Host * pHost = mpHost;
     if( ! pHost ) return;    
     QFont font = fontComboBox->currentFont();
-    font.setPixelSize( mFontSize );
+    font.setPointSize( mFontSize );
     pHost->mDisplayFont = font;
     if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
     {
@@ -628,10 +628,15 @@ void dlgProfilePreferences::slot_save_and_exit()
        QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
        file_use_smallscreen.remove();
     }
-
     pHost->mpConsole->console->updateScreenView();
     pHost->mpConsole->console->forceUpdate();
     pHost->mpConsole->refresh();
+    int x = pHost->mpConsole->width();
+    int y = pHost->mpConsole->height();
+    QSize s = QSize(x,y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent( pHost->mpConsole, &event);
+
     close();
 }
 
