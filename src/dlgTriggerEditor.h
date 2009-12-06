@@ -76,6 +76,7 @@ public:
     //  QsciLexerLua *              mpLuaLexer;
     QToolBar *                  toolBar;
     QToolBar *                  toolBar2;
+    bool                        mNeedUpdateData;
 
 signals:
     

@@ -4264,6 +4264,15 @@ void dlgTriggerEditor::slot_timer_clicked( QTreeWidgetItem *pItem, int column )
 
 void dlgTriggerEditor::fillout_form()
 {
+    mCurrentView = 0;
+    mCurrentTrigger = 0;
+    mCurrentAlias = 0;
+    mCurrentKey = 0;
+    mCurrentAction = 0;
+    mCurrentScript = 0;
+    mCurrentTimer = 0;
+
+    mNeedUpdateData = false;
     QStringList sL;
     sL << "Triggers";
     mpTriggerBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL );
@@ -5058,7 +5067,6 @@ void dlgTriggerEditor::slot_update()
 
 void dlgTriggerEditor::slot_show_search_area()
 {
-    qDebug()<<"show search area";
     if( mpSearchArea->isVisible() )
     {
         mpSearchArea->hide();
@@ -5073,6 +5081,11 @@ void dlgTriggerEditor::slot_show_search_area()
 
 void dlgTriggerEditor::saveOpenChanges()
 {
+    if( !mCurrentView )
+    {
+        return;
+    }
+
     switch( mCurrentView )
     {
     case cmTriggerView:
@@ -5094,11 +5107,23 @@ void dlgTriggerEditor::saveOpenChanges()
         saveKey();
         break;
     };
+
 }
 
 void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
 {
-    mCurrentView;
+    if( mNeedUpdateData )
+    {
+        treeWidget->clear();
+        treeWidget_alias->clear();
+        treeWidget_timers->clear();
+        treeWidget_scripts->clear();
+        treeWidget_actions->clear();
+        treeWidget_keys->clear();
+        fillout_form();
+        mNeedUpdateData = false;
+    }
+
     if( ! mCurrentView )
     {
         mCurrentTrigger = 0;
@@ -5107,7 +5132,6 @@ void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
         mCurrentAction = 0;
         mCurrentScript = 0;
         mCurrentTimer = 0;
-        qWarning("mFousOutView=0");
         return;
     }
 
@@ -5136,6 +5160,19 @@ void dlgTriggerEditor::slot_show_timers()
 {
 
     saveOpenChanges();
+
+    if( mNeedUpdateData )
+    {
+        treeWidget->clear();
+        treeWidget_alias->clear();
+        treeWidget_timers->clear();
+        treeWidget_scripts->clear();
+        treeWidget_actions->clear();
+        treeWidget_keys->clear();
+        fillout_form();
+        mNeedUpdateData = false;
+    }
+
     mCurrentView = cmTimerView;
     
     mpTriggersMainArea->hide();
@@ -5188,6 +5225,18 @@ void dlgTriggerEditor::slot_show_triggers()
 {
     saveOpenChanges();
 
+    if( mNeedUpdateData )
+    {
+        treeWidget->clear();
+        treeWidget_alias->clear();
+        treeWidget_timers->clear();
+        treeWidget_scripts->clear();
+        treeWidget_actions->clear();
+        treeWidget_keys->clear();
+        fillout_form();
+        mNeedUpdateData = false;
+    }
+
     mCurrentView = cmTriggerView;
     
     mpTriggersMainArea->hide();
@@ -5239,6 +5288,18 @@ void dlgTriggerEditor::slot_show_triggers()
 void dlgTriggerEditor::slot_show_scripts()
 {
     saveOpenChanges();
+
+    if( mNeedUpdateData )
+    {
+        treeWidget->clear();
+        treeWidget_alias->clear();
+        treeWidget_timers->clear();
+        treeWidget_scripts->clear();
+        treeWidget_actions->clear();
+        treeWidget_keys->clear();
+        fillout_form();
+        mNeedUpdateData = false;
+    }
 
     mCurrentView = cmScriptView;
     
@@ -5293,6 +5354,18 @@ void dlgTriggerEditor::slot_show_keys()
 {
     saveOpenChanges();
 
+    if( mNeedUpdateData )
+    {
+        treeWidget->clear();
+        treeWidget_alias->clear();
+        treeWidget_timers->clear();
+        treeWidget_scripts->clear();
+        treeWidget_actions->clear();
+        treeWidget_keys->clear();
+        fillout_form();
+        mNeedUpdateData = false;
+    }
+
     mCurrentView = cmKeysView;
     
     mpTriggersMainArea->hide();
@@ -5346,6 +5419,18 @@ void dlgTriggerEditor::slot_show_keys()
 void dlgTriggerEditor::slot_show_aliases()
 {
     saveOpenChanges();
+
+    if( mNeedUpdateData )
+    {
+        treeWidget->clear();
+        treeWidget_alias->clear();
+        treeWidget_timers->clear();
+        treeWidget_scripts->clear();
+        treeWidget_actions->clear();
+        treeWidget_keys->clear();
+        fillout_form();
+        mNeedUpdateData = false;
+    }
 
     mCurrentView = cmAliasView;
     

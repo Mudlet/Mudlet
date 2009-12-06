@@ -2211,8 +2211,15 @@ int TLuaInterpreter::showUserWindow( lua_State *L )
 
 int TLuaInterpreter::reset( lua_State *L )
 {
+    string luaWindowName="";
+    if( lua_isstring( L, 1 ) )
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
-    pHost->mpConsole->reset();    
+    QString name = luaWindowName.c_str();
+    mudlet::self()->resetFormat( name );
     
     return 0;
 }
@@ -2941,17 +2948,269 @@ int TLuaInterpreter::isActive( lua_State * L )
 
 int TLuaInterpreter::permAlias( lua_State *L )
 {
-    return 0;
+    string luaName;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 1 );
+    }
+
+    string luaParent;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaParent = lua_tostring( L, 2 );
+    }
+
+    string luaRegex;
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaRegex = lua_tostring( L, 3 );
+    }
+
+
+    string luaFunction;
+    if( ! lua_isstring( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 4 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _luaName = luaName.c_str();
+    QString _luaParent = luaParent.c_str();
+    QString _luaFunction = luaFunction.c_str();
+    QString _luaRegex = luaFunction.c_str();
+    int timerID = pLuaInterpreter->startPermAlias( _luaName, _luaParent, _luaRegex, _luaFunction );
+    lua_pushnumber( L, timerID );
+    return 1;
 }
 
 int TLuaInterpreter::permTimer( lua_State * L )
 {
-    return 0;
+    string luaName;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 1 );
+    }
+    string luaParent;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaParent = lua_tostring( L, 2 );
+    }
+
+    double luaTimeout;
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaTimeout = lua_tonumber( L, 3 );
+    }
+
+    string luaFunction;
+    if( ! lua_isstring( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 4 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _name = luaName.c_str();
+    QString _parent = luaParent.c_str();
+    QString _fun = luaFunction.c_str();
+    int timerID = pLuaInterpreter->startPermTimer( _name, _parent, luaTimeout, _fun );
+    lua_pushnumber( L, timerID );
+    return 1;
 }
 
 int TLuaInterpreter::permSubstringTrigger( lua_State * L )
 {
-    return 0;
+    string name;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tostring( L, 1 );
+    }
+
+    string parent;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        parent = lua_tostring( L, 2 );
+    }
+    QStringList _regList;
+    if( ! lua_istable( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        lua_pushnil( L );
+        while( lua_next( L, 3 ) != 0 )
+        {
+            // key at index -2 and value at index -1
+            if( lua_type(L, -1) == LUA_TSTRING )
+            {
+                QString regex = lua_tostring( L, -1 );
+                _regList << regex;
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    string luaFunction;
+    if( ! lua_isstring( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 4 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _name = name.c_str();
+    QString _parent = parent.c_str();
+    QString _luaFunction = luaFunction.c_str();
+    int ret = pLuaInterpreter->startPermSubstringTrigger( _name,
+                                                          _parent,
+                                                          _regList,
+                                                          _luaFunction );
+    lua_pushnumber( L, ret );
+    return 1;
+}
+
+int TLuaInterpreter::permBeginOfLineStringTrigger( lua_State * L )
+{
+    string name;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tostring( L, 1 );
+    }
+
+    string parent;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        parent = lua_tostring( L, 2 );
+    }
+    QStringList _regList;
+    if( ! lua_istable( L, 3 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        lua_pushnil( L );
+        while( lua_next( L, 3 ) != 0 )
+        {
+            // key at index -2 and value at index -1
+            if( lua_type(L, -1) == LUA_TSTRING )
+            {
+                QString regex = lua_tostring( L, -1 );
+                _regList << regex;
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    string luaFunction;
+    if( ! lua_isstring( L, 4 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 4 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _name = name.c_str();
+    QString _parent = parent.c_str();
+    QString _luaFunction = luaFunction.c_str();
+    int ret = pLuaInterpreter->startPermBeginOfLineStringTrigger( _name,
+                                                                  _parent,
+                                                                  _regList,
+                                                                  _luaFunction );
+    lua_pushnumber( L, ret );
+    return 1;
 }
 
 int TLuaInterpreter::permRegexTrigger( lua_State *L )
@@ -4049,6 +4308,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "exists", TLuaInterpreter::exists );
     lua_register( pGlobalLua, "isActive", TLuaInterpreter::isActive );
     lua_register( pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias );
+    lua_register( pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger );
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
@@ -4133,7 +4393,36 @@ void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString functio
     pT->registerTimer();    
 }
 
+int TLuaInterpreter::startPermTimer( QString & name, QString & parent, double timeout, QString & function )
+{
+    QTime time( 0, 0, 0, 0 );
+    int msec = static_cast<int>(timeout * 1000);
+    QTime time2 = time.addMSecs( msec );
+    TTimer * pT;
+    if( parent.isEmpty() )
+    {
+        pT = new TTimer( "a", time2, mpHost );
+    }
+    else
+    {
+        TTimer * pP = mpHost->getTimerUnit()->findTimer( parent );
+        if( !pP )
+        {
+            return -1;//parent not found
+        }
+        pT = new TTimer( pP, mpHost );
+    }
 
+    pT->setTime( time2 );
+    pT->setIsFolder( false );
+    pT->setIsTempTimer( false );
+    pT->registerTimer();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );//darf erst nach isTempTimer gesetzt werde, damit setName() schneller ist
+    pT->setIsActive( false );
+    return id;
+}
 
 int TLuaInterpreter::startTempTimer( double timeout, QString & function )
 {
@@ -4152,6 +4441,34 @@ int TLuaInterpreter::startTempTimer( double timeout, QString & function )
     pT->setIsActive( true );
     pT->enableTimer( id );
     return id;                  
+}
+
+int TLuaInterpreter::startPermAlias( QString & name, QString & parent, QString & regex, QString & function )
+{
+    TAlias * pT;
+
+    if( parent.isEmpty() )
+    {
+        pT = new TAlias("a", mpHost );
+    }
+    else
+    {
+        TAlias * pP = mpHost->getAliasUnit()->findAlias( parent );
+        if( !pP )
+        {
+            return -1;//parent not found
+        }
+        pT = new TAlias( pP, mpHost );
+        pT->setRegexCode( regex );
+    }
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempAlias( false );
+    pT->registerAlias();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
+    return id;
 }
 
 int TLuaInterpreter::startTempAlias( QString & regex, QString & function )
@@ -4266,6 +4583,7 @@ int TLuaInterpreter::startPermRegexTrigger( QString & name, QString & parent, QS
             return -1;//parent not found
         }
         pT = new TTrigger( pP, mpHost );
+        pT->setRegexCodeList( regexList, propertyList );
     }
     pT->setIsFolder( (regexList.size()==0) );
     pT->setIsActive( true );
@@ -4273,6 +4591,73 @@ int TLuaInterpreter::startPermRegexTrigger( QString & name, QString & parent, QS
     pT->registerTrigger();
     pT->setScript( function );
     pT->setName( name );
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    return 1;
+
+}
+
+int TLuaInterpreter::startPermBeginOfLineStringTrigger( QString & name, QString & parent, QStringList & regexList, QString & function )
+{
+    TTrigger * pT;
+    QList<int> propertyList;
+    for( int i=0; i<regexList.size(); i++ )
+    {
+        propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+    }
+    if( parent.isEmpty() )
+    {
+        pT = new TTrigger( "a", regexList, propertyList, (regexList.size()>1), mpHost );
+    }
+    else
+    {
+        TTrigger * pP = mpHost->getTriggerUnit()->findTrigger( parent );
+        if( !pP )
+        {
+            return -1;//parent not found
+        }
+        pT = new TTrigger( pP, mpHost );
+        pT->setRegexCodeList( regexList, propertyList );
+    }
+    pT->setIsFolder( (regexList.size()==0) );
+    pT->setIsActive( true );
+    pT->setIsTempTrigger( false );
+    pT->registerTrigger();
+    pT->setScript( function );
+    pT->setName( name );
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    return 1;
+
+}
+
+int TLuaInterpreter::startPermSubstringTrigger( QString & name, QString & parent, QStringList & regexList, QString & function )
+{
+    TTrigger * pT;
+    QList<int> propertyList;
+    for( int i=0; i<regexList.size(); i++ )
+    {
+        propertyList << REGEX_SUBSTRING;
+    }
+    if( parent.isEmpty() )
+    {
+        pT = new TTrigger( "a", regexList, propertyList, (regexList.size()>1), mpHost );
+    }
+    else
+    {
+        TTrigger * pP = mpHost->getTriggerUnit()->findTrigger( parent );
+        if( !pP )
+        {
+            return -1;//parent not found
+        }
+        pT = new TTrigger( pP, mpHost );
+        pT->setRegexCodeList( regexList, propertyList );
+    }
+    pT->setIsFolder( (regexList.size()==0) );
+    pT->setIsActive( true );
+    pT->setIsTempTrigger( false );
+    pT->registerTrigger();
+    pT->setScript( function );
+    pT->setName( name );
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
     return 1;
 
 }

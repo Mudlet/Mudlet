@@ -747,6 +747,18 @@ bool mudlet::setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 
         return false;
 }
 
+bool mudlet::resetFormat( QString & name )
+{
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->reset();
+        return true;
+    }
+    else
+        return false;
+}
+
+
 
 bool mudlet::moveWindow( QString & name, int x1, int y1 )
 {

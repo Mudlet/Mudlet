@@ -95,6 +95,11 @@ public:
     int startTempRegexTrigger( QString &, QString & );
     int startTempColorTrigger( int, int, QString & );
     int startPermRegexTrigger( QString & name, QString & parent, QStringList & regex, QString & function );
+    int startPermSubstringTrigger( QString & name, QString & parent, QStringList & regex, QString & function );
+    int startPermBeginOfLineStringTrigger( QString & name, QString & parent, QStringList & regex, QString & function );
+    int startPermTimer( QString & name, QString & parent, double timeout, QString & function );
+    int startPermAlias( QString & name, QString & parent, QString & regex, QString & function );
+
     TGatekeeperThread * mpGatekeeperThread;
  
     static int Wait( lua_State * L );
@@ -207,7 +212,7 @@ public:
     static int enableAlias( lua_State * );
     static int disableAlias( lua_State * );
     static int killAlias( lua_State * );
-
+    static int permBeginOfLineStringTrigger( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

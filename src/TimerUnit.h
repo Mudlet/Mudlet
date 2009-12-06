@@ -41,6 +41,7 @@ public:
     TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
     TTimer *              getTimer( int id );
+    TTimer *              findTimer( QString & name );
     bool                  enableTimer( QString & );
     bool                  disableTimer( QString & );
     bool                  killTimer( QString & name );

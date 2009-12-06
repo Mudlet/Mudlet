@@ -1,24 +1,147 @@
 
-
-------------------------------------------------------------------------
+----------------------------------------------------------------------------------
 -- Useful global LUA functions that are accessible from within Mudlet
-------------------------------------------------------------------------
+----------------------------------------------------------------------------------
 -- These general functions can be used from anywhere within Mudlet scripts
 -- They are described in the manual.
-------------------------------------------------------------------------
+----------------------------------------------------------------------------------
 
 
+
+----------------------------------------------------------------------------------
+-- Functions written by Blaine von Roeder - December 2009
+----------------------------------------------------------------------------------
+
+-- This function flags a variable to be saved by Mudlet's variable persistence system.
+-- Usage: remember("varName")
+-- Example: remember("table_Weapons")
+-- Example: remember("var_EnemyHeight")
+-- Variables are automatically unpacked into the global namespace when the profile is loaded. 
+-- They are saved to "SavedVariables.lua" when the profile is closed or saved.
+
+function remember(varName)
+	if not _saveTable then
+		_saveTable = {}
+	end
+	if (type(_G[varName]) == "table") then -- We got a table, repackage it into savedVars.
+		_saveTable[varName] = {}
+		for k,v in pairs(_G[varName]) do
+			_saveTable[varName][k] = v
+		end
+	else
+		_saveTable[varName] = _G[varName]
+	end
+end
+
+
+--- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
+--- and unpacks them into the global namespace. 
+function loadVars()
+	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
+	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+	local lt_VariableHolder = {}
+	if (io.exists(l_SettingsFile)) then
+		table.load(l_SettingsFile, lt_VariableHolder)
+		for k,v in pairs(lt_VariableHolder) do
+			if (type(v)=="table") then --We have a root table
+				_G[k] = {}
+				for subKey,subValue in pairs(lt_VariableHolder[k]) do --Unpack it into the namespace
+					_G[k][subKey] = subValue
+				end					
+			else
+				_G[k] = v
+			end
+		end
+	end
+end
+
+-- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
+
+function saveVars()
+	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
+	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+	table.save(l_SettingsFile, _saveTable)
+end
+
+-- Move a custom gauge built by createGauge(...)
+-- Example: moveGauge("healthBar", 1200, 400)
+-- This would move the health bar gauge to the location 1200, 400
+
+function moveGauge(gaugeName, newX, newY)
+	for _,g in pairs(gaugesTable) do
+		if g.name == gaugeName then
+			moveWindow(gaugeName, newX, newY)
+			moveWindow(gaugeName .. "_back", newX, newY)
+		end
+	end
+end
+
+-- Set the text on a custom gauge built by createGauge(...)
+-- Example: setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
+-- Example: setGaugeText("healthBar", "HP: 100%", "red")
+-- An empty gaugeText will clear the text entirely.
+-- Colors are optional and will default to 0,0,0(black) if not passed as args.
+
+function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
+	local red,green,blue = 0,0,0
+	local l_labelText = gaugeText
+	
+	if color1 ~= nil then
+		if color2 == nil then
+			red, green, blue = getRGB(color1)
+		else
+			red, green, blue = color1, color2, color3
+		end
+	end
+	
+	-- Check to make sure we had a text to apply, if not, clear the text
+	if l_labelText == nil then
+		l_labelText = ""
+	end
+	
+	local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
+	
+
+	echo(gaugeName, l_EchoString)
+	echo(gaugeName .. "_back", l_EchoString)
+end
+
+-- Converts an RGB value into an HTML compliant(label usable) HEX number
+-- This function is colorNames aware and can take any defined global color as its first arg
+-- Example: RGB2Hex(255,255,255) returns "FFFFFF"
+-- Example: RGB2Hex("white") returns "FFFFFF"
+function RGB2Hex(red,green,blue)
+	local l_Red, l_Green, l_Blue = 0,0,0
+	if green == nil then -- Not an RGB but a "color" instead!
+		l_Red, l_Green, l_Blue = getRGB(red)
+	else -- Nope, true color here
+		l_Red, l_Green, l_Blue = red, green, blue
+	end
+									
+	return PadHexNum(string.format("%X",l_Red)) .. 
+			PadHexNum(string.format("%X",l_Green)) .. 
+			PadHexNum(string.format("%X",l_Blue))
+end
+
+-- Pads a hex number to ensure a minimum of 2 digits.
+-- Example: PadHexNum("F") returns "F0
+function PadHexNum(incString)
+	local l_Return = incString
+	if tonumber(incString,16)<16 then
+		if tonumber(incString,16)<10 then
+			l_Return = "0" .. l_Return
+		elseif tonumber(incString,16)>10 then
+			l_Return = l_Return .. "0"
+		end
+	end
+
+	return l_Return
+end
 
 -----------------------------------------------------------
 -- Functions written by John Dahlstrom November 2008
 -----------------------------------------------------------
   
--- Make your very own customized gauge with this function.
---
--- Example: createGauge("healthBar", 300, 20, 30, 300, 0, 255, 0)
--- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
--- Return the numbers of a RGB colour by using the names used in our color_table. 
---
 -- Example: 
 --
 -- local red, green, blue = getRGB("green")
@@ -56,7 +179,13 @@ end
 gaugesTable = {} -- first we need to make this table which will be used later to store important data in...
 
 function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
-	
+	-- Check for existing gauge with same name
+	-- By Blaine von Roeder - 12/2009
+	for _,t in pairs(gaugesTable) do
+		if (t.name == gaugeName) then
+			return
+		end
+	end
 
 	-- make a nice background for our gauge
 	createLabel(gaugeName .. "_back",0,0,0,0,1)
@@ -82,14 +211,12 @@ function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, co
 	resizeWindow(gaugeName, width, height)
 	showWindow(gaugeName)
 
-	-- put some text on our label
+	-- Set Gauge text (Defaults to black)
+	-- If no gaugeText was passed, we'll just leave it blank!
 	if gaugeText ~= nil then
-		echo(gaugeName .. "_back", gaugeText)
-		echo(gaugeName, gaugeText)
+		setGaugeText(gaugeName, gaugeText, "black")
 	else
-		-- just so that it'll get rid of the text if there already was a label like this
-		echo(gaugeName .. "_back", "")
-		echo(gaugeName, "")
+		setGaugeText(gaugeName)
 	end
 
 	-- store important data in a table

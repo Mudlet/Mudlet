@@ -277,6 +277,18 @@ bool AliasUnit::restore( QDataStream & ifs, bool initMode )
     return true;
 }
 
+TAlias * AliasUnit::findAlias( QString & name )
+{
+    TAlias * pT = 0;
+    QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TAlias * pT = it.value();
+        return pT;
+    }
+    return 0;
+}
+
 bool AliasUnit::enableAlias( QString & name )
 {
     bool found = false;

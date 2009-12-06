@@ -311,6 +311,18 @@ bool TimerUnit::disableTimer( QString & name )
     return found;
 }
 
+TTimer * TimerUnit::findTimer( QString & name )
+{
+    TTimer * pT = 0;
+    QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TTimer * pT = it.value();
+        return pT;
+    }
+    return 0;
+}
+
 
 bool TimerUnit::killTimer( QString & name )
 {

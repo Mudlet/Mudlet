@@ -40,6 +40,7 @@ public:
                                     AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
     std::list<TAlias *>             getAliasRootNodeList()   { return mAliasRootNodeList; }
     TAlias *                        getAlias( int id );
+    TAlias *                        findAlias( QString & name );
     bool                            enableAlias( QString & );
     bool                            disableAlias( QString & );
     bool                            killAlias( QString & name );
