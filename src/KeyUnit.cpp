@@ -55,26 +55,32 @@ bool KeyUnit::processDataStream( int key, int modifier )
     return false;
 }
 
-void KeyUnit::enableKey( QString & name )
+bool KeyUnit::enableKey( QString & name )
 {
+    bool found = false;
     QMutexLocker locker(& mKeyUnitLock); 
     typedef list<TKey *>::const_iterator I;
     for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         pChild->enableKey( name );
+        found = true;
     } 
+    return found;
 }
 
-void KeyUnit::disableKey( QString & name )
+bool KeyUnit::disableKey( QString & name )
 {
+    bool found = false;
     QMutexLocker locker(& mKeyUnitLock); 
     typedef list<TKey *>::const_iterator I;
     for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         pChild->disableKey( name );
+        found = true;
     } 
+    return found;
 }
 
 void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )

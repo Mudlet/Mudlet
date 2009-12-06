@@ -41,6 +41,7 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpLua( pHost->getLuaInterpreter() )
+, mIsTempAlias( false )
 {
 } 
 
@@ -50,6 +51,7 @@ TAlias::TAlias( QString name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpLua( pHost->getLuaInterpreter() )
+, mIsTempAlias( false )
 {
 }
 
@@ -65,6 +67,16 @@ TAlias::~TAlias()
         mpHost->getAliasUnit()->unregisterAlias(this);     
     }
     
+}
+
+void TAlias::setName( QString name )
+{
+    if( ! mIsTempAlias )
+    {
+        mpHost->getAliasUnit()->mLookupTable.remove( mName, this );
+    }
+    mName = name;
+    mpHost->getAliasUnit()->mLookupTable.insertMulti( name, this );
 }
 
 bool TAlias::match( QString & toMatch )

@@ -53,7 +53,7 @@ public:
                      TAlias& clone(const TAlias& );
     
     QString          getName()                       { return mName; }
-    void             setName( QString name )         { mName = name; }
+    void             setName( QString name );
     void             compile();
     bool             compileScript();
     void             execute();
@@ -68,8 +68,10 @@ public:
     bool             match( QString & toMatch );
     bool             registerAlias();
     bool             isClone(TAlias &b) const;
+    bool             isTempAlias()                   { return mIsTempAlias; }
+    void             setIsTempAlias( bool b )        { mIsTempAlias = b; }
+    bool             mIsTempAlias;
     
-private:
     
                      TAlias(){};
     QString          mName;

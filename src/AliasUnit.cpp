@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -29,72 +29,43 @@
 #include <string>
 #include "Host.h"
 #include "TLuaInterpreter.h"
+#include "TConsole.h"
+
 #include <QDebug>
 #include "AliasUnit.h"
-#include "mudlet.h"
 
 using namespace std;
 
-void AliasUnit::stopAllTriggers()
+void AliasUnit::initStats()
 {
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
-    {
-        TAlias * pChild = *it;
-        pChild->disableFamily();
-    }
+    statsAliasTotal = 0;
+    statsTempAliass = 0;
+    statsActiveAliass = 0;
+    statsActiveAliassMax = 0;
+    statsActiveAliassMin = 0;
+    statsActiveAliassAverage = 0;
+    statsTempAliassCreated = 0;
+    statsTempAliassKilled = 0;
+    statsAverageLineProcessingTime = 0;
+    statsMaxLineProcessingTime = 0;
+    statsMinLineProcessingTime = 0;
+    statsRegexAliass = 0;
 }
 
-void AliasUnit::reenableAllTriggers()
-{
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
-    {
-        TAlias * pChild = *it;
-        pChild->enableFamily();
-    }
-}
-
-bool AliasUnit::processDataStream( QString & data )
-{
-    TLuaInterpreter * Lua = mpHost->getLuaInterpreter();
-    QString lua_command_string = "command";
-    Lua->set_lua_string( lua_command_string, data );
-    bool state = false;
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
-    {
-        TAlias * pChild = *it;
-        // = data.replace( "\n", "" );
-        if( pChild->match( data ) )
-        {
-            state = true;
-        }
-    }
-    // the idea to get "command" after alias processing was done and send its value
-    // was too difficult for users because if multiple alias change the value of command it becomes too difficult to handle for many users
-    // it's easier if we simply intercepts the command and hand responsibility for
-    // sending a command to the user scripts.
-    //data = Lua->get_lua_string( lua_command_string );
-    return state;
-}
-
-
-void AliasUnit::addAliasRootNode( TAlias * pT, int parentPosition, int childPosition )
+void AliasUnit::addAliasRootNode( TAlias * pT, int parentPosition, int childPosition, bool moveAlias )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );    
     }
-
     if( ( parentPosition == -1 ) || ( childPosition >= mAliasRootNodeList.size() ) )
     {
         mAliasRootNodeList.push_back( pT );
     }
     else
     {
-        // insert item at proper position
+         // insert item at proper position
         int cnt = 0;
         typedef std::list<TAlias *>::iterator IT;
         for( IT it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
@@ -108,7 +79,7 @@ void AliasUnit::addAliasRootNode( TAlias * pT, int parentPosition, int childPosi
         }
     }
 
-    if( mAliasMap.find( pT->getID() ) == mAliasMap.end() )
+    if( ! moveAlias )
     {
         mAliasMap.insert( pT->getID(), pT );
     }
@@ -127,12 +98,11 @@ void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID, in
     {
         pOldParent->popChild( pChild );
     }
-    if( ! pOldParent )
+    else
     {
-        removeAliasRootNode( pChild );    
+        mAliasRootNodeList.remove( pChild );
     }
-
-    if( pNewParent )
+    if( pNewParent ) 
     {
         pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
@@ -142,18 +112,28 @@ void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID, in
     else
     {
         pChild->Tree<TAlias>::setParent( 0 );
-        addAliasRootNode( pChild, parentPosition, childPosition );
+        addAliasRootNode( pChild, parentPosition, childPosition, true );
     }
 }
 
 void AliasUnit::removeAliasRootNode( TAlias * pT )
 {
     if( ! pT ) return;
+    if( ! pT->mIsTempAlias )
+    {
+        mLookupTable.remove( pT->mName, pT );
+    }
+    else
+    {
+        mLookupTable.remove( pT->getName() );
+    }
+    mAliasMap.remove( pT->getID() );
     mAliasRootNodeList.remove( pT );
 }
 
 TAlias * AliasUnit::getAlias( int id )
 { 
+    QMutexLocker locker(& mAliasUnitLock);
     if( mAliasMap.find( id ) != mAliasMap.end() )
     {
         return mAliasMap.value( id );
@@ -187,7 +167,7 @@ bool AliasUnit::registerAlias( TAlias * pT )
     }
     else
     {
-        addAliasRootNode( pT );    
+        addAliasRootNode( pT );
         return true;
     }
 }
@@ -202,7 +182,7 @@ void AliasUnit::unregisterAlias( TAlias * pT )
     }
     else
     {
-        removeAliasRootNode( pT );    
+        removeAliasRootNode( pT );
         return;
     }
 }
@@ -223,10 +203,14 @@ void AliasUnit::addAlias( TAlias * pT )
 void AliasUnit::removeAlias( TAlias * pT )
 {
     if( ! pT ) return;
-    
-    //FIXME: warning: race condition
-    //QMutexLocker locker(& mTriggerUnitLock); 
-    mAliasMap.remove(pT->getID());    
+    if( ! pT->mIsTempAlias )
+    {
+        mLookupTable.remove( pT->mName, pT );
+    }
+    else
+        mLookupTable.remove( pT->getName() );
+
+    mAliasMap.remove(pT->getID());
 }
 
 
@@ -234,5 +218,211 @@ qint64 AliasUnit::getNewID()
 {
     return ++mMaxID;
 }
+
+bool AliasUnit::processDataStream( QString & data )
+{
+    TLuaInterpreter * Lua = mpHost->getLuaInterpreter();
+    QString lua_command_string = "command";
+    Lua->set_lua_string( lua_command_string, data );
+    bool state = false;
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        // = data.replace( "\n", "" );
+        if( pChild->match( data ) )
+        {
+            state = true;
+        }
+    }
+    // the idea to get "command" after alias processing is finished and send its value
+    // was too difficult for users because if multiple alias change the value of command it becomes too difficult to handle for many users
+    // it's easier if we simply intercepts the command and hand responsibility for
+    // sending a command to the user scripts.
+    //data = Lua->get_lua_string( lua_command_string );
+    return state;
+}
+
+
+
+void AliasUnit::stopAllTriggers()
+{    
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        QString name = pChild->getName();
+        pChild->disableFamily();
+    }
+}
+
+void AliasUnit::reenableAllTriggers()
+{
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        pChild->enableFamily();
+    }
+}
+
+bool AliasUnit::serialize( QDataStream & ofs )
+{
+    return true;
+}
+
+
+bool AliasUnit::restore( QDataStream & ifs, bool initMode )
+{
+    return true;
+}
+
+bool AliasUnit::enableAlias( QString & name )
+{
+    bool found = false;
+    QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TAlias * pT = it.value();
+        pT->setIsActive( true );
+        ++it;
+        found = true;
+    }
+    return found;
+}
+
+bool AliasUnit::disableAlias( QString & name )
+{
+    bool found = false;
+    QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TAlias * pT = it.value();
+        pT->setIsActive( false );
+        ++it;
+        found = true;
+    }
+    return found;
+}
+
+
+bool AliasUnit::killAlias( QString & name )
+{
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        if( pChild->getName() == name )
+        {
+            // only temporary Aliass can be killed
+            if( ! pChild->isTempAlias() )
+            {
+                return false;
+            }
+            else
+            {
+                pChild->setIsActive( false );
+                markCleanup( pChild );
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+void AliasUnit::dump()
+{
+    bool ret = true;
+    
+    typedef list<TAlias *>::const_iterator I;
+    cout << "AliasUnit::dump() entries="<<mAliasRootNodeList.size()<<endl;
+    
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        pChild->DumpFamily();
+    }
+}
+
+void AliasUnit::_assembleReport( TAlias * pChild )
+{
+    typedef list<TAlias *>::const_iterator I;
+    list<TAlias*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TAlias * pT = *it2;
+        _assembleReport( pT );
+        if( pT->isActive() ) statsActiveAliass++;
+        if( pT->isTempAlias() ) statsTempAliass++;
+        statsAliasTotal++;
+    }
+}
+
+QString AliasUnit::assembleReport()
+{
+    statsActiveAliass = 0;
+    statsAliasTotal = 0;
+    statsTempAliass = 0;
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        if( pChild->isActive() ) statsActiveAliass++;
+        if( pChild->isTempAlias() ) statsTempAliass++;
+        statsAliasTotal++;
+        list<TAlias*> * childrenList = pChild->mpMyChildrenList;
+        for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        {
+            TAlias * pT = *it2;
+            _assembleReport( pT );
+            if( pT->isActive() ) statsActiveAliass++;
+            if( pT->isTempAlias() ) statsTempAliass++;
+            statsAliasTotal++;
+        }
+    }
+    QStringList msg;
+    msg << "Aliass current total: " << QString::number(statsAliasTotal) << "\n"
+        << "tempAliass current total: " << QString::number(statsTempAliass) << "\n"
+        << "active Aliass: " << QString::number(statsActiveAliass) << "\n";
+        /*<< "active Aliass max this session: " << QString::number(statsActiveAliassMax) << "\n"
+        << "active Aliass min this session: " << QString::number(statsActiveAliassMin) << "\n"
+        << "active Aliass average this session: " << QString::number(statsActiveAliassAverage) << "\n"*/
+        //<< "tempAliass created this session: " << QString::number(statsTempAliassCreated) << "\n"
+        //<< "tempAliass killed this session: " << QString::number(statsTempAliassKilled) << "\n"
+        //<< "current total regex Aliass: " << QString::number(statsRegexAliass) << "\n"
+        //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
+        //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
+        //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
+    return msg.join("");
+
+}
+
+void AliasUnit::doCleanup()
+{
+    typedef list<TAlias *>::iterator I;
+    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    {
+        delete *it;
+    }
+    mCleanupList.clear();
+}
+
+void AliasUnit::markCleanup( TAlias * pT )
+{
+    typedef list<TAlias *>::iterator I;
+    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    {
+        if( *it == pT )
+        {
+            return;
+        }
+    }
+    mCleanupList.push_back( pT );
+}
+
+
+
+
 
 

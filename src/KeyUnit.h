@@ -40,8 +40,8 @@ public:
                           KeyUnit( Host * pHost );
     std::list<TKey *>     getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
     TKey *                getKey( int id );
-    void                  enableKey( QString & name );
-    void                  disableKey( QString & name );
+    bool                  enableKey( QString & name );
+    bool                  disableKey( QString & name );
     bool                  registerKey( TKey * pT );
     void                  unregisterKey( TKey * pT );
     void                  reParentKey( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );

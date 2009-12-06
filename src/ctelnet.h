@@ -14,7 +14,6 @@ copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
 
 #ifndef CTELNET_H
 #define CTELNET_H
-
 #include <QObject>
 #include <list>
 #include <sys/time.h>
@@ -85,6 +84,7 @@ public:
   void                setDisplayDimensions();
   void                encodingChanged(QString encoding);
   void                set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
+  void                set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
   void                recordReplay();
   void                loadReplay( QString & );
   void                _loadReplay();
@@ -121,6 +121,7 @@ private:
   void                postData();  
     
   bool                mUSE_IRE_DRIVER_BUGFIX;
+  bool                mLF_ON_GA;
   Host *              mpHost;  
   QTcpSocket          socket;
   QHostAddress        mHostAddress;

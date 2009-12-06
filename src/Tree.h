@@ -221,7 +221,7 @@ void Tree<T>::disableFamily()
 template<class T>
 void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
 {
-    if( ( parentPosition == -1 ) || ( childPosition >= mpMyChildrenList->size() ) )
+    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mpMyChildrenList->size()) ) )
     {
         mpMyChildrenList->push_back( newChild );
     }

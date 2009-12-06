@@ -88,12 +88,13 @@ public:
     void clearCaptureGroups();
     bool callEventHandler( QString & function, TEvent * pE );
     
-    int startTempTimer( double, QString );
-    int startTempTrigger( QString, QString );
-    int startTempLineTrigger( int, int, QString );
-    int startTempRegexTrigger( QString, QString );
-    int startTempColorTrigger( int, int, QString );
-
+    int startTempTimer( double, QString & );
+    int startTempAlias( QString &, QString & );
+    int startTempTrigger( QString &, QString & );
+    int startTempLineTrigger( int, int, QString & );
+    int startTempRegexTrigger( QString &, QString & );
+    int startTempColorTrigger( int, int, QString & );
+    int startPermRegexTrigger( QString & name, QString & parent, QStringList & regex, QString & function );
     TGatekeeperThread * mpGatekeeperThread;
  
     static int Wait( lua_State * L );
@@ -196,6 +197,16 @@ public:
     static int calcFontWidth( int size );
     static int calcFontHeight( int size );
     static int calcFontSize( lua_State * );
+    static int permRegexTrigger( lua_State * );
+    static int permSubstringTrigger( lua_State * );
+    static int permTimer( lua_State * );
+    static int permAlias( lua_State * );
+    static int exists( lua_State * );
+    static int isActive( lua_State * );
+    static int tempAlias( lua_State * );
+    static int enableAlias( lua_State * );
+    static int disableAlias( lua_State * );
+    static int killAlias( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;

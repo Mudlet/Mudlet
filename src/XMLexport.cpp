@@ -172,7 +172,10 @@ bool XMLexport::writeHost( Host * pT )
     for( ItAliasUnit it3 = pT->mAliasUnit.mAliasRootNodeList.begin(); it3 != pT->mAliasUnit.mAliasRootNodeList.end(); it3++)
     {
         TAlias * pChildAlias = *it3;
-        ret = writeAlias( pChildAlias );
+        if( ! pChildAlias->isTempAlias() )
+        {
+            ret = writeAlias( pChildAlias );
+        }
     }
     writeEndElement();
 

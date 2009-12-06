@@ -41,6 +41,7 @@ cTelnet::cTelnet( Host * pH )
 : mpHost(pH)
 , mpPostingTimer( new QTimer( this ) )
 , mUSE_IRE_DRIVER_BUGFIX( false )
+, mLF_ON_GA( false )
 , mResponseProcessed( true )
 , mGA_Driver( false )
 , mCommands( 0 )
@@ -49,6 +50,7 @@ cTelnet::cTelnet( Host * pH )
     {
         //qDebug()<<"hostName="<<mpHost->getName()<<" bugfix="<<mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+        mLF_ON_GA = mpHost->mLF_ON_GA;
     }
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -898,7 +900,7 @@ MAIN_LOOP_END: ;
                 }
             }
 
-            if( mUSE_IRE_DRIVER_BUGFIX )
+            if( mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA )
             {
                 cleandata.push_back('\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
             }
@@ -1089,7 +1091,7 @@ MAIN_LOOP_END: ;
                 }
             }
 
-            if( mUSE_IRE_DRIVER_BUGFIX )
+            if( mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA )
             {
                 cleandata.push_back('\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
             }

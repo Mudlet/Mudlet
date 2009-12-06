@@ -121,6 +121,7 @@ public:
     void               stopAllTriggers();
     void               reenableAllTriggers();
     void               set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX = b; mTelnet.set_USE_IRE_DRIVER_BUGFIX( b ); }
+    void               set_LF_ON_GA( bool b ){ mLF_ON_GA = b; mTelnet.set_LF_ON_GA( b ); }
     void               adjustNAWS();
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
@@ -212,6 +213,7 @@ public:
     int                mMainIconSize;
     int                mTEFolderIconSize;
     bool               mIsGoingDown;
+    bool               mLF_ON_GA;
 };
 #endif
 

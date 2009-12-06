@@ -29,7 +29,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="General">
       <attribute name="title">
@@ -532,6 +532,18 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
+           <widget class="QCheckBox" name="checkBox_LF_ON_GA">
+            <property name="toolTip">
+             <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
+communicate with the client on where a newline should be. Enable this to fix text
+from getting appended to the previous prompt line</string>
+            </property>
+            <property name="text">
+             <string>add a linebreak after prompt on GA servers</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
              <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
@@ -539,7 +551,7 @@ communicate with the client on where a newline should be. Enable this to fix tex
 from getting appended to the previous prompt line</string>
             </property>
             <property name="text">
-             <string>Fix new text to be on its own line</string>
+             <string>fix unnecessary linebreaks on GA servers</string>
             </property>
            </widget>
           </item>
@@ -550,7 +562,7 @@ from getting appended to the previous prompt line</string>
 or some other computer model that has a small screen.</string>
             </property>
             <property name="text">
-             <string>Use Mudlet on a netbook with a small screen</string>
+             <string>use Mudlet on a netbook with a small screen</string>
             </property>
            </widget>
           </item>
@@ -561,7 +573,7 @@ or some other computer model that has a small screen.</string>
 &quot; to your command input on empty commands. This option will rarely be necessary.</string>
             </property>
             <property name="text">
-             <string>Force new line on empty commands</string>
+             <string>force new line on empty commands</string>
             </property>
            </widget>
           </item>
@@ -571,7 +583,7 @@ or some other computer model that has a small screen.</string>
              <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
             </property>
             <property name="text">
-             <string>Save log files in html format instead of text only.</string>
+             <string>save log files in html format instead of text only.</string>
             </property>
            </widget>
           </item>

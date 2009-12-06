@@ -40,8 +40,9 @@ public:
                           TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
     std::list<TTrigger *> getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
     TTrigger *            getTrigger( int id );
-    void                  enableTrigger( QString & );
-    void                  disableTrigger( QString & );
+    TTrigger *            findTrigger( QString & );
+    bool                  enableTrigger( QString & );
+    bool                  disableTrigger( QString & );
     bool                  killTrigger( QString & name );
     bool                  registerTrigger( TTrigger * pT );
     void                  unregisterTrigger( TTrigger * pT );

@@ -313,26 +313,44 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
     return ret1 && ret2;
 }
 
-void TriggerUnit::enableTrigger( QString & name )
+TTrigger * TriggerUnit::findTrigger( QString & name )
 {
+    TTrigger * pT = 0;
+    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
+    {
+        TTrigger * pT = it.value();
+        return pT;
+    }
+    return 0;
+}
+
+bool TriggerUnit::enableTrigger( QString & name )
+{
+    bool found = false;
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {
         TTrigger * pT = it.value();
         pT->setIsActive( true );
         ++it;
+        found = true;
     }
+    return found;
 }
 
-void TriggerUnit::disableTrigger( QString & name )
+bool TriggerUnit::disableTrigger( QString & name )
 {
+    bool found = false;
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {
         TTrigger * pT = it.value();
         pT->setIsActive( false );
         ++it;
+        found = true;
     }
+    return found;
 }
 
 void TriggerUnit::setTriggerStayOpen( QString name, int lines )

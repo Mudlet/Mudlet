@@ -768,7 +768,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
         {
             if( name() == "name" )
             {
-                pT->mName = readElementText();
+                pT->setName( readElementText() );
                 continue;
             }
             else if( name() == "script")
