@@ -304,7 +304,10 @@ void TTimer::disableTimer( qint64 id )
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTimer * pChild = *it;
-        pChild->disableTimer( pChild->getID() );
+        if( ! pChild->isOffsetTimer() && pChild->shouldBeActive() )
+        {
+            pChild->disableTimer( pChild->getID() );
+        }
     }
 }
 

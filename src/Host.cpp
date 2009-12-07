@@ -102,6 +102,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mpNotePad( 0 )
 , mInsertedMissingLF( false )
 , mLF_ON_GA( false )
+, mAlertOnNewData( true )
 {
 }
 

@@ -4419,8 +4419,9 @@ int TLuaInterpreter::startPermTimer( QString & name, QString & parent, double ti
     pT->registerTimer();
     pT->setScript( function );
     int id = pT->getID();
-    pT->setName( QString::number( id ) );//darf erst nach isTempTimer gesetzt werde, damit setName() schneller ist
+    pT->setName( name );//darf erst nach isTempTimer gesetzt werde, damit setName() schneller ist
     pT->setIsActive( false );
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
     return id;
 }
 
@@ -4467,7 +4468,8 @@ int TLuaInterpreter::startPermAlias( QString & name, QString & parent, QString &
     pT->registerAlias();
     pT->setScript( function );
     int id = pT->getID();
-    pT->setName( QString::number( id ) );
+    pT->setName( name );
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
     return id;
 }
 

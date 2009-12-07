@@ -92,6 +92,7 @@ public:
   QTime               networkLatencyTime;
   double              networkLatency;
   bool                mGA_Driver;
+  bool                mAlertOnNewData;
 
 protected slots:
   

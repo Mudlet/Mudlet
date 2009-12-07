@@ -1083,6 +1083,37 @@ void TConsole::deselect()
     P_end.setY( 0 );
 }
 
+void TConsole::showEvent( QShowEvent * event )
+{
+    if( ! mIsDebugConsole && ! mIsSubConsole )
+    {
+        if( mpHost )
+        {
+            mpHost->mTelnet.mAlertOnNewData = false;
+        }
+    }
+    return QWidget::showEvent( event );
+}
+
+void TConsole::hideEvent( QHideEvent * event )
+{
+    if( mudlet::self()->mWindowMinimized )
+    {
+        if( ! mIsDebugConsole && ! mIsSubConsole )
+        {
+            if( mpHost )
+            {
+                if( mpHost->mAlertOnNewData )
+                {
+                    mpHost->mTelnet.mAlertOnNewData = true;
+                }
+            }
+        }
+    }
+    return QWidget::hideEvent( event );
+}
+
+
 void TConsole::reset()
 {
     deselect();

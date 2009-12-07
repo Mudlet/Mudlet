@@ -214,6 +214,7 @@ public:
     int                mTEFolderIconSize;
     bool               mIsGoingDown;
     bool               mLF_ON_GA;
+    bool               mAlertOnNewData;
 };
 #endif
 

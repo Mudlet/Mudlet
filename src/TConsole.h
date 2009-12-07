@@ -163,6 +163,8 @@ public:
       void              finalize();
       void              runTriggers( int );
       void              showStatistics();
+      void              showEvent( QShowEvent * event );
+      void              hideEvent( QHideEvent * event );
       QString           mConsoleName;
       bool              mWindowIsHidden;
       int               mOldX;

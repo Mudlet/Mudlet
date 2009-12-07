@@ -45,6 +45,7 @@ cTelnet::cTelnet( Host * pH )
 , mResponseProcessed( true )
 , mGA_Driver( false )
 , mCommands( 0 )
+, mAlertOnNewData( true )
 {
     if( mpHost )
     {
@@ -710,6 +711,10 @@ void cTelnet::postData()
 {
     //QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
     mpHost->mpConsole->printOnDisplay( mMudData );
+    if( mAlertOnNewData )
+    {
+        QApplication::alert( mudlet::self(), 3 );
+    }
 }
 
 void cTelnet::initStreamDecompressor()

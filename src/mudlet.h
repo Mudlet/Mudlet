@@ -113,7 +113,10 @@ public:
    void                          replayStart();
    bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
    void                          replayOver();
+   void                          showEvent( QShowEvent * event );
+   void                          hideEvent( QHideEvent * event );
    bool                          resetFormat( QString & name );
+   bool                          mWindowMinimized;
    //QString                       readProfileData( QString profile, QString item );
    void                          doAutoLogin( QString & );
 

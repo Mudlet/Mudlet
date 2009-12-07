@@ -29,7 +29,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="General">
       <attribute name="title">
@@ -39,7 +39,7 @@
        <item>
         <widget class="QGroupBox" name="groupBox_11">
          <property name="title">
-          <string>Toolbar Icon Size</string>
+          <string>toolbar &amp; icon size</string>
          </property>
          <layout class="QFormLayout" name="formLayout_4">
           <property name="fieldGrowthPolicy">
@@ -48,7 +48,7 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_34">
             <property name="text">
-             <string>Icon size:</string>
+             <string>icon size</string>
             </property>
            </widget>
           </item>
@@ -71,7 +71,23 @@
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="showMenuBar">
             <property name="text">
-             <string>Show the menu bar</string>
+             <string>show menu bar</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>misc</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QCheckBox" name="mAlertOnNewData">
+            <property name="text">
+             <string>toolbar notification if Mudlet is minimized and new data arrives</string>
             </property>
            </widget>
           </item>

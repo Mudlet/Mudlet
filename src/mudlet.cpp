@@ -72,6 +72,7 @@ mudlet::mudlet()
 , mReplaySpeed( 1 )
 , actionReplaySpeedUp( 0 )
 , actionReplaySpeedDown( 0 )
+, mWindowMinimized( false )
 {
     setUnifiedTitleAndToolBarOnMac( true );
     setContentsMargins(0,0,0,0);
@@ -657,6 +658,18 @@ bool mudlet::setTextFormat( QString & name, int r1, int g1, int b1, int r2, int 
     }
     else
         return false;
+}
+
+void mudlet::showEvent( QShowEvent * event )
+{
+    mWindowMinimized = false;
+    QMainWindow::showEvent( event );
+}
+
+void mudlet::hideEvent( QHideEvent * event )
+{
+    mWindowMinimized = true;
+    QMainWindow::hideEvent( event );
 }
 
 bool mudlet::clearWindow( Host * pHost, QString & name )
