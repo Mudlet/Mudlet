@@ -72,8 +72,7 @@ public:
     void                        showInfo( QString );
     void                        focusInEvent( QFocusEvent * );
     void                        focusOutEvent( QFocusEvent * );
-
-    //  QsciLexerLua *              mpLuaLexer;
+    void                        enterEvent( QEvent * pE );
     QToolBar *                  toolBar;
     QToolBar *                  toolBar2;
     bool                        mNeedUpdateData;

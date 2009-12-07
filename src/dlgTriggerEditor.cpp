@@ -98,6 +98,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 , mCurrentAction( 0 )
 , mCurrentScript( 0 )
 , mCurrentKey( 0 )
+, mNeedUpdateData( false )
 {
     // init generated dialog
     setupUi(this);
@@ -635,9 +636,10 @@ void dlgTriggerEditor::slot_item_clicked_search_list(QTreeWidgetItem* pItem, int
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
+                slot_show_triggers();
                 treeWidget->setCurrentItem( pI, 0 );
                 treeWidget->scrollToItem( pI );
-                slot_show_triggers();
+
                 slot_trigger_clicked( pI, 0 );
                 return;
             }
@@ -2843,21 +2845,7 @@ void dlgTriggerEditor::saveTrigger()
     bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
     QStringList regexList;
     QList<int> regexPropertyList;
-    for( int i=0; i<100; i++ )
-    {
-        QString pattern = ((dlgTriggerPatternEdit *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 0 ))->lineEdit->text();
-        if( pattern.size() < 1 ) continue;
-        regexList << pattern;
-        if( ! mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ) ) continue;
-        int _type = ((QComboBox *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ))->currentIndex();
-        if( _type == 0 ) regexPropertyList << REGEX_SUBSTRING;
-        else if( _type == 1 ) regexPropertyList << REGEX_PERL;
-        else if( _type == 2 ) regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
-        else if( _type == 3 ) regexPropertyList << REGEX_EXACT_MATCH;
-        else if( _type == 4 ) regexPropertyList << REGEX_LUA_CODE;
-        else if( _type == 5 ) regexPropertyList << REGEX_LINE_SPACER;
-        else if( _type == 6 ) regexPropertyList << REGEX_COLOR_PATTERN;
-    }
+
     QString script = mpSourceEditorArea->editor->toPlainText();
 
     if( pItem )
@@ -2866,6 +2854,21 @@ void dlgTriggerEditor::saveTrigger()
         TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
         if( pT )
         {
+            for( int i=0; i<50; i++ )
+            {
+                QString pattern = ((dlgTriggerPatternEdit *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 0 ))->lineEdit->text();
+                if( pattern.size() < 1 ) continue;
+                regexList << pattern;
+                if( ! mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ) ) continue;
+                int _type = ((QComboBox *)mpTriggersMainArea->listWidget_regex_list->cellWidget( i, 1 ))->currentIndex();
+                if( _type == 0 ) regexPropertyList << REGEX_SUBSTRING;
+                else if( _type == 1 ) regexPropertyList << REGEX_PERL;
+                else if( _type == 2 ) regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+                else if( _type == 3 ) regexPropertyList << REGEX_EXACT_MATCH;
+                else if( _type == 4 ) regexPropertyList << REGEX_LUA_CODE;
+                else if( _type == 5 ) regexPropertyList << REGEX_LINE_SPACER;
+                else if( _type == 6 ) regexPropertyList << REGEX_COLOR_PATTERN;
+            }
             pT->setName( name );
             pT->setCommand( command );
             bool check = pT->setRegexCodeList( regexList, regexPropertyList );
@@ -3802,8 +3805,14 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     if( ! pItem ) return;
 
     mCurrentTrigger = pItem;
-    mpTriggersMainArea->show();
-    mpSourceEditorArea->show();
+    if( mpTriggersMainArea->isHidden() )
+    {
+        mpTriggersMainArea->show();
+    }
+    if( mpSourceEditorArea->isHidden() )
+    {
+        mpSourceEditorArea->show();
+    }
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
     mpSourceEditorArea->editor->setPlainText( "" );
@@ -3930,7 +3939,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
             connect(pItem->bgB, SIGNAL(clicked()), this, SLOT(slot_color_trigger_bg()));
         }
 
-        for( int i=patternList.size(); i<100; i++)
+        for( int i=patternList.size(); i<50-pT->getRegexCodeList().size(); i++)
         {
             dlgTriggerPatternEdit * pItem = new dlgTriggerPatternEdit( mpTriggersMainArea->listWidget_regex_list );
             connect(pItem->fgB, SIGNAL(clicked()), this, SLOT(slot_color_trigger_fg()));
@@ -5110,8 +5119,51 @@ void dlgTriggerEditor::saveOpenChanges()
 
 }
 
+void dlgTriggerEditor::enterEvent( QEvent * pE )
+{
+    qDebug()<<"enterEvent() mNeedUpdateData="<<mNeedUpdateData;
+    if( mNeedUpdateData )
+    {
+        treeWidget->clear();
+        treeWidget_alias->clear();
+        treeWidget_timers->clear();
+        treeWidget_scripts->clear();
+        treeWidget_actions->clear();
+        treeWidget_keys->clear();
+        fillout_form();
+        mNeedUpdateData = false;
+    }
+
+    if( ! mCurrentView )
+    {
+        mCurrentTrigger = 0;
+        mCurrentAlias = 0;
+        mCurrentKey = 0;
+        mCurrentAction = 0;
+        mCurrentScript = 0;
+        mCurrentTimer = 0;
+        return;
+    }
+
+    if( mCurrentTrigger )
+        mCurrentTrigger->setSelected( true );
+    if( mCurrentTimer )
+        mCurrentTimer->setSelected( true );
+    if( mCurrentAlias )
+        mCurrentAlias->setSelected( true );
+    if( mCurrentScript )
+        mCurrentScript->setSelected( true );
+    if( mCurrentAction )
+        mCurrentAction->setSelected( true );
+    if( mCurrentKey )
+        mCurrentKey->setSelected( true );
+
+    QWidget::enterEvent( pE );
+}
+
 void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
 {
+    qDebug()<<"focusInEvent() mNeedUpdateData="<<mNeedUpdateData;
     if( mNeedUpdateData )
     {
         treeWidget->clear();
@@ -5227,6 +5279,7 @@ void dlgTriggerEditor::slot_show_triggers()
 
     if( mNeedUpdateData )
     {
+        qDebug()<<"mNeedUpdateData="<<mNeedUpdateData;
         treeWidget->clear();
         treeWidget_alias->clear();
         treeWidget_timers->clear();
@@ -5236,31 +5289,7 @@ void dlgTriggerEditor::slot_show_triggers()
         fillout_form();
         mNeedUpdateData = false;
     }
-
     mCurrentView = cmTriggerView;
-    
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-    
-    mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-    
-    treeWidget->hide();
-    treeWidget_alias->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_actions->hide();   
-    treeWidget_keys->hide();
-
-
     QTreeWidgetItem * pI = treeWidget->topLevelItem( 0 );
     if( pI )
     {
@@ -5282,7 +5311,32 @@ void dlgTriggerEditor::slot_show_triggers()
             mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
         }
     }
-    treeWidget->show();
+    mpTimersMainArea->hide();
+    mpScriptsMainArea->hide();
+    mpAliasMainArea->hide();
+    mpActionsMainArea->hide();
+    mpKeysMainArea->hide();
+    if( mpTriggersMainArea->isHidden() )
+    {
+        mpTriggersMainArea->show();
+    }
+    mpSystemMessageArea->hide();
+    mpOptionsAreaTriggers->hide();
+    mpOptionsAreaAlias->hide();
+    mpOptionsAreaScripts->hide();
+    mpOptionsAreaTimers->hide();
+    mpOptionsAreaActions->hide();
+
+
+    treeWidget_alias->hide();
+    treeWidget_timers->hide();
+    treeWidget_scripts->hide();
+    treeWidget_actions->hide();
+    treeWidget_keys->hide();
+    if( treeWidget->isHidden() )
+    {
+        treeWidget->show();
+    }
 }
 
 void dlgTriggerEditor::slot_show_scripts()
