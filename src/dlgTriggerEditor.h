@@ -29,6 +29,7 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QScrollArea>
 #include "TTrigger.h"
 #include "TAction.h"
 //#include <Qsci/qsciscintilla.h>
@@ -56,17 +57,18 @@ class dlgOptionsAreaScripts;
 class dlgOptionsAreaTimers;
 class dlgOptionsAreaAction;
 class dlgKeysMainArea;
+class dlgTriggerPatternEdit;
 class TKey;
 
 class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
 {
 Q_OBJECT
-        
+
 public:
-        
+
                                 dlgTriggerEditor( Host * );
     void                        fillout_form();
-    void                        closeEvent(QCloseEvent *event);    
+    void                        closeEvent(QCloseEvent *event);
     void                        showError( QString );
     void                        showWarning( QString );
     void                        showInfo( QString );
@@ -78,11 +80,11 @@ public:
     bool                        mNeedUpdateData;
 
 signals:
-    
+
     void                        signal_establish_connection( QString profile_name );
     void                        accept();
     void                        update();
-    
+
 public slots:
     void                        slot_cursorPositionChanged();
     void                        slot_set_pattern_type_color( int );
@@ -172,7 +174,7 @@ public slots:
     void                        slot_color_trigger_bg();
 
 private:
-    
+
     void                        saveOpenChanges();
     void                        saveTrigger();
     void                        saveAlias();
@@ -188,14 +190,14 @@ private:
     void                        addTrigger( bool isFolder );
     void                        addAction( bool isFolder );
     void                        addKey( bool );
-    
+
     void                        expand_child_triggers( TTrigger * pTriggerParent, QTreeWidgetItem * pItem );
     void                        expand_child_timers( TTimer * pTimerParent, QTreeWidgetItem * pWidgetItemParent );
     void                        expand_child_scripts( TScript * pTriggerParent, QTreeWidgetItem * pWidgetItemParent );
     void                        expand_child_alias( TAlias *, QTreeWidgetItem * );
     void                        expand_child_action( TAction *, QTreeWidgetItem * );
     void                        expand_child_key( TKey * pTriggerParent, QTreeWidgetItem * pWidgetItemParent );
-    
+
     void                        exportTrigger( QFile & );
     void                        exportTimer( QFile & );
     void                        exportAlias( QFile & );
@@ -215,7 +217,7 @@ private:
     QTreeWidgetItem *           mpTimerBaseItem;
     QTreeWidgetItem *           mpActionBaseItem;
     QTreeWidgetItem *           mpKeyBaseItem;
-    
+
     QTreeWidgetItem *           mpCurrentActionItem;
     QTreeWidgetItem *           mpCurrentKeyItem;
     QTreeWidgetItem *           mpCurrentTimerItem;
@@ -230,7 +232,9 @@ private:
     static const int            cmScriptView;
     static const int            cmActionView;
     static const int            cmKeysView;
-    
+
+    QScrollArea *               mpScrollArea;
+    QWidget *                   HpatternList;
     dlgTriggersMainArea *       mpTriggersMainArea;
     dlgTimersMainArea *         mpTimersMainArea;
     dlgSystemMessageArea *      mpSystemMessageArea;
@@ -253,6 +257,7 @@ private:
     bool                        mIsGrabKey;
     //QsciDocument                mDocument;
     Host *                      mpHost;
+    QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
 };
 
 #endif

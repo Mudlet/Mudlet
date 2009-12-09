@@ -1,50 +1,82 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>trigger_pattern_edit</class>
- <widget class="QWidget" name="trigger_pattern_edit" >
-  <property name="geometry" >
+ <widget class="QWidget" name="trigger_pattern_edit">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>459</width>
-    <height>42</height>
+    <height>23</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout" >
-   <property name="spacing" >
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <property name="spacing">
     <number>3</number>
    </property>
-   <property name="margin" >
+   <property name="margin">
     <number>0</number>
    </property>
    <item>
-    <widget class="QPushButton" name="fgB" >
-     <property name="font" >
+    <widget class="QLabel" name="number">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>40</horstretch>
+       <verstretch>20</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::PlainText</enum>
+     </property>
+     <property name="scaledContents">
+      <bool>true</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="fgB">
+     <property name="font">
       <font>
        <pointsize>7</pointsize>
       </font>
      </property>
-     <property name="text" >
+     <property name="text">
       <string>Foreground Color</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="bgB" >
-     <property name="font" >
+    <widget class="QPushButton" name="bgB">
+     <property name="font">
       <font>
        <pointsize>7</pointsize>
       </font>
      </property>
-     <property name="text" >
+     <property name="text">
       <string>Background Color</string>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="lineEdit" />
+    <widget class="QLineEdit" name="lineEdit"/>
+   </item>
+   <item>
+    <widget class="QComboBox" name="patternType"/>
    </item>
   </layout>
  </widget>
