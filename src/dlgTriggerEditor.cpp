@@ -561,7 +561,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
                      << "begin of line substring"
                      << "exact match"
                      << "Lua function"
-                     << "line spacer";
+                     << "line spacer"
+                     << "color trigger";
         QComboBox * pBox = pItem->patternType;
         pBox->addItems( _patternList );
         pBox->setItemData(0, QVariant(i) );
