@@ -156,7 +156,6 @@ int main(int argc, char *argv[])
     while( t.elapsed() < 1500 ){}
     splash.finish( mudlet::self() );
     app.exec();
-    qDebug()<<"*** Have a nice day! ***";
 }
 
 

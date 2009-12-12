@@ -101,7 +101,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mCodeCompletion( true )
 , mpNotePad( 0 )
 , mInsertedMissingLF( false )
-, mLF_ON_GA( false )
+, mLF_ON_GA( true )
 , mAlertOnNewData( true )
 {
 }
