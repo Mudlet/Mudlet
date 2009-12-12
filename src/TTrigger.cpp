@@ -215,7 +215,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             int _pos = regex.indexIn( regexList[i] );
             if( _pos == -1 )
             {
-                qDebug()<<"ERROR: cannot parse color trigger pattern";
+                qDebug()<<"ERROR: cannot parse color trigger pattern="<<regexList[i];
                 mColorPatternList.push_back( 0 );
                 state = false;
                 continue;
@@ -839,26 +839,34 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
             }
             pC->reset();
         }
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups( captureList, posList );
-        // call lua trigger function with number of matches and matches itselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-        if( mFilterTrigger )
+        if( mIsMultiline )
         {
-            if( captureList.size() > 0 )
+            updateMultistates( regexNumber, captureList, posList );
+            return true;
+        }
+        else
+        {
+            TLuaInterpreter * pL = mpHost->getLuaInterpreter();
+            pL->setCaptureGroups( captureList, posList );
+            // call lua trigger function with number of matches and matches itselves as arguments
+            execute();
+            pL->clearCaptureGroups();
+            if( mFilterTrigger )
             {
-                typedef std::list<std::string>::iterator IT;
-                typedef std::list<int>::iterator IT2;
-                IT it1 = captureList.begin();
-                IT2 it2 = posList.begin();
-                for( ; it1!=captureList.end(); it1++, it2++ )
+                if( captureList.size() > 0 )
                 {
-                    filter( *it1, *it2 );
+                    typedef std::list<std::string>::iterator IT;
+                    typedef std::list<int>::iterator IT2;
+                    IT it1 = captureList.begin();
+                    IT2 it2 = posList.begin();
+                    for( ; it1!=captureList.end(); it1++, it2++ )
+                    {
+                        filter( *it1, *it2 );
+                    }
                 }
             }
+            return true;
         }
-        return true;
     }
     return false;
 }
@@ -1220,7 +1228,7 @@ TColorTable * TTrigger::createColorPattern( int ansiFg, int ansiBg )
     int bgColorB = 0;
 
     int tag = ansiFg;
-    if( tag < 16 )
+    if( tag <= 16 )
     {
         QColor c;
         switch( tag )
@@ -1276,7 +1284,7 @@ TColorTable * TTrigger::createColorPattern( int ansiFg, int ansiBg )
     }
 
     tag = ansiBg;
-    if( tag < 16 )
+    if( tag <= 16 )
     {
         QColor c;
         switch( tag )

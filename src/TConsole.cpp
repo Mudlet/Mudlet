@@ -1092,16 +1092,15 @@ void TConsole::showEvent( QShowEvent * event )
             mpHost->mTelnet.mAlertOnNewData = false;
         }
     }
-    //return QWidget::showEvent( event );
 }
 
 void TConsole::hideEvent( QHideEvent * event )
 {
-    if( mudlet::self()->mWindowMinimized )
+    if( ! mIsDebugConsole && ! mIsSubConsole )
     {
-        if( ! mIsDebugConsole && ! mIsSubConsole )
+        if( mpHost )
         {
-            if( mpHost )
+            if( mudlet::self()->mWindowMinimized )
             {
                 if( mpHost->mAlertOnNewData )
                 {
@@ -1110,7 +1109,6 @@ void TConsole::hideEvent( QHideEvent * event )
             }
         }
     }
-    //return QWidget::hideEvent( event );
 }
 
 

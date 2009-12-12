@@ -29,6 +29,8 @@
 #include <QFontDatabase>
 #include <QtCore>
 #include <qdir.h>
+#include <QFile>
+#include <QtCore>
 
 #define MUDLET_HOME "/usr/local/share/mudlet/"
 
@@ -42,14 +44,14 @@ void debugOutput(QtMsgType type, const char *msg)
     {
     case QtDebugMsg:
         cout << msg << endl;
-        if( mudlet::mpDebugConsole )
+        /*if( mudlet::mpDebugConsole )
         {
-            //mudlet::mpDebugConsole->print( msg );
+            ;//mudlet::mpDebugConsole->print( msg );
         }
         else
         {
             fprintf(stderr, "Debug: %s\n", msg);
-        }
+        }*/
         break;
     case QtWarningMsg:
         fprintf(stderr, "Warning: %s\n", msg);
@@ -60,9 +62,13 @@ void debugOutput(QtMsgType type, const char *msg)
     case QtFatalMsg:
         fprintf(stderr, "Fatal: %s\n", msg);
         abort();
+        break;
     }
 }
 
+QStringList gSysErrors;
+
+//extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 
 int main(int argc, char *argv[])
 {
@@ -79,7 +85,8 @@ int main(int argc, char *argv[])
     splash.showMessage("Loading profiles ...");
     
     app.processEvents();
-    
+    //qt_ntfs_permission_lookup++; // turn permission checking on on NTFS file systems
+
     QString directory = QDir::homePath()+"/.config/mudlet";
     QDir dir;
     if( ! dir.exists( directory ) )
@@ -90,20 +97,78 @@ int main(int argc, char *argv[])
     QFile file_doc(":/mudlet_documentation.html");
     QFile file_doc_old;
     file_doc_old.setFileName( directory+"/mudlet_documentation.html" );
-    //NOTE: B. von Roeder found out that the removal of old versions may fail on windows 7 *sometimes*due permission issues
-    file_doc_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ExeOwner );
-    qDebug()<<"deleting old manual<"<<directory+"/mudlet_documentation.html"<<">";
-    bool ok=file_doc_old.remove();
-    if( ok ) qDebug()<<"OK deleted file";
-    else qDebug()<<"ERROR: could not remove file";
-    file_doc.copy( directory+"/mudlet_documentation.html" );
-
+    if( file_doc_old.exists() )
+    {
+        //NOTE: B. von Roeder found out that the removal of old versions may *sometimes* fail on windows 7 due permission issues
+        if( ! file_doc_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+        {
+            cout << "[ERROR] could not set file permissions of the old version of the manual" << endl;
+            gSysErrors << "[ERROR] could not set file permissions of the old version of the manual";
+        }
+        string old_man_path = directory.toLatin1().data();
+        old_man_path += "/mudlet_documentation.html";
+        bool ok=file_doc_old.remove();
+        if( ok )
+        {
+            cout << "[OK] deleted old version of the manual successfully: " << old_man_path << endl;
+        }
+        else
+        {
+            cout << "[ERROR] could not remove old version of the manual: " << old_man_path << endl;
+            gSysErrors << "[ERROR] could not remove old version of the manual: " << old_man_path.c_str();
+        }
+    }
+    else
+    {
+        gSysErrors << "[INFO] no old version of the manual found";
+    }
+    if( file_doc.copy( directory+"/mudlet_documentation.html" ) )
+    {
+        cout << "[OK] successfully copied new version of the manual" << endl;
+        gSysErrors << "[INFO] successfully copied new version of the manual";
+    }
+    else
+    {
+        cout << "[ERROR] copy of new version of the manual failed" << endl;
+        gSysErrors << "[ERROR] copy of new version of the manual failed";
+    }
     QFile file_lua(":/LuaGlobal.lua");
-    file_lua.setPermissions( QFile::WriteOwner | QFile::ReadOwner );
+
     QFile file_lua_old( directory+"/LuaGlobal.lua" );
-    file_lua_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner );
-    file_lua_old.remove();
-    file_lua.copy( directory+"/LuaGlobal.lua" );
+    if( ! file_lua_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+    {
+        cout << "[ERROR] failed to set file permissions for the old version of LuaGlobal.lua" << endl;
+        gSysErrors << "[ERROR] failed to set file permissions for the old version of LuaGlobal.lua";
+    }
+    else
+    {
+        cout << "[OK] successfully set file permissions for the old version of LuaGlobal.lua" << endl;
+    }
+    if( file_lua_old.remove() )
+    {
+        cout << "[OK] old LuaGlobal.lua removed successfully" << endl;
+        gSysErrors << "[INFO] old LuaGlobal.lua removed successfully";
+    }
+    else
+    {
+        cout << "[ERROR] failed to remove the old version of LuaGlobal.lua" << endl;
+        gSysErrors << "[ERROR] failed to remove the old version of LuaGlobal.lua";
+    }
+    if( file_lua.copy( directory+"/LuaGlobal.lua" ) )
+    {
+        cout << "[OK] new version of LuaGlobal.lua copied successfully" << endl;
+        gSysErrors << "[OK] new version of LuaGlobal.lua copied successfully";
+        QFile file_lua_new(directory+"/LuaGlobal.lua");
+        if( ! file_lua_new.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+        {
+            cout << "[ERROR] failed to set file permissions for the new version of LuaGlobal.lua" << endl;
+            gSysErrors << "[ERROR] failed to set file permissions for the new version of LuaGlobal.lua";
+        }
+        else
+        {
+            cout << "[OK] successfully set file permissions for the new version of LuaGlobal.lua" << endl;
+        }
+    }
 
     QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
     file_f1.copy( directory+"/COPYRIGHT.TXT" );
@@ -153,7 +218,7 @@ int main(int argc, char *argv[])
     splash.showMessage("All data has been loaded successfully.\n\nHave fun!");
     QTime t;
     t.start();
-    while( t.elapsed() < 1500 ){}
+    while( t.elapsed() < 1500 );
     splash.finish( mudlet::self() );
     app.exec();
 }

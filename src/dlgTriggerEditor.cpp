@@ -6236,7 +6236,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
         ansiFg = regex.cap(1).toInt();
         ansiBg = regex.cap(2).toInt();
     }
-
+qDebug()<<"ansiFg="<<ansiFg<<" ansiBg="<<ansiBg;
     pT->mColorTriggerFgAnsi = ansiFg;
     pT->mColorTriggerBgAnsi = ansiBg;
 
@@ -6254,6 +6254,8 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
     pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
+   qDebug()<<"color pattern="<<pI->lineEdit->text();
+   qDebug()<<"stylesheet="<<styleSheet;
     pB->setStyleSheet( styleSheet );
 }
 
