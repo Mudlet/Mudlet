@@ -5074,7 +5074,7 @@ void dlgTriggerEditor::enterEvent( QEvent *pE )
         fillout_form();
         mNeedUpdateData = false;
     }
-    QWidget::enterEvent( pE );
+    //QWidget::enterEvent( pE );
 }
 
 void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
@@ -5115,7 +5115,7 @@ void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
     if( mCurrentKey )
         mCurrentKey->setSelected( true );
 
-    QWidget::focusInEvent( pE );
+    //QWidget::focusInEvent( pE );
 }
 
 void dlgTriggerEditor::focusOutEvent( QFocusEvent * pE )

@@ -1092,7 +1092,7 @@ void TConsole::showEvent( QShowEvent * event )
             mpHost->mTelnet.mAlertOnNewData = false;
         }
     }
-    return QWidget::showEvent( event );
+    //return QWidget::showEvent( event );
 }
 
 void TConsole::hideEvent( QHideEvent * event )
@@ -1110,7 +1110,7 @@ void TConsole::hideEvent( QHideEvent * event )
             }
         }
     }
-    return QWidget::hideEvent( event );
+    //return QWidget::hideEvent( event );
 }
 
 

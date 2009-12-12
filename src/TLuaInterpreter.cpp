@@ -3002,7 +3002,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     QString _luaName = luaName.c_str();
     QString _luaParent = luaParent.c_str();
     QString _luaFunction = luaFunction.c_str();
-    QString _luaRegex = luaFunction.c_str();
+    QString _luaRegex = luaRegex.c_str();
     int timerID = pLuaInterpreter->startPermAlias( _luaName, _luaParent, _luaRegex, _luaFunction );
     lua_pushnumber( L, timerID );
     return 1;

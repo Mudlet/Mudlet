@@ -162,7 +162,7 @@ bool TAlias::match( QString & toMatch )
         match.append( substring_start, substring_length );
         captureList.push_back( match );
         posList.push_back( ovector[2*i] );
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"Alias: capture group #"<<i<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"Alias: capture group #"<<(i+1)<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
     }
     (void)pcre_fullinfo( re,                                              
                          NULL,
@@ -247,7 +247,7 @@ bool TAlias::match( QString & toMatch )
             match.append( substring_start, substring_length );
             captureList.push_back( match );
             posList.push_back( ovector[2*i] );
-            if( mudlet::debugMode ) {TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"capture group #"<<i<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
+            if( mudlet::debugMode ) {TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"capture group #"<<(i+1)<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
         }
     }      
 

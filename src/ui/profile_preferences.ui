@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>623</width>
-    <height>567</height>
+    <width>643</width>
+    <height>619</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,7 +29,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="General">
       <attribute name="title">
@@ -547,18 +547,6 @@
           <string>Display workarounds</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
-           <widget class="QCheckBox" name="checkBox_LF_ON_GA">
-            <property name="toolTip">
-             <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
-communicate with the client on where a newline should be. Enable this to fix text
-from getting appended to the previous prompt line</string>
-            </property>
-            <property name="text">
-             <string>add a linebreak after prompt on GA servers</string>
-            </property>
-           </widget>
-          </item>
           <item>
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">

@@ -23,14 +23,8 @@ function remember(varName)
 	if not _saveTable then
 		_saveTable = {}
 	end
-	if (type(_G[varName]) == "table") then -- We got a table, repackage it into savedVars.
-		_saveTable[varName] = {}
-		for k,v in pairs(_G[varName]) do
-			_saveTable[varName][k] = v
-		end
-	else
-		_saveTable[varName] = _G[varName]
-	end
+
+    _saveTable[varName] = _G[varName]
 end
 
 
@@ -43,14 +37,7 @@ function loadVars()
 	if (io.exists(l_SettingsFile)) then
 		table.load(l_SettingsFile, lt_VariableHolder)
 		for k,v in pairs(lt_VariableHolder) do
-			if (type(v)=="table") then --We have a root table
-				_G[k] = {}
-				for subKey,subValue in pairs(lt_VariableHolder[k]) do --Unpack it into the namespace
-					_G[k][subKey] = subValue
-				end					
-			else
 				_G[k] = v
-			end
 		end
 	end
 end
@@ -60,6 +47,9 @@ end
 function saveVars()
 	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
 	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+    for k,_ in pairs(_saveTable) do
+        remember(k)
+    end
 	table.save(l_SettingsFile, _saveTable)
 end
 

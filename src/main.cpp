@@ -90,6 +90,8 @@ int main(int argc, char *argv[])
     QFile file_doc(":/mudlet_documentation.html");
     QFile file_doc_old;
     file_doc_old.setFileName( directory+"/mudlet_documentation.html" );
+    //NOTE: B. von Roeder found out that the removal of old versions may fail on windows 7 *sometimes*due permission issues
+    file_doc_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ExeOwner );
     qDebug()<<"deleting old manual<"<<directory+"/mudlet_documentation.html"<<">";
     bool ok=file_doc_old.remove();
     if( ok ) qDebug()<<"OK deleted file";
@@ -97,7 +99,9 @@ int main(int argc, char *argv[])
     file_doc.copy( directory+"/mudlet_documentation.html" );
 
     QFile file_lua(":/LuaGlobal.lua");
+    file_lua.setPermissions( QFile::WriteOwner | QFile::ReadOwner );
     QFile file_lua_old( directory+"/LuaGlobal.lua" );
+    file_lua_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner );
     file_lua_old.remove();
     file_lua.copy( directory+"/LuaGlobal.lua" );
 
@@ -107,7 +111,7 @@ int main(int argc, char *argv[])
     QFile file_f2(":/fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT");
     file_f2.copy( directory+"/RELEASENOTES.TXT" );
     
-     QFile file_f3(":/fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf");
+    QFile file_f3(":/fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf");
     file_f3.copy( directory+"/VeraMoIt.ttf" );
 
     QFile file_f4(":/fonts/ttf-bitstream-vera-1.10/local.conf");

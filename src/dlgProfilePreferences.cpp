@@ -180,7 +180,8 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         //disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
         
         checkBox_USE_IRE_DRIVER_BUGFIX->setChecked( pHost->mUSE_IRE_DRIVER_BUGFIX );
-        checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
+        //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
+        //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
         checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked( pHost->mUSE_FORCE_LF_AFTER_PROMPT );
         USE_UNIX_EOL->setChecked( pHost->mUSE_UNIX_EOL );
         QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
@@ -601,7 +602,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mCommandSeparator = command_separator_lineedit->text();
     //pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
     pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );
-    pHost->set_LF_ON_GA( checkBox_LF_ON_GA->isChecked() );
+    //pHost->set_LF_ON_GA( checkBox_LF_ON_GA->isChecked() );
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
     pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
     pHost->mBorderTopHeight = topBorderHeight->value();

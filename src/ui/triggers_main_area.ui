@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>584</width>
+    <width>592</width>
     <height>230</height>
    </rect>
   </property>
@@ -230,8 +230,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>484</width>
-              <height>138</height>
+              <width>463</width>
+              <height>131</height>
              </rect>
             </property>
            </widget>
@@ -1369,7 +1369,7 @@ Without this option, the pattern matching will stop after the first successful m
 otherwise highlight the entire match</string>
            </property>
            <property name="title">
-            <string>colorizer trigger</string>
+            <string>highlight</string>
            </property>
            <property name="checkable">
             <bool>true</bool>
