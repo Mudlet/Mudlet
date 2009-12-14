@@ -32,6 +32,7 @@
 
 //#define DEBUG
 
+extern QStringList gSysErrors;
 
 using namespace std;
 
@@ -134,6 +135,13 @@ void cTelnet::connectIt(const QString &address, int port)
     hostName = address;
     hostPort = port;
  
+    for( int i=0; i<gSysErrors.size(); i++ )
+    {
+        QString m = gSysErrors[i];
+        m.append("\n");
+        postMessage( m );
+    }
+
     QString server = "looking up the IP address of server:" + address + ":" + QString::number(port) + " ...\n";
     postMessage( server );
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));

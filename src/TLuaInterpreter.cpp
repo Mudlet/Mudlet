@@ -39,6 +39,7 @@ extern "C"
     #include "lauxlib.h"
 }
 
+extern QStringList gSysErrors;
 
 using namespace std;
 
@@ -2219,8 +2220,14 @@ int TLuaInterpreter::reset( lua_State *L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     QString name = luaWindowName.c_str();
-    mudlet::self()->resetFormat( name );
-    
+    if( luaWindowName.size() < 1 || luaWindowName == "main" )
+    {
+        pHost->mpConsole->reset();
+    }
+    else
+    {
+        mudlet::self()->resetFormat( name );
+    }
     return 0;
 }
 
@@ -4309,6 +4316,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "isActive", TLuaInterpreter::isActive );
     lua_register( pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias );
     lua_register( pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger );
+    lua_register( pGlobalLua, "tempAlias", TLuaInterpreter::tempAlias );
+    lua_register( pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias );
+    lua_register( pGlobalLua, "killAlias", TLuaInterpreter::killAlias );
+
 
     QString n;
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
@@ -4328,7 +4339,26 @@ void TLuaInterpreter::initLuaGlobals()
     {
         qDebug()<<"LUA_MESSAGE: LuaGlobal.lua loaded successfully.";
     }
-    
+    error = luaL_dostring( pGlobalLua, "require 'rex_pcre'" );
+
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, 1 ) )
+        {
+            e = "Lua error:";
+            e+=lua_tostring( pGlobalLua, 1 );
+        }
+        QString msg = "[FAILED] cannot find Lua module rex_pcre. Some functions may not be available."; //e.c_str();
+        gSysErrors << msg;
+    }
+    else
+    {
+        QString msg = "Lua module rex_pcre successfully loaded";
+        gSysErrors << msg;
+    }
+
+
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
     
     //FIXME make function call in destructor lua_close(L);

@@ -162,7 +162,7 @@ void TToolBar::slot_pressed()
     else
         pA->mpHost->mpConsole->mButtonState = 0;
     QStringList sL;
-    pA->execute( sL );
+    pA->_execute( sL );
 }
 
 void TToolBar::clear()
