@@ -323,6 +323,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
     pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
     pT->mRawStreamDump = ( attributes().value("mRawStreamDump") == "yes" );
+    pT->mAlertOnNewData = ( attributes().value("mAlertOnNewData") == "yes" );
 
     while( ! atEnd() ) 
     {

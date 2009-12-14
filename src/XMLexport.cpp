@@ -102,6 +102,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mUSE_UNIX_EOL", pT->mUSE_UNIX_EOL ? "yes" : "no" );
     writeAttribute( "mNoAntiAlias", pT->mNoAntiAlias ? "yes" : "no" );
     writeAttribute( "mRawStreamDump", pT->mRawStreamDump ? "yes" : "no" );
+    writeAttribute( "mAlertOnNewData", pT->mAlertOnNewData ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
