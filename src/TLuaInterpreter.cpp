@@ -4339,7 +4339,7 @@ void TLuaInterpreter::initLuaGlobals()
     {
         qDebug()<<"LUA_MESSAGE: LuaGlobal.lua loaded successfully.";
     }
-    error = luaL_dostring( pGlobalLua, "require 'rex_pcre'" );
+    error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
 
     if( error != 0 )
     {
@@ -4349,7 +4349,8 @@ void TLuaInterpreter::initLuaGlobals()
             e = "Lua error:";
             e+=lua_tostring( pGlobalLua, 1 );
         }
-        QString msg = "[FAILED] cannot find Lua module rex_pcre. Some functions may not be available."; //e.c_str();
+        //QString msg = "[FAILED] cannot find Lua module rex_pcre. Some functions may not be available.";
+        QString msg = e.c_str();
         gSysErrors << msg;
     }
     else
