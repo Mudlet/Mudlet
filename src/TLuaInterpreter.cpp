@@ -4322,24 +4322,7 @@ void TLuaInterpreter::initLuaGlobals()
 
 
     QString n;
-    QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
-    int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
-    if( error != 0 )
-    {
-        string e = "no error message available from Lua";
-        if( lua_isstring( pGlobalLua, 1 ) ) 
-        {
-            e = "Lua error:";
-            e += lua_tostring( pGlobalLua, 1 );
-        }
-        //emit signalNewEcho(script->session, QString(e.c_str()));
-        qDebug()<<"LUA_ERROR: "<<e.c_str();
-    }
-    else
-    {
-        qDebug()<<"LUA_MESSAGE: LuaGlobal.lua loaded successfully.";
-    }
-    error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
+    int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
 
     if( error != 0 )
     {
@@ -4355,10 +4338,25 @@ void TLuaInterpreter::initLuaGlobals()
     }
     else
     {
-        QString msg = "Lua module rex_pcre successfully loaded";
+        QString msg = "[INFO] found Lua module rex_pcre";
         gSysErrors << msg;
     }
-
+    QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
+    error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, 1 ) ) 
+        {
+            e = "[CRITICAL ERROR] LuaGlobal.lua compile error - please report";
+            e += lua_tostring( pGlobalLua, 1 );
+        }
+        gSysErrors << e.c_str();
+    }
+    else
+    {
+        gSysErrors << "[INFO] LuaGlobal.lua loaded successfully.";
+    }
 
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
     

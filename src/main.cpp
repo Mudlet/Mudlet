@@ -110,12 +110,14 @@ int main(int argc, char *argv[])
         bool ok=file_doc_old.remove();
         if( ok )
         {
-            cout << "[OK] deleted old version of the manual successfully: " << old_man_path << endl;
+            cout << "[INFO] deleted old version of the manual: " << old_man_path << endl;
         }
         else
         {
             cout << "[ERROR] could not remove old version of the manual: " << old_man_path << endl;
-            gSysErrors << "[ERROR] could not remove old version of the manual: " << old_man_path.c_str();
+            QString _m = "[ERROR] could not remove old version of the manual: ";
+            _m.append( old_man_path.c_str() );
+            gSysErrors << _m;
         }
     }
     else
@@ -125,7 +127,9 @@ int main(int argc, char *argv[])
     if( file_doc.copy( directory+"/mudlet_documentation.html" ) )
     {
         cout << "[OK] successfully copied new version of the manual" << endl;
-        gSysErrors << "[INFO] successfully copied new version of the manual";
+        QString _m = "[INFO] local manual: ";
+        _m.append( directory );
+        gSysErrors << _m;
     }
     else
     {
@@ -157,7 +161,7 @@ int main(int argc, char *argv[])
     if( file_lua.copy( directory+"/LuaGlobal.lua" ) )
     {
         cout << "[OK] new version of LuaGlobal.lua copied successfully" << endl;
-        gSysErrors << "[OK] new version of LuaGlobal.lua copied successfully";
+        gSysErrors << "[INFO] LuaGlobal.lua restored successfully";
         QFile file_lua_new(directory+"/LuaGlobal.lua");
         if( ! file_lua_new.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
         {

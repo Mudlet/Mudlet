@@ -134,12 +134,21 @@ void cTelnet::connectIt(const QString &address, int port)
     if( socket.state() != QAbstractSocket::UnconnectedState ) return;
     hostName = address;
     hostPort = port;
- 
+    #if QT_VERSION >= 0x040500
+        gSysErrors.removeDuplicates();
+    #endif
     for( int i=0; i<gSysErrors.size(); i++ )
     {
         QString m = gSysErrors[i];
         m.append("\n");
-        postMessage( m );
+        if( m.indexOf("[ERROR]") != -1 )
+        {
+            mpHost->mpConsole->print( m, 255, 0, 0, 0, 0, 0 );
+        }
+        else
+        {
+            mpHost->mpConsole->print( m, 0, 255, 0, 0, 0, 0 );
+        }
     }
 
     QString server = "looking up the IP address of server:" + address + ":" + QString::number(port) + " ...\n";

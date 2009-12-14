@@ -909,4 +909,271 @@ function indent(num)
   return indents[num]
 end
 end
------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------
+-- Functions written by Benjamin Smith - December 2009
+----------------------------------------------------------------------------------
+if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
+
+-- Echo with color function.
+-- Arg1: String to echo
+-- Arg2: String containing value for foreground color in hexadecimal RGB format
+-- Arg3: String containing value for background color in hexadecimal RGB format
+-- Arg4: Bool that tells the function to use insertText() rather than echo()
+-- Arg5: Name of the console to echo to. Defaults to main.
+--
+-- Color changes can be made within the string using the format |cFRFGFB,BRBGBB
+-- where FR is the foreground red value, FG is the foreground green value, FB
+-- is the foreground blue value, BR is the background red value, etc. ,BRBGBB
+-- is optional. |r can be used within the string to reset the colors to default.
+-- 
+-- The colors in arg2 and arg3 replace the normal defaults for your console.
+-- So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"),
+-- the first Testing would be red on black and the second would be green on blue.
+
+if rex then
+	function cecho(str, fgColor, bgColor, insert, win)
+		local t = {}
+		local reset, out
+		if insert then
+			if win then
+				out = function(win, str)
+					insertText(win, str)
+				end
+			else
+				out = function(str)
+					insertText(str)
+				end
+			end
+		else
+			if win then
+				out = function(win, str)
+					echo(win, str)
+				end
+			else
+				out = function(str)
+					echo(str)
+				end
+			end
+		end
+		if win then
+			if fgColor then
+				if bgColor then
+					reset = function()
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(win, fr, fg, fb)
+						local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+						br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+						setBgColor(win, br, bg, bb)
+					end
+				else
+					reset = function()
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(win, fr, fg, fb)
+					end
+				end
+			elseif bgColor then
+				reset = function()
+					local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+					setBgColor(win, br, bg, bb)
+				end
+			else
+				reset = function()
+					resetFormat(win)
+				end
+			end
+		else
+			if fgColor then
+				if bgColor then
+					reset = function()
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(fr, fg, fb)
+						local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+						br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+						setBgColor(br, bg, bb)
+					end
+				else
+					reset = function()
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(fr, fg, fb)
+					end
+				end
+			elseif bgColor then
+				reset = function()
+					local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+					setBgColor(br, bg, bb)
+				end
+			else
+				reset = function()
+					resetFormat()
+				end
+			end
+		end
+		
+		for s, fr, fg, fb, br, bg, bb, r in rex.split(str, [[(?:\|c([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}),?([0-9a-fA-F]{2})?([0-9a-fA-F]{2})?([0-9a-fA-F]{2})?|(\|r))]]) do 
+			local fore, back, color
+			if fr and fg and fb then fore = { fr, fg, fb } end
+			if br and bg and bb then back = { br, bg, bb } end
+			if fore and back then 
+				color = { ["fg"] = fore, ["bg"] = back }
+			elseif fore then
+				color = { ["fg"] = fore }
+			end
+			if s then table.insert(t, s) end
+			if color then table.insert(t, color) end
+			if r then table.insert(t, "r") end
+		end
+		
+		for _, v in ipairs(t) do
+			if type(v) == 'table' then
+				local fr, fg, fb = unpack(v.fg)
+				fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+				if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
+				if v.bg then
+					local br, bg, bb = unpack(v.bg)
+					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+					if win then setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb) end
+				end
+			elseif v == "r" then
+				reset()
+			else
+				if win then out(win, v) else out(v) end
+			end
+		end
+		if win then resetFormat(win) else resetFormat() end
+	end
+end
+
+-- Enable mathematical operations & comparisons on matches table.
+if not matches then matches = {} end
+setmetatable( matches, {
+	["__add"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			return (o1 + o2)
+		end
+	end,
+	["__sub"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			return (o1 - o2)
+		end
+	end,
+	["__div"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			return (o1 / o2)
+		end
+	end,
+	["__mul"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			return (o1 * o2)
+		end
+	end,
+	["__mod"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			return (o1 % o2)
+		end
+	end,
+	["__pow"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			return (o1 ^ o2)
+		end
+	end,
+	["__unm"] = function(op) 
+		local o = tonumber(op)
+	    if o then
+			return -o
+		end
+	end,
+	["__eq"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			if (o1 == o2) then
+				return true
+			else
+				return false
+			end
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+				return false
+		elseif ((not o1) and (not o2)) then
+			if (op1 == op2) then
+				return true
+			end
+		end
+	end,
+	["__lt"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			if (o1 < o2) then
+				return true
+			else
+				return false
+			end
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+				return false
+		elseif ((not o1) and (not o2)) then
+			if (op1 < op2) then
+				return true
+			end
+		end
+	end,
+	["__le"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			if (o1 <= o2) then
+				return true
+			else
+				return false
+			end
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+				return false
+		elseif ((not o1) and (not o2)) then
+			if (op1 <= op2) then
+				return true
+			end
+		end
+	end,
+	["__gt"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			if (o1 > o2) then
+				return true
+			else
+				return false
+			end
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+				return false
+		elseif ((not o1) and (not o2)) then
+			if (op1 > op2) then
+				return true
+			end
+		end
+	end,
+	["__ge"] = function(op1, op2) 
+		local o1, o2 = tonumber(op1), tonumber(op2)
+		if (o1 and o2) then
+			if (o1 >= o2) then
+				return true
+			else
+				return false
+			end
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+				return false
+		elseif ((not o1) and (not o2)) then
+			if (op1 >= op2) then
+				return true
+			end
+		end
+	end,
+	})
+
