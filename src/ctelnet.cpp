@@ -131,7 +131,13 @@ void cTelnet::encodingChanged(QString encoding)
 
 void cTelnet::connectIt(const QString &address, int port)
 {
-    if( socket.state() != QAbstractSocket::UnconnectedState ) return;
+    if( socket.state() != QAbstractSocket::UnconnectedState )
+    {
+        disconnect();
+        connectIt( address, port );
+        return;
+
+    }
     hostName = address;
     hostPort = port;
     #if QT_VERSION >= 0x040500
@@ -151,7 +157,7 @@ void cTelnet::connectIt(const QString &address, int port)
         }
     }
 
-    QString server = "looking up the IP address of server:" + address + ":" + QString::number(port) + " ...\n";
+    QString server = "[INFO] looking up the IP address of server:" + address + ":" + QString::number(port) + " ...\n";
     postMessage( server );
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
@@ -164,7 +170,7 @@ void cTelnet::disconnect ()
 
 void cTelnet::handle_socket_signal_error()
 {
-    QString err = "TCP/IP socket ERROR:" + socket.errorString() + "\n";
+    QString err = "[ERROR] TCP/IP socket ERROR:" + socket.errorString() + "\n";
     postMessage( err );
 }
 
@@ -181,7 +187,7 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
-    QString msg = "A connection has been established successfully.\n";
+    QString msg = "[INFO] A connection has been established successfully.\n";
     postMessage( msg );
     mConnectionTime.start();
     if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0) )
@@ -209,11 +215,11 @@ void cTelnet::handle_socket_signal_disconnected()
     postData();
     QString msg;
     QTime timeDiff(0,0,0,0);
-    msg = QString("connection time: %1\n").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
+    msg = QString("[INFO] connection time: %1\n").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
     reset();
     QString lf = "\n\n";
-    QString err = "Socket got disconnected. " + socket.errorString() + "\n";
+    QString err = "[INFO] Socket got disconnected. " + socket.errorString() + "\n";
     QString spacer = "-------------------------------------------------------------\n";
     if( ! mpHost->mIsGoingDown )
     {
@@ -230,16 +236,16 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     if(!hostInfo.addresses().isEmpty())
     {
         mHostAddress = hostInfo.addresses().first();
-        QString msg = "The IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
+        QString msg = "[INFO] The IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
         postMessage( msg );
-        msg = "trying to connect to "+mHostAddress.toString()+":"+QString::number(hostPort)+" ...\n";
+        msg = "[INFO] trying to connect to "+mHostAddress.toString()+":"+QString::number(hostPort)+" ...\n";
         postMessage( msg );
         socket.connectToHost(mHostAddress, hostPort);
     }
     else
     {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = "Host name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.\n";
+        QString msg = "[ERROR] Host name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.\n";
         postMessage( msg );
         return;
     }
@@ -635,7 +641,19 @@ void cTelnet::postMessage( QString msg )
 #ifdef DEBUG 
     qDebug() << " POSTING to message to GUI: " << msg;
 #endif
-    mudlet::self()->printSystemMessage( mpHost, msg );
+    //mudlet::self()->printSystemMessage( mpHost, msg );
+    if( ! msg.endsWith( '\n' ) )
+    {
+        msg.append("\n");
+    }
+    if( msg.indexOf("[ERROR]") != -1 )
+    {
+        mpHost->mpConsole->print( msg, 255, 0, 0, 0, 0, 0 );
+    }
+    else
+    {
+        mpHost->mpConsole->print( msg, 0, 255, 0, 0, 0, 0 );
+    }
 }
 
 //forward data for further processing
@@ -730,7 +748,7 @@ void cTelnet::postData()
     mpHost->mpConsole->printOnDisplay( mMudData );
     if( mAlertOnNewData )
     {
-        QApplication::alert( mudlet::self() );
+        QApplication::alert( mudlet::self(), 0 );
     }
 }
 

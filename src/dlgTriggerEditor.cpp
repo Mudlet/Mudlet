@@ -5955,6 +5955,7 @@ void dlgTriggerEditor::slot_export()
                                                     QDir::currentPath(),
                                                     tr("Mudlet packages (*.xml)"));
     if(fileName.isEmpty()) return;
+    fileName.append(".xml");
 
 
     QFile file(fileName);
@@ -6072,15 +6073,15 @@ void dlgTriggerEditor::slot_profileSaveAction()
     }
     QFile file_xml( filename_xml );
     if ( file_xml.open( QIODevice::WriteOnly ) )
-        {
-                XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();
-        }
-        else
-        {
-                QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+mpHost->getName()+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-        }
+    {
+            XMLexport writer( mpHost );
+            writer.exportHost( & file_xml );
+            file_xml.close();
+    }
+    else
+    {
+            QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+mpHost->getName()+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+    }
 }
 
 void dlgTriggerEditor::slot_profileSaveAsAction()
@@ -6090,6 +6091,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
                                                     tr("trigger files (*.trigger *.xml)"));
 
     if(fileName.isEmpty()) return;
+    fileName.append(".xml");
 
     QFile file(fileName);
     if( ! file.open(QFile::WriteOnly | QFile::Text) )
@@ -6236,7 +6238,6 @@ void dlgTriggerEditor::slot_color_trigger_fg()
         ansiFg = regex.cap(1).toInt();
         ansiBg = regex.cap(2).toInt();
     }
-qDebug()<<"ansiFg="<<ansiFg<<" ansiBg="<<ansiBg;
     pT->mColorTriggerFgAnsi = ansiFg;
     pT->mColorTriggerBgAnsi = ansiBg;
 
@@ -6254,8 +6255,6 @@ qDebug()<<"ansiFg="<<ansiFg<<" ansiBg="<<ansiBg;
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
     pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
-   qDebug()<<"color pattern="<<pI->lineEdit->text();
-   qDebug()<<"stylesheet="<<styleSheet;
     pB->setStyleSheet( styleSheet );
 }
 

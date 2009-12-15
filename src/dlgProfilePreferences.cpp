@@ -198,7 +198,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         showMenuBar->setChecked( mudlet::self()->mShowMenuBar );
         mRawStreamDump->setChecked( pHost->mRawStreamDump );
         mNoAntiAlias->setChecked( ! pHost->mNoAntiAlias );
-        mAlertOnNewData->setChecked( ! pHost->mAlertOnNewData );
+        mAlertOnNewData->setChecked( pHost->mAlertOnNewData );
     }
 }
 
@@ -617,7 +617,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->mShowMenuBar = showMenuBar->isChecked();
     pHost->mRawStreamDump = mRawStreamDump->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
-    pHost->mAlertOnNewData = !mAlertOnNewData->isChecked();
+    pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
     pHost->mpConsole->changeColors();
 
     if( checkBox_USE_SMALL_SCREEN->isChecked() )

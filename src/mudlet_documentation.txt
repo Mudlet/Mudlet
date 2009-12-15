@@ -2058,7 +2058,7 @@ tempTimer(2.3, [[hideWindow("messageBox")]] ) -- close the warning message box a
 
 === Example 2: 
 [[diag_a_GUI_pack]]
-[icon="./images/icons/achaea_GUI_pack_screen.png"]
+[icon="./images/icons/achaea_gui_pack_screen.png"]
 NOTE: . screenshot example 2
 
 This example creates a mouse clickable compass (taken from the GUI demo package. You can download this package with the image data etc. -> Mudlet forum -> packages section http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=95

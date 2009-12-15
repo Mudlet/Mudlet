@@ -1711,6 +1711,12 @@ int TLuaInterpreter::setBorderTop( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mBorderTopHeight = x1;
+    int x,y;
+    x = pHost->mpConsole->width();
+    y = pHost->mpConsole->height();
+    QSize s = QSize(x,y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent( pHost->mpConsole, &event);
     return 0;
 }
 
@@ -1729,6 +1735,12 @@ int TLuaInterpreter::setBorderBottom( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mBorderBottomHeight = x1;
+    int x,y;
+    x = pHost->mpConsole->width();
+    y = pHost->mpConsole->height();
+    QSize s = QSize(x,y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent( pHost->mpConsole, &event);
     return 0;
 }
 
@@ -1747,6 +1759,12 @@ int TLuaInterpreter::setBorderLeft( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mBorderLeftWidth = x1;
+    int x,y;
+    x = pHost->mpConsole->width();
+    y = pHost->mpConsole->height();
+    QSize s = QSize(x,y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent( pHost->mpConsole, &event);
     return 0;
 }
 
@@ -1765,6 +1783,12 @@ int TLuaInterpreter::setBorderRight( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mBorderRightWidth = x1;
+    int x,y;
+    x = pHost->mpConsole->width();
+    y = pHost->mpConsole->height();
+    QSize s = QSize(x,y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent( pHost->mpConsole, &event);
     return 0;
 }
 
