@@ -932,7 +932,7 @@ if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 -- the first Testing would be red on black and the second would be green on blue.
 
 if rex then
-	function cecho(str, fgColor, bgColor, insert, win)
+	function checho(str, fgColor, bgColor, insert, win)
 		local t = {}
 		local reset, out
 		if insert then

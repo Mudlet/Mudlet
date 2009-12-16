@@ -6,11 +6,11 @@ Mudlet Manual
 . <<introduction,General Introduction to Modern MUD Clients.>>
 . <<manual,Technical Manual>>
 .. <<splitScreen,Split Screen>>
-.. <<commandLine,Mudlet's Command Line>>
+.. <<commandLine,Mudlets Command Line>>
 .. <<logging,Logging to HTML log files>>
 .. <<export, Import & Export of Packages>>
 .. <<variables,Using Variables in Mudlet>>
-.. <<alias,Input Triggers - Mudlet's Alias Engine>>
+.. <<alias,Input Triggers - Mudlets Alias Engine>>
 .. <<triggers,The Trigger Engine>>
 ... <<simpleTriggerMatching, Simple Triggers>>
 ... <<simpleHighlighterTriggers, Simple Highlighter Triggers>>
@@ -43,7 +43,7 @@ Mudlet Manual
 .. <<buttons,Scripting Buttons>>
 .. <<userGfxWindows,User Custom Graphics Windows>>
 . <<api,Lua API and Reference>>
-  <<apiIndex, Alphabetical Lua API Function Index>>
+. <<apiIndex, Alphabetical Lua API Function Index>>
 ****************
 
 [[introduction]]
@@ -72,7 +72,7 @@ To connect to the MUD of your choice, click on `Connections` → `Connection Pro
 * Now just click `Connect` to play!
 
 == 1. General Introduction to Modern MUD Clients
-=== 1.1 Mudlet's automation features
+=== 1.1 Mudlets automation features
 Mudlet offers a vast array of standard features to automate or otherwise improve your gaming experience. These include, but are not limited to:
 
 - *Aliases* – user-defined text input, which is converted into a different, usually longer input before being sent to the MUD, e.g. +gg+ → +get gold from ground;put gold in 2.bag+.
@@ -209,7 +209,7 @@ When you want to stop hunting bunnies, you can simply select the bunny trigger a
 The trigger will stop firing until you re-enable it again via the padlock icon.
 If you lock a group of triggers or an entire trigger branch, all triggers in this branch will be locked until you remove the lock again. The locking starts from the root of the tree down to the end. As soon as a lock is met the trigger engine will skip the locked branch. Locking and unlocking branches is one of the most common actions you have to take care of when playing. You turn on your defensive triggers when engaging into a battle and you turn them off afterwards, or you turn on your harvesting triggers only when you are going to harvest.
 
-TIP: *Beginners should use Mudlet's automated colorizer triggers in the beginning to highlight the text that has been triggered on to get the hang of the different trigger and pattern types. Click on the "colorizer trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don't have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
+TIP: *Beginners should use Mudlets automated highlight triggers in the beginning to highlight the text that has been triggered on to get the hang of the different trigger and pattern types. Click on the "highlight trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically highlights its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don't have to know anything about scripting, regular expressions etc. to use highlight triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
 
 ===== 1.10 Matching one unknown
 You can also set up a trigger to gather the scimitars, gold or whatever the skeletons could carry around with them. Since we do not know what the loot is, we will need to set up a trigger to match the line and take whatever was dropped. Examples:
@@ -286,7 +286,7 @@ What it does here is save the +first word+, the +second word+ and then the +rest
 
 ==== 1.14 How to highlight words
 
-To highlight something in the MUD output, make a trigger and use the "colorizer trigger" option to highlight the matched trigger pattern.
+To highlight something in the MUD output, make a trigger and use the "highlight trigger" option to highlight the matched trigger pattern.
 
 ==== 1.15 Keybindings
 
@@ -330,7 +330,7 @@ Split screen usage is necessary when selecting text in order to copy it to trigg
 
 [[commandLine]]
 == Command Line Auto-Completion, Tab-Completion and Command History
-Mudlet's command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that are optimized for typical MUD playing situations.
+Mudlets command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that are optimized for typical MUD playing situations.
 The command line offers tab completion (TAB key with or without shift) and autocompletion (cursor up and cursor down keys).
 =======
 1. _Tab completion_ searches the last 100 lines in the MUD output buffer for words matching the word that you are currently typing. This is useful if you have to type complicated long names. You only have to type the first letters and then press the tab key until the proposal is what you want.
@@ -480,12 +480,12 @@ Second, you can take care of saving your variables yourself and reloading them y
 To be continued ...
 
 [[alias]]
-== Input Triggers - Mudlet's Alias Engine
+== Input Triggers - Mudlets Alias Engine
 
 IMPORTANT: QUICKSTART: Here is a video tutorial on how to do basic aliases in Mudlet: http://blip.tv/file/2288749
 
 Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
-We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlet's alias engine. 
+We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlets alias engine. 
 When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit, in form of the Lua variable [red]+command+. This variable will be matched against all active alias in the hierarchy unless access to an alias branch is locked by the user or by a script. *If an input trigger matches, it will intercept the user command and the original command will be ignored*. Upon a match the clear text command is being send as a command to the MUD in replacement of the original command, if a clear text command has been specified by the user _and_ the attached alias script is being executed. However, the initial command that the user has typed in the command line will *not* be sent unless you do this as part of your script. Consequently, if you want your input trigger to send a command to the MUD, you'll either have to specify a clear text command for simple cases or send commands via the attached alias script e.g. send("kill monster"). You may argue that you feel that it is unnecessary work to be forced to send a command replacement yourself, but this very fact makes our alias system way more powerful because it gives you complete control about what is happening. Why is this so? The initial user command is being held in the Lua variable [red]+command+. When this value changes within the alias unit processing chain, the initial user input that the input triggers work on can be rewritten and changed in the process. Consequently, you can substitute the user input step by step - or alias by alias - without that anything happens as far as sending commands is being concerned unless you explicitly decide to do so.
 
 [[aliasProcessing]]
@@ -571,7 +571,7 @@ end
 -----------------
 
 [[triggers]]
-== Mudlet's Trigger Engine
+== Mudlets Trigger Engine
 Unlike alias that define patterns that match on user input, triggers define patterns that match on MUD output. In other words, triggers react to text that has been sent by the MUD, whereas alias react to user commands that have been typed into the command line.
 
 [[simpleTriggerMatching]]
@@ -582,7 +582,7 @@ NOTE: .script editor screenshot
 IMPORTANT: QUICKSTART: Here is a simple *video tutorial* on how to make basic triggers in Mudlet: http://blip.tv/file/2288760
 
 To begin with, click on the "Add" button to create a new trigger. Then put the text pattern that you'd like to trigger on into the trigger conditions table on the right side of the screen above the script editor. Afterwards, chose the correct pattern type of your trigger pattern in the drop down list on the right side of the trigger pattern i.e. in the second column of the trigger pattern table. If you define multiple patterns in the same trigger, your trigger will run whenever any one of these patterns matches unless you chose the AND-trigger option, in which case the trigger will only fire if all patterns match within a specified amount of lines from the MUD. For more advanced information on AND and OR trigger see the corresponding AND/OR trigger section below.
-The next step is to define what should happen when the trigger matches. Usually, this will be done by a Lua script in the Lua editor below the table with the pattern list. In the beginning, you can simply chose the "colorizer trigger" option to make your trigger highlight the text that it has triggered on or send a clear text command to the MUD whenever the trigger fires until you have learned enough Lua to more meaningful scripts. Clear text command can be defined in the "send plain text" input box next to the trigger name above the pattern table.
+The next step is to define what should happen when the trigger matches. Usually, this will be done by a Lua script in the Lua editor below the table with the pattern list. In the beginning, you can simply chose the "highlight trigger" option to make your trigger highlight the text that it has triggered on or send a clear text command to the MUD whenever the trigger fires until you have learned enough Lua to more meaningful scripts. Clear text command can be defined in the "send plain text" input box next to the trigger name above the pattern table.
 Finally, you need to save the new trigger and then activate it with the padlock icon button. By default, new triggers are deactivated and thus will do nothing unless you explicitly activate them. Activated triggers show a green tick in the little blue box on the left side of the trigger name in the trigger tree on the left side of the script editor dialog. There is three ways to save your changes. 1. click on the save icon 2. adding a new trigger 3. clicking on another trigger item. Triggers that have not been saved yet cannot be activated. If you see a bug icon instead of an activation box, there is some error that prevents to activate your trigger. Check the error message above the pattern table.
 
 ****
@@ -592,8 +592,8 @@ Example: You want to trigger on the word "pond" in a line such as: "The frog swi
 [[highlighters]]
 === Simple Highlighter Triggers
 
-TIP: *Beginners should use Mudlet's automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text. 
-You don't have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
+TIP: *Beginners should use Mudlets automated highlight triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "highlight trigger" option and pick a foreground and a background color. When the trigger matches it automatically highlights its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text. 
+You don't have to know anything about scripting, regular expressions etc. to use highlight triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
 
 More advanced users will often want to do custom highlighting from within scripts. This is how it works: If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:
 ----
@@ -656,13 +656,13 @@ We could now add a call deleteLine() to the prompt detection trigger to erase th
 **************
 [[multilineTriggers]]
 === Multi-Line Triggers and Multi-Condition Triggers
-Multi Condition Triggers are the most advanced feature of Mudlet's trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
+Multi Condition Triggers are the most advanced feature of Mudlets trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
 All conditions in the list must have matched within the specified margin of lines (delta), in order to trigger the script.
 Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition returns true, the trigger script is run.
 In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. *The sequence of the conditions is binding.* This means that if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will *NOT* run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condition #2 has been true.
-Conditions can also be Lua Functions or plain Lua code that returns a boolean truth value. You can mix all types of conditions to build complex multi-condition triggers that only fire if all conditions are met. This is a very powerful feature as it reduces the amount of scripting to a minimum or even takes away with the need to script formerly complex processes completely. Multicondition triggers are multi-line triggers, i. e. the conditions can all be met in a single line or many lines after the first condition has been fulfilled. This effectively reduces the amount of complexity as you have all the important conditions placed into a single trigger and all the tedious bookkeeping, variable and condition state accounting is being done by Mudlet's trigger engine. The result of this is that the amount of manual condition checking via many different trigger scripts and legions of if condition1 == true then check condition2 can be forgotten about. All you have to do is to define the conditions and the final action that is taken if the trigger fires.
+Conditions can also be Lua Functions or plain Lua code that returns a boolean truth value. You can mix all types of conditions to build complex multi-condition triggers that only fire if all conditions are met. This is a very powerful feature as it reduces the amount of scripting to a minimum or even takes away with the need to script formerly complex processes completely. Multicondition triggers are multi-line triggers, i. e. the conditions can all be met in a single line or many lines after the first condition has been fulfilled. This effectively reduces the amount of complexity as you have all the important conditions placed into a single trigger and all the tedious bookkeeping, variable and condition state accounting is being done by Mudlets trigger engine. The result of this is that the amount of manual condition checking via many different trigger scripts and legions of if condition1 == true then check condition2 can be forgotten about. All you have to do is to define the conditions and the final action that is taken if the trigger fires.
 [icon="./images/icons/trigger_problem.png"]
-NOTE: This diagram shows what steps are involved in the process of problem solving with Mudlet's trigger engine. The main question is: How do we arrive at a solution to our problem, and how can we simplify the problem as much as possible?
+NOTE: This diagram shows what steps are involved in the process of problem solving with Mudlets trigger engine. The main question is: How do we arrive at a solution to our problem, and how can we simplify the problem as much as possible?
 
 Example: Let's go back to our pond & frog example. We have explained the difference between AND-triggers and OR-triggers. If you have a room description consisting of 3 lines:
 ----
@@ -697,7 +697,7 @@ Because an OR-trigger fires on the first condition that is true and ignores the 
 
 To complicate matters, however, you don't want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn't have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Condition Triggers (MCT). If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. when you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description despite that this room description my be spread over a number of lines. (NOTE: If you have word wrap turned off in your MUD chances are that the entire room description will be contained in a single line, but we are trying to keep the examples as easy as possible.)
 
-Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlet's MCTs.
+Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlets MCTs.
 
 You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.
 However, unlocking the full potential of Mudlet requires you do learn some Lua basics. In this manual we'll try to be as easy on you as we can in this respect, but it's highly recommended that you dig deeper into Lua after a while. It's one of the easiest fully fledged scripting languages available, easy to learn and the fastest of them all, and this is why it has been chosen by us. You don't need to become a programmer to be able to use Mudlet effectively. All you have to know is how to work with variables and how to do if conditions and maybe a few loops. But knowing more won't harm you and it will make your systems more effective.
@@ -823,13 +823,13 @@ selectCaptureGroup( 2 )
 setFgColor( 0,0,255 )
 ----
 
-The best way is to use selectCaptureGroup( number ) to select the proper capture group and then perform your actions on it e.g. replace(), colorize etc. Note: Both selectCaptureGroup() and matches[n] start with group 1.
+The best way is to use selectCaptureGroup( number ) to select the proper capture group and then perform your actions on it e.g. replace(), highlight etc. Note: Both selectCaptureGroup() and matches[n] start with group 1.
 
-How to select all occurrences of "Tom" and colorize them?
+How to select all occurrences of "Tom" and highlight them?
 
 You add a function like this to a script containing you main function definitions. Note that script items differ from all other "scripts" in triggers, timers, actions etc. because they require you to put your code in proper functions that can be called by your other trigger-scripts, timer-scripts etc. via normal function calls. Trigger-scripts, timer-scripts etc. cannot contain any function definitions because they are automatically generated functions themselves because this makes usage a lot easier.
 
-To come back to our question how to select all occurrences of "Tom" and colorize them:
+To come back to our question how to select all occurrences of "Tom" and highlight them:
 
 ----
 function setBgColorAll( word, r, g, b )
@@ -869,7 +869,7 @@ send( "say " .. matches[3] .." " .. matches[1] .." ".. matches[2] )
 Note: The variable "command" contains what was entered in the command line or issued via the expandAlias( ) function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion.
 
 
-==== Changing text from the MUD or reformatting text (colorize, make bold etc.)
+==== Changing text from the MUD or reformatting text (highlight, make bold etc.)
 
 When sending commands to the MUD - from now on referred to as output stream - alias scripts find the command that was issued by the user stored in the variable "command".
 
@@ -1093,7 +1093,8 @@ mySilver = mySilver + tonumber( multimatches[1][3] );
 ----
 What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines. 
 
-
+[[migrating]]
+== Migrating to Mudlet
 
 [[api]]
 == Lua API
@@ -1113,7 +1114,7 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 
 [[apiIndex]]
 == Alphabetical Function Index
-Click on the respective function to get more information
+Click on the respective function to get more information:
 
 == A
 <<appendBuffer,appendBuffer>>, 
@@ -1128,6 +1129,7 @@ Click on the respective function to get more information
 <<createBuffer,createBuffer>>, 
 <<createLabel,createLabel>>, 
 <<createMiniConsole,createMiniConsole>>, 
+<<createGauge,createGauge>>,
 <<createStopWatch,createStopWatch>>, 
 
 == D
@@ -1191,6 +1193,7 @@ Click on the respective function to get more information
 <<moveCursor,moveCursor>>, 
 <<moveCursorEnd,moveCursorEnd>>, 
 <<moveWindow,moveWindow>>, 
+<<moveGauge,moveGauge>>
 
 == O
 <<openUserWindow,openUserWindow>>, 
@@ -1236,6 +1239,7 @@ Click on the respective function to get more information
 <<setItalics,setItalics>>, 
 <<setLabelClickCallback,setLabelClickCallback>>, 
 <<setMiniConsoleFontSize,setMiniConsoleFontSize>>, 
+<<setGauge,setGauge>>,
 <<setTextFormat,setTextFormat>>, 
 <<setTriggerStayOpen,setTriggerStayOpen>>, 
 <<setUnderline,setUnderline>>, 
@@ -1481,7 +1485,7 @@ same as fg( color_name ) just for the background color. <<fg,-> more>> <<setBgCo
 
 [[resetFormat]]
 == resetFormat()
-Resets the character format to default. This should be used after you have colorized some text or changed the current foreground or background color, but you don't want to keep using these colors for further prints. If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
+Resets the character format to default. This should be used after you have highlightd some text or changed the current foreground or background color, but you don't want to keep using these colors for further prints. If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
 
 
 
@@ -1491,10 +1495,10 @@ Sets the current text background color in the main window. Values are RGB: red, 
 If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
 
 == setBgColor( windowName, r, g, b )
-Sets the current text background color in window windowName. If you have selected text prior to this call, the selection will be colorized otherwise the current text background color will be changed.
+Sets the current text background color in window windowName. If you have selected text prior to this call, the selection will be highlightd otherwise the current text background color will be changed.
 If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
 
-example 1 colorizes the first occurrence of the string "Tom" in the current line with a red background color.
+example 1 highlights the first occurrence of the string "Tom" in the current line with a red background color.
 -----
 selectString( "Tom", 1 )
 setBgColor( 255,0,0 )
@@ -1989,7 +1993,31 @@ append text at the end of temp buffer name (fast function)
 == setWindowWrap( windowName, wrapAt )
 sets at what position in the line the console or miniconsole will start word wrap
 
+[[createGauge]]
+== createGauge(name, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
+Creates a gauge that you can use to express completion with. For example, you can use this as your healthbar or xpbar.
 
+* `name` is the gauge name. Must be unique - so don't have two or more gauges with the same name.
+* `width` is the width (left to right dimensions) of the gauge.
+* `height` is the height (top to bottom dimensions) of the gauge.
+* `Xpos` is the X (so left to right) coordinate of the top-left corner of the gauge. It starts counting from the top-left corner of Mudlets window. So a coordinate of 5 will place it 5 pixels to the right from the top-left part of Mudlet.
+* `Ypox` is the Y coordinate of the top-left corner of the gauge, relative to the top-left corner of Mudlet.
+* `gaugeText` is optional text that you can have on the gauge. If you don't want to have text, use nil in it's place.
+* `color#` are the RGB color values to color the gauge with.
+
+See also: <<moveGauge,moveGauge>>, <<setGauge,setGauge>>, <<setGaugeText,setGaugeText>>.
+Examples:
+----
+createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0) 
+createGauge("healthBar", 300, 20, 30, 300, nil, "green")
+-- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
+-- The second example is using the same names you'd use for something like fg() or bg().
+
+-- If you wish to have some text on your label, you'll change the nil part and make it look like this:
+createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0) 
+-- or 
+createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
+----
 
 [[createMiniConsole]]
 == createMiniConsole( name, posX, posY, width, height ) returns true or false
@@ -2202,16 +2230,54 @@ see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>, 
 This function moves window name to the given x/y coordinate. The main screen cannot be moved. Instead you'll have to set appropriate border values -> preferences to move the main screen e.g. to make room for chat or information mini consoles, or other GUI elements. In the future moveWindow() will set the border values automatically if the name parameter is omitted.
 see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>, <<handleWindowResizeEvent,handleWindowResizeEvent>>, <<resizeWindow,resizeWindow>>, <<setBorderTop,setBorderTop>>
 
+[[moveGauge]]
+== moveGauge (gaugeName, newX, newY)
+Moves a gauge created with <<createGauge,createGauge>> to the new x,y coordinates. Remember the coordinates are relative to the top-left corner of the output window.
+
+=== Example:
+----
+moveGauge("healthBar", 1200, 400)
+-- This would move the health bar gauge to the location 1200, 400
+----
+
 [[setMiniConsoleFontSize]]
 == setMiniConsoleFontSize( name, fontSize )
 Sets the font size of the mini console.
 see also: <<createMiniConsole,createMiniConsole>>, <<createLabel,createLabel>>
+
+[[setGauge]]
+== setGauge(gaugeName, currentValue, maxValue, gaugeText)
+Use this function when you want to change the gauges look according to your values. Typical usage would be in a prompt with your current health or whatever value, and throw in some variables instead of the numbers.
+
+=== Examples:
+----
+setGauge("healthBar", 200, 400)
+----
+In that example, we'd change the looks of the gauge named healthBar and make it fill
+to half of its capacity. The height is always remembered.
+
+If you wish to change the text on your gauge, you'd do the following:
+----
+setGauge("healthBar", 200, 400, "some text")
+----
+
+[[setGaugeText]]
+== setGaugeText(gaugeName, gaugeText, color1, color2, color3)
+Set the color and text on a custom gauge built by <<createGauge,createGauge>>.
+
+=== Example:
+----
+setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
+setGaugeText("healthBar", "HP: 100%", "red")
+----
+An empty gaugeText will clear the text entirely. Colors are optional and will default to 0,0,0(black) if not passed as args.
 
 [[setTextFormat]]
 == setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )
 sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
 *A more convenient way to control the text format in a mini console is to use setFgColor( windowName, r,g,b ), setBold( windowName, true ), setItalics( windowName, true ), setUnderline( windowName, true ) etc.*
 -> <<createMiniConsole,createMiniConsole>>, <<setBold,setBold>>, <<setBgColor,setBgColor>>, <<setFgColor,setFgColor>>, <<setItalics,setItalics>>, <<setUnderline,setUnderline>>
+
 === Example: 
 ----
 createMiniConsole( "con1", 0,0,300,100);
@@ -2244,7 +2310,7 @@ Sets rgb color values and the transparency for the given label. Colors are from 
 
 
 
-[[setlabelClickCallback]]
+[[setLabelClickCallback]]
 == setLabelClickCallback( labelName, luaFunctionName, optional any amount of arguments )
 specify a Lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )
 UPDATE: this function can now pass any number of string or integer number values as additional parameters. These parameters are then used in the callback. Thus you can associate data with the label/button. check the forum for more information on how to use this.
@@ -2386,7 +2452,7 @@ example:
 ----
 tempColorTrigger(9,2,[[selectString(matches[1],1); fg("red"); bg("blue");]] ); 
 ----
-This script will re-colorize all text in blue foreground colors on a black background with a red foreground color on a blue background color until another color in the current line is being met. temporary color triggers do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors in a particular context.
+This script will re-highlight all text in blue foreground colors on a black background with a red foreground color on a blue background color until another color in the current line is being met. temporary color triggers do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors in a particular context.
 
 
 
