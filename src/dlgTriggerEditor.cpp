@@ -3694,7 +3694,6 @@ void dlgTriggerEditor::saveKey()
             pT->setName( name );
             pT->setCommand( command );
             pT->setScript( script );
-            pT->setIsActive( true );
 
             QIcon icon;
             if( pT->isFolder() )
