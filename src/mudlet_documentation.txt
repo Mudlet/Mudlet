@@ -3,7 +3,7 @@ Mudlet Manual
 
 .Table of Contents
 ****************
-. <<introduction,General Introduction to Modern MUD Clients.>>
+. <<introduction,General Introduction to Modern MUD Clients>>
 . <<manual,Technical Manual>>
 .. <<splitScreen,Split Screen>>
 .. <<commandLine,Mudlets Command Line>>
@@ -42,6 +42,7 @@ Mudlet Manual
 .. <<labels,Custom Mini Text Displays - Scripting Labels>>
 .. <<buttons,Scripting Buttons>>
 .. <<userGfxWindows,User Custom Graphics Windows>>
+. <<migrating,Migrating to Mudlet>>
 . <<api,Lua API and Reference>>
 . <<apiIndex, Alphabetical Lua API Function Index>>
 ****************
@@ -287,6 +288,8 @@ What it does here is save the +first word+, the +second word+ and then the +rest
 ==== 1.14 How to highlight words
 
 To highlight something in the MUD output, make a trigger and use the "highlight trigger" option to highlight the matched trigger pattern.
+
+Optionally, you can also make use of the <<bg,bg()>> and <<fg,fg()>> functions in scripting to highlight.
 
 ==== 1.15 Keybindings
 
@@ -1096,12 +1099,258 @@ What makes multiline triggers really shine is the ability to react to MUD output
 [[migrating]]
 == Migrating to Mudlet
 
+=== Nexus
+
+==== Trigger patterns
+
+Lets start with triggers. For translating Nexus patterns into Mudlet, use the following table below. Make sure to set the pattern type in Mudlet to be `perl regex`, because the default `substring` works differently.
+
+[width="100%", cols="20%,20%,60%", options="header"]
+|=======
+|Mudlet     |Nexus      |What it does
+|(\w+)      |\{w}        |Match one or more non-whitespace characters (a \'word')
+|(\d+)      |\{d}        |Match one or more numeric digits (a number)
+|([abc])    |{[abc]}    |Match one or more of either \'a', \'b' or \'c'. (a character class)
+|([^abc])   |{[^abc]}   |Match one or more of anything EXCEPT \'a', \'b', or \'c'
+|(.*)       |{*}        |Match zero or more characters (anything)
+|^          |{<}        |Match the beginning of a line (not the actual newline character)
+|$          |{>}        |Match the end of a line (not the actual newline character)
+|=======
+
+NOTE: If you just have a pattern with a {<} and {>} and nothing else, copy the pattern over without the {<}{>} and select the `exact match` pattern type. For example `{<}You sit down.{>}` in Nexus would become `You sit down.` in Mudlet with the pattern type of `exact match`. This is easier to read and matches way faster!
+
+==== Basic scripting
+
+The Nexus way of doing a function is like this: #'function' `stuff it does`. In Mudlet, it's 'function('`stuff it does`')'. Note that if you'd like to give text to a function, you put it inside double or single quotes.
+
+===== Nexus
+---------
+#send hi
+#echo Hello to me!
+---------
+
+===== Mudlet
+---------
+send ("hi")
+echo ("Hello to me!")
+---------
+
+If you'd like to use a variable inside text, you'd put it outside the text and glue it together with two dots.
+
+===== Nexus
+---------
+#set number 1234
+#echo My number is: $number
+#echo the $number is in the middle of my text
+---------
+
+===== Mudlet
+---------
+number = 1234
+echo ("My number is: " .. number)
+echo ("the " .. number .. " is in the middle of my text")
+---------
+
+==== ifs in Mudlet
+
+Next are the '#if' statements. Here's a table comparing the syntaxes of Nexus and Mudlet:
+
+[width="100%", frame="topbot", options="header,verse"]
+|===========
+|Mudlet				|Nexus
+|if <condition> then <text> end
+|#if <condition> <text>
+
+#if <condition> { <script> }
+|if <condition> then <script> else <script> end
+|#if <condition> { <script> } else { <script> }
+
+#if <condition> { <script> } { <script> }
+|if <condition> then <script> elseif <condition> then <script> end
+|#if <condition> { <script> } elsif <condition> { <script> }
+|if <condition> then <script> elseif <condition> then <script> else <script> end
+|#if <condition> { <script> } elsif <condition> { <script> } else { <script> }
+|===========
+
+Here is the sample side-by-side comparison of how you'd use it:
+
+[width="100%", frame="topbot", options="header,verse", cols="2*literal"]
+|==============
+|Mudlet				|Nexus
+|-- If foo is true, echo that fact.
+if foo then echo ("Foo is true!") end -- If foo is true, echo that fact.
+
+-- A slight modification of the above that illustrates an 'else' clause.
+-- Note that the 'then' is always necessary to avoid confusion.
+if foo then echo ("Foo is true!") else echo ("Foo is false!") end
+
+-- Illustration of putting more than one statement in a block (also
+-- spans lines here). Note the if doesn't end until the last 'end' is
+-- encountered.
+-- We also add a \n at the end of multiple echos so each one is on it's own line.
+if foo then
+   echo ("Foo is true!\n")
+   echo ("Isn't it grand?\n")
+   echo ("These commands are all on separate lines too!\n")
+end
+
+-- This shows how ifs continue (on 'logical' lines) even though the
+-- blocks in its constituent clauses may have multiple lines. The
+-- following lines are all _one_ single if statement.
+if foo > 50 then
+   echo ("Foo is big!\nYes it is.")
+elseif foo > 10 then
+   echo ("Foo is pretty big...\n")
+   echo ("I've seen bigger.")
+else
+   echo ("Foo is actually kind of small.")
+end
+
+-- Ifs can be nested too.
+if foo then
+   if bar then
+      echo ("Both foo and bar are true.")
+   else
+      echo ("Foo's true, but bar isn't.")
+   end
+end
+|
+// If $foo is true, echo that fact.
+#if $foo #echo Foo is true!          // If $foo is true, echo that fact.
+
+// A slight modification of the above that illustrates an 'else' clause.
+// The second form shows that the word 'else' is actually optional too.
+// (The two lines are functionally the same.)
+#if $foo { #echo Foo is true! } else { #echo Foo is false! }
+#if $foo { #echo Foo is true! } { #echo Foo is false! }
+
+// Illustration of putting more than one statement in a block (also
+// spans lines here). Note the if doesn't end until the last '}' is
+// encountered.
+#if $foo {
+   #echo Foo is true!
+   #echo Isn't it grand?
+   #echo These commands are all on separate lines too!
+}
+
+// This shows how ifs continue (on 'logical' lines) even though the
+// blocks in its constituent clauses may have multiple lines. The
+// following lines are all _one_ single if statement.
+#if $foo > 50 {
+   #echo Foo is big!
+   #echo Yes it is.
+} elsif $foo > 10 {
+   #echo Foo is pretty big...
+   #echo I've seen bigger.
+} else {
+   #echo Foo is actually kind of small.
+}
+
+// Ifs can be nested too.
+#if $foo {
+   #if $bar {
+      #echo Both foo and bar are true.
+   } else {
+      #echo Foo's true, but bar isn't.
+   }
+}
+|==============
+
+==== Mudlet equivalents of Nexus functions
+
+Now that we got the ifs covered, lets go over the Mudlet equivalents of other Nexus functions. Note that this is a direct Nexus->Mudlet comparison; certain functions in Mudlet have much more capability.
+
+[width="100%", frame="topbot", options="header,verse", cols="2*literal"]
+|==============
+|Mudlet					|Nexus
+|<variable> = <variablename> <+ - /  *> <number or variable>	|#add <variablename> <expression>
+|echo "text\n" or echo("text\n")	|#echo <text>
+|echo "text" or echo("text")		|#echo_ <text>
+|enableAlias("<group name>"), enableTrigger(), enableKey() or enableTimer() |#groupon <group name>
+|disableAlias("<group name>"), disableTrigger(), disableKey() or disableTimer() |#groupoff <group name>
+|selectString (line, 1) bg("<color>") resetFormat() |#highlight <color>
+|deleteLine()                       |#gag
+|openUrl("<url>")*                  |#openurl <url>
+|send("<stuff>")                    |#send <text>
+|sendAll("hi", "hello", "bye")      |#send_ hi #send_ hello #send bye
+|<variable name> = "<text value>"   |#set <variable name> <text value>
+|<variable name> = <expression>     |#set <variable name> = <expression>
+|<variable name> = nil              |#unset <variable name>
+|tempTimer(<time in s>, [[<lua code to do once time is up>]])|#wait <milliseconds>
+|==============
+^*Planned for Mudlet 1.0.6^
+
+==== How to call aliases in Mudlet
+The typical workflow in Nexus is that you'd define the aliases for yourself to use, and also use aliases for system-related things (things like checking if you'd need to eat a herb, etc).
+
+While the first use is good, the second isn't - because the user can also run this alias at an inopportune time, because if you want to call an alias it has to match all alises again, and so on.
+
+Now, while in Mudlet you can call another alias with the <<expandAlias,expandAlias()>> function, this is strongly discouraged. What you do instead if create a 'function' (for example, <<send,send()>> and <<echo,echo()>> are functions) that you can then call from your alias or trigger. This has many advantages - it's faster, you can easily give your function values, and your function can return you values, too.
+
+To make a function, you go to the Scripts section, create a new script, and write in your function:
+----
+function <name> ()
+    <stuff it does>
+end
+----
+
+For example, if we want to make a function that does two things for us at once, we'd do this:
+----
+function eat_bloodroot()
+    send ("outr bloodroot")
+    send ("eat bloodroot")
+end
+----
+
+Then just do this in our alias or trigger to outr and eat bloodroot:
+----
+eat_bloodroot()
+----
+
+As mentioned, you can also give things to functions - in this case lets expand the function to eat any herb for us we tell it:
+----
+function eat (what)
+    send ("outr " .. what)
+    send ("eat " .. what)
+end
+
+[...]
+eat ("bloodroot")
+eat ("kelp")
+eat ("ginseng")
+----
+
+Lastly, functions can also give you data back. One useful example for this is to break down tasks into functions, which will help your code readibility:
+
+----
+function can_i_stand()
+    if not paralyzed and not prone and not stunned then
+        return true
+    else
+        return false
+end
+
+[...]
+
+if can_i_stand() and have_balance and have_equilibrium then
+    send ("stand")
+end
+----
+
+==== Notes to be aware of
+To finish off, a couple of points that should be rememberd
+* Mudlet does profile snapshots (nexus archives) automatically - to load a different one, select it from the list when connecting
+* Mudlet can import and export xml
+* Mudlet and Nexus xml formats aren't compatible
+* Mudlet can do nexus graphics, here is a package for - Achaea
+* Mudlet has a ton more features such are more speed, less bugs, copy from the normal window, replay logging, color html logging, more powerful scripting, and the list goes on.
+
 [[api]]
 == Lua API
 Mudlet defines several global Lua variables that are accessible from anywhere.
 
 .Built-in Lua Variables
-[width="100%",frame="topbot",options="header"]
+[width="100%",cols="20%,80%", frame="topbot",options="header"]
 |===================================================
 |Variable Name|Description
 |command|This variable holds the current user command. This is typically used in alias scripts.
@@ -1111,6 +1360,10 @@ Mudlet defines several global Lua variables that are accessible from anywhere.
 If the trigger uses the Perl style /g switch to evaluate *all* possible matches of the given regex within the current line, matches[n+1] will hold the second entire match, matches[n+2] the first capture group of the second match and matches[n+m] the m-th capture group of the second match.
 |multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
 |===================================================
+
+.Useful Lua resources on the Web
+* http://thomaslauer.com/download/luarefv51single.pdf[Lua reference card]
+* http://lua-users.org/wiki/TutorialDirectory[A ton of useful Lua mini-tutorials]
 
 [[apiIndex]]
 == Alphabetical Function Index
@@ -1421,7 +1674,7 @@ Sets the current selection foreground color to color_name which is one of the pr
 see also: <<resetFormat, ->resetFormat()>> <<setFgColor, -> setFgColor()>>
 
 .Color Table (for use in the fg("colorname") and bg("colorname") functions)
-[frame="topbot",options="header"]
+[frame="topbot"]
 |===================================================
 | snow| ghost_white| white_smoke|gainsboro|floral_white
 | old_lace| linen| antique_white| papaya_whip| blanched_almond
@@ -1624,9 +1877,10 @@ example:
 tempTimer( 0.3, [[send("kill monster")]] )
 ----
 This script will send the command "kill monster" 0.3 seconds after this function has been called. Note that this function does not wait until 0.3 seconds have been passed, but it will start a timer that will run the Lua script that you have provided as a second argument after 0.3 seconds.
-----
- [[ ]] can be used to quote strings in Lua. The difference to the usual " " quote syntax is that [[ ]] also accepts the character ". Consequently, you don't have to escape the " character in the above script. The other advantage is that it can be used as a multiline quote.
-----
+
+[NOTE]
+`[[ ]]` can be used to quote strings in Lua. The difference to the usual ``" " quote syntax is that `[[ ]]` also accepts the character `"`. Consequently, you don't have to escape the `"` character in the above script. The other advantage is that it can be used as a multiline quote.
+
 Also note that the Lua code that you provide as an argument is compiled from a string value when the timer fires. This means that if you want to pass any parameters by value e.g. you want to make a function call that uses the value of your variable myGold as a parameter you have to do things like this:
 ----
 tempTimer( 3.8, [[echo("at the time of the tempTimer call I had ]] .. myGold .. [[ gold.")]] ); 
@@ -1877,9 +2131,13 @@ a debug function for building triggers: this function highlights all capture gro
 
 
 [[sendAll]]
-== sendAll( what )
-Sends a list of commands to the MUD.
+== sendAll( command1, command2, ... )
+Sends a list of commands to the MUD. You can use this to send some things at once instead of having to use multiple <<send,send()>> commands one after another.
 
+=== Example:
+----
+sendAll("stand", "touch shield", "say ha!")
+----
 
 [[debug]]
 == debug( arg1 ... argn )
@@ -1894,9 +2152,14 @@ Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 
 
 [[resetFormat]]
-== resetFormat()
-resets the user character format to the default.
+== resetFormat (window)
+Resets the user character format to the default. If you don't specify a window, it'll reset the main console - otherwise it'll reset the specified miniConsole.
 
+=== Example:
+----
+resetFormat() -- resets the format on the main window
+resetFormat("chat console") -- resets the format on the specified window
+----
 
 [[playSoundFile]]
 == playSoundFile( fileName )

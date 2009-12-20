@@ -394,7 +394,7 @@ div#toc a:visited { color: blue; }
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
-<a href="#introduction">General Introduction to Modern MUD Clients.</a>
+<a href="#introduction">General Introduction to Modern MUD Clients</a>
 </p>
 </li>
 <li>
@@ -409,7 +409,7 @@ div#toc a:visited { color: blue; }
 </li>
 <li>
 <p>
-<a href="#commandLine">Mudlet&#8217;s Command Line</a>
+<a href="#commandLine">Mudlets Command Line</a>
 </p>
 </li>
 <li>
@@ -429,7 +429,7 @@ div#toc a:visited { color: blue; }
 </li>
 <li>
 <p>
-<a href="#alias">Input Triggers - Mudlet&#8217;s Alias Engine</a>
+<a href="#alias">Input Triggers - Mudlets Alias Engine</a>
 </p>
 </li>
 <li>
@@ -605,8 +605,17 @@ div#toc a:visited { color: blue; }
 </li>
 <li>
 <p>
+<a href="#migrating">Migrating to Mudlet</a>
+</p>
+</li>
+<li>
+<p>
 <a href="#api">Lua API and Reference</a>
-  <a href="#apiIndex">Alphabetical Lua API Function Index</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#apiIndex">Alphabetical Lua API Function Index</a>
 </p>
 </li>
 </ol></div>
@@ -1501,7 +1510,7 @@ Now just click <tt>Connect</tt> to play!
 </div>
 <h2 id="_1_general_introduction_to_modern_mud_clients">1. General Introduction to Modern MUD Clients</h2>
 <div class="sectionbody">
-<h3 id="_1_1_mudlet_8217_s_automation_features">1.1 Mudlet&#8217;s automation features</h3><div style="clear:left"></div>
+<h3 id="_1_1_mudlets_automation_features">1.1 Mudlets automation features</h3><div style="clear:left"></div>
 <div class="paragraph"><p>Mudlet offers a vast array of standard features to automate or otherwise improve your gaming experience. These include, but are not limited to:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1697,7 +1706,7 @@ Pvx+P8FgkGAw+OWfD7gj94RG13U0TSOdTpNOp8lMbmQ0TcvbArrrK1mW8Xg8eL3e7BLB5/N9dSc0
 uSP3jMwwjKy4G3AXwB0ugAsx5YzMndW//DOy3OFMjGwrxrKs7NX9LBfAneFFUcxec6rU5zqpvCqA
 qTCT16/0nPgLA/i6xjf+Xw3+B2ll/uiqTaJTAAAAAElFTkSuQmCC" />
 </td>
-<td class="content"><strong>Beginners should use Mudlet&#8217;s automated colorizer triggers in the beginning to highlight the text that has been triggered on to get the hang of the different trigger and pattern types. Click on the "colorizer trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don&#8217;t have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.</strong></td>
+<td class="content"><strong>Beginners should use Mudlets automated highlight triggers in the beginning to highlight the text that has been triggered on to get the hang of the different trigger and pattern types. Click on the "highlight trigger" option and pick a foreground and a background color that you like to highlight your trigger with. When the trigger matches it automatically highlights its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. You don&#8217;t have to know anything about scripting, regular expressions etc. to use highlight triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.</strong></td>
 </tr></table>
 </div>
 <h5 id="_1_10_matching_one_unknown">1.10 Matching one unknown</h5>
@@ -1775,7 +1784,8 @@ Script:  send( "say "..matches[4].." "..matches[2].." "..matches[3] )</tt></pre>
 </div></div>
 <div class="paragraph"><p>What it does here is save the <tt>first word</tt>, the <tt>second word</tt> and then the <tt>rest of the text</tt> into wildcards. It then says <tt>rest of the text</tt> first, then the <tt>first word</tt> and then the <tt>second word</tt>.</p></div>
 <h4 id="_1_14_how_to_highlight_words">1.14 How to highlight words</h4>
-<div class="paragraph"><p>To highlight something in the MUD output, make a trigger and use the "colorizer trigger" option to highlight the matched trigger pattern.</p></div>
+<div class="paragraph"><p>To highlight something in the MUD output, make a trigger and use the "highlight trigger" option to highlight the matched trigger pattern.</p></div>
+<div class="paragraph"><p>Optionally, you can also make use of the <a href="#bg">bg()</a> and <a href="#fg">fg()</a> functions in scripting to highlight.</p></div>
 <h4 id="_1_15_keybindings">1.15 Keybindings</h4>
 <div class="paragraph"><p>Keybindings, or hotkeys, are in many respects very similar to aliases, however, instead of typing in what you want to be done, you simply hit a key (or combination of keys) and let the Mudlet do the work.</p></div>
 <div class="sidebarblock">
@@ -1816,7 +1826,7 @@ Split screen usage is necessary when selecting text in order to copy it to trigg
 </div>
 <h2 id="commandLine">Command Line Auto-Completion, Tab-Completion and Command History</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Mudlet&#8217;s command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that are optimized for typical MUD playing situations.
+<div class="paragraph"><p>Mudlets command line is especially designed for MUD and MUSH playing. It aims at reducing the amount of typing by using autocompletion and tab completion schemes that are optimized for typical MUD playing situations.
 The command line offers tab completion (TAB key with or without shift) and autocompletion (cursor up and cursor down keys).</p></div>
 <div class="exampleblock">
 <div class="exampleblock-content">
@@ -6012,7 +6022,7 @@ Having statistics scripts that last as long as the session lasts is a nice thing
 Second, you can take care of saving your variables yourself and reloading them yourself. This gives you more control and will be the preferred solution in bigger systems.</p></div>
 <div class="paragraph"><p>To be continued &#8230;</p></div>
 </div>
-<h2 id="alias">Input Triggers - Mudlet&#8217;s Alias Engine</h2>
+<h2 id="alias">Input Triggers - Mudlets Alias Engine</h2>
 <div class="sectionbody">
 <div class="admonitionblock">
 <table><tr>
@@ -6076,7 +6086,7 @@ EQn3XQAAAABJRU5ErkJggg==" />
 </tr></table>
 </div>
 <div class="paragraph"><p>Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
-We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlet&#8217;s alias engine.
+We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlets alias engine.
 When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit, in form of the Lua variable <tt style="color: red;">command</tt>. This variable will be matched against all active alias in the hierarchy unless access to an alias branch is locked by the user or by a script. <strong>If an input trigger matches, it will intercept the user command and the original command will be ignored</strong>. Upon a match the clear text command is being send as a command to the MUD in replacement of the original command, if a clear text command has been specified by the user <em>and</em> the attached alias script is being executed. However, the initial command that the user has typed in the command line will <strong>not</strong> be sent unless you do this as part of your script. Consequently, if you want your input trigger to send a command to the MUD, you&#8217;ll either have to specify a clear text command for simple cases or send commands via the attached alias script e.g. send("kill monster"). You may argue that you feel that it is unnecessary work to be forced to send a command replacement yourself, but this very fact makes our alias system way more powerful because it gives you complete control about what is happening. Why is this so? The initial user command is being held in the Lua variable <tt style="color: red;">command</tt>. When this value changes within the alias unit processing chain, the initial user input that the input triggers work on can be rewritten and changed in the process. Consequently, you can substitute the user input step by step - or alias by alias - without that anything happens as far as sending commands is being concerned unless you explicitly decide to do so.</p></div>
 <div class="admonitionblock" id="aliasProcessing">
 <table><tr>
@@ -8164,7 +8174,7 @@ For example:</p></div>
 end</tt></pre>
 </div></div>
 </div>
-<h2 id="triggers">Mudlet&#8217;s Trigger Engine</h2>
+<h2 id="triggers">Mudlets Trigger Engine</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Unlike alias that define patterns that match on user input, triggers define patterns that match on MUD output. In other words, triggers react to text that has been sent by the MUD, whereas alias react to user commands that have been typed into the command line.</p></div>
 <h3 id="simpleTriggerMatching">Simple Trigger Matching</h3><div style="clear:left"></div>
@@ -11147,7 +11157,7 @@ EQn3XQAAAABJRU5ErkJggg==" />
 </tr></table>
 </div>
 <div class="paragraph"><p>To begin with, click on the "Add" button to create a new trigger. Then put the text pattern that you&#8217;d like to trigger on into the trigger conditions table on the right side of the screen above the script editor. Afterwards, chose the correct pattern type of your trigger pattern in the drop down list on the right side of the trigger pattern i.e. in the second column of the trigger pattern table. If you define multiple patterns in the same trigger, your trigger will run whenever any one of these patterns matches unless you chose the AND-trigger option, in which case the trigger will only fire if all patterns match within a specified amount of lines from the MUD. For more advanced information on AND and OR trigger see the corresponding AND/OR trigger section below.
-The next step is to define what should happen when the trigger matches. Usually, this will be done by a Lua script in the Lua editor below the table with the pattern list. In the beginning, you can simply chose the "colorizer trigger" option to make your trigger highlight the text that it has triggered on or send a clear text command to the MUD whenever the trigger fires until you have learned enough Lua to more meaningful scripts. Clear text command can be defined in the "send plain text" input box next to the trigger name above the pattern table.
+The next step is to define what should happen when the trigger matches. Usually, this will be done by a Lua script in the Lua editor below the table with the pattern list. In the beginning, you can simply chose the "highlight trigger" option to make your trigger highlight the text that it has triggered on or send a clear text command to the MUD whenever the trigger fires until you have learned enough Lua to more meaningful scripts. Clear text command can be defined in the "send plain text" input box next to the trigger name above the pattern table.
 Finally, you need to save the new trigger and then activate it with the padlock icon button. By default, new triggers are deactivated and thus will do nothing unless you explicitly activate them. Activated triggers show a green tick in the little blue box on the left side of the trigger name in the trigger tree on the left side of the script editor dialog. There is three ways to save your changes. 1. click on the save icon 2. adding a new trigger 3. clicking on another trigger item. Triggers that have not been saved yet cannot be activated. If you see a bug icon instead of an activation box, there is some error that prevents to activate your trigger. Check the error message above the pattern table.</p></div>
 <div class="sidebarblock">
 <div class="sidebar-content">
@@ -11207,8 +11217,8 @@ Pvx+P8FgkGAw+OWfD7gj94RG13U0TSOdTpNOp8lMbmQ0TcvbArrrK1mW8Xg8eL3e7BLB5/N9dSc0
 uSP3jMwwjKy4G3AXwB0ugAsx5YzMndW//DOy3OFMjGwrxrKs7NX9LBfAneFFUcxec6rU5zqpvCqA
 qTCT16/0nPgLA/i6xjf+Xw3+B2ll/uiqTaJTAAAAAElFTkSuQmCC" />
 </td>
-<td class="content"><strong>Beginners should use Mudlet&#8217;s automated colorizer triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "colorizer trigger" option and pick a foreground and a background color. When the trigger matches it automatically colorizes its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text.
-You don&#8217;t have to know anything about scripting, regular expressions etc. to use colorizer triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.</strong></td>
+<td class="content"><strong>Beginners should use Mudlets automated highlight triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "highlight trigger" option and pick a foreground and a background color. When the trigger matches it automatically highlights its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text.
+You don&#8217;t have to know anything about scripting, regular expressions etc. to use highlight triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.</strong></td>
 </tr></table>
 </div>
 <div class="paragraph"><p>More advanced users will often want to do custom highlighting from within scripts. This is how it works: If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:</p></div>
@@ -14561,11 +14571,11 @@ SUVORK5CYII=" />
 <div class="paragraph"><p>We could now add a call deleteLine() to the prompt detection trigger to erase the prompt from the screen if we don&#8217;t want to see it as we have computed all relevant information.</p></div>
 </div></div>
 <h3 id="multilineTriggers">Multi-Line Triggers and Multi-Condition Triggers</h3><div style="clear:left"></div>
-<div class="paragraph"><p>Multi Condition Triggers are the most advanced feature of Mudlet&#8217;s trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
+<div class="paragraph"><p>Multi Condition Triggers are the most advanced feature of Mudlets trigger engine. Like trigger chains or filter chains they are a form of AND-Triggers.
 All conditions in the list must have matched within the specified margin of lines (delta), in order to trigger the script.
 Normal triggers fire and run the script as soon as one of the conditions in the regex list is met i.e. if one of the regex/string matches match - or the Lua function condition returns true, the trigger script is run.
 In multiline triggers, however, each single regex/string/Lua function condition in the list has to have matched within the specified margin of lines at least once to trigger the script. <strong>The sequence of the conditions is binding.</strong> This means that if the 10th regex on the regex list would be matched on the eleventh line after the match of the first line happened, the trigger will <strong>NOT</strong> run unless the margin of lines is set to 11. If condition #3 is true but currently #2 is waiting to be true, condition #3 is ignored and must be true again after condition #2 has been true.
-Conditions can also be Lua Functions or plain Lua code that returns a boolean truth value. You can mix all types of conditions to build complex multi-condition triggers that only fire if all conditions are met. This is a very powerful feature as it reduces the amount of scripting to a minimum or even takes away with the need to script formerly complex processes completely. Multicondition triggers are multi-line triggers, i. e. the conditions can all be met in a single line or many lines after the first condition has been fulfilled. This effectively reduces the amount of complexity as you have all the important conditions placed into a single trigger and all the tedious bookkeeping, variable and condition state accounting is being done by Mudlet&#8217;s trigger engine. The result of this is that the amount of manual condition checking via many different trigger scripts and legions of if condition1 == true then check condition2 can be forgotten about. All you have to do is to define the conditions and the final action that is taken if the trigger fires.</p></div>
+Conditions can also be Lua Functions or plain Lua code that returns a boolean truth value. You can mix all types of conditions to build complex multi-condition triggers that only fire if all conditions are met. This is a very powerful feature as it reduces the amount of scripting to a minimum or even takes away with the need to script formerly complex processes completely. Multicondition triggers are multi-line triggers, i. e. the conditions can all be met in a single line or many lines after the first condition has been fulfilled. This effectively reduces the amount of complexity as you have all the important conditions placed into a single trigger and all the tedious bookkeeping, variable and condition state accounting is being done by Mudlets trigger engine. The result of this is that the amount of manual condition checking via many different trigger scripts and legions of if condition1 == true then check condition2 can be forgotten about. All you have to do is to define the conditions and the final action that is taken if the trigger fires.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -16133,7 +16143,7 @@ jpGcnAyAubaGb1d/dF6ftrFBdIgPvuD0zo4Ov/utOS0WK5k5+RdtX/b1YfLOlF+wrcl11xMafe4e
 nxEjRuDv768dIyIKdJErYe3atXzzzTcXbIuPj697dKaIiAJdgS4iIvJHp1u/ioiIKNBFREREgS4i
 IiIKdBEREVGgi4iIKNBFREREgS4iIiIKdBEREfn//g/LNAv0suhuYQAAAABJRU5ErkJggg==" />
 </td>
-<td class="content">This diagram shows what steps are involved in the process of problem solving with Mudlet&#8217;s trigger engine. The main question is: How do we arrive at a solution to our problem, and how can we simplify the problem as much as possible?</td>
+<td class="content">This diagram shows what steps are involved in the process of problem solving with Mudlets trigger engine. The main question is: How do we arrive at a solution to our problem, and how can we simplify the problem as much as possible?</td>
 </tr></table>
 </div>
 <div class="paragraph"><p>Example: Let&#8217;s go back to our pond &amp; frog example. We have explained the difference between AND-triggers and OR-triggers. If you have a room description consisting of 3 lines:</p></div>
@@ -16185,7 +16195,7 @@ in line #3 two conditions are true i.e. frog=true and stone = true</tt></pre>
 <div class="paragraph"><p>Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.</p></div>
 <div class="paragraph"><p><strong>CAUTION: The multi line condition switch must be turned off to get an OR-trigger! If the multi-line condition switch is turned on the trigger becomes and AND trigger which means that the trigger only fires if all conditions are true and fulfilled in the correct sequence. With OR-triggers the sequence is irrelevant.</strong></p></div>
 <div class="paragraph"><p>To complicate matters, however, you don&#8217;t want your trigger to fire 3 commands, because you want to use this room description as a whole to fire your trigger e. g. this pond is the only kind of ponds in the entire world that doesn&#8217;t have poisoned water. So you want to make sure that you only drink water from a pond of this kind and from no other pond. Your solution is to use Multi Condition Triggers (MCT). If you check the MCT checkbox this trigger will fire only once from now on - and only if all conditions are met i e. when you can guarantee that you only drink water from a good pond because your drinking trigger is matching on the entire room description despite that this room description my be spread over a number of lines. (NOTE: If you have word wrap turned off in your MUD chances are that the entire room description will be contained in a single line, but we are trying to keep the examples as easy as possible.)</p></div>
-<div class="paragraph"><p>Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlet&#8217;s MCTs.</p></div>
+<div class="paragraph"><p>Sadly, there are many unfriendly people in this world and somebody goes around and poisons your good ponds. Consequently, you would want to examine the frog and find out if it is poisoned before drinking water from the pond. This is difficult because the villain is a mean magician who used illusion spells to make everything look like the good pond. To solve the problem you can now resort to Lua function conditions in the trigger condition list that perform certain check ups to put the current room description into a wider context e. g. check if you have been here before etc. This adds yet another level of complexity to your problem but this is a very powerful means to use the full potential of Mudlets MCTs.</p></div>
 <div class="paragraph"><p>You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.
 However, unlocking the full potential of Mudlet requires you do learn some Lua basics. In this manual we&#8217;ll try to be as easy on you as we can in this respect, but it&#8217;s highly recommended that you dig deeper into Lua after a while. It&#8217;s one of the easiest fully fledged scripting languages available, easy to learn and the fastest of them all, and this is why it has been chosen by us. You don&#8217;t need to become a programmer to be able to use Mudlet effectively. All you have to know is how to work with variables and how to do if conditions and maybe a few loops. But knowing more won&#8217;t harm you and it will make your systems more effective.</p></div>
 <h3 id="_lua_code_conditions_amp_variable_triggers_expression_triggers">Lua Code Conditions &amp; Variable Triggers - Expression Triggers</h3><div style="clear:left"></div>
@@ -20128,10 +20138,10 @@ setFgColor( 255,0,0 )
 selectCaptureGroup( 2 )
 setFgColor( 0,0,255 )</tt></pre>
 </div></div>
-<div class="paragraph"><p>The best way is to use selectCaptureGroup( number ) to select the proper capture group and then perform your actions on it e.g. replace(), colorize etc. Note: Both selectCaptureGroup() and matches[n] start with group 1.</p></div>
-<div class="paragraph"><p>How to select all occurrences of "Tom" and colorize them?</p></div>
+<div class="paragraph"><p>The best way is to use selectCaptureGroup( number ) to select the proper capture group and then perform your actions on it e.g. replace(), highlight etc. Note: Both selectCaptureGroup() and matches[n] start with group 1.</p></div>
+<div class="paragraph"><p>How to select all occurrences of "Tom" and highlight them?</p></div>
 <div class="paragraph"><p>You add a function like this to a script containing you main function definitions. Note that script items differ from all other "scripts" in triggers, timers, actions etc. because they require you to put your code in proper functions that can be called by your other trigger-scripts, timer-scripts etc. via normal function calls. Trigger-scripts, timer-scripts etc. cannot contain any function definitions because they are automatically generated functions themselves because this makes usage a lot easier.</p></div>
-<div class="paragraph"><p>To come back to our question how to select all occurrences of "Tom" and colorize them:</p></div>
+<div class="paragraph"><p>To come back to our question how to select all occurrences of "Tom" and highlight them:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>function setBgColorAll( word, r, g, b )
@@ -20168,7 +20178,7 @@ Perl regex:</p></div>
 <pre><tt>send( "say " .. matches[3] .." " .. matches[1] .." ".. matches[2] )</tt></pre>
 </div></div>
 <div class="paragraph"><p>Note: The variable "command" contains what was entered in the command line or issued via the expandAlias( ) function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion.</p></div>
-<h4 id="_changing_text_from_the_mud_or_reformatting_text_colorize_make_bold_etc">Changing text from the MUD or reformatting text (colorize, make bold etc.)</h4>
+<h4 id="_changing_text_from_the_mud_or_reformatting_text_highlight_make_bold_etc">Changing text from the MUD or reformatting text (highlight, make bold etc.)</h4>
 <div class="paragraph"><p>When sending commands to the MUD - from now on referred to as output stream - alias scripts find the command that was issued by the user stored in the variable "command".</p></div>
 <div class="paragraph"><p>By manipulating the value, the command can easily be changed before it is being sent to the MUD.</p></div>
 <div class="paragraph"><p>However, things get much more complicated with the data received from the MUD â€“ from now on referred to as input stream. Before triggers can be run on the MUD data Mudlet has to strip all format codes from the text and store it in data structures associated with the text. Consequently, the text that is being passed on to the trigger processing unit is a small subset of the data received from the MUD. If you want to edit, replace, delete or reformat text from within your trigger scripts you have to keep this in mind if you don&#8217;t want to lose all text format information as colors etc.</p></div>
@@ -20352,6 +20362,416 @@ mySilver = mySilver + tonumber( multimatches[1][3] );</tt></pre>
 </div></div>
 <div class="paragraph"><p>What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines.</p></div>
 </div>
+<h2 id="migrating">Migrating to Mudlet</h2>
+<div class="sectionbody">
+<h3 id="_nexus">Nexus</h3><div style="clear:left"></div>
+<h4 id="_trigger_patterns">Trigger patterns</h4>
+<div class="paragraph"><p>Lets start with triggers. For translating Nexus patterns into Mudlet, use the following table below. Make sure to set the pattern type in Mudlet to be <tt>perl regex</tt>, because the default <tt>substring</tt> works differently.</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="20%" />
+<col width="20%" />
+<col width="60%" />
+<thead>
+<tr>
+<th align="left" valign="top">Mudlet     </th>
+<th align="left" valign="top">Nexus      </th>
+<th align="left" valign="top">What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">(\w+)</p></td>
+<td align="left" valign="top"><p class="table">{w}</p></td>
+<td align="left" valign="top"><p class="table">Match one or more non-whitespace characters (a 'word')</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">(\d+)</p></td>
+<td align="left" valign="top"><p class="table">{d}</p></td>
+<td align="left" valign="top"><p class="table">Match one or more numeric digits (a number)</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">([abc])</p></td>
+<td align="left" valign="top"><p class="table">{[abc]}</p></td>
+<td align="left" valign="top"><p class="table">Match one or more of either 'a', 'b' or 'c'. (a character class)</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">([^abc])</p></td>
+<td align="left" valign="top"><p class="table">{[^abc]}</p></td>
+<td align="left" valign="top"><p class="table">Match one or more of anything EXCEPT 'a', 'b', or 'c'</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">(.*)</p></td>
+<td align="left" valign="top"><p class="table">{*}</p></td>
+<td align="left" valign="top"><p class="table">Match zero or more characters (anything)</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">^</p></td>
+<td align="left" valign="top"><p class="table">{&lt;}</p></td>
+<td align="left" valign="top"><p class="table">Match the beginning of a line (not the actual newline character)</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">$</p></td>
+<td align="left" valign="top"><p class="table">{&gt;}</p></td>
+<td align="left" valign="top"><p class="table">Match the end of a line (not the actual newline character)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">If you just have a pattern with a {&lt;} and {&gt;} and nothing else, copy the pattern over without the {&lt;}{&gt;} and select the <tt>exact match</tt> pattern type. For example <tt>{&lt;}You sit down.{&gt;}</tt> in Nexus would become <tt>You sit down.</tt> in Mudlet with the pattern type of <tt>exact match</tt>. This is easier to read and matches way faster!</td>
+</tr></table>
+</div>
+<h4 id="_basic_scripting">Basic scripting</h4>
+<div class="paragraph"><p>The Nexus way of doing a function is like this: #<em>function</em> <tt>stuff it does</tt>. In Mudlet, it&#8217;s <em>function(</em><tt>stuff it does</tt><em>)</em>. Note that if you&#8217;d like to give text to a function, you put it inside double or single quotes.</p></div>
+<h5 id="_nexus_2">Nexus</h5>
+<div class="listingblock">
+<div class="content">
+<pre><tt>#send hi
+#echo Hello to me!</tt></pre>
+</div></div>
+<h5 id="_mudlet">Mudlet</h5>
+<div class="listingblock">
+<div class="content">
+<pre><tt>send ("hi")
+echo ("Hello to me!")</tt></pre>
+</div></div>
+<div class="paragraph"><p>If you&#8217;d like to use a variable inside text, you&#8217;d put it outside the text and glue it together with two dots.</p></div>
+<h5 id="_nexus_3">Nexus</h5>
+<div class="listingblock">
+<div class="content">
+<pre><tt>#set number 1234
+#echo My number is: $number
+#echo the $number is in the middle of my text</tt></pre>
+</div></div>
+<h5 id="_mudlet_2">Mudlet</h5>
+<div class="listingblock">
+<div class="content">
+<pre><tt>number = 1234
+echo ("My number is: " .. number)
+echo ("the " .. number .. " is in the middle of my text")</tt></pre>
+</div></div>
+<h4 id="_ifs_in_mudlet">ifs in Mudlet</h4>
+<div class="paragraph"><p>Next are the <em>#if</em> statements. Here&#8217;s a table comparing the syntaxes of Nexus and Mudlet:</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="hsides"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top">Mudlet                         </th>
+<th align="left" valign="top">Nexus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">if &lt;condition&gt; then &lt;text&gt; end</p></td>
+<td align="left" valign="top"><p class="table">#if &lt;condition&gt; &lt;text&gt;</p>
+<p class="table">#if &lt;condition&gt; { &lt;script&gt; }</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">if &lt;condition&gt; then &lt;script&gt; else &lt;script&gt; end</p></td>
+<td align="left" valign="top"><p class="table">#if &lt;condition&gt; { &lt;script&gt; } else { &lt;script&gt; }</p>
+<p class="table">#if &lt;condition&gt; { &lt;script&gt; } { &lt;script&gt; }</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">if &lt;condition&gt; then &lt;script&gt; elseif &lt;condition&gt; then &lt;script&gt; end</p></td>
+<td align="left" valign="top"><p class="table">#if &lt;condition&gt; { &lt;script&gt; } elsif &lt;condition&gt; { &lt;script&gt; }</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">if &lt;condition&gt; then &lt;script&gt; elseif &lt;condition&gt; then &lt;script&gt; else &lt;script&gt; end</p></td>
+<td align="left" valign="top"><p class="table">#if &lt;condition&gt; { &lt;script&gt; } elsif &lt;condition&gt; { &lt;script&gt; } else { &lt;script&gt; }</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p>Here is the sample side-by-side comparison of how you&#8217;d use it:</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="hsides"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top">Mudlet                         </th>
+<th align="left" valign="top">Nexus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>-- If foo is true, echo that fact.
+if foo then echo ("Foo is true!") end -- If foo is true, echo that fact.
+
+-- A slight modification of the above that illustrates an 'else' clause.
+-- Note that the 'then' is always necessary to avoid confusion.
+if foo then echo ("Foo is true!") else echo ("Foo is false!") end
+
+-- Illustration of putting more than one statement in a block (also
+-- spans lines here). Note the if doesn't end until the last 'end' is
+-- encountered.
+-- We also add a \n at the end of multiple echos so each one is on it's own line.
+if foo then
+   echo ("Foo is true!\n")
+   echo ("Isn't it grand?\n")
+   echo ("These commands are all on separate lines too!\n")
+end
+
+-- This shows how ifs continue (on 'logical' lines) even though the
+-- blocks in its constituent clauses may have multiple lines. The
+-- following lines are all _one_ single if statement.
+if foo &gt; 50 then
+   echo ("Foo is big!\nYes it is.")
+elseif foo &gt; 10 then
+   echo ("Foo is pretty big...\n")
+   echo ("I've seen bigger.")
+else
+   echo ("Foo is actually kind of small.")
+end
+
+-- Ifs can be nested too.
+if foo then
+   if bar then
+      echo ("Both foo and bar are true.")
+   else
+      echo ("Foo's true, but bar isn't.")
+   end
+end</tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>// If $foo is true, echo that fact.
+#if $foo #echo Foo is true!          // If $foo is true, echo that fact.
+
+// A slight modification of the above that illustrates an 'else' clause.
+// The second form shows that the word 'else' is actually optional too.
+// (The two lines are functionally the same.)
+#if $foo { #echo Foo is true! } else { #echo Foo is false! }
+#if $foo { #echo Foo is true! } { #echo Foo is false! }
+
+// Illustration of putting more than one statement in a block (also
+// spans lines here). Note the if doesn't end until the last '}' is
+// encountered.
+#if $foo {
+   #echo Foo is true!
+   #echo Isn't it grand?
+   #echo These commands are all on separate lines too!
+}
+
+// This shows how ifs continue (on 'logical' lines) even though the
+// blocks in its constituent clauses may have multiple lines. The
+// following lines are all _one_ single if statement.
+#if $foo &gt; 50 {
+   #echo Foo is big!
+   #echo Yes it is.
+} elsif $foo &gt; 10 {
+   #echo Foo is pretty big...
+   #echo I've seen bigger.
+} else {
+   #echo Foo is actually kind of small.
+}
+
+// Ifs can be nested too.
+#if $foo {
+   #if $bar {
+      #echo Both foo and bar are true.
+   } else {
+      #echo Foo's true, but bar isn't.
+   }
+}</tt></pre></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h4 id="_mudlet_equivalents_of_nexus_functions">Mudlet equivalents of Nexus functions</h4>
+<div class="paragraph"><p>Now that we got the ifs covered, lets go over the Mudlet equivalents of other Nexus functions. Note that this is a direct Nexus&#8594;Mudlet comparison; certain functions in Mudlet have much more capability.</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="hsides"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top">Mudlet                                 </th>
+<th align="left" valign="top">Nexus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>&lt;variable&gt; = &lt;variablename&gt; &lt;+ - /  *&gt; &lt;number or variable&gt;    </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#add &lt;variablename&gt; &lt;expression&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>echo "text\n" or echo("text\n")        </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#echo &lt;text&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>echo "text" or echo("text")            </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#echo_ &lt;text&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>enableAlias("&lt;group name&gt;"), enableTrigger(), enableKey() or enableTimer() </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#groupon &lt;group name&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>disableAlias("&lt;group name&gt;"), disableTrigger(), disableKey() or disableTimer() </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#groupoff &lt;group name&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>selectString (line, 1) bg("&lt;color&gt;") resetFormat() </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#highlight &lt;color&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>deleteLine()                       </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#gag</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>openUrl("&lt;url&gt;")*                  </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#openurl &lt;url&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>send("&lt;stuff&gt;")                    </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#send &lt;text&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>sendAll("hi", "hello", "bye")      </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#send_ hi #send_ hello #send bye</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>&lt;variable name&gt; = "&lt;text value&gt;"   </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#set &lt;variable name&gt; &lt;text value&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>&lt;variable name&gt; = &lt;expression&gt;     </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#set &lt;variable name&gt; = &lt;expression&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>&lt;variable name&gt; = nil              </tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#unset &lt;variable name&gt;</tt></pre></div></td>
+</tr>
+<tr>
+<td align="left" valign="top"><div class="literal"><pre><tt>tempTimer(&lt;time in s&gt;, [[&lt;lua code to do once time is up&gt;]])</tt></pre></div></td>
+<td align="left" valign="top"><div class="literal"><pre><tt>#wait &lt;milliseconds&gt;</tt></pre></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p><sup>*Planned for Mudlet 1.0.6</sup></p></div>
+<h4 id="_how_to_call_aliases_in_mudlet">How to call aliases in Mudlet</h4>
+<div class="paragraph"><p>The typical workflow in Nexus is that you&#8217;d define the aliases for yourself to use, and also use aliases for system-related things (things like checking if you&#8217;d need to eat a herb, etc).</p></div>
+<div class="paragraph"><p>While the first use is good, the second isn&#8217;t - because the user can also run this alias at an inopportune time, because if you want to call an alias it has to match all alises again, and so on.</p></div>
+<div class="paragraph"><p>Now, while in Mudlet you can call another alias with the <a href="#expandAlias">expandAlias()</a> function, this is strongly discouraged. What you do instead if create a <em>function</em> (for example, <a href="#send">send()</a> and <a href="#echo">echo()</a> are functions) that you can then call from your alias or trigger. This has many advantages - it&#8217;s faster, you can easily give your function values, and your function can return you values, too.</p></div>
+<div class="paragraph"><p>To make a function, you go to the Scripts section, create a new script, and write in your function:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>function &lt;name&gt; ()
+    &lt;stuff it does&gt;
+end</tt></pre>
+</div></div>
+<div class="paragraph"><p>For example, if we want to make a function that does two things for us at once, we&#8217;d do this:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>function eat_bloodroot()
+    send ("outr bloodroot")
+    send ("eat bloodroot")
+end</tt></pre>
+</div></div>
+<div class="paragraph"><p>Then just do this in our alias or trigger to outr and eat bloodroot:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>eat_bloodroot()</tt></pre>
+</div></div>
+<div class="paragraph"><p>As mentioned, you can also give things to functions - in this case lets expand the function to eat any herb for us we tell it:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>function eat (what)
+    send ("outr " .. what)
+    send ("eat " .. what)
+end
+
+[...]
+eat ("bloodroot")
+eat ("kelp")
+eat ("ginseng")</tt></pre>
+</div></div>
+<div class="paragraph"><p>Lastly, functions can also give you data back. One useful example for this is to break down tasks into functions, which will help your code readibility:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>function can_i_stand()
+    if not paralyzed and not prone and not stunned then
+        return true
+    else
+        return false
+end
+
+[...]
+
+if can_i_stand() and have_balance and have_equilibrium then
+    send ("stand")
+end</tt></pre>
+</div></div>
+<h4 id="_notes_to_be_aware_of">Notes to be aware of</h4>
+<div class="paragraph"><p>To finish off, a couple of points that should be rememberd
+* Mudlet does profile snapshots (nexus archives) automatically - to load a different one, select it from the list when connecting
+* Mudlet can import and export xml
+* Mudlet and Nexus xml formats aren&#8217;t compatible
+* Mudlet can do nexus graphics, here is a package for - Achaea
+* Mudlet has a ton more features such are more speed, less bugs, copy from the normal window, replay logging, color html logging, more powerful scripting, and the list goes on.</p></div>
+</div>
 <h2 id="api">Lua API</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Mudlet defines several global Lua variables that are accessible from anywhere.</p></div>
@@ -20361,8 +20781,8 @@ width="100%"
 frame="hsides"
 cellspacing="0" cellpadding="4">
 <caption class="title">Built-in Lua Variables</caption>
-<col width="50%" />
-<col width="50%" />
+<col width="20%" />
+<col width="80%" />
 <thead>
 <tr>
 <th align="left" valign="top">Variable Name</th>
@@ -20390,10 +20810,22 @@ cellspacing="0" cellpadding="4">
 </tbody>
 </table>
 </div>
+<div class="ulist"><div class="title">Useful Lua resources on the Web</div><ul>
+<li>
+<p>
+<a href="http://thomaslauer.com/download/luarefv51single.pdf">Lua reference card</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://lua-users.org/wiki/TutorialDirectory">A ton of useful Lua mini-tutorials</a>
+</p>
+</li>
+</ul></div>
 </div>
 <h2 id="apiIndex">Alphabetical Function Index</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Click on the respective function to get more information</p></div>
+<div class="paragraph"><p>Click on the respective function to get more information:</p></div>
 </div>
 <h2 id="_a">A</h2>
 <div class="sectionbody">
@@ -20410,6 +20842,7 @@ cellspacing="0" cellpadding="4">
 <a href="#createBuffer">createBuffer</a>,
 <a href="#createLabel">createLabel</a>,
 <a href="#createMiniConsole">createMiniConsole</a>,
+<a href="#createGauge">createGauge</a>,
 <a href="#createStopWatch">createStopWatch</a>,</p></div>
 </div>
 <h2 id="_d">D</h2>
@@ -20477,7 +20910,8 @@ cellspacing="0" cellpadding="4">
 <div class="sectionbody">
 <div class="paragraph"><p><a href="#moveCursor">moveCursor</a>,
 <a href="#moveCursorEnd">moveCursorEnd</a>,
-<a href="#moveWindow">moveWindow</a>,</p></div>
+<a href="#moveWindow">moveWindow</a>,
+<a href="#moveGauge">moveGauge</a></p></div>
 </div>
 <h2 id="_o">O</h2>
 <div class="sectionbody">
@@ -20527,6 +20961,7 @@ cellspacing="0" cellpadding="4">
 <a href="#setItalics">setItalics</a>,
 <a href="#setLabelClickCallback">setLabelClickCallback</a>,
 <a href="#setMiniConsoleFontSize">setMiniConsoleFontSize</a>,
+<a href="#setGauge">setGauge</a>,
 <a href="#setTextFormat">setTextFormat</a>,
 <a href="#setTriggerStayOpen">setTriggerStayOpen</a>,
 <a href="#setUnderline">setUnderline</a>,
@@ -20705,16 +21140,14 @@ cellspacing="0" cellpadding="4">
 <col width="20%" />
 <col width="20%" />
 <col width="20%" />
-<thead>
-<tr>
-<th align="left" valign="top"> snow</th>
-<th align="left" valign="top"> ghost_white</th>
-<th align="left" valign="top"> white_smoke</th>
-<th align="left" valign="top">gainsboro</th>
-<th align="left" valign="top">floral_white</th>
-</tr>
-</thead>
 <tbody>
+<tr>
+<td align="left" valign="top"><p class="table">snow</p></td>
+<td align="left" valign="top"><p class="table">ghost_white</p></td>
+<td align="left" valign="top"><p class="table">white_smoke</p></td>
+<td align="left" valign="top"><p class="table">gainsboro</p></td>
+<td align="left" valign="top"><p class="table">floral_white</p></td>
+</tr>
 <tr>
 <td align="left" valign="top"><p class="table">old_lace</p></td>
 <td align="left" valign="top"><p class="table">linen</p></td>
@@ -21113,7 +21546,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <h2 id="resetFormat">resetFormat()</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Resets the character format to default. This should be used after you have colorized some text or changed the current foreground or background color, but you don&#8217;t want to keep using these colors for further prints. If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.</p></div>
+<div class="paragraph"><p>Resets the character format to default. This should be used after you have highlightd some text or changed the current foreground or background color, but you don&#8217;t want to keep using these colors for further prints. If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.</p></div>
 </div>
 <h2 id="setBgColor">setBgColor( r,g,b )</h2>
 <div class="sectionbody">
@@ -21122,9 +21555,9 @@ If you set a foreground or background color, the color will be used until you ca
 </div>
 <h2 id="_setbgcolor_windowname_r_g_b">setBgColor( windowName, r, g, b )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Sets the current text background color in window windowName. If you have selected text prior to this call, the selection will be colorized otherwise the current text background color will be changed.
+<div class="paragraph"><p>Sets the current text background color in window windowName. If you have selected text prior to this call, the selection will be highlightd otherwise the current text background color will be changed.
 If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.</p></div>
-<div class="paragraph"><p>example 1 colorizes the first occurrence of the string "Tom" in the current line with a red background color.</p></div>
+<div class="paragraph"><p>example 1 highlights the first occurrence of the string "Tom" in the current line with a red background color.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>selectString( "Tom", 1 )
@@ -21239,10 +21672,58 @@ example:</p></div>
 <pre><tt>tempTimer( 0.3, [[send("kill monster")]] )</tt></pre>
 </div></div>
 <div class="paragraph"><p>This script will send the command "kill monster" 0.3 seconds after this function has been called. Note that this function does not wait until 0.3 seconds have been passed, but it will start a timer that will run the Lua script that you have provided as a second argument after 0.3 seconds.</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt> [[ ]] can be used to quote strings in Lua. The difference to the usual " " quote syntax is that [[ ]] also accepts the character ". Consequently, you don't have to escape the " character in the above script. The other advantage is that it can be used as a multiline quote.</tt></pre>
-</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content"><tt>[[ ]]</tt> can be used to quote strings in Lua. The difference to the usual <tt>`" " quote syntax is that `[[ ]]</tt> also accepts the character <tt>"</tt>. Consequently, you don&#8217;t have to escape the <tt>"</tt> character in the above script. The other advantage is that it can be used as a multiline quote.</td>
+</tr></table>
+</div>
 <div class="paragraph"><p>Also note that the Lua code that you provide as an argument is compiled from a string value when the timer fires. This means that if you want to pass any parameters by value e.g. you want to make a function call that uses the value of your variable myGold as a parameter you have to do things like this:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -21454,9 +21935,14 @@ This function is defined in LuaGlobal.Lua. NOTE: This function is old. Use the n
 <div class="sectionbody">
 <div class="paragraph"><p>a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (&#8594;trigger editor&#8594;bug symbol)</p></div>
 </div>
-<h2 id="sendAll">sendAll( what )</h2>
+<h2 id="sendAll">sendAll( command1, command2, &#8230; )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Sends a list of commands to the MUD.</p></div>
+<div class="paragraph"><p>Sends a list of commands to the MUD. You can use this to send some things at once instead of having to use multiple <a href="#send">send()</a> commands one after another.</p></div>
+<h3 id="_example_3">Example:</h3><div style="clear:left"></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>sendAll("stand", "touch shield", "say ha!")</tt></pre>
+</div></div>
 </div>
 <h2 id="debug">debug( arg1 &#8230; argn )</h2>
 <div class="sectionbody">
@@ -21467,9 +21953,15 @@ This function is defined in LuaGlobal.Lua. NOTE: This function is old. Use the n
 <div class="paragraph"><p>Replaces the given wildcard (as a number) with the given text.
 Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$</tt></p></div>
 </div>
-<h2 id="resetFormat">resetFormat()</h2>
+<h2 id="resetFormat">resetFormat (window)</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>resets the user character format to the default.</p></div>
+<div class="paragraph"><p>Resets the user character format to the default. If you don&#8217;t specify a window, it&#8217;ll reset the main console - otherwise it&#8217;ll reset the specified miniConsole.</p></div>
+<h3 id="_example_4">Example:</h3><div style="clear:left"></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>resetFormat() -- resets the format on the main window
+resetFormat("chat console") -- resets the format on the specified window</tt></pre>
+</div></div>
 </div>
 <h2 id="playSoundFile">playSoundFile( fileName )</h2>
 <div class="sectionbody">
@@ -21553,6 +22045,61 @@ resetStopWatch( fightStopWatchID );</tt></pre>
 <h2 id="setWindowWrap">setWindowWrap( windowName, wrapAt )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>sets at what position in the line the console or miniconsole will start word wrap</p></div>
+</div>
+<h2 id="createGauge">createGauge(name, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Creates a gauge that you can use to express completion with. For example, you can use this as your healthbar or xpbar.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<tt>name</tt> is the gauge name. Must be unique - so don&#8217;t have two or more gauges with the same name.
+</p>
+</li>
+<li>
+<p>
+<tt>width</tt> is the width (left to right dimensions) of the gauge.
+</p>
+</li>
+<li>
+<p>
+<tt>height</tt> is the height (top to bottom dimensions) of the gauge.
+</p>
+</li>
+<li>
+<p>
+<tt>Xpos</tt> is the X (so left to right) coordinate of the top-left corner of the gauge. It starts counting from the top-left corner of Mudlets window. So a coordinate of 5 will place it 5 pixels to the right from the top-left part of Mudlet.
+</p>
+</li>
+<li>
+<p>
+<tt>Ypox</tt> is the Y coordinate of the top-left corner of the gauge, relative to the top-left corner of Mudlet.
+</p>
+</li>
+<li>
+<p>
+<tt>gaugeText</tt> is optional text that you can have on the gauge. If you don&#8217;t want to have text, use nil in it&#8217;s place.
+</p>
+</li>
+<li>
+<p>
+<tt>color#</tt> are the RGB color values to color the gauge with.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>See also: <a href="#moveGauge">moveGauge</a>, <a href="#setGauge">setGauge</a>, <a href="#setGaugeText">setGaugeText</a>.
+Examples:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0)
+createGauge("healthBar", 300, 20, 30, 300, nil, "green")
+-- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
+-- The second example is using the same names you'd use for something like fg() or bg().
+
+-- If you wish to have some text on your label, you'll change the nil part and make it look like this:
+createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0)
+-- or
+createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")</tt></pre>
+</div></div>
 </div>
 <h2 id="createMiniConsole">createMiniConsole( name, posX, posY, width, height ) returns true or false</h2>
 <div class="sectionbody">
@@ -30735,17 +31282,54 @@ see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLa
 <div class="paragraph"><p>This function moves window name to the given x/y coordinate. The main screen cannot be moved. Instead you&#8217;ll have to set appropriate border values &#8594; preferences to move the main screen e.g. to make room for chat or information mini consoles, or other GUI elements. In the future moveWindow() will set the border values automatically if the name parameter is omitted.
 see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLabel">createLabel</a>, <a href="#handleWindowResizeEvent">handleWindowResizeEvent</a>, <a href="#resizeWindow">resizeWindow</a>, <a href="#setBorderTop">setBorderTop</a></p></div>
 </div>
+<h2 id="moveGauge">moveGauge (gaugeName, newX, newY)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Moves a gauge created with <a href="#createGauge">createGauge</a> to the new x,y coordinates. Remember the coordinates are relative to the top-left corner of the output window.</p></div>
+<h3 id="_example_5">Example:</h3><div style="clear:left"></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>moveGauge("healthBar", 1200, 400)
+-- This would move the health bar gauge to the location 1200, 400</tt></pre>
+</div></div>
+</div>
 <h2 id="setMiniConsoleFontSize">setMiniConsoleFontSize( name, fontSize )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Sets the font size of the mini console.
 see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLabel">createLabel</a></p></div>
 </div>
+<h2 id="setGauge">setGauge(gaugeName, currentValue, maxValue, gaugeText)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Use this function when you want to change the gauges look according to your values. Typical usage would be in a prompt with your current health or whatever value, and throw in some variables instead of the numbers.</p></div>
+<h3 id="_examples_2">Examples:</h3><div style="clear:left"></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>setGauge("healthBar", 200, 400)</tt></pre>
+</div></div>
+<div class="paragraph"><p>In that example, we&#8217;d change the looks of the gauge named healthBar and make it fill
+to half of its capacity. The height is always remembered.</p></div>
+<div class="paragraph"><p>If you wish to change the text on your gauge, you&#8217;d do the following:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>setGauge("healthBar", 200, 400, "some text")</tt></pre>
+</div></div>
+</div>
+<h2 id="setGaugeText">setGaugeText(gaugeName, gaugeText, color1, color2, color3)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Set the color and text on a custom gauge built by <a href="#createGauge">createGauge</a>.</p></div>
+<h3 id="_example_6">Example:</h3><div style="clear:left"></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
+setGaugeText("healthBar", "HP: 100%", "red")</tt></pre>
+</div></div>
+<div class="paragraph"><p>An empty gaugeText will clear the text entirely. Colors are optional and will default to 0,0,0(black) if not passed as args.</p></div>
+</div>
 <h2 id="setTextFormat">setTextFormat( windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
 <strong>A more convenient way to control the text format in a mini console is to use setFgColor( windowName, r,g,b ), setBold( windowName, true ), setItalics( windowName, true ), setUnderline( windowName, true ) etc.</strong>
-&#8594; <a href="#createMiniConsole">createMiniConsole</a>, <a href="#setBold">setBold</a>, <a href="#setBgColor">setBgColor</a>, <a href="#setFgColor">setFgColor</a>, <a href="#setItalics">setItalics</a>, <a href="#setUnderline">setUnderline</a>
-=== Example:</p></div>
+&#8594; <a href="#createMiniConsole">createMiniConsole</a>, <a href="#setBold">setBold</a>, <a href="#setBgColor">setBgColor</a>, <a href="#setFgColor">setFgColor</a>, <a href="#setItalics">setItalics</a>, <a href="#setUnderline">setUnderline</a></p></div>
+<h3 id="_example_7">Example:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>createMiniConsole( "con1", 0,0,300,100);
@@ -30770,7 +31354,7 @@ echo("con1","This is a test")</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>Sets rgb color values and the transparency for the given label. Colors are from 0 to 255 (0 being black), and transparency is from - to 255 (0 being completely transparent).</p></div>
 </div>
-<h2 id="setlabelClickCallback">setLabelClickCallback( labelName, luaFunctionName, optional any amount of arguments )</h2>
+<h2 id="setLabelClickCallback">setLabelClickCallback( labelName, luaFunctionName, optional any amount of arguments )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>specify a Lua function to be called if the user clicks on the label/image e.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" )
 UPDATE: this function can now pass any number of string or integer number values as additional parameters. These parameters are then used in the callback. Thus you can associate data with the label/button. check the forum for more information on how to use this.
@@ -30892,7 +31476,7 @@ end;</tt></pre>
 <div class="content">
 <pre><tt>tempColorTrigger(9,2,[[selectString(matches[1],1); fg("red"); bg("blue");]] );</tt></pre>
 </div></div>
-<div class="paragraph"><p>This script will re-colorize all text in blue foreground colors on a black background with a red foreground color on a blue background color until another color in the current line is being met. temporary color triggers do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors in a particular context.</p></div>
+<div class="paragraph"><p>This script will re-highlight all text in blue foreground colors on a black background with a red foreground color on a blue background color until another color in the current line is being met. temporary color triggers do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors in a particular context.</p></div>
 </div>
 <h2 id="getFgColor">r,g,b = getFgColor( windowName )</h2>
 <div class="sectionbody">
@@ -31015,7 +31599,7 @@ Default values are linesLimit = 100000 lines with 10000 lines of batch deletion.
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2009-12-15 04:22:37 CEST
+Last updated 2009-12-20 03:20:49 CEST
 </div>
 </div>
 </body>
