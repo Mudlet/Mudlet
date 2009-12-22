@@ -2624,6 +2624,19 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     }      
     
     string luaFunction;
+    if( lua_isfunction( L, 2 ) )
+    {
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+        QString _fun;
+        int timerID = pLuaInterpreter->startTempTimer( luaTimeout, _fun );
+        TTimer * pT = pHost->getTimerUnit()->getTimer( timerID );
+        lua_pushlightuserdata( L, pT );
+        lua_pushvalue( L, 2 );
+        lua_settable( L, LUA_REGISTRYINDEX );
+        lua_pushnumber( L, timerID );
+        return 1;
+    }
     if( ! lua_isstring( L, 2 ) )
     {
         lua_pushstring( L, "wrong argument type" );
@@ -2642,6 +2655,7 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     lua_pushnumber( L, timerID );
     return 1;
 }
+
 
 // tempTrigger( string regex, string function to call ) // one shot timer.
 int TLuaInterpreter::tempTrigger( lua_State *L )
@@ -3914,6 +3928,43 @@ void TLuaInterpreter::adjustCaptureGroups( int x, int a )
         }
     }
 }
+
+bool TLuaInterpreter::call_luafunction( void * pT )
+{
+    lua_State * L = pGlobalLua;
+    lua_pushlightuserdata( L, pT );
+    lua_gettable( L, LUA_REGISTRYINDEX );
+    if( lua_isfunction( L, -1 ) )
+    {
+        int error = lua_pcall( L, 0, LUA_MULTRET, 0 );
+        if( error != 0 )
+        {
+            int nbpossible_errors = lua_gettop(L);
+            for (int i=1; i<=nbpossible_errors; i++)
+            {
+                string e = "";
+                if(lua_isstring( L, i) )
+                {
+                    e = "Lua error:";
+                    e+=lua_tostring( L, i );
+
+                    if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running anonymous Lua function ERROR:"<<e.c_str()>>0;}
+                }
+            }
+        }
+        else
+        {
+            if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK anonymous Lua function ran without errors\n">>0;}
+        }
+        lua_pop( L, lua_gettop( L ) );
+        if( error == 0 )
+            return true;
+        else
+            return false;
+    }
+    return false;
+}
+
 
 bool TLuaInterpreter::call( QString & function, QString & mName )
 {

@@ -2866,6 +2866,7 @@ void dlgTriggerEditor::saveTrigger()
         TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
         if( pT )
         {
+	    QString old_name = pT->getName();
             pT->setName( name );
             pT->setCommand( command );
             bool check = pT->setRegexCodeList( regexList, regexPropertyList );
@@ -2924,9 +2925,26 @@ void dlgTriggerEditor::saveTrigger()
             }
             if( pT->state() )
             {
-                pItem->setIcon( 0, icon);
-                pItem->setText( 0, name );
-
+                if( old_name == "New Trigger" || old_name == "New Trigger Group" )
+                {
+                    QIcon _icon;
+                    if( pT->isFolder() )
+                    {
+                        _icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        _icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    pItem->setIcon( 0, _icon );
+                    pItem->setText( 0, name );
+                    pT->setIsActive( true );
+                }
+                else
+                {
+                    pItem->setIcon( 0, icon);
+                    pItem->setText( 0, name );
+                }
             }
             else
             {
@@ -3209,6 +3227,7 @@ void dlgTriggerEditor::saveAlias()
         TAlias * pT = mpHost->getAliasUnit()->getAlias( triggerID );
         if( pT )
         {
+	    QString old_name = pT->getName();
             pT->setName( name );
             pT->setCommand( substitution );
             pT->setRegexCode( regex );
@@ -3240,9 +3259,26 @@ void dlgTriggerEditor::saveAlias()
 
             if( pT->state() )
             {
-                pItem->setIcon( 0, icon);
-                pItem->setText( 0, name );
-
+                if( old_name == "New Alias" || old_name == "New Alias Group" )
+                {
+                    QIcon _icon;
+                    if( pT->isFolder() )
+                    {
+                        _icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        _icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    pItem->setIcon( 0, _icon );
+                    pItem->setText( 0, name );
+                    pT->setIsActive( true );
+                }
+                else
+                {
+                    pItem->setIcon( 0, icon);
+                    pItem->setText( 0, name );
+                }
             }
             else
             {

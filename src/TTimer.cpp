@@ -173,8 +173,16 @@ void TTimer::compile()
 bool TTimer::setScript( QString & script )
 {
     mScript = script;
-    mNeedsToBeCompiled = true;
-    mOK_code = compileScript();
+    if( script == "" )
+    {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+    }
+    else
+    {
+        mNeedsToBeCompiled = true;
+        mOK_code = compileScript();
+    }
     return mOK_code;
 }
 
@@ -206,7 +214,14 @@ void TTimer::execute()
     if( mudlet::debugMode && ! mIsFolder ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
     if( mIsTempTimer )
     {
-        mpLua->compileAndExecuteScript( mScript );
+        if( mScript == "" )
+        {
+            mpLua->call_luafunction( this );
+        }
+        else
+        {
+            mpLua->compileAndExecuteScript( mScript );
+        }
         mTimer.stop();
         mpHost->mTimerUnit.markCleanup( this );
         return;

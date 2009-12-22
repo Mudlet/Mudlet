@@ -71,6 +71,7 @@ public:
     bool call( QString & function, QString & mName );
     bool callMulti( QString & function, QString & mName );
     bool callConditionFunction( std::string & function, QString & mName );
+    bool call_luafunction( void * );
     bool compile( QString & );
     bool compile( QString & code, QString & error );
     bool compileScript( QString & );
