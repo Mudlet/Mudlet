@@ -452,6 +452,20 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
 }
 
+void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
+{
+    std::string key = buf;
+    QString sheet = sh.c_str();
+    if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        QLabel * pC = mLabelMap[key];
+        if( ! pC ) return;
+        pC->setStyleSheet( sheet );
+        return;
+    }
+}
+
+
 void TConsole::resizeEvent( QResizeEvent * event )
 {
     if( ! mIsDebugConsole && ! mIsSubConsole )

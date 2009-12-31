@@ -3625,6 +3625,36 @@ int TLuaInterpreter::pasteWindow( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setLabelStyleSheet( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    string a2;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        a2 = lua_tostring( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpConsole->setLabelStyleSheet( luaSendText, a2 );
+    return 0;
+}
+
+
 int TLuaInterpreter::appendBuffer( lua_State *L )
 {
     string luaName;
@@ -4394,7 +4424,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempAlias", TLuaInterpreter::tempAlias );
     lua_register( pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias );
     lua_register( pGlobalLua, "killAlias", TLuaInterpreter::killAlias );
-
+    lua_register( pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet );
 
     QString n;
     int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );

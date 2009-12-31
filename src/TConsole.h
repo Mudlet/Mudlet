@@ -102,6 +102,7 @@ public:
       void              insertHTML( QString );
       void              insertText( QString );
       void              insertText( QString, QPoint );
+      void              setLabelStyleSheet( std::string & buf, std::string & sh );
       void              copy();
       void              cut();
       void              paste();

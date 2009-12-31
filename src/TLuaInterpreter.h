@@ -214,6 +214,7 @@ public:
     static int disableAlias( lua_State * );
     static int killAlias( lua_State * );
     static int permBeginOfLineStringTrigger( lua_State * );
+    static int setLabelStyleSheet( lua_State * L );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
