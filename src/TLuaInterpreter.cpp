@@ -2853,7 +2853,7 @@ int TLuaInterpreter::tempAlias( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
-    QString _luaRegex = luaFunction.c_str();
+    QString _luaRegex = luaRegex.c_str();
     int timerID = pLuaInterpreter->startTempAlias( _luaRegex, _luaFunction );
     lua_pushnumber( L, timerID );
     return 1;
@@ -4564,8 +4564,8 @@ int TLuaInterpreter::startPermAlias( QString & name, QString & parent, QString &
             return -1;//parent not found
         }
         pT = new TAlias( pP, mpHost );
-        pT->setRegexCode( regex );
     }
+    pT->setRegexCode( regex );
     pT->setIsFolder( false );
     pT->setIsActive( true );
     pT->setIsTempAlias( false );
@@ -4581,6 +4581,7 @@ int TLuaInterpreter::startTempAlias( QString & regex, QString & function )
 {
     TAlias * pT;
     pT = new TAlias("a", mpHost );
+    pT->setRegexCode( regex );
     pT->setIsFolder( false );
     pT->setIsActive( true );
     pT->setIsTempAlias( true );

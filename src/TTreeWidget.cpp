@@ -159,6 +159,8 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         int childPosition = child.row();
         if( mChildID == 0 )
         {
+            if( ! parent.model() ) goto END;
+            if( ! mpHost ) goto END;
             mChildID = parent.model()->index( start, 0 ).data( Qt::UserRole ).toInt();
         }
         int newParentID = parent.data( Qt::UserRole ).toInt();
@@ -170,7 +172,7 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         {
             mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             TTimer * pTChild = mpHost->getTimerUnit()->getTimer( mChildID );
-            TTimer * pTnewParent = mpHost->getTimerUnit()->getTimer( newParentID );
+            //TTimer * pTnewParent = mpHost->getTimerUnit()->getTimer( newParentID );
             if( pTChild )
             {
                 QIcon icon;
@@ -197,9 +199,11 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                     }
                 }   
                 QTreeWidgetItem * pParent = itemFromIndex( parent );
+                if( ! pParent ) goto END;
                 for( int i=0; i<pParent->childCount(); i++ )
                 {
                     QTreeWidgetItem * pItem = pParent->child(i);
+                    if( ! pItem ) goto END;
                     int id = pItem->data(0, Qt::UserRole).toInt();
                     if( id == mChildID )
                     {
@@ -220,7 +224,7 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         mOldParentID = 0;
         mIsDropAction = false;
     }
-    QTreeWidget::rowsInserted( parent, start, end );
+    END: QTreeWidget::rowsInserted( parent, start, end );
 }
 
 Qt::DropActions TTreeWidget::supportedDropActions() const
