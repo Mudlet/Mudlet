@@ -834,6 +834,7 @@ void TTextEdit::copySelectionToClipboard()
 
     for( int y=mPA.y(); y<=mPB.y()+1; y++ )
     {
+        if( y >= mpBuffer->buffer.size() ) return;
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
         while( x < static_cast<int>( mpBuffer->buffer[y].size() ) )
@@ -841,7 +842,7 @@ void TTextEdit::copySelectionToClipboard()
             text.append( mpBuffer->lineBuffer[y].at(x) );
             if( y >= mPB.y() )
             {
-                if( ( x == mPB.x()-1 ) || ( x >= (int) mpBuffer->buffer[y].size()-1 ) )
+                if( ( x == mPB.x()-1 ) || ( x >= static_cast<int>( mpBuffer->buffer[y].size() - 1 ) ) )
                 {
                     QClipboard * clipboard = QApplication::clipboard();
                     clipboard->setText( text );
