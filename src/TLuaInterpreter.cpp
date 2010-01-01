@@ -2818,7 +2818,7 @@ int TLuaInterpreter::tempRegexTrigger( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L]; 
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
-    QString _luaRegex = luaFunction.c_str();
+    QString _luaRegex = luaRegex.c_str();
     int timerID = pLuaInterpreter->startTempRegexTrigger( _luaRegex, _luaFunction );
     lua_pushnumber( L, timerID );
     return 1;
