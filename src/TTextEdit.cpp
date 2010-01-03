@@ -677,7 +677,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 
 void TTextEdit::paintEvent( QPaintEvent* e )
 {
-    qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
+    //qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" mScrollVEctor="<<mScrollVector<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
     if( mScreenHeight <= 0 || mScreenWidth <= 0 )
     {
         mScreenHeight = height()/mFontHeight;//e->rect().height();
