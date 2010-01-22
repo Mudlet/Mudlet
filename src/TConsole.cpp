@@ -1611,9 +1611,9 @@ void TConsole::setBgColor( int r, int g, int b )
 
 void TConsole::printCommand( QString & msg )
 {
-    msg.append("\n");
     if( mTriggerEngineMode )
     {
+        msg.append("\n");
         int lineBeforeNewContent = buffer.getLastLineNumber();
         if( lineBeforeNewContent >= 0 )
         {
@@ -1637,17 +1637,34 @@ void TConsole::printCommand( QString & msg )
     }
     else
     {
-        int lineBeforeNewContent = buffer.size()-1;
-        if( lineBeforeNewContent-1 >= 0 )
+        int lineBeforeNewContent = buffer.size()-2;
+        if( lineBeforeNewContent >= 0 )
         {
-            if( buffer.promptBuffer[lineBeforeNewContent-1] == true )
+            int promptEnd = buffer.buffer[lineBeforeNewContent].size();
+            if( promptEnd < 0 )
             {
-                deleteLine( lineBeforeNewContent );
-                buffer.newLines--;
+                promptEnd = 0;
             }
-            else
-                qDebug()<<buffer.promptBuffer;
+            if( buffer.promptBuffer[lineBeforeNewContent] == true )
+            {
+                QPoint P( promptEnd, lineBeforeNewContent );
+                TChar format;
+                format.fgR = mCommandFgColor.red();
+                format.fgG = mCommandFgColor.green();
+                format.fgB = mCommandFgColor.blue();
+                format.bgR = mCommandBgColor.red();
+                format.bgG = mCommandBgColor.green();
+                format.bgB = mCommandBgColor.blue();
+                buffer.insertInLine( P, msg, format );
+                console->needUpdate( lineBeforeNewContent, lineBeforeNewContent+1 );
+                //nachfolgende cmd prints werden dadurch ganz normal untereinander geschrieben, anstatt alle auf eine zeile. Die letze leerzeile wird deshalb nicht gelöscht, damit \n am Ende der Zeile nicht auf dem Bildschrim erscheint
+                buffer.promptBuffer[lineBeforeNewContent] = false;
+                //console->updateLastLine();
+                //console2->updateLastLine();
+                return; 
+            }
         }
+        msg.append("\n");
         print( msg, mCommandFgColor.red(), mCommandFgColor.green(), mCommandFgColor.blue(), mCommandBgColor.red(), mCommandBgColor.green(), mCommandBgColor.blue() );
     }
 }

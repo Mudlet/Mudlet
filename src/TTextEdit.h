@@ -55,6 +55,7 @@ public:
     void              drawForeground(QPainter &, const QRect & );
     void              drawFrame(QPainter &, const QRect & );
     void              drawBackground( QPainter &, const QRect &, const QColor & );
+    void              updateLastLine();
     void              drawCharacters( QPainter & painter,
                                       const QRect & rect,
                                       QString & text,

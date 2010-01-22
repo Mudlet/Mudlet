@@ -105,20 +105,22 @@ void TTextEdit::forceUpdate()
 
 void TTextEdit::needUpdate( int y1, int y2 )
 {
-    forceUpdate();
+    int top = imageTopLine();
+    int bottom = y2-y1;
 
-    //TODO: implemente this properly
-    /*
-    int current = imageTopLine();
-    if( y1 < current || y2 < current ) return;
-    if( (y1 > current + mScreenHeight) || (y2 > current + mScreenHeight) ) return;
-    QRect rect;
-    rect.setX( 0 );
-    rect.setY( abs(current-y1)*mFontHeight );
-    rect.setWidth( mScreenWidth * mFontWidth );
-    rect.setHeight(abs(y2-y1)*mFontHeight );
-    qDebug()<<"needUpdate() updating rect="<<rect;
-    update( rect );*/
+    if( top > 0 )
+    {
+        top = (y1 - top) % mScreenHeight;
+    }
+    else
+    {
+        top = y1 % mScreenHeight;
+    }
+
+    QRect r( 0, top*mFontHeight, mScreenWidth*mFontWidth, bottom*mFontHeight );
+    mForceUpdate = true;
+    update( r );
+    qDebug()<<"y1="<<y1<<" mScreenHeight="<<mScreenHeight<<" rect:"<<r;
 }
 
 void TTextEdit::focusInEvent ( QFocusEvent * event )
@@ -498,6 +500,12 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
     mScrollVector = 0;
 }
 
+void TTextEdit::updateLastLine()
+{
+    QRect r( 0, mScreenHeight-2*mFontHeight, mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
+    mForceUpdate = true;
+    update( r );
+}
 
 void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
 {
