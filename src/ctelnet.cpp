@@ -696,9 +696,7 @@ void cTelnet::setATCPVariables( QString & msg )
     }
     var.remove( '.' );
     arg.remove( '\n' );
-qDebug()<<"calling lua";
     mpHost->mLuaInterpreter.setAtcpTable( var, arg );
-qDebug()<<"out of atcp";
 }
 
 void cTelnet::atcpComposerCancel()

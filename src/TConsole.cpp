@@ -1643,6 +1643,7 @@ void TConsole::printCommand( QString & msg )
             if( buffer.promptBuffer[lineBeforeNewContent-1] == true )
             {
                 deleteLine( lineBeforeNewContent );
+                buffer.newLines--;
             }
             else
                 qDebug()<<buffer.promptBuffer;
