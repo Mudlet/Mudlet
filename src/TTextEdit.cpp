@@ -504,7 +504,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     if( ( mScrollVector >= mScreenHeight ) || mForceUpdate )
     {
         mScrollVector = 0;
-        mForceUpdate = false;
+        //mForceUpdate = false;
     }
     if( ( ( rect.height() < this->rect().height() ) && (rect.width() < this->rect().width() ) ) )
     {
@@ -538,7 +538,10 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     int y_topLeft = P_topLeft.y();
     int x_bottomRight = P_bottomRight.x();
     int y_bottomRight = P_bottomRight.y();
-        if( x_bottomRight > mScreenWidth * mFontWidth ) x_bottomRight = mScreenWidth * mFontWidth;
+    if( x_bottomRight > mScreenWidth * mFontWidth )
+    {
+        x_bottomRight = mScreenWidth * mFontWidth;
+    }
     
     int x1 = x_topLeft / mFontWidth;
     int y1 = y_topLeft / mFontHeight;
@@ -560,7 +563,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     {
         invers = true;
     }
-    
+    int from = 0;
     if( mScrollVector > 0 )
     {
         if( mScrollUp )
@@ -575,11 +578,6 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
             screenPixmap = mScreenMap.copy( 0, 0, mScreenWidth*mFontWidth, (mScreenHeight-mScrollVector)*mFontHeight );
             p.drawPixmap( 0, mScrollVector*mFontHeight, screenPixmap );
         }
-    }
-    
-    int from = 0;
-    if( mScrollVector > 0 )
-    {
         from = mScreenHeight-mScrollVector-1;
     }
 
@@ -673,6 +671,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
     painter.drawPixmap( 0, 0, pixmap );
     mScreenMap = pixmap.copy();
     mScrollVector = 0;
+    mForceUpdate = false;
 }
 
 void TTextEdit::paintEvent( QPaintEvent* e )
@@ -684,7 +683,11 @@ void TTextEdit::paintEvent( QPaintEvent* e )
         mScreenWidth = 100;//e->rect().width();
     }
     QPainter painter( this );
-    if( ! painter.isActive() ) return;
+
+    if( ! painter.isActive() )
+    {
+        return;
+    }
     const QRect & rect = e->rect();
 
     QRect borderRect = QRect( 0, mScreenHeight*mFontHeight, rect.width(), rect.height() );
@@ -726,9 +729,9 @@ void TTextEdit::highlight()
         QRect rectFirstLine( mPA.x()*mFontWidth, (mPA.y()-imageTopLine())*mFontHeight, (mPB.x()-mPA.x())*mFontWidth, mFontHeight );
         newRegion += rectFirstLine;
     }
-    mSelectedRegion = mSelectedRegion - newRegion;
-    unHighlight( mSelectedRegion );
-     
+    QRegion tmpR = mSelectedRegion.subtracted( newRegion );
+    unHighlight( tmpR );
+    mForceUpdate = true;
     mHighlight_on = true;
     mInversOn = true;
     mSelectedRegion = newRegion;
@@ -737,6 +740,7 @@ void TTextEdit::highlight()
 
 void TTextEdit::unHighlight( QRegion & region )
 {
+    mForceUpdate = true;
     mHighlight_on = false;
     mInversOn = false;
     repaint( region );
@@ -924,7 +928,15 @@ int TTextEdit::imageTopLine()
 { 
     if( mCursorY > mScreenHeight  )
     {
-        return mCursorY - mScreenHeight + 1;
+        //return mCursorY - mScreenHeight + 1;
+        if( mpBuffer->lineBuffer.back() == "" )
+        {
+            return mCursorY - mScreenHeight;
+        }
+        else
+        {
+            return mCursorY - mScreenHeight + 1;
+        }
     }
     else
     {   

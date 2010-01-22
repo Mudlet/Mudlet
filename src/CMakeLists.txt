@@ -67,6 +67,9 @@ TSplitterHandle.cpp
 dlgNotepad.cpp
 THighlighter.cpp
 dlgTriggerPatternEdit.cpp
+dlgComposer.cpp
+TArea.cpp
+TMap.cpp
 TLabel.cpp)
 
 SET(mudlet_UIS ui/connection_profiles.ui
@@ -90,6 +93,7 @@ ui/keybindings_main_area.ui
 ui/color_trigger.ui
 ui/notes_editor.ui
 ui/trigger_pattern_edit.ui
+ui/composer.ui
 ui/profile_preferences.ui)
 
 SET(mudlet_MOC_HDRS mudlet.h
@@ -128,6 +132,10 @@ TSplitterHandle.h
 dlgNotepad.h
 THighlighter.h
 dlgTriggerPatternEdit.h
+dlgComposer.h
+TRoom.h
+TArea.h
+TMap.h
 TLabel.h)
 
 FIND_PACKAGE(Qt4 REQUIRED)

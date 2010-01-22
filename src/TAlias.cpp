@@ -57,16 +57,11 @@ TAlias::TAlias( QString name, Host * pHost )
 
 TAlias::~TAlias()
 {
-    if( mpParent == 0 )
+    if( ! mpHost )
     {
-        if( ! mpHost )
-        {
-            qDebug() << "ERROR: TAlias::**UN**registerTrigger() pHost=0";
-            return;
-        }
-        mpHost->getAliasUnit()->unregisterAlias(this);     
+        return;
     }
-    
+    mpHost->getAliasUnit()->unregisterAlias(this);
 }
 
 void TAlias::setName( QString name )

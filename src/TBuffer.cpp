@@ -995,9 +995,10 @@ void TBuffer::translateToPlainText( std::string & s )
         }
         const QString nothing = "";
         TChar stdCh;
-        if( ch == '\n' )
+        if( ( ch == '\n' ) || ( ch == '\xff') )
         {
             int line = lineBuffer.size()-1;
+
             mpHost->mpConsole->runTriggers( line );
 	    if( lineBuffer.size()-1 == line )
             {
@@ -1011,11 +1012,19 @@ void TBuffer::translateToPlainText( std::string & s )
 	    else
                 newLines += 1+wrap( line );
 
+            if( ch == '\xff' )
+            {
+                promptBuffer[line] = true;
+            }
+
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer << nothing;
             QString time = "-----";
             timeBuffer << time;
+
+            promptBuffer.push_back( false );
+
             firstChar = true;
             msPos++;
             if( static_cast<int>(buffer.size()) > mLinesLimit )
@@ -1072,6 +1081,7 @@ void TBuffer::append( QString & text,
         newLine.push_back( c );
         buffer.push_back( newLine );
         lineBuffer.push_back(QString());
+        promptBuffer.push_back( false );
         timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
         last = 0;
     }
@@ -1087,6 +1097,7 @@ void TBuffer::append( QString & text,
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back( QString() );
+            promptBuffer.push_back( false );
             QString time = "-----";
             timeBuffer << time;
             mLastLine++;
@@ -1126,6 +1137,7 @@ void TBuffer::append( QString & text,
                         lineBuffer.append( nothing );
                     QString time = "-----";
                     timeBuffer << time;
+                    promptBuffer.push_back( false );
                     mLastLine++;
                     newLines++;
                     break;
@@ -1171,6 +1183,7 @@ void TBuffer::appendLine( QString & text,
         newLine.push_back( c );
         buffer.push_back( newLine );
         lineBuffer.push_back(QString());
+        promptBuffer.push_back( false );
         timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
         last = 0;
     }
@@ -1368,6 +1381,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
             TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
             newLine.push_back( c );
             buffer.push_back( newLine );
+            promptBuffer.push_back( false );
             const QString nothing = "";
             lineBuffer.insert(y, nothing );
             timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "-   ";
@@ -1571,19 +1585,20 @@ void TBuffer::appendBuffer( TBuffer chunk )
 int TBuffer::calcWrapPos( int line, int begin, int end )
 {
     const QString lineBreaks = ",.- ";
-    if( lineBuffer.size() < line ) return -1;
-    if( lineBuffer[line].size() < end )
+    if( lineBuffer.size() < line ) return 0;
+    int lineSize = static_cast<int>(lineBuffer[line].size())-1;
+    if( lineSize < end )
     {
-        end = lineBuffer[line].size()-1;
+        end = lineSize;
     }
     for( int i=end; i>=begin; i-- )
     {
-        if( lineBreaks.indexOf(lineBuffer[line][i]) > -1 )
+        if( lineBreaks.indexOf( lineBuffer[line].at(i) ) > -1 )
         {
             return i;
         }
     }
-    return -1;
+    return 0;
 }
 
 inline int TBuffer::wrap( int startLine )
@@ -1611,28 +1626,29 @@ inline int TBuffer::wrap( int startLine )
             }
             indent = mWrapIndent;
         }
-        int lastSpace = -1;
-        int wrapPos = -1;
+        int lastSpace = 0;
+        int wrapPos = 0;
         int length = buffer[i].size();
         for( int i2=0; i2<static_cast<int>(buffer[i].size());  )
         {
             if( length-i2 > mWrapAt-indent )
             {
                 wrapPos = calcWrapPos( i, i2, i2+mWrapAt-indent );
-                if( wrapPos > -1 )
+                if( wrapPos > 0 )
                 {
                     lastSpace = wrapPos;
                 }
                 else
                 {
-                    lastSpace = -1;
+                    lastSpace = 0;
                 }
             }
             else
             {
-                lastSpace = -1;
+                lastSpace = 0;
             }
-            for( int i3=0; i3<mWrapAt-indent; i3++ )
+            int __wrapPos = lastSpace == 0 ? mWrapAt-indent : lastSpace;
+            for( int i3=0; i3<__wrapPos; i3++ )
             {
                 if( lastSpace > 0 )
                 {
@@ -1670,6 +1686,7 @@ inline int TBuffer::wrap( int startLine )
         buffer.pop_back();
         lineBuffer.pop_back();
         timeBuffer.pop_back();
+        promptBuffer.pop_back();
     }
 
     newLines -= lineCount;
@@ -1686,6 +1703,7 @@ inline int TBuffer::wrap( int startLine )
     {
         lineBuffer.append( tempList[i] );
         timeBuffer.append( timeList[i] );
+        promptBuffer.push_back( false );//optimierung: prompts werden nicht gewrappt
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -1779,6 +1797,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         buffer.pop_back();    
         lineBuffer.pop_back();
         timeBuffer.pop_back();
+        promptBuffer.pop_back();
     }
     
     newLines -= lineCount;
@@ -1795,6 +1814,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     {
         lineBuffer.append( tempList[i] );
         timeBuffer.append( timeList[i] );
+        promptBuffer.push_back( false );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -1813,6 +1833,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         if( i > startLine ) break; //only wrap one line of text
 
         assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
+        assert( static_cast<int>(buffer.size()) == promptBuffer.size() );
         std::deque<TChar> newLine;
         QString lineText;
 
@@ -1884,6 +1905,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     buffer.erase( buffer.begin()+startLine );
     lineBuffer.removeAt( startLine );
     timeBuffer.removeAt( startLine );
+    promptBuffer.removeAt( startLine );
 
     int insertedLines = queue.size()-1;
 
@@ -1899,6 +1921,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     {
         lineBuffer.insert( startLine+i, tempList[i] );
         timeBuffer.insert( startLine+i, QTime::currentTime().toString("hh:mm:ss.zzz")+"   " );
+        promptBuffer.insert( startLine+i, false);
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -2070,6 +2093,7 @@ void TBuffer::clear()
     buffer.push_back( newLine );
     lineBuffer << QString();
     timeBuffer << "   ";
+    promptBuffer.push_back( false );
 }
 
 bool TBuffer::deleteLine( int y )
@@ -2082,6 +2106,7 @@ void TBuffer::shrinkBuffer()
     for( int i=0; i < mBatchDeleteSize; i++ )
     {
         lineBuffer.pop_front();
+        promptBuffer.pop_front();
         timeBuffer.pop_front();
         buffer.pop_front();
     }
@@ -2101,6 +2126,7 @@ bool TBuffer::deleteLines( int from, int to )
         {
             lineBuffer.removeAt( i ); 
             timeBuffer.removeAt( i );
+            promptBuffer.removeAt( i );
         }
         
         int i = (int)buffer.size();

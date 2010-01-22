@@ -77,16 +77,11 @@ TAction::TAction( QString name, Host * pHost )
 
 TAction::~TAction()
 {
-    if( mpParent == 0 )
+    if( ! mpHost )
     {
-        if( ! mpHost )
-        {
-            qDebug() << "ERROR: TAction::**UN**registerTrigger() pHost=0";
-            return;
-        }
-        mpHost->getActionUnit()->unregisterAction(this);     
+        return;
     }
-    
+    mpHost->getActionUnit()->unregisterAction(this);
 }
 
 

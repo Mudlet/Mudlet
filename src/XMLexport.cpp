@@ -117,7 +117,9 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "wrapIndentCount", QString::number(pT->mWrapIndentCount) );
     writeTextElement( "commandSeperator", pT->mCommandSeperator );
     writeTextElement( "mFgColor", pT->mFgColor.name() );
-    writeTextElement( "mBgColor", pT->mBgColor.name() );    
+    writeTextElement( "mBgColor", pT->mBgColor.name() );
+    writeTextElement( "mCommandFgColor", pT->mCommandFgColor.name() );
+    writeTextElement( "mCommandBgColor", pT->mCommandBgColor.name() );
     writeTextElement( "mBlack", pT->mBlack.name() );    
     writeTextElement( "mLightBlack", pT->mLightBlack.name() );    
     writeTextElement( "mRed", pT->mRed.name() );    
@@ -136,7 +138,7 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mLightWhite", pT->mLightWhite.name() );    
     writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );    
     writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() ); 
-    writeTextElement( "mCommandSeperator", pT->mCommandSeperator );
+    writeTextElement( "mCommandSeparator", pT->mCommandSeparator );
 
 
     writeEndElement(); // end Host tag

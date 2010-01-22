@@ -59,15 +59,12 @@ TTimer::TTimer( QString name, QTime time, Host * pHost )
 TTimer::~TTimer()
 {
     mTimer.stop();
-    if( mpParent == 0 )
+    if( ! mpHost )
     {
-        if( ! mpHost )
-        {
-            return;
-        }
-        mpHost->getTimerUnit()->unregisterTimer( this );
-        mudlet::self()->unregisterTimer( this, &mTimer );
+        return;
     }
+    mpHost->getTimerUnit()->unregisterTimer( this );
+    mudlet::self()->unregisterTimer( this, &mTimer );
 }
 
 bool TTimer::registerTimer()
@@ -205,13 +202,23 @@ bool TTimer::compileScript()
     }
 }
 
+bool TTimer::checkRestart()
+{
+    return ( ! mIsTempTimer
+            && ! isOffsetTimer()
+            && isActive()
+            && ! mIsFolder );
+}
+
 void TTimer::execute()
 {
-    if( ! isActive() )
+    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
+    if( ! isActive() || mIsFolder )
     {
+        mTimer.stop();
         return;
     }
-    if( mudlet::debugMode && ! mIsFolder ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
+
     if( mIsTempTimer )
     {
         if( mScript == "" )
@@ -254,11 +261,14 @@ void TTimer::execute()
     {
         if( ! compileScript() )
         {
+            disableTimer();
             return;
         }
     }
-    mpLua->call( mFuncName, mName );
-
+    if( ! mpLua->call( mFuncName, mName ) )
+    {
+        mTimer.stop();
+    }
 }
 
 bool TTimer::canBeUnlocked( TTimer * pChild )
@@ -289,7 +299,10 @@ void TTimer::enableTimer( qint64 id )
         {
             if( activate() )
             {
-                mTimer.start();
+                if( mScript.size() > 0 )
+                {
+                    mTimer.start();
+                }
             }
             else
             {
@@ -335,7 +348,10 @@ void TTimer::enableTimer()
     {
         if( activate() )
         {
-            mTimer.start();
+            if( mScript.size() > 0 )
+            {
+                mTimer.start();
+            }
         }
         else
         {

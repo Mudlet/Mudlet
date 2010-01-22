@@ -75,6 +75,7 @@ public:
     bool compile( QString & );
     bool compile( QString & code, QString & error );
     bool compileScript( QString & );
+    void setAtcpTable( QString &, QString & );
     bool compileAndExecuteScript( QString & );
     //void execLuaCode( QString code );
     QString get_lua_string( QString & stringName );

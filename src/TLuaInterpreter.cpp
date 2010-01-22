@@ -3959,6 +3959,24 @@ void TLuaInterpreter::adjustCaptureGroups( int x, int a )
     }
 }
 
+void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
+{
+    lua_State * L = pGlobalLua;
+    lua_getglobal( L, "atcp" ); //defined in LuaGlobal.lua
+    lua_pushstring( L, var.toLatin1().data() );
+    lua_pushstring( L, arg.toLatin1().data() );
+    lua_rawset( L, -3 );
+    lua_pop( L, 1 );
+
+    TEvent event;
+    event.mArgumentList.append( var );
+    event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    event.mArgumentList.append( arg );
+    event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->raiseEvent( & event );
+}
+
 bool TLuaInterpreter::call_luafunction( void * pT )
 {
     lua_State * L = pGlobalLua;
@@ -4173,6 +4191,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
         }
         else
         {
+            qDebug()<<"calling func:"<<function<<"() args="<<pE->mArgumentList;
             lua_pushstring( L, pE->mArgumentList[i].toLatin1().data() );
         }
     }

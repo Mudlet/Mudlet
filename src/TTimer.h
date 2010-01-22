@@ -56,6 +56,7 @@ public:
     void             setName( QString name );
     QTime &          getTime()                       { return mTime; }
     void             compile();
+    bool             checkRestart();
     bool             compileScript();
     void             execute();
     void             setTime( QTime time );         

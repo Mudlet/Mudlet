@@ -35,6 +35,7 @@
 #include "Host.h"
 #include <QMdiArea>
 #include "TConsole.h"
+#include "ui_main_window.h"
 
 class QAction;
 class QMenu;
@@ -43,7 +44,9 @@ class EAction;
 class TConsole;
 class TLabel;
 
-class mudlet : public QMainWindow
+
+
+class mudlet : public QMainWindow, public Ui::MainWindow
 {
 Q_OBJECT
 
@@ -106,6 +109,7 @@ public:
    QMap<Host *, TLabel *>        mHostLabelMap;
    QIcon *                       testicon; 
    bool                          mShowMenuBar;
+   bool                          mShowToolbar;
    bool                          isGoingDown() { return mIsGoingDown; }
    int                           mMainIconSize;
    int                           mTEFolderIconSize;
@@ -133,6 +137,11 @@ public slots:
    void                          toggleFullScreenView(); 
    void                          slot_userToolBar_orientation_changed(Qt::Orientation); 
    void                          slot_show_about_dialog();
+   void                          slot_show_help_dialog_video();
+   void                          slot_show_help_dialog_forum();
+   void                          slot_show_help_dialog_irc();
+   void                          slot_show_help_dialog_download();
+
    void                          slot_multi_view();
    void                          slot_stopAllTriggers();
    void                          slot_userToolBar_triggered(QAction*);   
@@ -142,6 +151,7 @@ public slots:
    void                          slot_send_login();
    void                          slot_send_pass();
    void                          slot_replay();
+   void                          slot_disconnect();
    void                          slot_notes();
    void                          slot_reconnect();
    void                          slot_close_profile_requested(int);

@@ -100,16 +100,11 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 
 TTrigger::~TTrigger()
 {
-    if( mpParent == 0 )
+    if( ! mpHost )
     {
-        if( ! mpHost )
-        {
-            qDebug() << "ERROR: TTrigger::*UN*-registerTrigger() pHost=0";
-            return;
-        }
-        mpHost->getTriggerUnit()->unregisterTrigger( this );     
+        return;
     }
-        
+    mpHost->getTriggerUnit()->unregisterTrigger( this );
 }
 
 void TTrigger::setName( QString name )
@@ -125,6 +120,9 @@ void TTrigger::setName( QString name )
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
 bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList )
 {
+    regexList.replaceInStrings(" \n", " ");// \n might have slipped in the pattern because of copy and paste and lead to unmatching triggers. \n cannot be seen in the pattern list -> hard to debug
+    regexList.replaceInStrings("\n", " ");
+
     mRegexCodeList.clear();
     mRegexMap.clear();
     mRegexCodePropertyList.clear();

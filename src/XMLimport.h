@@ -33,6 +33,8 @@ class TAction;
 class TScript;
 class TKey;
 
+
+
 class XMLimport : public QXmlStreamReader
 {
 
@@ -53,6 +55,9 @@ private:
     void      readActionPackage();
     void      readScriptPackage();
     void      readKeyPackage();
+    void      readUnknownMapElement();
+    void      readMap();
+    void      readRoom();
 
     void      readUnknownHostElement();
     void      readUnknownTriggerElement();

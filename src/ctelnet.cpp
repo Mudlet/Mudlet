@@ -25,6 +25,7 @@
 #include <QTcpSocket>
 #include "mudlet.h"
 #include "TDebug.h"
+#include "dlgComposer.h"
 
 #ifdef DEBUG
 #undef DEBUG
@@ -47,6 +48,10 @@ cTelnet::cTelnet( Host * pH )
 , mGA_Driver( false )
 , mCommands( 0 )
 , mAlertOnNewData( true )
+, enableATCP( false )
+, mMCCP_version_1( false )
+, mMCCP_version_2( false )
+, mpComposer( 0 )
 {
     if( mpHost )
     {
@@ -365,31 +370,33 @@ void cTelnet::sendTelnetOption (char type, char option)
 
 
 
-void cTelnet::processTelnetCommand (const string &command)
+void cTelnet::processTelnetCommand( const string & command )
 {
-  string ayt_response = "delay\r\n";
+  const string ayt_response = "delay\r\n";
   char ch = command[1];
-  int option;
-  switch(ch) 
+  char option;
+  switch( ch )
   {
-      case TN_AYT: 
-          //FIXME
-          cout << "WARNING: FIXME: cTelnet::processTelnetCommand() command = TN_AYT"<<endl;
-          break;
-
       case TN_GA:
+      {
           #ifdef DEBUG
             cout << "cTelnet::processTelnetCommand() command = TN_GA"<<endl;
           #endif
           recvdGA = true;
           break;
-
+      }
       case TN_WILL:
+      {
           //server wants to enable some option (or he sends a timing-mark)...
           option = command[2];
-          #ifdef DEBUG
-            cout << "cTelnet::processTelnetCommand() command = TN_WILL option="<<(int)option<<endl;
-          #endif
+          if( option == static_cast<char>(200) ) // ATCP support
+          {
+              cout << "ATCP enabled" << endl;
+              enableATCP = true;
+              sendTelnetOption( TN_DO, 200 );
+              break;
+          }
+
           heAnnouncedState[option] = true;
           if( triedToEnable[option] )
           {
@@ -433,13 +440,13 @@ void cTelnet::processTelnetCommand (const string &command)
                            {
                                mMCCP_version_1 = true;
                                //MCCP->setMCCP1(true);
-                               cout << "MCCP v1 enabled." << endl;
+                               cout << "MCCP v1 negotiated." << endl;
                            }
                            else 
                            {
                                mMCCP_version_2 = true;
                                //MCCP->setMCCP2( true );
-                               cout << "MCCP v2 enabled !" << endl;
+                               cout << "MCCP v2 negotiated!" << endl;
                            }
                        }
                    }
@@ -448,11 +455,13 @@ void cTelnet::processTelnetCommand (const string &command)
                        sendTelnetOption( TN_DONT, option );
                        hisOptionState[option] = false;
                    }
-            //}    
+               }
           }
           break;
+      }
 
       case TN_WONT:
+      {
           
           //server refuses to enable some option...
           #ifdef DEBUG
@@ -489,11 +498,19 @@ void cTelnet::processTelnetCommand (const string &command)
               heAnnouncedState[option] = true;
           }
           break;
+      }
 
       case TN_DO:
-          
+      {
           //server wants us to enable some option
           option = command[2];
+          if( option == static_cast<char>(200) ) // ATCP support
+          {
+            cout << "TELNET IAC DO ATCP" << endl;
+            enableATCP = true;
+            sendTelnetOption( TN_WILL, 200 );
+            break;
+          }
               //cout << "server wants us to enable telnet option " << (int)option << "(TN_DO + "<< (int)option<<")"<<endl;
           if(option == OPT_TIMING_MARK)
           {
@@ -531,9 +548,9 @@ void cTelnet::processTelnetCommand (const string &command)
               setDisplayDimensions();
           }
           break;
-
+      }
       case TN_DONT:
-          
+      {
           //only respond if value changed or if this option has not been announced yet
               //cout << "cTelnet::processTelnetCommand() command = TN_DONT"<<endl;
           option = command[2];
@@ -544,18 +561,35 @@ void cTelnet::processTelnetCommand (const string &command)
           }
           myOptionState[option] = false;
           break;
-
+      }
       case TN_SB:
-          
+      {
           //subcommand - we analyze and respond...
-              //cout << "cTelnet::processTelnetCommand() command = TN_SB"<<endl;
-         
           option = command[2];
-          
-          switch (option) //switch 2
+          if( option == static_cast<char>(200) )
+          {
+              QString _m = command.c_str();
+              if( command.size() < 6 ) return;
+              _m = _m.mid( 3, command.size()-5 );
+              setATCPVariables( _m );
+              if( _m.startsWith("Auth.Request") )
+              {
+                  string _h;
+                  _h += TN_IAC;
+                  _h += TN_SB;
+                  _h += 200;
+                  _h += "hello Mudlet 1.0.6\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n";
+                  _h += TN_IAC;
+                  _h += TN_SE;
+                  socketOutRaw( _h );
+              }
+
+              return;
+          }
+          switch( option ) //switch 2
           {
               case OPT_STATUS:
-                  
+              {
                   //see OPT_TERMINAL_TYPE for explanation why I'm doing this
                   if( true )
                   {
@@ -591,9 +625,10 @@ void cTelnet::processTelnetCommand (const string &command)
                       }
                   }
                   break;
+              }
           
               case OPT_TERMINAL_TYPE:
-   
+              {
                   cout << "server sends telnet option terminal type"<<endl;
                   if( myOptionState[static_cast<int>(OPT_TERMINAL_TYPE)] )
                   {
@@ -614,10 +649,84 @@ void cTelnet::processTelnetCommand (const string &command)
                   }
                   //other cmds should not arrive, as they were not negotiated.
                   //if they do, they are merely ignored
+              }
           };//end switch 2
           //other commands are simply ignored (NOP and such, see .h file for list)
       }
   };//end switch 1
+}
+
+void cTelnet::setATCPVariables( QString & msg )
+{
+    qDebug()<<"msg<"<<msg<<">";
+    QString var;
+    QString arg;
+    bool single = true;
+    if( msg.indexOf( '\n' ) > -1 )
+    {
+        var = msg.section( "\n", 0, 0 );
+        arg = msg.section( "\n", 1 );
+        single = false;
+    }
+    else
+    {
+        var = msg.section( " ", 0, 0 );
+        arg = msg.section( " ", 1 );
+    }
+
+    if( var.startsWith("Client.Compose") )
+    {
+        QString title;
+        if( ! single )
+            title = var.section( " ", 1 );
+        else
+        {
+            title = arg;
+            arg = "";
+        }
+        if( mpComposer )
+        {
+            return;
+        }
+        mpComposer = new dlgComposer( mpHost );
+        mpComposer->init( title, arg );
+        mpComposer->raise();
+        mpComposer->show();
+        return;
+    }
+    var.remove( '.' );
+    arg.remove( '\n' );
+    mpHost->mLuaInterpreter.setAtcpTable( var, arg );
+}
+
+void cTelnet::atcpComposerCancel()
+{
+    if( ! mpComposer ) return;
+    mpComposer->close();
+    mpComposer = 0;
+    string msg = "*q\nno\n";
+    socketOutRaw( msg );
+}
+
+void cTelnet::atcpComposerSave( QString txt )
+{
+    //olesetbuf \n <text>
+    string _h;
+    _h += TN_IAC;
+    _h += TN_SB;
+    _h += 200;
+    _h += "olesetbuf \n ";
+    _h += txt.toLatin1().data();
+    _h += '\n';
+    _h += TN_IAC;
+    _h += TN_SE;
+    socketOutRaw( _h );
+    _h.clear();
+    _h += "*s\n";
+    socketOutRaw( _h );
+    if( ! mpComposer ) return;
+    mpComposer->close();
+    mpComposer = 0;
 }
 
 /*string cTelnet::getCurrentTime()
@@ -638,9 +747,6 @@ void cTelnet::processTelnetCommand (const string &command)
 
 void cTelnet::postMessage( QString msg )
 {
-#ifdef DEBUG 
-    qDebug() << " POSTING to message to GUI: " << msg;
-#endif
     //mudlet::self()->printSystemMessage( mpHost, msg );
     if( ! msg.endsWith( '\n' ) )
     {
@@ -664,7 +770,7 @@ void cTelnet::gotPrompt( string & mud_data )
     mpPostingTimer->stop();
     mMudData += mud_data;
     
-    if( mUSE_IRE_DRIVER_BUGFIX )
+    /*if( mUSE_IRE_DRIVER_BUGFIX )
     {
         //////////////////////////////////////////////////////////////////////
         //
@@ -701,7 +807,7 @@ void cTelnet::gotPrompt( string & mud_data )
         }
         //
         ////////////////////////////   
-    }
+    }*/
     
     postData();
     mMudData = "";
@@ -856,7 +962,7 @@ void cTelnet::readPipe()
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
-                cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
+                cout <<" SERVER SENDS telnet command "<<(int)ch<<endl;
             #endif
             if (! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
@@ -997,6 +1103,7 @@ void cTelnet::handle_socket_signal_readyRead()
 
     string cleandata = "";
     recvdGA = false;
+    bool atcp_msg = false;
     for( int i = 0; i < datalen; i++ )
     {
         char ch = buffer[i];
@@ -1005,7 +1112,7 @@ void cTelnet::handle_socket_signal_readyRead()
         {
             char _ch = ch;
             #ifdef DEBUG
-                cout <<" SERVER SENDS telnet command "<<(int)_ch<<endl;
+                cout <<" SERVER SENDS telnet command "<<(unsigned int)_ch<<endl;
             #endif
             if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
@@ -1036,7 +1143,6 @@ void cTelnet::handle_socket_signal_readyRead()
             }
             else if( iac && (!insb) && (ch == TN_SB) )
             {
-                //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
                 iac = false;
                 insb = true;
@@ -1050,43 +1156,64 @@ void cTelnet::handle_socket_signal_readyRead()
             }
             else if( insb )
             {
+                /*if( buffer[i] == static_cast<char>(200) )
+                {
+                    cout << "got atcp? ";
+                    if( i > 1 )
+                    {
+                        if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) )
+                        {
+                            atcp_msg = true;
+                            cout << " yes"<<endl;
+                        }
+                        else
+                            cout << "no"<<endl;
+                    }
+                }
+                else*/
                 if( ! mNeedDecompression )
                 {
-                    cout << " looking for MCCP to initialize"<<endl;
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
                     // IAC SB COMPRESS2 IAC SE for MCCP v2    
-                    if( i+1 < datalen )
+                    if( mMCCP_version_1 || mMCCP_version_2 )
                     {
                         char _ch = buffer[i];
                         if( (_ch == OPT_COMPRESS ) || (_ch == OPT_COMPRESS2 ) )
                         {
-                            cout << "COMPRESSION START sequence found"<<endl;
-                            for( int _i = i; _i<datalen; _i++ )
+                            bool _compress = false;
+                            if( ( i > 1 ) && ( i+2 < datalen ) )
                             {
-                                mWaitingForCompressedStreamToStart = true;
-                                cout << "looking for end of compression start sequence"<<endl;
-                                _ch = buffer[_i];
-                                if( _ch == TN_SE )
+                                cout << "checking mccp start seq..." << endl;
+                                if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) && ( buffer[i+1] == TN_WILL ) && ( buffer[i+2] == TN_SE ) )
                                 {
-                                    // start decompression MCCP version 1
-                                    mNeedDecompression = true;
-                                    setDisplayDimensions();
-                                    // from this position in stream onwards, data will be compressed by zlib
-                                    cout << "starting ZLIB decompression. ";
-                                    if( _ch == OPT_COMPRESS )
-                                        cout << "MCCP version 1" << endl;
-                                    else
-                                        cout << "MCCP version 2" << endl;
-                                    gotRest( cleandata );
-                                    cleandata = "";
-                                    initStreamDecompressor();
-                                    pBuffer += _i+1;
-                                    mWaitingForCompressedStreamToStart = false;
-                                    int restLength = datalen-_i-1;
-                                    if( restLength > 0 ) datalen = decompressBuffer( pBuffer, restLength );
-                                    i = 0;
-                                    goto MAIN_LOOP_END;
+                                    cout << "MCCP version 2 starting sequence" << endl;
+                                    _compress = true;
                                 }
+                                if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) && ( buffer[i+1] == TN_IAC ) && ( buffer[i+2] == TN_SE ) )
+                                {
+                                    cout << "MCCP version 1 starting sequence" << endl;
+                                    _compress = true;
+                                }
+                                cout << (int)buffer[i-2]<<","<<(int)buffer[i-1]<<","<<(int)buffer[i]<<","<<(int)buffer[i+1]<<","<<(int)buffer[i+2]<<endl;
+                            }
+                            if( _compress )
+                            {
+                                cout << "COMPRESSION START sequence found"<<endl;
+                                mNeedDecompression = true;
+                                // from this position in stream onwards, data will be compressed by zlib
+                                cout << "starting ZLIB decompression. ";
+                                gotRest( cleandata );
+                                cleandata = "";
+                                initStreamDecompressor();
+                                pBuffer += 3;
+                                //mWaitingForCompressedStreamToStart = false;
+                                int restLength = datalen - i - 3;
+                                if( restLength > 0 )
+                                {
+                                    datalen = decompressBuffer( pBuffer, restLength );
+                                }
+                                i = 0;
+                                goto MAIN_LOOP_END;
                             }
                         }
                     }
@@ -1131,10 +1258,10 @@ MAIN_LOOP_END: ;
                 }
             }
 
-            if( mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA )
-            {
-                cleandata.push_back('\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
-            }
+            //if( mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA )
+            //{
+                cleandata.push_back('\xff');//'\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
+            //}
             recvdGA = false;
             gotPrompt( cleandata );
             cleandata = "";

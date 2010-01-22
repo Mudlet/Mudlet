@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +26,7 @@
 class mudlet;
 class TLuaInterpreter;
 
+
 #include <list>
 #include <string>
 #include <QMutex>
@@ -43,10 +44,16 @@ class TLuaInterpreter;
 #include "TEvent.h"
 #include "TKey.h"
 #include "KeyUnit.h"
+#include <QVector3D>
+
 
 class dlgTriggerEditor;
 class TConsole;
 class dlgNotepad;
+
+
+
+
 
 
 class Host  : public QObject
@@ -147,6 +154,11 @@ public:
     
     QColor             mFgColor;
     QColor             mBgColor;
+    QColor             mCommandBgColor;
+    QColor             mCommandFgColor;
+    int                mMXPMode;
+    int                mEncoding;
+    bool               mShowToolbar;
     QFont              mDisplayFont;
     int                mScreenHeight;
     int                mScreenWidth;

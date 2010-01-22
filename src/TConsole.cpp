@@ -133,7 +133,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
             mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
             mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
             mMainFrameRightWidth = mpHost->mBorderRightWidth;
-            mCommandBgColor = mpHost->mBgColor;
+            mCommandBgColor = mpHost->mCommandBgColor;
+            mCommandFgColor = mpHost->mCommandFgColor;
         }
         mStandardFormat.bgR = mpHost->mBgColor.red();
         mStandardFormat.bgG = mpHost->mBgColor.green();
@@ -716,6 +717,8 @@ void TConsole::changeColors()
         layer->setPalette( palette );
         console->setPalette( palette );
         console2->setPalette( palette );
+        mCommandFgColor = mpHost->mCommandFgColor;
+        mCommandBgColor = mpHost->mCommandBgColor;
     }
     QPalette palette;
     palette.setColor( QPalette::Button, QColor(0,0,255) );
@@ -1633,7 +1636,19 @@ void TConsole::printCommand( QString & msg )
                            false );
     }
     else
+    {
+        int lineBeforeNewContent = buffer.size()-1;
+        if( lineBeforeNewContent-1 >= 0 )
+        {
+            if( buffer.promptBuffer[lineBeforeNewContent-1] == true )
+            {
+                deleteLine( lineBeforeNewContent );
+            }
+            else
+                qDebug()<<buffer.promptBuffer;
+        }
         print( msg, mCommandFgColor.red(), mCommandFgColor.green(), mCommandFgColor.blue(), mCommandBgColor.red(), mCommandBgColor.green(), mCommandBgColor.blue() );
+    }
 }
 
 void TConsole::echo( QString & msg )

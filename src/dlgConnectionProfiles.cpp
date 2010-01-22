@@ -228,10 +228,36 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
     }
 }
 
-void dlgConnectionProfiles::slot_update_name( const QString name )             
+void dlgConnectionProfiles::slot_update_name( const QString _n )
 {
     QTreeWidgetItem * pItem = profiles_tree_widget->currentItem();
-    const QString allowedChars = "0123456789 _-#aAbBcCdDeEfFg GhHiIjJkKl LmMnNoOpPqQ rRsStTuUvV wWxXyYzZ";
+
+    QString name = profile_name_entry->text();
+
+    const QString allowedChars = " _0123456789-#aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ";
+    bool __error = false;
+    for( int __i=0; __i<name.size(); __i++ )
+    {
+        if( ! allowedChars.contains( name[__i] ) )
+        {
+            name.replace( name[__i], "" );
+            __i=-1;
+            __error = true;
+        }
+    }
+    if( __error )
+    {
+        profile_name_entry->setText( name );
+        notificationArea->show();
+        notificationAreaIconLabelWarning->show();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->show();
+        notificationAreaMessageBox->setText( tr("This character is not permitted. Use one of the following: %1\n").arg(allowedChars) );
+        return;
+    }
+
+    /*const QString allowedChars = " _0123456789-#aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ";
     if( ! allowedChars.contains( name.right( 1 ) ) )
     {
         QString val = name;
@@ -244,7 +270,8 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
         notificationAreaMessageBox->show();
         notificationAreaMessageBox->setText( tr("This character is not permitted. Use one of the following: %1\n").arg(allowedChars) );
         return; 
-    }
+    }*/
+
     if( pItem )
     {
         if( ! mProfileList.contains( name ) ) 
@@ -273,6 +300,8 @@ void dlgConnectionProfiles::slot_update_name( const QString name )
         
         if( mEditOK )
         {
+
+            if( name.size() < 1 || name == " " ) return;
             QDir dir(QDir::homePath()+"/.config/mudlet/profiles");
             if( ! mSavedNewName )
             {
@@ -602,11 +631,13 @@ void dlgConnectionProfiles::slot_item_clicked(QTreeWidgetItem *pItem)
             notificationAreaIconLabelInformation->show();
             notificationAreaMessageBox->show();
             notificationAreaMessageBox->setText(tr("This profile is currently loaded. You cant change all parameters on loaded profiles. Disconnect the profile and then do the changes."));
-            
         }
         else
         {
-            profile_name_entry->setReadOnly( false );   
+            if( profile_name == "new profile name" )
+                profile_name_entry->setReadOnly( false );
+            else
+                profile_name_entry->setReadOnly( true );   //profile name changing disabled until we have a better login dialog
             host_name_entry->setReadOnly( false );
             port_entry->setReadOnly( false );  
             

@@ -56,15 +56,15 @@ TScript::TScript( QString name, Host * pHost )
 
 TScript::~TScript()
 {
-    if( mpParent == 0 )
+    if( ! mpHost )
     {
-        if( ! mpHost )
-        {
-            return;
-        }
-        mpHost->getScriptUnit()->unregisterScript( this );     
+        return;
     }
-    
+    for( int i=0; i<mEventHandlerList.size(); i++ )
+    {
+        mpHost->unregisterEventHandler( mEventHandlerList[i], this );
+    }
+    mpHost->getScriptUnit()->unregisterScript( this );
 }
 
 

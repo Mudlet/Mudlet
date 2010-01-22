@@ -111,6 +111,7 @@ public:
     std::deque< std::deque<TChar> > buffer;
     QStringList timeBuffer;
     QStringList lineBuffer;
+    QList<bool> promptBuffer;
     int mLinesLimit;
     int mBatchDeleteSize;
     int newLines;

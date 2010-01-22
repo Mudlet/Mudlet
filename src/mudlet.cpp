@@ -71,8 +71,11 @@ mudlet::mudlet()
 , mReplaySpeed( 1 )
 , actionReplaySpeedUp( 0 )
 , actionReplaySpeedDown( 0 )
+, mShowToolbar( true )
 , mWindowMinimized( false )
 {
+    setupUi(this);
+
     setUnifiedTitleAndToolBarOnMac( true );
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
@@ -272,18 +275,37 @@ mudlet::mudlet()
     QAction * mactionCloseProfile = new QAction(tr("Close"), this);
 
     connect(mactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(dactionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
+    connect(dactionDisconnect, SIGNAL(triggered()), this, SLOT(slot_disconnect()));
+    connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
+    connect(dactionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
+
     connect(mactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
+    connect(dactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
+    connect(dactionVideo, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_video()));
+    connect(dactionForum, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_forum()));
+    connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_irc()));
+    connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
+
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
+    connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
+
     connect(mactionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
     connect(mactionAlias, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
     connect(mactionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
     connect(mactionKeys, SIGNAL(triggered()),this,SLOT(show_key_dialog()));
     connect(mactionButtons, SIGNAL(triggered()), this, SLOT(show_action_dialog()));
+
     connect(mactionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
+    connect(dactionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
+
     connect(mactionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
+    connect(dactionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
+
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
-    QMenu * menu;
+   /* QMenu * menu;
     menuBar()->addAction(mactionConnect);
     menuBar()->addAction(mactionTriggers);
     menuBar()->addAction(mactionTimers);
@@ -293,7 +315,7 @@ mudlet::mudlet()
     menuBar()->addAction(mactionButtons);
     menuBar()->addAction(mactionOptions);
     menuBar()->addAction(mactionAbout);
-    menuBar()->addAction(mactionHelp);
+    menuBar()->addAction(mactionHelp);*/
     readSettings();
     
     QTimer * timerAutologin = new QTimer( this );
@@ -457,11 +479,11 @@ void mudlet::slot_timer_fires()
     {
         TTimer * pTT = mTimerMap[pQT];
         pTT->execute();
-        if( ( ! pTT->isTempTimer() ) && ( ! pTT->isOffsetTimer() ) && ( pTT->isActive() ) )
+        if( pTT->checkRestart()  )
         {
             pTT->start();
         }    
-	}
+    }
     else
     {
         qDebug()<<"MUDLET CRITICAL ERROR: Timer not registered!";
@@ -1095,14 +1117,29 @@ void mudlet::readSettings()
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
     mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(3)).toInt();
     mShowMenuBar = settings.value("showMenuBar",QVariant(0)).toBool();
+    mShowToolbar = settings.value("showToolbar",QVariant(0)).toBool();
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
     if( mShowMenuBar )
-        menuBar()->show();
+        MenuBar->show();
     else
-        menuBar()->hide();
+        MenuBar->hide();
+    if( mShowToolbar )
+    {
+        mpMainToolBar->show();
+    }
+    else
+    {
+        if( mShowMenuBar )
+        {
+            mpMainToolBar->hide();
+        }
+        else
+            mpMainToolBar->show();
+    }
 }
+
 
 void mudlet::setIcoSize( int s )
 {
@@ -1125,6 +1162,7 @@ void mudlet::writeSettings()
     settings.setValue("mainiconsize", mMainIconSize);
     settings.setValue("tefoldericonsize",mTEFolderIconSize);
     settings.setValue("showMenuBar", mShowMenuBar );
+    settings.setValue("showToolbar", mShowToolbar );
 }
 
 void mudlet::connectToServer()
@@ -1217,6 +1255,26 @@ void mudlet::show_help_dialog()
     QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/wordpress/?page_id=40"));
 }
 
+void mudlet::slot_show_help_dialog_video()
+{
+    QDesktopServices::openUrl(QUrl("http://www.mudlet.org/media/"));
+}
+
+void mudlet::slot_show_help_dialog_forum()
+{
+    QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/"));
+}
+
+void mudlet::slot_show_help_dialog_irc()
+{
+    QDesktopServices::openUrl(QUrl("http://webchat.freenode.net/?channels=mudlet"));
+}
+
+void mudlet::slot_show_help_dialog_download()
+{
+    QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/wordpress/"));
+}
+
 void mudlet::slot_show_about_dialog()
 {
     dlgAboutDialog * pDlg = new dlgAboutDialog( this );
@@ -1251,6 +1309,13 @@ void mudlet::slot_reconnect()
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
     pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
+}
+
+void mudlet::slot_disconnect()
+{
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+    pHost->mTelnet.disconnect();
 }
 
 void mudlet::slot_replay()

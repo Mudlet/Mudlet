@@ -1,4 +1,4 @@
-QT += network
+QT += network opengl
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 unix:LIBS += -lpcre \
@@ -74,6 +74,7 @@ SOURCES += TConsole.cpp \
     mudlet.cpp \
     dlgNotepad.cpp \
     THighlighter.cpp \
+    dlgComposer.cpp \  
     TBuffer.cpp
 HEADERS += mudlet.h \
     TTimer.h \
@@ -132,6 +133,7 @@ HEADERS += mudlet.h \
     TSplitterHandle.h \
     dlgNotepad.h \
     THighlighter.h \
+    dlgComposer.h \
     Tree.h
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \
@@ -154,6 +156,7 @@ FORMS += ui/connection_profiles.ui \
     ui/color_trigger.ui \
     ui/notes_editor.ui \
     ui/trigger_pattern_edit.ui \
+    ui/composer.ui \
     ui/profile_preferences.ui
 TEMPLATE = app
 TARGET = mudlet

@@ -66,7 +66,7 @@ const char TNSB_SEND = 1;
 
 class mudlet;
 class Host;
-
+class dlgComposer;
 
 class cTelnet : public QObject
 {
@@ -79,6 +79,9 @@ public:
   void                disconnect();
   bool                sendData ( QString & data );
   void                setCommandEcho( bool cmdEcho );
+  void                setATCPVariables( QString & _msg );
+  void                atcpComposerCancel();
+  void                atcpComposerSave( QString );
   void                setLPMudStyle ( bool lpmustyle );
   void                setNegotiateOnStartup( bool startupneg );
   void                setDisplayDimensions();
@@ -162,6 +165,8 @@ private:
   QTime               timeOffset;
   QTime               mConnectionTime;
   int                 lastTimeOffset;
+  bool                enableATCP;
+  dlgComposer *       mpComposer;
 };
 
 #endif

@@ -56,16 +56,11 @@ TKey::TKey( QString name, Host * pHost )
 
 TKey::~TKey()
 {
-    if( mpParent == 0 )
+    if( ! mpHost )
     {
-        if( ! mpHost )
-        {
-            qDebug() << "ERROR: TAlias::**UN**registerTrigger() pHost=0";
-            return;
-        }
-        mpHost->getKeyUnit()->unregisterKey(this);     
+        return;
     }
-    
+    mpHost->getKeyUnit()->unregisterKey(this);
 }
 
 bool TKey::match( int key, int modifier )
