@@ -64,7 +64,7 @@ TTimer::~TTimer()
         return;
     }
     mpHost->getTimerUnit()->unregisterTimer( this );
-    mudlet::self()->unregisterTimer( this, &mTimer );
+    mudlet::self()->unregisterTimer( &mTimer );
 }
 
 bool TTimer::registerTimer()

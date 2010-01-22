@@ -205,7 +205,7 @@ int TLuaInterpreter::select( lua_State * L )
     else
     {
         QString _name(a1.c_str());
-        int pos = mudlet::self()->selectString( _name, QString( luaSendText.c_str() ), luaNumOfMatch );
+        int pos = mudlet::self()->selectString( pHost, _name, QString( luaSendText.c_str() ), luaNumOfMatch );
         lua_pushnumber( L, pos );
         return 1;
     }
@@ -951,7 +951,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
     if( n > 2 )
     {
         QString _name = a1.c_str();
-        ret = mudlet::self()->selectSection( _name, luaFrom, luaTo );
+        ret = mudlet::self()->selectSection( pHost, _name, luaFrom, luaTo );
     }
     else
     {
@@ -1013,7 +1013,7 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     else
     {
         QString windowName = a1.c_str();
-        lua_pushboolean( L, mudlet::self()->moveCursor( windowName, luaFrom, luaTo ) );
+        lua_pushboolean( L, mudlet::self()->moveCursor( pHost, windowName, luaFrom, luaTo ) );
     }
     return 1;
 }
@@ -1136,7 +1136,7 @@ int TLuaInterpreter::replace( lua_State * L )
     if( n == 1 )
         pHost->mpConsole->replace( QString(a1.c_str()) );
     else
-        mudlet::self()->replace( _name, QString(a2.c_str()) );
+        mudlet::self()->replace( pHost, _name, QString(a2.c_str()) );
     return 0;
 }
 
@@ -1163,7 +1163,7 @@ int TLuaInterpreter::deleteLine( lua_State * L )
     if( name == "" )
         pHost->mpConsole->skipLine();
     else
-        mudlet::self()->deleteLine( _name );
+        mudlet::self()->deleteLine( pHost, _name );
     return 0;
 }
 
@@ -1874,7 +1874,7 @@ int TLuaInterpreter::moveWindow( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
 
     QString text(luaSendText.c_str());
-    mudlet::self()->moveWindow( text, static_cast<int>(x1), static_cast<int>(y1) );
+    mudlet::self()->moveWindow( pHost, text, static_cast<int>(x1), static_cast<int>(y1) );
     return 0;
 }
 
@@ -1938,7 +1938,7 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->setBackgroundColor( text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2) );
+    mudlet::self()->setBackgroundColor( pHost, text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2) );
 
     return 0;
 }
@@ -2024,7 +2024,7 @@ int TLuaInterpreter::setBackgroundImage( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
     QString name(luaName.c_str());
-    mudlet::self()->setBackgroundImage( text, name );
+    mudlet::self()->setBackgroundImage( pHost, text, name );
 
     return 0;
 }
@@ -2209,7 +2209,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     }
     else
     {
-        mudlet::self()->setTextFormat( text, static_cast<int>(r1), static_cast<int>(g1), static_cast<int>(b1), static_cast<int>(r2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
+        mudlet::self()->setTextFormat( pHost, text, static_cast<int>(r1), static_cast<int>(g1), static_cast<int>(b1), static_cast<int>(r2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
     }
 
     return 0;
@@ -2250,7 +2250,7 @@ int TLuaInterpreter::reset( lua_State *L )
     }
     else
     {
-        mudlet::self()->resetFormat( name );
+        mudlet::self()->resetFormat( pHost, name );
     }
     return 0;
 }
@@ -2317,7 +2317,7 @@ int TLuaInterpreter::moveCursorEnd( lua_State *L )
     if( luaWindowName == "main" )
         pHost->mpConsole->moveCursorEnd();
     else
-       mudlet::self()->moveCursorEnd( windowName );
+       mudlet::self()->moveCursorEnd( pHost, windowName );
     return 0;
 }
 
@@ -2341,7 +2341,7 @@ int TLuaInterpreter::getLastLineNumber( lua_State *L )
     if( luaWindowName == "main" )
         number = pHost->mpConsole->getLastLineNumber();
     else
-        number = mudlet::self()->getLastLineNumber( windowName );
+        number = mudlet::self()->getLastLineNumber( pHost, windowName );
     lua_pushnumber( L, number );
     return 1;
 }
@@ -2443,7 +2443,7 @@ int TLuaInterpreter::setBold( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
     if( windowName.size() > 0 )
-        mudlet::self()->setBold( windowName, b );
+        mudlet::self()->setBold( pHost, windowName, b );
     else
         pHost->mpConsole->setBold( b );
     return 0;
@@ -2482,7 +2482,7 @@ int TLuaInterpreter::setItalics( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
     if( windowName.size() > 0 )
-        mudlet::self()->setItalics( windowName, b );
+        mudlet::self()->setItalics( pHost, windowName, b );
     else
         pHost->mpConsole->setItalics( b );
     return 0;
@@ -2520,7 +2520,7 @@ int TLuaInterpreter::setUnderline( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString windowName(luaWindowName.c_str());
     if( windowName.size() > 0 )
-        mudlet::self()->setUnderline( windowName, b );
+        mudlet::self()->setUnderline( pHost, windowName, b );
     else
         pHost->mpConsole->setUnderline( b );
     return 0;
@@ -3434,7 +3434,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     if( n < 4 )
         pHost->mpConsole->setFgColor( luaRed, luaGreen, luaBlue );
     else
-        mudlet::self()->setFgColor( _name, luaRed, luaGreen, luaBlue );
+        mudlet::self()->setFgColor( pHost, _name, luaRed, luaGreen, luaBlue );
     return 0;
 }
 
@@ -3494,7 +3494,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     if( n < 4 )
         pHost->mpConsole->setBgColor( luaRed, luaGreen, luaBlue );
     else
-        mudlet::self()->setBgColor( _name, luaRed, luaGreen, luaBlue );
+        mudlet::self()->setBgColor( pHost, _name, luaRed, luaGreen, luaBlue );
     return 0;
 }
 
@@ -3535,7 +3535,7 @@ int TLuaInterpreter::insertText( lua_State *L )
     if( n == 1 )
         pHost->mpConsole->insertText( QString(a1.c_str()) );
     else
-        mudlet::self()->insertText( _name, QString( a2.c_str() ) );
+        mudlet::self()->insertText( pHost, _name, QString( a2.c_str() ) );
     return 0;
 }
 
@@ -3961,14 +3961,13 @@ void TLuaInterpreter::adjustCaptureGroups( int x, int a )
 
 void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
 {
-qDebug()<<"LuaInter::trace#0";
     lua_State * L = pGlobalLua;
     lua_getglobal( L, "atcp" ); //defined in LuaGlobal.lua
     lua_pushstring( L, var.toLatin1().data() );
     lua_pushstring( L, arg.toLatin1().data() );
     lua_rawset( L, -3 );
     lua_pop( L, 1 );
-qDebug()<<"LuaInter::trace#1";
+
     TEvent event;
     event.mArgumentList.append( var );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -3976,7 +3975,6 @@ qDebug()<<"LuaInter::trace#1";
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( & event );
-qDebug()<<"Luainter::trace#2";
 }
 
 bool TLuaInterpreter::call_luafunction( void * pT )
@@ -4486,6 +4484,7 @@ void TLuaInterpreter::initLuaGlobals()
     QString tn = "atcp";
     QStringList args;
     set_lua_table( tn, args );
+
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
     
     //FIXME make function call in destructor lua_close(L);
