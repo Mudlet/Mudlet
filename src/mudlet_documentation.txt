@@ -23,6 +23,7 @@ Mudlet Manual
 ..... <<tempTriggers, Temporary Triggers>>
 .... <<lineTriggers, Line Triggers>>
 .... <<enablingTriggers, Enabling and Disabling Triggers in Scripts>>
+... <<testingTriggers, Testing your triggers>>
 .. <<timers,The Timer Engine>>
 .. <<keys,Key Bindings>>
 .. <<buttons,Buttons and Menus>>
@@ -34,6 +35,7 @@ Mudlet Manual
 .. <<events,Events - Defining & Using Event Handlers>>
 .. <<cursorControl,Cursor Control - Custom Printing>>
 .. <<lineTriggers, Using tempLineTrigger>>
+.. <<scripting-howtos, Scripting Howtos>>
 . <<exampleScripts,Advanced Learning From Selected Example Scripts>>
 .. <<inlineMapExample,inlineMapExample>>
 .. <<silbermine,Auto Miner Bot Example - How to write a little Bot with Mudlet?>>
@@ -688,7 +690,7 @@ The condition type can be among others:
 4. Lua code that returns a truth value e.g. a call to a function check() that return either true or false depending on the condition
 ====
 In our example we chose condition type "substring" for all three conditions.
-Consequently, the trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.
+Consequently, the trigger will fire the command or script 3 times i. e. the trigger will do on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.
 ....
 in line #1 we get: pond = true. 
 in line #2 we get frog = true and 
@@ -752,6 +754,13 @@ Line triggers trigger on a specified line in the future - or a sequence of lines
 === Enabling and Disabling Triggers in Scripts
 enableTrigger() disableTrigger()
 
+[[testingTriggers]]
+=== Testing your triggers
+
+==== Externally
+http://regexpal.com/[RegexPal] - a good website for testing your triggers against a set of text.
+http://code.google.com/p/kiki-re/[[kiki-re] - stand-alone program which will also tell you which matches are translated to what wildcard number.
+
 [[timers]]
 == The Timer Engine
 Mudlet supports 4 different sort of timers:
@@ -792,7 +801,7 @@ matches[1] = "Betty"
 b = matches[1]
 c = a .. b and e will equal "TomBetty"
 -----
-To output a table you can use a convenience function printTable( name ). This function is defined in LuaGlobal.Lua and can be found in your home directory under ./mudlet (note the leading dot ) Profiles and mudlet_documentation.html are stored in this directory as well.
+To output a table you can use a convenience function printTable( name ). This function is defined in LuaGlobal.lua and can be found in your home directory under ./mudlet (note the leading dot ) Profiles and mudlet_documentation.html are stored in this directory as well.
 
 == Lua interface functions to Mudlet - or how do I access triggers, timers etc. from Lua scripts
 How to get data from regex capture groups?
@@ -902,7 +911,7 @@ This code would change the second "Tom" and leave the first "Tom" alone. The fun
 replaceAll( "Betty" )
 -----
 
-will replace all occurrences of "Tom" with "Betty" in the line if "Tom" has been selected before. replaceAll() is a convenience function defined in LuaGlobal.Lua.
+will replace all occurrences of "Tom" with "Betty" in the line if "Tom" has been selected before. replaceAll() is a convenience function defined in LuaGlobal.lua.
 
 Colorization example: You want to change to color of the words ugly monster to red on a white background.
 
@@ -989,7 +998,7 @@ clearWindow( string window_name )
 Dynamic Timers
 
 
-tempTimer( double timeout, string Lua_code_to_execute, string/float/int timer_name )
+tempTimer( double timeout, string lua code_to_execute, string/float/int timer_name )
 disableTimer( name )
 enableTimer( name )
 
@@ -1096,6 +1105,27 @@ mySilver = mySilver + tonumber( multimatches[1][3] );
 ----
 What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines. 
 
+[[scripting-howtos]]
+== Scripting howtos
+=== How to highlight my current target?
+
+You can put the following script into your targetting alias:
+
+----
+if id then killTrigger(id) end
+id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])
+----
+
+Where `target` is your target variable. Note that you have to use the full name, capitalized. If you'd like the script to auto-capitalize for you, you can use this version*:
+
+----
+target = capitalize(target)
+if id then killTrigger(id) end
+id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])
+----
+
+^*requires Mudlet 1.0.6 or the http://forums.mudlet.org/viewtopic.php?f=5&t=92&p=2210#p2210[capitalize function] in a script.^
+
 [[migrating]]
 == Migrating to Mudlet
 
@@ -1135,7 +1165,7 @@ send ("hi")
 echo ("Hello to me!")
 ---------
 
-If you'd like to use a variable inside text, you'd put it outside the text and glue it together with two dots.
+If you'd like to use a variable inside text, you'd put it outside the quotes and glue it together with two dots.
 
 ===== Nexus
 ---------
@@ -1364,6 +1394,7 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 .Useful Lua resources on the Web
 * http://thomaslauer.com/download/luarefv51single.pdf[Lua reference card]
 * http://lua-users.org/wiki/TutorialDirectory[A ton of useful Lua mini-tutorials]
+* http://wowprogramming.com/utils/weblua[A Lua console in your browser, use when doing tutorials]
 
 [[apiIndex]]
 == Alphabetical Function Index
@@ -1376,7 +1407,7 @@ Click on the respective function to get more information:
 <<bg,bg>>, 
 
 == C
-
+<<calcFontSize,calcFontSize>>,
 <<clearUserWindow,clearUserWindow>>, 
 <<copy,copy>>, 
 <<createBuffer,createBuffer>>, 
@@ -1539,6 +1570,7 @@ send( "Hello Jane", false ) --does not echo the command on the screen
 [[echo]]
 == echo( windowName, text )
 This function appends text at the end of the current line. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
+
 If the first argument is omitted the main console is used, otherwise the mini console windowName.
 === Example 1: 
 -------------------
@@ -1563,7 +1595,7 @@ NOTE: to prevent selection of random data use the error return if not found like
 deletes the current Line under the user cursor. Note: This is a high speed gagging tool and it is very good at this task. It is meant to be used when the line can be omitted entirely in the output. If you want to replace this line with something else have a look at the replace() functions below. Note that scripts such as: deleteLine(); echo("this line is gone"); will not work because lines that have been gagged with deleteLine() will not be rendered even if there is text in the buffer. -> wrapLine() for details on how to force a re-render if this is necessary for some reason. This is not the recommended way of replacing text. <<replace,-> replace()>> and <<wrapLine, wrapLine()>>
 
 
-== tempTimer( seconds, Lua_code )
+== tempTimer( seconds, lua code )
 Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed. see <<tempTimer,here>> for details.
 
 
@@ -1588,48 +1620,123 @@ inserts text at cursor position in window windowName
 
 
 [[suffix]]
-== suffix( what )
-prints "what" at the end of the line when used in a trigger script
-
+== suffix( text )
+Suffixes text at the end of the current line when used in a trigger.
 
 [[prefix]]
-== prefix( what )
-prints "what" at the beginning of a line when used in a trigger script
+== prefix( text )
+Prefixes text at the beginning of the current line when used in a trigger.
+
+=== Example:
+----
+-- Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that
+prefix(os.date("%H:%M:%S "))
+----
 
 [[permAlias]]
-== permAlias(name, parent, regex, Lua_code)
+== permAlias(name, parent, regex, lua code)
 Creates a persistent alias that stays after Mudlet is restarted and shows up in the Script Editor. 
 
-Name is the alias name, parent is the name of the alias group you want the alias to go in. Regex is the alias pattern that you'd like to have it match,  and Lua_code is a string containing the alias script.
+* `name` is the name you'd like the alias to have.
+* `parent` is the name of the group, or another alias you want the trigger to go in - however if such a group/alias doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+* `regex` is the pattern that you'd like the alias to use.
+* `lua code` is the script the alias will do when it matches.
 
 Examples:
 -------------------
-permAlias("new alias", "my group", "^test$", [[echo ("say it works! This alias will show up in the script editor momentarily.")]])
+-- creates an alias called "new alias" in a group called "my group"
+permAlias("new alias", "my group", "^test$", [[echo ("say it works! This alias will show up in the script editor too.")]])
 -------------------
 
+[NOTE]
+===============================
+Note that Mudlet by design allows duplicate names - so calling permAlias with the same name will keep creating new aliases. You can check if an alias already exists with the <<exists,exists()>> function.
+===============================
+
 [[permSubstringTrigger]]
-== permSubstringTrigger( name, parent, pattern, Lua_code )
+== permSubstringTrigger( name, parent, pattern, lua code )
 Creates a persistent trigger with a `substring` pattern that stays after Mudlet is restarted and shows up in the Script Editor. 
 
-`name` is the the trigger name and `parent` is the name of the group you want the trigger to go in. `pattern` is the substring trigger pattern you'd like to use, and Lua_code is the script the trigger will execute when it matches.
+* `name` is the name you'd like the trigger to have.
+* `parent` is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+* `pattern table` is a table of patterns that you'd like the trigger to use - it can be one or many.
+* `lua code` is the script the trigger will do when it matches.
+
+=== Example:
+----
+-- Create a trigger to highlight the word "pixie" for us
+permSubstringTrigger("Highlight stuff", "General", {"pixie"}, [[selectString(line, 1) bg("yellow") resetFormat()]])
+
+-- Or another trigger to highlight several different things
+permSubstringTrigger("Highlight stuff", "General", {"pixie", "cat", "dog", "rabbit"}, [[selectString(line, 1) fg ("blue") bg("yellow") resetFormat()]])
+----
+
+[NOTE]
+===============================
+Note that Mudlet by design allows duplicate names - so calling permSubstringTrigger with the same name will keep creating new triggers. You can check if a trigger already exists with the <<exists,exists()>> function.
+===============================
 
 [[permRegexTrigger]]
-== permRegexTrigger( name, parent, pattern, Lua_code )
+== permRegexTrigger( name, parent, pattern, lua code )
 Creates a persistent trigger with a `regex` pattern that stays after Mudlet is restarted and shows up in the Script Editor. 
 
-`name` is the the trigger name and `parent` is the name of the group you want the trigger to go in. `pattern` is the regex trigger pattern you'd like to use, and Lua_code is the script the trigger will execute when it matches.
+* `name` is the name you'd like the trigger to have.
+* `parent` is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+* `pattern table` is a table of patterns that you'd like the trigger to use - it can be one or many.
+* `lua code` is the script the trigger will do when it matches.
+
+=== Example:
+----
+-- Create a regex trigger that will match on the prompt to record your status
+permRegexTrigger("Prompt", "", {"^(\d+)h, (\d+)m"}, [[health = tonumber(matches[2]; mana = tonumber(matches[3])]]
+----
+
+[NOTE]
+===============================
+Note that Mudlet by design allows duplicate names - so calling permRegexTrigger with the same name will keep creating new triggers. You can check if a trigger already exists with the <<exists,exists()>> function.
+===============================
+
+[[permBeginOfLineStringTrigger]]
+== permBeginOfLineStringTrigger( name, parent, pattern table, lua code )
+
+Creates a persistent trigger with a `begin of line substring` pattern that shows up in the Script Editor andstays after Mudlet is restarted. 
+
+* `name` is the name you'd like the trigger to have.
+* `parent` is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+* `pattern table` is a table of patterns that you'd like the trigger to use - it can be one or many.
+* `lua code` is the script the trigger will do when it matches.
+
+=== Example:
+----
+-- Create a trigger that will match on anything that starts with "You sit" and do "stand".
+-- It will not go into any groups, so it'll be on the top.
+permBeginOfLineStringTrigger("Stand up", "", {"You sit"}, [[send ("stand")]])
+
+-- Another example - lets put our trigger into a "General" folder and give it several patterns.
+permBeginOfLineStringTrigger("Stand up", "General", {"You sit", "You fall", "You are knocked over by"}, [[send ("stand")]])
+----
+
+[NOTE]
+===============================
+Note that Mudlet by design allows duplicate names - so calling permBeginOfLineStringTrigger with the same name will keep creating new triggers. You can check if a trigger already exists with the <<exists,exists()>> function.
+===============================
 
 [[permTimer]]
-== permTimer(name, parent, seconds, Lua_code)
+== permTimer(name, parent, seconds, lua code)
 Creates a persistent timer that stays after Mudlet is restarted and shows up in the Script Editor. 
 
-Name is the timer name, parent is the name of the timer group you want the timer to go in. Seconds is a number specifying a delay after which the timer will execute the Lua_code you give it as a string.
+Name is the timer name, parent is the name of the timer group you want the timer to go in. Seconds is a number specifying a delay after which the timer will do the lua code you give it as a string.
 
 Examples:
 -------
 -------
 permTimer("my timer", "first timer group", 4.5, [[send ("my timer that's in my first timer group fired!")]])
 -------
+
+[NOTE]
+===============================
+Note that Mudlet by design allows duplicate names - so calling permTimer with the same name will keep creating new timers. You can check if a timer already exists with the <<exists,exists()>> function.
+===============================
 
 [[selectSection]]
 == selectSection( from, length_of_string )
@@ -1649,20 +1756,28 @@ Selects the content of the capture group number in your Perl regular expression 
 
 [[replace]]
 == replace( with )
-Replaces the currently selected text with "with". To delete or gag the selected text use replace("")
+Replaces the currently selected text with the new text. To select text, use <<selectString,selectString()>> and similar function.
+
+If you'd like to delete/gag the whole line, use <<deleteLine,deleteLine()>>.
 
 example:
 ----
+-- replace word "troll" with "cute trolly"
 selectString("troll",1)
-replace("my friend the cute trolly")
+replace("cute trolly")
+
+-- lets replace the whole line
+selectString(line, 1)
+replace("Out with the old, in with the new!")
 ----
 
-To gag entire lines you can use the very fast function <<deleteLine, -> deleteLine()>>
-
 == replace( windowName, with )
-Replaces the currently selected text with "with". This function operates on window windowName <<replace, -> more>>
+Same as above, but replaces text in a window (miniConsole, label). 
 
+Example:
+----
 
+----
 
 [[replaceAll]]
 == replaceAll( what, with )
@@ -1670,10 +1785,11 @@ replaces all occurrences of what in the current line with with  <<replace, -> re
 
 [[fg]]
 == fg( color_name )
-Sets the current selection foreground color to color_name which is one of the pre defined colors in the table below. 
-see also: <<resetFormat, ->resetFormat()>> <<setFgColor, -> setFgColor()>>
+Sets the current selection foreground color to color_name which is one of the pre defined colors in the table below.
 
-.Color Table (for use in the fg("colorname") and bg("colorname") functions)
+See also: <<resetFormat,resetFormat()>> <<setFgColor,setFgColor()>>
+
+.Color table (for use in the fg("colorname") and bg("colorname") functions)
 [frame="topbot"]
 |===================================================
 | snow| ghost_white| white_smoke|gainsboro|floral_white
@@ -1701,39 +1817,37 @@ see also: <<resetFormat, ->resetFormat()>> <<setFgColor, -> setFgColor()>>
 | dark_orchid| blue_violet| purple| medium_purple| thistle
 |===================================================
 
+=== Example:
+----
+-- in a trigger, lets color all words on the current line green
+selectString(line, 1)
+fg("green")
+resetFormat()
+
+-- or lets only color Anne's name in tomato color
+selectString("Anne", 1)
+fg("tomato")
+resetFormat()
+----
 
 [[bg]]
 == bg( color_name )
-same as fg( color_name ) just for the background color. <<fg,-> more>> <<setBgColor, -> setBgColor()>>
+Same as fg(), but changes the background color of the text (ie, highlights).
 
-[[colortable]]
-.Color Table (for use in the fg("colorname") and bg("colorname") functions)
-[frame="topbot",options="header"]
-|===================================================
-| snow| ghost_white| white_smoke|gainsboro|floral_white
-| old_lace| linen| antique_white| papaya_whip| blanched_almond
-| bisque| peach_puff| navajo_white| moccasin | cornsilk| ivory
-| lemon_chiffon| seashell| honeydew| mint_cream| azure| alice_blue
-| lavender| lavender_blush| misty_rose| white | black| dark_slate_gray 
-| dark_slate_grey| dim_gray   | dim_grey| slate_gray | slate_grey | light_slate_gray  
-| light_slate_grey| gray| grey| light_grey | light_gray | midnight_blue
-| navy| navy_blue | cornflower_blue| dark_slate_blue| slate_blue | medium_slate_blue 
-| light_slate_blue| medium_blue| royal_blue | blue  | dodger_blue| deep_sky_blue 
-| sky_blue| light_sky_blue| steel_blue| light_steel_blue| light_blue| powder_blue 
-| pale_turquoise| dark_turquoise | medium_turquoise| turquoise| cyan| light_cyan 
-| cadet_blue| medium_aquamarine| aquamarine| dark_green | dark_olive_green| dark_sea_green
-| sea_green | medium_sea_green| light_sea_green| pale_green | spring_green| lawn_green  
-| green| chartreuse | medium_spring_green| green_yellow| lime_green | yellow_green 
-| forest_green | olive_drab| dark_khaki| khaki | pale_goldenrod| light_goldenrod_yellow
-| light_yellow| yellow| gold   | light_goldenrod| goldenrod| dark_goldenrod
-| rosy_brown| indian_red| saddle_brown | sienna| peru | burlywood
-| beige| wheat| sandy_brown| tan| chocolate | firebrick
-| brown| dark_salmon| salmon | light_salmon| orange| dark_orange
-| coral| light_coral | tomato| orange_red | red | hot_pink 
-| deep_pink| pink| light_pink| pale_violet_red| maroon| medium_violet_red
-| violet_red| magenta| violet| plum | orchid | medium_orchid
-| dark_orchid| blue_violet| purple| medium_purple| thistle
-|===================================================
+See also: <<fg,fg()>>, <<setBgColor,setBgColor()>>.
+
+=== Example:
+----
+-- in a trigger, lets highlight all words on the current line red
+selectString(line, 1)
+fg("red")
+resetFormat()
+
+-- or lets only color dogs in blue
+selectString("dog", 1)
+fg("tomato")
+resetFormat()
+----
 
 
 [[resetFormat]]
@@ -1797,8 +1911,9 @@ Opens a user dockable console window for user output e.g. statistics, chat etc. 
 
 [[disableTimer]]
 == disableTimer( name )
-Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.
+Disables a timer from running it's script when it fires - so the timer cycles will still be happening, just no action on them. If you'd like to permanently delete it, use <<killTrigger,killTrigger()>> instead.
 
+Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.
 
 
 [[disableTrigger]]
@@ -1848,6 +1963,18 @@ Example:
 echo("I have " .. exists("my trigger", "trigger") .. " triggers called 'my trigger'!")
 -------------------
 
+You can also use this alias to avoid creating duplicate things, for example:
+-------------------
+-- this code doesn't check if an alias already exists and will keep creating new aliases
+permAlias("Attack", "General", "^aa$", [[send ("kick rat")]])
+
+-- while this code will make sure that such an alias doesn't exist first
+-- we do == 0 instead of 'not exists' because 0 is considered true in Lua
+if exists("Attack", "alias") == 0 then
+    permAlias("Attack", "General", "^aa$", [[send ("kick rat")]])
+end
+-------------------
+
 [[raiseEvent]]
 == raiseEvent( event_name, arg-1, ... arg-n )
 Raises the event event_name. The event system will call the main function (the one that is called exactly like 
@@ -1870,7 +1997,7 @@ and thus help reduce complexity on large systems.
 
 
 [[tempTimer]]
-== tempTimer( seconds, Lua_code ) returns timer ID, ID is a string and not a number.
+== tempTimer( seconds, lua code ) returns timer ID, ID is a string and not a number.
 Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 example:
 ----
@@ -1918,7 +2045,7 @@ Result:
 
 
 [[tempTrigger]]
-== tempTrigger( string, Lua_code ) returns trigger ID, ID is a string and not a number.
+== tempTrigger( string, lua code ) returns trigger ID, ID is a string and not a number.
 This function creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitly disabled or killed. Disabled tempTimers can be re-enabled with enableTrigger(). This is much faster than killing the trigger and creating a new one. This is the second fastest trigger (with begin of line substring patterns being the fastest) and should be used instead of regex triggers whenever possible.
 
 
@@ -1935,7 +2062,7 @@ The function returns the ID of the newly created temporary trigger. You can use 
 
 
 [[tempRegexTrigger]]
-== tempRegexTrigger( regex, Lua_code ) returns trigger ID
+== tempRegexTrigger( regex, lua code ) returns trigger ID
 temporary trigger using Perl regex pattern matching <<tempTrigger, This function returns the ID of the newly created temporary trigger. *ID is a string and not a number.* You can use this ID to enable/disable or kill this trigger later on. -> tempTrigger()
 
 [[killAlias]]
@@ -1957,7 +2084,20 @@ Deletes a tempTrigger according to trigger ID. ID is a string value, not a numbe
 == openUserWindow( name )
 Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them. Most often a mini console is more useful than a dockable window -> <<createMiniConsole,createMiniConsole>>
 
+[[calcFontSize]]
+== x,y = calcFontSize(font_size)
+This returns you the height and the length of letters for the given font size. As the primary intended usage is for calculating the needed dimensions of a miniConsole, it doesn't accept a font argument - as the miniConsoles currently only work with the default font for the sake of portability.
 
+=== Examples:
+----
+-- Create a miniConsole that is 45 letters in length and 25 letters in height for font size 7
+font_size = 7
+
+local x, y = calcFontSize( font_size )
+createMiniConsole("map",0,0,0,0)
+setMiniConsoleFontSize("map", font_size)
+resizeWindow( "map", x*45, y*25 )
+----
 
 [[clearUserWindow]]
 == clearUserWindow( window_name )
@@ -2090,29 +2230,40 @@ pastes the previously copied text including all format codes like color, font et
 
 [[appendBuffer]]
 == appendBuffer( name )
-Pastes the previously copied rich text (including text formats like color etc.) into user window name. example:
+Pastes the previously copied rich text (including text formats like color etc.) into user window name.
+
+=== Example:
 -----
 selectString( line, 1 )
 copy()
 appendBuffer( "chat" )
 -----
 
+See also: <<selectString, selectString()>>, <<copy, copy()>>
 
 [[printTable]]
 == printTable( table_name )
 Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the Lua table "matches".
-This function is defined in LuaGlobal.Lua. NOTE: This function is old. Use the newer <<display, display( table_or_variable )>> instead.
 
+This function is defined in LuaGlobal.lua. 
 
+[NOTE]
+===============================
+This function is old. Use the newer <<display, display()>> function instead.
+===============================
 
 [[showCaptureGroups]]
 == showCaptureGroups()
-Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in LuaGlobal.Lua
+Lua debug function that highlights in random coolors all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. This function is defined in LuaGlobal.lua.
 
+=== Example:
+----
+Make a trigger with the regex (\w+) and call this function in a trigger. All words in the text will be highlighted in random colors.
+----
 
 [[showMultimatches]]
 == showMultimatches()
-Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers
+Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers - just doing `showMultimatches()` in your script will make it give the info.
 
 
 [[tableload]]
@@ -2121,14 +2272,13 @@ restores a Lua table from a data file that has been saved with table.save()
 
 
 [[tablesave]]
-== table.save( file, table )|saves the given table into the given file
+== table.save( file, table )
+Saves the given table into the given file.
 
 
 [[showCaptureGroups]]
 == showCaptureGroups()
 a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (->trigger editor->bug symbol)
-
-
 
 [[sendAll]]
 == sendAll( command1, command2, ... )
@@ -2136,19 +2286,21 @@ Sends a list of commands to the MUD. You can use this to send some things at onc
 
 === Example:
 ----
-sendAll("stand", "touch shield", "say ha!")
+sendAll("stand", "wield shield", "say ha!")
+
+-- instead of:
+send ("stand")
+send ("wield shield")
+send ("say ha!")
 ----
-
-[[debug]]
-== debug( arg1 ... argn )
-Prints out debug information to the user debug console.
-
-
 
 [[replaceWildcard]]
 == replaceWildcard(what, replacement)
 Replaces the given wildcard (as a number) with the given text.
-Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
+=== Example: 
+----
+replaceWildcard(1, "hello") -- on a perl regex trigger of ^You wave (goodbye)\.$, it will make
+----
 
 
 [[resetFormat]]
@@ -2678,7 +2830,7 @@ generic pretty print function to display tables of any complexity. This is the p
 generic pretty print function to display the content of any Lua variable or table on the main screen
 
 [[tempAlias]]
-== tempAlias(regex, Lua_code)
+== id = tempAlias(regex, lua code)
 Creates a temporary (lasts only until the profile is closed) alias. This means that after a Mudlet restart, it won't exist anymore.
 
 Example:

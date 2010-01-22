@@ -4,10 +4,9 @@
 ----------------------------------------------------------------------------------
 -- These general functions can be used from anywhere within Mudlet scripts
 -- They are described in the manual.
---------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
 
-atcp = {}
-
+if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
 ----------------------------------------------------------------------------------
 -- Functions written by Blaine von Roeder - December 2009
@@ -59,12 +58,16 @@ end
 -- This would move the health bar gauge to the location 1200, 400
 
 function moveGauge(gaugeName, newX, newY)
-	for _,g in pairs(gaugesTable) do
-		if g.name == gaugeName then
-			moveWindow(gaugeName, newX, newY)
-			moveWindow(gaugeName .. "_back", newX, newY)
-		end
-	end
+        local newX, newY = newX, newY
+       
+        assert(gaugesTable[gaugeName], "moveGauge: no such gauge exists.")
+        assert(newX and newY, "moveGauge: need to have both X and Y dimensions.")
+       
+        moveWindow(gaugeName, newX, newY)
+        moveWindow(gaugeName .. "_back", newX, newY)
+                       
+        gaugesTable[gaugeName].xpos, gaugesTable[gaugeName].ypos = newX, newY
+ 
 end
 
 -- Set the text on a custom gauge built by createGauge(...)
@@ -74,27 +77,33 @@ end
 -- Colors are optional and will default to 0,0,0(black) if not passed as args.
 
 function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
-	local red,green,blue = 0,0,0
-	local l_labelText = gaugeText
-	
-	if color1 ~= nil then
-		if color2 == nil then
-			red, green, blue = getRGB(color1)
-		else
-			red, green, blue = color1, color2, color3
-		end
-	end
-	
-	-- Check to make sure we had a text to apply, if not, clear the text
-	if l_labelText == nil then
-		l_labelText = ""
-	end
-	
-	local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
-	
-
-	echo(gaugeName, l_EchoString)
-	echo(gaugeName .. "_back", l_EchoString)
+        assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
+ 
+        local red,green,blue = 0,0,0
+        local l_labelText = gaugeText
+       
+        if color1 ~= nil then
+                if color2 == nil then
+                        red, green, blue = getRGB(color1)
+                else
+                        red, green, blue = color1, color2, color3
+                end
+        end
+       
+        -- Check to make sure we had a text to apply, if not, clear the text
+        if l_labelText == nil then
+                l_labelText = ""
+        end
+       
+        local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
+       
+ 
+        echo(gaugeName, l_EchoString)
+        echo(gaugeName .. "_back", l_EchoString)
+       
+       
+        gaugesTable[gaugeName].text = l_EchoString
+        gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
 end
 
 -- Converts an RGB value into an HTML compliant(label usable) HEX number
@@ -170,49 +179,42 @@ end
 gaugesTable = {} -- first we need to make this table which will be used later to store important data in...
 
 function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
-	-- Check for existing gauge with same name
-	-- By Blaine von Roeder - 12/2009
-	for _,t in pairs(gaugesTable) do
-		if (t.name == gaugeName) then
-			return
-		end
-	end
-
-	-- make a nice background for our gauge
-	createLabel(gaugeName .. "_back",0,0,0,0,1)
-	if color2 == nil then
-		local red, green, blue = getRGB(color1)
-		setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)		
-	else
-		setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
-	end
-	moveWindow(gaugeName .. "_back", Xpos, Ypos)
-	resizeWindow(gaugeName .. "_back", width, height)
-	showWindow(gaugeName .. "_back")
-
-	-- make a nicer front for our gauge
-	createLabel(gaugeName,0,0,0,0,1)
-	if color2 == nil then
-		local red, green, blue = getRGB(color1)
-		setBackgroundColor(gaugeName, red , green, blue, 255)		
-	else
-		setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
-	end
-	moveWindow(gaugeName, Xpos, Ypos)
-	resizeWindow(gaugeName, width, height)
-	showWindow(gaugeName)
-
-	-- Set Gauge text (Defaults to black)
-	-- If no gaugeText was passed, we'll just leave it blank!
-	if gaugeText ~= nil then
-		setGaugeText(gaugeName, gaugeText, "black")
-	else
-		setGaugeText(gaugeName)
-	end
-
-	-- store important data in a table
-	table.insert(gaugesTable, {name = gaugeName, width = width, height = height, color1 = color1, color2 = color2, color3 = color3})
-	
+ 
+        -- make a nice background for our gauge
+        createLabel(gaugeName .. "_back",0,0,0,0,1)
+        if color2 == nil then
+                local red, green, blue = getRGB(color1)
+                setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)               
+        else
+                setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
+        end
+        moveWindow(gaugeName .. "_back", Xpos, Ypos)
+        resizeWindow(gaugeName .. "_back", width, height)
+        showWindow(gaugeName .. "_back")
+ 
+        -- make a nicer front for our gauge
+        createLabel(gaugeName,0,0,0,0,1)
+        if color2 == nil then
+                local red, green, blue = getRGB(color1)
+                setBackgroundColor(gaugeName, red , green, blue, 255)          
+        else
+                setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
+        end
+        moveWindow(gaugeName, Xpos, Ypos)
+        resizeWindow(gaugeName, width, height)
+        showWindow(gaugeName)
+ 
+        -- store important data in a table
+        gaugesTable[gaugeName] = {width = width, height = height, xpos = Xpos, ypos = Ypos,text = gaugeText, color1 = color1, color2 = color2, color3 = color3}
+ 
+        -- Set Gauge text (Defaults to black)
+        -- If no gaugeText was passed, we'll just leave it blank!
+        if gaugeText ~= nil then
+                setGaugeText(gaugeName, gaugeText, "black")
+        else
+                setGaugeText(gaugeName)
+        end
+ 
 end
 
 
@@ -232,22 +234,19 @@ end
 -- Typical usage would be in a prompt with your current health or whatever value, and throw
 -- in some variables instead of the numbers.
 
-function setGauge(gaugeName, currentValue, maxValue, gaugeText)	
-
-
-	-- search through our gaugesTable for our name input and change according to the values
-	for _,v in pairs(gaugesTable) do
-		if v.name == gaugeName then
-			resizeWindow(gaugeName, v.width/100*((100/maxValue)*currentValue), v.height)
-		end
-	end
-
-	-- if we wanted to change the text, we do it
-	if gaugeText ~= nil then
-		echo(gaugeName .. "_back", gaugeText)
-		echo(gaugeName, gaugeText)
-	end
-	
+function setGauge(gaugeName, currentValue, maxValue, gaugeText)
+        assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
+        assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
+       
+        resizeWindow(gaugeName, gaugesTable[gaugeName].width/100*((100/maxValue)*currentValue), gaugesTable[gaugeName].height)
+ 
+        -- if we wanted to change the text, we do it
+        if gaugeText ~= nil then
+                echo(gaugeName .. "_back", gaugeText)
+                echo(gaugeName, gaugeText)
+               
+           gaugesTable[gaugeName].text = gaugeText
+        end
 end
 
 
@@ -854,7 +853,7 @@ function display(what, numformat, recursion)
       echo(indent(recursion))
       echo(printable(k))
       echo(": ")
-      display(v, numformat, recursion + 1)
+      if not (v == _G) then display(v, numformat, recursion + 1) end
     end
 
     -- so empty tables print as {} instead of {..indent..}
@@ -895,47 +894,176 @@ function printable(what, numformat)
   return ret
 end
 
-
 -- Handles indentation
 do local indents = {}  -- simulate a static variable
-function indent(num)
+	function indent(num)
 
-  if not indents[num] then
-    indents[num] = ""
-    for i = 0, num do
-      indents[num] = indents[num].."  "
-    end
-  end
+	  if not indents[num] then
+	    indents[num] = ""
+	    for i = 0, num do
+	      indents[num] = indents[num].."  "
+	    end
+	  end
 
-  return indents[num]
+	  return indents[num]
+	end
 end
+
+function resizeGauge(gaugeName, width, height)
+    assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
+    assert(width and height, "resizeGauge: need to have both width and height.")
+ 
+	resizeWindow(gaugeName, width, height)
+	resizeWindow(gaugeName .. "_back", width, height)
+ 
+    -- save in the table
+    gaugesTable[gaugeName].width, gaugesTable[gaugeName].height = width, height
+end
+ 
+function setGaugeStyleSheet(gaugeName, css, cssback)
+    if not setLabelStyleSheet then return end-- mudlet 1.0.5 and lower compatibility
+    assert(gaugesTable[gaugeName], "setGaugeStyleSheet: no such gauge exists.")
+ 
+    setLabelStyleSheet(gaugeName, css)
+    setLabelStyleSheet(gaugeName .. "_back", cssback or css)
 end
 
 ----------------------------------------------------------------------------------
 -- Functions written by Benjamin Smith - December 2009
 ----------------------------------------------------------------------------------
-if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
--- Echo with color function.
--- Arg1: String to echo
--- Arg2: String containing value for foreground color in hexadecimal RGB format
--- Arg3: String containing value for background color in hexadecimal RGB format
--- Arg4: Bool that tells the function to use insertText() rather than echo()
--- Arg5: Name of the console to echo to. Defaults to main.
---
--- Color changes can be made within the string using the format |cFRFGFB,BRBGBB
--- where FR is the foreground red value, FG is the foreground green value, FB
--- is the foreground blue value, BR is the background red value, etc. ,BRBGBB
--- is optional. |r can be used within the string to reset the colors to default.
--- 
--- The colors in arg2 and arg3 replace the normal defaults for your console.
--- So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"),
--- the first Testing would be red on black and the second would be green on blue.
+--[[------------------------------------------------------------------------------
+Color echo functions: hecho, decho, cecho
+
+Function: hecho()
+Arg1: String to echo
+Arg2: String containing value for foreground color in hexadecimal RGB format
+Arg3: String containing value for background color in hexadecimal RGB format
+Arg4: Bool that tells the function to use insertText() rather than echo()
+Arg5: Name of the console to echo to. Defaults to main.
+
+Color changes can be made within the string using the format |cFRFGFB,BRBGBB
+where FR is the foreground red value, FG is the foreground green value, FB
+is the foreground blue value, BR is the background red value, etc. ,BRBGBB
+is optional. |r can be used within the string to reset the colors to default.
+
+The colors in arg2 and arg3 replace the normal defaults for your console.
+So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"),
+the first Testing would be red on black and the second would be green on blue.
+
+Function: decho()
+Arg1: String to echo
+Arg2: String containing value for foreground color in decimal format
+Arg3: String containing value for background color in decimal format
+Arg4: Bool that tells the function to use insertText() rather than echo()
+Arg5: Name of the console to echo to. Defaults to main.
+
+Color changes can be made using the format <FR,FG,FB:BR,BG,BB> where
+each field is a number from 0 to 255. The background portion can be omitted
+using <FR,FG,FB> or the foreground portion can be omitted using <:BR,BG,BB>
+Arguments 2 and 3 set the default fore and background colors for the string
+using the same format as is used within the string, sans angle brackets,
+e.g.  decho("test", "255,0,0", "0,255,0")
+
+Function: cecho()
+Arg1: String to echo
+Arg2: String containing value for foreground color as a named color
+Arg3: String containing value for background color as a named color
+Arg4: Bool that tells the function to use insertText() rather than echo()
+Arg5: Name of the console to echo to. Defaults to main.
+
+Color changes can be made using the format <foreground:background>
+where each field is one of the colors listed by showColors()
+The background portion can be omitted using <foreground> or the foreground 
+portion can be omitted using <:background>
+Arguments 2 and 3 to set the default colors take named colors as well.
+--]]------------------------------------------------------------------------------
 
 if rex then
-	function checho(str, fgColor, bgColor, insert, win)
-		local t = {}
+	Echos = {
+		Patterns = {
+			Hex = {
+				[[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
+				rex.new[[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
+				},
+			Decimal = {
+				[[(\x5c?<[0-9,:]+>)|(<r>)]],
+				rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
+				},
+			Color = {
+				[[(\x5c?<[a-zA-Z_:]+>)]],
+				rex.new[[<([a-zA-Z_]+)?(?::([a-zA-Z_]+))?>]],
+				},
+			Ansi = {
+				[[(\x5c?<[0-9,:]+>)]],
+				rex.new[[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
+				},
+			},
+		Process = function(str, style)
+			local t = {}
+			for s, c, r in rex.split(str, Echos.Patterns[style][1]) do
+				if c and (c:byte(1) == 92) then 
+					c = c:sub(2)
+					if s then s = s .. c else s = c end
+					c = nil
+				end
+				if s then table.insert(t, s) end
+				if r then table.insert(t, "r") end
+				if c then
+					if style == 'Hex' or style == 'Decimal' then
+						local fr, fg, fb, br, bg, bb = Echos.Patterns[style][2]:match(c)
+						local color = {}
+						if style == 'Hex' then 
+							if fr and fg and fb then fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16) end
+							if br and bg and bb then br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16) end
+						end
+						if fr and fg and fb then color.fg = { fr, fg, fb } end
+						if br and bg and bb then color.bg = { br, bg, bb } end
+						table.insert(t, color)
+					elseif style == 'Color' then
+						if c == "<reset>" then table.insert(t, "r")
+						else
+							local fcolor, bcolor = Echos.Patterns[style][2]:match(c)
+							local color = {}
+							if fcolor and color_table[fcolor] then color.fg = color_table[fcolor] end
+							if bcolor and color_table[bcolor] then color.bg = color_table[bcolor] end
+							table.insert(t, color)
+						end
+					end
+				end
+			end
+			return t
+		end,
+		}
+	
+	function xEcho(style, str, fgColor, bgColor, insert, win)
 		local reset, out
+		local function getFgColor()
+			if style == 'Hex' then
+				local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+				fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+				return fr, fg, fb
+			elseif style == 'Decimal' then
+				local fr, fg, fb = fgColor:split(",")
+				return fr, fg, fb
+			elseif style == 'Color' then
+				local fr, fg, fb = unpack(color_table[fgColor])
+				return fr, fg, fb
+			end
+		end
+		local function getBgColor()
+			if style == 'Hex' then
+				local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+				br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+				return br, bg, bb
+			elseif style == 'Decimal' then
+				local br, bg, bb = bgColor:split(",")
+				return br, bg, bb
+			elseif style == 'Color' then
+				local br, bg, bb = unpack(color_table[bgColor])
+				return br, bg, bb
+			end
+		end
 		if insert then
 			if win then
 				out = function(win, str)
@@ -961,25 +1089,19 @@ if rex then
 			if fgColor then
 				if bgColor then
 					reset = function()
-						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
-						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
-						setFgColor(win, fr, fg, fb)
-						local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
-						br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
-						setBgColor(win, br, bg, bb)
+						setFgColor(win, getFgColor())
+						setBgColor(win, getBgColor())
 					end
 				else
 					reset = function()
-						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
-						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
-						setFgColor(win, fr, fg, fb)
+						resetFormat(win)
+						setFgColor(win, getFgColor())
 					end
 				end
 			elseif bgColor then
 				reset = function()
-					local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
-					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
-					setBgColor(win, br, bg, bb)
+					resetFormat(win)
+					setBgColor(win, getBgColor())
 				end
 			else
 				reset = function()
@@ -990,25 +1112,19 @@ if rex then
 			if fgColor then
 				if bgColor then
 					reset = function()
-						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
-						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
-						setFgColor(fr, fg, fb)
-						local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
-						br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
-						setBgColor(br, bg, bb)
+						setFgColor(getFgColor())
+						setBgColor(getBgColor())
 					end
 				else
 					reset = function()
-						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
-						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
-						setFgColor(fr, fg, fb)
+						resetFormat()
+						setFgColor(getFgColor())
 					end
 				end
 			elseif bgColor then
 				reset = function()
-					local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
-					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
-					setBgColor(br, bg, bb)
+					resetFormat()
+					setBgColor(getBgColor())
 				end
 			else
 				reset = function()
@@ -1017,28 +1133,18 @@ if rex then
 			end
 		end
 		
-		for s, fr, fg, fb, br, bg, bb, r in rex.split(str, [[(?:\|c([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}),?([0-9a-fA-F]{2})?([0-9a-fA-F]{2})?([0-9a-fA-F]{2})?|(\|r))]]) do 
-			local fore, back, color
-			if fr and fg and fb then fore = { fr, fg, fb } end
-			if br and bg and bb then back = { br, bg, bb } end
-			if fore and back then 
-				color = { ["fg"] = fore, ["bg"] = back }
-			elseif fore then
-				color = { ["fg"] = fore }
-			end
-			if s then table.insert(t, s) end
-			if color then table.insert(t, color) end
-			if r then table.insert(t, "r") end
-		end
+		local t = Echos.Process(str, style)
+		
+		reset()
 		
 		for _, v in ipairs(t) do
 			if type(v) == 'table' then
-				local fr, fg, fb = unpack(v.fg)
-				fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
-				if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
+				if v.fg then
+					local fr, fg, fb = unpack(v.fg)
+					if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
+				end
 				if v.bg then
 					local br, bg, bb = unpack(v.bg)
-					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
 					if win then setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb) end
 				end
 			elseif v == "r" then
@@ -1049,11 +1155,88 @@ if rex then
 		end
 		if win then resetFormat(win) else resetFormat() end
 	end
+	
+	function hecho(...) xEcho("Hex", ...) end
+--	function aecho(...) xEcho("Ansi", ...) end
+	function decho(...) xEcho("Decimal", ...) end
+	function cecho(...) xEcho("Color", ...) end
+	checho = cecho
+else
+	function cecho(window, text)
+		local win = text and window
+		local s = text or window
+		local reset
+		if win then 
+			reset = function() resetFormat(win) end 
+		else 
+			reset = function() resetFormat() end
+		end
+		reset()
+		for color, text in s:gmatch("<([a-zA-Z_:]+)>([^<>]+)") do  
+			if color == "reset" then 
+				reset()
+				if win then echo(win, text) else echo(text) end
+			else
+				local colist  =   string.split(color..":", "%s*:%s*")
+				local fgcol   =   colist[1] ~= "" and colist[1] or "white"
+				local bgcol   =   colist[2] ~= "" and colist[2] or "black"
+				local FGrgb   =   color_table[fgcol]
+				local BGrgb   =   color_table[bgcol]
+
+				if win then
+					setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
+					setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
+					echo(win,text)
+				else
+					setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
+					setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
+					echo(text)
+				end
+			end
+		end
+		reset()
+	end
+	
+	function decho(window, text)
+		local win = text and window
+		local s = text or window
+		local reset
+		if win then 
+			reset = function() resetFormat(win) end 
+		else 
+			reset = function() resetFormat() end
+		end
+		reset()
+		for color, text in s:gmatch("<([0-9,:]+)>([^<>]+)") do  
+			if color == "reset" then 
+				reset()
+				if win then echo(win, text) else echo(text) end
+			else
+				local colist  =   string.split(color..":", "%s*:%s*")
+				local fgcol   =   colist[1] ~= "" and colist[1] or "white"
+				local bgcol   =   colist[2] ~= "" and colist[2] or "black"
+				local FGrgb   =   color_table[fgcol] or string.split(fgcol, ",")
+				local BGrgb   =   color_table[bgcol] or string.split(bgcol, ",")
+				
+				if win then
+					setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
+					setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
+					echo(win,text)
+				else
+					setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
+					setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
+					echo(text)
+				end
+			end
+		end
+		reset()
+	end
 end
 
 -- Enable mathematical operations & comparisons on matches table.
 if not matches then matches = {} end
-setmetatable( matches, {
+if not multimatches then multimatches = {} end
+matches_mt = {
 	["__add"] = function(op1, op2) 
 		local o1, o2 = tonumber(op1), tonumber(op2)
 		if (o1 and o2) then
@@ -1104,7 +1287,7 @@ setmetatable( matches, {
 			else
 				return false
 			end
-		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+		elseif xor(o1, o2) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 == op2) then
@@ -1120,7 +1303,7 @@ setmetatable( matches, {
 			else
 				return false
 			end
-		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+		elseif xor(o1, o2) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 < op2) then
@@ -1136,7 +1319,7 @@ setmetatable( matches, {
 			else
 				return false
 			end
-		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+		elseif xor(o1, o2) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 <= op2) then
@@ -1152,7 +1335,7 @@ setmetatable( matches, {
 			else
 				return false
 			end
-		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+		elseif xor(o1, o2) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 > op2) then
@@ -1168,7 +1351,7 @@ setmetatable( matches, {
 			else
 				return false
 			end
-		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
+		elseif xor(o1, o2) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 >= op2) then
@@ -1176,5 +1359,137 @@ setmetatable( matches, {
 			end
 		end
 	end,
+	["__index"] = function(t, k)
+		local key = tonumber(rawget(t, k)) or rawget(t, k)
+		return key
+	end,
+	}
+setmetatable(matches, matches_mt)
+setmetatable(multimatches, matches_mt)
+
+-- Extending default libraries makes Babelfish happy.
+setmetatable( _G, { 
+	["__call"] = function(func, ...)
+		if type(func) == "function" then
+			return func(...)
+		else
+			local h = metatable(func).__call
+			if h then
+				return h(func, ...)
+			elseif _G[type(func)][func] then
+				_G[type(func)][func](...)
+			else
+				debug("Error attempting to call function " .. func .. ", function does not exist.")
+			end
+		end
+	end,
 	})
+	
+function xor(a, b) if (a and (not b)) or (b and (not a)) then return true else return false end end
+	
+function getOS()
+    if string.char(getMudletHomeDir():byte()) == "/" then 
+        if string.find(os.getenv("HOME"), "home") == 2 then return "linux" else return "mac" end
+        else return "windows"
+    end
+end
+
+-- Opens URL in default browser
+function openURL(url)
+	local os = getOS()
+	if os == "linux" then _G.os.execute("xdg-open " .. url)
+	elseif os == "mac" then _G.os.execute("open " .. url)
+	elseif os == "windows" then _G.os.execute("start " .. url) end
+end
+
+-- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3
+function showColors(...)
+	local cols = ... or 3
+	local i = 1
+	for k,v in pairs(color_table) do
+		local fg
+		local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
+		if luminosity > 0.5 then
+			fg = {0,0,0}
+		else
+			fg = {255,255,255}
+		end
+		hecho("|c"..RGB2Hex(unpack(fg))..","..RGB2Hex(unpack(v))..k..string.rep(" ", 23-k:len()))
+		echo"  "
+		if i == cols then 
+			echo"\n"
+			i = 1
+		else 
+			i = i + 1
+		end
+	end
+end
+
+-- Capitalize first character in a string
+function string:title()
+	self = self:gsub("^%l", string.upper, 1)
+	return self
+end
+
+-- Contribution from Iocun
+walklist = {}
+walkdelay = 0
+
+function speedwalktimer()
+	send(walklist[1])
+	table.remove(walklist, 1)
+	if #walklist>0 then
+		tempTimer(walkdelay, [[speedwalktimer()]])
+	end
+end
+
+function speedwalk(dirString, backwards, delay)
+	local dirString		= dirString:lower()
+	walklist			= {}
+	walkdelay			= delay
+	local reversedir	= {
+		n	= "s",
+		en	= "sw",
+		e	= "w",
+		es	= "nw",
+		s	= "n",
+		ws	= "ne",
+		w	= "e",
+		wn	= "se",
+		u	= "d",
+		d	= "u",
+		ni	= "out",
+		tuo	= "in"
+	}
+	
+	if not backwards then
+		for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do      
+			count = (count == "" and 1 or count)
+			for i=1, count do
+				if delay then walklist[#walklist+1] = direction 
+				else send(direction)
+				end
+			end
+		end
+	else
+		for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do      
+			count = (count == "" and 1 or count)
+			for i=1, count do
+				if delay then walklist[#walklist+1] = reversedir[direction]
+				else send(reversedir[direction])
+				end
+			end
+		end
+	end
+	
+	if walkdelay then speedwalktimer() end
+end
+
+
+
+__________ Information from ESET NOD32 Antivirus, version of virus signature database 4757 (20100109) __________
+
+The message was checked by ESET NOD32 Antivirus.
+
+http://www.eset.com
 
