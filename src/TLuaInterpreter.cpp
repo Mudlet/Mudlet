@@ -3961,13 +3961,14 @@ void TLuaInterpreter::adjustCaptureGroups( int x, int a )
 
 void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
 {
+qDebug()<<"LuaInter::trace#0";
     lua_State * L = pGlobalLua;
     lua_getglobal( L, "atcp" ); //defined in LuaGlobal.lua
     lua_pushstring( L, var.toLatin1().data() );
     lua_pushstring( L, arg.toLatin1().data() );
     lua_rawset( L, -3 );
     lua_pop( L, 1 );
-
+qDebug()<<"LuaInter::trace#1";
     TEvent event;
     event.mArgumentList.append( var );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -3975,6 +3976,7 @@ void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( & event );
+qDebug()<<"Luainter::trace#2";
 }
 
 bool TLuaInterpreter::call_luafunction( void * pT )
@@ -4481,7 +4483,9 @@ void TLuaInterpreter::initLuaGlobals()
     {
         gSysErrors << "[INFO] LuaGlobal.lua loaded successfully.";
     }
-
+    QString tn = "atcp";
+    QStringList args;
+    set_lua_table( tn, args );
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
     
     //FIXME make function call in destructor lua_close(L);

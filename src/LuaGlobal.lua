@@ -6,6 +6,10 @@
 -- They are described in the manual.
 ----------------------------------------------------------------------------------
 
+atcp = {}
+
+
+
 if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
 ----------------------------------------------------------------------------------
@@ -1484,12 +1488,4 @@ function speedwalk(dirString, backwards, delay)
 	
 	if walkdelay then speedwalktimer() end
 end
-
-
-
-__________ Information from ESET NOD32 Antivirus, version of virus signature database 4757 (20100109) __________
-
-The message was checked by ESET NOD32 Antivirus.
-
-http://www.eset.com
 

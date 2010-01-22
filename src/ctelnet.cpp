@@ -696,7 +696,9 @@ void cTelnet::setATCPVariables( QString & msg )
     }
     var.remove( '.' );
     arg.remove( '\n' );
+qDebug()<<"calling lua";
     mpHost->mLuaInterpreter.setAtcpTable( var, arg );
+qDebug()<<"out of atcp";
 }
 
 void cTelnet::atcpComposerCancel()
@@ -770,7 +772,7 @@ void cTelnet::gotPrompt( string & mud_data )
     mpPostingTimer->stop();
     mMudData += mud_data;
     
-    /*if( mUSE_IRE_DRIVER_BUGFIX )
+    if( mUSE_IRE_DRIVER_BUGFIX )
     {
         //////////////////////////////////////////////////////////////////////
         //
@@ -807,7 +809,7 @@ void cTelnet::gotPrompt( string & mud_data )
         }
         //
         ////////////////////////////   
-    }*/
+    }
     
     postData();
     mMudData = "";
