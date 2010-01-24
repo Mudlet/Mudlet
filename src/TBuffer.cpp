@@ -46,18 +46,22 @@ TChar::TChar()
     italics = false;
     bold = false;
     underline = false;
+    link = 0;
+    invers = false;
 }
 
-TChar::TChar( int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bool u )
+TChar::TChar( int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bool u, int _link )
 : fgR(fR)
 , fgG(fG)
 , fgB(fB)
 , bgR(bR)
 , bgG(bG)
 , bgB(bB)
-, bold(b)
 , italics(i)
+, bold(b)
 , underline(u)
+, link(_link )
+, invers( false )
 {
 }
 
@@ -84,7 +88,9 @@ TChar::TChar( Host * pH )
     }
     italics = false;
     bold = false;
-    underline = false;    
+    underline = false;
+    invers = false;
+    link = 0;
 }
 
 bool TChar::operator==( const TChar & c )
@@ -97,6 +103,7 @@ bool TChar::operator==( const TChar & c )
     if( bold != c.bold ) return false;
     if( italics != c.italics ) return false;
     if( underline != c.underline ) return false;
+    if( invers != c.invers ) return false;
     return true;
 }
 
@@ -110,23 +117,23 @@ TChar::TChar( const TChar & copy )
     bgB = copy.bgB;
     italics = copy.italics;
     bold = copy.bold;
-    underline = copy.underline;     
+    underline = copy.underline;
+    link = copy.link;
+    invers = false;
 }
 
 
 TBuffer::TBuffer( Host * pH )
 : mLinesLimit( 10000 )
 , mBatchDeleteSize( 100 )
-, mpHost( pH )
-, mCursorMoved( false )
+, mUntriggered( 0 )
 , mWrapAt( 99999999 )
 , mWrapIndent( 0 )
+
+, gotESC( false )
+, gotHeader( false )
+, codeRet( 0 )
 , mFormatSequenceRest( QString("") )
-, mBold( false )
-, mItalics( false )
-, mUnderline( false )
-, mFgColorCode( 0 )
-, mBgColorCode( 0 )
 , mBlack             ( pH->mBlack )
 , mLightBlack        ( pH->mLightBlack )
 , mRed               ( pH->mRed )
@@ -145,10 +152,16 @@ TBuffer::TBuffer( Host * pH )
 , mWhite             ( pH->mWhite )
 , mFgColor           ( pH->mFgColor )
 , mBgColor           ( pH->mBgColor )
-, mUntriggered( 0 )
-, gotESC( false )
-, gotHeader( false )
-, codeRet( 0 )
+, mpHost( pH )
+, mCursorMoved( false )
+, mBold( false )
+, mItalics( false )
+, mUnderline( false )
+, mFgColorCode( 0 )
+, mBgColorCode( 0 )
+, mLinkID( 0 )
+
+
 {   
     clear();
     newLines = 0;
@@ -264,7 +277,7 @@ void TBuffer::updateColors()
 
 }
 
-QPoint & TBuffer::getEndPos()
+QPoint TBuffer::getEndPos()
 {
     int x = 0;
     int y = 0;
@@ -647,17 +660,10 @@ void TBuffer::translateToPlainText( std::string & s )
     speedTP = 0;
     int numCodes=0;
     speedSequencer = 0;
-    int last = buffer.size()-1;
-
     mUntriggered = lineBuffer.size()-1;
     msLength = s.length();
     mFormatSequenceRest="";
-    int sequence_begin = 0;
-    int sequence_end = 0;
     int msPos = 0;
-    int highCode = 0;
-    int numNull = 0;
-
     QString packetTime = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
     bool firstChar = (lineBuffer.back().size() == 0); //FIXME
     if( msLength < 1 ) return;
@@ -1002,19 +1008,19 @@ void TBuffer::translateToPlainText( std::string & s )
             mpHost->mpConsole->runTriggers( line );
 	    if( lineBuffer.size()-1 == line )
             {
-                if( lineBuffer[line] == "" )
+                if( lineBuffer[lineBuffer.size()-1] == "" )
 		{
                     newLines++;
                 }
                 else
-                    newLines += 1+wrap( line );
+                    newLines += 1+wrap( lineBuffer.size()-1 );
             }
 	    else
-                newLines += 1+wrap( line );
+                newLines += 1+wrap( lineBuffer.size()-1 );
 
             if( ch == '\xff' )
             {
-                promptBuffer[line] = true;
+                promptBuffer[lineBuffer.size()-1] = true;
             }
 
             std::deque<TChar> newLine;
@@ -1022,7 +1028,7 @@ void TBuffer::translateToPlainText( std::string & s )
             lineBuffer << nothing;
             QString time = "-----";
             timeBuffer << time;
-
+            dirty << true;
             promptBuffer.push_back( false );
 
             firstChar = true;
@@ -1083,6 +1089,7 @@ void TBuffer::append( QString & text,
         lineBuffer.push_back(QString());
         promptBuffer.push_back( false );
         timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        dirty << true;
         last = 0;
     }
     bool firstChar = (lineBuffer.back().size() == 0);
@@ -1100,6 +1107,7 @@ void TBuffer::append( QString & text,
             promptBuffer.push_back( false );
             QString time = "-----";
             timeBuffer << time;
+            dirty << true;
             mLastLine++;
             newLines++;
             firstChar = true;
@@ -1137,6 +1145,7 @@ void TBuffer::append( QString & text,
                         lineBuffer.append( nothing );
                     QString time = "-----";
                     timeBuffer << time;
+                    dirty << true;
                     promptBuffer.push_back( false );
                     mLastLine++;
                     newLines++;
@@ -1184,6 +1193,7 @@ void TBuffer::appendLine( QString & text,
         buffer.push_back( newLine );
         lineBuffer.push_back(QString());
         promptBuffer.push_back( false );
+        dirty << true;
         timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
         last = 0;
     }
@@ -1381,10 +1391,11 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
             TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
             newLine.push_back( c );
             buffer.push_back( newLine );
-            promptBuffer.push_back( false );
+            promptBuffer.insert( y, false );
             const QString nothing = "";
-            lineBuffer.insert(y, nothing );
-            timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "-   ";
+            lineBuffer.insert( y, nothing );
+            timeBuffer << "-->";//this is intentional -> faster
+            dirty.insert( y, true );
             mLastLine++;
             newLines++;
             x = 0;
@@ -1397,6 +1408,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
         IT it = buffer[y].begin();
         buffer[y].insert( it+x, c );
     }
+    dirty[y] = true;
     P.setX( x );
     P.setY( y );
     return P;
@@ -1687,6 +1699,7 @@ inline int TBuffer::wrap( int startLine )
         lineBuffer.pop_back();
         timeBuffer.pop_back();
         promptBuffer.pop_back();
+        dirty.pop_back();
     }
 
     newLines -= lineCount;
@@ -1703,6 +1716,7 @@ inline int TBuffer::wrap( int startLine )
     {
         lineBuffer.append( tempList[i] );
         timeBuffer.append( timeList[i] );
+        dirty.push_back( true );
         promptBuffer.push_back( false );//optimierung: prompts werden nicht gewrappt
     }
     return insertedLines > 0 ? insertedLines : 0;
@@ -1798,6 +1812,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         lineBuffer.pop_back();
         timeBuffer.pop_back();
         promptBuffer.pop_back();
+        dirty.pop_back();
     }
     
     newLines -= lineCount;
@@ -1815,6 +1830,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         lineBuffer.append( tempList[i] );
         timeBuffer.append( timeList[i] );
         promptBuffer.push_back( false );
+        dirty.push_back( true );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -1906,6 +1922,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     lineBuffer.removeAt( startLine );
     timeBuffer.removeAt( startLine );
     promptBuffer.removeAt( startLine );
+    dirty.removeAt( startLine );
 
     int insertedLines = queue.size()-1;
 
@@ -1922,6 +1939,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         lineBuffer.insert( startLine+i, tempList[i] );
         timeBuffer.insert( startLine+i, QTime::currentTime().toString("hh:mm:ss.zzz")+"   " );
         promptBuffer.insert( startLine+i, false);
+        dirty.insert( startLine+i, true );
     }
     return insertedLines > 0 ? insertedLines : 0;
 }
@@ -2094,6 +2112,7 @@ void TBuffer::clear()
     lineBuffer << QString();
     timeBuffer << "   ";
     promptBuffer.push_back( false );
+    dirty.push_back( true );
 }
 
 bool TBuffer::deleteLine( int y )
@@ -2108,6 +2127,7 @@ void TBuffer::shrinkBuffer()
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
+        dirty.pop_front();
         buffer.pop_front();
     }
 }
@@ -2127,6 +2147,7 @@ bool TBuffer::deleteLines( int from, int to )
             lineBuffer.removeAt( i ); 
             timeBuffer.removeAt( i );
             promptBuffer.removeAt( i );
+            dirty.removeAt( i );
         }
         
         int i = (int)buffer.size();
@@ -2157,22 +2178,30 @@ bool TBuffer::deleteLines( int from, int to )
 
 bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
 {
-    if( ( P_begin.x() >= 0 ) 
-        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
-        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    int x1 = P_begin.x();
+    int x2 = P_end.x();
+    int y1 = P_begin.y();
+    int y2 = P_end.y();
+
+    if( ( x1 >= 0 )
+        && ( ( y2 < static_cast<int>(buffer.size()) )
+        && ( y2 >= 0 ) )
+        && ( ( x2 > x1 ) || ( y2 > y1 ) )
+        && ( x1 < static_cast<int>(buffer[y1].size()) )
+        && ( x2 < static_cast<int>(buffer[y2].size()) ) )
     {
-        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        for( int y=y1; y<=y2; y++ )
         {
             int x = 0;
-            if( y == P_begin.y() )
+            if( y == y1 )
             {
-                x = P_begin.x();
+                x = x1;
             }
             while( x < static_cast<int>(buffer[y].size()) )
             {
-                if( y >= P_end.y() )
+                if( y >= y2 )
                 {
-                    if( x >= P_end.x() )
+                    if( x >= x2 )
                     {
                         return true;
                     }
@@ -2190,22 +2219,30 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
 
 bool TBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
 {
-    if( ( P_begin.x() >= 0 )
-        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
-        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    int x1 = P_begin.x();
+    int x2 = P_end.x();
+    int y1 = P_begin.y();
+    int y2 = P_end.y();
+
+    if( ( x1 >= 0 )
+        && ( ( y2 < static_cast<int>(buffer.size()) )
+        && ( y2 >= 0 ) )
+        && ( ( x2 > x1 ) || ( y2 > y1 ) )
+        && ( x1 < static_cast<int>(buffer[y1].size()) )
+        && ( x2 < static_cast<int>(buffer[y2].size()) ) )
     {
-        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        for( int y=y1; y<=y2; y++ )
         {
             int x = 0;
-            if( y == P_begin.y() )
+            if( y == y1 )
             {
-                x = P_begin.x();
+                x = x1;
             }
             while( x < static_cast<int>(buffer[y].size()) )
             {
-                if( y >= P_end.y() )
+                if( y >= y2 )
                 {
-                    if( x >= P_end.x() )
+                    if( x >= x2 )
                     {
                         return true;
                     }
@@ -2223,27 +2260,34 @@ bool TBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
 
 bool TBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
 {
-    if( ( P_begin.x() >= 0 )
-        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
-        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    int x1 = P_begin.x();
+    int x2 = P_end.x();
+    int y1 = P_begin.y();
+    int y2 = P_end.y();
+
+    if( ( x1 >= 0 )
+        && ( ( y2 < static_cast<int>(buffer.size()) )
+        && ( y2 >= 0 ) )
+        && ( ( x2 > x1 ) || ( y2 > y1 ) )
+        && ( x1 < static_cast<int>(buffer[y1].size()) )
+        && ( x2 < static_cast<int>(buffer[y2].size()) ) )
     {
-        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        for( int y=y1; y<=y2; y++ )
         {
             int x = 0;
-            if( y == P_begin.y() )
+            if( y == y1 )
             {
-                x = P_begin.x();
+                x = x1;
             }
             while( x < static_cast<int>(buffer[y].size()) )
             {
-                if( y >= P_end.y() )
+                if( y >= y2 )
                 {
-                    if( x >= P_end.x() )
+                    if( x >= x2 )
                     {
                         return true;
                     }
                 }
-
                 buffer[y][x].italics = bold;
                 x++;
             }
@@ -2256,22 +2300,30 @@ bool TBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
 
 bool TBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
 {
-    if( ( P_begin.x() >= 0 )
-        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
-        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    int x1 = P_begin.x();
+    int x2 = P_end.x();
+    int y1 = P_begin.y();
+    int y2 = P_end.y();
+
+    if( ( x1 >= 0 )
+        && ( ( y2 < static_cast<int>(buffer.size()) )
+        && ( y2 >= 0 ) )
+        && ( ( x2 > x1 ) || ( y2 > y1 ) )
+        && ( x1 < static_cast<int>(buffer[y1].size()) )
+        && ( x2 < static_cast<int>(buffer[y2].size()) ) )
     {
-        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        for( int y=y1; y<=y2; y++ )
         {
             int x = 0;
-            if( y == P_begin.y() )
+            if( y == y1 )
             {
-                x = P_begin.x();
+                x = x1;
             }
             while( x < static_cast<int>(buffer[y].size()) )
             {
-                if( y >= P_end.y() )
+                if( y >= y2 )
                 {
-                    if( x >= P_end.x() )
+                    if( x >= x2 )
                     {
                         return true;
                     }
@@ -2289,22 +2341,30 @@ bool TBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
 
 bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int fgColorG, int fgColorB )
 {
-    if( ( P_begin.x() >= 0 )
-        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
-        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    int x1 = P_begin.x();
+    int x2 = P_end.x();
+    int y1 = P_begin.y();
+    int y2 = P_end.y();
+
+    if( ( x1 >= 0 )
+        && ( ( y2 < static_cast<int>(buffer.size()) )
+        && ( y2 >= 0 ) )
+        && ( ( x2 > x1 ) || ( y2 > y1 ) )
+        && ( x1 < static_cast<int>(buffer[y1].size()) )
+        && ( x2 < static_cast<int>(buffer[y2].size()) ) )
     {
-        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        for( int y=y1; y<=y2; y++ )
         {
             int x = 0;
-            if( y == P_begin.y() )
+            if( y == y1 )
             {
-                x = P_begin.x();
+                x = x1;
             }
             while( x < static_cast<int>(buffer[y].size()) )
             {
-                if( y >= P_end.y() )
+                if( y >= y2 )
                 {
-                    if( x >= P_end.x() )
+                    if( x >= x2 )
                     {
                         return true;
                     }
@@ -2324,22 +2384,30 @@ bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int 
 
 bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, int bgColorR, int bgColorG, int bgColorB )
 {
-    if( ( P_begin.x() >= 0 )
-        && ( ( P_end.y() < static_cast<int>(buffer.size()) ) && ( P_end.y() >= 0 ) )
-        && ( ( P_end.x() > P_begin.x() ) || ( P_end.y() > P_begin.y() ) ) )
+    int x1 = P_begin.x();
+    int x2 = P_end.x();
+    int y1 = P_begin.y();
+    int y2 = P_end.y();
+
+    if( ( x1 >= 0 )
+        && ( ( y2 < static_cast<int>(buffer.size()) )
+        && ( y2 >= 0 ) )
+        && ( ( x2 > x1 ) || ( y2 > y1 ) )
+        && ( x1 < static_cast<int>(buffer[y1].size()) )
+        && ( x2 < static_cast<int>(buffer[y2].size()) ) )
     {
-        for( int y=P_begin.y(); y<=P_end.y(); y++ )
+        for( int y=y1; y<=y2; y++ )
         {
             int x = 0;
-            if( y == P_begin.y() )
+            if( y == y1 )
             {
-                x = P_begin.x();
+                x = x1;
             }
             while( x < static_cast<int>(buffer[y].size()) )
             {
-                if( y >= P_end.y() )
+                if( y >= y2 )
                 {
-                    if( x >= P_end.x() )
+                    if( x >= x2 )
                     {
                         return true;
                     }

@@ -4191,7 +4191,6 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
         }
         else
         {
-            qDebug()<<"calling func:"<<function<<"() args="<<pE->mArgumentList;
             lua_pushstring( L, pE->mArgumentList[i].toLatin1().data() );
         }
     }

@@ -51,6 +51,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mShowTimeStamps( isDebugConsole )
 , mForceUpdate( false )
 , mIsMiniConsole( false )
+, mLastRenderBottom( 0 )
 {    
     if( ! mIsDebugConsole )
     {
@@ -120,7 +121,6 @@ void TTextEdit::needUpdate( int y1, int y2 )
     QRect r( 0, top*mFontHeight, mScreenWidth*mFontWidth, bottom*mFontHeight );
     mForceUpdate = true;
     update( r );
-    qDebug()<<"y1="<<y1<<" mScreenHeight="<<mScreenHeight<<" rect:"<<r;
 }
 
 void TTextEdit::focusInEvent ( QFocusEvent * event )
@@ -502,7 +502,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
 
 void TTextEdit::updateLastLine()
 {
-    QRect r( 0, mScreenHeight-2*mFontHeight, mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
+    QRect r( 0, (mScreenHeight-1)*mFontHeight, mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
     mForceUpdate = true;
     update( r );
 }
@@ -514,14 +514,31 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
         mScrollVector = 0;
         //mForceUpdate = false;
     }
-    if( ( ( rect.height() < this->rect().height() ) && (rect.width() < this->rect().width() ) ) )
+
+    int x1 = rect.topLeft().x() / mFontWidth;
+    int x2 = rect.bottomRight().x() / mFontWidth;
+    int y1 = rect.topLeft().y() / mFontHeight;
+
+    if( ( ( rect.height() < this->rect().height() ) ) )//&& (rect.width() < this->rect().width() ) ) )
     {
         if( ! mForceUpdate )
         {
             painter.drawPixmap(0,0,mScreenMap);
             return;
         }
+        else
+        {
+            if( ! mMouseTracking )
+            {
+                mScrollVector = mScreenHeight - y1 - 1;
+            }
+            else
+            {
+                mScrollVector = 0;
+            }
+        }
     }
+
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
     pixmap.fill( palette().base().color() );
@@ -539,32 +556,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
         p.setRenderHint( QPainter::TextAntialiasing, false );
     }
 
-    
-    QPoint P_topLeft  = rect.topLeft();
-    QPoint P_bottomRight = rect.bottomRight();
-    int x_topLeft = P_topLeft.x();
-    int y_topLeft = P_topLeft.y();
-    int x_bottomRight = P_bottomRight.x();
-    int y_bottomRight = P_bottomRight.y();
-    if( x_bottomRight > mScreenWidth * mFontWidth )
-    {
-        x_bottomRight = mScreenWidth * mFontWidth;
-    }
-    
-    int x1 = x_topLeft / mFontWidth;
-    int y1 = y_topLeft / mFontHeight;
-    int x2 = x_bottomRight / mFontWidth;
-    int y2 = y_bottomRight / mFontHeight;
-    if( ( mForceUpdate ) || ( ( rect.height() >= this->rect().height() ) && (rect.width() >= this->rect().width() ) ) )
-    {
-        mScrollVector = 0;
-        x1 = 0;
-        x2 = mScreenWidth*mFontWidth;
-        y1 = 0;
-        y2 = mScreenHeight*mFontHeight;
-    }
-
-    int lineOffset = imageTopLine(); 
+    int lineOffset = imageTopLine();
     bool invers = false;
     
     if( mHighlight_on && mInversOn ) 
@@ -572,21 +564,25 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & rect )
         invers = true;
     }
     int from = 0;
+    if( lineOffset < 20 )
+    {
+        mScrollVector = 0;
+    }
     if( mScrollVector > 0 )
     {
         if( mScrollUp )
         {
             //screenPixmap = mScreenMap.copy( 0, mScrollVector*mFontHeight, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
             screenPixmap = mScreenMap.copy( 0, mScrollVector*mFontHeight, mScreenWidth*mFontWidth, (mScreenHeight-mScrollVector)*mFontHeight );
-            p.drawPixmap( 0, 0, screenPixmap );    
+            p.drawPixmap( 0, 0, screenPixmap );               
         }
         else
         {
             //screenPixmap = mScreenMap.copy( 0, 0, rect.width(), mScreenHeight*mFontHeight-mScrollVector*mFontHeight );
             screenPixmap = mScreenMap.copy( 0, 0, mScreenWidth*mFontWidth, (mScreenHeight-mScrollVector)*mFontHeight );
-            p.drawPixmap( 0, mScrollVector*mFontHeight, screenPixmap );
+            p.drawPixmap( 0, mScrollVector*mFontHeight, screenPixmap );            
         }
-        from = mScreenHeight-mScrollVector-1;
+        from = mScreenHeight - mScrollVector;
     }
 
     QRect deleteRect = QRect( 0, from*mFontHeight, rect.width(), rect.height() );
@@ -947,7 +943,7 @@ int TTextEdit::imageTopLine()
         }
     }
     else
-    {   
+    {
         return 0;
     }
 } 

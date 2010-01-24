@@ -843,11 +843,11 @@ void TConsole::runTriggers( int line )
 
     //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
     //       ansonsten einfach löschen
-    if( mDeletedLines > 0 )
+    /*if( mDeletedLines > 0 )
     {
         mDeletedLines = 0;
         buffer.newLines--;
-    }
+    }*/
 }
 
 void TConsole::finalize()
@@ -1656,7 +1656,7 @@ void TConsole::printCommand( QString & msg )
                 format.bgG = mCommandBgColor.green();
                 format.bgB = mCommandBgColor.blue();
                 buffer.insertInLine( P, msg, format );
-                console->needUpdate( lineBeforeNewContent, lineBeforeNewContent+1 );
+                console->updateLastLine();//needUpdate( lineBeforeNewContent, lineBeforeNewContent+1 );
                 //nachfolgende cmd prints werden dadurch ganz normal untereinander geschrieben, anstatt alle auf eine zeile. Die letze leerzeile wird deshalb nicht gelöscht, damit \n am Ende der Zeile nicht auf dem Bildschrim erscheint
                 buffer.promptBuffer[lineBeforeNewContent] = false;
                 //console->updateLastLine();

@@ -152,6 +152,8 @@ private:
     int               mOldScrollPos;
     bool              mInit_OK;
     bool              mIsMiniConsole;
+    int               mLastRenderBottom;
+    bool              mUpdateSlice;
 };
 
 #endif

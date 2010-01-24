@@ -41,7 +41,7 @@ class TChar
 {
 public:
            TChar();
-           TChar( int, int, int, int, int, int, bool, bool, bool );
+           TChar( int, int, int, int, int, int, bool, bool, bool, int _link = 0 );
            TChar( Host * );
            TChar( const TChar & copy );
     bool   operator==( const TChar & c );
@@ -54,7 +54,10 @@ public:
     bool   italics;
     bool   bold;
     bool   underline;
+    int    link;
+    bool   invers;
 };
+
 
 class Host;
 
@@ -95,7 +98,7 @@ public:
     QStringList getEndLines( int );
     void clear();
     void resetFontSpecs();
-    QPoint & getEndPos();
+    QPoint getEndPos();
     void translateToPlainText( std::string & s );
     void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
     void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
@@ -109,17 +112,21 @@ public:
     void paste( QPoint &, TBuffer );
     std::deque<TChar> bufferLine;
     std::deque< std::deque<TChar> > buffer;
-    QStringList timeBuffer;
-    QStringList lineBuffer;
-    QList<bool> promptBuffer;
-    int mLinesLimit;
-    int mBatchDeleteSize;
-    int newLines;
-    int mUntriggered;
+    QStringList       timeBuffer;
+    QStringList       lineBuffer;
+    QList<bool>       promptBuffer;
+    QList<bool>       dirty;
+    QString           mLinkStore[1000];
+    QString           mHintStore[1000];
+    int               mLinkID;
+    int               mLinesLimit;
+    int               mBatchDeleteSize;
+    int               newLines;
+    int               mUntriggered;
     int               mWrapAt;
     int               mWrapIndent;
-    void setBufferSize( int s, int batch );
-    void messen();
+    void              setBufferSize( int s, int batch );
+    void              messen();
     
 private:  
     inline void       shrinkBuffer();
