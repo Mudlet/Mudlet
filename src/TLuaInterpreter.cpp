@@ -4464,6 +4464,27 @@ void TLuaInterpreter::initLuaGlobals()
         QString msg = "[INFO] found Lua module rex_pcre";
         gSysErrors << msg;
     }
+
+    error = luaL_dostring( pGlobalLua, "require \"luasql.sqlite3\"" );
+
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, 1 ) )
+        {
+            e = "Lua error:";
+            e+=lua_tostring( pGlobalLua, 1 );
+        }
+        //QString msg = "[FAILED] cannot find Lua module luasql.sqlite3. The database functionality will not be available.";
+        QString msg = e.c_str();
+        gSysErrors << msg;
+    }
+    else
+    {
+        QString msg = "[INFO] found Lua module luasql.sqlite3";
+        gSysErrors << msg;
+    }
+
     QString path = QDir::homePath()+"/.config/mudlet/LuaGlobal.lua";
     error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
     if( error != 0 )

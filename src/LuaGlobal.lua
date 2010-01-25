@@ -4,13 +4,988 @@
 ----------------------------------------------------------------------------------
 -- These general functions can be used from anywhere within Mudlet scripts
 -- They are described in the manual.
-----------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 atcp = {}
 
-
-
+--------------------------------------------------------------
+-- easy luasqlite access module (c) Stephen Hansen 2010
+-- http://bazaar.launchpad.net/~mudlet-crucible-drivers/mudlet-crucible/db/files
+-------------------------------------------------------------
+-----------------------------------------------------------------------------
+-- General-purpose useful tools that were needed during development:
+-----------------------------------------------------------------------------
 if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
+
+
+
+-- Tests if a table is empty: this is useful in situations where you find
+-- yourself wanting to do 'if my_table == {}' and such.
+function table.is_empty(tbl)
+   for k, v in pairs(tbl) do
+      return false
+   end
+   return true
+end
+
+function string.starts(String,Start)
+   return string.sub(String,1,string.len(Start))==Start
+end
+
+function string.ends(String,End)
+   return End=='' or string.sub(String,-string.len(End))==End
+end
+
+-----------------------------------------------------------------------------
+-- Some Date / Time parsing functions.
+-----------------------------------------------------------------------------
+
+datetime = {
+   _directives = {
+      ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
+      ["%B"] = "(?P<month_name>january|febuary|march|april|may|june|july|august|september|october|november|december)",
+      ["%d"] = "(?P<day_of_month>\\d{2})",
+      ["%H"] = "(?P<hour_24>\\d{2})",
+      ["%I"] = "(?P<hour_12>\\d{2})",
+      ["%m"] = "(?P<month>\\d{2})",
+      ["%M"] = "(?P<minute>\\d{2})",
+      ["%p"] = "(?P<ampm>am|pm)",
+      ["%S"] = "(?P<second>\\d{2})",
+      ["%y"] = "(?P<year_half>\\d{2})",
+      ["%Y"] = "(?P<year_full>\\d{4})"
+   },
+   _pattern_cache = {},
+   _month_names = {
+      ["january"] = 1,
+      ["febuary"] = 2,
+      ["march"] = 3,
+      ["april"] = 4,
+      ["may"] = 5,
+      ["june"] = 6,
+      ["july"] = 7,
+      ["august"] = 8,
+      ["september"] = 9,
+      ["october"] = 10,
+      ["november"] = 11,
+      ["december"] = 12
+   },
+   _abbrev_month_names = {
+      ["jan"] = 1,
+      ["feb"] = 2,
+      ["mar"] = 3,
+      ["apr"] = 4,
+      ["may"] = 5,
+      ["jun"] = 6,
+      ["jul"]= 7,
+      ["aug"]= 8,
+      ["sep"] = 9,
+      ["oct"] = 10,
+      ["nov"] = 11,
+      ["dec"] = 12
+   }
+}
+
+-- datetime:_get_pattern(format)
+--  The rex.match function does not return named patterns even if you use named capture
+--  groups, but the r:tfind does -- but this only operates on compiled patterns. So,
+--  we are caching the conversion of 'simple format' date patterns into a regex, and
+--  then compiling them.
+function datetime:_get_pattern(format)
+   if not datetime._pattern_cache[format] then
+      local fmt = rex.gsub(format, "(%[A-Za-z])", 
+         function(m)
+               return datetime._directives[m] or m
+         end
+         )
+      
+      datetime._pattern_cache[format] = rex.new(fmt, rex.flags().CASELESS)
+   end
+
+   return datetime._pattern_cache[format]
+end
+
+-- datetime:parse(source, format, as_epoch)
+--   Parse the source for a date time value, according to the specified format. The
+--   default format if not specified is: "^%Y-%m-%d %H:%M:%S$"
+--   If as_epoch is true, the return value will be a single number. Otherwise, it will
+--   be a time table. See: http://www.lua.org/pil/22.1.html
+function datetime:parse(source, format, as_epoch)
+   if not format then
+      format = "^%Y-%m-%d %H:%M:%S$"
+   end
+
+   local fmt = datetime:_get_pattern(format)
+   local m = {fmt:tfind(source)}
+   
+   if m then
+      m = m[3]
+      dt = {}
+      
+      if m.year_half then
+         dt.year = tonumber("20"..m.year_half)
+      elseif m.year_full then
+         dt.year = tonumber(m.year_full)
+      end
+
+      if m.month then
+         dt.month = tonumber(m.month)
+      elseif m.month_name then
+         dt.month = datetime._month_names[m.month_name:lower()]
+      elseif m.abbrev_month_name then
+         dt.month = datetime._abbrev_month_names[m.abbrev_month_name:lower()]
+      end
+
+      dt.day = m.day_of_month
+      
+      if m.hour_12 then
+         assert(m.ampm, "You must use %p (AM|PM) with %I (12-hour time)")
+         if m.ampm == "PM" then
+            dt.hour = 12 + tonumber(m.hour_12)
+         else
+            dt.hour = tonumber(m.hour_12)
+         end
+      else
+         dt.hour = tonumber(m.hour_24)
+      end
+
+      dt.min = tonumber(m.minute)
+      dt.sec = tonumber(m.second)
+      dt.isdst = false
+      
+      if as_epoch then
+         return os.time(dt)
+      else
+         return dt
+      end
+   else
+      return nil
+   end
+end
+
+-----------------------------------------------------------------------------
+-- The database wrapper library
+-----------------------------------------------------------------------------
+
+if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
+
+db = {}
+db.__autocommit = {}
+db.__schema = {}
+db.__conn = {}
+   
+db.debug_sql = false
+
+-- db:_sql_type(v)
+--   Converts the type of a lua object to the equivalent type in SQL 
+function db:_sql_type(value)
+   local t = type(value)
+
+   if t == "number" then
+      return "REAL"
+   elseif t == "nil" then
+      return "NULL"
+   elseif t == "table" and value._timestamp ~= nil then
+      return "INTEGER"
+   else
+      return "TEXT"
+   end
+end
+
+-- db:_sql_convert(v)
+--   Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to 
+--   prevent inadvertant SQL injection.
+function db:_sql_convert(value)
+   local t = db:_sql_type(value)
+   echo("Value --"..tostring(value)..tostring(t))
+   if type(value) == "table" then
+      display(value)
+   end
+   
+   if value == nil then
+      return "NULL"
+   elseif t == "TEXT" then
+      return '"'..value:gsub("'", "''")..'"'
+   elseif t == "NULL" then
+      return "NULL"
+   elseif t == "INTEGER" then
+      -- With db.Timestamp's, a value of false should be interpreted as nil.
+      if value._timestamp == false then
+         return "NULL"
+      end
+      return tostring(value._timestamp)
+   else
+      return tostring(value)
+   end
+end
+
+-- db:_index_name(sheet_name, index_contents)
+--   Given a sheet name and the details of an index, this function will return a unique index name to
+--   add to the database. The purpose of this is to create unique index names as indexes are tested
+--   for existance on each call of db:create and not only on creation. That way new indexes can be 
+--   added after initial creation.
+function db:_index_name(tbl_name, params)
+   local t = type(params)
+   
+   if t == "string" then
+      return "idx_" .. tbl_name .. "_c_" .. params
+   elseif assert(t == "table", "Indexes must be either a string or a table.") then
+      local parts = {"idx", tbl_name, "c"}
+      for _, v in pairs(params) do
+         parts[#parts+1] = v
+      end
+      return table.concat(parts, "_")
+   end
+end
+
+-- db:_index_valid(sheet_columns, index_columns)
+--   This function returns true if all of the columns referenced in index_columns also exist within
+--   the sheet_columns table array. The purpose of this is to raise an error if someone tries to index
+--   a column which doesn't currently exist in the schema.
+function db:_index_valid(sheet_columns, index_columns)
+   if type(index_columns) == "string" then
+      return sheet_columns[index_columns] ~= nil
+   else
+      for _, v in ipairs(index_columns) do
+         if sheet_columns[v] == nil then
+            echo("\n--> Bad index "..v)
+            return false
+         end
+      end
+   end
+   return true
+end
+-- db:_sql_columns(column_spec)
+--   The column_spec is either a string or an indexed table. This function returns either "column" or
+--   "column1", "column2" for use in the column specification of INSERT.
+function db:_sql_columns(value)
+   local colstr = ''
+   local t = type(value)
+   
+   if t == "table" then
+      col_chunks = {}
+      for _, v in ipairs(value) do
+         col_chunks[#col_chunks+1] = '"'..v:lower()..'"'
+      end
+      
+      colstr = table.concat(col_chunks, ',') 
+   elseif assert(t == "string", 
+         "Must specify either a table array or string for index, not "..type(value)) then
+      colstr = '"'..value:lower()..'"'
+   end
+   return colstr
+end
+
+-- db:_sql_fields(field_spec)
+--   This serves as a very similar function to db:_sql_columns, quoting column names properly but for
+--   uses outside of INSERTs.
+function db:_sql_fields(values)
+   local sql_fields = {}
+
+   for k, v in pairs(values) do
+      sql_fields[#sql_fields+1] = '"'..k..'"'
+   end
+
+   return   "("..table.concat(sql_fields, ",")..")"
+end
+
+-- db:_sql_values(value_spec)
+--   This quotes values to be passed into an INSERT or UPDATE operation in a SQL list. Meaning, it turns
+--   {x="this", y="that", z=1} into ('this', 'that', 1).
+--   It is intelligent with data-types; strings are automatically quoted (with internal single quotes 
+--   escaped), nil turned into NULL, timestamps converted to integers, and such.
+function db:_sql_values(values)
+   local sql_values = {}
+
+   for k, v in pairs(values) do
+      local t = type(v)
+      local s = ""
+
+      if t == "string" then
+         s = "'"..v:gsub("'", "''").."'"
+      elseif t == "nil" then
+         s = "NULL"
+      elseif t == "table" and t._timestamp ~= nil then
+         if not t._timestamp then
+            return "NULL"
+         else
+            s = tostring(t._timestamp)
+         end
+      else
+         s = tostring(v)
+      end
+      
+      sql_values[#sql_values+1] = s
+   end
+
+   return "("..table.concat(sql_values, ",")..")"
+end
+
+-- db:safe_name(name)
+--   On a filesystem level, names are restricted to being alphanumeric only. So, "my_database" becomes
+--   "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible 
+--   security issues with database names.
+function db:safe_name(name)
+   name = name:gsub("[^%ad]", "")
+   name = name:lower()
+   return name
+end
+
+-- db:create(db_name, ...)
+--   Creates and/or modifies an existing database. This function is safe to define at a top-level of a
+--   Mudlet script: in fact it is reccommended you run this function at a top-level without any kind
+--   of guards. If the named database does not exist it will ccreate it. If the database does exist
+--   then it will add any columns or indexes which didn't exist before to that database. If the
+--   database already has all the specified columns and indexes, it will do nothing.
+function db:create(db_name, sheets)
+   if not db.__env then
+      db.__env = luasql.sqlite3()
+   end
+   
+   db_name = db:safe_name(db_name)
+   
+   if not db.__conn[db_name] then
+      db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+      db.__conn[db_name]:setautocommit(true)
+      db.__autocommit[db_name] = true
+   end
+   
+   db.__schema[db_name] = {}
+   
+   -- We need to separate the actual column configuration from the meta-configuration of the desired
+   -- sheet. {sheet={"column"}} verses {sheet={"column"}, _index={"column"}}. In the former we are
+   -- creating a database with a single field; in the latter we are also adding an index on that
+   -- field. The db package reserves any key that begins with an underscore to be special and syntax
+   -- for its own use.
+   for s_name, sht in pairs(sheets) do
+      options = {}
+
+      if sht[1] ~= nil then
+         t = {}
+         for k, v in pairs(sht) do
+            t[v] = nil
+         end
+         sht = t
+      else
+         for k, v in pairs(sht) do
+            if string.starts(k, "_") then
+               options[k] = v
+               sht[k] = nil
+            end
+         end
+      end
+      
+      db.__schema[db_name][s_name] = {columns=sht, options=options}
+      db:_migrate(db_name, s_name)
+   end
+   return db:get_database(db_name)
+end
+
+-- db:_migrate(db_name, sheet_name)
+--   The migrate function is meant to upgrade an existing database live, to maintain a consistant
+--   and correct set of sheets and fields, along with their indexes. It should be safe to run 
+--   at any time, and must not cause any data loss. It simply adds to what is there: in perticular
+--   it is not capable of removing indexes, columns, or sheets after they have been defined.
+function db:_migrate(db_name, s_name)
+   local conn = db.__conn[db_name]
+   local schema = db.__schema[db_name][s_name]
+   
+   local current_columns = {}
+   
+   -- The PRAGMA table_info command is a query which returns all of the columns currently 
+   -- defined in the specified table. The purpose of this section is to see if any new columns
+   -- have been added.
+   local cur = conn:execute("PRAGMA table_info('"..s_name.."')")
+   
+   if cur ~= 0 then
+      local row = cur:fetch({}, "a")
+      
+      while row do
+         current_columns[row.name:lower()] = row.type
+         row = cur:fetch({}, "a")
+      end
+      cur:close()
+   end
+   
+   -- The SQL definition of a column is:
+   --    "column_name" column_type NULL
+   -- The db module does not presently support columns that are required. Everything is optional,
+   -- everything may be NULL / nil.
+   -- If you specify a column's type, you also specify its default value. 
+   local sql_column = ', "%s" %s NULL'
+   local sql_column_default = sql_column..' DEFAULT %s'
+   
+   if table.is_empty(current_columns) then
+      -- At this point, we know that the specified table does not exist in the database and so we
+      -- should create it.
+      
+      -- Every sheet has an implicit _row_id column. It is not presently (and likely never will be)
+      -- supported to define the primary key of any sheet.
+      local sql_chunks = {"CREATE TABLE ", s_name,  '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT'}
+      
+      -- We iterate over every defined column, and add a line which creates it.
+      for key, value in pairs(schema.columns) do
+         local sql = ""
+         if value == nil then
+            sql = sql_column:format(key:lower(), db:_sql_type(value))
+         else
+            sql = sql_column_default:format(key:lower(), db:_sql_type(value), db:_sql_convert(value))
+         end
+         sql_chunks[#sql_chunks+1] = sql
+      end
+
+      sql_chunks[#sql_chunks+1] = ")"
+      
+      local sql = table.concat(sql_chunks, "")
+      db:echo_sql(sql)
+      conn:execute(sql)
+
+   else
+      -- At this point we know that the sheet already exists, but we are concerned if the current 
+      -- definition includes columns which may be added.
+      
+      local sql_chunks = {}
+      local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
+      
+      for k, v in pairs(schema.columns) do
+         k = k:lower()
+         t = db:_sql_type(v)
+         v = db:_sql_convert(v)
+         
+         -- Here we test it a given column exists in the sheet already, and if not, we add that
+         -- column.
+         if not current_columns[k] then
+            local sql = sql_add:format(s_name, k, t, v)
+            conn:execute(sql)
+            db:echo_sql(sql)
+         end
+      end
+   end
+   
+   -- On every invocation of db:create we run the code that creates indexes, as that code will
+   -- do nothing if the specific indexes already exist. This is enforced by the db:_index_name
+   -- function creating a unique index.
+   --
+   -- Note that in no situation will an existing index be deleted. 
+   db:_migrate_indexes(conn, s_name, schema, current_columns)      
+   db:echo_sql("COMMIT")
+   conn:commit()
+end
+
+-- db:_migrate_indexes(connection, sheet_name, schema, existing_columns)
+--   Creates any indexes which do not yet exist in the given database.
+function db:_migrate_indexes(conn, s_name, schema, current_columns)      
+   local sql_create_index = "CREATE %s IF NOT EXISTS %s ON %s (%s);"
+   local opt = {_unique = "UNIQUE INDEX", _index = "INDEX"} -- , _check = "CHECK"}
+
+   for option_type, options in pairs(schema.options) do
+      for _, value in pairs(options) do
+         
+         -- If an index references a column which does not presently exist within the schema
+         -- this will fail. 
+         assert(db:_index_valid(current_columns, value), 
+               "In sheet "..s_name.." an index field is specified that does not exist.")
+
+         sql = sql_create_index:format(
+               opt[option_type], db:_index_name(s_name, value), s_name, db:_sql_columns(value)
+         )
+         db:echo_sql(sql)
+         conn:execute(sql)
+      end
+   end
+end
+
+-- db:add(sheet, table1, ..., tableN)
+--   Adds one or more new rows to the specified sheet. If any of these rows would violate a
+--   UNIQUE index, a lua error will be thrown and execution will cancel. As such it is
+--   advisable that if you use a UNIQUE index, you test those values before you attempt to
+--   insert a new row.
+--
+--   Each table is a series of key-value pairs to set the values of the sheet, but if any
+--   keys do nto exist then they will be set to nil or the default value.
+function db:add(sheet, ...)
+   local db_name = sheet._db_name
+   local s_name = sheet._sht_name
+   assert(s_name, "First argument to db:add must be a proper Sheet object.")
+
+   local conn = db.__conn[db_name]
+   local sql_insert = "INSERT INTO %s %s VALUES %s"
+   
+   for _, t in ipairs({...}) do
+      if t._row_id then
+         -- You are not permitted to change a _row_id
+         t._row_id = nil
+      end
+
+      local sql = sql_insert:format(s_name, db:_sql_fields(t), db:_sql_values(t))
+      db:echo_sql(sql)
+      assert(conn:execute(sql), "Failed to add item: this is probably a violation of a UNIQUE index or other constraint.")
+   end
+   if db.__autocommit[db_name] then
+      conn:commit()
+   end
+end
+
+-- db:fetch(sheet, query, order_by, descending)
+--   Returns a table array of table dictionaries representing each row in the specified sheet.
+--   If query is not specified, it returns EVERY row in the sheet. 
+function db:fetch(sheet, query, order_by, descending)
+   local db_name = sheet._db_name
+   local s_name = sheet._sht_name
+
+   local conn = db.__conn[db_name]
+   local sql = "SELECT * FROM "..s_name
+   
+   if query then
+      if type(query) == "table" then
+         sql = sql.." WHERE "..db:AND(unpack(query))
+      else
+         sql = sql.." WHERE "..query
+      end
+   end
+   
+   if order_by then
+      local o = {}
+      for _, v in ipairs(order_by) do
+         assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
+         o[#o+1] = v.name
+      end
+      
+      sql = sql.." ORDER BY "..db:_sql_columns(o)
+      
+      if descending then
+         sql = sql.." DESC"
+      end
+   end
+   
+   db:echo_sql(sql)
+   local cur = conn:execute(sql)
+
+   if cur ~= 0 then
+      local results = {}
+      local row = cur:fetch({}, "a")
+
+      while row do
+         results[#results+1] = db:_coerce_sheet(sheet, row)
+         row = cur:fetch({}, "a")
+      end
+      cur:close()
+      return results
+   else
+      return nil
+   end
+end   
+
+-- db:delete(sheet, query)
+--   Deletes rows from the specified sheet. The argument for query tries to be intelligent: 
+--      - if it is a simple number, it deletes a specific row by _row_id
+--      - if it is a table that contains a _row_id (e.g., a table returned by db:get) it 
+--        deletes just that record.
+--      - Otherwise, it deletes every record which matches the query pattern which is
+--        specified as with db:get.
+--      - If the query is simply true, then it will truncate the entire contents of the
+--        sheet.
+function db:delete(sheet, query)
+   local db_name = sheet._db_name
+   local s_name = sheet._sht_name
+
+   local conn = db.__conn[db_name]
+
+   if type(query) == "number" then
+      query = "_row_id = "..tostring(query)
+   elseif type(query) == "table" then
+      assert(query._row_id, "Passed a non-result table to db:delete, need a _row_id field to continue.")
+      query = "_row_id = "..tostring(query._row_id)
+   end
+
+   local sql = "DELETE FROM "..s_name
+   if query and query ~= true then
+      local sql = sql.." WHERE "..query
+   end
+   
+   db:echo_sql(sql)
+   assert(conn:execute(sql))
+
+   if db.__autocommit[db_name] then
+      conn:commit()
+   end
+end
+
+-- db:update(sheet, table)
+--   This function updates a row in the specified sheet, but only accepts a row which has
+--   been previously obtained by db:get. Its primary purpose is that if you do a db:get,
+--   then change the value of a field or tow, you can save back that table.
+function db:update(sheet, tbl)
+   assert(tbl._row_id, "Can only update a table with a _row_id")
+   assert(not table.is_empty(tbl), "An empty table was passed to db:update")
+   
+   local db_name = sheet._db_name
+   local s_name = sheet._sht_name
+
+   local conn = db.__conn[db_name]
+   
+   local sql_chunks = {"UPDATE", s_name}
+   local set_chunks = {}
+   local set_block = [[SET "%s" = %s]] 
+
+   for k, v in pairs(db.__schema[db_name][s_name]['columns']) do
+      if tbl[k] then
+         local field = sheet[k]
+         set_chunks[#set_chunks+1] = set_block:format(k, db:_coerce(field, tbl[k]))
+      end
+   end
+   
+   sql_chunks[#set_chunks+1] = table.concat(set_chunks, ",")
+   sql_chunks[#sql_chunks+1] = "WHERE _row_id = "..tbl._row_id
+
+   local sql = table.concat(sql_chunks, " ")
+   db:echo_sql(sql)
+   assert(conn:execute(sql))
+
+   if db.__autocommit[db_name] then
+      conn:commit()
+   end
+end
+
+-- db:set(field, value, query)
+--   The db:set function allows you to set a certain field to a certain value across
+--   an entire sheet. Meaning, you can change all of the last_read fields in the
+--   sheet to a certain value, or possibly only the last_read fields which are in
+--   a certain city. The query argument can be any value which is appropriate for
+--   db:get.
+function db:set(field, value, query)
+   local db_name = sheet._db_name
+   local s_name = sheet._sht_name
+
+   local conn = db.__conn[db_name]
+
+   local sql_update = [[UPDATE %s SET "%s" = %s]]
+   if query then
+       sql_update = sql_update .. [[ WHERE %s]]
+   end
+   
+   local sql = sql_update:format(s_name, field.name, db:_coerce(field, value), query)
+
+   db:echo_sql(sql)
+   assert(conn:execute(sql))  
+
+   if db.__autocommit[db_name] then
+      conn:commit()
+   end
+end
+
+-- db:echo_eql(sql)
+--   This is a debugging function, which echos any SQL commands if db.debug_sql is
+--   true
+function db:echo_sql(sql)
+   if db.debug_sql then
+      echo("\n"..sql.."\n")
+   end
+end
+
+-- db:_coerce_sheet(sheet, tbl)
+--   After a table so retrieved from the database, this function coerces values to
+--   their proper types. Specifically, numbers and datetimes become the proper 
+--   types.
+function db:_coerce_sheet(sheet, tbl)
+   if tbl then
+      tbl._row_id = tonumber(tbl._row_id)
+      
+      for k, v in pairs(tbl) do
+         if k ~= "_row_id" then
+            local field = sheet[k]
+            if field.type == "number" then
+               tbl[k] = tonumber(tbl[k]) or tbl[k]
+            elseif field.type == "datetime" then
+               tbl[k] = db:Timestamp(datetime:parse(tbl[k], nil, true))
+            end
+         end   
+      end
+      return tbl
+   end
+end
+
+-- db:_coerce(field, value)
+--   The function converts a Lua value into its SQL representation, depending on the
+--   type of the specified field. Strings will be single-quoted (and single-quotes 
+--   within will be properly escaped), numbers will be rendered properly, and such.
+function db:_coerce(field, value)
+   if field.type == "number" then
+      return tonumber(value) or "'"..value.."'"
+   elseif field.type == "datetime" then
+      if value._timestamp == false then
+         return "NULL"
+      else
+         return tonumber(value._timestamp) or "'"..value.."'"
+      end
+   else
+      return "'"..tostring(value):gsub("'", "''").."'"
+   end
+end
+
+-- SQL Expression Functions
+--   The following functions form the basis of defining basic database expressions.
+--   If a value is equal to a field, if a value is less then a field, and so
+--   forth.
+
+function db:eq(field, value, case_insensitive)
+   if case_insensitive then
+      local v = db:_coerce(field, value):lower()
+      return "lower("..field.name..") == "..v      
+   else
+      local v = db:_coerce(field, value)
+      return field.name.." == "..v
+   end
+end
+
+function db:not_eq(field, value, case_insensitive)
+   if case_insensitive then
+      local v = db:_coerce(field, value):lower()
+      return "lower("..field.name..") != "..v      
+   else
+      local v = db:_coerce(field, value)
+      return field.name.." != "..v
+   end
+end
+
+function db:lt(field, value)
+   local v = db:_coerce(field, value)
+   return field.name.." < "..v
+end
+
+function db:lte(field, value)
+   local v = db:_coerce(field, value)
+   return field.name.." <= "..v
+end
+
+function db:gt(field, value)
+   local v = db:_coerce(field, value)
+   return field.name.." > "..v
+end
+
+function db:gte(field, value)
+   local v = db:_coerce(field, value)
+   return field.name.." >= "..v
+end
+
+function db:is_nil(field)
+   return field.name.." IS NULL"
+end
+
+function db:is_not_nil(field)
+   return field.name.." IS NOT NULL"
+end
+
+function db:like(field, value)
+   local v = db:_coerce(field, value)
+   return field.name.." LIKE "..v
+end
+
+function db:not_like(field, value)
+   local v = db:_coerce(field, value)
+   return field.name.." NOT LIKE "..v
+end
+
+function db:between(field, left_bound, right_bound)
+   local x = db:_coerce(field, left_bound)
+   local y = db:_coerce(field, right_bound)
+   return field.name.." BETWEEN "..x.." AND "..y
+end
+
+function db:not_between(field, left_bound, right_bound)
+   local x = db:_coerce(field, left_bound)
+   local y = db:_coerce(field, right_bound)
+   return field.name.." NOT BETWEEN "..x.." AND "..y
+end
+
+function db:in_(field, tbl)
+   local parts = {}
+   for _, v in pairs(tbl) do
+      parts[#parts+1] = db:_coerce(v)
+   end
+
+   return field.name.." IN ("..table.concat(parts, ",")..")"
+end
+
+function db:not_in(field, tbl)
+   local parts = {}
+   for _, v in pairs(tbl) do
+      parts[#parts+1] = db:_coerce(v)
+   end
+
+   return field.name.." NOT IN ("..table.concat(parts, ",")..")"
+end
+
+function db:exp(text)
+   return text
+end
+
+function db:AND(...)
+   local parts = {}
+
+   for _, expression in ipairs({...}) do
+      parts[#parts+1] = "("..expression..")"
+   end
+
+   return "("..table.concat(parts, " AND ")..")"
+end   
+
+function db:OR(left, right)
+   if not string.starts(left, "(") then
+      left = "("..left..")"
+   end
+
+   if not string.starts(right, "(") then
+      right = "("..right..")"
+   end
+
+   return left.." OR "..right
+end
+
+function db:close()
+   for _, c in pairs(db.__conn) do
+      c:close()
+   end
+   db.__env:close()
+end
+
+-- Timestamp support
+
+db.__Timestamp = {}
+
+db.__TimestampMT = {
+   __index = db.__Timestamp
+}
+
+function db.__Timestamp:as_string(format)
+   if not format then
+      format = "%m-%d-%Y %H:%M:%S"
+   end
+   
+   return os.date(format, self._timestamp)
+end
+
+function db.__Timestamp:as_table()
+   return os.date("*t", self._timestamp)
+end
+
+function db.__Timestamp:as_number()
+   return self._timestamp
+end
+
+function db:Timestamp(ts, fmt)
+   local dt = {}
+   if type(ts) == "table" then
+      dt._timestamp = os.time(ts)
+   elseif type(ts) == "number" then
+      dt._timestamp = ts
+   elseif type(ts) == "string" and 
+           assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
+      dt._timestamp = "CURRENT_TIMESTAMP"
+   elseif ts == nil then
+      dt._timestamp = false
+   else
+      assert(nil, "Invalid value passed to db.Timestamp()")
+   end
+   return setmetatable(dt, db.__TimestampMT)
+end
+
+-- function db.Timestamp:new(ts, fmt)
+--    local dt = {}
+--    if type(ts) == "table" then
+--       dt._timestamp = os.time(ts)
+--    elseif type(ts) == "number" then
+--       dt._timestamp = ts
+--    elseif assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
+--       dt._timestamp = "CURRENT_TIMESTAMP"
+--    end
+--    return setmetatable(dt, db.__TimestampMT)
+-- end
+
+db.Field = {}
+db.__FieldMT = {
+   __index = db.Field
+}
+
+db.Sheet = {}
+db.__SheetMT = {
+   __index = function(t, k)
+      local v = rawget(db.Sheet, k)
+      if v then
+         return v
+      end
+
+      local db_name = rawget(t, "_db_name")
+      local sht_name = rawget(t, "_sht_name")
+      local f_name = k:lower()
+
+      local errormsg = "Attempt to access field %s in sheet %s in database %s that does not exist."
+      
+      local field = db.__schema[db_name][sht_name]['columns'][f_name]
+      if assert(field, errormsg:format(k, sht_name, db_name)) then
+         type_ = type(field)
+         if type_ == "table" and field._timestamp then
+            type_ = "datetime"
+         end
+         
+         rt = setmetatable({database=db_name, sheet=sht_name, type=type_, name=f_name}, db.__FieldMT)
+         rawset(t,k,rt)
+         return rt
+      end
+
+   end
+}
+
+db.Database = {}
+
+db.__DatabaseMT = {
+   __index = function(t, k)
+      local v = rawget(t, k)
+      if v then
+         return v
+      end
+
+      local v = rawget(db.Database, k)
+      if v then
+         return v
+      end
+
+      local db_name = rawget(t, "_db_name")
+      if assert(db.__schema[db_name][k:lower()], "Attempt to access sheet in db '"..db_name.."' that does not exist.") then
+         rt = setmetatable({_db_name = db_name, _sht_name = k:lower()}, db.__SheetMT)
+         rawset(t,k,rt)
+         return rt
+      end
+   end
+}
+
+function db.Database:_begin()
+   local conn = db.__conn[self._db_name]
+   conn:setautocommit(false)
+end
+
+function db.Database:_commit()
+   local conn = db.__conn[self._db_name]
+   conn:commit()
+end
+
+function db.Database:_rollback()
+   local conn = db.__conn[self._db_name]
+   conn:rollback()
+end
+
+function db.Database:_end()
+   local conn = db.__conn[self._db_name]
+   conn:setautocommit(true)
+end
+
+function db:get_database(db_name)
+   db_name = db:safe_name(db_name)
+   assert(db.__schema[db_name], "Attempt to access database that does not exist.")
+
+   db_inst = {_db_name = db_name}
+   return setmetatable(db_inst, db.__DatabaseMT)
+end
+
 
 ----------------------------------------------------------------------------------
 -- Functions written by Blaine von Roeder - December 2009
@@ -62,16 +1037,12 @@ end
 -- This would move the health bar gauge to the location 1200, 400
 
 function moveGauge(gaugeName, newX, newY)
-        local newX, newY = newX, newY
-       
-        assert(gaugesTable[gaugeName], "moveGauge: no such gauge exists.")
-        assert(newX and newY, "moveGauge: need to have both X and Y dimensions.")
-       
-        moveWindow(gaugeName, newX, newY)
-        moveWindow(gaugeName .. "_back", newX, newY)
-                       
-        gaugesTable[gaugeName].xpos, gaugesTable[gaugeName].ypos = newX, newY
- 
+	for _,g in pairs(gaugesTable) do
+		if g.name == gaugeName then
+			moveWindow(gaugeName, newX, newY)
+			moveWindow(gaugeName .. "_back", newX, newY)
+		end
+	end
 end
 
 -- Set the text on a custom gauge built by createGauge(...)
@@ -81,33 +1052,27 @@ end
 -- Colors are optional and will default to 0,0,0(black) if not passed as args.
 
 function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
-        assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
- 
-        local red,green,blue = 0,0,0
-        local l_labelText = gaugeText
-       
-        if color1 ~= nil then
-                if color2 == nil then
-                        red, green, blue = getRGB(color1)
-                else
-                        red, green, blue = color1, color2, color3
-                end
-        end
-       
-        -- Check to make sure we had a text to apply, if not, clear the text
-        if l_labelText == nil then
-                l_labelText = ""
-        end
-       
-        local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
-       
- 
-        echo(gaugeName, l_EchoString)
-        echo(gaugeName .. "_back", l_EchoString)
-       
-       
-        gaugesTable[gaugeName].text = l_EchoString
-        gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
+	local red,green,blue = 0,0,0
+	local l_labelText = gaugeText
+	
+	if color1 ~= nil then
+		if color2 == nil then
+			red, green, blue = getRGB(color1)
+		else
+			red, green, blue = color1, color2, color3
+		end
+	end
+	
+	-- Check to make sure we had a text to apply, if not, clear the text
+	if l_labelText == nil then
+		l_labelText = ""
+	end
+	
+	local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
+	
+
+	echo(gaugeName, l_EchoString)
+	echo(gaugeName .. "_back", l_EchoString)
 end
 
 -- Converts an RGB value into an HTML compliant(label usable) HEX number
@@ -183,42 +1148,49 @@ end
 gaugesTable = {} -- first we need to make this table which will be used later to store important data in...
 
 function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
- 
-        -- make a nice background for our gauge
-        createLabel(gaugeName .. "_back",0,0,0,0,1)
-        if color2 == nil then
-                local red, green, blue = getRGB(color1)
-                setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)               
-        else
-                setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
-        end
-        moveWindow(gaugeName .. "_back", Xpos, Ypos)
-        resizeWindow(gaugeName .. "_back", width, height)
-        showWindow(gaugeName .. "_back")
- 
-        -- make a nicer front for our gauge
-        createLabel(gaugeName,0,0,0,0,1)
-        if color2 == nil then
-                local red, green, blue = getRGB(color1)
-                setBackgroundColor(gaugeName, red , green, blue, 255)          
-        else
-                setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
-        end
-        moveWindow(gaugeName, Xpos, Ypos)
-        resizeWindow(gaugeName, width, height)
-        showWindow(gaugeName)
- 
-        -- store important data in a table
-        gaugesTable[gaugeName] = {width = width, height = height, xpos = Xpos, ypos = Ypos,text = gaugeText, color1 = color1, color2 = color2, color3 = color3}
- 
-        -- Set Gauge text (Defaults to black)
-        -- If no gaugeText was passed, we'll just leave it blank!
-        if gaugeText ~= nil then
-                setGaugeText(gaugeName, gaugeText, "black")
-        else
-                setGaugeText(gaugeName)
-        end
- 
+	-- Check for existing gauge with same name
+	-- By Blaine von Roeder - 12/2009
+	for _,t in pairs(gaugesTable) do
+		if (t.name == gaugeName) then
+			return
+		end
+	end
+
+	-- make a nice background for our gauge
+	createLabel(gaugeName .. "_back",0,0,0,0,1)
+	if color2 == nil then
+		local red, green, blue = getRGB(color1)
+		setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)		
+	else
+		setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
+	end
+	moveWindow(gaugeName .. "_back", Xpos, Ypos)
+	resizeWindow(gaugeName .. "_back", width, height)
+	showWindow(gaugeName .. "_back")
+
+	-- make a nicer front for our gauge
+	createLabel(gaugeName,0,0,0,0,1)
+	if color2 == nil then
+		local red, green, blue = getRGB(color1)
+		setBackgroundColor(gaugeName, red , green, blue, 255)		
+	else
+		setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
+	end
+	moveWindow(gaugeName, Xpos, Ypos)
+	resizeWindow(gaugeName, width, height)
+	showWindow(gaugeName)
+
+	-- Set Gauge text (Defaults to black)
+	-- If no gaugeText was passed, we'll just leave it blank!
+	if gaugeText ~= nil then
+		setGaugeText(gaugeName, gaugeText, "black")
+	else
+		setGaugeText(gaugeName)
+	end
+
+	-- store important data in a table
+	table.insert(gaugesTable, {name = gaugeName, width = width, height = height, color1 = color1, color2 = color2, color3 = color3})
+	
 end
 
 
@@ -238,19 +1210,22 @@ end
 -- Typical usage would be in a prompt with your current health or whatever value, and throw
 -- in some variables instead of the numbers.
 
-function setGauge(gaugeName, currentValue, maxValue, gaugeText)
-        assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
-        assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
-       
-        resizeWindow(gaugeName, gaugesTable[gaugeName].width/100*((100/maxValue)*currentValue), gaugesTable[gaugeName].height)
- 
-        -- if we wanted to change the text, we do it
-        if gaugeText ~= nil then
-                echo(gaugeName .. "_back", gaugeText)
-                echo(gaugeName, gaugeText)
-               
-           gaugesTable[gaugeName].text = gaugeText
-        end
+function setGauge(gaugeName, currentValue, maxValue, gaugeText)	
+
+
+	-- search through our gaugesTable for our name input and change according to the values
+	for _,v in pairs(gaugesTable) do
+		if v.name == gaugeName then
+			resizeWindow(gaugeName, v.width/100*((100/maxValue)*currentValue), v.height)
+		end
+	end
+
+	-- if we wanted to change the text, we do it
+	if gaugeText ~= nil then
+		echo(gaugeName .. "_back", gaugeText)
+		echo(gaugeName, gaugeText)
+	end
+	
 end
 
 
@@ -857,7 +1832,7 @@ function display(what, numformat, recursion)
       echo(indent(recursion))
       echo(printable(k))
       echo(": ")
-      if not (v == _G) then display(v, numformat, recursion + 1) end
+      display(v, numformat, recursion + 1)
     end
 
     -- so empty tables print as {} instead of {..indent..}
@@ -898,176 +1873,47 @@ function printable(what, numformat)
   return ret
 end
 
+
 -- Handles indentation
 do local indents = {}  -- simulate a static variable
-	function indent(num)
+function indent(num)
 
-	  if not indents[num] then
-	    indents[num] = ""
-	    for i = 0, num do
-	      indents[num] = indents[num].."  "
-	    end
-	  end
+  if not indents[num] then
+    indents[num] = ""
+    for i = 0, num do
+      indents[num] = indents[num].."  "
+    end
+  end
 
-	  return indents[num]
-	end
+  return indents[num]
 end
-
-function resizeGauge(gaugeName, width, height)
-    assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
-    assert(width and height, "resizeGauge: need to have both width and height.")
- 
-	resizeWindow(gaugeName, width, height)
-	resizeWindow(gaugeName .. "_back", width, height)
- 
-    -- save in the table
-    gaugesTable[gaugeName].width, gaugesTable[gaugeName].height = width, height
-end
- 
-function setGaugeStyleSheet(gaugeName, css, cssback)
-    if not setLabelStyleSheet then return end-- mudlet 1.0.5 and lower compatibility
-    assert(gaugesTable[gaugeName], "setGaugeStyleSheet: no such gauge exists.")
- 
-    setLabelStyleSheet(gaugeName, css)
-    setLabelStyleSheet(gaugeName .. "_back", cssback or css)
 end
 
 ----------------------------------------------------------------------------------
 -- Functions written by Benjamin Smith - December 2009
 ----------------------------------------------------------------------------------
+if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
---[[------------------------------------------------------------------------------
-Color echo functions: hecho, decho, cecho
-
-Function: hecho()
-Arg1: String to echo
-Arg2: String containing value for foreground color in hexadecimal RGB format
-Arg3: String containing value for background color in hexadecimal RGB format
-Arg4: Bool that tells the function to use insertText() rather than echo()
-Arg5: Name of the console to echo to. Defaults to main.
-
-Color changes can be made within the string using the format |cFRFGFB,BRBGBB
-where FR is the foreground red value, FG is the foreground green value, FB
-is the foreground blue value, BR is the background red value, etc. ,BRBGBB
-is optional. |r can be used within the string to reset the colors to default.
-
-The colors in arg2 and arg3 replace the normal defaults for your console.
-So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"),
-the first Testing would be red on black and the second would be green on blue.
-
-Function: decho()
-Arg1: String to echo
-Arg2: String containing value for foreground color in decimal format
-Arg3: String containing value for background color in decimal format
-Arg4: Bool that tells the function to use insertText() rather than echo()
-Arg5: Name of the console to echo to. Defaults to main.
-
-Color changes can be made using the format <FR,FG,FB:BR,BG,BB> where
-each field is a number from 0 to 255. The background portion can be omitted
-using <FR,FG,FB> or the foreground portion can be omitted using <:BR,BG,BB>
-Arguments 2 and 3 set the default fore and background colors for the string
-using the same format as is used within the string, sans angle brackets,
-e.g.  decho("test", "255,0,0", "0,255,0")
-
-Function: cecho()
-Arg1: String to echo
-Arg2: String containing value for foreground color as a named color
-Arg3: String containing value for background color as a named color
-Arg4: Bool that tells the function to use insertText() rather than echo()
-Arg5: Name of the console to echo to. Defaults to main.
-
-Color changes can be made using the format <foreground:background>
-where each field is one of the colors listed by showColors()
-The background portion can be omitted using <foreground> or the foreground 
-portion can be omitted using <:background>
-Arguments 2 and 3 to set the default colors take named colors as well.
---]]------------------------------------------------------------------------------
+-- Echo with color function.
+-- Arg1: String to echo
+-- Arg2: String containing value for foreground color in hexadecimal RGB format
+-- Arg3: String containing value for background color in hexadecimal RGB format
+-- Arg4: Bool that tells the function to use insertText() rather than echo()
+-- Arg5: Name of the console to echo to. Defaults to main.
+--
+-- Color changes can be made within the string using the format |cFRFGFB,BRBGBB
+-- where FR is the foreground red value, FG is the foreground green value, FB
+-- is the foreground blue value, BR is the background red value, etc. ,BRBGBB
+-- is optional. |r can be used within the string to reset the colors to default.
+-- 
+-- The colors in arg2 and arg3 replace the normal defaults for your console.
+-- So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"),
+-- the first Testing would be red on black and the second would be green on blue.
 
 if rex then
-	Echos = {
-		Patterns = {
-			Hex = {
-				[[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
-				rex.new[[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
-				},
-			Decimal = {
-				[[(\x5c?<[0-9,:]+>)|(<r>)]],
-				rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
-				},
-			Color = {
-				[[(\x5c?<[a-zA-Z_:]+>)]],
-				rex.new[[<([a-zA-Z_]+)?(?::([a-zA-Z_]+))?>]],
-				},
-			Ansi = {
-				[[(\x5c?<[0-9,:]+>)]],
-				rex.new[[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
-				},
-			},
-		Process = function(str, style)
-			local t = {}
-			for s, c, r in rex.split(str, Echos.Patterns[style][1]) do
-				if c and (c:byte(1) == 92) then 
-					c = c:sub(2)
-					if s then s = s .. c else s = c end
-					c = nil
-				end
-				if s then table.insert(t, s) end
-				if r then table.insert(t, "r") end
-				if c then
-					if style == 'Hex' or style == 'Decimal' then
-						local fr, fg, fb, br, bg, bb = Echos.Patterns[style][2]:match(c)
-						local color = {}
-						if style == 'Hex' then 
-							if fr and fg and fb then fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16) end
-							if br and bg and bb then br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16) end
-						end
-						if fr and fg and fb then color.fg = { fr, fg, fb } end
-						if br and bg and bb then color.bg = { br, bg, bb } end
-						table.insert(t, color)
-					elseif style == 'Color' then
-						if c == "<reset>" then table.insert(t, "r")
-						else
-							local fcolor, bcolor = Echos.Patterns[style][2]:match(c)
-							local color = {}
-							if fcolor and color_table[fcolor] then color.fg = color_table[fcolor] end
-							if bcolor and color_table[bcolor] then color.bg = color_table[bcolor] end
-							table.insert(t, color)
-						end
-					end
-				end
-			end
-			return t
-		end,
-		}
-	
-	function xEcho(style, str, fgColor, bgColor, insert, win)
+	function checho(str, fgColor, bgColor, insert, win)
+		local t = {}
 		local reset, out
-		local function getFgColor()
-			if style == 'Hex' then
-				local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
-				fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
-				return fr, fg, fb
-			elseif style == 'Decimal' then
-				local fr, fg, fb = fgColor:split(",")
-				return fr, fg, fb
-			elseif style == 'Color' then
-				local fr, fg, fb = unpack(color_table[fgColor])
-				return fr, fg, fb
-			end
-		end
-		local function getBgColor()
-			if style == 'Hex' then
-				local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
-				br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
-				return br, bg, bb
-			elseif style == 'Decimal' then
-				local br, bg, bb = bgColor:split(",")
-				return br, bg, bb
-			elseif style == 'Color' then
-				local br, bg, bb = unpack(color_table[bgColor])
-				return br, bg, bb
-			end
-		end
 		if insert then
 			if win then
 				out = function(win, str)
@@ -1093,19 +1939,25 @@ if rex then
 			if fgColor then
 				if bgColor then
 					reset = function()
-						setFgColor(win, getFgColor())
-						setBgColor(win, getBgColor())
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(win, fr, fg, fb)
+						local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+						br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+						setBgColor(win, br, bg, bb)
 					end
 				else
 					reset = function()
-						resetFormat(win)
-						setFgColor(win, getFgColor())
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(win, fr, fg, fb)
 					end
 				end
 			elseif bgColor then
 				reset = function()
-					resetFormat(win)
-					setBgColor(win, getBgColor())
+					local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+					setBgColor(win, br, bg, bb)
 				end
 			else
 				reset = function()
@@ -1116,19 +1968,25 @@ if rex then
 			if fgColor then
 				if bgColor then
 					reset = function()
-						setFgColor(getFgColor())
-						setBgColor(getBgColor())
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(fr, fg, fb)
+						local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+						br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+						setBgColor(br, bg, bb)
 					end
 				else
 					reset = function()
-						resetFormat()
-						setFgColor(getFgColor())
+						local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
+						fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+						setFgColor(fr, fg, fb)
 					end
 				end
 			elseif bgColor then
 				reset = function()
-					resetFormat()
-					setBgColor(getBgColor())
+					local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
+					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+					setBgColor(br, bg, bb)
 				end
 			else
 				reset = function()
@@ -1137,18 +1995,28 @@ if rex then
 			end
 		end
 		
-		local t = Echos.Process(str, style)
-		
-		reset()
+		for s, fr, fg, fb, br, bg, bb, r in rex.split(str, [[(?:\|c([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}),?([0-9a-fA-F]{2})?([0-9a-fA-F]{2})?([0-9a-fA-F]{2})?|(\|r))]]) do 
+			local fore, back, color
+			if fr and fg and fb then fore = { fr, fg, fb } end
+			if br and bg and bb then back = { br, bg, bb } end
+			if fore and back then 
+				color = { ["fg"] = fore, ["bg"] = back }
+			elseif fore then
+				color = { ["fg"] = fore }
+			end
+			if s then table.insert(t, s) end
+			if color then table.insert(t, color) end
+			if r then table.insert(t, "r") end
+		end
 		
 		for _, v in ipairs(t) do
 			if type(v) == 'table' then
-				if v.fg then
-					local fr, fg, fb = unpack(v.fg)
-					if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
-				end
+				local fr, fg, fb = unpack(v.fg)
+				fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
+				if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
 				if v.bg then
 					local br, bg, bb = unpack(v.bg)
+					br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
 					if win then setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb) end
 				end
 			elseif v == "r" then
@@ -1159,88 +2027,11 @@ if rex then
 		end
 		if win then resetFormat(win) else resetFormat() end
 	end
-	
-	function hecho(...) xEcho("Hex", ...) end
---	function aecho(...) xEcho("Ansi", ...) end
-	function decho(...) xEcho("Decimal", ...) end
-	function cecho(...) xEcho("Color", ...) end
-	checho = cecho
-else
-	function cecho(window, text)
-		local win = text and window
-		local s = text or window
-		local reset
-		if win then 
-			reset = function() resetFormat(win) end 
-		else 
-			reset = function() resetFormat() end
-		end
-		reset()
-		for color, text in s:gmatch("<([a-zA-Z_:]+)>([^<>]+)") do  
-			if color == "reset" then 
-				reset()
-				if win then echo(win, text) else echo(text) end
-			else
-				local colist  =   string.split(color..":", "%s*:%s*")
-				local fgcol   =   colist[1] ~= "" and colist[1] or "white"
-				local bgcol   =   colist[2] ~= "" and colist[2] or "black"
-				local FGrgb   =   color_table[fgcol]
-				local BGrgb   =   color_table[bgcol]
-
-				if win then
-					setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
-					setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
-					echo(win,text)
-				else
-					setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
-					setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
-					echo(text)
-				end
-			end
-		end
-		reset()
-	end
-	
-	function decho(window, text)
-		local win = text and window
-		local s = text or window
-		local reset
-		if win then 
-			reset = function() resetFormat(win) end 
-		else 
-			reset = function() resetFormat() end
-		end
-		reset()
-		for color, text in s:gmatch("<([0-9,:]+)>([^<>]+)") do  
-			if color == "reset" then 
-				reset()
-				if win then echo(win, text) else echo(text) end
-			else
-				local colist  =   string.split(color..":", "%s*:%s*")
-				local fgcol   =   colist[1] ~= "" and colist[1] or "white"
-				local bgcol   =   colist[2] ~= "" and colist[2] or "black"
-				local FGrgb   =   color_table[fgcol] or string.split(fgcol, ",")
-				local BGrgb   =   color_table[bgcol] or string.split(bgcol, ",")
-				
-				if win then
-					setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
-					setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
-					echo(win,text)
-				else
-					setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
-					setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
-					echo(text)
-				end
-			end
-		end
-		reset()
-	end
 end
 
 -- Enable mathematical operations & comparisons on matches table.
 if not matches then matches = {} end
-if not multimatches then multimatches = {} end
-matches_mt = {
+setmetatable( matches, {
 	["__add"] = function(op1, op2) 
 		local o1, o2 = tonumber(op1), tonumber(op2)
 		if (o1 and o2) then
@@ -1291,7 +2082,7 @@ matches_mt = {
 			else
 				return false
 			end
-		elseif xor(o1, o2) then
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 == op2) then
@@ -1307,7 +2098,7 @@ matches_mt = {
 			else
 				return false
 			end
-		elseif xor(o1, o2) then
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 < op2) then
@@ -1323,7 +2114,7 @@ matches_mt = {
 			else
 				return false
 			end
-		elseif xor(o1, o2) then
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 <= op2) then
@@ -1339,7 +2130,7 @@ matches_mt = {
 			else
 				return false
 			end
-		elseif xor(o1, o2) then
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 > op2) then
@@ -1355,7 +2146,7 @@ matches_mt = {
 			else
 				return false
 			end
-		elseif xor(o1, o2) then
+		elseif ((o1 and (not o2)) or (o2 and (not o1))) then
 				return false
 		elseif ((not o1) and (not o2)) then
 			if (op1 >= op2) then
@@ -1363,129 +2154,5 @@ matches_mt = {
 			end
 		end
 	end,
-	["__index"] = function(t, k)
-		local key = tonumber(rawget(t, k)) or rawget(t, k)
-		return key
-	end,
-	}
-setmetatable(matches, matches_mt)
-setmetatable(multimatches, matches_mt)
-
--- Extending default libraries makes Babelfish happy.
-setmetatable( _G, { 
-	["__call"] = function(func, ...)
-		if type(func) == "function" then
-			return func(...)
-		else
-			local h = metatable(func).__call
-			if h then
-				return h(func, ...)
-			elseif _G[type(func)][func] then
-				_G[type(func)][func](...)
-			else
-				debug("Error attempting to call function " .. func .. ", function does not exist.")
-			end
-		end
-	end,
 	})
-	
-function xor(a, b) if (a and (not b)) or (b and (not a)) then return true else return false end end
-	
-function getOS()
-    if string.char(getMudletHomeDir():byte()) == "/" then 
-        if string.find(os.getenv("HOME"), "home") == 2 then return "linux" else return "mac" end
-        else return "windows"
-    end
-end
-
--- Opens URL in default browser
-function openURL(url)
-	local os = getOS()
-	if os == "linux" then _G.os.execute("xdg-open " .. url)
-	elseif os == "mac" then _G.os.execute("open " .. url)
-	elseif os == "windows" then _G.os.execute("start " .. url) end
-end
-
--- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3
-function showColors(...)
-	local cols = ... or 3
-	local i = 1
-	for k,v in pairs(color_table) do
-		local fg
-		local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
-		if luminosity > 0.5 then
-			fg = {0,0,0}
-		else
-			fg = {255,255,255}
-		end
-		hecho("|c"..RGB2Hex(unpack(fg))..","..RGB2Hex(unpack(v))..k..string.rep(" ", 23-k:len()))
-		echo"  "
-		if i == cols then 
-			echo"\n"
-			i = 1
-		else 
-			i = i + 1
-		end
-	end
-end
-
--- Capitalize first character in a string
-function string:title()
-	self = self:gsub("^%l", string.upper, 1)
-	return self
-end
-
--- Contribution from Iocun
-walklist = {}
-walkdelay = 0
-
-function speedwalktimer()
-	send(walklist[1])
-	table.remove(walklist, 1)
-	if #walklist>0 then
-		tempTimer(walkdelay, [[speedwalktimer()]])
-	end
-end
-
-function speedwalk(dirString, backwards, delay)
-	local dirString		= dirString:lower()
-	walklist			= {}
-	walkdelay			= delay
-	local reversedir	= {
-		n	= "s",
-		en	= "sw",
-		e	= "w",
-		es	= "nw",
-		s	= "n",
-		ws	= "ne",
-		w	= "e",
-		wn	= "se",
-		u	= "d",
-		d	= "u",
-		ni	= "out",
-		tuo	= "in"
-	}
-	
-	if not backwards then
-		for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do      
-			count = (count == "" and 1 or count)
-			for i=1, count do
-				if delay then walklist[#walklist+1] = direction 
-				else send(direction)
-				end
-			end
-		end
-	else
-		for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do      
-			count = (count == "" and 1 or count)
-			for i=1, count do
-				if delay then walklist[#walklist+1] = reversedir[direction]
-				else send(reversedir[direction])
-				end
-			end
-		end
-	end
-	
-	if walkdelay then speedwalktimer() end
-end
 

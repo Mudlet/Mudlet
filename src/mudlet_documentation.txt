@@ -36,6 +36,8 @@ Mudlet Manual
 .. <<cursorControl,Cursor Control - Custom Printing>>
 .. <<lineTriggers, Using tempLineTrigger>>
 .. <<scripting-howtos, Scripting Howtos>>
+.. <<atcp, ATCP>>
+.. <<db, Database frontend>>
 . <<exampleScripts,Advanced Learning From Selected Example Scripts>>
 .. <<inlineMapExample,inlineMapExample>>
 .. <<silbermine,Auto Miner Bot Example - How to write a little Bot with Mudlet?>>
@@ -1126,10 +1128,330 @@ id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])
 
 ^*requires Mudlet 1.0.6 or the http://forums.mudlet.org/viewtopic.php?f=5&t=92&p=2210#p2210[capitalize function] in a script.^
 
+[[atcp]]
+== ATCP
+
+Since version 1.0.6, Mudlet includes support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough such that any it should work on others.
+
+The latest ATCP data is stored in the `atcp` table. Whenever new data arrives, the previous is overwritten. An event is also raised for each ATCP message that arrives. To find out the available messages available in the `atcp` table and the event names, you can use `display(atcp)`.
+
+Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is removed - so it becomes CharVitals and RoomExits. Here's an example:
+
+---------
+room_number = tonumber(atcp.RoomNum)
+echo(room_number)
+---------
+
+=== Triggering on ATCP events
+If you'd like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages. The ATCP handler names follow the same format as the `atcp` table - RoomNum, RoomExits, CharVitals and so on.
+
+While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place the event name you'd like your script to listen to into the `Add User Defined Event Handler:` field and press the + button to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function should it call for you when your handler receives a message. You do that by setting the `Script name:` to the function name in the script you'd like to be called. 
+
+For example, if you'd like to listen to the RoomExits event and have it call the `process_exits()` function - register RoomExits as the event handler, make the script name be `process_exits`, and use this in the script:
+
+----------
+function process_exits(event, args)
+    echo("Called event: " .. event .. "\nWith args: " .. args)
+end
+----------
+
+Feel free to experiment with this to receive the desires results. An http://forums.mudlet.org/viewtopic.php?f=6&t=1243[ATCP demo package] is also available on the forums for using event handlers and parsing it's messages into Lua datastructures.
+
+[[db]]
+== db: Mudlet DB Frontend
+
+ 
+The DB package is meant to provide easier access to a database, so  you don't have to know SQL or use the luasql module to set and get at your data. However, it does require that the luasql module be compiled and included in Mudlet to function - and this all is available since Mudlet 1.0.6.
+ 
+=== Creating a Database
+
+ 
+Before you can store anything in a database, you need to create one. You may have as many independent databases as you wish, with each having as many unique tables-- what we will call sheets in this package, so as to avoid confusion with Lua tables - think spreadsheets.
+ 
+To create a database, you use the db:create() function, passing it the name of your database and a Lua table containing its schema configuration. A schema is a mold for your database - it defines what goes where. Using the spreadsheet example, ths would mean that you'd define what goes into each column. A simple example:
+-----
+        db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes"}})
+-----
+This will create a database which contains two sheets: one named friends, the other named enemies. Each has three columns, name, city and notes-- and the datatype of each are strings, though the types are very flexible and can be changed basically whenever you would like. It'll be stored in a file named Database_people.db in your Mudlet config directory on the hard drive should you want to share it.
+ 
+It's okay to run this function repeatedly, or to place it at the top-level of a script so that it gets run each time the script is saved: the DB package will not wipe out or clear the existing data in this case. More importantly, this allows you to add columns to an existing sheet. If you change that line to:
+-----
+        db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes", "enemied"}})
+-----
+It will notice that there is a new column on enemies, and add it to the existing sheet-- though the value will end up as nil for any rows which are already present. Similarly, you can add whole new sheets this way. It is not presently possible to -remove- columns or sheets without deleting the database and starting over.
+ 
+A note on column or field names: you may not create a field which begins with an underscore. This is strictly reserved to the db package for special use.
+
+=== Adding Data
+
+ 
+To add data to your database, you must first obtain a reference (variable) for it. You do that with the db:fetch_database function, such as:
+-----
+        local mydb = db:fetch_database("people")
+-----
+The database object contains certain convenience functions (discussed later, but all are preceded with an underscore), but also a reference to every sheet that currently exists within the database. You then use the db:add() function to add data to the specified sheet.
+-----
+        db:add(mydb.friends, {name="Ixokai", city="Magnagora"})
+-----
+If you would like to add multiple rows at once to the same table, you can do that by just passing in multiple tables:
+-----
+        db:add(mydb.friends, 
+                {name="Ixokai", city="Magnagora"},
+                {name="Vadi", city="New Celest"},
+                {name="Heiko", city="Hallifax", notes="The Boss"}
+        )
+-----
+Notice that by default, all columns of every table are considered optional-- if you don't include it in the add, then it will be set to its default value (which is nil by default)
+ 
+For those familiar with databases: with the DB package, you don't have to worry about 'committing' or 'rolling back' any changes, it will commit after each action automatically. If you would like more control then this, see Transactions below.
+ 
+You also cannot control what is the primary key of any sheets managed with DB, nor do you have to create one. Each row will get a unique integer ID that automatically increments, and this field can be accessed as "_row_id".
+ 
+=== Querying
+
+ 
+Putting data in isn't any fun if you can't get it out. If you want every row from the sheet, you can do:
+-----
+        db:fetch(mydb.friends)
+-----
+But rarely is that actually useful; usually you want to get only select data. For example, you only want to get people from the city of Magnagora. To do that you need to specify what criteria the system should use to determine what to return to you. It looks like this:
+-----
+        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"))
+-----
+So the basic command is - `db:fetch(_sheet_, _what to filter by_)`
+    
+The following filter operations are defined:
+-----
+        db:eq(field, value[, case_insensitive]) -- Defaults to case insensitive, pass true as the last arg to reverse this behavior.
+        db:not_eq(field, value[, case_insensitive) -- Not Equal To
+        db:lt(field, value) -- Less Than
+        db:lte(field, value) -- Less Than or  Equal to.
+        db:gt(field, value) -- Greater Than
+        db:gte(field, value) -- Greater Than or Equal To
+        db:is_nil(field) -- If the column is nil
+        db:is_not_nil(field) -- If the column is not nil
+        db:like(field, pattern) -- A simple matching pattern. An underscore matches any single character, and a percent(%) matches zero or more characters. Case insensitive.
+        db:not_like(field, pattern) -- As above, except it'll give you everything but what you ask for.
+        db:between(field, lower_bound, upper_bound) -- Tests if the field is between the given bounds (numbers only).
+        db:not_between(field, lower_bound, upper_bound) -- As above, only... not.
+        db:in_(field, table) -- Tests if the field is in the values of the table. NOTE the trailing underscore!
+        db:not_in(field, table) -- Tests if the field is NOT in the values of the table *
+-----
+The db:in_ operator takes a little more explanation. Given a table, it tests if any of the values in the table are in the sheet. For example:
+-----
+        db:in_(mydb.friends.city, {"Magnagora", "New Celest"})
+-----
+It tests if `city == "Magnagora" OR city == "New Celest"`, but with a more concise syntax for longer lists of items.
+        
+There are also two logical operators:
+-----
+        db:AND(operation1, ..., operationN)
+        db:OR(operation1, operation2)
+-----
+You may pass multiple operations to db:fetch in a table array, and they will be joined together with an AND by default. For example:
+-----
+        db:fetch(mydb.friends, 
+        	{db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "X%")}
+        )
+-----
+This will return every record in the sheet which is in the city of Magnagora, and has a name that starts with an X. Again note that in LIKE patterns, a percent is 'zero or more characters' -- this is the same effect as "X.*" in pcre patterns. Similarly, an underscore matches any single characters and so is the same as a dot in pcre. 
+ 
+Passing multiple expressions in an array to db:fetch is just a convenience, as its exactly the same as:
+-----
+        db:fetch(mydb.friends, db:AND(db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "I%")))
+-----
+The db:OR operation only takes two arguments, and will check to see if either of the two is true. You can nest these logical operators as deeply as you need to.
+ 
+You can also just pass in a string directly to db:fetch, but you have to be very careful as this will be passed straight to the SQL layer. If you don't know any SQL then you want to avoid this... for example, in SQL there's a very big difference between double and single quotes. If you don't know that, then stick to the db functions. But an example is:
+-----
+        db:fetch(mydb.friends, "city == 'Magnagora'")
+-----
+Now, the return value of db:fetch() is always a table array that contains a table dictionary representing the full contents of all matching rows in the sheet. For example, if a request from the friends sheet were to return one row, it would look like this if passed into the display() function:
+-----
+    table {
+        1: table {
+            'name': 'Bob',
+            'city': 'Magnagora',
+            'notes': 'Trademaster of Tailoring'
+        }
+    }
+-----
+The order of the returned rows from db:fetch is generally the same as the order in which you entered them into the database, but no actual guarantees are made to this. If you care about the order then you can pass one or two optional parameters after the query to db:fetch() to control this.
+
+The first table array of fields that indicate the column names to sort by; the second is a flag to switch from the default ascending(smallest to largest) sort, to a descending(largest to smallest) sort. For example:
+-----
+	db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city})
+-----
+This will return all your friends in Magnagora, sorted by their name, from smallest to largest. To reverse this, you would simply do:
+-----
+	db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city}, true)
+-----
+Including more then one field in the array will indicate that in the case that two rows have the same value, the second field should be used to sort them.
+
+If you would like to return ALL rows from a sheet, but still sort them, you can do that by passing nil into the query portion. For example:
+-----
+	db:fetch(mydb.friends, nil, {mydb.friends.city, mydb.friends.name})
+-----
+This will return every friend you have, sorted first by city and then their name.
+
+
+=== Indexes and Types
+
+ 
+The sheets we've defined thus far are very simple, but you can take more control over the process if you need to. For example, you may assign default values and types to columns, and the DB package will attempt to coerce them as appropriate. To do that, you change your db:create() call as:
+-----
+        db:create("people", {
+                friends={"name", "city", "notes"}, 
+                enemies={
+                        name="", 
+                        city="", 
+                        notes="", 
+                        enemied="",
+                        kills=0
+                }
+        })
+-----
+This is almost the same as the original definition, but we've defined that our first four fields are strings with a default value of blank, and the new kills field which is an integer that starts off at 0. The only way to set a datatype is to set a default value at this time.
+ 
+Please note, beneath the DB package is http://www.sqlite.org/[SQLite], and SQLite is very data-type neutral. It doesn't really care very much if you break those rules and put an integer in a string field or vice-versa, but the DB package will -- to a limited degree -- attempt to convert as appropriate, especially for the operations that work on numbers.
+ 
+You may also create both standard and unique indexes. A unique index enforces that a certain criteria can only happen once in the sheet. Now, before you go and make indexes, pause and consider. There is no right or wrong answer when it comes to what to index: it depends on what kind of queries you do regularly. If in doubt, don't make an index. Indexes will speed up reading data from the sheet, but they will slow down writing data.
+ 
+To add an index, pass either the _index or _unique keys in the table definition. An example:
+-----
+        db:create("people", {
+                friends={"name", "city", "notes"}, 
+                enemies={
+                        name="", 
+                        city="", 
+                        notes="", 
+                        enemied="",
+                        kills=0,
+                        _index = { "city" },
+                        _unique = { "name" }
+                }
+        })
+-----
+You can also create compound indexes, which is a very advanced thing to do. One could be: `_unique = { {"name", "city"} }`
+ 
+This would produce an effect that there could be only one "Bob" in Magnagora, but he and "Bob" in Celest could coexist happily.
+ 
+Now, bear in mind: `_index = { "name", "city"}` creates two indexes in this sheet. One on the city field, one on the name field. But, `_index = { {"name", "city"} }` creates one index: on the combination of the two. Compound indexes help speed up queries which frequently scan two fields together, but don't help if you scan one or the other.
+ 
+The admonition against making indexes willy-nilly holds double for compound indexes: do it only if you really need to!
+ 
+==== Timestamps
+
+In addition to strings and floats, the db module also has basic support for timestamps. In the database itself this is recorded as an integer (seconds since 1970) called an epoch, but you can easily convert them to strings for display, or even time tables to use with Lua's built-in time support.
+
+The most common use for the Timestamp type is where you want the database to automatically record the current time whenever you insert a new row into a sheet. The following example illustrates that:
+ 
+-----
+        local mydb = db:create("combat_log",
+           {
+              kills = {
+                 name = "",
+                 area = "",
+                 killed = db:Timestamp("CURRENT_TIMESTAMP"),
+                 _index = { {"name", "killed"} }
+              }
+           }
+        )
+        
+        
+        db:add(mydb.kills, {name="Drow", area="Undervault"})
+        
+        results = db:fetch(mydb.kills)
+        display(results)
+-----
+
+The result of that final display would show you this on a newly created sheet:
+
+-----
+        table {
+          1: table {
+            '_row_id': 1
+            'area': 'Undervault'
+            'name': 'Drow'
+            'killed': table {
+              '_timestamp': 1264317670
+            }
+          }
+-----
+
+As you can see from this output, the killed fields contains a timestamp-- and that timestamp is stored as an epoch value. For your convienance, the db.Timestamp type offers three functions to get the value of the timestamp in easy formats. They are as_string, as_number and as_table, and are called on the timestamp value itself.
+
+The as_number function returns the epoch number, and the as_table function returns a time table. The as_string function returns a string representation of the timestamp, with a default format of "%m-%d-%Y %H:%M:%S". You can override this format to anything you would like. Details of what you can do with epoch values, time tables, and what format codes you can use are specified in the Lua manual at: http://www.lua.org/pil/22.1.html for the Lua date/time functions.
+
+A quick example of the usage of these functions is:
+-----
+	results = db:fetch(mydb.kills)
+	for _, row in ipairs(results) do
+		echo("You killed " .. row.name .. " at: " .. row.killed:as_string() .."\n")
+	end
+-----
+ 
+=== Deleting
+
+ 
+The db:delete function is used to delete rows from the sheet. It takes two arguments, the first being the sheet you are deleting and the second a query string built using the same functions used to build db:fetch() queries.
+ 
+For example, to delete all your enemies in the city of Magnagora, you would do:
+-----
+        db:delete(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))
+-----
+Be careful in writing these! You may inadvertantly wipe out huge chunks of your sheets if you don't have the query parameters set just to what you need them to be. Its advised that you first run a db:fetch() with those parameters to test out the results they return.
+        
+As a convienence, you may also pass in a result table that was previously retrieved via db:fetch and it will delete only that record from the table. For example, the following will get all of the enemies in Magnagora, and then delete the first one:
+-----
+        results = db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))
+        db:delete(mydb.enemies, db:eq(mydb.enemies._row_id, results[1]._row_id))
+-----
+That is equivelent to:
+-----
+        db:delete(mydb.enemies, results[1])
+-----
+You can even pass a number directly to db:delete if you know what _row_id you want to purege.
+
+A final note of caution: if you want to delete all the records in a sheet, you can do so by only passing in the table reference. To try to protect you from doing this inadvertantly, you must also pass 'true' as the query after:
+-----
+	db:delete(mydb.enemies, true)
+-----
+ 
+=== Updating
+
+ 
+If you make a change to a table that you have received via db:fetch(), you can save those changes back to the database by doing:
+-----
+        db:update(mydb.enemies, results[1])
+-----
+A more powerful (and somewhat dangerous, be careful!) function to make changes to the database is db:set, which is capable of making sweeping changes to a column in every row of a sheet. Beware, if you have previously obtained a table from db:fetch, that table will NOT represent this change.
+ 
+The db:set() function takes two arguments: the field to change, the value to set it to, and the db:fetch() like query to indicate which rows should be affected. If you pass true as the last argument, ALL rows will be changed.
+ 
+To clear out the notes of all of our friends in Magnagora, we could do:
+-----
+        db:set(mydb.friends.notes, "", db:eq(mydb.friends.notes, "Magnagora"))
+-----
+Be careful in writing these!
+ 
+=== Transactions
+
+ 
+As was specified earlier, by default the db module commits everything immediately whenever you make a change. For power-users, if you would like to control transactions yourself, the following functions are provided on your database instance:
+-----
+        local mydb = db:fetch_database("my_database")
+        mydb._begin()
+        mydb._commit()
+        mydb._rollback()
+        mydb._end()
+-----
+Once you issue a mydb._begin() command, autocommit mode will be turned off and stay off until you do a mydb._end(). Thus, if you want to always use transactions explicitly, just put a mydb._begin() right after your db:create() and that database will always be in manual commit mode.
+
 [[migrating]]
 == Migrating to Mudlet
 
-=== Nexus
+=== From Nexus
 
 ==== Trigger patterns
 
@@ -1180,6 +1502,35 @@ number = 1234
 echo ("My number is: " .. number)
 echo ("the " .. number .. " is in the middle of my text")
 ---------
+
+==== wildcards in Mudlet
+
+To use the wildcard variable in Nexus, you'd use $1 for the first match, $2 for the second and so on. In Mudlet, the matches[] table contains the matches - and it starts placing the matches from 2. So the Nexus $1 would be matches[2], $2 would be matches[3].
+
+---------
+Nexus:
+{w} kicks you.
+#set badguy $1
+#echo $badguy kicked me!
+
+Mudlet:
+(\w+) kicks you\.
+badguy = matches[2]
+echo(badguy .. " kicked me!")
+---------
+
+Another example would be the targetting alias:
+---------
+Nexus:
+alias name: t
+alias script: #set target $1
+
+Mudlet:
+alias pattern: ^t (.*)$
+alias script: target = matches[2]
+---------
+
+The reason the first match goes into matches[2] and not matches[1] is because matches[1] contains the part of the line that matched your trigger / alias.
 
 ==== ifs in Mudlet
 
@@ -1417,6 +1768,7 @@ Click on the respective function to get more information:
 <<createStopWatch,createStopWatch>>, 
 
 == D
+<<datetime_parse,datetime:parse>>
 <<debug,debug>>
 <<deleteLine,deleteLine>>, 
 <<disableAlias,disableAlias>>,
@@ -1425,6 +1777,32 @@ Click on the respective function to get more information:
 <<disableTrigger,disableTrigger>>, 
 <<disconnect,disconnect>>, 
 <<display,display>>, 
+<<db_add,db:add>>, 
+<<db_AND,db:AND>>, 
+<<db_between,db:between>>, 
+<<db_create,db:create>>, 
+<<db_delete,db:delete>>, 
+<<db_eq,db:eq>>,
+<<db_exp,db:exp>>,
+<<db_fetch,db:fetch>>, 
+<<db_fetch_database,db:fetch_database>>, 
+<<db_gt,db:gt>>, 
+<<db_gte,db:gte>>, 
+<<db_in_,db:in_>>, 
+<<db_is_nil,db:is_nil>>, 
+<<db_is_not_nil,db:is_not_nil>>, 
+<<db_like,db:like>>, 
+<<db_lt,db:lt>>, 
+<<db_lte,db:lte>>, 
+<<db_not_between,db:not_between>>, 
+<<db_not_eq,db:not_eq>>, 
+<<db_not_in,db:not_in>>, 
+<<db_not_like,db:not_like>>, 
+<<db_OR,db:OR>>, 
+<<db_set,db:set>>, 
+<<db_update,db:update>>, 
+
+
 
 
 == E
@@ -2239,7 +2617,7 @@ copy()
 appendBuffer( "chat" )
 -----
 
-See also: <<selectString, selectString()>>, <<copy, copy()>>
+See also: <<selectString, selectString()>>, <<copy, copy()>>, <<echo, echo()>>
 
 [[printTable]]
 == printTable( table_name )
@@ -2720,10 +3098,10 @@ loads an image file (png) as a background image for a label. This can be used to
 
 
 [[setBackgroundColor]]
-== setBackgroundColor( labelName, red, green, blue, transparency )
-Sets rgb color values and the transparency for the given label. Colors are from 0 to 255 (0 being black), and transparency is from - to 255 (0 being completely transparent).
+== setBackgroundColor( window name, red, green, blue, transparency )
+Sets rgb color values and the transparency for the given window. Colors are from 0 to 255 (0 being black), and transparency is from - to 255 (0 being completely transparent).
 
-
+Note that transparency only works on labels, not miniConsoles for efficiency reasons.
 
 [[setLabelClickCallback]]
 == setLabelClickCallback( labelName, luaFunctionName, optional any amount of arguments )
@@ -2821,13 +3199,322 @@ set for how many more lines a trigger script should fire or a chain should stay 
 == homedir = getMudletHomeDir()
 returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files
 
+[[datetime_parse]]
+== datetime:parse(source, format, as_epoch)
+parses the specified source string, according to the format if given, to return a representation of the date/time. If as_epoch is provided and true, the return value will be a Unix epoch -- the number of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch is false, then a Lua time table will be returned. Details of the time tables are provided in the http://www.lua.org/pil/22.1.html[Lua Manual].
+
+[horizontal]
+.Supported Format Codes
+%b:: Abbreviated Month Name
+%B:: Full Month Name
+%d:: Day of Month
+%H:: Hour (24-hour format)
+%I:: Hour (12-hour format, requires %p as well)
+%p:: AM or PM
+%m:: 2-digit month (01-12)
+%M:: 2-digit minutes (00-59)
+%S:: 2-digit seconds (00-59)
+%y:: 2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910.
+%Y:: 4-digit year.
+
 
 [[display]]
 == display( myTable )
-generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.
+Generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.
 
 == display( myVariable )
 generic pretty print function to display the content of any Lua variable or table on the main screen
+
+[[db:create]]
+== db:create(database name, schema table)
+Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet script: in fact it is reccommended you run this function at a top-level without any kind of guards. If the named database does not exist it will create it. If the database does exist then it will add any columns or indexes which didn't exist before to that database. If the database already has all the specified columns and indexes, it will do nothing.
+
+The database will be called Database_<sanitized database name>.db and will be stored in the Mudlet configuration directory.
+
+Database 'tables' are called 'sheets' consistantly throughout this documentation, to avoid confusion with Lua tables.
+
+The schema table must be a Lua table array containing table dictionaries that define the structure and layout of each sheet.
+
+
+Examples:
+-------------------
+	local mydb = db:create("combat_log",
+		{
+			kills = {
+				name = "",
+				area = "",
+				killed = db:Timestamp("CURRENT_TIMESTAMP"),
+				_index = { {"name", "area"} }
+			},
+			enemies = {
+				name = "",
+				city = "",
+				reason = "",
+				enemied = db:Timestamp("CURRENT_TIMESTAMP"),
+				_index = { "city" },
+				_unique = { "name" }
+			}
+		}
+	)
+-------------------
+
+The above will create a database with two sheets; the first is kills and is used to track every successful kill, with both where and when the kill happened. It has one index, a compound inde tracking the combination of name and area. The second sheet has two indexes, but one is unique: it isn't possible to add two items to the enemies sheet with the same name.
+
+[[db:get_database]]
+== db:get_database(database name)
+returns a reference of an already existing database. This instance can be used to get references to the sheets (and from there, fields) that are defined within the database. You use these references to construct queries.
+
+If a database has a sheet named enemies, you can obtain a reference to that sheet by simply doing:
+-----
+    local mydb = db:get_database("my database")
+    local enemies_ref = mydb.enemies
+    local name_ref = mydb.enemies.name
+-----
+
+These references do not contain any actual data, they only point to parts of the database structure.
+
+
+[[db_add]]
+== db:add(sheet reference, table1, ..., tableN)
+Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index, a lua error will be thrown and execution will cancel. As such it is advisable that if you use a UNIQUE index, you test those values before you attempt to insert a new row.
+
+Each table is a series of key-value pairs to set the values of the sheet, but if any keys do nto exist then they will be set to nil or the default value.
+
+An example:
+-----
+	db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
+	db:add(mydb.enemies,
+		{name="John Smith", city="San Francisco"},
+		{name="Jane Smith", city="San Francisco"},
+		{name="Richard Clark"})
+-----
+
+As you can see, all fields are optional.
+
+[[db_fetch]]
+== db:fetch(sheet reference, query, order_by, descending)
+returns a table array containing a table for each matching row in the specified sheet. All arguments but sheet are optional. If query is nil, the entire contents of the sheet will be returned.
+
+Query is a string which should be built by calling the various db: expression functions, such as db:eq, db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous. If you don't know SQL well, its best to build the expression.
+
+Query may also be a table array of such expressions, if so they will be AND'd together implicitly.
+
+The results that are returned are not in any guaranteed order, though they are usually the same order as the records were inserted. If you want to rely on the order in any way, you must pass a value to the order_by field. This must be a table array listing the columns you want to sort by. It can be { "column1" }, or { "column1", "column2" }
+
+The results are returned in ascending (smallest to largest) order; to reverse this pass true into the final field.
+
+Examples:
+-----
+	db:fetch(mydb.enemies, nil, {"city", "name"})
+	db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+	db:fetch(mydb.kills, 
+			{db:eq(mydb.kills.area, "Undervault"),
+			db:like(mydb.kills.name, "%Drow%")}
+	)
+-----
+
+The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.
+
+The second will fetch only the enemies which are in San Francisco.
+
+The third will fetch all the things you've killed in Undervault which have Drow in their name.
+
+[[db_eq]]
+== db:eq(field reference, value)
+returns a database expression to test if the field in the sheet is equal to the value.
+
+[[db_exp]]
+== db:exp(string)
+returns the string as-is to the database.
+
+Use this function with caution, but it is very useful in some circumstances. One of the most common of such is incrementing an existing field in a db:set() operation, as so:
+
+-----
+	db:set(mydb.enemies, db:exp("kills + 1"), db:eq(mydb.enemies.name, "Ixokai"))
+-----
+
+This will increment the value of the kills field for the row identified by the name Ixokai.
+
+But there are other uses, as the underlining database layer provides many functions you can call to do certain things. If you want to get a list of all your enemies who have a name longer then 10 characters, you may do:
+
+-----
+	db:fetch(mydb.enemies, db:exp("length(name) > 10"))
+-----
+
+Again, take special care with this, as you are doing SQL syntax directly and the library can't help you get things right.
+
+[[db_not_eq]]
+== db:not_eq(field reference, value)
+returns a database expression to test if the field in the sheet is NOT equal to the value.
+
+[[db_lt]]
+== db:lt(field reference, value)
+returns a database expression to test if the field in the sheet is less than the value.
+
+[[db_lte]]
+== db:lte(field reference, value)
+returns a database expression to test if the field in the sheet is less than or equal to the value.
+
+[[db_gt]]
+== db:gt(field reference, value)
+returns a database expression to test if the field in the sheet is greater than to the value.
+
+[[db_gte]]
+== db:gte(field reference, value)
+returns a database expression to test if the field in the sheet is greater than or equal to the value.
+
+[[db_is_nil]]
+== db:is_nil(field reference, value)
+returns a database expression to test if the field in the sheet is nil.
+
+[[db_is_not_nil]]
+== db:is_not_nil(field reference, value)
+returns a database expression to test if the field in the sheet is not nil.
+
+[[db_like]]
+== db:like(field reference, pattern)
+returns a database expression to test if the field in the sheet matches the specified pattern.
+
+LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.
+
+LIKE with "_" is therefore the same as the "." regular expression.
+
+LIKE with "%" is therefore the same as ".*" regular expression.
+
+[[db_not_like]]
+== db:not_like(field reference, pattern)
+returns a database expression to test if the field in the sheet does not match the specified pattern.
+
+LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.
+
+LIKE with "_" is therefore the same as the "." regular expression.
+
+LIKE with "%" is therefore the same as ".*" regular expression.
+
+[[db_between]]
+== db:between(field reference, lower_bound, upper_bound)
+returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps.
+
+[[db_not_between]]
+== db:not_between(field reference, lower_bound, upper_bound)
+returns a database expression to test if the field in the sheet is not a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps.
+
+[[db_in_]]
+== db:in_(field reference, table array)
+returns a database expression to test if the field in the sheet is one of the values in the table array.
+
+First, note the trailing underscore carefully! It is required.
+
+The following example illustrates the use of in_:
+
+-----
+	local mydb = db:get_database("my database")
+	local areas = {"Undervault", "Hell", "Purgatory"}
+
+	db:fetch(mydb.kills, db:in_(mydb.kills.area, areas))
+-----
+
+This will obtain all of your kills which happened in the Undervault, Hell or Purgatory. Every db:in_ expression can be written as a db:OR, but that quite often gets very complex.
+
+[[db_not_in]]
+== db:not_in(field reference, table array)
+returns a database expression to test if the field in the sheet is not one of the values in the table array.
+
+See link: <<db_in_,db:in_>>
+
+[[db_AND]]
+== db:AND(sub-expression1, ..., sub-expressionN)
+returns a compound database expression that combines all of the simple expressions passed into it; these expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like.
+
+This compound expression will only find items in the sheet if all sub-expressions match.
+
+[[db_OR]]
+== db:OR(sub-expression1, sub-expression2)
+returns a compound database expression that combines both of the simple expressions passed into it; these expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like.
+
+This compound expression will find any item that matches either the first or the second sub-expression.
+
+[[db_delete]]
+== db:delete(sheet reference, query)
+Deletes rows from the specified sheet. The argument for query tries to be intelligent: 
+
+* if it is a simple number, it deletes a specific row by _row_id
+* if it is a table that contains a _row_id (e.g., a table returned by db:get) it deletes just that record.
+* Otherwise, it deletes every record which matches the query pattern which is specified as with db:get.
+* If the query is simply true, then it will truncate the entire contents of the sheet.
+
+Some examples:
+-----
+	enemies = db:fetch(mydb.enemies)
+	
+	db:delete(mydb.enemies, enemies[1])
+	db:delete(mydb.enemies, enemies[1]._row_id)
+	db:delete(mydb.enemies, 5)
+	db:delete(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+	db:delete(mydb.enemies, true)
+-----
+
+Those deletion commands will do in order:
+
+. When passed an actual result table that was obtained from db:fetch, it will delete the record for that table.
+. When passed a number, will delete the record for that _row_id. This example shows getting the row id from a table.
+. As above, but this example just passes in the row id directly.
+. Here, we will delete anything which matches the same kind of query as db:fetch uses-- namely, anyone who is in the city of San Francisco.
+. And finally, we will delete the entire contents of the enemies table.	
+
+[[db_update]]
+== db:update(sheet reference, table)
+This function updates a row in the specified sheet, but only accepts a row which has been previously obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field or tow, you can save back that table.
+
+For example:
+-----
+	local mydb = db:get_database("my database")
+	local bob = db:fetch(mydb.friends, db:eq(mydb.friends.name, "Bob"))[1]
+	bob.notes = "He's a really awesome guy."
+	db:update(mydb.friends, bob)
+-----
+
+This obtains a database reference, and queries the friends sheet for someone named Bob. As this returns a table array containing only one item, it assigns that one item to the local variable named bob. We then change the notes on Bob, and pass it into db:update() to save the changes back.
+
+[[db_set]]
+== db:set(field reference, value, query)
+The db:set function allows you to set a certain field to a certain value across an entire sheet. Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only the last_read fields which are in a certain city. The query argument can be any value which is appropriate for db:fetch, even nil which will change the value for the specified column for EVERY row in the sheet.
+
+For example, consider a situation in which you are tracking how many times you find a certain type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and then adding a record for each type of egg.
+
+-----
+	local mydb = db:create("egg database", {eggs = {color = "", last_found = db.Timestamp(false), found = 0}})
+	db:add(mydb.eggs,
+		{color = "Red"},
+		{color = "Blue"},
+		{color = "Green"},
+		{color = "Yellow"},
+		{color = "Black"}
+	)
+-----
+
+Now, you have three columns. One is a string, one a timestamp (that ends up as nil in the database), and one is a number.
+
+You can then set up a trigger to capture from the mud the string, "You pick up a (.*?) egg!", and you end up arranging to store the value of that expression in a variable called "myegg".
+
+To increment how many we found, we will do this:
+
+-----
+	myegg = "Red" -- We will pretend a trigger set this.
+	db:set(mydb.eggs.found, db:exp("found + 1"), db:eq(mydb.eggs.color, myegg))
+	db:set(mydb.eggs.last_found, db.Timestamp("CURRENT_TIMESTAMP"), db:eq(mydb.eggs.color, myegg))
+-----
+
+This will go out and set two fields in the Red egg sheet; the first is the found field, which will increment the value of that field (using the special db:exp function). The second will update the last_found field with the current time.
+
+Once this contest is over, you may wish to reset this data but keep the database around. To do that, you may use a more broad use of db:set as such:
+
+-----
+	db:set(mydb.eggs.found, 0)
+	db:set(mydb.eggs.last_found, nil)
+-----
+
+
 
 [[tempAlias]]
 == id = tempAlias(regex, lua code)
@@ -2840,7 +3527,7 @@ tempAlias("^hi$", [[send ("hi") echo ("we said hi!")]]
 
 
 [[tempColorTrigger]]
-== tempColorTrigger( foregroundColor, backgroundColor, function )
+== tempColorTrigger( foregroundColor, backgqroundColor, function )
 Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be supplied in form of these simplified ANSI 16 color mode codes:
 .Color Codes:
 ----

@@ -1083,7 +1083,16 @@ QString TConsole::logger_translate( QString & s )
 void TConsole::scrollDown( int lines )
 {
     console->scrollDown( lines );
-    if( console->isTailMode() ) console2->hide();
+    if( console->isTailMode() )
+    {
+        console2->mCursorY = buffer.getLastLineNumber();
+        console2->hide();
+        console->mCursorY = buffer.getLastLineNumber();
+        console->mIsTailMode = true;
+        console->updateScreenView();
+        console->forceUpdate();
+
+    }
 }
 
 void TConsole::scrollUp( int lines )
@@ -1656,11 +1665,14 @@ void TConsole::printCommand( QString & msg )
                 format.bgG = mCommandBgColor.green();
                 format.bgB = mCommandBgColor.blue();
                 buffer.insertInLine( P, msg, format );
-                console->updateLastLine();//needUpdate( lineBeforeNewContent, lineBeforeNewContent+1 );
+                int down = buffer.wrapLine( lineBeforeNewContent,
+                                            mpHost->mScreenWidth,
+                                            mpHost->mWrapIndentCount,
+                                            mFormatCurrent );
+                console->needUpdate( lineBeforeNewContent, lineBeforeNewContent+1+down );
+                console2->needUpdate( lineBeforeNewContent, lineBeforeNewContent+1+down );
                 //nachfolgende cmd prints werden dadurch ganz normal untereinander geschrieben, anstatt alle auf eine zeile. Die letze leerzeile wird deshalb nicht gelöscht, damit \n am Ende der Zeile nicht auf dem Bildschrim erscheint
                 buffer.promptBuffer[lineBeforeNewContent] = false;
-                //console->updateLastLine();
-                //console2->updateLastLine();
                 return; 
             }
         }
@@ -2046,8 +2058,11 @@ void TConsole::showStatistics()
 
 
     QString footer = QString("\n+--------------------------------------------------------------+\n" );
-    QString msg = h + r + footer;
+    QString msg = h + r;
     printSystemMessage( msg );
+    QString script = "display( atcp )";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+    printSystemMessage( footer );
     //print( "20 triggers\n" );
 
 

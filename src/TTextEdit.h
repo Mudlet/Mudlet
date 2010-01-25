@@ -144,6 +144,7 @@ private:
     bool              mInversOn;
     QPoint            mPA;
     QPoint            mPB;
+    QPoint            mP_aussen;
 
 
     bool              mPainterInit;
