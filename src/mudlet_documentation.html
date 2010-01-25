@@ -567,6 +567,16 @@ div#toc a:visited { color: blue; }
 <a href="#scripting-howtos">Scripting Howtos</a>
 </p>
 </li>
+<li>
+<p>
+<a href="#atcp">ATCP</a>
+</p>
+</li>
+<li>
+<p>
+<a href="#db">Database frontend</a>
+</p>
+</li>
 </ol></div>
 </li>
 <li>
@@ -20394,9 +20404,296 @@ id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])</
 </div></div>
 <div class="paragraph"><p><sup>*requires Mudlet 1.0.6 or the <a href="http://forums.mudlet.org/viewtopic.php?f=5&amp;t=92&amp;p=2210#p2210">capitalize function</a> in a script.</sup></p></div>
 </div>
+<h2 id="atcp">ATCP</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Since version 1.0.6, Mudlet includes support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough such that any it should work on others.</p></div>
+<div class="paragraph"><p>The latest ATCP data is stored in the <tt>atcp</tt> table. Whenever new data arrives, the previous is overwritten. An event is also raised for each ATCP message that arrives. To find out the available messages available in the <tt>atcp</tt> table and the event names, you can use <tt>display(atcp)</tt>.</p></div>
+<div class="paragraph"><p>Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is removed - so it becomes CharVitals and RoomExits. Here&#8217;s an example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>room_number = tonumber(atcp.RoomNum)
+echo(room_number)</tt></pre>
+</div></div>
+<h3 id="_triggering_on_atcp_events">Triggering on ATCP events</h3><div style="clear:left"></div>
+<div class="paragraph"><p>If you&#8217;d like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages. The ATCP handler names follow the same format as the <tt>atcp</tt> table - RoomNum, RoomExits, CharVitals and so on.</p></div>
+<div class="paragraph"><p>While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place the event name you&#8217;d like your script to listen to into the <tt>Add User Defined Event Handler:</tt> field and press the + button to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function should it call for you when your handler receives a message. You do that by setting the <tt>Script name:</tt> to the function name in the script you&#8217;d like to be called.</p></div>
+<div class="paragraph"><p>For example, if you&#8217;d like to listen to the RoomExits event and have it call the <tt>process_exits()</tt> function - register RoomExits as the event handler, make the script name be <tt>process_exits</tt>, and use this in the script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>function process_exits(event, args)
+    echo("Called event: " .. event .. "\nWith args: " .. args)
+end</tt></pre>
+</div></div>
+<div class="paragraph"><p>Feel free to experiment with this to receive the desires results. An <a href="http://forums.mudlet.org/viewtopic.php?f=6&amp;t=1243">ATCP demo package</a> is also available on the forums for using event handlers and parsing it&#8217;s messages into Lua datastructures.</p></div>
+</div>
+<h2 id="db">db: Mudlet DB Frontend</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The DB package is meant to provide easier access to a database, so  you don&#8217;t have to know SQL or use the luasql module to set and get at your data. However, it does require that the luasql module be compiled and included in Mudlet to function - and this all is available since Mudlet 1.0.6.</p></div>
+<h3 id="_creating_a_database">Creating a Database</h3><div style="clear:left"></div>
+<div class="paragraph"><p>Before you can store anything in a database, you need to create one. You may have as many independent databases as you wish, with each having as many unique tables-- what we will call sheets in this package, so as to avoid confusion with Lua tables - think spreadsheets.</p></div>
+<div class="paragraph"><p>To create a database, you use the db:create() function, passing it the name of your database and a Lua table containing its schema configuration. A schema is a mold for your database - it defines what goes where. Using the spreadsheet example, ths would mean that you&#8217;d define what goes into each column. A simple example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes"}})</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will create a database which contains two sheets: one named friends, the other named enemies. Each has three columns, name, city and notes-- and the datatype of each are strings, though the types are very flexible and can be changed basically whenever you would like. It&#8217;ll be stored in a file named Database_people.db in your Mudlet config directory on the hard drive should you want to share it.</p></div>
+<div class="paragraph"><p>It&#8217;s okay to run this function repeatedly, or to place it at the top-level of a script so that it gets run each time the script is saved: the DB package will not wipe out or clear the existing data in this case. More importantly, this allows you to add columns to an existing sheet. If you change that line to:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes", "enemied"}})</tt></pre>
+</div></div>
+<div class="paragraph"><p>It will notice that there is a new column on enemies, and add it to the existing sheet-- though the value will end up as nil for any rows which are already present. Similarly, you can add whole new sheets this way. It is not presently possible to -remove- columns or sheets without deleting the database and starting over.</p></div>
+<div class="paragraph"><p>A note on column or field names: you may not create a field which begins with an underscore. This is strictly reserved to the db package for special use.</p></div>
+<h3 id="_adding_data">Adding Data</h3><div style="clear:left"></div>
+<div class="paragraph"><p>To add data to your database, you must first obtain a reference (variable) for it. You do that with the db:fetch_database function, such as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        local mydb = db:fetch_database("people")</tt></pre>
+</div></div>
+<div class="paragraph"><p>The database object contains certain convenience functions (discussed later, but all are preceded with an underscore), but also a reference to every sheet that currently exists within the database. You then use the db:add() function to add data to the specified sheet.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:add(mydb.friends, {name="Ixokai", city="Magnagora"})</tt></pre>
+</div></div>
+<div class="paragraph"><p>If you would like to add multiple rows at once to the same table, you can do that by just passing in multiple tables:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:add(mydb.friends,
+                {name="Ixokai", city="Magnagora"},
+                {name="Vadi", city="New Celest"},
+                {name="Heiko", city="Hallifax", notes="The Boss"}
+        )</tt></pre>
+</div></div>
+<div class="paragraph"><p>Notice that by default, all columns of every table are considered optional-- if you don&#8217;t include it in the add, then it will be set to its default value (which is nil by default)</p></div>
+<div class="paragraph"><p>For those familiar with databases: with the DB package, you don&#8217;t have to worry about <em>committing</em> or <em>rolling back</em> any changes, it will commit after each action automatically. If you would like more control then this, see Transactions below.</p></div>
+<div class="paragraph"><p>You also cannot control what is the primary key of any sheets managed with DB, nor do you have to create one. Each row will get a unique integer ID that automatically increments, and this field can be accessed as "_row_id".</p></div>
+<h3 id="_querying">Querying</h3><div style="clear:left"></div>
+<div class="paragraph"><p>Putting data in isn&#8217;t any fun if you can&#8217;t get it out. If you want every row from the sheet, you can do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends)</tt></pre>
+</div></div>
+<div class="paragraph"><p>But rarely is that actually useful; usually you want to get only select data. For example, you only want to get people from the city of Magnagora. To do that you need to specify what criteria the system should use to determine what to return to you. It looks like this:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"))</tt></pre>
+</div></div>
+<div class="paragraph"><p>So the basic command is - <tt>db:fetch(_sheet_, _what to filter by_)</tt></p></div>
+<div class="paragraph"><p>The following filter operations are defined:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:eq(field, value[, case_insensitive]) -- Defaults to case insensitive, pass true as the last arg to reverse this behavior.
+        db:not_eq(field, value[, case_insensitive) -- Not Equal To
+        db:lt(field, value) -- Less Than
+        db:lte(field, value) -- Less Than or  Equal to.
+        db:gt(field, value) -- Greater Than
+        db:gte(field, value) -- Greater Than or Equal To
+        db:is_nil(field) -- If the column is nil
+        db:is_not_nil(field) -- If the column is not nil
+        db:like(field, pattern) -- A simple matching pattern. An underscore matches any single character, and a percent(%) matches zero or more characters. Case insensitive.
+        db:not_like(field, pattern) -- As above, except it'll give you everything but what you ask for.
+        db:between(field, lower_bound, upper_bound) -- Tests if the field is between the given bounds (numbers only).
+        db:not_between(field, lower_bound, upper_bound) -- As above, only... not.
+        db:in_(field, table) -- Tests if the field is in the values of the table. NOTE the trailing underscore!
+        db:not_in(field, table) -- Tests if the field is NOT in the values of the table *</tt></pre>
+</div></div>
+<div class="paragraph"><p>The db:in_ operator takes a little more explanation. Given a table, it tests if any of the values in the table are in the sheet. For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:in_(mydb.friends.city, {"Magnagora", "New Celest"})</tt></pre>
+</div></div>
+<div class="paragraph"><p>It tests if <tt>city == "Magnagora" OR city == "New Celest"</tt>, but with a more concise syntax for longer lists of items.</p></div>
+<div class="paragraph"><p>There are also two logical operators:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:AND(operation1, ..., operationN)
+        db:OR(operation1, operation2)</tt></pre>
+</div></div>
+<div class="paragraph"><p>You may pass multiple operations to db:fetch in a table array, and they will be joined together with an AND by default. For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends,
+                {db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "X%")}
+        )</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will return every record in the sheet which is in the city of Magnagora, and has a name that starts with an X. Again note that in LIKE patterns, a percent is <em>zero or more characters</em>&#8201;&#8212;&#8201;this is the same effect as "X.*" in pcre patterns. Similarly, an underscore matches any single characters and so is the same as a dot in pcre.</p></div>
+<div class="paragraph"><p>Passing multiple expressions in an array to db:fetch is just a convenience, as its exactly the same as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends, db:AND(db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "I%")))</tt></pre>
+</div></div>
+<div class="paragraph"><p>The db:OR operation only takes two arguments, and will check to see if either of the two is true. You can nest these logical operators as deeply as you need to.</p></div>
+<div class="paragraph"><p>You can also just pass in a string directly to db:fetch, but you have to be very careful as this will be passed straight to the SQL layer. If you don&#8217;t know any SQL then you want to avoid this&#8230; for example, in SQL there&#8217;s a very big difference between double and single quotes. If you don&#8217;t know that, then stick to the db functions. But an example is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends, "city == 'Magnagora'")</tt></pre>
+</div></div>
+<div class="paragraph"><p>Now, the return value of db:fetch() is always a table array that contains a table dictionary representing the full contents of all matching rows in the sheet. For example, if a request from the friends sheet were to return one row, it would look like this if passed into the display() function:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    table {
+        1: table {
+            'name': 'Bob',
+            'city': 'Magnagora',
+            'notes': 'Trademaster of Tailoring'
+        }
+    }</tt></pre>
+</div></div>
+<div class="paragraph"><p>The order of the returned rows from db:fetch is generally the same as the order in which you entered them into the database, but no actual guarantees are made to this. If you care about the order then you can pass one or two optional parameters after the query to db:fetch() to control this.</p></div>
+<div class="paragraph"><p>The first table array of fields that indicate the column names to sort by; the second is a flag to switch from the default ascending(smallest to largest) sort, to a descending(largest to smallest) sort. For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city})</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will return all your friends in Magnagora, sorted by their name, from smallest to largest. To reverse this, you would simply do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city}, true)</tt></pre>
+</div></div>
+<div class="paragraph"><p>Including more then one field in the array will indicate that in the case that two rows have the same value, the second field should be used to sort them.</p></div>
+<div class="paragraph"><p>If you would like to return ALL rows from a sheet, but still sort them, you can do that by passing nil into the query portion. For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.friends, nil, {mydb.friends.city, mydb.friends.name})</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will return every friend you have, sorted first by city and then their name.</p></div>
+<h3 id="_indexes_and_types">Indexes and Types</h3><div style="clear:left"></div>
+<div class="paragraph"><p>The sheets we&#8217;ve defined thus far are very simple, but you can take more control over the process if you need to. For example, you may assign default values and types to columns, and the DB package will attempt to coerce them as appropriate. To do that, you change your db:create() call as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:create("people", {
+                friends={"name", "city", "notes"},
+                enemies={
+                        name="",
+                        city="",
+                        notes="",
+                        enemied="",
+                        kills=0
+                }
+        })</tt></pre>
+</div></div>
+<div class="paragraph"><p>This is almost the same as the original definition, but we&#8217;ve defined that our first four fields are strings with a default value of blank, and the new kills field which is an integer that starts off at 0. The only way to set a datatype is to set a default value at this time.</p></div>
+<div class="paragraph"><p>Please note, beneath the DB package is <a href="http://www.sqlite.org/">SQLite</a>, and SQLite is very data-type neutral. It doesn&#8217;t really care very much if you break those rules and put an integer in a string field or vice-versa, but the DB package will&#8201;&#8212;&#8201;to a limited degree&#8201;&#8212;&#8201;attempt to convert as appropriate, especially for the operations that work on numbers.</p></div>
+<div class="paragraph"><p>You may also create both standard and unique indexes. A unique index enforces that a certain criteria can only happen once in the sheet. Now, before you go and make indexes, pause and consider. There is no right or wrong answer when it comes to what to index: it depends on what kind of queries you do regularly. If in doubt, don&#8217;t make an index. Indexes will speed up reading data from the sheet, but they will slow down writing data.</p></div>
+<div class="paragraph"><p>To add an index, pass either the _index or _unique keys in the table definition. An example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:create("people", {
+                friends={"name", "city", "notes"},
+                enemies={
+                        name="",
+                        city="",
+                        notes="",
+                        enemied="",
+                        kills=0,
+                        _index = { "city" },
+                        _unique = { "name" }
+                }
+        })</tt></pre>
+</div></div>
+<div class="paragraph"><p>You can also create compound indexes, which is a very advanced thing to do. One could be: <tt>_unique = { {"name", "city"} }</tt></p></div>
+<div class="paragraph"><p>This would produce an effect that there could be only one "Bob" in Magnagora, but he and "Bob" in Celest could coexist happily.</p></div>
+<div class="paragraph"><p>Now, bear in mind: <tt>_index = { "name", "city"}</tt> creates two indexes in this sheet. One on the city field, one on the name field. But, <tt>_index = { {"name", "city"} }</tt> creates one index: on the combination of the two. Compound indexes help speed up queries which frequently scan two fields together, but don&#8217;t help if you scan one or the other.</p></div>
+<div class="paragraph"><p>The admonition against making indexes willy-nilly holds double for compound indexes: do it only if you really need to!</p></div>
+<h4 id="_timestamps">Timestamps</h4>
+<div class="paragraph"><p>In addition to strings and floats, the db module also has basic support for timestamps. In the database itself this is recorded as an integer (seconds since 1970) called an epoch, but you can easily convert them to strings for display, or even time tables to use with Lua&#8217;s built-in time support.</p></div>
+<div class="paragraph"><p>The most common use for the Timestamp type is where you want the database to automatically record the current time whenever you insert a new row into a sheet. The following example illustrates that:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        local mydb = db:create("combat_log",
+           {
+              kills = {
+                 name = "",
+                 area = "",
+                 killed = db:Timestamp("CURRENT_TIMESTAMP"),
+                 _index = { {"name", "killed"} }
+              }
+           }
+        )
+
+
+        db:add(mydb.kills, {name="Drow", area="Undervault"})
+
+        results = db:fetch(mydb.kills)
+        display(results)</tt></pre>
+</div></div>
+<div class="paragraph"><p>The result of that final display would show you this on a newly created sheet:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        table {
+          1: table {
+            '_row_id': 1
+            'area': 'Undervault'
+            'name': 'Drow'
+            'killed': table {
+              '_timestamp': 1264317670
+            }
+          }</tt></pre>
+</div></div>
+<div class="paragraph"><p>As you can see from this output, the killed fields contains a timestamp-- and that timestamp is stored as an epoch value. For your convienance, the db.Timestamp type offers three functions to get the value of the timestamp in easy formats. They are as_string, as_number and as_table, and are called on the timestamp value itself.</p></div>
+<div class="paragraph"><p>The as_number function returns the epoch number, and the as_table function returns a time table. The as_string function returns a string representation of the timestamp, with a default format of "%m-%d-%Y %H:%M:%S". You can override this format to anything you would like. Details of what you can do with epoch values, time tables, and what format codes you can use are specified in the Lua manual at: <a href="http://www.lua.org/pil/22.1.html">http://www.lua.org/pil/22.1.html</a> for the Lua date/time functions.</p></div>
+<div class="paragraph"><p>A quick example of the usage of these functions is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        results = db:fetch(mydb.kills)
+        for _, row in ipairs(results) do
+                echo("You killed " .. row.name .. " at: " .. row.killed:as_string() .."\n")
+        end</tt></pre>
+</div></div>
+<h3 id="_deleting">Deleting</h3><div style="clear:left"></div>
+<div class="paragraph"><p>The db:delete function is used to delete rows from the sheet. It takes two arguments, the first being the sheet you are deleting and the second a query string built using the same functions used to build db:fetch() queries.</p></div>
+<div class="paragraph"><p>For example, to delete all your enemies in the city of Magnagora, you would do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:delete(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))</tt></pre>
+</div></div>
+<div class="paragraph"><p>Be careful in writing these! You may inadvertantly wipe out huge chunks of your sheets if you don&#8217;t have the query parameters set just to what you need them to be. Its advised that you first run a db:fetch() with those parameters to test out the results they return.</p></div>
+<div class="paragraph"><p>As a convienence, you may also pass in a result table that was previously retrieved via db:fetch and it will delete only that record from the table. For example, the following will get all of the enemies in Magnagora, and then delete the first one:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        results = db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))
+        db:delete(mydb.enemies, db:eq(mydb.enemies._row_id, results[1]._row_id))</tt></pre>
+</div></div>
+<div class="paragraph"><p>That is equivelent to:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:delete(mydb.enemies, results[1])</tt></pre>
+</div></div>
+<div class="paragraph"><p>You can even pass a number directly to db:delete if you know what _row_id you want to purege.</p></div>
+<div class="paragraph"><p>A final note of caution: if you want to delete all the records in a sheet, you can do so by only passing in the table reference. To try to protect you from doing this inadvertantly, you must also pass <em>true</em> as the query after:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:delete(mydb.enemies, true)</tt></pre>
+</div></div>
+<h3 id="_updating">Updating</h3><div style="clear:left"></div>
+<div class="paragraph"><p>If you make a change to a table that you have received via db:fetch(), you can save those changes back to the database by doing:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:update(mydb.enemies, results[1])</tt></pre>
+</div></div>
+<div class="paragraph"><p>A more powerful (and somewhat dangerous, be careful!) function to make changes to the database is db:set, which is capable of making sweeping changes to a column in every row of a sheet. Beware, if you have previously obtained a table from db:fetch, that table will NOT represent this change.</p></div>
+<div class="paragraph"><p>The db:set() function takes two arguments: the field to change, the value to set it to, and the db:fetch() like query to indicate which rows should be affected. If you pass true as the last argument, ALL rows will be changed.</p></div>
+<div class="paragraph"><p>To clear out the notes of all of our friends in Magnagora, we could do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:set(mydb.friends.notes, "", db:eq(mydb.friends.notes, "Magnagora"))</tt></pre>
+</div></div>
+<div class="paragraph"><p>Be careful in writing these!</p></div>
+<h3 id="_transactions">Transactions</h3><div style="clear:left"></div>
+<div class="paragraph"><p>As was specified earlier, by default the db module commits everything immediately whenever you make a change. For power-users, if you would like to control transactions yourself, the following functions are provided on your database instance:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        local mydb = db:fetch_database("my_database")
+        mydb._begin()
+        mydb._commit()
+        mydb._rollback()
+        mydb._end()</tt></pre>
+</div></div>
+<div class="paragraph"><p>Once you issue a mydb._begin() command, autocommit mode will be turned off and stay off until you do a mydb._end(). Thus, if you want to always use transactions explicitly, just put a mydb._begin() right after your db:create() and that database will always be in manual commit mode.</p></div>
+</div>
 <h2 id="migrating">Migrating to Mudlet</h2>
 <div class="sectionbody">
-<h3 id="_nexus">Nexus</h3><div style="clear:left"></div>
+<h3 id="_from_nexus">From Nexus</h3><div style="clear:left"></div>
 <h4 id="_trigger_patterns">Trigger patterns</h4>
 <div class="paragraph"><p>Lets start with triggers. For translating Nexus patterns into Mudlet, use the following table below. Make sure to set the pattern type in Mudlet to be <tt>perl regex</tt>, because the default <tt>substring</tt> works differently.</p></div>
 <div class="tableblock">
@@ -20507,7 +20804,7 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 </div>
 <h4 id="_basic_scripting">Basic scripting</h4>
 <div class="paragraph"><p>The Nexus way of doing a function is like this: #<em>function</em> <tt>stuff it does</tt>. In Mudlet, it&#8217;s <em>function(</em><tt>stuff it does</tt><em>)</em>. Note that if you&#8217;d like to give text to a function, you put it inside double or single quotes.</p></div>
-<h5 id="_nexus_2">Nexus</h5>
+<h5 id="_nexus">Nexus</h5>
 <div class="listingblock">
 <div class="content">
 <pre><tt>#send hi
@@ -20520,7 +20817,7 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 echo ("Hello to me!")</tt></pre>
 </div></div>
 <div class="paragraph"><p>If you&#8217;d like to use a variable inside text, you&#8217;d put it outside the quotes and glue it together with two dots.</p></div>
-<h5 id="_nexus_3">Nexus</h5>
+<h5 id="_nexus_2">Nexus</h5>
 <div class="listingblock">
 <div class="content">
 <pre><tt>#set number 1234
@@ -20534,6 +20831,32 @@ echo ("Hello to me!")</tt></pre>
 echo ("My number is: " .. number)
 echo ("the " .. number .. " is in the middle of my text")</tt></pre>
 </div></div>
+<h4 id="_wildcards_in_mudlet">wildcards in Mudlet</h4>
+<div class="paragraph"><p>To use the wildcard variable in Nexus, you&#8217;d use $1 for the first match, $2 for the second and so on. In Mudlet, the matches[] table contains the matches - and it starts placing the matches from 2. So the Nexus $1 would be matches[2], $2 would be matches[3].</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>Nexus:
+{w} kicks you.
+#set badguy $1
+#echo $badguy kicked me!
+
+Mudlet:
+(\w+) kicks you\.
+badguy = matches[2]
+echo(badguy .. " kicked me!")</tt></pre>
+</div></div>
+<div class="paragraph"><p>Another example would be the targetting alias:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>Nexus:
+alias name: t
+alias script: #set target $1
+
+Mudlet:
+alias pattern: ^t (.*)$
+alias script: target = matches[2]</tt></pre>
+</div></div>
+<div class="paragraph"><p>The reason the first match goes into matches[2] and not matches[1] is because matches[1] contains the part of the line that matched your trigger / alias.</p></div>
 <h4 id="_ifs_in_mudlet">ifs in Mudlet</h4>
 <div class="paragraph"><p>Next are the <em>#if</em> statements. Here&#8217;s a table comparing the syntaxes of Nexus and Mudlet:</p></div>
 <div class="tableblock">
@@ -20885,14 +21208,39 @@ cellspacing="0" cellpadding="4">
 </div>
 <h2 id="_d">D</h2>
 <div class="sectionbody">
-<div class="paragraph"><p><a href="#debug">debug</a>
+<div class="paragraph"><p><a href="#datetime_parse">datetime:parse</a>
+<a href="#debug">debug</a>
 <a href="#deleteLine">deleteLine</a>,
 <a href="#disableAlias">disableAlias</a>,
 <a href="#disableKey">disableKey</a>,
 <a href="#disableTimer">disableTimer</a>,
 <a href="#disableTrigger">disableTrigger</a>,
 <a href="#disconnect">disconnect</a>,
-<a href="#display">display</a>,</p></div>
+<a href="#display">display</a>,
+<a href="#db_add">db:add</a>,
+<a href="#db_AND">db:AND</a>,
+<a href="#db_between">db:between</a>,
+<a href="#db_create">db:create</a>,
+<a href="#db_delete">db:delete</a>,
+<a href="#db_eq">db:eq</a>,
+<a href="#db_exp">db:exp</a>,
+<a href="#db_fetch">db:fetch</a>,
+<a href="#db_fetch_database">db:fetch_database</a>,
+<a href="#db_gt">db:gt</a>,
+<a href="#db_gte">db:gte</a>,
+<a href="#db_in_">db:in_</a>,
+<a href="#db_is_nil">db:is_nil</a>,
+<a href="#db_is_not_nil">db:is_not_nil</a>,
+<a href="#db_like">db:like</a>,
+<a href="#db_lt">db:lt</a>,
+<a href="#db_lte">db:lte</a>,
+<a href="#db_not_between">db:not_between</a>,
+<a href="#db_not_eq">db:not_eq</a>,
+<a href="#db_not_in">db:not_in</a>,
+<a href="#db_not_like">db:not_like</a>,
+<a href="#db_OR">db:OR</a>,
+<a href="#db_set">db:set</a>,
+<a href="#db_update">db:update</a>,</p></div>
 </div>
 <h2 id="_e">E</h2>
 <div class="sectionbody">
@@ -22199,7 +22547,7 @@ echo("sys", "*** This is the end. ***\n");</tt></pre>
 copy()
 appendBuffer( "chat" )</tt></pre>
 </div></div>
-<div class="paragraph"><p>See also: <a href="#selectString">selectString()</a>, <a href="#copy">copy()</a></p></div>
+<div class="paragraph"><p>See also: <a href="#selectString">selectString()</a>, <a href="#copy">copy()</a>, <a href="#echo">echo()</a></p></div>
 </div>
 <h2 id="printTable">printTable( table_name )</h2>
 <div class="sectionbody">
@@ -31705,9 +32053,10 @@ echo("con1","This is a test")</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>loads an image file (png) as a background image for a label. This can be used to display clickable images etc.</p></div>
 </div>
-<h2 id="setBackgroundColor">setBackgroundColor( labelName, red, green, blue, transparency )</h2>
+<h2 id="setBackgroundColor">setBackgroundColor( window name, red, green, blue, transparency )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Sets rgb color values and the transparency for the given label. Colors are from 0 to 255 (0 being black), and transparency is from - to 255 (0 being completely transparent).</p></div>
+<div class="paragraph"><p>Sets rgb color values and the transparency for the given window. Colors are from 0 to 255 (0 being black), and transparency is from - to 255 (0 being completely transparent).</p></div>
+<div class="paragraph"><p>Note that transparency only works on labels, not miniConsoles for efficiency reasons.</p></div>
 </div>
 <h2 id="setLabelClickCallback">setLabelClickCallback( labelName, luaFunctionName, optional any amount of arguments )</h2>
 <div class="sectionbody">
@@ -31785,13 +32134,427 @@ end;</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files</p></div>
 </div>
+<h2 id="datetime_parse">datetime:parse(source, format, as_epoch)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>parses the specified source string, according to the format if given, to return a representation of the date/time. If as_epoch is provided and true, the return value will be a Unix epoch&#8201;&#8212;&#8201;the number of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch is false, then a Lua time table will be returned. Details of the time tables are provided in the <a href="http://www.lua.org/pil/22.1.html">Lua Manual</a>.</p></div>
+<div class="hdlist"><div class="title">Supported Format Codes</div><table>
+<tr>
+<td class="hdlist1">
+%b
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+Abbreviated Month Name
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%B
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+Full Month Name
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%d
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+Day of Month
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%H
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+Hour (24-hour format)
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%I
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+Hour (12-hour format, requires %p as well)
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%p
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+AM or PM
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%m
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+2-digit month (01-12)
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%M
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+2-digit minutes (00-59)
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%S
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+2-digit seconds (00-59)
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%y
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+%Y
+<br />
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+4-digit year.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
 <h2 id="display">display( myTable )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.</p></div>
+<div class="paragraph"><p>Generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.</p></div>
 </div>
 <h2 id="_display_myvariable">display( myVariable )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>generic pretty print function to display the content of any Lua variable or table on the main screen</p></div>
+</div>
+<h2 id="_db_create_database_name_schema_table">db:create(database name, schema table)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet script: in fact it is reccommended you run this function at a top-level without any kind of guards. If the named database does not exist it will create it. If the database does exist then it will add any columns or indexes which didn&#8217;t exist before to that database. If the database already has all the specified columns and indexes, it will do nothing.</p></div>
+<div class="paragraph"><p>The database will be called Database_&lt;sanitized database name&gt;.db and will be stored in the Mudlet configuration directory.</p></div>
+<div class="paragraph"><p>Database <em>tables</em> are called <em>sheets</em> consistantly throughout this documentation, to avoid confusion with Lua tables.</p></div>
+<div class="paragraph"><p>The schema table must be a Lua table array containing table dictionaries that define the structure and layout of each sheet.</p></div>
+<div class="paragraph"><p>Examples:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        local mydb = db:create("combat_log",
+                {
+                        kills = {
+                                name = "",
+                                area = "",
+                                killed = db:Timestamp("CURRENT_TIMESTAMP"),
+                                _index = { {"name", "area"} }
+                        },
+                        enemies = {
+                                name = "",
+                                city = "",
+                                reason = "",
+                                enemied = db:Timestamp("CURRENT_TIMESTAMP"),
+                                _index = { "city" },
+                                _unique = { "name" }
+                        }
+                }
+        )</tt></pre>
+</div></div>
+<div class="paragraph"><p>The above will create a database with two sheets; the first is kills and is used to track every successful kill, with both where and when the kill happened. It has one index, a compound inde tracking the combination of name and area. The second sheet has two indexes, but one is unique: it isn&#8217;t possible to add two items to the enemies sheet with the same name.</p></div>
+</div>
+<h2 id="_db_get_database_database_name">db:get_database(database name)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a reference of an already existing database. This instance can be used to get references to the sheets (and from there, fields) that are defined within the database. You use these references to construct queries.</p></div>
+<div class="paragraph"><p>If a database has a sheet named enemies, you can obtain a reference to that sheet by simply doing:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>    local mydb = db:get_database("my database")
+    local enemies_ref = mydb.enemies
+    local name_ref = mydb.enemies.name</tt></pre>
+</div></div>
+<div class="paragraph"><p>These references do not contain any actual data, they only point to parts of the database structure.</p></div>
+</div>
+<h2 id="db_add">db:add(sheet reference, table1, &#8230;, tableN)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index, a lua error will be thrown and execution will cancel. As such it is advisable that if you use a UNIQUE index, you test those values before you attempt to insert a new row.</p></div>
+<div class="paragraph"><p>Each table is a series of key-value pairs to set the values of the sheet, but if any keys do nto exist then they will be set to nil or the default value.</p></div>
+<div class="paragraph"><p>An example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
+        db:add(mydb.enemies,
+                {name="John Smith", city="San Francisco"},
+                {name="Jane Smith", city="San Francisco"},
+                {name="Richard Clark"})</tt></pre>
+</div></div>
+<div class="paragraph"><p>As you can see, all fields are optional.</p></div>
+</div>
+<h2 id="db_fetch">db:fetch(sheet reference, query, order_by, descending)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a table array containing a table for each matching row in the specified sheet. All arguments but sheet are optional. If query is nil, the entire contents of the sheet will be returned.</p></div>
+<div class="paragraph"><p>Query is a string which should be built by calling the various db: expression functions, such as db:eq, db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous. If you don&#8217;t know SQL well, its best to build the expression.</p></div>
+<div class="paragraph"><p>Query may also be a table array of such expressions, if so they will be AND&#8217;d together implicitly.</p></div>
+<div class="paragraph"><p>The results that are returned are not in any guaranteed order, though they are usually the same order as the records were inserted. If you want to rely on the order in any way, you must pass a value to the order_by field. This must be a table array listing the columns you want to sort by. It can be { "column1" }, or { "column1", "column2" }</p></div>
+<div class="paragraph"><p>The results are returned in ascending (smallest to largest) order; to reverse this pass true into the final field.</p></div>
+<div class="paragraph"><p>Examples:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.enemies, nil, {"city", "name"})
+        db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+        db:fetch(mydb.kills,
+                        {db:eq(mydb.kills.area, "Undervault"),
+                        db:like(mydb.kills.name, "%Drow%")}
+        )</tt></pre>
+</div></div>
+<div class="paragraph"><p>The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.</p></div>
+<div class="paragraph"><p>The second will fetch only the enemies which are in San Francisco.</p></div>
+<div class="paragraph"><p>The third will fetch all the things you&#8217;ve killed in Undervault which have Drow in their name.</p></div>
+</div>
+<h2 id="db_eq">db:eq(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is equal to the value.</p></div>
+</div>
+<h2 id="db_exp">db:exp(string)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns the string as-is to the database.</p></div>
+<div class="paragraph"><p>Use this function with caution, but it is very useful in some circumstances. One of the most common of such is incrementing an existing field in a db:set() operation, as so:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:set(mydb.enemies, db:exp("kills + 1"), db:eq(mydb.enemies.name, "Ixokai"))</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will increment the value of the kills field for the row identified by the name Ixokai.</p></div>
+<div class="paragraph"><p>But there are other uses, as the underlining database layer provides many functions you can call to do certain things. If you want to get a list of all your enemies who have a name longer then 10 characters, you may do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:fetch(mydb.enemies, db:exp("length(name) &gt; 10"))</tt></pre>
+</div></div>
+<div class="paragraph"><p>Again, take special care with this, as you are doing SQL syntax directly and the library can&#8217;t help you get things right.</p></div>
+</div>
+<h2 id="db_not_eq">db:not_eq(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is NOT equal to the value.</p></div>
+</div>
+<h2 id="db_lt">db:lt(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is less than the value.</p></div>
+</div>
+<h2 id="db_lte">db:lte(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is less than or equal to the value.</p></div>
+</div>
+<h2 id="db_gt">db:gt(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is greater than to the value.</p></div>
+</div>
+<h2 id="db_gte">db:gte(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is greater than or equal to the value.</p></div>
+</div>
+<h2 id="db_is_nil">db:is_nil(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is nil.</p></div>
+</div>
+<h2 id="db_is_not_nil">db:is_not_nil(field reference, value)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is not nil.</p></div>
+</div>
+<h2 id="db_like">db:like(field reference, pattern)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet matches the specified pattern.</p></div>
+<div class="paragraph"><p>LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.</p></div>
+<div class="paragraph"><p>LIKE with "_" is therefore the same as the "." regular expression.</p></div>
+<div class="paragraph"><p>LIKE with "%" is therefore the same as ".*" regular expression.</p></div>
+</div>
+<h2 id="db_not_like">db:not_like(field reference, pattern)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet does not match the specified pattern.</p></div>
+<div class="paragraph"><p>LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.</p></div>
+<div class="paragraph"><p>LIKE with "_" is therefore the same as the "." regular expression.</p></div>
+<div class="paragraph"><p>LIKE with "%" is therefore the same as ".*" regular expression.</p></div>
+</div>
+<h2 id="db_between">db:between(field reference, lower_bound, upper_bound)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps.</p></div>
+</div>
+<h2 id="db_not_between">db:not_between(field reference, lower_bound, upper_bound)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is not a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps.</p></div>
+</div>
+<h2 id="db_in_">db:in_(field reference, table array)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is one of the values in the table array.</p></div>
+<div class="paragraph"><p>First, note the trailing underscore carefully! It is required.</p></div>
+<div class="paragraph"><p>The following example illustrates the use of in_:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        local mydb = db:get_database("my database")
+        local areas = {"Undervault", "Hell", "Purgatory"}
+
+        db:fetch(mydb.kills, db:in_(mydb.kills.area, areas))</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will obtain all of your kills which happened in the Undervault, Hell or Purgatory. Every db:in_ expression can be written as a db:OR, but that quite often gets very complex.</p></div>
+</div>
+<h2 id="db_not_in">db:not_in(field reference, table array)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a database expression to test if the field in the sheet is not one of the values in the table array.</p></div>
+<div class="paragraph"><p>See link: <a href="#db_in_">db:in_</a></p></div>
+</div>
+<h2 id="db_AND">db:AND(sub-expression1, &#8230;, sub-expressionN)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a compound database expression that combines all of the simple expressions passed into it; these expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like.</p></div>
+<div class="paragraph"><p>This compound expression will only find items in the sheet if all sub-expressions match.</p></div>
+</div>
+<h2 id="db_OR">db:OR(sub-expression1, sub-expression2)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>returns a compound database expression that combines both of the simple expressions passed into it; these expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like.</p></div>
+<div class="paragraph"><p>This compound expression will find any item that matches either the first or the second sub-expression.</p></div>
+</div>
+<h2 id="db_delete">db:delete(sheet reference, query)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Deletes rows from the specified sheet. The argument for query tries to be intelligent:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+if it is a simple number, it deletes a specific row by _row_id
+</p>
+</li>
+<li>
+<p>
+if it is a table that contains a _row_id (e.g., a table returned by db:get) it deletes just that record.
+</p>
+</li>
+<li>
+<p>
+Otherwise, it deletes every record which matches the query pattern which is specified as with db:get.
+</p>
+</li>
+<li>
+<p>
+If the query is simply true, then it will truncate the entire contents of the sheet.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Some examples:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        enemies = db:fetch(mydb.enemies)
+
+        db:delete(mydb.enemies, enemies[1])
+        db:delete(mydb.enemies, enemies[1]._row_id)
+        db:delete(mydb.enemies, 5)
+        db:delete(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+        db:delete(mydb.enemies, true)</tt></pre>
+</div></div>
+<div class="paragraph"><p>Those deletion commands will do in order:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+When passed an actual result table that was obtained from db:fetch, it will delete the record for that table.
+</p>
+</li>
+<li>
+<p>
+When passed a number, will delete the record for that _row_id. This example shows getting the row id from a table.
+</p>
+</li>
+<li>
+<p>
+As above, but this example just passes in the row id directly.
+</p>
+</li>
+<li>
+<p>
+Here, we will delete anything which matches the same kind of query as db:fetch uses-- namely, anyone who is in the city of San Francisco.
+</p>
+</li>
+<li>
+<p>
+And finally, we will delete the entire contents of the enemies table.
+</p>
+</li>
+</ol></div>
+</div>
+<h2 id="db_update">db:update(sheet reference, table)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This function updates a row in the specified sheet, but only accepts a row which has been previously obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field or tow, you can save back that table.</p></div>
+<div class="paragraph"><p>For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        local mydb = db:get_database("my database")
+        local bob = db:fetch(mydb.friends, db:eq(mydb.friends.name, "Bob"))[1]
+        bob.notes = "He's a really awesome guy."
+        db:update(mydb.friends, bob)</tt></pre>
+</div></div>
+<div class="paragraph"><p>This obtains a database reference, and queries the friends sheet for someone named Bob. As this returns a table array containing only one item, it assigns that one item to the local variable named bob. We then change the notes on Bob, and pass it into db:update() to save the changes back.</p></div>
+</div>
+<h2 id="db_set">db:set(field reference, value, query)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The db:set function allows you to set a certain field to a certain value across an entire sheet. Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only the last_read fields which are in a certain city. The query argument can be any value which is appropriate for db:fetch, even nil which will change the value for the specified column for EVERY row in the sheet.</p></div>
+<div class="paragraph"><p>For example, consider a situation in which you are tracking how many times you find a certain type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and then adding a record for each type of egg.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        local mydb = db:create("egg database", {eggs = {color = "", last_found = db.Timestamp(false), found = 0}})
+        db:add(mydb.eggs,
+                {color = "Red"},
+                {color = "Blue"},
+                {color = "Green"},
+                {color = "Yellow"},
+                {color = "Black"}
+        )</tt></pre>
+</div></div>
+<div class="paragraph"><p>Now, you have three columns. One is a string, one a timestamp (that ends up as nil in the database), and one is a number.</p></div>
+<div class="paragraph"><p>You can then set up a trigger to capture from the mud the string, "You pick up a (.*?) egg!", and you end up arranging to store the value of that expression in a variable called "myegg".</p></div>
+<div class="paragraph"><p>To increment how many we found, we will do this:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        myegg = "Red" -- We will pretend a trigger set this.
+        db:set(mydb.eggs.found, db:exp("found + 1"), db:eq(mydb.eggs.color, myegg))
+        db:set(mydb.eggs.last_found, db.Timestamp("CURRENT_TIMESTAMP"), db:eq(mydb.eggs.color, myegg))</tt></pre>
+</div></div>
+<div class="paragraph"><p>This will go out and set two fields in the Red egg sheet; the first is the found field, which will increment the value of that field (using the special db:exp function). The second will update the last_found field with the current time.</p></div>
+<div class="paragraph"><p>Once this contest is over, you may wish to reset this data but keep the database around. To do that, you may use a more broad use of db:set as such:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><tt>        db:set(mydb.eggs.found, 0)
+        db:set(mydb.eggs.last_found, nil)</tt></pre>
+</div></div>
 </div>
 <h2 id="tempAlias">id = tempAlias(regex, lua code)</h2>
 <div class="sectionbody">
@@ -31802,7 +32565,7 @@ end;</tt></pre>
 <pre><tt>tempAlias("^hi$", [[send ("hi") echo ("we said hi!")]]</tt></pre>
 </div></div>
 </div>
-<h2 id="tempColorTrigger">tempColorTrigger( foregroundColor, backgroundColor, function )</h2>
+<h2 id="tempColorTrigger">tempColorTrigger( foregroundColor, backgqroundColor, function )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be supplied in form of these simplified ANSI 16 color mode codes:
 .Color Codes:</p></div>
@@ -31954,7 +32717,7 @@ Default values are linesLimit = 100000 lines with 10000 lines of batch deletion.
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2010-01-22 02:02:56 CEST
+Last updated 2010-01-25 00:07:30 CEST
 </div>
 </div>
 </body>
