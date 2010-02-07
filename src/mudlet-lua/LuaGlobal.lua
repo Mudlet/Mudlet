@@ -1473,6 +1473,19 @@ end
 
 --// Set functions //
 
+function _comp(a, b)
+	if type(a) ~= type(b) then return false end
+	if type(a) == 'table' then
+		for k, v in pairs(a) do
+			if not b[k] then return false end
+			if not _comp(v, b[k]) then return false end
+		end
+	else
+		if a ~= b then return false end
+	end
+	return true
+end
+
 --[[-----------------------------------------------------------------------------------------
 Table Union
 Returns a table that is the union of the provided tables. This is a union of key/value
@@ -1602,8 +1615,8 @@ function table.intersection(...)
 	local function intersect(set1, set2)
 		local result = {}
 		for key, val in pairs(set1) do
-			if set2[key] == val then
-				result[key] = val
+			if set2[key] then
+				if _comp(val, set2[key]) then result[key] = val end
 			end
 		end
 		return result
@@ -1620,17 +1633,25 @@ function table.intersection(...)
 	return intersection
 end
 
+--[[-----------------------------------------------------------------------------------------
+Table Intersection
+Returns a numerically indexed table that is the intersection of the provided tables. 
+This is an intersection of unique values. The order and keys of the input tables are 
+not preserved.
+--]]-----------------------------------------------------------------------------------------
 function table.n_intersection(...)
 	if #arg < 2 then return false end
 	
 	local intersection = {}
 	
 	local function intersect(set1, set2)
+		local intersection_keys = {}
 		local result = {}
-		for _, val1, in pairs(set1) do
+		for _, val1 in pairs(set1) do
 			for _, val2 in pairs(set2) do
-				if val1 == val2 then
+				if _comp(val1, val2) and not intersection_keys[val1] then
 					table.insert(result, val1)
+					intersection_keys[val1] = true
 				end
 			end
 		end
@@ -1644,32 +1665,43 @@ function table.n_intersection(...)
 			intersection = intersect(intersection, arg[i])
 		end
 	end
-	
+
 	return intersection
 end
 
+--[[-----------------------------------------------------------------------------------------
+Table Complement
+Returns a table that is the relative complement of the first table with respect to
+the second table. Returns a complement of key/value pairs.
+--]]-----------------------------------------------------------------------------------------
 function table.complement(set1, set2)
 	if not set1 and set2 then return false end
+	if type(set1) ~= 'table' or type(set2) ~= 'table' then return false end
 	
 	local complement = {}
 	
 	for key, val in pairs(set1) do
-		if not set2[key] == val then
+		if not _comp(set2[key], val) then
 			complement[key] = val
 		end
 	end
 	return complement
 end
 
+--[[-----------------------------------------------------------------------------------------
+Table Complement
+Returns a table that is the relative complement of the first table with respect to
+the second table. Returns a complement of values.
+--]]-----------------------------------------------------------------------------------------
 function table.n_complement(set1, set2)
 	if not set1 and set2 then return false end
 	
 	local complement = {}
 	
-	for _, val1, in pairs(set1) do
+	for _, val1 in pairs(set1) do
 		local insert = true
 		for _, val2 in pairs(set2) do
-			if val1 == val2 then
+			if _comp(val1, val2) then
 				insert = false
 			end
 		end
