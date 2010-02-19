@@ -1450,9 +1450,9 @@ function showColors(...)
 		local fg
 		local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
 		if luminosity > 0.5 then
-			fg = {0,0,0}
+			fg = "black"
 		else
-			fg = {255,255,255}
+			fg = "white"
 		end
 		cecho("<"..fg..":"..k..">"..k..string.rep(" ", 23-k:len()))
 		echo"  "
