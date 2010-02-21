@@ -1162,11 +1162,11 @@ if rex then
 				},
 			Decimal = {
 				[[(\x5c?<[0-9,:]+>)|(<r>)]],
-				rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
+				rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
 				},
 			Color = {
-				[[(\x5c?<[a-zA-Z_:]+>)]],
-				rex.new[[<([a-zA-Z_]+)?(?::([a-zA-Z_]+))?>]],
+				[[(\x5c?<[a-zA-Z_,:]+>)]],
+				rex.new[[<([a-zA-Z_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z_]+))?>]],
 				},
 			Ansi = {
 				[[(\x5c?<[0-9,:]+>)]],
@@ -1763,4 +1763,24 @@ function speedwalk(dirString, backwards, delay)
 	end
 	
 	if walkdelay then speedwalktimer() end
+end
+
+--[[-----------------------------------------------------------------------------------------
+Variable Persistence
+--]]-----------------------------------------------------------------------------------------
+
+SavedVariables = { }
+
+function SavedVariables:Add(tbl)
+	if type(tbl) == 'string' then
+		self[tbl] = _G[tbl]
+	elseif type(tbl) == 'table' then
+		for k,v in pairs(_G) do
+			if _comp(v, tbl) then
+				self[k] = tbl
+			end
+		end
+	else
+		hecho"|cff0000Error registering table for persistence: invalid argument to SavedVariables:Add()"
+	end
 end
