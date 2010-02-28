@@ -30,131 +30,6 @@ function string.ends(String,End)
    return End=='' or string.sub(String,-string.len(End))==End
 end
 
------------------------------------------------------------------------------
--- Some Date / Time parsing functions.
------------------------------------------------------------------------------
-
-datetime = {
-   _directives = {
-      ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-      ["%B"] = "(?P<month_name>january|febuary|march|april|may|june|july|august|september|october|november|december)",
-      ["%d"] = "(?P<day_of_month>\\d{2})",
-      ["%H"] = "(?P<hour_24>\\d{2})",
-      ["%I"] = "(?P<hour_12>\\d{2})",
-      ["%m"] = "(?P<month>\\d{2})",
-      ["%M"] = "(?P<minute>\\d{2})",
-      ["%p"] = "(?P<ampm>am|pm)",
-      ["%S"] = "(?P<second>\\d{2})",
-      ["%y"] = "(?P<year_half>\\d{2})",
-      ["%Y"] = "(?P<year_full>\\d{4})"
-   },
-   _pattern_cache = {},
-   _month_names = {
-      ["january"] = 1,
-      ["febuary"] = 2,
-      ["march"] = 3,
-      ["april"] = 4,
-      ["may"] = 5,
-      ["june"] = 6,
-      ["july"] = 7,
-      ["august"] = 8,
-      ["september"] = 9,
-      ["october"] = 10,
-      ["november"] = 11,
-      ["december"] = 12
-   },
-   _abbrev_month_names = {
-      ["jan"] = 1,
-      ["feb"] = 2,
-      ["mar"] = 3,
-      ["apr"] = 4,
-      ["may"] = 5,
-      ["jun"] = 6,
-      ["jul"]= 7,
-      ["aug"]= 8,
-      ["sep"] = 9,
-      ["oct"] = 10,
-      ["nov"] = 11,
-      ["dec"] = 12
-   }
-}
-
--- datetime:_get_pattern(format)
---  The rex.match function does not return named patterns even if you use named capture
---  groups, but the r:tfind does -- but this only operates on compiled patterns. So,
---  we are caching the conversion of 'simple format' date patterns into a regex, and
---  then compiling them.
-function datetime:_get_pattern(format)
-   if not datetime._pattern_cache[format] then
-      local fmt = rex.gsub(format, "(%[A-Za-z])", 
-         function(m)
-               return datetime._directives[m] or m
-         end
-         )
-      
-      datetime._pattern_cache[format] = rex.new(fmt, rex.flags().CASELESS)
-   end
-
-   return datetime._pattern_cache[format]
-end
-
--- datetime:parse(source, format, as_epoch)
---   Parse the source for a date time value, according to the specified format. The
---   default format if not specified is: "^%Y-%m-%d %H:%M:%S$"
---   If as_epoch is true, the return value will be a single number. Otherwise, it will
---   be a time table. See: http://www.lua.org/pil/22.1.html
-function datetime:parse(source, format, as_epoch)
-   if not format then
-      format = "^%Y-%m-%d %H:%M:%S$"
-   end
-
-   local fmt = datetime:_get_pattern(format)
-   local m = {fmt:tfind(source)}
-   
-   if m then
-      m = m[3]
-      dt = {}
-      
-      if m.year_half then
-         dt.year = tonumber("20"..m.year_half)
-      elseif m.year_full then
-         dt.year = tonumber(m.year_full)
-      end
-
-      if m.month then
-         dt.month = tonumber(m.month)
-      elseif m.month_name then
-         dt.month = datetime._month_names[m.month_name:lower()]
-      elseif m.abbrev_month_name then
-         dt.month = datetime._abbrev_month_names[m.abbrev_month_name:lower()]
-      end
-
-      dt.day = m.day_of_month
-      
-      if m.hour_12 then
-         assert(m.ampm, "You must use %p (AM|PM) with %I (12-hour time)")
-         if m.ampm == "PM" then
-            dt.hour = 12 + tonumber(m.hour_12)
-         else
-            dt.hour = tonumber(m.hour_12)
-         end
-      else
-         dt.hour = tonumber(m.hour_24)
-      end
-
-      dt.min = tonumber(m.minute)
-      dt.sec = tonumber(m.second)
-      dt.isdst = false
-      
-      if as_epoch then
-         return os.time(dt)
-      else
-         return dt
-      end
-   else
-      return nil
-   end
-end
 
 ----------------------------------------------------------------------------------
 -- Functions written by Blaine von Roeder - December 2009
@@ -1210,34 +1085,9 @@ if rex then
 		end,
 		}
 	
-	function xEcho(style, str, fgColor, bgColor, insert, win)
+	function xEcho(style, insert, win, str)
+		if not str then str = win; win = nil end
 		local reset, out
-		local function getFgColor()
-			if style == 'Hex' then
-				local fr, fg, fb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(fgColor)
-				fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
-				return fr, fg, fb
-			elseif style == 'Decimal' then
-				local fr, fg, fb = fgColor:split(",")
-				return fr, fg, fb
-			elseif style == 'Color' then
-				local fr, fg, fb = unpack(color_table[fgColor])
-				return fr, fg, fb
-			end
-		end
-		local function getBgColor()
-			if style == 'Hex' then
-				local br, bg, bb = rex.new("([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})"):match(bgColor)
-				br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
-				return br, bg, bb
-			elseif style == 'Decimal' then
-				local br, bg, bb = bgColor:split(",")
-				return br, bg, bb
-			elseif style == 'Color' then
-				local br, bg, bb = unpack(color_table[bgColor])
-				return br, bg, bb
-			end
-		end
 		if insert then
 			if win then
 				out = function(win, str)
@@ -1260,50 +1110,12 @@ if rex then
 			end
 		end
 		if win then
-			if fgColor then
-				if bgColor then
-					reset = function()
-						setFgColor(win, getFgColor())
-						setBgColor(win, getBgColor())
-					end
-				else
-					reset = function()
-						resetFormat(win)
-						setFgColor(win, getFgColor())
-					end
-				end
-			elseif bgColor then
-				reset = function()
-					resetFormat(win)
-					setBgColor(win, getBgColor())
-				end
-			else
-				reset = function()
-					resetFormat(win)
-				end
+			reset = function()
+				resetFormat(win)
 			end
 		else
-			if fgColor then
-				if bgColor then
-					reset = function()
-						setFgColor(getFgColor())
-						setBgColor(getBgColor())
-					end
-				else
-					reset = function()
-						resetFormat()
-						setFgColor(getFgColor())
-					end
-				end
-			elseif bgColor then
-				reset = function()
-					resetFormat()
-					setBgColor(getBgColor())
-				end
-			else
-				reset = function()
-					resetFormat()
-				end
+			reset = function()
+				resetFormat()
 			end
 		end
 		
@@ -1330,10 +1142,12 @@ if rex then
 		if win then resetFormat(win) else resetFormat() end
 	end
 	
-	function hecho(...) xEcho("Hex", ...) end
---	function aecho(...) xEcho("Ansi", ...) end
-	function decho(...) xEcho("Decimal", ...) end
-	function cecho(...) xEcho("Color", ...) end
+	function hecho(...) xEcho("Hex", false, ...) end
+	function decho(...) xEcho("Decimal", false, ...) end
+	function cecho(...) xEcho("Color", false, ...) end
+	function hinsertText(...) xEcho("Hex", true, ...) end
+	function dinsertText(...) xEcho("Decimal", true, ...) end
+	function cinsertText(...) xEcho("Color", true, ...) end
 	checho = cecho
 else
 	function cecho(window, text)
