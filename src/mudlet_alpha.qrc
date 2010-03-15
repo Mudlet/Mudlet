@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/" >
+    <qresource prefix="/">
         <file>icons/filter-locked.png</file>
         <file>icons/filter.png</file>
         <file>icons/view-filter.png</file>
@@ -96,5 +96,16 @@
         <file>icons/aardwolf_mud.png</file>
         <file>icons/utilities-file-archiver.png</file>
         <file>icons/view-statistics.png</file>
+        <file>icons/achaea_120_30.png</file>
+        <file>icons/aetolia_120_30.png</file>
+        <file>icons/imperian_120_30.png</file>
+        <file>icons/lusternia_120_30.png</file>
+        <file>icons/midkemia_120_30.png</file>
+        <file>icons/120x30RoDLogo.png</file>
+        <file>icons/zombiemud.png</file>
+        <file>db.lua</file>
+        <file>icons/media-seek-backward.png</file>
+        <file>icons/media-seek-forward.png</file>
+        <file>icons/errors.png</file>
     </qresource>
 </RCC>

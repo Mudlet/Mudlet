@@ -97,7 +97,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>24</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuGames">
@@ -129,7 +129,6 @@
     </property>
     <addaction name="dactionHelp"/>
     <addaction name="dactionVideo"/>
-    <addaction name="dactionForum_2"/>
     <addaction name="dactionIRC"/>
     <addaction name="dactionForum"/>
    </widget>
@@ -226,7 +225,7 @@
   </action>
   <action name="dactionForum">
    <property name="text">
-    <string>Download Latest Version</string>
+    <string>Online Forum</string>
    </property>
   </action>
   <action name="dactionDownload">

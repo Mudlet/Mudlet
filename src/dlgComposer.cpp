@@ -28,6 +28,8 @@ dlgComposer::dlgComposer( Host * pH )
 
 {
     setupUi(this);
+    QFont f = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier );
+    edit->setFont ( f );
     connect( saveButton, SIGNAL(pressed()), this, SLOT(save()));
     connect( cancelButton, SIGNAL(pressed()), this, SLOT(cancel()));
 }

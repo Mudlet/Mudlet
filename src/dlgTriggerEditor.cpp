@@ -50,7 +50,7 @@
 #include "dlgColorTrigger.h"
 #include "dlgTriggerPatternEdit.h"
 #include "THighlighter.h"
-
+#include "TTextEdit.h"
 using namespace std;
 
 const int dlgTriggerEditor::cmTriggerView = 1;
@@ -185,6 +185,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     popupArea->setMinimumSize(200,60);
     //    pHB2->setMaximumSize(170);
     pHB2->setSizeConstraint( QLayout::SetMaximumSize );
+    mpErrorConsole = new TConsole(mpHost,false, popupArea);
+    mpErrorConsole->console->slot_toggleTimeStamps();
+    mpErrorConsole->print("*** starting new session ***\n");
+    pHB2->setContentsMargins(0,0,0,0);
+    pHB2->addWidget( mpErrorConsole );
+    mpErrorConsole->show();
+
+
     mpOptionsAreaTriggers = new dlgOptionsAreaTriggers( popupArea );
     mpOptionsAreaTriggers->setSizePolicy( sizePolicy2 );
     pHB2->addWidget( mpOptionsAreaTriggers );
@@ -356,6 +364,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     viewStatsAction->setEnabled( true );
     connect( viewStatsAction, SIGNAL(triggered()), this, SLOT( slot_viewStatsAction()));
 
+    QAction * viewErrorsAction = new QAction(QIcon(":/icons/errors.png"), tr("errors"), this);
+    viewErrorsAction->setEnabled( true );
+    connect( viewErrorsAction, SIGNAL(triggered()), this, SLOT( slot_viewErrorsAction()));
+
 
     //Action * saveProfileMenu = new QMenu( this );
     //saveProfileMenu->addAction( profileSaveAction );
@@ -470,6 +482,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar2->addAction( viewKeysAction );
     toolBar2->addAction( viewActionAction );
     toolBar2->addAction( showSearchAreaAction );
+    toolBar2->addAction( viewErrorsAction );
     toolBar2->addAction( viewStatsAction );
     toolBar2->addAction( showDebugAreaAction );
 
@@ -549,8 +562,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpScrollArea = mpTriggersMainArea->scrollArea;
     HpatternList = new QWidget;
     QVBoxLayout * lay1 = new QVBoxLayout( HpatternList );
-    lay1->setContentsMargins(1,1,1,1);
-    lay1->setSpacing(1);
+    lay1->setContentsMargins(0,0,0,0);
+    lay1->setSpacing(0);
     mpScrollArea->setWidget( HpatternList );
     for( int i=0; i<50; i++)
     {
@@ -586,6 +599,15 @@ void dlgTriggerEditor::slot_viewStatsAction()
     mudlet::self()->raise();
     mudlet::self()->activateWindow();
     mudlet::self()->raise();
+}
+
+void dlgTriggerEditor::slot_viewErrorsAction()
+{
+    if( frame_4->isHidden() )frame_4->show();
+    else
+        frame_4->hide();
+    mpErrorConsole->show();
+    popupArea->show();
 }
 
 
@@ -2057,6 +2079,7 @@ void dlgTriggerEditor::slot_action_toggle_active()
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
               .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
+    mpHost->getActionUnit()->updateToolbar();
 }
 
 void dlgTriggerEditor::slot_key_toggle_active()
@@ -2952,6 +2975,7 @@ void dlgTriggerEditor::saveTrigger()
                 pItem->setText( 0, name );
                 iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
                 pItem->setIcon( 0, iconError );
+                pT->setIsActive( false );
 
             }
         }
@@ -3570,9 +3594,10 @@ void dlgTriggerEditor::saveScript()
     if( ! pItem ) return;
 
     bool state = true;
+    QString old_name;
     QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
     QString script = mpSourceEditorArea->editor->toPlainText();
-
+    mpScriptsMainAreaEditHandlerItem = 0;
     QList<QListWidgetItem*> itemList;
     for( int i=0; i<mpScriptsMainArea->listWidget_registered_event_handlers->count(); i++ )
     {
@@ -3592,11 +3617,11 @@ void dlgTriggerEditor::saveScript()
         TScript * pT = mpHost->getScriptUnit()->getScript( triggerID );
         if( pT )
         {
+            old_name = pT->getName();
             pT->setName( name );
             pT->setEventHandlerList( handlerList );
             pT->setScript( script );
 
-            pT->setIsActive( true );//FIXME: discuss if new triggers are automatically active
             pT->compile();
             QIcon icon;
             if( pT->isFolder() )
@@ -3624,9 +3649,26 @@ void dlgTriggerEditor::saveScript()
 
             if( pT->state() )
             {
-                pItem->setIcon( 0, icon);
-                pItem->setText( 0, name );
-
+                if( old_name == "New Script" || old_name == "New Script Group" )
+                {
+                    QIcon _icon;
+                    if( pT->isFolder() )
+                    {
+                        _icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        _icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    pItem->setIcon( 0, _icon );
+                    pItem->setText( 0, name );
+                    pT->setIsActive( true );
+                }
+                else
+                {
+                    pItem->setIcon( 0, icon);
+                    pItem->setText( 0, name );
+                }
             }
             else
             {
@@ -3837,8 +3879,6 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
 void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column )
 {
     QTime t;
-    qDebug()<<"slot_trigger_clicked() enter";
-    t.start();
     if( ! pItem ) return;
 
     mCurrentTrigger = pItem;
@@ -3851,7 +3891,6 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
-
     if( (pItem == 0) || (column != 0) ) return;
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( ID );
@@ -3864,6 +3903,7 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
 
         for( int i=0; i<patternList.size(); i++ )
         {
+            if( i >= 50 ) break; //pattern liste ist momentan auf 50 begrenzt
             if( i >= pT->mColorPatternList.size() )
             {
                 break;
@@ -3923,7 +3963,6 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
                 pItem->lineEdit->hide();
                 QPalette fgPal;
                 QPalette bgPal;
-
                 if( ! pT->mColorPatternList[i] ) break;
                 QColor fgC = QColor(pT->mColorPatternList[i]->fgR,
                                     pT->mColorPatternList[i]->fgG,
@@ -3943,7 +3982,6 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
             pItem->lineEdit->setPalette( palette );
             pItem->lineEdit->setText( patternList[i] );
         }
-
         for( int i=patternList.size(); i<50; i++)
         {
             mTriggerPatternEdit[i]->lineEdit->clear();
@@ -3965,7 +4003,6 @@ void dlgTriggerEditor::slot_trigger_clicked( QTreeWidgetItem *pItem, int column 
         mpTriggersMainArea->spinBox_stayOpen->setValue( pT->mStayOpen );
         mpTriggersMainArea->soundTrigger->setChecked( pT->mSoundTrigger );
         mpTriggersMainArea->lineEdit_soundFile->setText( pT->mSoundFile );
-
         QPalette pal = palette();
         QColor color =  pal.color( QPalette::Button );
         QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
@@ -4140,7 +4177,7 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         mpActionsMainArea->buttonSizeX->setText( QString::number(pT->mSizeX) );
         mpActionsMainArea->buttonSizeY->setText( QString::number(pT->mSizeY) );
         mpActionsMainArea->css->clear();
-        mpActionsMainArea->css->insertPlainText( pT->css );
+        mpActionsMainArea->css->setPlainText( pT->css );
         if( ! pT->getParent() )
         {
             mpActionsMainArea->groupBox_toolBar->show();
@@ -6137,9 +6174,10 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
                             .arg(file.errorString()));
        return;
     }
-
-    XMLexport writer( mpHost );
-    writer.exportHost( & file );
+qDebug()<<"generic export";
+    XMLexport writer( mpHost, true );//just export a generic package without host element
+    //writer.exportHost( & file );
+    writer.exportGenericPackage( & file );
     file.close();
 }
 

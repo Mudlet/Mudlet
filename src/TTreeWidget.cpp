@@ -38,7 +38,7 @@ TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
     mIsDropAction = false;
     mpHost = 0;
     mOldParentID = 0;
-    
+
     mIsTriggerTree = false;
     mIsScriptTree = false;
     mIsTimerTree = false;
@@ -109,7 +109,7 @@ void TTreeWidget::setIsScriptTree()
 
 void TTreeWidget::setHost( Host * pH )
 {
-    mpHost = pH;    
+    mpHost = pH;
 }
 
 void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end )
@@ -118,14 +118,14 @@ void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, i
     {
         mOldParentID = parent.data( Qt::UserRole ).toInt();
     }
-    else 
+    else
         mOldParentID = 0;
-    
+
     if( mOldParentID == 0 )
     {
         mOldParentID = parent.sibling( start, 0 ).data( Qt::UserRole ).toInt();
     }
-        
+
     if( parent.isValid() )
     {
         QModelIndex child = parent.child( start, 0 );
@@ -136,7 +136,7 @@ void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, i
             {
                 child = parent.model()->index( start, 0, QModelIndex() );
             }
-            if( child.isValid() )        
+            if( child.isValid() )
             {
                 mChildID = child.data( Qt::UserRole ).toInt();
             }
@@ -164,10 +164,13 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
             mChildID = parent.model()->index( start, 0 ).data( Qt::UserRole ).toInt();
         }
         int newParentID = parent.data( Qt::UserRole ).toInt();
-        if( mIsTriggerTree ) 
+        if( mIsTriggerTree )
             mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
-        if( mIsAliasTree ) 
+        if( mIsAliasTree )
             mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+        if( mIsKeyTree )
+            mpHost->getKeyUnit()->reParentKey( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+
         if( mIsTimerTree )
         {
             mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
@@ -184,7 +187,7 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                     }
                     else
                     {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);            
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                     }
                 }
                 else
@@ -195,9 +198,9 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                     }
                     else
                     {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);            
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     }
-                }   
+                }
                 QTreeWidgetItem * pParent = itemFromIndex( parent );
                 if( ! pParent ) goto END;
                 for( int i=0; i<pParent->childCount(); i++ )
@@ -207,19 +210,19 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                     int id = pItem->data(0, Qt::UserRole).toInt();
                     if( id == mChildID )
                     {
-                        pItem->setIcon(0, icon); 
+                        pItem->setIcon(0, icon);
                     }
                 }
             }
         }
-        if( mIsScriptTree ) 
+        if( mIsScriptTree )
             mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
-        if( mIsActionTree ) 
+        if( mIsActionTree )
         {
             mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             mpHost->getActionUnit()->updateToolbar();
         }
-        
+
         mChildID = 0;
         mOldParentID = 0;
         mIsDropAction = false;
@@ -275,7 +278,7 @@ void TTreeWidget::dragMoveEvent( QDragMoveEvent * e )
 void TTreeWidget::startDrag( Qt::DropActions supportedActions )
 {
     QTreeWidgetItem * item = currentItem();
-    
+
     QTreeWidget::startDrag( supportedActions );
 }
 

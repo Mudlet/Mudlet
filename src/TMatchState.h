@@ -71,10 +71,16 @@ public:
 
     bool lineSpacerMatch( int lines )
     {
-        if( ++mSpacer >= lines )
+        if( mSpacer >= lines )
+        {
+            mSpacer = 0;
             return true;
+        }
         else
+        {
+            mSpacer++;
             return false;
+        }
     }
 
     int                                 mSpacer;

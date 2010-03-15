@@ -81,7 +81,7 @@ THighlighter::THighlighter( QTextDocument *parent )
 void THighlighter::setSearchPattern( QString p )
 {
     HighlightingRule rule;
-    mSearchPattern = p;
+    mSearchPattern = QRegExp::escape( p );
     searchFormat.setForeground( QColor(0,0,0) );
     searchFormat.setBackground( QColor(255,255,0) );
 

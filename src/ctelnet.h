@@ -1,8 +1,8 @@
 /***************************************************************************
-    
+
 copyright (C) 2002-2005 by Tomas Mecir (kmuddy@kmuddy.com)
 copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
- 
+
 ***************************************************************************
 *                                                                         *
 *   This program is free software; you can redistribute it and/or modify  *
@@ -72,7 +72,7 @@ class cTelnet : public QObject
 {
 Q_OBJECT
 
-public: 
+public:
                       cTelnet( Host * pH );
                      ~cTelnet();
   void                connectIt(const QString &address, int port);
@@ -95,10 +95,12 @@ public:
   QTime               networkLatencyTime;
   double              networkLatency;
   bool                mGA_Driver;
+  bool                mFORCE_GA_OFF;
   bool                mAlertOnNewData;
+  bool                socketOutRaw(std::string & data);
 
 protected slots:
-  
+
   void                readPipe();
   void                handle_socket_signal_hostFound(QHostInfo);
   void                handle_socket_signal_connected();
@@ -109,24 +111,25 @@ protected slots:
   void                slot_send_login();
   void                slot_send_pass();
 
+
 private:
-                      cTelnet(){;}    
-  void                initStreamDecompressor();  
+                      cTelnet(){;}
+  void                initStreamDecompressor();
   int                 decompressBuffer( char * dirtyBuffer, int length );
-  void                postMessage( QString msg );  
+  void                postMessage( QString msg );
   void                reset();
   void                connectionFailed();
-  bool                socketOutRaw(std::string & data);
+
   void                processTelnetCommand (const std::string &command);
   void                sendTelnetOption( char type, char option);
   //string getCurrentTime(); //NOTE: not w32 compatible
   void                gotRest( std::string & );
   void                gotPrompt( std::string & );
-  void                postData();  
-    
+  void                postData();
+
   bool                mUSE_IRE_DRIVER_BUGFIX;
   bool                mLF_ON_GA;
-  Host *              mpHost;  
+  Host *              mpHost;
   QTcpSocket          socket;
   QHostAddress        mHostAddress;
   QTextCodec *        incomingDataCodec;
@@ -141,10 +144,10 @@ private:
   bool                mWaitingForResponse;
   std::queue<int>     mCommandQueue;
   int                 mCommands;
-  z_stream            mZstream;  
+  z_stream            mZstream;
   bool                mMCCP_version_1;
   bool                mMCCP_version_2;
-  bool                mNeedDecompression; 
+  bool                mNeedDecompression;
   bool                mWaitingForCompressedStreamToStart;
   std::string         command;
   bool                iac, iac2, insb;

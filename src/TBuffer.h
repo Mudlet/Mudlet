@@ -67,14 +67,27 @@ const QChar cSPACE = QChar(' ');
 
 class TBuffer
 {
-public: 
-    
+public:
+
     TBuffer( Host * pH );
     QPoint insert( QPoint &, QString text, int,int,int, int, int, int, bool bold, bool italics, bool underline );
     bool insertInLine( QPoint & cursor, QString & what, TChar & format );
     void expandLine( int y, int count, TChar & );
     int wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
+    void addLink( QString & text, QStringList & command, QStringList & hint, TChar format );
+    void appendLink( QString & text,
+                     int sub_start,
+                     int sub_end,
+                     int fgColorR,
+                     int fgColorG,
+                     int fgColorB,
+                     int bgColorR,
+                     int bgColorG,
+                     int bgColorB,
+                     bool bold,
+                     bool italics,
+                     bool underline );
     int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
     int find( int line, QString what, int pos );
@@ -88,6 +101,7 @@ public:
     bool applyFormat( QPoint &, QPoint &, TChar & format );
     bool applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold );
     bool applyBold( QPoint & P_begin, QPoint & P_end, bool bold );
+    bool applyLink( QPoint & P_begin, QPoint & P_end, QString linkText, QStringList &, QStringList & );
     bool applyItalics( QPoint & P_begin, QPoint & P_end, bool bold );
     bool applyFgColor( QPoint &, QPoint &, int, int, int );
     bool applyBgColor( QPoint &, QPoint &, int, int, int );
@@ -112,23 +126,30 @@ public:
     void paste( QPoint &, TBuffer );
     std::deque<TChar> bufferLine;
     std::deque< std::deque<TChar> > buffer;
-    QStringList       timeBuffer;
-    QStringList       lineBuffer;
-    QList<bool>       promptBuffer;
-    QList<bool>       dirty;
-    QString           mLinkStore[1000];
-    QString           mHintStore[1000];
-    int               mLinkID;
-    int               mLinesLimit;
-    int               mBatchDeleteSize;
-    int               newLines;
+    QStringList            timeBuffer;
+    QStringList            lineBuffer;
+    QList<bool>            promptBuffer;
+    QList<bool>            dirty;
+    QMap<int, QStringList> mLinkStore;
+    QMap<int, QStringList> mHintStore;
+    int                    mLinkID;
+    int                    mLinesLimit;
+    int                    mBatchDeleteSize;
+    int                    newLines;
     int               mUntriggered;
     int               mWrapAt;
     int               mWrapIndent;
     void              setBufferSize( int s, int batch );
     void              messen();
-    
-private:  
+    int               speedTP;
+    int               speedSequencer;
+    int               speedAppend;
+    int               msLength;
+    int               msPos;
+    int               mCode[3];
+    int               mCursorY;
+
+private:
     inline void       shrinkBuffer();
     inline int        calcWrapPos( int line, int begin, int end );
     void              handleNewLine();
@@ -241,6 +262,9 @@ private:
     int               mBgColorR;
     int               mBgColorG;
     int               mBgColorB;
+    QString           mMudLine;
+    std::deque<TChar> mMudBuffer;
+
 };
 
 #endif

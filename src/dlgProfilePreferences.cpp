@@ -23,6 +23,7 @@
 #include <QPalette>
 #include <QFontDialog>
 #include <QFont>
+#include <QToolBar>
 #include "dlgProfilePreferences.h"
 #include <QtCore>
 #include <QDir>
@@ -188,14 +189,14 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
         setColors();
 
-        wrap_at_spinBox->setValue(pHost->mWrapAt);    
+        wrap_at_spinBox->setValue(pHost->mWrapAt);
         indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
 
         show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
         auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
         command_separator_lineedit->setText( pHost->mCommandSeparator);
         //disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
-        
+
         checkBox_USE_IRE_DRIVER_BUGFIX->setChecked( pHost->mUSE_IRE_DRIVER_BUGFIX );
         //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
         //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
@@ -204,7 +205,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
         if( file_use_smallscreen.exists() )
             checkBox_USE_SMALL_SCREEN->setChecked( true );
-        else 
+        else
             checkBox_USE_SMALL_SCREEN->setChecked( false );
         topBorderHeight->setValue(pHost->mBorderTopHeight);
         bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
@@ -213,12 +214,18 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         MainIconSize->setValue(mudlet::self()->mMainIconSize);
         TEFolderIconSize->setValue(mudlet::self()->mTEFolderIconSize);
         showMenuBar->setChecked( mudlet::self()->mShowMenuBar );
-        showToolbar->setChecked( mudlet::self()->mShowToolbar );
+        if( ! showMenuBar->isChecked() )
+            showToolbar->setChecked( true );
+        else
+            showToolbar->setChecked( mudlet::self()->mShowToolbar );
         mRawStreamDump->setChecked( pHost->mRawStreamDump );
         mNoAntiAlias->setChecked( ! pHost->mNoAntiAlias );
+        mFORCE_MCCP_OFF->setChecked( pHost->mFORCE_NO_COMPRESSION );
+        mFORCE_GA_OFF->setChecked( pHost->mFORCE_GA_OFF );
         mAlertOnNewData->setChecked( pHost->mAlertOnNewData );
         mMXPMode->setCurrentIndex( pHost->mMXPMode );
         encoding->setCurrentIndex( pHost->mEncoding );
+        mFORCE_SAVE_ON_EXIT->setChecked( pHost->mFORCE_SAVE_ON_EXIT );
     }
 }
 
@@ -398,7 +405,7 @@ void dlgProfilePreferences::resetColors()
 void dlgProfilePreferences::setFgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mFgColor, this );
     if ( color.isValid() )
     {
@@ -416,7 +423,7 @@ void dlgProfilePreferences::setFgColor()
 void dlgProfilePreferences::setBgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mBgColor, this );
     if ( color.isValid() )
     {
@@ -479,11 +486,11 @@ void dlgProfilePreferences::setFontSize()
 void dlgProfilePreferences::setDisplayFont()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QFont font = fontComboBox->currentFont();
     font.setPointSize( mFontSize );
     pHost->mDisplayFont = font;
-    if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
+    if( mudlet::self()->mConsoleMap.contains( pHost ) )
     {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
@@ -491,22 +498,22 @@ void dlgProfilePreferences::setDisplayFont()
 void dlgProfilePreferences::setCommandLineFont()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     bool ok;
     QFont font = QFontDialog::getFont( &ok, pHost->mCommandLineFont, this );
     pHost->mCommandLineFont = font;
-    if( mudlet::self()->mConsoleMap.contains( pHost ) ) 
+    if( mudlet::self()->mConsoleMap.contains( pHost ) )
     {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
-    
+
 }
 
 
 void dlgProfilePreferences::setColorBlack()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mBlack, this );
     if ( color.isValid() )
     {
@@ -523,7 +530,7 @@ void dlgProfilePreferences::setColorBlack()
 void dlgProfilePreferences::setColorLightBlack()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightBlack, this );
     if ( color.isValid() )
     {
@@ -540,7 +547,7 @@ void dlgProfilePreferences::setColorLightBlack()
 void dlgProfilePreferences::setColorRed()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mRed, this );
     if ( color.isValid() )
     {
@@ -557,7 +564,7 @@ void dlgProfilePreferences::setColorRed()
 void dlgProfilePreferences::setColorLightRed()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightRed, this );
     if ( color.isValid() )
     {
@@ -574,7 +581,7 @@ void dlgProfilePreferences::setColorLightRed()
 void dlgProfilePreferences::setColorGreen()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mGreen, this );
     if ( color.isValid() )
     {
@@ -590,7 +597,7 @@ void dlgProfilePreferences::setColorGreen()
 void dlgProfilePreferences::setColorLightGreen()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightGreen, this );
     if ( color.isValid() )
     {
@@ -607,7 +614,7 @@ void dlgProfilePreferences::setColorLightGreen()
 void dlgProfilePreferences::setColorBlue()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mBlue, this );
     if ( color.isValid() )
     {
@@ -623,7 +630,7 @@ void dlgProfilePreferences::setColorBlue()
 void dlgProfilePreferences::setColorLightBlue()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightBlue, this );
     if ( color.isValid() )
     {
@@ -640,7 +647,7 @@ void dlgProfilePreferences::setColorLightBlue()
 void dlgProfilePreferences::setColorYellow()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mYellow, this );
     if ( color.isValid() )
     {
@@ -656,7 +663,7 @@ void dlgProfilePreferences::setColorYellow()
 void dlgProfilePreferences::setColorLightYellow()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightYellow, this );
     if ( color.isValid() )
     {
@@ -673,7 +680,7 @@ void dlgProfilePreferences::setColorLightYellow()
 void dlgProfilePreferences::setColorCyan()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mCyan, this );
     if ( color.isValid() )
     {
@@ -689,7 +696,7 @@ void dlgProfilePreferences::setColorCyan()
 void dlgProfilePreferences::setColorLightCyan()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightCyan, this );
     if ( color.isValid() )
     {
@@ -706,7 +713,7 @@ void dlgProfilePreferences::setColorLightCyan()
 void dlgProfilePreferences::setColorMagenta()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mMagenta, this );
     if ( color.isValid() )
     {
@@ -722,7 +729,7 @@ void dlgProfilePreferences::setColorMagenta()
 void dlgProfilePreferences::setColorLightMagenta()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightMagenta, this );
     if ( color.isValid() )
     {
@@ -739,7 +746,7 @@ void dlgProfilePreferences::setColorLightMagenta()
 void dlgProfilePreferences::setColorWhite()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mWhite, this );
     if ( color.isValid() )
     {
@@ -755,7 +762,7 @@ void dlgProfilePreferences::setColorWhite()
 void dlgProfilePreferences::setColorLightWhite()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;    
+    if( ! pHost ) return;
     QColor color = QColorDialog::getColor( pHost->mLightWhite, this );
     if ( color.isValid() )
     {
@@ -784,6 +791,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     //pHost->set_LF_ON_GA( checkBox_LF_ON_GA->isChecked() );
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
     pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
+    pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
+    pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
+    pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
+
     pHost->mBorderTopHeight = topBorderHeight->value();
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
@@ -795,7 +806,15 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setIcoSize(MainIconSize->value());
     pHost->mpEditorDialog->setTBIconSize( 0 );
     mudlet::self()->mShowMenuBar = showMenuBar->isChecked();
+    if( showMenuBar->isChecked() )
+        mudlet::self()->menuBar()->show();
+    else
+        mudlet::self()->menuBar()->hide();
     mudlet::self()->mShowToolbar = showToolbar->isChecked();
+    if( showToolbar->isChecked() )
+        mudlet::self()->mpMainToolBar->show();
+    else
+        mudlet::self()->mpMainToolBar->hide();
     pHost->mRawStreamDump = mRawStreamDump->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
     pHost->mAlertOnNewData = mAlertOnNewData->isChecked();

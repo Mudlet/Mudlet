@@ -36,9 +36,9 @@
 
 using namespace std;
 
-KeyUnit::KeyUnit( Host * pHost ) 
+KeyUnit::KeyUnit( Host * pHost )
 : mpHost(pHost)
-, mMaxID(0) 
+, mMaxID(0)
 {
     setupKeyNames();
 }
@@ -51,35 +51,35 @@ bool KeyUnit::processDataStream( int key, int modifier )
         TKey * pChild = *it;
         if( pChild->match( key, modifier ) ) return true;
     }
-    
+
     return false;
 }
 
 bool KeyUnit::enableKey( QString & name )
 {
     bool found = false;
-    QMutexLocker locker(& mKeyUnitLock); 
+    QMutexLocker locker(& mKeyUnitLock);
     typedef list<TKey *>::const_iterator I;
     for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         pChild->enableKey( name );
         found = true;
-    } 
+    }
     return found;
 }
 
 bool KeyUnit::disableKey( QString & name )
 {
     bool found = false;
-    QMutexLocker locker(& mKeyUnitLock); 
+    QMutexLocker locker(& mKeyUnitLock);
     typedef list<TKey *>::const_iterator I;
     for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         pChild->disableKey( name );
         found = true;
-    } 
+    }
     return found;
 }
 
@@ -88,7 +88,7 @@ void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
     if( ! pT ) return;
     if( ! pT->getID() )
     {
-        pT->setID( getNewID() );    
+        pT->setID( getNewID() );
     }
 
     if( ( parentPosition == -1 ) || ( childPosition >= mKeyRootNodeList.size() ) )
@@ -120,7 +120,7 @@ void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
 void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
     QMutexLocker locker(& mKeyUnitLock);
-    
+
     TKey * pOldParent = getKeyPrivate( oldParentID );
     TKey * pNewParent = getKeyPrivate( newParentID );
     TKey * pChild = getKeyPrivate( childID );
@@ -134,12 +134,15 @@ void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID, int pa
     }
     if( ! pOldParent )
     {
-        removeKeyRootNode( pChild );    
+        removeKeyRootNode( pChild );
     }
     if( pNewParent )
     {
         pNewParent->addChild( pChild, parentPosition, childPosition );
-        if( pChild ) pChild->setParent( pNewParent );
+        if( pChild )
+        {
+            pChild->setParent( pNewParent );
+        }
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     }
@@ -157,8 +160,8 @@ void KeyUnit::removeKeyRootNode( TKey * pT )
 }
 
 TKey * KeyUnit::getKey( int id )
-{ 
-    QMutexLocker locker(& mKeyUnitLock); 
+{
+    QMutexLocker locker(& mKeyUnitLock);
     if( mKeyMap.find( id ) != mKeyMap.end() )
     {
         return mKeyMap.value( id );
@@ -172,7 +175,7 @@ TKey * KeyUnit::getKey( int id )
 
 
 TKey * KeyUnit::getKeyPrivate( int id )
-{ 
+{
     if( mKeyMap.find( id ) != mKeyMap.end() )
     {
         return mKeyMap.value( id );
@@ -186,7 +189,7 @@ TKey * KeyUnit::getKeyPrivate( int id )
 bool KeyUnit::registerKey( TKey * pT )
 {
     if( ! pT ) return false;
-    
+
     if( pT->getParent() )
     {
         addKey( pT );
@@ -194,7 +197,7 @@ bool KeyUnit::registerKey( TKey * pT )
     }
     else
     {
-        addKeyRootNode( pT );    
+        addKeyRootNode( pT );
         return true;
     }
 }
@@ -209,7 +212,7 @@ void KeyUnit::unregisterKey( TKey * pT )
     }
     else
     {
-        removeKeyRootNode( pT );    
+        removeKeyRootNode( pT );
         return;
     }
 }
@@ -218,7 +221,7 @@ void KeyUnit::unregisterKey( TKey * pT )
 void KeyUnit::addKey( TKey * pT )
 {
     if( ! pT ) return;
-    
+
     pT->setID( getNewID() );
 
     mKeyMap.insert( pT->getID(), pT );
@@ -227,7 +230,7 @@ void KeyUnit::addKey( TKey * pT )
 void KeyUnit::removeKey( TKey * pT )
 {
     if( ! pT ) return;
-    mKeyMap.remove( pT->getID() );    
+    mKeyMap.remove( pT->getID() );
 }
 
 
@@ -263,8 +266,8 @@ QString KeyUnit::getKeyName( int keyCode, int modifierCode )
     else return QString("undefined key");
 }
 
-        
-        
+
+
 void KeyUnit::setupKeyNames()
 {
     mKeys[0x01000000]=QString("Escape");
@@ -582,7 +585,7 @@ void KeyUnit::setupKeyNames()
     mKeys[0x01020005]=QString("Play");
     mKeys[0x01020004]=QString("Sleep");
     mKeys[0x01020006]=QString("Zoom");
-    mKeys[0x01020001]=QString("Cancel");    
+    mKeys[0x01020001]=QString("Cancel");
 }
 
 

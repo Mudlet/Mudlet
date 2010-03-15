@@ -57,7 +57,7 @@ void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int chi
     if( ! pT ) return;
     if( ! pT->getID() )
     {
-        pT->setID( getNewID() );    
+        pT->setID( getNewID() );
     }
     if( ( parentPosition == -1 ) || ( childPosition >= mTriggerRootNodeList.size() ) )
     {
@@ -102,7 +102,7 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     {
         mTriggerRootNodeList.remove( pChild );
     }
-    if( pNewParent ) 
+    if( pNewParent )
     {
         pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
@@ -132,8 +132,8 @@ void TriggerUnit::removeTriggerRootNode( TTrigger * pT )
 }
 
 TTrigger * TriggerUnit::getTrigger( int id )
-{ 
-    QMutexLocker locker(& mTriggerUnitLock); 
+{
+    QMutexLocker locker(& mTriggerUnitLock);
     if( mTriggerMap.find( id ) != mTriggerMap.end() )
     {
         return mTriggerMap.value( id );
@@ -145,7 +145,7 @@ TTrigger * TriggerUnit::getTrigger( int id )
 }
 
 TTrigger * TriggerUnit::getTriggerPrivate( int id )
-{ 
+{
     if( mTriggerMap.find( id ) != mTriggerMap.end() )
     {
         return mTriggerMap.value( id );
@@ -159,7 +159,7 @@ TTrigger * TriggerUnit::getTriggerPrivate( int id )
 bool TriggerUnit::registerTrigger( TTrigger * pT )
 {
     if( ! pT ) return false;
-    
+
     if( pT->getParent() )
     {
         addTrigger( pT );
@@ -167,7 +167,7 @@ bool TriggerUnit::registerTrigger( TTrigger * pT )
     }
     else
     {
-        addTriggerRootNode( pT );    
+        addTriggerRootNode( pT );
         return true;
     }
 }
@@ -182,7 +182,7 @@ void TriggerUnit::unregisterTrigger( TTrigger * pT )
     }
     else
     {
-        removeTriggerRootNode( pT );    
+        removeTriggerRootNode( pT );
         return;
     }
 }
@@ -191,12 +191,12 @@ void TriggerUnit::unregisterTrigger( TTrigger * pT )
 void TriggerUnit::addTrigger( TTrigger * pT )
 {
     if( ! pT ) return;
-    
+
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );
     }
-    
+
     mTriggerMap.insert( pT->getID(), pT );
 }
 
@@ -220,10 +220,10 @@ qint64 TriggerUnit::getNewID()
 }
 
 void TriggerUnit::processDataStream( QString & data, int line )
-{    
+{
     if( data.size() > 0 )
     {
-        char * subject = (char *) malloc( strlen( data.toLatin1().data() ) + 2048 );
+        char * subject = (char *) malloc( strlen( data.toLocal8Bit().data() ) + 1 );
         strcpy( subject, data.toLocal8Bit().data() );
 
         typedef list<TTrigger *>::const_iterator I;
@@ -247,7 +247,7 @@ void TriggerUnit::processDataStream( QString & data, int line )
 
 
 void TriggerUnit::stopAllTriggers()
-{    
+{
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
@@ -287,29 +287,29 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
     ifs >> mMaxID;
     qint64 children;
     ifs >> children;
-    
+
     if( initMode ) qDebug()<<"TriggerUnit::restore() mMaxID="<<mMaxID<<" children="<<children;
-    
+
     bool ret1 = false;
     bool ret2 = true;
-    
+
     if( ifs.status() == QDataStream::Ok )
         ret1 = true;
-    
+
     mMaxID = 0;
     for( qint64 i=0; i<children; i++ )
     {
         TTrigger * pChild = new TTrigger( 0, mpHost );
         ret2 = pChild->restore( ifs, initMode );
-        
-        if( ( pChild->isTempTrigger() ) || ( ! initMode ) ) 
+
+        if( ( pChild->isTempTrigger() ) || ( ! initMode ) )
         {
             delete pChild;
         }
-        else 
+        else
             registerTrigger( pChild );
     }
-    
+
     return ret1 && ret2;
 }
 
@@ -392,10 +392,10 @@ bool TriggerUnit::killTrigger( QString & name )
 void TriggerUnit::dump()
 {
     bool ret = true;
-    
+
     typedef list<TTrigger *>::const_iterator I;
     cout << "TriggerUnit::dump() entries="<<mTriggerRootNodeList.size()<<endl;
-    
+
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;

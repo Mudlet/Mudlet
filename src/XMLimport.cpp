@@ -36,11 +36,11 @@ bool XMLimport::importPackage( QIODevice * device )
 {
     setDevice( device );
 
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "MudletPackage" )// && attributes().value("version") == "1.0")
             {
@@ -66,7 +66,7 @@ bool XMLimport::importPackage( QIODevice * device )
 
 void XMLimport::readMap()
 {
-    while( ! atEnd() )
+    /*while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -76,7 +76,7 @@ void XMLimport::readMap()
 
         if( isStartElement() )
         {
-            /*if( name() == "room" )
+            if( name() == "room" )
             {
                 readRoom();
             }
@@ -84,14 +84,14 @@ void XMLimport::readMap()
             else
             {
                 readUnknownHostElement();
-            }*/
+            }
         }
-    }
+    }*/
 }
 
 void XMLimport::readRoom()
 {
-/*    TRoom * pT = new TRoom;
+    /*TRoom * pT = new TRoom;
     while( ! atEnd() )
     {
         readNext();
@@ -218,7 +218,7 @@ void XMLimport::readUnknownMapElement()
 
 void XMLimport::readPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -226,7 +226,7 @@ void XMLimport::readPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "HostPackage" )
             {
@@ -273,11 +273,11 @@ void XMLimport::readPackage()
 
 void XMLimport::readUnknownPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN readUnknownPackage() Package Element:"<<name().toString()<<"text:"<<text().toString();        
+        qDebug()<<"[ERROR]: UNKNOWN readUnknownPackage() Package Element:"<<name().toString()<<"text:"<<text().toString();
         if( isEndElement() )
         {
             break;
@@ -292,7 +292,7 @@ void XMLimport::readUnknownPackage()
 
 void XMLimport::readUnknownHostElement()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
@@ -313,7 +313,7 @@ void XMLimport::readUnknownHostElement()
 
 void XMLimport::readUnknownTriggerElement()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
@@ -333,7 +333,7 @@ void XMLimport::readUnknownTriggerElement()
 
 void XMLimport::readUnknownTimerElement()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
@@ -351,7 +351,7 @@ void XMLimport::readUnknownTimerElement()
 
 void XMLimport::readUnknownAliasElement()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
@@ -369,7 +369,7 @@ void XMLimport::readUnknownAliasElement()
 
 void XMLimport::readUnknownActionElement()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
@@ -387,7 +387,7 @@ void XMLimport::readUnknownActionElement()
 
 void XMLimport::readUnknownScriptElement()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
@@ -405,7 +405,7 @@ void XMLimport::readUnknownScriptElement()
 
 void XMLimport::readUnknownKeyElement()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
 
         readNext();
@@ -425,7 +425,7 @@ void XMLimport::readUnknownKeyElement()
 
 void XMLimport::readTriggerPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -433,7 +433,7 @@ void XMLimport::readTriggerPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "TriggerGroup" )
             {
@@ -453,7 +453,7 @@ void XMLimport::readTriggerPackage()
 
 void XMLimport::readHostPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -461,7 +461,7 @@ void XMLimport::readHostPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "Host" )
             {
@@ -487,13 +487,16 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
     pT->mRawStreamDump = ( attributes().value("mRawStreamDump") == "yes" );
     pT->mAlertOnNewData = ( attributes().value("mAlertOnNewData") == "yes" );
+    pT->mFORCE_NO_COMPRESSION = ( attributes().value("mFORCE_NO_COMPRESSION") == "yes" );
+    pT->mFORCE_GA_OFF = ( attributes().value("mFORCE_GA_OFF") == "yes" );
+    pT->mFORCE_SAVE_ON_EXIT = ( attributes().value("mFORCE_SAVE_ON_EXIT") == "yes" );
 
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "name" )
             {
@@ -504,7 +507,7 @@ void XMLimport::readHostPackage( Host * pT )
             {
                 pT->mUrl = readElementText();
                 continue;
-            }       
+            }
 
             else if( name() == "port")
             {
@@ -555,7 +558,7 @@ void XMLimport::readHostPackage( Host * pT )
             {
                 pT->mBgColor.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mCommandFgColor")
             {
                 pT->mCommandFgColor.setNamedColor( readElementText() );
@@ -570,96 +573,96 @@ void XMLimport::readHostPackage( Host * pT )
             {
                 pT->mBlack.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightBlack")
             {
                 pT->mLightBlack.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mRed")
             {
                 pT->mRed.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightRed")
             {
                 pT->mLightRed.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mBlue")
             {
                 pT->mBlue.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightBlue")
             {
                 pT->mLightBlue.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mGreen")
             {
                 pT->mGreen.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightGreen")
             {
                 pT->mLightGreen.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mYellow")
             {
                 pT->mYellow.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightYellow")
             {
                 pT->mLightYellow.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mCyan")
             {
                 pT->mCyan.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightCyan")
             {
                 pT->mLightCyan.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mMagenta")
             {
                 pT->mMagenta.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightMagenta")
             {
                 pT->mLightMagenta.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mWhite")
             {
                 pT->mWhite.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mLightWhite")
             {
                 pT->mLightWhite.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mDisplayFont")
             {
                 pT->mDisplayFont.fromString( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "mCommandLineFont")
             {
                 pT->mCommandLineFont.fromString( readElementText() );
                 continue;
-            } 
+            }
             else
             {
                 readUnknownHostElement();
-            } 
+            }
         }
     }
 }
@@ -668,11 +671,11 @@ void XMLimport::readHostPackage( Host * pT )
 void XMLimport::readTriggerGroup( TTrigger * pParent )
 {
     TTrigger * pT;
-    if( pParent ) 
+    if( pParent )
     {
         pT = new TTrigger( pParent, mpHost );
-    } 
-    else 
+    }
+    else
     {
         pT = new TTrigger( 0, mpHost );
     }
@@ -692,13 +695,13 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mColorTriggerFg = ( attributes().value("isColorTriggerFg") == "yes" );
 
 
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
-        //qDebug()<<"[INFO] element:"<<name().toString()<<" text:"<<text().toString();        
+        //qDebug()<<"[INFO] element:"<<name().toString()<<" text:"<<text().toString();
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "name" )
             {
@@ -795,7 +798,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
 
 void XMLimport::readTimerPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -803,7 +806,7 @@ void XMLimport::readTimerPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "TimerGroup" )
             {
@@ -824,11 +827,11 @@ void XMLimport::readTimerPackage()
 void XMLimport::readTimerGroup( TTimer * pParent )
 {
     TTimer * pT;
-    if( pParent ) 
+    if( pParent )
     {
         pT = new TTimer( pParent, mpHost );
-    } 
-    else 
+    }
+    else
     {
         pT = new TTimer( 0, mpHost );
     }
@@ -837,12 +840,12 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
 
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "name" )
             {
@@ -891,7 +894,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
 
 void XMLimport::readAliasPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -899,7 +902,7 @@ void XMLimport::readAliasPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "AliasGroup" )
             {
@@ -920,11 +923,11 @@ void XMLimport::readAliasPackage()
 void XMLimport::readAliasGroup( TAlias * pParent )
 {
     TAlias * pT;
-    if( pParent ) 
+    if( pParent )
     {
         pT = new TAlias( pParent, mpHost );
-    } 
-    else 
+    }
+    else
     {
         pT = new TAlias( 0, mpHost );
     }
@@ -933,12 +936,12 @@ void XMLimport::readAliasGroup( TAlias * pParent )
     pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "name" )
             {
@@ -981,7 +984,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
 
 void XMLimport::readActionPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -989,7 +992,7 @@ void XMLimport::readActionPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "ActionGroup" )
             {
@@ -1010,11 +1013,11 @@ void XMLimport::readActionPackage()
 void XMLimport::readActionGroup( TAction * pParent )
 {
     TAction * pT;
-    if( pParent ) 
+    if( pParent )
     {
         pT = new TAction( pParent, mpHost );
-    } 
-    else 
+    }
+    else
     {
         pT = new TAction( 0, mpHost );
     }
@@ -1024,13 +1027,12 @@ void XMLimport::readActionGroup( TAction * pParent )
     pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
     pT->mButtonFlat = ( attributes().value("isFlatButton") == "yes" );
     pT->mUseCustomLayout = ( attributes().value("useCustomLayout") == "yes" );
-
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "name" )
             {
@@ -1073,7 +1075,7 @@ void XMLimport::readActionGroup( TAction * pParent )
                 pT->mLocation = readElementText().toInt();
                 continue;
             }
-            
+
             else if( name() == "buttonRotation")
             {
                 pT->mButtonRotation = readElementText().toInt();
@@ -1089,17 +1091,22 @@ void XMLimport::readActionGroup( TAction * pParent )
                 pT->mSizeY = readElementText().toInt();
                 continue;
             }
+            else if( name() == "mButtonState")
+            {
+                pT->mButtonState = readElementText().toInt();
+                continue;
+            }
             else if( name() == "buttonColor")
             {
                 pT->mButtonColor.setNamedColor( readElementText() );
                 continue;
-            } 
+            }
             else if( name() == "buttonColumn")
             {
                 pT->mButtonColumns = readElementText().toInt();
                 continue;
             }
-            
+
             else if( name() == "posX")
             {
                 pT->mPosX = readElementText().toInt();
@@ -1110,7 +1117,7 @@ void XMLimport::readActionGroup( TAction * pParent )
                 pT->mPosY = readElementText().toInt();
                 continue;
             }
-          
+
             else if( name() == "ActionGroup" )
             {
                 readActionGroup( pT );
@@ -1131,7 +1138,7 @@ void XMLimport::readActionGroup( TAction * pParent )
 
 void XMLimport::readScriptPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -1139,7 +1146,7 @@ void XMLimport::readScriptPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "ScriptGroup" )
             {
@@ -1160,11 +1167,11 @@ void XMLimport::readScriptPackage()
 void XMLimport::readScriptGroup( TScript * pParent )
 {
     TScript * pT;
-    if( pParent ) 
+    if( pParent )
     {
         pT = new TScript( pParent, mpHost );
-    } 
-    else 
+    }
+    else
     {
         pT = new TScript( 0, mpHost );
     }
@@ -1172,12 +1179,12 @@ void XMLimport::readScriptGroup( TScript * pParent )
     pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "name" )
             {
@@ -1214,7 +1221,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
 
 void XMLimport::readKeyPackage()
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -1222,7 +1229,7 @@ void XMLimport::readKeyPackage()
             break;
         }
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "KeyGroup" )
             {
@@ -1243,11 +1250,11 @@ void XMLimport::readKeyPackage()
 void XMLimport::readKeyGroup( TKey * pParent )
 {
     TKey * pT;
-    if( pParent ) 
+    if( pParent )
     {
         pT = new TKey( pParent, mpHost );
-    } 
-    else 
+    }
+    else
     {
         pT = new TKey( 0, mpHost );
     }
@@ -1255,12 +1262,12 @@ void XMLimport::readKeyGroup( TKey * pParent )
     pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
 
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "name" )
             {
@@ -1308,13 +1315,13 @@ void XMLimport::readKeyGroup( TKey * pParent )
 
 void XMLimport::readStringList( QStringList & list )
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
 
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "string")
             {
@@ -1330,13 +1337,13 @@ void XMLimport::readStringList( QStringList & list )
 
 void XMLimport::readIntegerList( QList<int> & list )
 {
-    while( ! atEnd() ) 
+    while( ! atEnd() )
     {
         readNext();
 
         if( isEndElement() ) break;
 
-        if( isStartElement() ) 
+        if( isStartElement() )
         {
             if( name() == "integer")
             {

@@ -31,7 +31,7 @@
 #include "TTextEdit.h"
 #include <math.h>
 
-TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen ) 
+TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen )
 : QWidget( pW )
 , mpBuffer( pB )
 , mpHost( pH )
@@ -52,15 +52,16 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mForceUpdate( false )
 , mIsMiniConsole( false )
 , mLastRenderBottom( 0 )
-{    
+, mIsCommandPopup( false )
+{
     if( ! mIsDebugConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-        mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );    
+        mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
         mScreenWidth = 100;
         if( (width()/mFontWidth ) < mScreenWidth )
         {
-            
+
             mScreenWidth = 100;//width()/mFontWidth;
         }
         setFont( mpHost->mDisplayFont );
@@ -70,14 +71,14 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         initDefaultSettings();
         mIsDebugConsole = true;
         mFontHeight = QFontMetrics( mDisplayFont ).height();
-        mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );    
+        mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
         mScreenWidth = 100;
         setFont( mDisplayFont );
     }
     mScreenHeight = height() / mFontHeight;
 
     mScreenWidth = 100;
-    
+
     setMouseTracking( true );
     setFocusPolicy( Qt::NoFocus );//Qt::WheelFocus );
     QCursor cursor;
@@ -106,6 +107,12 @@ void TTextEdit::forceUpdate()
 
 void TTextEdit::needUpdate( int y1, int y2 )
 {
+    if( ! mIsTailMode )
+    {
+        return;
+    }
+
+    if( mScreenHeight == 0 ) return;
     int top = imageTopLine();
     int bottom = y2-y1;
 
@@ -117,7 +124,6 @@ void TTextEdit::needUpdate( int y1, int y2 )
     {
         top = y1 % mScreenHeight;
     }
-
     QRect r( 0, top*mFontHeight, mScreenWidth*mFontWidth, bottom*mFontHeight );
     mForceUpdate = true;
     update( r );
@@ -132,7 +138,8 @@ void TTextEdit::focusInEvent ( QFocusEvent * event )
 
 void TTextEdit::slot_toggleTimeStamps()
 {
-    mShowTimeStamps = !mShowTimeStamps;   
+    mShowTimeStamps = !mShowTimeStamps;
+    forceUpdate();
     update();
 }
 
@@ -158,7 +165,7 @@ void TTextEdit::initDefaultSettings()
     setFont( mDisplayFont );
     mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
     mCommandSeperator = QString(";");
-    mWrapAt = 100;    
+    mWrapAt = 100;
     mWrapIndentCount = 5;
 }
 
@@ -184,7 +191,7 @@ void TTextEdit::setScroll(int cursor, int lines)
     struct timeval tv;
     struct timezone tz;
     gettimeofday(&tv, &tz);
-    localtime_r( &t, &lt ); 
+    localtime_r( &t, &lt );
     s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
     string time = s.str();
     return time;
@@ -192,6 +199,7 @@ void TTextEdit::setScroll(int cursor, int lines)
 
 void TTextEdit::updateScreenView()
 {
+    if( isHidden() ) return; //NOTE: das ist wichtig, damit ich keine floating point exception bekomme, wenn mScreenHeight==0, was hier der Fall wäre
     if( ! mIsDebugConsole && ! mIsMiniConsole )
     {
         mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
@@ -238,36 +246,38 @@ void TTextEdit::updateScreenView()
     }
 }
 
-void TTextEdit::showNewLines() 
-{   
+void TTextEdit::showNewLines()
+{
     if( ! mIsSplitScreen )
     {
-        if( ! isTailMode() ) 
+        if( ! isTailMode() )
         {
             return;
         }
     }
-    
-    int lines = mpBuffer->newLines;
+    else
+    {
+        if( isHidden() )
+        {
+            return;
+        }
+    }
 
+    //int lines = mpBuffer->newLines;
+
+    mCursorY = mpBuffer->size();
     if( ! mIsSplitScreen )
     {
-        if( ( lines <= 0 )
-         && ( mpBuffer->line( mpBuffer->getLastLineNumber() ).size() <= 1 ) )
-        {
-            return;
-        }
+        mpBuffer->mCursorY = mpBuffer->size();
     }
-    mCursorY = mpBuffer->size()-1;
     if( mCursorY > mScreenHeight )
     {
-        mScrollVector += lines;
         mScrollUp = true;
-    } 
+    }
     mOldScrollPos = mpBuffer->getLastLineNumber();
-    if( mIsSplitScreen )
+    if( ! mIsSplitScreen )
     {
-        if( mpConsole->mpScrollBar )
+        if( mpConsole->mpScrollBar && mOldScrollPos > 0 )
         {
             disconnect( mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
             mpConsole->mpScrollBar->setRange( 0, mpBuffer->getLastLineNumber() );
@@ -275,13 +285,12 @@ void TTextEdit::showNewLines()
             mpConsole->mpScrollBar->setPageStep( mScreenHeight );
             if( mpConsole->console->isTailMode() )
             {
-                mpConsole->mpScrollBar->setValue( mCursorY );
+                mpConsole->mpScrollBar->setValue( mpBuffer->mCursorY );
             }
             connect( mpConsole->mpScrollBar, SIGNAL(valueChanged(int)), mpConsole->console, SLOT(slot_scrollBarMoved(int)));
         }
     }
     update();
-    mpBuffer->newLines = 0;    
 }
 
 void TTextEdit::scrollTo( int line )
@@ -290,8 +299,12 @@ void TTextEdit::scrollTo( int line )
     {
         if( (line < (mpBuffer->getLastLineNumber()-mScreenHeight) && mIsTailMode ) )
         {
+qDebug()<<"scroll: setzte cursor im slitscreen ans ende...";
+            mpConsole->console2->mCursorY = mpBuffer->size();
+            mpConsole->console2->mIsTailMode = true;
             mIsTailMode = false;
             mpConsole->console2->show();
+            mpConsole->console2->forceUpdate();
         }
         else if( (line > (mpBuffer->getLastLineNumber()-mScreenHeight)) && !mIsTailMode )
         {
@@ -302,7 +315,8 @@ void TTextEdit::scrollTo( int line )
             mpConsole->console->updateScreenView();
             mpConsole->console->forceUpdate();
         }
-        mCursorY = line;
+        mpBuffer->mCursorY = line;
+
         mScrollVector = 0;
         update();
     }
@@ -310,43 +324,29 @@ void TTextEdit::scrollTo( int line )
 
 void TTextEdit::scrollUp( int lines )
 {
-    if( mIsSplitScreen ) 
+    if( mIsSplitScreen )
         return;
     lines = bufferScrollUp( lines );
-    if( lines == 0 ) 
+    if( lines == 0 )
         return;
     else
     {
         mIsTailMode = false;
         lines = mScreenHeight;
-        
-        QRect drawRect;
-        drawRect.setLeft( 0 );
-        drawRect.setRight( mScreenWidth * mFontWidth );
-        drawRect.setTop( abs(mScreenHeight - lines ) * mFontHeight );
-        drawRect.setHeight( mScreenHeight * mFontHeight );
-        mScrollVector = 0;    
+        mScrollVector = 0;
         update();
     }
 }
 
 void TTextEdit::scrollDown( int lines )
 {
-    if( mIsSplitScreen ) 
+    if( mIsSplitScreen )
         return;
     lines = bufferScrollDown( lines );
-    if( lines == 0 ) 
+    if( lines == 0 )
         return;
     else
     {
-        // lines < 0 => skip scrolling and paint frame directly,
-        //              as scrollRect covers the entire area of the screen
-        lines = lines * -1;
-        QRect drawRect;
-        drawRect.setLeft( 0 );
-        drawRect.setRight( mScreenWidth * mFontWidth );
-        drawRect.setBottom( mScreenHeight*mFontHeight );
-        drawRect.setHeight( abs(lines*mFontHeight) );
         mScrollVector = 0;
         update();
     }
@@ -505,6 +505,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
 
 void TTextEdit::updateLastLine()
 {
+    qDebug()<<"--->ACHTUNG: error: updateLastLine() called";
     QRect r( 0, (mScreenHeight-1)*mFontHeight, mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
     mForceUpdate = true;
     update( r );
@@ -513,7 +514,7 @@ void TTextEdit::updateLastLine()
 
 void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
 {
-    int lastLine = mpBuffer->buffer.size();
+    //int lastLine = mpBuffer->buffer.size();
 
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
@@ -532,15 +533,17 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
         p.setRenderHint( QPainter::TextAntialiasing, false );
     }
 
-
     QPoint P_topLeft  = r.topLeft();
     QPoint P_bottomRight = r.bottomRight();
-    int x_topLeft = P_topLeft.x();
+    int x_topLeft = 0;//P_topLeft.x();
     int y_topLeft = P_topLeft.y();
     int x_bottomRight = P_bottomRight.x();
     int y_bottomRight = P_bottomRight.y();
 
-    if( x_bottomRight > mScreenWidth * mFontWidth ) x_bottomRight = mScreenWidth * mFontWidth;
+    if( x_bottomRight > mScreenWidth * mFontWidth )
+    {
+        x_bottomRight = mScreenWidth * mFontWidth;
+    }
 
     int x1 = x_topLeft / mFontWidth;
     int y1 = y_topLeft / mFontHeight;
@@ -562,13 +565,11 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
 
     bool noScroll = false;
     bool noCopy = false;
-
     if( abs( mScrollVector ) > mScreenHeight || mForceUpdate || lineOffset < 10 )
     {
         mScrollVector = 0;
         noScroll = true;
     }
-
     if( ( r.height() < rect().height() ) && ( lineOffset > 0 ) )
     {
         p.drawPixmap( 0, 0, mScreenMap );
@@ -586,27 +587,40 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
             mScrollVector = 0;
         }
     }
-    if( ( ! noScroll ) && ( mScrollVector > 0 ) && ( mScrollVector <= mScreenHeight ) && ( ! mForceUpdate ) )
+    if( ( ! noScroll ) && ( mScrollVector >= 0 ) && ( mScrollVector <= mScreenHeight ) && ( ! mForceUpdate ) )
     {
-        screenPixmap = mScreenMap.copy( 0,
-                                        mScrollVector*mFontHeight,
-                                        mScreenWidth*mFontWidth,
-                                        (mScreenHeight-mScrollVector)*mFontHeight );
-        p.drawPixmap( 0, 0, screenPixmap );
-        from = mScreenHeight - mScrollVector - 1;
+
+        if( mScrollVector*mFontHeight < mScreenMap.height()
+            && mScreenWidth*mFontWidth <= mScreenMap.width()
+            && (mScreenHeight-mScrollVector)*mFontHeight > 0
+            && (mScreenHeight-mScrollVector)*mFontHeight <= mScreenMap.height() )
+        {
+            screenPixmap = mScreenMap.copy( 0,
+                                            mScrollVector*mFontHeight,
+                                            mScreenWidth*mFontWidth,
+                                            (mScreenHeight-mScrollVector)*mFontHeight );
+            p.drawPixmap( 0, 0, screenPixmap );
+            from = mScreenHeight - mScrollVector - 1;
+        }
     }
     else if( ( ! noScroll ) && ( mScrollVector < 0 && mScrollVector >= ((-1)*mScreenHeight) ) && ( ! mForceUpdate ) )
     {
-        screenPixmap = mScreenMap.copy( 0,
-                                        mScrollVector*mFontHeight,
-                                        mScreenWidth*mFontWidth,
-                                        (mScreenHeight-mScrollVector)*mFontHeight );
-        p.drawPixmap( 0, mScrollVector*mFontHeight, screenPixmap );
-        from = 0;
+        if( abs(mScrollVector)*mFontHeight < mScreenMap.height()
+            && mScreenWidth*mFontWidth <= mScreenMap.width()
+            && (mScreenHeight-abs(mScrollVector))*mFontHeight > 0
+            && (mScreenHeight-abs(mScrollVector))*mFontHeight <= mScreenMap.height() )
+        {
+            screenPixmap = mScreenMap.copy( 0,
+                                            0,
+                                            mScreenWidth*mFontWidth,
+                                            (mScreenHeight-abs(mScrollVector))*mFontHeight );
+            p.drawPixmap( 0, abs(mScrollVector)*mFontHeight, screenPixmap );
+            from = 0;
+            y2 = abs(mScrollVector);
+        }
     }
-    QRect deleteRect = QRect( 0, from*mFontHeight, x2*mFontHeight, y2*mFontHeight);//rect.width(), rect.height()-from*mFontHeight );
-
-    drawBackground( p, deleteRect, mBgColor );
+    QRect deleteRect = QRect( 0, from*mFontHeight, x2*mFontHeight, (y2+1)*mFontHeight);//rect.width(), rect.height()-from*mFontHeight );
+    drawBackground( p, deleteRect, mBgColor );//QColor(rand()%255,rand()%255,rand()%255));//mBgColor );
     for( int i=from; i<=y2; i++ )
     {
         if( mpBuffer->buffer.size() <= i+lineOffset )
@@ -614,15 +628,6 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
             break;
         }
         mpBuffer->dirty[lineOffset+i] = false;
-        /*else
-        {
-            screenPixmap = mScreenMap.copy( 0,
-                                            i*mFontHeight,
-                                            mScreenWidth*mFontWidth,
-                                            mFontHeight );
-            p.drawPixmap( 0, i*mFontHeight, screenPixmap );
-            continue;
-        }*/
         int timeOffset = 0;
         if( mShowTimeStamps )
         {
@@ -715,9 +720,9 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                 }*/
 
                 textRect = QRect( mFontWidth * i2,
-                                        mFontHeight * i,
-                                        mFontWidth * delta,
-                                        mFontHeight );
+                                  mFontHeight * i,
+                                  mFontWidth * delta,
+                                  mFontHeight );
                 if( f.invers || ( bgColor != mBgColor ) )
                 {
                     drawBackground( p, textRect, bgColor );
@@ -743,7 +748,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
 void TTextEdit::paintEvent( QPaintEvent* e )
 {
     const QRect & rect = e->rect();
-   // qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" rect="<<e->rect()<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
+    //qDebug()<<"\nconsole="<<mpConsole->mConsoleName<<" rect="<<e->rect()<<" screenheight="<<mScreenHeight<<"screenWidth="<<mScreenWidth<<" forceUpdate="<<mForceUpdate<<" mScrollUp="<<mScrollUp<<" bufferSize="<<mpBuffer->size()<<" update rect="<<e->rect()<<"\n";
 
     if( mScreenHeight <= 0 || mScreenWidth <= 0 )
     {
@@ -797,10 +802,14 @@ void TTextEdit::highlight()
         newRegion += rectFirstLine;
     }
 
-    update( mSelectedRegion.boundingRect() );
+    QRect _r = mSelectedRegion.boundingRect();
+    if( lineDelta < 0 )
+    {
+        _r.setWidth( mScreenWidth*mFontWidth );
+    }
+    update( _r );
 
     mSelectedRegion = mSelectedRegion.subtracted( newRegion );
-
 
     int y1 = mPA.y();
     for( int y=y1; y<=mPB.y(); y++ )
@@ -828,7 +837,7 @@ void TTextEdit::highlight()
         }
     }
 
-    update( mSelectedRegion.boundingRect() );// );
+    update( mSelectedRegion.boundingRect() );
     mSelectedRegion = newRegion;
 }
 
@@ -879,11 +888,35 @@ void TTextEdit::swap( QPoint & p1, QPoint & p2 )
     p2 = tmp;
 }
 
+#include<QToolTip>
+
 void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 {
+    if( mFontWidth == 0 | mFontHeight == 0 ) return;
+    int x = event->x() / mFontWidth;
+    int y = ( event->y() / mFontHeight ) + imageTopLine();
+    if( x < 0 || y < 0 ) return;
+    if( y < mpBuffer->buffer.size() )
+    {
+        if( x < mpBuffer->buffer[y].size() )
+        {
+            if( mpBuffer->buffer[y][x].link > 0 )
+            {
+                setCursor( Qt::PointingHandCursor );
+                QStringList tooltip = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
+                QToolTip::showText( event->globalPos(), tooltip.join("\n") );
+            }
+            else
+            {
+                setCursor( Qt::IBeamCursor );
+                QToolTip::hideText();
+            }
+        }
+    }
+
     if( ! mMouseTracking ) return;
 
-    int x, y;
+    //int x, y;
     int timeOffset = 0;
     y = ( event->y() / mFontHeight ) + imageTopLine();
     if( mShowTimeStamps )
@@ -993,6 +1026,43 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 
 void TTextEdit::contextMenuEvent ( QContextMenuEvent * event )
 {
+    int x = event->x() / mFontWidth;
+    int y = ( event->y() / mFontHeight ) + imageTopLine();
+    if( y < mpBuffer->buffer.size() )
+    {
+        if( x < mpBuffer->buffer[y].size() )
+        {
+            if( mpBuffer->buffer[y][x].link > 0 )
+            {
+                QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
+                QStringList hint = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
+                if( command.size() > 1 )
+                {
+                    QMenu * popup = new QMenu( this );
+                    for( int i=0; i<command.size(); i++ )
+                    {
+                        QAction * pA;
+                        if( i < hint.size() )
+                        {
+                            pA = popup->addAction( hint[i] );
+                            mPopupCommands[hint[i]] = command[i];
+                        }
+                        else
+                        {
+                            pA = popup->addAction( command[i] );
+                            mPopupCommands[command[i]] = command[i];
+                        }
+                        connect( pA, SIGNAL(triggered()), this, SLOT(slot_popupMenu()));
+                    }
+                    popup->popup( event->globalPos() );
+                }
+                mIsCommandPopup = true;
+                return;
+            }
+        }
+    }
+    mIsCommandPopup = false;
+
     QAction * action = new QAction("copy", this );
     action->setStatusTip(tr("copy selected text to clipboard"));
     connect( action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
@@ -1003,24 +1073,123 @@ void TTextEdit::contextMenuEvent ( QContextMenuEvent * event )
     return;
 }
 
+void TTextEdit::slot_popupMenu()
+{
+    QAction * pA = (QAction *)sender();
+    if( ! pA )
+    {
+        return;
+    }
+    QString cmd;
+    if( mPopupCommands.contains( pA->text() ) )
+    {
+        cmd = mPopupCommands[pA->text()];
+    }
+    mpHost->mLuaInterpreter.compileAndExecuteScript( cmd );
+}
+
 void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
+    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
+    {
+        TEvent me;
+        me.mArgumentList.append( "sysWindowMousePressEvent" );
+        switch( event->button() )
+        {
+        case Qt::LeftButton:
+            me.mArgumentList.append( QString::number(1) );
+            break;
+        case Qt::RightButton:
+            me.mArgumentList.append( QString::number(2) );
+            break;
+        case Qt::MidButton:
+            me.mArgumentList.append( QString::number(3) );
+            break;
+        default:
+            me.mArgumentList.append( 0 );
+            break;
+        }
+        me.mArgumentList.append( QString::number(event->x()) );
+        me.mArgumentList.append( QString::number(event->y()) );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mpHost->raiseEvent( &me );
+    }
     if( event->button() == Qt::LeftButton )
     {
-        mMouseTracking = true;
         int x = event->x() / mFontWidth;
         int y = ( event->y() / mFontHeight ) + imageTopLine();
+        if( y < mpBuffer->buffer.size() )
+        {
+            if( x < mpBuffer->buffer[y].size() )
+            {
+                if( mpBuffer->buffer[y][x].link > 0 )
+                {
+                    QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
+                    QString func = command.at(0);
+                    mpHost->mLuaInterpreter.compileAndExecuteScript( func );
+                    return;
+                }
+            }
+        }
+        mMouseTracking = true;
+        //int x = event->x() / mFontWidth;
+        //int y = ( event->y() / mFontHeight ) + imageTopLine();
         unHighlight( mSelectedRegion );
         mSelectedRegion = QRegion( 0, 0, 0, 0 );
+        qDebug()<<"x="<<x<<" y="<<y;
+        if( y >= mpBuffer->size() )
+        {
+            return;
+        }
         mPA.setX( x );
         mPA.setY( y );
         mPB = mPA;
         event->accept();
         return;
     }
-    
+
     if( event->button() == Qt::RightButton )
     {
+        int x = event->x() / mFontWidth;
+        int y = ( event->y() / mFontHeight ) + imageTopLine();
+        if( y < mpBuffer->buffer.size() )
+        {
+            if( x < mpBuffer->buffer[y].size() )
+            {
+                if( mpBuffer->buffer[y][x].link > 0 )
+                {
+                    QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
+                    QStringList hint = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
+                    if( command.size() > 1 )
+                    {
+                        QMenu * popup = new QMenu( this );
+                        for( int i=0; i<command.size(); i++ )
+                        {
+                            QAction * pA;
+                            if( i < hint.size() )
+                            {
+                                pA = popup->addAction( hint[i] );
+                                mPopupCommands[hint[i]] = command[i];
+                            }
+                            else
+                            {
+                                pA = popup->addAction( command[i] );
+                                mPopupCommands[command[i]] = command[i];
+                            }
+                            connect( pA, SIGNAL(triggered()), this, SLOT(slot_popupMenu()));
+                        }
+                        popup->popup( event->globalPos() );
+                    }
+                    mIsCommandPopup = true;
+                    return;
+                }
+            }
+        }
+        mIsCommandPopup = false;
+
         QAction * action = new QAction("copy", this );
         action->setStatusTip(tr("copy selected text to clipboard"));
         connect( action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
@@ -1029,14 +1198,15 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         popup->popup( mapToGlobal( event->pos() ), action );
         event->accept();
         return;
-        
+
     }
 
     if( event->button() == Qt::MidButton )
     {
-        mpConsole->console2->mCursorY = mpConsole->buffer.getLastLineNumber();
+        mpConsole->console2->mCursorY = mpConsole->buffer.size();//
         mpConsole->console2->hide();
-        mpConsole->console->mCursorY = mpConsole->buffer.getLastLineNumber();
+        mpBuffer->mCursorY = mpBuffer->size();
+        mpConsole->console->mCursorY = mpConsole->buffer.size();//
         mpConsole->console->mIsTailMode = true;
         mpConsole->console->updateScreenView();
         mpConsole->console->forceUpdate();
@@ -1048,14 +1218,14 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
 
 void TTextEdit::slot_copySelectionToClipboard()
 {
-    copySelectionToClipboard();        
+    copySelectionToClipboard();
 }
 
 void TTextEdit::copySelectionToClipboard()
 {
     if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
     {
-        swap( mPA, mPB );    
+        swap( mPA, mPB );
     }
     if( mPA.y() > mPB.y() )
     {
@@ -1073,7 +1243,7 @@ void TTextEdit::copySelectionToClipboard()
             text.append( mpBuffer->lineBuffer[y].at(x) );
             if( y >= mPB.y() )
             {
-                if( ( x == mPB.x()-1 ) || ( x >= static_cast<int>( mpBuffer->buffer[y].size() - 1 ) ) )
+                if( ( x == mPB.x() ) || ( x >= static_cast<int>( mpBuffer->buffer[y].size() - 1 ) ) )
                 {
                     QClipboard * clipboard = QApplication::clipboard();
                     clipboard->setText( text );
@@ -1094,9 +1264,36 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
     {
         mMouseTracking = false;
     }
+    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
+    {
+        TEvent me;
+        me.mArgumentList.append( "sysWindowMouseReleaseEvent" );
+        switch( event->button() )
+        {
+        case Qt::LeftButton:
+            me.mArgumentList.append( QString::number(1) );
+            break;
+        case Qt::RightButton:
+            me.mArgumentList.append( QString::number(2) );
+            break;
+        case Qt::MidButton:
+            me.mArgumentList.append( QString::number(3) );
+            break;
+        default:
+            me.mArgumentList.append( QString::number(0) );
+            break;
+        }
+        me.mArgumentList.append( QString::number(event->x()) );
+        me.mArgumentList.append( QString::number(event->y()) );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mpHost->raiseEvent( &me );
+    }
 }
 
-void TTextEdit::showEvent( QShowEvent * event ) 
+void TTextEdit::showEvent( QShowEvent * event )
 {
     updateScreenView();
     mScrollVector=0;
@@ -1104,21 +1301,22 @@ void TTextEdit::showEvent( QShowEvent * event )
     QWidget::showEvent( event );
 }
 
-void TTextEdit::resizeEvent( QResizeEvent * event ) 
+void TTextEdit::resizeEvent( QResizeEvent * event )
 {
-    updateScreenView();  
+    updateScreenView();
     if( ! mIsSplitScreen  && ! mIsDebugConsole )
     {
         mpHost->adjustNAWS();
     }
+
     QWidget::resizeEvent( event );
 }
 
-void TTextEdit::wheelEvent ( QWheelEvent * e ) 
+void TTextEdit::wheelEvent ( QWheelEvent * e )
 {
     int delta = e->delta() / 8 / 15;
-    
-    int k = 10 + (abs(delta) * 50) - 50;
+
+    int k = 3;//10 + (abs(delta) * 50) - 50;
     if( e->delta() < 0 )
     {
         mpConsole->scrollDown( abs( k ) );
@@ -1134,57 +1332,69 @@ void TTextEdit::wheelEvent ( QWheelEvent * e )
     e->ignore();
     return;
 }
-    
-int TTextEdit::imageTopLine() 
-{ 
+
+int TTextEdit::imageTopLine()
+{
+    if( ! mIsSplitScreen )
+    {
+        mCursorY = mpBuffer->mCursorY;
+    }
     if( mCursorY > mScreenHeight  )
     {
-        //return mCursorY - mScreenHeight + 1;
-        if( mpBuffer->lineBuffer.back() == "" )
+        if( isTailMode() )
         {
-            return mCursorY - mScreenHeight;
+            if( mpBuffer->lineBuffer[mpBuffer->getLastLineNumber()] == "" )
+            {
+                return mCursorY - mScreenHeight - 1;
+            }
+            else
+            {
+                return mCursorY - mScreenHeight;
+            }
         }
         else
         {
-            return mCursorY - mScreenHeight + 1;
+            return mCursorY - mScreenHeight;
         }
     }
     else
     {
         return 0;
     }
-} 
+}
 
 bool TTextEdit::isTailMode()
 {
-    if( ( mCursorY == (int) mpBuffer->size()-1 ) 
-        //|| ( mIsDebugConsole ) 
-        || ( mIsTailMode ) 
-        || ( (int)mpBuffer->size() <= mScreenHeight) )
+    /*if( ( mpBuffer->mCursorY >= (int) mpBuffer->size()-1 )
+        || ( mIsTailMode )
+        || ( (int)mpBuffer->size() <= mScreenHeight) )*/
+    if( mIsTailMode )
     {
         mIsTailMode = true;
-        return true;    
+        return true;
     }
-    else 
+    else
+    {
         return false;
+    }
 }
 
 int TTextEdit::bufferScrollUp( int lines )
 {
-    if( (mCursorY - lines) >= mScreenHeight  )
+    if( (mpBuffer->mCursorY - lines) >= mScreenHeight  )
     {
-        mCursorY -= lines;
+        mpBuffer->mCursorY -= lines;
         mIsTailMode = true;
         return lines;
     }
     else
     {
-        mCursorY -= lines;  
+        mpBuffer->mCursorY -= lines;
         if( mCursorY < 0 )
         {
             int delta = mCursorY;
-            mCursorY = 0;
-            return delta; 
+            mpBuffer->mCursorY = 0;
+            return delta;
         }
         else
             return 0;
@@ -1193,33 +1403,30 @@ int TTextEdit::bufferScrollUp( int lines )
 
 int TTextEdit::bufferScrollDown( int lines )
 {
-    if( ( mCursorY + lines ) < (int)(mpBuffer->size()-1 - mScreenHeight) )
+    if( ( mpBuffer->mCursorY + lines ) < (int)(mpBuffer->size()-1 - mScreenHeight) )
     {
-        if( mCursorY + lines < mScreenHeight + lines )
+        if( mpBuffer->mCursorY + lines < mScreenHeight + lines )
         {
-            mCursorY = mScreenHeight+lines;
-            if( mCursorY > (int)(mpBuffer->size()-1 ) )
+            mpBuffer->mCursorY = mScreenHeight+lines;
+            if( mpBuffer->mCursorY > (int)(mpBuffer->size()-1 ) )
             {
-                mCursorY = mpBuffer->size()-1;    
+                mpBuffer->mCursorY = mpBuffer->size()-1;
+                mIsTailMode = true;
             }
         }
         else
         {
-            mCursorY += lines;
+            mpBuffer->mCursorY += lines;
+            mIsTailMode = false;
         }
-        mIsTailMode = false;
+
         return lines;
     }
     else
     {
-        mCursorY += lines;
-        if( mCursorY > (int)(mpBuffer->size()-1) )
-        {
-            int delta = mCursorY;
-            mCursorY = mpBuffer->size()-1;
-            return (-1 * delta);
-        }
         mIsTailMode = true;
+        mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
+        forceUpdate();
         return 0;
     }
 }

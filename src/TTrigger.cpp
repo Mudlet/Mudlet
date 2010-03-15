@@ -120,9 +120,7 @@ void TTrigger::setName( QString name )
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
 bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList )
 {
-    regexList.replaceInStrings(" \n", " ");// \n might have slipped in the pattern because of copy and paste and lead to unmatching triggers. \n cannot be seen in the pattern list -> hard to debug
-    regexList.replaceInStrings("\n", " ");
-
+    regexList.replaceInStrings( "\n", "" );
     mRegexCodeList.clear();
     mRegexMap.clear();
     mRegexCodePropertyList.clear();
@@ -334,11 +332,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
     {
         switch(rc)
         {
-            case PCRE_ERROR_NOMATCH: 
-                goto ERROR;
-        
-            default: 
-                goto ERROR;
+             return false;
         }
     }
     if( rc > 0 )
@@ -353,7 +347,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
     
     if( rc < 0 )
     {
-        goto ERROR;
+        return false;
     }
     
     for( i=0; i < rc; i++ )
@@ -559,9 +553,9 @@ EXIT_OK:
     return true;
    
     
-ERROR: 
+//ERROR: 
 
-    return false;
+//    return false;
     
 }
 
@@ -874,6 +868,7 @@ bool TTrigger::match_line_spacer( int regexNumber )
     if( mIsMultiline )
     {
         int k=0;
+
         for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
         {
             k++;
@@ -980,10 +975,9 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
 bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset )
 {
     bool ret = false;
+    gotNewLine = true;
     if( isActive() )
     {
-
-
         if( mIsLineTrigger )
         {
             if( --mStartOfLineDelta < 0 )

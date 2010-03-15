@@ -29,7 +29,7 @@
 #include <QThread>
 #include <QTimer>
 
-extern "C" 
+extern "C"
 {
     #include "lua.h"
     #include "lualib.h"
@@ -57,15 +57,16 @@ class Host;
 class TTrigger;
 class TEvent;
 
+
 class TLuaInterpreter : public QThread  {
-   
+
     friend class TForkedProcess;
 
 Q_OBJECT
 
 public:
-  
-    TLuaInterpreter( Host * mpHost, int id );      
+
+    TLuaInterpreter( Host * mpHost, int id );
     void startLuaExecThread();
     void threadLuaInterpreterExec( std::string code );
     bool call( QString & function, QString & mName );
@@ -89,7 +90,7 @@ public:
     void adjustCaptureGroups( int x, int a );
     void clearCaptureGroups();
     bool callEventHandler( QString & function, TEvent * pE );
-    
+
     int startTempTimer( double, QString & );
     int startTempAlias( QString &, QString & );
     int startTempTrigger( QString &, QString & );
@@ -103,7 +104,9 @@ public:
     int startPermAlias( QString & name, QString & parent, QString & regex, QString & function );
 
     TGatekeeperThread * mpGatekeeperThread;
- 
+
+    static int isPrompt( lua_State * L );
+    static int feedTriggers( lua_State * );
     static int Wait( lua_State * L );
     static int Send( lua_State * L );
     static int sendRaw( lua_State * L );
@@ -111,6 +114,8 @@ public:
     static int select( lua_State * L );
     static int selectSection( lua_State * L );
     static int replace( lua_State * L );
+    static int deselect( lua_State * L );
+    static int hasFocus( lua_State * L );
     static int setFgColor( lua_State * L );
     static int setBgColor( lua_State * L );
     static int tempTimer( lua_State * L );
@@ -142,7 +147,7 @@ public:
     static int cut( lua_State * L );
     static int paste( lua_State * L );
     static int pasteWindow( lua_State * L );
-    
+
     static int enableKey( lua_State * );
     static int disableKey( lua_State * );
     static int debug( lua_State * L );
@@ -215,18 +220,28 @@ public:
     static int disableAlias( lua_State * );
     static int killAlias( lua_State * );
     static int permBeginOfLineStringTrigger( lua_State * );
-    static int setLabelStyleSheet( lua_State * L );
+    static int setLabelStyleSheet( lua_State * );
+    static int getTime( lua_State * );
+    static int invokeFileDialog( lua_State * );
+    static int getTimestamp( lua_State * );
+    static int setLink( lua_State * );
+    static int echoLink( lua_State * );
+    static int insertLink( lua_State * );
+    static int echoPopup( lua_State * );
+    static int insertPopup( lua_State * );
+    static int setPopup( lua_State * );
+    static int sendATCP( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list< std::list<std::string> > mMultiCaptureGroupList;
     std::list< std::list<int> > mMultiCaptureGroupPosList;
+    void logError( std::string & e, QString &, QString & function );
 
-    
     static std::map<lua_State *, Host *> luaInterpreterMap;
 
 signals:
-  
+
     void signalOpenUserWindow( int, QString );
     void signalEchoUserWindow( int, QString, QString );
     void signalClearUserWindow( int, QString );
@@ -244,7 +259,7 @@ signals:
     void signalNewLuaCodeToExecute( QString );
 
 public slots:
-    
+
     void slotOpenUserWindow( int, QString );
     void slotEchoUserWindow( int, QString, QString );
     void slotClearUserWindow( int, QString );
@@ -260,7 +275,7 @@ public slots:
     void slotTempTimer( int hostID, double timeout, QString function, QString timerName );
     void slotPurge();
     void slotDeleteSender();
-        
+
         //void slotNewEcho(int,QString);
 
     //public:
@@ -269,14 +284,14 @@ private:
     lua_State * getLuaExecutionUnit( int unit );
     lua_State* pGlobalLua;
     TLuaMainThread * mpLuaSessionThread;
-    
+
     Host * mpHost;
     int mHostID;
     //std::list<std::string> mCaptureList;
     QList<QObject *> objectsToDelete;
     QTimer purgeTimer;
-    
-    
+
+
     lua_State * pGlobalLuaAliasExecutionUnit;
     lua_State * pGlobalLuaTriggerExecutionUnit;
     lua_State * pGlobalLuaGuiExecutionUnit;
@@ -305,13 +320,13 @@ public:
 
   TLuaMainThread( TLuaInterpreter * pL ){ pLuaInterpreter = pL;  }
   void run()
-  {  
+  {
      std::cout << "TLuaMainThread::run() called. Initializing Gatekeeper..."<<std::endl;
       //pLuaInterpreter->initLuaGlobals();
      exit=false;
      while( ! exit )
      {
-         if( ! mJobQueue.empty() ) 
+         if( ! mJobQueue.empty() )
          {
              pLuaInterpreter->threadLuaInterpreterExec( getJob() );
          }
@@ -322,16 +337,16 @@ public:
      }
      std::cout << "TLuaMainThread::run() done exit." << std::endl;
   }
-  
+
   std::string getJob()
   {
       mutex.lock();
-      std::string job = mJobQueue.front(); 
+      std::string job = mJobQueue.front();
       mJobQueue.pop();
       mutex.unlock();
       return job;
   }
-  
+
   void postJob(QString code)
   {
      std::cout << "posting new job <"<<code.toLatin1().data()<<">"<<std::endl;
@@ -342,15 +357,15 @@ public:
      std::cout << "DONE posting new job"<<std::endl;
   }
 
-  void callExit(){ exit = true; } 
-  
+  void callExit(){ exit = true; }
+
 private:
 
   TLuaInterpreter * pLuaInterpreter;
   QString code;
   QMutex mutex;
   std::queue<std::string> mJobQueue;
-  
+
   bool exit;
 };
 
@@ -367,7 +382,7 @@ public:
        function = _func;
        parameters = _p;
    }
-   
+
    void run()
    {
        qDebug()<<"TLuaTimer::run() goingin to sleep for "<<msec<<" milliseconds...";
@@ -377,14 +392,14 @@ public:
        rs->mpLuaSessionThread->postJob(code);
        qDebug()<<"TLuaTimer::run() exiting thread";
    }
- 
+
 private:
-    
+
    TLuaInterpreter * rs;
    int msec;
    int session;
    QString function;
-   QString parameters;   
+   QString parameters;
 };
   */
 #endif

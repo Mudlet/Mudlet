@@ -37,7 +37,7 @@
 using namespace std;
 
 void ScriptUnit::stopAllTriggers()
-{    
+{
     typedef list<TScript *>::const_iterator I;
     for( I it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
     {
@@ -51,9 +51,9 @@ void ScriptUnit::addScriptRootNode( TScript * pT, int parentPosition, int childP
     if( ! pT ) return;
     if( ! pT->getID() )
     {
-        pT->setID( getNewID() );    
+        pT->setID( getNewID() );
     }
-    
+
     if( ( parentPosition == -1 ) || ( childPosition >= mScriptRootNodeList.size() ) )
     {
         mScriptRootNodeList.push_back( pT );
@@ -92,7 +92,7 @@ void ScriptUnit::reParentScript( int childID, int oldParentID, int newParentID, 
     }
     if( ! pOldParent )
     {
-        removeScriptRootNode( pChild );    
+        removeScriptRootNode( pChild );
     }
     if( pNewParent )
     {
@@ -115,8 +115,8 @@ void ScriptUnit::removeScriptRootNode( TScript * pT )
 }
 
 TScript * ScriptUnit::getScript( int id )
-{ 
-    QMutexLocker locker(& mScriptUnitLock); 
+{
+    QMutexLocker locker(& mScriptUnitLock);
     if( mScriptMap.find( id ) != mScriptMap.end() )
     {
         return mScriptMap.value( id );
@@ -128,7 +128,7 @@ TScript * ScriptUnit::getScript( int id )
 }
 
 TScript * ScriptUnit::getScriptPrivate( int id )
-{ 
+{
     if( mScriptMap.find( id ) != mScriptMap.end() )
     {
         return mScriptMap.value( id );
@@ -142,7 +142,7 @@ TScript * ScriptUnit::getScriptPrivate( int id )
 bool ScriptUnit::registerScript( TScript * pT )
 {
     if( ! pT ) return false;
-    
+
     if( pT->getParent() )
     {
         addScript( pT );
@@ -150,7 +150,7 @@ bool ScriptUnit::registerScript( TScript * pT )
     }
     else
     {
-        addScriptRootNode( pT );    
+        addScriptRootNode( pT );
         return true;
     }
 }
@@ -165,7 +165,7 @@ void ScriptUnit::unregisterScript( TScript * pT )
     }
     else
     {
-        removeScriptRootNode( pT );    
+        removeScriptRootNode( pT );
         return;
     }
 }
@@ -174,22 +174,22 @@ void ScriptUnit::unregisterScript( TScript * pT )
 void ScriptUnit::addScript( TScript * pT )
 {
     if( ! pT ) return;
-    
-    QMutexLocker locker(& mScriptUnitLock); 
-    
+
+    QMutexLocker locker(& mScriptUnitLock);
+
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );
     }
-    
+
     mScriptMap.insert( pT->getID(), pT );
 }
 
 void ScriptUnit::removeScript( TScript * pT )
 {
     if( ! pT ) return;
-    
-    mScriptMap.remove(pT->getID());    
+
+    mScriptMap.remove(pT->getID());
 }
 
 
@@ -204,7 +204,10 @@ void ScriptUnit::compileAll()
     for( I it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
     {
         TScript * pChild = *it;
-        pChild->compileAll();
+        if( pChild->isActive() )
+        {
+            pChild->compileAll();
+        }
     }
 }
 

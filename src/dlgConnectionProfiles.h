@@ -21,6 +21,8 @@
 #ifndef DLGCONNECTION_PROFILES_H
 #define DLGCONNECTION_PROFILES_H
 
+
+#include <QListWidgetItem>
 #include "ui_connection_profiles.h"
 
 
@@ -54,7 +56,7 @@ public slots:
     void slot_update_website( const QString );
     void slot_update_description();
     
-    void slot_item_clicked( QTreeWidgetItem * );
+    void slot_item_clicked( QListWidgetItem * );
     void slot_update();
     void slot_addProfile();
     void slot_deleteProfile();

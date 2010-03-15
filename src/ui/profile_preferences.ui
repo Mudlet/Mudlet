@@ -90,6 +90,9 @@
        </item>
        <item>
         <widget class="QGroupBox" name="groupBox_5">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="title">
           <string>Character Encoding</string>
          </property>
@@ -121,11 +124,18 @@
          <property name="title">
           <string>Misc</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
+         <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="text">
              <string>Toolbar notification if Mudlet is minimized and new data arrives</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
+            <property name="text">
+             <string>Force auto save on exit</string>
             </property>
            </widget>
           </item>
@@ -1226,6 +1236,50 @@ or some other computer model that has a small screen.</string>
         </spacer>
        </item>
       </layout>
+     </widget>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>Special Options</string>
+      </attribute>
+      <widget class="QGroupBox" name="groupBox_7">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>20</y>
+         <width>491</width>
+         <height>311</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>special options needed for some older MUD drivers</string>
+       </property>
+       <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>421</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>force compression off (needs restart!)</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="mFORCE_GA_OFF">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>50</y>
+          <width>421</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>force telnet GA signal interpretation off (needs restart!)</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
     </widget>
    </item>

@@ -1,4 +1,8 @@
-QT += network opengl
+CONFIG += release warn_off
+QMAKE_CXXFLAGS_RELEASE += -O3
+MOC_DIR = ./tmp
+OBJECTS_DIR = ./tmp
+QT += network
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 unix:LIBS += -lpcre \
@@ -157,6 +161,7 @@ FORMS += ui/connection_profiles.ui \
     ui/notes_editor.ui \
     ui/trigger_pattern_edit.ui \
     ui/composer.ui \
+    ui/mapper.ui \
     ui/profile_preferences.ui
 TEMPLATE = app
 TARGET = mudlet

@@ -40,11 +40,16 @@ class TLuaInterpreter;
 #include "ActionUnit.h"
 #include "TLuaInterpreter.h"
 #include <QTextBlock>
+#include <QTextStream>
+#include <QFile>
 #include "dlgTriggerEditor.h"
 #include "TEvent.h"
 #include "TKey.h"
 #include "KeyUnit.h"
-#include <QVector3D>
+//#include <QVector3D>
+//#include "TArea.h"
+//#include "TRoom.h"
+//#include "TMap.h"
 
 
 class dlgTriggerEditor;
@@ -64,6 +69,7 @@ class Host  : public QObject
 public:    
             
                        Host( int port, QString mHostName, QString login, QString pass, int host_id );  
+                       Host();
                        ~Host(); 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     void               setName( QString s )             { QMutexLocker locker(& mLock); mHostName = s; }
@@ -227,6 +233,13 @@ public:
     bool               mIsGoingDown;
     bool               mLF_ON_GA;
     bool               mAlertOnNewData;
+//Map *             mpMap;
+    bool               mFORCE_NO_COMPRESSION;
+    bool               mFORCE_GA_OFF;
+    bool               mFORCE_SAVE_ON_EXIT;
+    bool               mIsProfileLoadingSequence;
+    QTextStream        mErrorLogStream;
+    QFile              mErrorLogFile;
 };
 #endif
 

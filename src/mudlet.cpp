@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2010 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -53,7 +53,7 @@ bool mudlet::debugMode = false;
 
 mudlet * mudlet::_self = 0;
 
-mudlet * mudlet::self() 
+mudlet * mudlet::self()
 {
     if( ! _self )
     {
@@ -63,7 +63,7 @@ mudlet * mudlet::self()
 }
 
 
-mudlet::mudlet() 
+mudlet::mudlet()
 : QMainWindow()
 , mShowMenuBar( false )
 , mShowToolbar( true )
@@ -81,7 +81,7 @@ mudlet::mudlet()
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet 1.0.6");
+    setWindowTitle("Mudlet 1.1.0 March 2010");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
@@ -139,20 +139,20 @@ mudlet::mudlet()
     QAction * actionTriggers = new QAction(QIcon(":/icons/tools-wizard.png"), tr("Triggers"), this);
     actionTriggers->setStatusTip(tr("Show Triggers"));
     mpMainToolBar->addAction( actionTriggers );
-    
+
     QAction * actionAlias = new QAction(QIcon(":/icons/system-users.png"), tr("Aliases"), this);
     actionAlias->setStatusTip(tr("Show Aliases"));
     actionAlias->setEnabled( true );
     mpMainToolBar->addAction( actionAlias );
-    
+
     QAction * actionTimers = new QAction(QIcon(":/icons/chronometer.png"), tr("Timers"), this);
     actionTimers->setStatusTip(tr("Show Timers"));
-    mpMainToolBar->addAction( actionTimers );    
-    
+    mpMainToolBar->addAction( actionTimers );
+
     QAction * actionButtons = new QAction(QIcon(":/icons/bookmarks.png"), tr("Buttons"), this);
     actionButtons->setStatusTip(tr("Show Easy Buttons"));
     mpMainToolBar->addAction( actionButtons );
-    
+
     QAction * actionScripts = new QAction(QIcon(":/icons/document-properties.png"), tr("Scripts"), this);
     actionScripts->setEnabled( true );
     actionScripts->setStatusTip(tr("Show Scripts"));
@@ -162,19 +162,19 @@ mudlet::mudlet()
     actionKeys->setStatusTip(tr("Options"));
     actionKeys->setEnabled( true );
     mpMainToolBar->addAction( actionKeys );
-    
+
     QAction * actionHelp = new QAction(QIcon(":/icons/help-hint.png"), tr("Manual"), this);
     actionHelp->setStatusTip(tr("Browse Reference Material and Documentation"));
     mpMainToolBar->addAction( actionHelp );
-    
+
     QAction * actionOptions = new QAction(QIcon(":/icons/configure.png"), tr("Settings"), this);
     actionOptions->setStatusTip(tr("Settings, Options and Preferences"));
     mpMainToolBar->addAction( actionOptions );
-    
+
     QAction * actionNotes = new QAction(QIcon(":/icons/applications-accessories.png"), tr("Notepad"), this);
     actionNotes->setStatusTip(tr("take notes"));
     mpMainToolBar->addAction( actionNotes );
-    
+
     QAction * actionReplay = new QAction(QIcon(":/icons/media-optical.png"), tr("Replay"), this);
     actionNotes->setStatusTip(tr("load replay"));
     mpMainToolBar->addAction( actionReplay );
@@ -188,21 +188,21 @@ mudlet::mudlet()
     QAction * actionMultiView = new QAction(QIcon(":/icons/view-split-left-right.png"), tr("MultiView"), this);
     actionMultiView->setStatusTip(tr("MultiView"));
     mpMainToolBar->addAction( actionMultiView );
-    
+
     QAction * actionStopAllTriggers = new QAction(QIcon(":/icons/edit-bomb.png"), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setStatusTip(tr("stop all triggers, alias, actions, timers and scripts"));
     //mpMainToolBar->addAction( actionStopAllTriggers );
-    
-    
+
+
     /* QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
     actionProfileBackup->setStatusTip(tr("Backup Profile"));
     mpMainToolBar->addAction( actionProfileBackup );*/
-    
-    
+
+
     QAction * actionAbout = new QAction(QIcon(":/icons/mudlet_main_32px.png"), tr("About"), this);
     actionAbout->setStatusTip(tr("About"));
     mpMainToolBar->addAction( actionAbout );
-    
+
     QAction * actionCloseProfile = new QAction(QIcon(":/icons/window-close.png"), tr("Close"), this);
     actionScripts->setEnabled( true );
     actionScripts->setStatusTip(tr("close connection"));
@@ -213,7 +213,7 @@ mudlet::mudlet()
     disableToolbarButtons();
 
     mpDebugArea = new QMainWindow(0);
-    HostManager::self()->addHost("default_host", "", "","" );  
+    HostManager::self()->addHost("default_host", "", "","" );
     mpDefaultHost = HostManager::self()->getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
     mpDebugConsole->setWindowTitle("Central Debug Console");
@@ -229,7 +229,7 @@ mudlet::mudlet()
     if( file_use_smallscreen.exists() )
     {
         mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
-        showFullScreen();   
+        showFullScreen();
         QAction * actionFullScreeniew = new QAction(QIcon(":/icons/dialog-cancel.png"), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction( actionFullScreeniew );
@@ -317,12 +317,12 @@ mudlet::mudlet()
     menuBar()->addAction(mactionAbout);
     menuBar()->addAction(mactionHelp);*/
     readSettings();
-    
+
     QTimer * timerAutologin = new QTimer( this );
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
-       
+
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
 
 }
@@ -332,6 +332,7 @@ void mudlet::slot_close_profile_requested( int tab )
     QString name = mpTabBar->tabText( tab );
     Host * pH = HostManager::self()->getHost( name );
     if( ! pH ) return;
+    pH->stopAllTriggers();
     pH->mpEditorDialog->close();
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
@@ -445,11 +446,11 @@ void mudlet::addConsoleForNewHost( Host * pH )
     mpCurrentActiveHost = pH;
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
-    
+
     dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH );
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
-    
+
     pH->getActionUnit()->updateToolbar();
     QMap<QString, TConsole *> miniConsoleMap;
     mHostConsoleMap[mpCurrentActiveHost] = miniConsoleMap;
@@ -480,7 +481,7 @@ void mudlet::slot_timer_fires()
         if( pTT->checkRestart()  )
         {
             pTT->start();
-        }    
+        }
     }
     else
     {
@@ -497,7 +498,7 @@ void mudlet::unregisterTimer( QTimer * pQT )
     else
     {
         qDebug()<<"MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
-    }    
+    }
 }
 
 void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
@@ -602,7 +603,23 @@ bool mudlet::createLabel( Host * pHost, QString & name, int x, int y, int width,
 
 bool mudlet::createBuffer( Host * pHost, QString & name )
 {
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( ! dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = pHost->mpConsole->createBuffer( name );
+        pC->mConsoleName = name;
+        if( pC )
+        {
+            dockWindowConsoleMap[name] = pC;
+            return true;
+        }
+    }
+    else
+        return false;
+    /*QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( ! dockWindowConsoleMap.contains( name ) )
     {
         TConsole * pC = new TConsole( pHost, false );
@@ -614,7 +631,7 @@ bool mudlet::createBuffer( Host * pHost, QString & name )
         dockWindowConsoleMap[name] = pC;
         return true;
     }
-    else return false;
+    else return false;*/
 }
 
 bool mudlet::setBackgroundColor( Host * pHost, QString & name, int r, int g, int b, int alpha )
@@ -689,8 +706,8 @@ bool mudlet::clearWindow( Host * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
-    { 
-        dockWindowConsoleMap[name]->buffer.clear(); 
+    {
+        dockWindowConsoleMap[name]->buffer.clear();
         dockWindowConsoleMap[name]->console->update();
         return true;
     }
@@ -802,8 +819,6 @@ bool mudlet::resetFormat( Host * pHost, QString & name )
         return false;
 }
 
-
-
 bool mudlet::moveWindow( Host * pHost, QString & name, int x1, int y1 )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
@@ -904,6 +919,15 @@ void mudlet::insertText( Host * pHost, QString & name, QString text )
     }
 }
 
+bool mudlet::insertLink( Host * pHost, QString & name, QString text, QStringList & func, QStringList & hint, bool customFormat )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->insertLink( text, func, hint, customFormat );
+    }
+}
+
 void mudlet::replace( Host * pHost, QString & name, QString text )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
@@ -913,6 +937,15 @@ void mudlet::replace( Host * pHost, QString & name, QString text )
     }
 }
 
+void mudlet::setLink( Host * pHost, QString & name, QString & linkText, QStringList & linkFunction, QStringList & linkHint )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->setLink( linkText, linkFunction, linkHint );
+    }
+}
 
 void mudlet::setBold( Host * pHost, QString & name, bool b )
 {
@@ -920,7 +953,7 @@ void mudlet::setBold( Host * pHost, QString & name, bool b )
     if( dockWindowConsoleMap.contains( name ) )
     {
         TConsole * pC = dockWindowConsoleMap[name];
-        pC->mFormatCurrent.bold = b;
+        pC->setBold( b );
     }
 }
 
@@ -930,7 +963,7 @@ void mudlet::setItalics( Host * pHost, QString & name, bool b )
     if( dockWindowConsoleMap.contains( name ) )
     {
         TConsole * pC = dockWindowConsoleMap[name];
-        pC->mFormatCurrent.italics = b;
+        pC->setItalics( b );
     }
 }
 
@@ -940,7 +973,7 @@ void mudlet::setUnderline( Host * pHost, QString & name, bool b )
     if( dockWindowConsoleMap.contains( name ) )
     {
         TConsole * pC = dockWindowConsoleMap[name];
-        pC->mFormatCurrent.underline = b;
+        pC->setUnderline( b );
     }
 }
 
@@ -950,9 +983,7 @@ void mudlet::setFgColor( Host * pHost, QString & name, int r, int g, int b )
     if( dockWindowConsoleMap.contains( name ) )
     {
         TConsole * pC = dockWindowConsoleMap[name];
-        pC->mFormatCurrent.fgR = r;
-        pC->mFormatCurrent.fgG = g;
-        pC->mFormatCurrent.fgB = b;
+        pC->setFgColor( r, g, b );
     }
 }
 
@@ -962,9 +993,7 @@ void mudlet::setBgColor( Host * pHost, QString & name, int r, int g, int b )
     if( dockWindowConsoleMap.contains( name ) )
     {
         TConsole * pC = dockWindowConsoleMap[name];
-        pC->mFormatCurrent.bgR = r;
-        pC->mFormatCurrent.bgG = g;
-        pC->mFormatCurrent.bgB = b;
+        pC->setBgColor( r, g, b );
     }
 }
 
@@ -992,13 +1021,23 @@ int mudlet::selectSection( Host * pHost, QString & name, int f, int t )
         return -1;
 }
 
+void mudlet::deselect( Host * pHost, QString & name )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->deselect();
+    }
+}
+
 bool mudlet::setWindowWrap( Host * pHost, QString & name, int & wrap )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString wn = name;
     if( dockWindowConsoleMap.contains( name ) )
-    { 
-        dockWindowConsoleMap[wn]->setWrapAt( wrap );    
+    {
+        dockWindowConsoleMap[wn]->setWrapAt( wrap );
         return true;
     }
     else
@@ -1010,8 +1049,8 @@ bool mudlet::setWindowWrapIndent( Host * pHost, QString & name, int & wrap )
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString wn = name;
     if( dockWindowConsoleMap.contains( name ) )
-    { 
-        dockWindowConsoleMap[wn]->setIndentCount( wrap );    
+    {
+        dockWindowConsoleMap[wn]->setIndentCount( wrap );
         return true;
     }
     else
@@ -1023,7 +1062,7 @@ bool mudlet::echoWindow( Host * pHost, QString & name, QString & text )
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString t = text;
     if( dockWindowConsoleMap.contains( name ) )
-    { 
+    {
         dockWindowConsoleMap[name]->echoUserWindow( t );
         return true;
     }
@@ -1033,6 +1072,31 @@ bool mudlet::echoWindow( Host * pHost, QString & name, QString & text )
         labelMap[name]->setText( t );
         return true;
     }
+    else
+        return false;
+}
+
+bool mudlet::echoLink( Host * pHost, QString & name, QString & text, QStringList & func, QStringList & hint, bool customFormat )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QString t = text;
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->echoLink( text, func, hint, customFormat );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::copy( Host * pHost, QString & name )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        dockWindowConsoleMap[name]->copy();
+        return true;
+    }
     else return false;
 }
 
@@ -1040,7 +1104,7 @@ bool mudlet::pasteWindow( Host * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
-    { 
+    {
         dockWindowConsoleMap[name]->pasteWindow( mConsoleMap[pHost]->mClipboard );
         return true;
     }
@@ -1065,8 +1129,8 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
     {
         pA->menu()->exec();
     }
-    
-    
+
+
 }
 
 void mudlet::slot_userToolBar_triggered( QAction* pA )
@@ -1078,7 +1142,7 @@ void mudlet::slot_userToolBar_triggered( QAction* pA )
     }
     else
     {
-        ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 1;    
+        ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 1;
     }
     QStringList sL;
     ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->execute(sL);
@@ -1101,8 +1165,8 @@ Host * mudlet::getActiveHost()
 
 
 
-void mudlet::addSubWindow( TConsole* pConsole ) 
-{  
+void mudlet::addSubWindow( TConsole* pConsole )
+{
     mainPane->layout()->addWidget( pConsole );
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
 }
@@ -1122,7 +1186,7 @@ void mudlet::closeEvent(QCloseEvent *event)
             if( pC->mpHost->mpEditorDialog )
             {
                 pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
-                pC->mpHost->mpEditorDialog->close();    
+                pC->mpHost->mpEditorDialog->close();
             }
             if( pC->mpHost->mpNotePad )
             {
@@ -1131,10 +1195,10 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
             }
-            
+
             // close console
             pC->close();
-        } 
+        }
     }
 
     event->accept();
@@ -1159,7 +1223,7 @@ void mudlet::readSettings()
         MenuBar->show();
     else
         MenuBar->hide();
-    if( mShowToolbar )
+    if( mShowToolbar || ! mShowMenuBar )
     {
         mpMainToolBar->show();
     }
@@ -1245,7 +1309,7 @@ void mudlet::show_script_dialog()
 {
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;  
+    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
     if( ! pEditor ) return;
     pEditor->slot_show_scripts();
     pEditor->raise();
@@ -1306,7 +1370,7 @@ void mudlet::slot_show_help_dialog_irc()
 
 void mudlet::slot_show_help_dialog_download()
 {
-    QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/wordpress/"));
+    QDesktopServices::openUrl(QUrl("http://sourceforge.net/projects/mudlet/files/"));
 }
 
 void mudlet::slot_show_about_dialog()
@@ -1359,7 +1423,7 @@ void mudlet::slot_replay()
     QString home = QDir::homePath() + "/.config/mudlet/profiles/";
     home.append( pHost->getName() );
     home.append( "/log/" );
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
                                                     home,
                                                     tr("*.dat"));
     if( fileName.isEmpty() ) return;
@@ -1367,7 +1431,7 @@ void mudlet::slot_replay()
     QFile file(fileName);
     if( ! file.open(QFile::ReadOnly | QFile::Text) )
     {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"),
+        QMessageBox::warning(this, tr("Select Replay"),
                              tr("Cannot read file %1:\n%2.")
                              .arg(fileName)
                              .arg(file.errorString()));
@@ -1394,10 +1458,10 @@ QString mudlet::readProfileData( QString profile, QString item )
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
     file.open( QIODevice::ReadOnly );
     if( ! file.exists() ) return "";
-    
-    QDataStream ifs( & file ); 
+
+    QDataStream ifs( & file );
     QString ret;
-    
+
     ifs >> ret;
     file.close();
     return ret;
@@ -1481,10 +1545,10 @@ void mudlet::doAutoLogin( QString & profile_name )
         QString profile = pH->getName();
         if( profile.size() < 1 )
         {
-            HostManager::self()->deleteHost( profile ); 
+            HostManager::self()->deleteHost( profile );
             continue;
         }
-            
+
         QString item = "autologin";
         QString val = readProfileData( profile, item );
         if( val.toInt() == Qt::Checked )
@@ -1497,7 +1561,7 @@ void mudlet::doAutoLogin( QString & profile_name )
         {
             // remove Hosts that don't have autologin defined from HostPool
             qDebug() << "----> [ EXPIRED ] " << profile.toLatin1().data() << " Host ist no longer an autoloader. Due to user decision.";
-            HostManager::self()->deleteHost( profile );    
+            HostManager::self()->deleteHost( profile );
         }
     }
     if( hostList.size() < 1 )
@@ -1533,10 +1597,13 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
 {
     Host * pHost = HostManager::self()->getHost( profile );
     if( ! pHost ) return;
+    pHost->mIsProfileLoadingSequence = true;
     addConsoleForNewHost( pHost );
     pHost->mBlockScriptCompile = false;
     pHost->getScriptUnit()->compileAll();
-    //NOTE: this is a potential problem if users connect by hand quickly 
+    pHost->mIsProfileLoadingSequence = false;
+
+    //NOTE: this is a potential problem if users connect by hand quickly
     //      and one host has a slower response time as the other one, but
     //      the worst that can happen is that they have to login manually.
 
@@ -1562,7 +1629,7 @@ void mudlet::slot_stopAllTriggers()
     {
         pC->mpHost->stopAllTriggers();
     }*/
-}   
+}
 
 mudlet::~mudlet()
 {
@@ -1596,7 +1663,7 @@ void mudlet::replayStart()
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction( actionReplaySpeedUp );
 
-    actionReplaySpeedDown = new QAction(QIcon(":/icons/import.png"), tr("slower"), this);
+    actionReplaySpeedDown = new QAction(QIcon(":/icons/port.png"), tr("slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction( actionReplaySpeedDown );
     replaySpeedDisplay = new QLabel( this );

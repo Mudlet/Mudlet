@@ -31,6 +31,7 @@ class XMLexport : public QXmlStreamWriter
 {
 public:
                     XMLexport( Host * );
+                    XMLexport( Host *, bool );
                     XMLexport( TTrigger * );
                     XMLexport( TTimer * );
                     XMLexport( TAlias * );
@@ -50,6 +51,8 @@ public:
     bool            exportHost( Host * );
 
     bool            exportHost( QIODevice * );
+    bool            exportGenericPackage( QIODevice * device );
+    bool            writeGenericPackage( Host * pT );
     bool            exportTrigger( QIODevice * );
     bool            exportTimer( QIODevice * );
     bool            exportAlias( QIODevice * );

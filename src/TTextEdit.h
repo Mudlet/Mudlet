@@ -40,16 +40,16 @@ class TConsole;
 class TTextEdit : public QWidget
 {
 Q_OBJECT
-        
+
 public:
-    
-                      TTextEdit( TConsole *, 
-                                 QWidget *, 
-                                 TBuffer * pB, 
-                                 Host * pH, 
+
+                      TTextEdit( TConsole *,
+                                 QWidget *,
+                                 TBuffer * pB,
+                                 Host * pH,
                                  bool isDebugConsole,
                                  bool isSplitScreen );
-    
+
     void              paintEvent( QPaintEvent* );
     void              contextMenuEvent ( QContextMenuEvent * event );
     void              drawForeground(QPainter &, const QRect & );
@@ -68,10 +68,10 @@ public:
     void              showNewLines();
     void              forceUpdate();
     void              needUpdate( int, int );
-    void              scrollTo( int );    
+    void              scrollTo( int );
     void              scrollUp( int lines );
     void              scrollDown( int lines );
-    void              wheelEvent( QWheelEvent * e ); 
+    void              wheelEvent( QWheelEvent * e );
     void              resizeEvent( QResizeEvent * event );
     void              mousePressEvent( QMouseEvent *  );
     void              mouseReleaseEvent( QMouseEvent * );
@@ -102,19 +102,22 @@ public:
     QRegion           mSelectedRegion;
     QColor            mFgColor;
     QColor            mBgColor;
+    bool              mIsCommandPopup;
+    QMap<QString, QString> mPopupCommands;
 
 signals:
-    
+
 public slots:
-    
+
     void              slot_toggleTimeStamps();
     void              slot_copySelectionToClipboard();
     void              slot_scrollBarMoved( int );
+    void              slot_popupMenu();
 
 
 
 private:
-    
+
     bool              mForceUpdate;
     void              initDefaultSettings();
     bool              mScrollUp;
@@ -123,8 +126,8 @@ private:
     QFont             mCommandLineFont;
     QFont             mCommandSeperator;
 
-    bool              mIsDebugConsole;    
-    
+    bool              mIsDebugConsole;
+
     int               mLeftMargin;
     int               mTopMargin;
     int               mScreenHeight;
@@ -140,7 +143,7 @@ private:
     bool              mHighlightingBegin;
     bool              mHighlightingEnd;
     bool              mMouseTracking;
-    bool              mIsSplitScreen; 
+    bool              mIsSplitScreen;
     bool              mInversOn;
     QPoint            mPA;
     QPoint            mPB;

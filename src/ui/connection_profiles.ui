@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>698</width>
-    <height>554</height>
+    <width>760</width>
+    <height>597</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>760</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Select a profile to connect with</string>
@@ -23,14 +29,14 @@
    <item>
     <widget class="QWidget" name="widget" native="true">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="minimumSize">
       <size>
-       <width>698</width>
+       <width>0</width>
        <height>0</height>
       </size>
      </property>
@@ -38,16 +44,7 @@
       <property name="spacing">
        <number>0</number>
       </property>
-      <property name="leftMargin">
-       <number>9</number>
-      </property>
-      <property name="topMargin">
-       <number>9</number>
-      </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>0</number>
       </property>
       <item>
@@ -60,18 +57,167 @@
         </property>
         <property name="minimumSize">
          <size>
-          <width>323</width>
+          <width>0</width>
           <height>0</height>
          </size>
         </property>
         <layout class="QGridLayout" name="gridLayout_5">
-         <property name="margin">
+         <property name="leftMargin">
+          <number>9</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>9</number>
+         </property>
+         <property name="bottomMargin">
           <number>0</number>
          </property>
          <property name="spacing">
           <number>0</number>
          </property>
-         <item row="0" column="0">
+         <item row="2" column="1">
+          <widget class="QListWidget" name="profiles_tree_widget">
+           <property name="minimumSize">
+            <size>
+             <width>365</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="resizeMode">
+            <enum>QListView::Adjust</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="2">
+          <widget class="QWidget" name="profileAdminArea" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>50</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <spacer name="horizontalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>15</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="remove_profile_button">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Remove</string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="copy_profile_button">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Copy</string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="new_profile_button">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>New</string>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="1" column="1">
           <widget class="QFrame" name="notificationArea">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -1989,199 +2135,6 @@
            </layout>
           </widget>
          </item>
-         <item row="1" column="0">
-          <widget class="QTreeWidget" name="profiles_tree_widget">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>300</width>
-             <height>120</height>
-            </size>
-           </property>
-           <property name="sizeIncrement">
-            <size>
-             <width>0</width>
-             <height>5</height>
-            </size>
-           </property>
-           <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Sunken</enum>
-           </property>
-           <property name="showDropIndicator" stdset="0">
-            <bool>false</bool>
-           </property>
-           <property name="dragEnabled">
-            <bool>false</bool>
-           </property>
-           <property name="dragDropMode">
-            <enum>QAbstractItemView::NoDragDrop</enum>
-           </property>
-           <property name="alternatingRowColors">
-            <bool>true</bool>
-           </property>
-           <property name="rootIsDecorated">
-            <bool>false</bool>
-           </property>
-           <property name="itemsExpandable">
-            <bool>false</bool>
-           </property>
-           <property name="sortingEnabled">
-            <bool>false</bool>
-           </property>
-           <property name="animated">
-            <bool>false</bool>
-           </property>
-           <property name="headerHidden">
-            <bool>true</bool>
-           </property>
-           <property name="expandsOnDoubleClick">
-            <bool>false</bool>
-           </property>
-           <property name="columnCount">
-            <number>1</number>
-           </property>
-           <column>
-            <property name="text">
-             <string>1</string>
-            </property>
-           </column>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QWidget" name="profileAdminArea" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>50</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
-            <item>
-             <spacer name="horizontalSpacer_4">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>15</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QPushButton" name="remove_profile_button">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Remove</string>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png</iconset>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="copy_profile_button">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Copy</string>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="new_profile_button">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>New</string>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
         </layout>
        </widget>
       </item>
@@ -2193,20 +2146,23 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <layout class="QGridLayout" name="gridLayout_3">
-         <property name="topMargin">
+        <property name="minimumSize">
+         <size>
+          <width>300</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>300</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="margin">
           <number>0</number>
          </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <property name="verticalSpacing">
-          <number>0</number>
-         </property>
-         <item row="0" column="0">
+         <item>
           <widget class="QTextBrowser" name="welcome_message">
            <property name="enabled">
             <bool>true</bool>
@@ -2219,7 +2175,7 @@
            </property>
            <property name="minimumSize">
             <size>
-             <width>350</width>
+             <width>0</width>
              <height>140</height>
             </size>
            </property>
@@ -2234,25 +2190,34 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:16pt; font-weight:600;&quot;&gt;Welcome to Mudlet!&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:16pt;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Click on one of the MUDs on the list below to play.&lt;/span&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;If you want to play on a server that is not on the list, click on the &lt;img src=&quot;:/icons/icons/list-add_small.png&quot; /&gt;&lt;span style=&quot; font-size:8pt; color:#aa0000;&quot;&gt; Create New Profile&lt;/span&gt; button on your left, create your own profile, and fill in the &lt;span style=&quot; font-style:italic;&quot;&gt;Profile Name&lt;/span&gt;, &lt;span style=&quot; font-style:italic;&quot;&gt;Host&lt;/span&gt;, and &lt;span style=&quot; font-style:italic;&quot;&gt;Port&lt;/span&gt; fields in the R&lt;span style=&quot; font-style:italic;&quot;&gt;equired &lt;/span&gt;area. &lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;After that, click Connect to play.&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-weight:600;&quot;&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Have fun!&lt;/p&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-weight:600;&quot;&gt;&lt;/p&gt;
-&lt;p align=&quot;right&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;- The Mudlet Team&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;table border=&quot;0&quot; style=&quot;-qt-table-type: root; margin-top:4px; margin-bottom:4px; margin-left:4px; margin-right:4px;&quot;&gt;
+&lt;tr&gt;
+&lt;td style=&quot;border: none;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Welcome to Mudlet!&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-weight:600;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt; font-weight:600;&quot;&gt;Click on one of the MUDs on the list below to play.&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;If you want to play on a server that is not on the list, click on the &lt;/span&gt;&lt;img src=&quot;:/icons/icons/list-add_small.png&quot; /&gt;&lt;span style=&quot; font-size:9pt; color:#aa0000;&quot;&gt; Create New Profile&lt;/span&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt; button on your left, create your own profile, and fill in the &lt;/span&gt;&lt;span style=&quot; font-size:9pt; font-style:italic;&quot;&gt;Profile Name&lt;/span&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;, &lt;/span&gt;&lt;span style=&quot; font-size:9pt; font-style:italic;&quot;&gt;Host&lt;/span&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;, and &lt;/span&gt;&lt;span style=&quot; font-size:9pt; font-style:italic;&quot;&gt;Port&lt;/span&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt; fields in the R&lt;/span&gt;&lt;span style=&quot; font-size:9pt; font-style:italic;&quot;&gt;equired &lt;/span&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;area. &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt; font-weight:600;&quot;&gt;After that, click Connect to play.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt; font-weight:600;&quot;&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;Have fun!&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt; font-weight:600;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;right&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt; font-weight:600;&quot;&gt;- The Mudlet Team&lt;/span&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="openLinks">
             <bool>false</bool>
            </property>
           </widget>
          </item>
-         <item row="1" column="0">
+         <item>
           <widget class="QGroupBox" name="requiredArea">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="title">
             <string>Required</string>
            </property>
@@ -2261,9 +2226,10 @@ p, li { white-space: pre-wrap; }
              <widget class="QLabel" name="label">
               <property name="font">
                <font>
-                <weight>50</weight>
-                <bold>false</bold>
-                <underline>false</underline>
+                <family>DejaVu Sans</family>
+                <pointsize>9</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
                </font>
               </property>
               <property name="text">
@@ -2273,6 +2239,12 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="0" column="1" colspan="3">
              <widget class="QLineEdit" name="profile_name_entry">
+              <property name="font">
+               <font>
+                <family>Bitstream Charter</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
               <property name="readOnly">
                <bool>false</bool>
               </property>
@@ -2282,6 +2254,8 @@ p, li { white-space: pre-wrap; }
              <widget class="QLabel" name="label_2">
               <property name="font">
                <font>
+                <family>DejaVu Sans</family>
+                <pointsize>9</pointsize>
                 <underline>false</underline>
                </font>
               </property>
@@ -2298,10 +2272,22 @@ p, li { white-space: pre-wrap; }
                 <height>0</height>
                </size>
               </property>
+              <property name="font">
+               <font>
+                <family>Bitstream Charter</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
              </widget>
             </item>
             <item row="1" column="2">
              <widget class="QLabel" name="label_3">
+              <property name="font">
+               <font>
+                <family>Bitstream Charter</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
               <property name="text">
                <string>Port:</string>
               </property>
@@ -2311,7 +2297,7 @@ p, li { white-space: pre-wrap; }
              <widget class="QLineEdit" name="port_entry">
               <property name="minimumSize">
                <size>
-                <width>50</width>
+                <width>40</width>
                 <height>0</height>
                </size>
               </property>
@@ -2320,6 +2306,12 @@ p, li { white-space: pre-wrap; }
                 <width>50</width>
                 <height>16777215</height>
                </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>Bitstream Charter</family>
+                <pointsize>9</pointsize>
+               </font>
               </property>
               <property name="text">
                <string/>
@@ -2335,14 +2327,20 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
+            <item row="2" column="0">
              <widget class="QLabel" name="label_9">
+              <property name="font">
+               <font>
+                <family>DejaVu Sans</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
               <property name="text">
                <string>Profile history:</string>
               </property>
              </widget>
             </item>
-            <item row="3" column="1" colspan="3">
+            <item row="2" column="1" colspan="2">
              <widget class="QComboBox" name="profile_history">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -2376,8 +2374,14 @@ p, li { white-space: pre-wrap; }
            </layout>
           </widget>
          </item>
-         <item row="2" column="0">
+         <item>
           <widget class="QGroupBox" name="optionalArea">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -2390,6 +2394,12 @@ p, li { white-space: pre-wrap; }
            <layout class="QGridLayout" name="gridLayout_2">
             <item row="0" column="0">
              <widget class="QLabel" name="label_4">
+              <property name="font">
+               <font>
+                <family>DejaVu Sans</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
               <property name="text">
                <string>Character name:</string>
               </property>
@@ -2407,6 +2417,12 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_5">
+              <property name="font">
+               <font>
+                <family>DejaVu Sans</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
               <property name="text">
                <string>Password:</string>
               </property>
@@ -2422,8 +2438,16 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
+            <item row="2" column="0" colspan="2">
              <widget class="QCheckBox" name="autologin_checkBox">
+              <property name="font">
+               <font>
+                <family>DejaVu Sans</family>
+                <pointsize>10</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
               <property name="toolTip">
                <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
               </property>
@@ -2431,35 +2455,25 @@ p, li { white-space: pre-wrap; }
                <enum>Qt::LeftToRight</enum>
               </property>
               <property name="text">
-               <string>Auto-connect on startup</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QPushButton" name="browseProfileHistoryButton">
-              <property name="text">
-               <string>Load Profile Package</string>
-              </property>
-              <property name="flat">
-               <bool>false</bool>
+               <string>Auto connect this profile on startup</string>
               </property>
              </widget>
             </item>
            </layout>
           </widget>
          </item>
-         <item row="3" column="0">
+         <item>
           <widget class="QGroupBox" name="informationalArea">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
            <property name="minimumSize">
             <size>
-             <width>339</width>
-             <height>100</height>
+             <width>0</width>
+             <height>0</height>
             </size>
            </property>
            <property name="title">
@@ -2467,29 +2481,31 @@ p, li { white-space: pre-wrap; }
            </property>
            <layout class="QGridLayout" name="gridLayout_4">
             <property name="horizontalSpacing">
-             <number>9</number>
+             <number>0</number>
+            </property>
+            <property name="margin">
+             <number>0</number>
             </property>
             <item row="0" column="0" rowspan="2">
              <widget class="QLabel" name="label_7">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
+              </property>
+              <property name="font">
+               <font>
+                <family>DejaVu Sans</family>
+                <pointsize>9</pointsize>
+               </font>
               </property>
               <property name="text">
                <string>Website:</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="1" rowspan="2" colspan="2">
-             <widget class="QLineEdit" name="website_entry">
-              <property name="toolTip">
-               <string>MUD website</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
+            <item row="1" column="1">
              <widget class="QWidget" name="widget_7" native="true">
               <property name="minimumSize">
                <size>
@@ -2497,9 +2513,42 @@ p, li { white-space: pre-wrap; }
                 <height>25</height>
                </size>
               </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_4">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="margin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="website_entry">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>DejaVu Sans</family>
+                   <pointsize>9</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="scaledContents">
+                  <bool>true</bool>
+                 </property>
+                 <property name="openExternalLinks">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </widget>
             </item>
-            <item row="2" column="0" colspan="3">
+            <item row="2" column="0" colspan="2">
              <widget class="QPlainTextEdit" name="mud_description_textedit">
               <property name="minimumSize">
                <size>
@@ -2509,12 +2558,15 @@ p, li { white-space: pre-wrap; }
               </property>
               <property name="maximumSize">
                <size>
-                <width>325</width>
+                <width>16777215</width>
                 <height>16777215</height>
                </size>
               </property>
               <property name="toolTip">
                <string>MUD description</string>
+              </property>
+              <property name="readOnly">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -2580,7 +2632,6 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <tabstops>
-  <tabstop>profiles_tree_widget</tabstop>
   <tabstop>dialog_buttonbox</tabstop>
   <tabstop>remove_profile_button</tabstop>
  </tabstops>

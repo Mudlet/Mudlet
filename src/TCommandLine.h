@@ -31,12 +31,14 @@
 #include "TCommandLine.h"
 #include "Host.h"
 
+#include <QPlainTextEdit>
+
 class TConsole;
 class KeyUnit;
 class Host;
 class TConsole;
 
-class TCommandLine : public QLineEdit
+class TCommandLine : public QPlainTextEdit//QLineEdit
 {
     Q_OBJECT
         
@@ -55,6 +57,7 @@ private:
     void              historyDown(QKeyEvent *event);
     bool              event(QEvent *event);
     void              enterCommand(QKeyEvent *event);
+    int               adjustHeight();
     
     int               mHistoryBuffer;
     QStringList       mHistoryList;

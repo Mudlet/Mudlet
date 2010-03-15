@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2010 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,9 +21,12 @@
 #include <QShortcut>
 #include "TConsole.h"
 #include "TTextEdit.h"
+#include <QPlainTextEdit>
+#include "TSplitter.h"
+
 
 TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent )
-: QLineEdit( parent )
+: QPlainTextEdit( parent )
 , mpHost( pHost )
 , mpConsole( pConsole )
 , mSelectionStart( 0 )
@@ -35,29 +38,32 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 
     QFont font = mpHost->mDisplayFont;
     setFont(font);
-    
+
     mRegularPalette.setColor(QPalette::Text,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
     mRegularPalette.setColor(QPalette::Base,QColor(255,255,225));
-    
+
     setPalette( mRegularPalette );
 
     mTabCompletionPalette.setColor(QPalette::Text,QColor(0,0,192));
     mTabCompletionPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mTabCompletionPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    mTabCompletionPalette.setColor(QPalette::Base,QColor(235,255,235));    
-    
+    mTabCompletionPalette.setColor(QPalette::Base,QColor(235,255,235));
+
     mAutoCompletionPalette.setColor(QPalette::Text,QColor(0,0,192));
     mAutoCompletionPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mAutoCompletionPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    mAutoCompletionPalette.setColor(QPalette::Base,QColor(255,235,235));    
-    
-    
-    mHistoryBuffer = 0;
-    //TODO: historyList is goint to get restored via host restore
+    mAutoCompletionPalette.setColor(QPalette::Base,QColor(255,235,235));
 
+
+    mHistoryBuffer = 0;
     mAutoCompletion = false;
+    setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+    setCenterOnScroll( false );
+    setWordWrapMode( QTextOption::WrapAnywhere );
+//    setMaximumBlockCount(1);
+    setContentsMargins(0,0,0,0);
 }
 
 void TCommandLine::slot_textChanged( const QString & text )
@@ -66,11 +72,13 @@ void TCommandLine::slot_textChanged( const QString & text )
 
 bool TCommandLine::event( QEvent * event )
 {
-    if( event->type() == QEvent::KeyPress ) 
+    if( event->type() == QEvent::KeyPress )
     {
+        int _height;
+        int lines;
         QKeyEvent *ke = static_cast<QKeyEvent *>( event );
         //qDebug()<<"modifier="<<ke->modifiers()<<" key="<<ke->key();
-        switch( ke->key() ) 
+        switch( ke->key() )
         {
             case Qt::Key_Space:
                 mTabCompletionCount = -1;
@@ -87,6 +95,7 @@ bool TCommandLine::event( QEvent * event )
             case Qt::Key_Backtab:
                 handleTabCompletion( false );
                 ke->accept();
+                adjustHeight();
                 return true;
                 break;
 
@@ -119,7 +128,11 @@ bool TCommandLine::event( QEvent * event )
                     mAutoCompletionCount = -1;
                     mLastCompletion = "";
                 }
-                break;
+                QPlainTextEdit::event(event);
+
+                adjustHeight();
+
+                return true;
 
             case Qt::Key_Delete:
                 if( mpHost->mAutoClearCommandLineAfterSend )
@@ -145,19 +158,33 @@ bool TCommandLine::event( QEvent * event )
                     mTabCompletionCount = -1;
                     mAutoCompletionCount = -1;
                 }
+                QPlainTextEdit::event(event);
+                adjustHeight();
+                return true;
                 break;
 
             case Qt::Key_Return:
                 if( ke->modifiers() & Qt::ControlModifier )
                 {
-                     mpConsole->console2->mCursorY = mpConsole->buffer.getLastLineNumber();
-                     mpConsole->console2->hide();
-                     mpConsole->console->mCursorY = mpConsole->buffer.getLastLineNumber();
-                     mpConsole->console->mIsTailMode = true;
-                     mpConsole->console->updateScreenView();
-                     mpConsole->console->forceUpdate();
-                     ke->accept();
-                     return true;
+                    mpConsole->console2->mCursorY = mpConsole->buffer.size();//
+                    mpConsole->console2->hide();
+                    mpConsole->buffer.mCursorY = mpConsole->buffer.size();
+                    mpConsole->console->mCursorY = mpConsole->buffer.size();//
+                    mpConsole->console->mIsTailMode = true;
+                    mpConsole->console->updateScreenView();
+                    mpConsole->console->forceUpdate();
+                    ke->accept();
+                    return true;
+                }
+                else if( ke->modifiers() & Qt::ShiftModifier )
+                {
+                    textCursor().insertBlock();
+                    /*if( ! textCursor().movePosition(QTextCursor::Down, QTextCursor::KeepAnchor) )
+                    {
+                        textCursor().insertBlock();
+                    }*/
+                    ke->accept();
+                    return true;
                 }
                 else
                 {
@@ -171,9 +198,13 @@ bool TCommandLine::event( QEvent * event )
                     mTabCompletionCount = -1;
                     mAutoCompletionCount = -1;
                     if( mpHost->mAutoClearCommandLineAfterSend )
+                    {
+                        clear();
                         mHistoryBuffer = -1;
+                    }
                     else
                         mHistoryBuffer = 0;
+                    adjustHeight();
                     ke->accept();
                     return true;
                 }
@@ -190,23 +221,45 @@ bool TCommandLine::event( QEvent * event )
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 if( mpHost->mAutoClearCommandLineAfterSend )
+                {
+                    clear();
                     mHistoryBuffer = -1;
+                }
                 else
                     mHistoryBuffer = 0;
+                adjustHeight();
                 ke->accept();
                 return true;
                 break;
 
             case Qt::Key_Down:
-                historyDown(ke);
-                ke->accept();
-                return true;
+                if( ke->modifiers() & Qt::ControlModifier )
+                {
+                    moveCursor(QTextCursor::Down, QTextCursor::MoveAnchor);
+                    ke->accept();
+                    return true;
+                }
+                else
+                {
+                    historyDown(ke);
+                    ke->accept();
+                    return true;
+                }
                 break;
 
             case Qt::Key_Up:
-                historyUp(ke);
-                ke->accept();
-                return true;
+                if( ke->modifiers() & Qt::ControlModifier )
+                {
+                    moveCursor(QTextCursor::Up, QTextCursor::MoveAnchor );
+                    ke->accept();
+                    return true;
+                }
+                else
+                {
+                    historyUp(ke);
+                    ke->accept();
+                    return true;
+                }
                 break;
 
             case Qt::Key_Escape:
@@ -245,7 +298,6 @@ bool TCommandLine::event( QEvent * event )
                 {
                      if( mpConsole->console->mSelectedRegion != QRegion( 0, 0, 0, 0 ) )
                      {
-                         qDebug()<<"selected region="<<mpConsole->console->mSelectedRegion;
                          mpConsole->console->copySelectionToClipboard();
                          ke->accept();
                          return true;
@@ -262,12 +314,14 @@ bool TCommandLine::event( QEvent * event )
                 }
                 else
                 {
-                    QLineEdit::event( event );
+                    QPlainTextEdit::event( event );
+                    adjustHeight();
+
                     if( mpHost->mAutoClearCommandLineAfterSend )
                         mHistoryBuffer = -1;
                     else
                         mHistoryBuffer = 0;
-                    if( mTabCompletionOld != text() )
+                    if( mTabCompletionOld != toPlainText() )//text() )
                     {
                         mUserKeptOnTyping = true;
                         mAutoCompletionCount = -1;
@@ -279,44 +333,76 @@ bool TCommandLine::event( QEvent * event )
                     return false;
                 }
         }
-    } 
-    return QLineEdit::event( event );
+
+    }
+
+    return QPlainTextEdit::event( event );
 }
 
 void TCommandLine::focusInEvent( QFocusEvent * event )
 {
-    setSelection( mSelectionStart, mSelectedText.length() );
+    //setSelection( mSelectionStart, mSelectedText.length() );
+    textCursor().movePosition(QTextCursor::Start);
+    textCursor().movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, mSelectedText.length() );
+
     mpConsole->console->forceUpdate();
     mpConsole->console2->forceUpdate();
-    QLineEdit::focusInEvent( event );
+    QPlainTextEdit::focusInEvent( event );
 }
 
 void TCommandLine::focusOutEvent( QFocusEvent * event )
 {
-    if( hasSelectedText() )
+    if( textCursor().hasSelection() )//hasSelectedText() )
     {
-        mSelectionStart = selectionStart();
-        mSelectedText = selectedText();
+        mSelectionStart = textCursor().selectionStart();
+        mSelectedText = textCursor().selectedText();
     }
     else
     {
         mSelectionStart = 0;
         mSelectedText = "";
     }
-    QLineEdit::focusOutEvent( event );
+    QPlainTextEdit::focusOutEvent( event );
+}
+
+int TCommandLine::adjustHeight()
+{
+    int lines = document()->size().height();
+    int fontH = QFontMetrics( mpHost->mDisplayFont ).height();
+    if( lines < 1 ) lines = 1;
+    if( lines > 10 ) lines = 10;
+    int _height = fontH * lines;
+    if( _height+fontH > height() || _height+fontH < height() )
+    {
+        qDebug()<<"***resizing commandline: _height="<<_height<<" height()="<<height();
+        mpConsole->layerCommandLine->setMinimumHeight( _height+fontH );
+        mpConsole->layerCommandLine->setMaximumHeight( _height+fontH );
+        int x = mpConsole->width();
+        int y = mpConsole->height();
+        QSize s = QSize(x,y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent( mpConsole, &event);
+    }
 }
 
 void TCommandLine::enterCommand( QKeyEvent * event )
 {
-    mpHost->send( text() );
-    if( text().size() > 0 )
+    QString _t = toPlainText();
+    QStringList _l = _t.split("\n");
+    for( int i=0; i<_l.size(); i++ )
+    {
+        mpHost->send( _l[i] );
+    }
+    if( toPlainText().size() > 0 )
     {
         mHistoryBuffer = 0;
         setPalette( mRegularPalette );
 
-        mHistoryList.removeAll( text() );
-        mHistoryList.push_front( text() );
+        mHistoryList.removeAll( toPlainText() );
+        mHistoryList.push_front( toPlainText() );
     }
+
+
 
     mAutoCompletion = false;
     mTabCompletion = false;
@@ -326,12 +412,16 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     if( mpHost->mAutoClearCommandLineAfterSend )
         clear();
     else
+    {
         selectAll();
+    }
+    adjustHeight();
+
 }
 
 void TCommandLine::slot_sendCommand(const char * pS)
 {
-    mpHost->sendRaw( QString(pS) );    
+    mpHost->sendRaw( QString(pS) );
 }
 
 // TAB completion mode gets turned on by the tab key.
@@ -345,7 +435,7 @@ void TCommandLine::handleTabCompletion( bool direction )
 {
     if( ( mTabCompletionCount < 0 ) || ( mUserKeptOnTyping ) )
     {
-        mTabCompletionTyped = text();
+        mTabCompletionTyped = toPlainText();
         if( mTabCompletionTyped.size() == 0 ) return;
         mUserKeptOnTyping = false;
         mTabCompletionCount = -1;
@@ -396,8 +486,9 @@ void TCommandLine::handleTabCompletion( bool direction )
             if( mTabCompletionCount < 0 ) mTabCompletionCount = 0;
             QString proposal = filterList[mTabCompletionCount];
             QString userWords = mTabCompletionTyped.left( typePosition );
-            setText( QString( userWords + proposal ).trimmed().toLower() );
-            mTabCompletionOld = text();
+            setPlainText( QString( userWords + proposal ).trimmed() );
+            moveCursor( QTextCursor::End, QTextCursor::MoveAnchor );
+            mTabCompletionOld = toPlainText();
         }
     }
 }
@@ -410,11 +501,11 @@ void TCommandLine::handleTabCompletion( bool direction )
 
 void TCommandLine::handleAutoCompletion()
 {
-    QString neu = text();
-    neu.chop( selectedText().size() );
-    setText( neu );
+    QString neu = toPlainText();
+    neu.chop( textCursor().selectedText().size() );
+    setPlainText( neu );
     mTabCompletionOld = neu;
-    int oldLength = text().size();
+    int oldLength = toPlainText().size();
     if( mAutoCompletionCount >= mHistoryList.size() ) mAutoCompletionCount = mHistoryList.size()-1;
     if( mAutoCompletionCount < 0 ) mAutoCompletionCount = 0;
     for( int i=mAutoCompletionCount; i<mHistoryList.size(); i++ )
@@ -424,9 +515,18 @@ void TCommandLine::handleAutoCompletion()
         {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
-            setText( mHistoryList[i].toLower() );
-            setSelection( oldLength, text().size() );
+            setPlainText( mHistoryList[i] );
+            moveCursor( QTextCursor::Start );
+            for( int k=0; k<oldLength; k++ )
+            {
+                moveCursor( QTextCursor::Right, QTextCursor::MoveAnchor );
+            }
+            moveCursor( QTextCursor::End, QTextCursor::KeepAnchor );
             return;
+        }
+        else
+        {
+            moveCursor( QTextCursor::End, QTextCursor::MoveAnchor );
         }
     }
     mAutoCompletionCount = -1;
@@ -437,13 +537,14 @@ void TCommandLine::handleAutoCompletion()
 void TCommandLine::historyDown(QKeyEvent *event)
 {
     if( mHistoryList.size() < 1 ) return;
-    if( (selectedText().size() == text().size()) || (text().size() == 0) )
+    if( (textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) )
     {
         mHistoryBuffer--;
         if( mHistoryBuffer >= mHistoryList.size() ) mHistoryBuffer = mHistoryList.size()-1;
         if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
-        setText( mHistoryList[mHistoryBuffer] );
+        setPlainText( mHistoryList[mHistoryBuffer] );
         selectAll();
+        adjustHeight();
     }
     else
     {
@@ -453,19 +554,20 @@ void TCommandLine::historyDown(QKeyEvent *event)
 }
 
 // cursor up: turns on autocompletion mode and cycles through all possible matches
-// In case nothing has been typed it cycles through the command history in 
+// In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
 
 void TCommandLine::historyUp(QKeyEvent *event)
 {
     if( mHistoryList.size() < 1 ) return;
-    if( (selectedText().size() == text().size()) || (text().size() == 0) )
+    if( (textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) )
     {
-        if( text().size() != 0) mHistoryBuffer++;
+        if( toPlainText().size() != 0) mHistoryBuffer++;
         if( mHistoryBuffer >= mHistoryList.size() ) mHistoryBuffer = mHistoryList.size()-1;
         if( mHistoryBuffer < 0 ) mHistoryBuffer = 0;
-        setText( mHistoryList[mHistoryBuffer] );
+        setPlainText( mHistoryList[mHistoryBuffer] );
         selectAll();
+        adjustHeight();
     }
     else
     {

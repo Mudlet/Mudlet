@@ -36,16 +36,16 @@
 
 using namespace std;
 
-TAlias::TAlias( TAlias * parent, Host * pHost ) 
+TAlias::TAlias( TAlias * parent, Host * pHost )
 : Tree<TAlias>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpLua( pHost->getLuaInterpreter() )
 , mIsTempAlias( false )
 {
-} 
+}
 
-TAlias::TAlias( QString name, Host * pHost ) 
+TAlias::TAlias( QString name, Host * pHost )
 : Tree<TAlias>(0)
 , mName( name )
 , mpHost( pHost )
@@ -83,22 +83,22 @@ bool TAlias::match( QString & toMatch )
     bool conditionMet = false;
     pcre * re = mpRegex;
     if( re == NULL ) return false; //regex compile error
-    
+
     const char *error;
-    char * subject = (char *) malloc(strlen(toMatch.toLatin1().data())+20);
+    char * subject = (char *) malloc(strlen(toMatch.toLocal8Bit().data())+1);
     strcpy( subject, toMatch.toLocal8Bit().data() );
     unsigned char *name_table;
     int erroffset;
     int find_all;
     int namecount;
     int name_entry_size;
-    
+
     int subject_length = strlen( subject );
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
-    
+
     //cout <<" LINE="<<subject<<endl;
     if( mRegexCode.size() > 0 )
     {
@@ -112,36 +112,36 @@ bool TAlias::match( QString & toMatch )
                         100 );
     }
     else
-        goto ERROR;
+        goto MUD_ERROR;
 
     if( rc < 0 )
     {
         switch(rc)
         {
-        case PCRE_ERROR_NOMATCH: 
-            goto ERROR;
-            
-        default: 
-            goto ERROR;
+        case PCRE_ERROR_NOMATCH:
+            goto MUD_ERROR;
+
+        default:
+            goto MUD_ERROR;
         }
     }
     if( rc > 0 )
     {
         if( mudlet::debugMode ) {TDebug(QColor(Qt::cyan),QColor(Qt::black))<<"Alias name="<<mName<<"("<<mRegexCode<<") matched.\n">>0;}
     }
-    
+
     if( rc == 0 )
     {
         qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
     }
-    
+
     if( rc < 0 )
     {
-        goto ERROR;
+        goto MUD_ERROR;
     }
-    
+
     matchCondition = true; // alias has matched
-    
+
     for( i=0; i < rc; i++ )
     {
         char * substring_start = subject + ovector[2*i];
@@ -159,11 +159,11 @@ bool TAlias::match( QString & toMatch )
         posList.push_back( ovector[2*i] );
         if( mudlet::debugMode ) {TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"Alias: capture group #"<<(i+1)<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
     }
-    (void)pcre_fullinfo( re,                                              
+    (void)pcre_fullinfo( re,
                          NULL,
                          PCRE_INFO_NAMECOUNT,
                          &namecount );
-    
+
     if( namecount <= 0 )
     {
         //cout << "no named substrings detected" << endl;
@@ -175,25 +175,25 @@ bool TAlias::match( QString & toMatch )
                              NULL,
                              PCRE_INFO_NAMETABLE,
                              &name_table );
-        
+
         (void)pcre_fullinfo( re,
                              NULL,
                              PCRE_INFO_NAMEENTRYSIZE,
                              &name_entry_size );
-        
+
         tabptr = name_table;
         for( i = 0; i < namecount; i++ )
         {
             int n = (tabptr[0] << 8) | tabptr[1];
             tabptr += name_entry_size;
         }
-    } 
+    }
     //TODO: add named groups seperately later as Lua::namedGroups
     for(;;)
     {
-        int options = 0;                
-        int start_offset = ovector[1];  
-        
+        int options = 0;
+        int start_offset = ovector[1];
+
         if( ovector[0] == ovector[1] )
         {
             if( ovector[0] >= subject_length )
@@ -202,28 +202,28 @@ bool TAlias::match( QString & toMatch )
             }
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
-        
-        rc = pcre_exec( re,                                            
-                        NULL,                                                                  
-                        subject,              
-                        subject_length,                                       
-                        start_offset,         
-                        options,                             
-                        ovector,                                                           
-                        30 ); 
-        
+
+        rc = pcre_exec( re,
+                        NULL,
+                        subject,
+                        subject_length,
+                        start_offset,
+                        options,
+                        ovector,
+                        30 );
+
         if( rc == PCRE_ERROR_NOMATCH )
         {
             if( options == 0 ) break;
             ovector[1] = start_offset + 1;
-            continue; 
+            continue;
         }
-        
+
         if( rc < 0 )
         {
             goto END;
         }
-        
+
         if( rc == 0 )
         {
             qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
@@ -244,7 +244,7 @@ bool TAlias::match( QString & toMatch )
             posList.push_back( ovector[2*i] );
             if( mudlet::debugMode ) {TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"capture group #"<<(i+1)<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
         }
-    }      
+    }
 
 END:
     {
@@ -255,7 +255,7 @@ END:
         pL->clearCaptureGroups();
     }
 
-ERROR:
+MUD_ERROR:
     typedef list<TAlias *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
@@ -269,19 +269,19 @@ ERROR:
 
 void TAlias::setRegexCode( QString code )
 {
-    mRegexCode = code; 
+    mRegexCode = code;
     const char *error;
     char * pattern = (char *) malloc( strlen( code.toLocal8Bit().data() ) + 48 );
     strcpy( pattern, code.toLocal8Bit().data() );
     int erroffset;
-    
+
     pcre * re;
-    re = pcre_compile( pattern,              
-                       0,                    
-                       &error,               
-                       &erroffset,           
-                       NULL);                
-    
+    re = pcre_compile( pattern,
+                       0,
+                       &error,
+                       &erroffset,
+                       NULL);
+
     if( re == NULL )
     {
         mOK_init = false;
@@ -290,8 +290,8 @@ void TAlias::setRegexCode( QString code )
     {
         mOK_init = true;
     }
-    
-    mpRegex = re; 
+
+    mpRegex = re;
 }
 
 TAlias& TAlias::clone(const TAlias& b)
@@ -308,13 +308,13 @@ TAlias& TAlias::clone(const TAlias& b)
 }
 
 bool TAlias::isClone(TAlias &b) const {
-    return (mName == b.mName 
-            && mCommand == b.mCommand 
-            && mRegexCode == b.mRegexCode 
-            && mpRegex == b.mpRegex 
-            && mScript == b.mScript 
-            && mIsFolder == b.mIsFolder 
-            && mpHost == b.mpHost 
+    return (mName == b.mName
+            && mCommand == b.mCommand
+            && mRegexCode == b.mRegexCode
+            && mpRegex == b.mpRegex
+            && mScript == b.mScript
+            && mIsFolder == b.mIsFolder
+            && mpHost == b.mpHost
             && mNeedsToBeCompiled == b.mNeedsToBeCompiled );
 }
 
@@ -325,7 +325,7 @@ bool TAlias::registerAlias()
         qDebug() << "ERROR: TAlias::registerTrigger() pHost=0";
         return false;
     }
-    return mpHost->getAliasUnit()->registerAlias( this );    
+    return mpHost->getAliasUnit()->registerAlias( this );
 }
 
 void TAlias::compile()

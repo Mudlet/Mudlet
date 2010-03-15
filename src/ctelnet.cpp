@@ -39,7 +39,7 @@ using namespace std;
 
 
 
-cTelnet::cTelnet( Host * pH ) 
+cTelnet::cTelnet( Host * pH )
 : mpHost(pH)
 , mpPostingTimer( new QTimer( this ) )
 , mUSE_IRE_DRIVER_BUGFIX( false )
@@ -52,25 +52,21 @@ cTelnet::cTelnet( Host * pH )
 , mMCCP_version_1( false )
 , mMCCP_version_2( false )
 , mpComposer( 0 )
+, mFORCE_GA_OFF( false )
 {
-    if( mpHost )
-    {
-        //qDebug()<<"hostName="<<mpHost->getName()<<" bugfix="<<mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mLF_ON_GA = mpHost->mLF_ON_GA;
-    }
+
     mIsTimerPosting = false;
     mNeedDecompression = false;
     mWaitingForCompressedStreamToStart = false;
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
-    termType = "Mudlet 1.0";
+    termType = "Mudlet 1.1";
     iac = iac2 = insb = false;
     command = "";
     curX = 80;
     curY = 25;
-  
+
     // initialize the socket
     connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
@@ -80,14 +76,14 @@ cTelnet::cTelnet( Host * pH )
 
     // initialize telnet session
     reset ();
-        
-    mpPostingTimer->setInterval( 100 ); // 10 times per second
+
+    mpPostingTimer->setInterval( 500 );//FIXME
     connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
-    
+
     mTimerLogin = new QTimer( this );
     mTimerLogin->setSingleShot(true);
     connect(mTimerLogin, SIGNAL(timeout()), this, SLOT(slot_send_login()));
-    
+
     mTimerPass = new QTimer( this );
     mTimerPass->setSingleShot( true );
     connect(mTimerPass, SIGNAL(timeout()), this, SLOT(slot_send_pass()));
@@ -120,15 +116,15 @@ void cTelnet::encodingChanged(QString encoding)
 {
     //cout << "cTelnet::encodingChanged() called!" << endl;
     encoding = encoding;
-  
-    // unicode carries information in form of single byte characters 
+
+    // unicode carries information in form of single byte characters
     // and multiple byte character sequences.
     // the encoder and the decoder maintain translation state, i.e. they need to know the preceding
     // chars to make the correct decisions when translating into unicode and vice versa
 
     incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
     incomingDataDecoder = incomingDataCodec->makeDecoder();
-  
+
     outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
     outgoingDataDecoder = outgoingDataCodec->makeEncoder();
 }
@@ -136,6 +132,13 @@ void cTelnet::encodingChanged(QString encoding)
 
 void cTelnet::connectIt(const QString &address, int port)
 {
+    // wird an dieser Stelle gesetzt
+    if( mpHost )
+    {
+        mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+        mLF_ON_GA = mpHost->mLF_ON_GA;
+        mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+    }
     if( socket.state() != QAbstractSocket::UnconnectedState )
     {
         socket.abort();
@@ -181,7 +184,7 @@ void cTelnet::handle_socket_signal_error()
 
 void cTelnet::slot_send_login()
 {
-    sendData( mpHost->getLogin() );    
+    sendData( mpHost->getLogin() );
 }
 
 void cTelnet::slot_send_pass()
@@ -294,17 +297,17 @@ bool cTelnet::socketOutRaw(string & data)
     }
     cout << " ]" << endl;*/
 
-    do 
+    do
     {
         int written = socket.write(data.data(), remlen);
-      
+
         if (written == -1)
         {
             return false;
         }
         remlen -= written;
         dataLength += written;
-    } 
+    }
     while(remlen > 0);
 
     if( mGA_Driver )
@@ -324,7 +327,7 @@ bool cTelnet::socketOutRaw(string & data)
 
 void cTelnet::setDisplayDimensions()
 {
-    int x = mpHost->mScreenWidth;
+    int x = mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
     if(myOptionState[static_cast<int>(OPT_NAWS)])
     {
@@ -351,7 +354,7 @@ void cTelnet::setDisplayDimensions()
         s += y2;
         if (y2 == TN_IAC)
         s += TN_IAC;
-        
+
         s += TN_IAC;
         s += TN_SE;
         socketOutRaw(s);
@@ -360,7 +363,7 @@ void cTelnet::setDisplayDimensions()
 
 void cTelnet::sendTelnetOption (char type, char option)
 {
-    //cout << "CLIENT SENDING Telnet option: command<"<<(int)type<<"> option<"<<(int)option<<">"<<endl;		
+    //cout << "CLIENT SENDING Telnet option: command<"<<(int)type<<"> option<"<<(int)option<<">"<<endl;
     string cmd;
     cmd += TN_IAC;
     cmd += type;
@@ -411,9 +414,9 @@ void cTelnet::processTelnetCommand( const string & command )
                    //(according to telnet specification, option announcement may not be
                    //unless explicitly requested)
 
-                   if( ( option == OPT_SUPPRESS_GA ) || 
+                   if( ( option == OPT_SUPPRESS_GA ) ||
                        ( option == OPT_STATUS ) ||
-                       ( option == OPT_TERMINAL_TYPE) || 
+                       ( option == OPT_TERMINAL_TYPE) ||
                        ( option == OPT_ECHO ) ||
                        ( option == OPT_NAWS ) )
                    {
@@ -423,7 +426,7 @@ void cTelnet::processTelnetCommand( const string & command )
                    else if( ( option == OPT_COMPRESS ) || ( option == OPT_COMPRESS2 ) )
                    {
                        //these are handled separately, as they're a bit special
-                       if( ( option == OPT_COMPRESS ) && ( hisOptionState[static_cast<int>(OPT_COMPRESS2)] ) )
+                       if( mpHost->mFORCE_NO_COMPRESSION || ( ( option == OPT_COMPRESS ) && ( hisOptionState[static_cast<int>(OPT_COMPRESS2)] ) ) )
                        {
                            //protocol says: reject MCCP v1 if you have previously accepted
                            //MCCP v2...
@@ -436,13 +439,13 @@ void cTelnet::processTelnetCommand( const string & command )
                            sendTelnetOption( TN_DO, option );
                            hisOptionState[option] = true;
                            //inform MCCP object about the change
-                           if( ( option == OPT_COMPRESS ) ) 
+                           if( ( option == OPT_COMPRESS ) )
                            {
                                mMCCP_version_1 = true;
                                //MCCP->setMCCP1(true);
                                cout << "MCCP v1 negotiated." << endl;
                            }
-                           else 
+                           else
                            {
                                mMCCP_version_2 = true;
                                //MCCP->setMCCP2( true );
@@ -462,7 +465,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
       case TN_WONT:
       {
-          
+
           //server refuses to enable some option...
           #ifdef DEBUG
               cout << "cTelnet::processTelnetCommand() command = TN_WONT"<<endl;
@@ -481,14 +484,14 @@ void cTelnet::processTelnetCommand( const string & command )
               {
                   sendTelnetOption( TN_DONT, option );
                   hisOptionState[option] = false;
-                  
-                  if( ( option == OPT_COMPRESS ) ) 
+
+                  if( ( option == OPT_COMPRESS ) )
                   {
                       //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
                       cout << "MCCP v1 disabled !" << endl;
                   }
-                  if( ( option == OPT_COMPRESS2 ) ) 
+                  if( ( option == OPT_COMPRESS2 ) )
                   {
                       mMCCP_version_2 = false;
                       //MCCP->setMCCP2 (false);
@@ -521,10 +524,10 @@ void cTelnet::processTelnetCommand( const string & command )
           else if (!myOptionState[255])
           //only if the option is currently disabled
           {
-              if( ( option == OPT_SUPPRESS_GA ) || 
-                  ( option == OPT_STATUS ) || 
-                  ( option == OPT_NAWS ) || 
-                  ( option == OPT_TERMINAL_TYPE ) ) 
+              if( ( option == OPT_SUPPRESS_GA ) ||
+                  ( option == OPT_STATUS ) ||
+                  ( option == OPT_NAWS ) ||
+                  ( option == OPT_TERMINAL_TYPE ) )
               {
                   if( option == OPT_SUPPRESS_GA ) cout << "OK we are willing to enable option SUPPRESS_GA"<<endl;
                   if( option == OPT_STATUS ) cout << "OK we are willing to enable telnet option STATUS"<<endl;
@@ -543,8 +546,8 @@ void cTelnet::processTelnetCommand( const string & command )
               }
           }
           if( option == OPT_NAWS )
-          {    
-          				//NAWS 
+          {
+          				//NAWS
               setDisplayDimensions();
           }
           break;
@@ -626,7 +629,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   }
                   break;
               }
-          
+
               case OPT_TERMINAL_TYPE:
               {
                   cout << "server sends telnet option terminal type"<<endl;
@@ -658,7 +661,6 @@ void cTelnet::processTelnetCommand( const string & command )
 
 void cTelnet::setATCPVariables( QString & msg )
 {
-    qDebug()<<"msg<"<<msg<<">";
     QString var;
     QString arg;
     bool single = true;
@@ -689,6 +691,11 @@ void cTelnet::setATCPVariables( QString & msg )
             return;
         }
         mpComposer = new dlgComposer( mpHost );
+        //FIXME
+        if( arg.startsWith(" ") )
+        {
+            arg.remove(0,1);
+        }
         mpComposer->init( title, arg );
         mpComposer->raise();
         mpComposer->show();
@@ -696,7 +703,25 @@ void cTelnet::setATCPVariables( QString & msg )
     }
     var.remove( '.' );
     arg.remove( '\n' );
+    int space = var.indexOf( ' ' );
+    if( space > -1 )
+    {
+        arg.prepend(" ");
+        arg = arg.prepend( var.section( " ", 1 ) );
+        var = var.section( " ", 0, 0 );
+    }
     mpHost->mLuaInterpreter.setAtcpTable( var, arg );
+    /*if( var.startsWith("RoomNum") )
+    {
+        if( mpHost->mpMap )
+        {
+            mpHost->mpMap->mRoomId = arg.toInt();
+            if( mpHost->mpMap->mpM )
+            {
+                mpHost->mpMap->mpM->update();
+            }
+        }
+    }*/
 }
 
 void cTelnet::atcpComposerCancel()
@@ -739,7 +764,7 @@ void cTelnet::atcpComposerSave( QString txt )
     struct timeval tv;
     struct timezone tz;
     gettimeofday(&tv, &tz);
-    localtime_r( &t, &lt ); 
+    localtime_r( &t, &lt );
     s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
     string time = s.str();
     return time;
@@ -769,14 +794,14 @@ void cTelnet::gotPrompt( string & mud_data )
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
-    
-    if( mUSE_IRE_DRIVER_BUGFIX )
+
+    if( mUSE_IRE_DRIVER_BUGFIX && mGA_Driver )
     {
         //////////////////////////////////////////////////////////////////////
         //
         // Patch for servers that need GA/EOR for prompt fixups
         //
-     
+
         int j = 0;
         int s = mMudData.size();
         while( j < s )
@@ -806,9 +831,9 @@ void cTelnet::gotPrompt( string & mud_data )
             NEXT: j++;
         }
         //
-        ////////////////////////////   
+        ////////////////////////////
     }
-    
+
     postData();
     mMudData = "";
     mIsTimerPosting = false;
@@ -816,15 +841,16 @@ void cTelnet::gotPrompt( string & mud_data )
 
 void cTelnet::gotRest( string & mud_data )
 {
-    if( mud_data.size() < 1 ) 
+    if( mud_data.size() < 1 )
     {
         return;
     }
-    if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
+    //if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
+    if( ( mud_data[mud_data.size()-1] == '\n' ) )
     {
+
         mpPostingTimer->stop();
         mMudData += mud_data;
-        
         postData();
         mMudData = "";
         mIsTimerPosting = false;
@@ -843,9 +869,11 @@ void cTelnet::gotRest( string & mud_data )
 void cTelnet::slot_timerPosting()
 {
     if( ! mIsTimerPosting ) return;
+    mMudData += "\n";
     postData();
     mMudData = "";
-    mIsTimerPosting = false; 
+    mIsTimerPosting = false;
+    mpHost->mpConsole->finalize();
 }
 
 void cTelnet::postData()
@@ -861,34 +889,34 @@ void cTelnet::postData()
 void cTelnet::initStreamDecompressor()
 {
     mZstream.zalloc = Z_NULL;
-    mZstream.zfree = Z_NULL;    
+    mZstream.zfree = Z_NULL;
     mZstream.opaque = Z_NULL;
     mZstream.avail_in = 0;
     mZstream.next_in = Z_NULL;
-    
+
     inflateInit( & mZstream );
 }
 
 int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
 {
     char cleanBuffer[100001]; //clean data after decompression
-    
+
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef *) dirtyBuffer;
-    
+
     mZstream.avail_out = 100000;
     mZstream.next_out = (Bytef *) cleanBuffer;
-    
+
     int zval = inflate( & mZstream, Z_SYNC_FLUSH );
     int outSize = 100000 - mZstream.avail_out;
-    
+
     if (zval == Z_STREAM_END)
     {
         inflateEnd( & mZstream );
     }
     else
     {
-        if (zval < 0)  
+        if (zval < 0)
         {
             initStreamDecompressor();
             return -1;
@@ -1081,9 +1109,9 @@ void cTelnet::handle_socket_signal_readyRead()
 
     int amount = socket.read( buffer, 100000 );
     buffer[amount+1] = '\0';
-    if( amount == -1 ) return; 
-    if( amount == 0 ) return; 
-  
+    if( amount == -1 ) return;
+    if( amount == 0 ) return;
+
     int datalen = amount;
     char * pBuffer = buffer;
     if( mNeedDecompression )
@@ -1092,7 +1120,7 @@ void cTelnet::handle_socket_signal_readyRead()
     }
     buffer[datalen] = '\0';
     #ifdef DEBUG
-        cout<<"got<";
+        cout<<"got<"<<pBuffer<<">"<<endl;
     #endif
     if( mpHost->mpConsole->mRecordReplay )
     {
@@ -1107,7 +1135,7 @@ void cTelnet::handle_socket_signal_readyRead()
     for( int i = 0; i < datalen; i++ )
     {
         char ch = buffer[i];
-                  
+
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             char _ch = ch;
@@ -1174,7 +1202,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 if( ! mNeedDecompression )
                 {
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
-                    // IAC SB COMPRESS2 IAC SE for MCCP v2    
+                    // IAC SB COMPRESS2 IAC SE for MCCP v2
                     if( mMCCP_version_1 || mMCCP_version_2 )
                     {
                         char _ch = buffer[i];
@@ -1248,27 +1276,33 @@ void cTelnet::handle_socket_signal_readyRead()
 MAIN_LOOP_END: ;
         if( recvdGA )
         {
-            mGA_Driver = true;
-            if( mCommands > 0 )
+            if( ! mFORCE_GA_OFF ) //FIXME: wird noch nicht richtig initialisiert
             {
-                mCommands--;
-                if( networkLatencyTime.elapsed() > 2000 )
+                mGA_Driver = true;
+                if( mCommands > 0 )
                 {
-                    mCommands = 0;
+                    mCommands--;
+                    if( networkLatencyTime.elapsed() > 2000 )
+                    {
+                        mCommands = 0;
+                    }
+                }
+                cleandata.push_back('\xff');
+                recvdGA = false;
+                gotPrompt( cleandata );
+                cleandata = "";
+            }
+            else
+            {
+                if( mLF_ON_GA ) //TODO: reenable option in preferences
+                {
+                    cleandata.push_back('\n');
                 }
             }
-
-            //if( mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA )
-            //{
-                cleandata.push_back('\xff');//'\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
-            //}
-            recvdGA = false;
-            gotPrompt( cleandata );
-            cleandata = "";
         }
     }//for
-  
-    if( cleandata.size() > 0 ) 
+
+    if( cleandata.size() > 0 )
     {
        gotRest( cleandata );
     }

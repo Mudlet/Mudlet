@@ -51,23 +51,25 @@ class mudlet : public QMainWindow, public Ui::MainWindow
 Q_OBJECT
 
 public:
-        
+
                                  mudlet();
                                 ~mudlet();
    static                        mudlet * self();
-   void                          addSubWindow(TConsole* p); 
-   void                          printSystemMessage( Host * pH, QString & s ); 
+   void                          addSubWindow(TConsole* p);
+   void                          printSystemMessage( Host * pH, QString & s );
    void                          print( Host *, QString & );
    void                          addConsoleForNewHost( Host * pH );
    void							 disableToolbarButtons();
    void							 enableToolbarButtons();
    Host *                        getActiveHost();
-   void                          registerTimer( TTimer *, QTimer * ); 
+   void                          registerTimer( TTimer *, QTimer * );
    void                          unregisterTimer( QTimer * );
    bool                          openWindow( Host *, QString & );
    bool                          createMiniConsole( Host *, QString &, int, int, int, int );
    bool                          createLabel( Host *, QString &, int, int, int, int, bool );
    bool                          echoWindow( Host *, QString &, QString & );
+   bool                          echoLink( Host * pHost, QString & name, QString & text, QStringList &, QStringList &, bool customFormat=false );
+   bool                          insertLink( Host *, QString &, QString, QStringList &, QStringList &, bool customFormat=false );
    bool                          appendBuffer( Host *, QString & );
    bool                          createBuffer( Host *, QString & );
    bool                          showWindow( Host *, QString & );
@@ -88,27 +90,28 @@ public:
    int                           selectString( Host *, QString & name, QString what, int );
    int                           selectSection( Host *, QString & name, int, int );
    void                          setBold( Host *, QString & name, bool );
+   void                          setLink( Host * pHost, QString & name, QString & linkText, QStringList & linkFunction, QStringList & );
    void                          setItalics( Host *, QString & name, bool );
    void                          setUnderline( Host *, QString & name, bool );
    void                          setFgColor( Host *, QString & name, int, int, int );
    void                          setBgColor( Host *, QString & name, int, int, int );
    bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
-   QString                       readProfileData( QString profile, QString item ); 
+   QString                       readProfileData( QString profile, QString item );
    bool                          setWindowWrap( Host * pHost, QString & name, int & wrap );
    bool                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
-
+   bool                          copy( Host * pHost, QString & name );
    bool                          moveCursorEnd( Host *, QString & );
    bool                          moveCursor( Host *, QString &, int, int );
    int                           getLastLineNumber( Host *, QString & );
    void                          readSettings();
    void                          writeSettings();
-   static TConsole *             mpDebugConsole; 
-   static QMainWindow *          mpDebugArea; 
-   static bool                   debugMode; 
+   static TConsole *             mpDebugConsole;
+   static QMainWindow *          mpDebugArea;
+   static bool                   debugMode;
    QMap<Host *, TConsole *>     mConsoleMap;
    QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
    QMap<Host *, QMap<QString, TLabel * > > mHostLabelMap;
-   QIcon *                       testicon; 
+   QIcon *                       testicon;
    bool                          mShowMenuBar;
    bool                          mShowToolbar;
    bool                          isGoingDown() { return mIsGoingDown; }
@@ -124,19 +127,20 @@ public:
    bool                          mWindowMinimized;
    //QString                       readProfileData( QString profile, QString item );
    void                          doAutoLogin( QString & );
-
-
+   void                          deselect( Host * pHost, QString & name );
 
    QTime                         mReplayTime;
    int                           mReplaySpeed;
+   QToolBar *                    mpMainToolBar;
 
-public slots:      
+
+public slots:
 
    void                          slot_replayTimeChanged();
    void                          slot_replaySpeedUp();
    void                          slot_replaySpeedDown();
-   void                          toggleFullScreenView(); 
-   void                          slot_userToolBar_orientation_changed(Qt::Orientation); 
+   void                          toggleFullScreenView();
+   void                          slot_userToolBar_orientation_changed(Qt::Orientation);
    void                          slot_show_about_dialog();
    void                          slot_show_help_dialog_video();
    void                          slot_show_help_dialog_forum();
@@ -145,10 +149,10 @@ public slots:
 
    void                          slot_multi_view();
    void                          slot_stopAllTriggers();
-   void                          slot_userToolBar_triggered(QAction*);   
+   void                          slot_userToolBar_triggered(QAction*);
    void                          slot_userToolBar_hovered( QAction* pA );
    void                          slot_connection_dlg_finnished( QString profile, int historyVersion );
-   void                          slot_timer_fires();   
+   void                          slot_timer_fires();
    void                          slot_send_login();
    void                          slot_send_pass();
    void                          slot_replay();
@@ -157,25 +161,25 @@ public slots:
    void                          slot_reconnect();
    void                          slot_close_profile_requested(int);
    void                          startAutoLogin();
-    
+
 protected:
-    
+
    void                          closeEvent(QCloseEvent *event);
 
 private slots:
-   
+
    void                          slot_close_profile();
    void                          slot_tab_changed( int );
-   void                          show_help_dialog(); 
+   void                          show_help_dialog();
    void                          connectToServer();
    void                          show_trigger_dialog();
    void                          show_alias_dialog();
    void                          show_script_dialog();
    void                          show_timer_dialog();
    void                          show_action_dialog();
-   void                          show_key_dialog(); 
+   void                          show_key_dialog();
    void                          show_options_dialog();
-    
+
 private:
 
    void                          goingDown() { mIsGoingDown = true; }
@@ -183,7 +187,7 @@ private:
    QTabBar *                     mpTabBar;
    QWidget *                     mainPane;
 
-   Host *                        mpDefaultHost; 
+   Host *                        mpDefaultHost;
    QQueue<QString>               tempLoginQueue;
    QQueue<QString>               tempPassQueue;
    QQueue<Host *>                tempHostQueue;
@@ -191,9 +195,9 @@ private:
    QMap<QString, QDockWidget *>  dockWindowMap;
    //QMap<QString, TConsole *>     dockWindowConsoleMap;
    //QMap<QString, TLabel *>>       mLabelMap;
-   QMap<Host *, QToolBar *>      mUserToolbarMap; 
+   QMap<Host *, QToolBar *>      mUserToolbarMap;
    QMap<QTimer *, TTimer *>      mTimerMap;
-   QToolBar *                    mpMainToolBar;
+
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
    Host *                        mpCurrentActiveHost;

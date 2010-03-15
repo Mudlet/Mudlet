@@ -82,7 +82,7 @@ void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID, 
     }
     if( ! pOldParent )
     {
-        removeActionRootNode( pChild );  
+        removeActionRootNode( pChild );
     }
 
     if( pNewParent )
@@ -127,7 +127,7 @@ void ActionUnit::removeActionRootNode( TAction * pT )
 }
 
 TAction * ActionUnit::getAction( int id )
-{ 
+{
     if( mActionMap.contains( id ) )
     {
         return mActionMap.value( id );
@@ -139,7 +139,7 @@ TAction * ActionUnit::getAction( int id )
 }
 
 TAction * ActionUnit::getActionPrivate( int id )
-{ 
+{
     if( mActionMap.find( id ) != mActionMap.end() )
     {
         return mActionMap.value( id );
@@ -153,7 +153,7 @@ TAction * ActionUnit::getActionPrivate( int id )
 bool ActionUnit::registerAction( TAction * pT )
 {
     if( ! pT ) return false;
-    
+
     if( pT->getParent() )
     {
         addAction( pT );
@@ -161,7 +161,7 @@ bool ActionUnit::registerAction( TAction * pT )
     }
     else
     {
-        addActionRootNode( pT );    
+        addActionRootNode( pT );
         return true;
     }
 }
@@ -191,7 +191,7 @@ void ActionUnit::unregisterAction( TAction * pT )
                 }
             }
         }
-        removeActionRootNode( pT );    
+        removeActionRootNode( pT );
         updateToolbar();
         return;
     }
@@ -201,20 +201,20 @@ void ActionUnit::unregisterAction( TAction * pT )
 void ActionUnit::addAction( TAction * pT )
 {
     if( ! pT ) return;
-    
+
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );
     }
-    
+
     mActionMap.insert(pT->getID(), pT);
 }
 
 void ActionUnit::removeAction( TAction * pT )
 {
     if( ! pT ) return;
-    
-    mActionMap.remove( pT->getID() );    
+
+    mActionMap.remove( pT->getID() );
 }
 
 
@@ -255,8 +255,8 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         constructToolbar( *it, mudlet::self(), pTB );
         (*it)->mpToolBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
-    }    
-    
+    }
+
     return mToolBarList;
 }
 
@@ -344,7 +344,7 @@ void ActionUnit::hideToolBar( QString & name )
         }
     }
 }
-    
+
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
 {
     pTB->clear();
@@ -366,14 +366,14 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
         QWidget * test = new QWidget;
         pTB->setTitleBarWidget( test );
     }*/
-    
+
     pTB->finalize();
-      
+
     if( pA->mOrientation == 0 )
         pTB->setHorizontalOrientation();
     else
         pTB->setVerticalOrientation();
-    
+
     pTB->setTitleBarWidget( 0 );
     pTB->setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
     if( pA->mLocation == 4 )
@@ -388,6 +388,7 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
     }
     else
         pTB->show();
+
     pTB->setStyleSheet( pTB->mpTAction->css );
 }
 
@@ -414,7 +415,11 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
 {
     pTB->clear();
     if( pA->mLocation == 4 ) return; //floating toolbars are handled differently
-    if( ! pA->isActive() ) return;
+    if( ! pA->isActive() )
+    {
+        pTB->hide();
+        return;
+    }
 
     pA->expandToolbar( pMainWindow, pTB, 0 );
     pTB->finalize();
@@ -429,6 +434,7 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
         case 2: mpHost->mpConsole->mpLeftToolBar->layout()->addWidget( pTB ); break;
         case 3: mpHost->mpConsole->mpRightToolBar->layout()->addWidget( pTB ); break;
     }
+
     pTB->show();
     pTB->setStyleSheet( pTB->mpTAction->css );
 }

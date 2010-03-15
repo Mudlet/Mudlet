@@ -50,7 +50,7 @@ TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
         mpLayout->setContentsMargins(0,0,0,0);
         mpLayout->setMargin(0);
         mpLayout->setSpacing(0);
-        QSizePolicy sizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred);
+        QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred);
         mpWidget->setSizePolicy( sizePolicy );
     }
     else
@@ -126,6 +126,8 @@ void TEasyButtonBar::addButton( TFlipButton * pB )
     connect( pB, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
     mButtonList.push_back( pB );
     pB->setChecked( (pB->mpTAction->mButtonState==2) );
+
+
 }
 
 
@@ -136,15 +138,17 @@ void TEasyButtonBar::finalize()
         return;
     }
     QWidget * fillerWidget = new QWidget;
+
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding );
     fillerWidget->setSizePolicy( sizePolicy );
+    //fillerWidget->setMinimumHeight(1);
+    //fillerWidget->setMinimumWidth(1);
     int columns = mpTAction->getButtonColumns();
     if( columns <= 0 ) columns = 1;
     if( mpLayout )
     {
         mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
     }
-    mpWidget->show();
 }
 
 void TEasyButtonBar::slot_pressed()
@@ -195,7 +199,7 @@ void TEasyButtonBar::clear()
         mpLayout->setContentsMargins(0,0,0,0);
         mpLayout->setSpacing(0);
         mpLayout->setMargin(0);
-        QSizePolicy sizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred );
+        QSizePolicy sizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
         mpWidget->setSizePolicy( sizePolicy );
 
         mpWidget->setContentsMargins(0,0,0,0);

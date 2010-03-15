@@ -39,10 +39,11 @@
 #include "dlgNotepad.h"
 
 
-Host::Host( int port, QString hostname, QString login, QString pass, int id ) 
+Host::Host( int port, QString hostname, QString login, QString pass, int id )
 : mHostName          ( hostname )
 , mLogin             ( login )
 , mPass              ( pass )
+, mpEditorDialog(0)
 , mLuaInterpreter    ( this, id )
 , mTimeout           ( 60 )
 , mRetries           ( 5 )
@@ -85,7 +86,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mCommandSeparator( ';' )
 , mDisableAutoCompletion( false )
 , mSaveProfileOnExit( false )
-, mUSE_IRE_DRIVER_BUGFIX( true ) 
+, mUSE_IRE_DRIVER_BUGFIX( true )
 , mScreenWidth( 90 )
 , mScreenHeight( 25 )
 , mUSE_FORCE_LF_AFTER_PROMPT( false )
@@ -98,29 +99,124 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mMainIconSize( 3 )
 , mTEFolderIconSize( 3 )
 , mIsGoingDown( false )
-, mNoAntiAlias( true )
+, mNoAntiAlias( false )
 , mRawStreamDump( false )
 , mCodeCompletion( true )
 , mpNotePad( 0 )
 , mInsertedMissingLF( false )
 , mLF_ON_GA( true )
 , mAlertOnNewData( true )
+//, mpMap( new TMap )
+, mFORCE_NO_COMPRESSION( false )
+, mFORCE_GA_OFF( false )
+, mFORCE_SAVE_ON_EXIT( false )
 {
+    QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
+    directoryLogFile.append(mHostName);
+    directoryLogFile.append("/log");
+    QString logFileName = directoryLogFile + "/errors.txt";
+    QDir dirLogFile;
+    if( ! dirLogFile.exists( directoryLogFile ) )
+    {
+        dirLogFile.mkpath( directoryLogFile );
+    }
+    mErrorLogFile.setFileName( logFileName );
+    mErrorLogFile.open( QIODevice::Append );
+    mErrorLogStream.setDevice( &mErrorLogFile );
+}
+
+Host::Host()
+: mHostName          ( "default-host" )
+, mLogin             ( "" )
+, mPass              ( "" )
+, mLuaInterpreter    ( this, 0 )
+, mTimeout           ( 60 )
+, mRetries           ( 5 )
+, mPort              ( 23 )
+, mLF_ON_GA( true )//wird von telnet gebraucht
+, mUSE_IRE_DRIVER_BUGFIX( true ) //wird von telnet gebraucht
+, mUSE_UNIX_EOL( false )//wird von telnet gebraucht
+, mFORCE_NO_COMPRESSION( false ) //wird von telnet gebraucht
+, mFORCE_GA_OFF( false ) //wird von telnet gebraucht
+, mTriggerUnit       ( this )
+, mTimerUnit         ( this )
+, mScriptUnit        ( this )
+, mAliasUnit         ( this )
+, mActionUnit        ( this )
+, mKeyUnit           ( this )
+, mTelnet            ( this )
+, mHostID            ( 0 )
+, mCommandFgColor    ( QColor(113,113,  0) )
+, mCommandBgColor    ( QColor(  0,  0,  0) )
+, mBlack             ( QColor(  0,  0,  0) )
+, mLightBlack        ( QColor(128,128,128) )
+, mRed               ( QColor(128,  0,  0) )
+, mLightRed          ( QColor(255,  0,  0) )
+, mLightGreen        ( QColor(  0,255,  0) )
+, mGreen             ( QColor(  0,179,  0) )
+, mLightBlue         ( QColor(  0,  0,255) )
+, mBlue              ( QColor(  0,  0,128) )
+, mLightYellow       ( QColor(255,255,  0) )
+, mYellow            ( QColor(128,128,  0) )
+, mLightCyan         ( QColor(  0,255,255) )
+, mCyan              ( QColor(  0,128,128) )
+, mLightMagenta      ( QColor(255,  0,255) )
+, mMagenta           ( QColor(128,  0,128) )
+, mLightWhite        ( QColor(255,255,255) )
+, mWhite             ( QColor(192,192,192) )
+, mFgColor           ( QColor(192,192,192) )
+, mBgColor           ( QColor(  0,  0,  0) )
+, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) )
+, mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//( QFont("Monospace", 10, QFont::Courier) )
+, mCommandSeperator  ( QString(";") )
+, mWrapAt( 100 )
+, mWrapIndentCount( 0 )
+, mPrintCommand( true )
+, mAutoClearCommandLineAfterSend( false )
+, mCommandSeparator( ';' )
+, mDisableAutoCompletion( false )
+, mSaveProfileOnExit( false )
+, mScreenWidth( 90 )
+, mScreenHeight( 25 )
+, mUSE_FORCE_LF_AFTER_PROMPT( false )
+, mBorderTopHeight( 0 )
+, mBorderBottomHeight( 0 )
+, mBorderLeftWidth( 0 )
+, mBorderRightWidth( 0 )
+
+, mBlockScriptCompile( true )
+, mMainIconSize( 3 )
+, mTEFolderIconSize( 3 )
+, mIsGoingDown( false )
+, mNoAntiAlias( true )
+, mRawStreamDump( false )
+, mCodeCompletion( true )
+, mpNotePad( 0 )
+, mInsertedMissingLF( false )
+
+, mAlertOnNewData( true )
+//, mpMap( new TMap )
+
+{
+    qDebug()<<"######################################################################################";
+    qDebug()<<"#########     ERROR DEFAULT HOST CONSTRUCTOR USED            #########################";
+    qDebug()<<"######################################################################################";
 }
 
 Host::~Host()
 {
-
+    mErrorLogStream.flush();
+    mErrorLogFile.close();
 }
 
 void Host::adjustNAWS()
 {
-    mTelnet.setDisplayDimensions();    
+    mTelnet.setDisplayDimensions();
 }
 
 void Host::setReplacementCommand( QString s )
 {
-    mReplacementCommand = s;    
+    mReplacementCommand = s;
 }
 
 void Host::stopAllTriggers()
@@ -138,7 +234,7 @@ void Host::reenableAllTriggers()
 }
 
 void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
-{  
+{
     if( wantPrint && mPrintCommand )
     {
         mInsertedMissingLF = true;
@@ -157,9 +253,9 @@ void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
     QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
     if( ! dontExpandAliases )
     {
-        if( commandList.size() == 0 ) 
+        if( commandList.size() == 0 )
         {
-            sendRaw( "" );
+            sendRaw( "\n" );//NOTE: damit leerprompt moeglich sind
             return;
         }
     }
@@ -176,21 +272,21 @@ void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
         }
         if( ! mAliasUnit.processDataStream( command ) )
         {
-            if( mReplacementCommand.size() > 0 ) 
+            if( mReplacementCommand.size() > 0 )
             {
                 mTelnet.sendData( mReplacementCommand );
             }
             else
             {
-                mTelnet.sendData( command ); 
+                mTelnet.sendData( command );
             }
         }
     }
 }
 
 void Host::sendRaw( QString command )
-{ 
-    mTelnet.sendData( command ); 
+{
+    mTelnet.sendData( command );
 }
 
 
@@ -207,7 +303,7 @@ void Host::sendRaw( QString command )
         bufList << mTextBufferList[i];
     }
     return bufList;
-} 
+}
 
 QString Host::getBufferLine( int line )
 {
@@ -296,7 +392,7 @@ void Host::registerEventHandler( QString name, TScript * pScript )
     {
         QList<TScript *> scriptList;
         scriptList.append( pScript );
-        mEventHandlerMap.insert( name, scriptList );    
+        mEventHandlerMap.insert( name, scriptList );
     }
 }
 
@@ -322,7 +418,7 @@ void Host::raiseEvent( TEvent * pE )
 void Host::gotRest( QString & data )
 {
 /*
-    mRest = data; 
+    mRest = data;
     if( mpConsole )
     {
         mpConsole->printOnDisplay( data );
@@ -341,7 +437,7 @@ void Host::gotPrompt( QString & data )
 {
     /*mPrompt = data;
     QString promptVar("prompt");
-    mLuaInterpreter.set_lua_string( promptVar, mPrompt ); 
+    mLuaInterpreter.set_lua_string( promptVar, mPrompt );
     if( mpConsole )
     {
         mpConsole->printOnDisplay( data );
@@ -350,7 +446,7 @@ void Host::gotPrompt( QString & data )
 
 void Host::enableTimer( QString & name )
 {
-    mTimerUnit.enableTimer( name );    
+    mTimerUnit.enableTimer( name );
 }
 
 void Host::disableTimer( QString & name )
@@ -365,7 +461,7 @@ bool Host::killTimer( QString & name )
 
 void Host::enableKey( QString & name )
 {
-    mKeyUnit.enableKey( name );    
+    mKeyUnit.enableKey( name );
 }
 
 void Host::disableKey( QString & name )
@@ -376,7 +472,7 @@ void Host::disableKey( QString & name )
 
 void Host::enableTrigger( QString & name )
 {
-    mTriggerUnit.enableTrigger( name );    
+    mTriggerUnit.enableTrigger( name );
 }
 
 void Host::disableTrigger( QString & name )
@@ -392,7 +488,7 @@ bool Host::killTrigger( QString & name )
 
 void Host::connectToServer()
 {
-    mTelnet.connectIt( mUrl, mPort );     
+    mTelnet.connectIt( mUrl, mPort );
 }
 
 bool Host::serialize()
@@ -407,7 +503,7 @@ bool Host::serialize()
     QDir dir_xml;
     if( ! dir_xml.exists( directory_xml ) )
     {
-        dir_xml.mkpath( directory_xml );    
+        dir_xml.mkpath( directory_xml );
     }
     QFile file_xml( filename_xml );
     if ( file_xml.open( QIODevice::WriteOnly ) )
@@ -420,7 +516,7 @@ bool Host::serialize()
     {
         QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
     }
-    
+
     return true;
 }
 

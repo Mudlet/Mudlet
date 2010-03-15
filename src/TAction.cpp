@@ -40,7 +40,7 @@
 
 using namespace std;
 
-TAction::TAction( TAction * parent, Host * pHost ) 
+TAction::TAction( TAction * parent, Host * pHost )
 : Tree<TAction>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
@@ -55,9 +55,9 @@ TAction::TAction( TAction * parent, Host * pHost )
 , mpLua( pHost->getLuaInterpreter() )
 , mButtonState( 1 )
 {
-} 
+}
 
-TAction::TAction( QString name, Host * pHost ) 
+TAction::TAction( QString name, Host * pHost )
 : Tree<TAction>(0)
 , mName( name )
 , mpHost( pHost )
@@ -92,7 +92,7 @@ bool TAction::registerAction()
         qDebug() << "ERROR: TAction::registerTrigger() pHost=0";
         return false;
     }
-    return mpHost->getActionUnit()->registerAction( this );    
+    return mpHost->getActionUnit()->registerAction( this );
 }
 
 void TAction::compile()
@@ -164,6 +164,7 @@ void TAction::_execute(QStringList & list)
             return;
         }
     }
+    mpHost->mpConsole->mButtonState = mButtonState;
     mpLua->call( mFuncName, mName );
     // move focus back to the active console / command line
     mpHost->mpConsole->activateWindow();
@@ -176,7 +177,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
        TAction * pChild = *it;
-       
+
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
@@ -184,6 +185,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
        button->setChecked( (pChild->mButtonState==2) );
+qDebug()<<"button="<<pChild->mName<<" checked="<<(pChild->mButtonState==2);
        button->setFlat( mButtonFlat );
        button->setStyleSheet( css );
 
@@ -212,13 +214,13 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
     menu->addAction( action );
     //mudlet::self()->bindMenu( menu, action );
 
-    
+
     if( mIsFolder )
     {
         QMenu * newMenu = new QMenu( pMainWindow );
         newMenu->setStyleSheet( css );
         action->setMenu( newMenu );
-        
+
         typedef list<TAction *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
@@ -227,7 +229,7 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
         }
     }
 }
-                                   
+
 
 void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * menu )
 {
@@ -245,6 +247,12 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
        button->setFlat( mButtonFlat );
        button->setStyleSheet( css );
        button->setChecked( (pChild->mButtonState==2) );
+       if( mpHost->mIsProfileLoadingSequence && pChild->mButtonState == 2 )
+       {
+           qDebug()<<"name="<<pChild->mName<<" executing script";
+           QStringList bla;
+           pChild->_execute(bla);
+       }
 
        pT->addButton( button );
 
@@ -272,6 +280,13 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
         action->mID = pChild->mID;
         action->mpHost = mpHost;
         action->setStatusTip( pChild->mName );
+        action->setChecked((pChild->mButtonState==2));
+        if( mpHost->mIsProfileLoadingSequence && pChild->mButtonState == 2 )
+        {
+            qDebug()<<"name="<<pChild->mName<<" executing script";
+            QStringList bla;
+            pChild->_execute(bla);
+        }
         menu->addAction( action );
         if( pChild->mIsFolder )
         {
@@ -316,17 +331,17 @@ TAction& TAction::clone(const TAction& b)
     return *this;
 }
 
-bool TAction::isClone( TAction & b ) const 
+bool TAction::isClone( TAction & b ) const
 {
-    return ( mName == b.mName 
-             && mCommandButtonUp == b.mCommandButtonUp 
-             && mCommandButtonDown == b.mCommandButtonDown 
-             && mRegex == b.mRegex 
-             && mScript == b.mScript 
-             && mIsPushDownButton == b.mIsPushDownButton 
-             && mIsFolder == b.mIsFolder 
-             && mpHost == b.mpHost 
-             && mNeedsToBeCompiled == b.mNeedsToBeCompiled 
+    return ( mName == b.mName
+             && mCommandButtonUp == b.mCommandButtonUp
+             && mCommandButtonDown == b.mCommandButtonDown
+             && mRegex == b.mRegex
+             && mScript == b.mScript
+             && mIsPushDownButton == b.mIsPushDownButton
+             && mIsFolder == b.mIsFolder
+             && mpHost == b.mpHost
+             && mNeedsToBeCompiled == b.mNeedsToBeCompiled
              && mpToolBar == b.mpToolBar
              && mIcon == b.mIcon );
 }

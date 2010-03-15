@@ -184,6 +184,7 @@ private:
     QColor                                 mFgColor;
     QColor                                 mBgColor;
     bool                                   mIsColorizerTrigger;
+    bool                                   gotNewLine;
 
 
 };

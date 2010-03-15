@@ -86,12 +86,12 @@ public:
 
 };
 
-class TConsole : public QWidget 
+class TConsole : public QWidget
 {
 Q_OBJECT
 
 public:
-   
+
                         TConsole( Host *, bool isDebugConsole, QWidget * parent=0 );
 
       void              reset();
@@ -102,6 +102,9 @@ public:
       void              insertHTML( QString );
       void              insertText( QString );
       void              insertText( QString, QPoint );
+      void              insertLink( QString, QStringList &, QStringList &, QPoint, bool customFormat=false );
+      void              insertLink( QString, QStringList &, QStringList &, bool customFormat=false );
+      void              echoLink( QString & text, QStringList & func, QStringList & hint, bool customFormat=false );
       void              setLabelStyleSheet( std::string & buf, std::string & sh );
       void              copy();
       void              cut();
@@ -134,6 +137,7 @@ public:
       void              setFgColor( int, int, int );
       void              setBgColor( int, int, int );
       void              changeColors();
+      TConsole *        createBuffer( QString & name );
       void              scrollDown( int lines );
       void              scrollUp( int lines );
       void              print( QString &, int, int, int, int, int, int );
@@ -159,6 +163,7 @@ public:
       void              selectCurrentLine( std::string & );
       bool              setMiniConsoleFontSize( std::string &, int );
       void              setBold( bool );
+      void              setLink( QString & linkText, QStringList & linkFunction, QStringList & linkHint );
       void              setItalics( bool );
       void              setUnderline( bool );
       void              finalize();
@@ -172,13 +177,13 @@ public:
       int               mOldY;
       TTextEdit *       console;
       TTextEdit *       console2;
-      Host *            mpHost; 
+      Host *            mpHost;
       TBuffer           buffer;
       TBuffer           mClipboard;
       QScrollBar *      mpScrollBar;
       QWidget *         layerEdit;
       QWidget *         layer;
-      QWidget *         layerCommandLine;  
+      QWidget *         layerCommandLine;
       //QPushButton *     emergencyStop;
       QToolButton *     emergencyStop;
       QLineEdit *       networkLatency;
@@ -206,7 +211,7 @@ public:
       bool              mRecordReplay;
       QString           mLogFileName;
       dlgNotepad *      mpNotePad;
-
+      bool              mUserConsole;
 
 //private:
 
@@ -216,11 +221,11 @@ public:
       QTime             mProcessingTime;
       QString           getCurrentLine();
       void              selectCurrentLine();
-      QString           profile_name; 
+      QString           profile_name;
       TChar             mStandardFormat;
       //std::string       getCurrentTime();
       //void              translateToPlainText( QString & );
-     
+
       QString           logger_translate( QString & );
       void              logger_set_text_properties( QString );
       //void              set_text_properties( int formatPropertyCode );
@@ -265,15 +270,15 @@ public:
       bool              mIsSubConsole;
 
 signals:
-    
-    
-public slots:    
-      
+
+
+public slots:
+
       void              slot_toggleReplayRecording();
       void              slot_stop_all_triggers( bool );
       void              slot_toggleLogging();
       void              slot_user_scrolling( int );
-      
+
 };
 
 #endif

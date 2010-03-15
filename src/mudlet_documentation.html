@@ -496,11 +496,6 @@ div#toc a:visited { color: blue; }
 </li>
 </ol></div>
 </li>
-<li>
-<p>
-<a href="#testingTriggers">Testing your triggers</a>
-</p>
-</li>
 </ol></div>
 </li>
 <li>
@@ -560,21 +555,6 @@ div#toc a:visited { color: blue; }
 <li>
 <p>
 <a href="#lineTriggers">Using tempLineTrigger</a>
-</p>
-</li>
-<li>
-<p>
-<a href="#scripting-howtos">Scripting Howtos</a>
-</p>
-</li>
-<li>
-<p>
-<a href="#atcp">ATCP</a>
-</p>
-</li>
-<li>
-<p>
-<a href="#db">Database frontend</a>
 </p>
 </li>
 </ol></div>
@@ -16205,7 +16185,7 @@ Lua code that returns a truth value e.g. a call to a function check() that retur
 </ol></div>
 </div></div>
 <div class="paragraph"><p>In our example we chose condition type "substring" for all three conditions.
-Consequently, the trigger will fire the command or script 3 times i. e. the trigger will do on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.</p></div>
+Consequently, the trigger will fire the command or script 3 times i. e. the trigger will execute on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.</p></div>
 <div class="literalblock">
 <div class="content">
 <pre><tt>in line #1 we get: pond = true.
@@ -16262,10 +16242,6 @@ Check the Lua API table for reference.</p></div>
 <div class="paragraph"><p>Line triggers trigger on a specified line in the future - or a sequence of lines - irrespective of the content of the line. This type of triggers can be very handy in scripting if you know what is coming e.g. you want to parse a table from the MUD, maps etc.</p></div>
 <h3 id="enablingTriggers">Enabling and Disabling Triggers in Scripts</h3><div style="clear:left"></div>
 <div class="paragraph"><p>enableTrigger() disableTrigger()</p></div>
-<h3 id="testingTriggers">Testing your triggers</h3><div style="clear:left"></div>
-<h4 id="_externally">Externally</h4>
-<div class="paragraph"><p><a href="http://regexpal.com/">RegexPal</a> - a good website for testing your triggers against a set of text.
-<a href="http://code.google.com/p/kiki-re/">[kiki-re</a> - stand-alone program which will also tell you which matches are translated to what wildcard number.</p></div>
 </div>
 <h2 id="timers">The Timer Engine</h2>
 <div class="sectionbody">
@@ -20130,7 +20106,7 @@ matches[1] = "Betty"
 b = matches[1]
 c = a .. b and e will equal "TomBetty"</tt></pre>
 </div></div>
-<div class="paragraph"><p>To output a table you can use a convenience function printTable( name ). This function is defined in LuaGlobal.lua and can be found in your home directory under ./mudlet (note the leading dot ) Profiles and mudlet_documentation.html are stored in this directory as well.</p></div>
+<div class="paragraph"><p>To output a table you can use a convenience function printTable( name ). This function is defined in LuaGlobal.Lua and can be found in your home directory under ./mudlet (note the leading dot ) Profiles and mudlet_documentation.html are stored in this directory as well.</p></div>
 </div>
 <h2 id="_lua_interface_functions_to_mudlet_or_how_do_i_access_triggers_timers_etc_from_lua_scripts">Lua interface functions to Mudlet - or how do I access triggers, timers etc. from Lua scripts</h2>
 <div class="sectionbody">
@@ -20226,7 +20202,7 @@ replace( "Betty" )</tt></pre>
 <div class="content">
 <pre><tt>replaceAll( "Betty" )</tt></pre>
 </div></div>
-<div class="paragraph"><p>will replace all occurrences of "Tom" with "Betty" in the line if "Tom" has been selected before. replaceAll() is a convenience function defined in LuaGlobal.lua.</p></div>
+<div class="paragraph"><p>will replace all occurrences of "Tom" with "Betty" in the line if "Tom" has been selected before. replaceAll() is a convenience function defined in LuaGlobal.Lua.</p></div>
 <div class="paragraph"><p>Colorization example: You want to change to color of the words ugly monster to red on a white background.</p></div>
 <div class="paragraph"><p>You add a new trigger and define the regex: ugly monster
 In the script you write:</p></div>
@@ -20283,7 +20259,7 @@ Adding a user defined window:</p></div>
 <div class="paragraph"><p>setWindowSize( int x, int y )</p></div>
 <div class="paragraph"><p>clearWindow( string window_name )</p></div>
 <div class="paragraph"><p>Dynamic Timers</p></div>
-<div class="paragraph"><p>tempTimer( double timeout, string lua code_to_execute, string/float/int timer_name )
+<div class="paragraph"><p>tempTimer( double timeout, string Lua_code_to_execute, string/float/int timer_name )
 disableTimer( name )
 enableTimer( name )</p></div>
 </div>
@@ -20386,314 +20362,9 @@ mySilver = mySilver + tonumber( multimatches[1][3] );</tt></pre>
 </div></div>
 <div class="paragraph"><p>What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines.</p></div>
 </div>
-<h2 id="scripting-howtos">Scripting howtos</h2>
-<div class="sectionbody">
-<h3 id="_how_to_highlight_my_current_target">How to highlight my current target?</h3><div style="clear:left"></div>
-<div class="paragraph"><p>You can put the following script into your targetting alias:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>if id then killTrigger(id) end
-id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])</tt></pre>
-</div></div>
-<div class="paragraph"><p>Where <tt>target</tt> is your target variable. Note that you have to use the full name, capitalized. If you&#8217;d like the script to auto-capitalize for you, you can use this version*:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>target = capitalize(target)
-if id then killTrigger(id) end
-id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])</tt></pre>
-</div></div>
-<div class="paragraph"><p><sup>*requires Mudlet 1.0.6 or the <a href="http://forums.mudlet.org/viewtopic.php?f=5&amp;t=92&amp;p=2210#p2210">capitalize function</a> in a script.</sup></p></div>
-</div>
-<h2 id="atcp">ATCP</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Since version 1.0.6, Mudlet includes support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough such that any it should work on others.</p></div>
-<div class="paragraph"><p>The latest ATCP data is stored in the <tt>atcp</tt> table. Whenever new data arrives, the previous is overwritten. An event is also raised for each ATCP message that arrives. To find out the available messages available in the <tt>atcp</tt> table and the event names, you can use <tt>display(atcp)</tt>.</p></div>
-<div class="paragraph"><p>Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is removed - so it becomes CharVitals and RoomExits. Here&#8217;s an example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>room_number = tonumber(atcp.RoomNum)
-echo(room_number)</tt></pre>
-</div></div>
-<h3 id="_triggering_on_atcp_events">Triggering on ATCP events</h3><div style="clear:left"></div>
-<div class="paragraph"><p>If you&#8217;d like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages. The ATCP handler names follow the same format as the <tt>atcp</tt> table - RoomNum, RoomExits, CharVitals and so on.</p></div>
-<div class="paragraph"><p>While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place the event name you&#8217;d like your script to listen to into the <tt>Add User Defined Event Handler:</tt> field and press the + button to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function should it call for you when your handler receives a message. You do that by setting the <tt>Script name:</tt> to the function name in the script you&#8217;d like to be called.</p></div>
-<div class="paragraph"><p>For example, if you&#8217;d like to listen to the RoomExits event and have it call the <tt>process_exits()</tt> function - register RoomExits as the event handler, make the script name be <tt>process_exits</tt>, and use this in the script:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>function process_exits(event, args)
-    echo("Called event: " .. event .. "\nWith args: " .. args)
-end</tt></pre>
-</div></div>
-<div class="paragraph"><p>Feel free to experiment with this to receive the desires results. An <a href="http://forums.mudlet.org/viewtopic.php?f=6&amp;t=1243">ATCP demo package</a> is also available on the forums for using event handlers and parsing it&#8217;s messages into Lua datastructures.</p></div>
-</div>
-<h2 id="db">db: Mudlet DB Frontend</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>The DB package is meant to provide easier access to a database, so  you don&#8217;t have to know SQL or use the luasql module to set and get at your data. However, it does require that the luasql module be compiled and included in Mudlet to function - and this all is available since Mudlet 1.0.6.</p></div>
-<h3 id="_creating_a_database">Creating a Database</h3><div style="clear:left"></div>
-<div class="paragraph"><p>Before you can store anything in a database, you need to create one. You may have as many independent databases as you wish, with each having as many unique tables-- what we will call sheets in this package, so as to avoid confusion with Lua tables - think spreadsheets.</p></div>
-<div class="paragraph"><p>To create a database, you use the db:create() function, passing it the name of your database and a Lua table containing its schema configuration. A schema is a mold for your database - it defines what goes where. Using the spreadsheet example, ths would mean that you&#8217;d define what goes into each column. A simple example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes"}})</tt></pre>
-</div></div>
-<div class="paragraph"><p>This will create a database which contains two sheets: one named friends, the other named enemies. Each has three columns, name, city and notes-- and the datatype of each are strings, though the types are very flexible and can be changed basically whenever you would like. It&#8217;ll be stored in a file named Database_people.db in your Mudlet config directory on the hard drive should you want to share it.</p></div>
-<div class="paragraph"><p>It&#8217;s okay to run this function repeatedly, or to place it at the top-level of a script so that it gets run each time the script is saved: the DB package will not wipe out or clear the existing data in this case. More importantly, this allows you to add columns to an existing sheet. If you change that line to:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes", "enemied"}})</tt></pre>
-</div></div>
-<div class="paragraph"><p>It will notice that there is a new column on enemies, and add it to the existing sheet-- though the value will end up as nil for any rows which are already present. Similarly, you can add whole new sheets this way. It is not presently possible to -remove- columns or sheets without deleting the database and starting over.</p></div>
-<div class="paragraph"><p>A note on column or field names: you may not create a field which begins with an underscore. This is strictly reserved to the db package for special use.</p></div>
-<h3 id="_adding_data">Adding Data</h3><div style="clear:left"></div>
-<div class="paragraph"><p>To add data to your database, you must first obtain a reference (variable) for it. You do that with the db:fetch_database function, such as:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        local mydb = db:fetch_database("people")</tt></pre>
-</div></div>
-<div class="paragraph"><p>The database object contains certain convenience functions (discussed later, but all are preceded with an underscore), but also a reference to every sheet that currently exists within the database. You then use the db:add() function to add data to the specified sheet.</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:add(mydb.friends, {name="Ixokai", city="Magnagora"})</tt></pre>
-</div></div>
-<div class="paragraph"><p>If you would like to add multiple rows at once to the same table, you can do that by just passing in multiple tables:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:add(mydb.friends,
-                {name="Ixokai", city="Magnagora"},
-                {name="Vadi", city="New Celest"},
-                {name="Heiko", city="Hallifax", notes="The Boss"}
-        )</tt></pre>
-</div></div>
-<div class="paragraph"><p>Notice that by default, all columns of every table are considered optional-- if you don&#8217;t include it in the add, then it will be set to its default value (which is nil by default)</p></div>
-<div class="paragraph"><p>For those familiar with databases: with the DB package, you don&#8217;t have to worry about <em>committing</em> or <em>rolling back</em> any changes, it will commit after each action automatically. If you would like more control then this, see Transactions below.</p></div>
-<div class="paragraph"><p>You also cannot control what is the primary key of any sheets managed with DB, nor do you have to create one. Each row will get a unique integer ID that automatically increments, and this field can be accessed as "_row_id".</p></div>
-<h3 id="_querying">Querying</h3><div style="clear:left"></div>
-<div class="paragraph"><p>Putting data in isn&#8217;t any fun if you can&#8217;t get it out. If you want every row from the sheet, you can do:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends)</tt></pre>
-</div></div>
-<div class="paragraph"><p>But rarely is that actually useful; usually you want to get only select data. For example, you only want to get people from the city of Magnagora. To do that you need to specify what criteria the system should use to determine what to return to you. It looks like this:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"))</tt></pre>
-</div></div>
-<div class="paragraph"><p>So the basic command is - <tt>db:fetch(_sheet_, _what to filter by_)</tt></p></div>
-<div class="paragraph"><p>The following filter operations are defined:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:eq(field, value[, case_insensitive]) -- Defaults to case insensitive, pass true as the last arg to reverse this behavior.
-        db:not_eq(field, value[, case_insensitive) -- Not Equal To
-        db:lt(field, value) -- Less Than
-        db:lte(field, value) -- Less Than or  Equal to.
-        db:gt(field, value) -- Greater Than
-        db:gte(field, value) -- Greater Than or Equal To
-        db:is_nil(field) -- If the column is nil
-        db:is_not_nil(field) -- If the column is not nil
-        db:like(field, pattern) -- A simple matching pattern. An underscore matches any single character, and a percent(%) matches zero or more characters. Case insensitive.
-        db:not_like(field, pattern) -- As above, except it'll give you everything but what you ask for.
-        db:between(field, lower_bound, upper_bound) -- Tests if the field is between the given bounds (numbers only).
-        db:not_between(field, lower_bound, upper_bound) -- As above, only... not.
-        db:in_(field, table) -- Tests if the field is in the values of the table. NOTE the trailing underscore!
-        db:not_in(field, table) -- Tests if the field is NOT in the values of the table *</tt></pre>
-</div></div>
-<div class="paragraph"><p>The db:in_ operator takes a little more explanation. Given a table, it tests if any of the values in the table are in the sheet. For example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:in_(mydb.friends.city, {"Magnagora", "New Celest"})</tt></pre>
-</div></div>
-<div class="paragraph"><p>It tests if <tt>city == "Magnagora" OR city == "New Celest"</tt>, but with a more concise syntax for longer lists of items.</p></div>
-<div class="paragraph"><p>There are also two logical operators:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:AND(operation1, ..., operationN)
-        db:OR(operation1, operation2)</tt></pre>
-</div></div>
-<div class="paragraph"><p>You may pass multiple operations to db:fetch in a table array, and they will be joined together with an AND by default. For example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends,
-                {db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "X%")}
-        )</tt></pre>
-</div></div>
-<div class="paragraph"><p>This will return every record in the sheet which is in the city of Magnagora, and has a name that starts with an X. Again note that in LIKE patterns, a percent is <em>zero or more characters</em>&#8201;&#8212;&#8201;this is the same effect as "X.*" in pcre patterns. Similarly, an underscore matches any single characters and so is the same as a dot in pcre.</p></div>
-<div class="paragraph"><p>Passing multiple expressions in an array to db:fetch is just a convenience, as its exactly the same as:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends, db:AND(db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "I%")))</tt></pre>
-</div></div>
-<div class="paragraph"><p>The db:OR operation only takes two arguments, and will check to see if either of the two is true. You can nest these logical operators as deeply as you need to.</p></div>
-<div class="paragraph"><p>You can also just pass in a string directly to db:fetch, but you have to be very careful as this will be passed straight to the SQL layer. If you don&#8217;t know any SQL then you want to avoid this&#8230; for example, in SQL there&#8217;s a very big difference between double and single quotes. If you don&#8217;t know that, then stick to the db functions. But an example is:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends, "city == 'Magnagora'")</tt></pre>
-</div></div>
-<div class="paragraph"><p>Now, the return value of db:fetch() is always a table array that contains a table dictionary representing the full contents of all matching rows in the sheet. For example, if a request from the friends sheet were to return one row, it would look like this if passed into the display() function:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>    table {
-        1: table {
-            'name': 'Bob',
-            'city': 'Magnagora',
-            'notes': 'Trademaster of Tailoring'
-        }
-    }</tt></pre>
-</div></div>
-<div class="paragraph"><p>The order of the returned rows from db:fetch is generally the same as the order in which you entered them into the database, but no actual guarantees are made to this. If you care about the order then you can pass one or two optional parameters after the query to db:fetch() to control this.</p></div>
-<div class="paragraph"><p>The first table array of fields that indicate the column names to sort by; the second is a flag to switch from the default ascending(smallest to largest) sort, to a descending(largest to smallest) sort. For example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city})</tt></pre>
-</div></div>
-<div class="paragraph"><p>This will return all your friends in Magnagora, sorted by their name, from smallest to largest. To reverse this, you would simply do:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city}, true)</tt></pre>
-</div></div>
-<div class="paragraph"><p>Including more then one field in the array will indicate that in the case that two rows have the same value, the second field should be used to sort them.</p></div>
-<div class="paragraph"><p>If you would like to return ALL rows from a sheet, but still sort them, you can do that by passing nil into the query portion. For example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.friends, nil, {mydb.friends.city, mydb.friends.name})</tt></pre>
-</div></div>
-<div class="paragraph"><p>This will return every friend you have, sorted first by city and then their name.</p></div>
-<h3 id="_indexes_and_types">Indexes and Types</h3><div style="clear:left"></div>
-<div class="paragraph"><p>The sheets we&#8217;ve defined thus far are very simple, but you can take more control over the process if you need to. For example, you may assign default values and types to columns, and the DB package will attempt to coerce them as appropriate. To do that, you change your db:create() call as:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:create("people", {
-                friends={"name", "city", "notes"},
-                enemies={
-                        name="",
-                        city="",
-                        notes="",
-                        enemied="",
-                        kills=0
-                }
-        })</tt></pre>
-</div></div>
-<div class="paragraph"><p>This is almost the same as the original definition, but we&#8217;ve defined that our first four fields are strings with a default value of blank, and the new kills field which is an integer that starts off at 0. The only way to set a datatype is to set a default value at this time.</p></div>
-<div class="paragraph"><p>Please note, beneath the DB package is <a href="http://www.sqlite.org/">SQLite</a>, and SQLite is very data-type neutral. It doesn&#8217;t really care very much if you break those rules and put an integer in a string field or vice-versa, but the DB package will&#8201;&#8212;&#8201;to a limited degree&#8201;&#8212;&#8201;attempt to convert as appropriate, especially for the operations that work on numbers.</p></div>
-<div class="paragraph"><p>You may also create both standard and unique indexes. A unique index enforces that a certain criteria can only happen once in the sheet. Now, before you go and make indexes, pause and consider. There is no right or wrong answer when it comes to what to index: it depends on what kind of queries you do regularly. If in doubt, don&#8217;t make an index. Indexes will speed up reading data from the sheet, but they will slow down writing data.</p></div>
-<div class="paragraph"><p>To add an index, pass either the _index or _unique keys in the table definition. An example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:create("people", {
-                friends={"name", "city", "notes"},
-                enemies={
-                        name="",
-                        city="",
-                        notes="",
-                        enemied="",
-                        kills=0,
-                        _index = { "city" },
-                        _unique = { "name" }
-                }
-        })</tt></pre>
-</div></div>
-<div class="paragraph"><p>You can also create compound indexes, which is a very advanced thing to do. One could be: <tt>_unique = { {"name", "city"} }</tt></p></div>
-<div class="paragraph"><p>This would produce an effect that there could be only one "Bob" in Magnagora, but he and "Bob" in Celest could coexist happily.</p></div>
-<div class="paragraph"><p>Now, bear in mind: <tt>_index = { "name", "city"}</tt> creates two indexes in this sheet. One on the city field, one on the name field. But, <tt>_index = { {"name", "city"} }</tt> creates one index: on the combination of the two. Compound indexes help speed up queries which frequently scan two fields together, but don&#8217;t help if you scan one or the other.</p></div>
-<div class="paragraph"><p>The admonition against making indexes willy-nilly holds double for compound indexes: do it only if you really need to!</p></div>
-<h4 id="_timestamps">Timestamps</h4>
-<div class="paragraph"><p>In addition to strings and floats, the db module also has basic support for timestamps. In the database itself this is recorded as an integer (seconds since 1970) called an epoch, but you can easily convert them to strings for display, or even time tables to use with Lua&#8217;s built-in time support.</p></div>
-<div class="paragraph"><p>The most common use for the Timestamp type is where you want the database to automatically record the current time whenever you insert a new row into a sheet. The following example illustrates that:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        local mydb = db:create("combat_log",
-           {
-              kills = {
-                 name = "",
-                 area = "",
-                 killed = db:Timestamp("CURRENT_TIMESTAMP"),
-                 _index = { {"name", "killed"} }
-              }
-           }
-        )
-
-
-        db:add(mydb.kills, {name="Drow", area="Undervault"})
-
-        results = db:fetch(mydb.kills)
-        display(results)</tt></pre>
-</div></div>
-<div class="paragraph"><p>The result of that final display would show you this on a newly created sheet:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        table {
-          1: table {
-            '_row_id': 1
-            'area': 'Undervault'
-            'name': 'Drow'
-            'killed': table {
-              '_timestamp': 1264317670
-            }
-          }</tt></pre>
-</div></div>
-<div class="paragraph"><p>As you can see from this output, the killed fields contains a timestamp-- and that timestamp is stored as an epoch value. For your convienance, the db.Timestamp type offers three functions to get the value of the timestamp in easy formats. They are as_string, as_number and as_table, and are called on the timestamp value itself.</p></div>
-<div class="paragraph"><p>The as_number function returns the epoch number, and the as_table function returns a time table. The as_string function returns a string representation of the timestamp, with a default format of "%m-%d-%Y %H:%M:%S". You can override this format to anything you would like. Details of what you can do with epoch values, time tables, and what format codes you can use are specified in the Lua manual at: <a href="http://www.lua.org/pil/22.1.html">http://www.lua.org/pil/22.1.html</a> for the Lua date/time functions.</p></div>
-<div class="paragraph"><p>A quick example of the usage of these functions is:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        results = db:fetch(mydb.kills)
-        for _, row in ipairs(results) do
-                echo("You killed " .. row.name .. " at: " .. row.killed:as_string() .."\n")
-        end</tt></pre>
-</div></div>
-<h3 id="_deleting">Deleting</h3><div style="clear:left"></div>
-<div class="paragraph"><p>The db:delete function is used to delete rows from the sheet. It takes two arguments, the first being the sheet you are deleting and the second a query string built using the same functions used to build db:fetch() queries.</p></div>
-<div class="paragraph"><p>For example, to delete all your enemies in the city of Magnagora, you would do:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:delete(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))</tt></pre>
-</div></div>
-<div class="paragraph"><p>Be careful in writing these! You may inadvertantly wipe out huge chunks of your sheets if you don&#8217;t have the query parameters set just to what you need them to be. Its advised that you first run a db:fetch() with those parameters to test out the results they return.</p></div>
-<div class="paragraph"><p>As a convienence, you may also pass in a result table that was previously retrieved via db:fetch and it will delete only that record from the table. For example, the following will get all of the enemies in Magnagora, and then delete the first one:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        results = db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))
-        db:delete(mydb.enemies, db:eq(mydb.enemies._row_id, results[1]._row_id))</tt></pre>
-</div></div>
-<div class="paragraph"><p>That is equivelent to:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:delete(mydb.enemies, results[1])</tt></pre>
-</div></div>
-<div class="paragraph"><p>You can even pass a number directly to db:delete if you know what _row_id you want to purege.</p></div>
-<div class="paragraph"><p>A final note of caution: if you want to delete all the records in a sheet, you can do so by only passing in the table reference. To try to protect you from doing this inadvertantly, you must also pass <em>true</em> as the query after:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:delete(mydb.enemies, true)</tt></pre>
-</div></div>
-<h3 id="_updating">Updating</h3><div style="clear:left"></div>
-<div class="paragraph"><p>If you make a change to a table that you have received via db:fetch(), you can save those changes back to the database by doing:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:update(mydb.enemies, results[1])</tt></pre>
-</div></div>
-<div class="paragraph"><p>A more powerful (and somewhat dangerous, be careful!) function to make changes to the database is db:set, which is capable of making sweeping changes to a column in every row of a sheet. Beware, if you have previously obtained a table from db:fetch, that table will NOT represent this change.</p></div>
-<div class="paragraph"><p>The db:set() function takes two arguments: the field to change, the value to set it to, and the db:fetch() like query to indicate which rows should be affected. If you pass true as the last argument, ALL rows will be changed.</p></div>
-<div class="paragraph"><p>To clear out the notes of all of our friends in Magnagora, we could do:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:set(mydb.friends.notes, "", db:eq(mydb.friends.notes, "Magnagora"))</tt></pre>
-</div></div>
-<div class="paragraph"><p>Be careful in writing these!</p></div>
-<h3 id="_transactions">Transactions</h3><div style="clear:left"></div>
-<div class="paragraph"><p>As was specified earlier, by default the db module commits everything immediately whenever you make a change. For power-users, if you would like to control transactions yourself, the following functions are provided on your database instance:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        local mydb = db:fetch_database("my_database")
-        mydb._begin()
-        mydb._commit()
-        mydb._rollback()
-        mydb._end()</tt></pre>
-</div></div>
-<div class="paragraph"><p>Once you issue a mydb._begin() command, autocommit mode will be turned off and stay off until you do a mydb._end(). Thus, if you want to always use transactions explicitly, just put a mydb._begin() right after your db:create() and that database will always be in manual commit mode.</p></div>
-</div>
 <h2 id="migrating">Migrating to Mudlet</h2>
 <div class="sectionbody">
-<h3 id="_from_nexus">From Nexus</h3><div style="clear:left"></div>
+<h3 id="_nexus">Nexus</h3><div style="clear:left"></div>
 <h4 id="_trigger_patterns">Trigger patterns</h4>
 <div class="paragraph"><p>Lets start with triggers. For translating Nexus patterns into Mudlet, use the following table below. Make sure to set the pattern type in Mudlet to be <tt>perl regex</tt>, because the default <tt>substring</tt> works differently.</p></div>
 <div class="tableblock">
@@ -20804,7 +20475,7 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 </div>
 <h4 id="_basic_scripting">Basic scripting</h4>
 <div class="paragraph"><p>The Nexus way of doing a function is like this: #<em>function</em> <tt>stuff it does</tt>. In Mudlet, it&#8217;s <em>function(</em><tt>stuff it does</tt><em>)</em>. Note that if you&#8217;d like to give text to a function, you put it inside double or single quotes.</p></div>
-<h5 id="_nexus">Nexus</h5>
+<h5 id="_nexus_2">Nexus</h5>
 <div class="listingblock">
 <div class="content">
 <pre><tt>#send hi
@@ -20816,8 +20487,8 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 <pre><tt>send ("hi")
 echo ("Hello to me!")</tt></pre>
 </div></div>
-<div class="paragraph"><p>If you&#8217;d like to use a variable inside text, you&#8217;d put it outside the quotes and glue it together with two dots.</p></div>
-<h5 id="_nexus_2">Nexus</h5>
+<div class="paragraph"><p>If you&#8217;d like to use a variable inside text, you&#8217;d put it outside the text and glue it together with two dots.</p></div>
+<h5 id="_nexus_3">Nexus</h5>
 <div class="listingblock">
 <div class="content">
 <pre><tt>#set number 1234
@@ -20831,32 +20502,6 @@ echo ("Hello to me!")</tt></pre>
 echo ("My number is: " .. number)
 echo ("the " .. number .. " is in the middle of my text")</tt></pre>
 </div></div>
-<h4 id="_wildcards_in_mudlet">wildcards in Mudlet</h4>
-<div class="paragraph"><p>To use the wildcard variable in Nexus, you&#8217;d use $1 for the first match, $2 for the second and so on. In Mudlet, the matches[] table contains the matches - and it starts placing the matches from 2. So the Nexus $1 would be matches[2], $2 would be matches[3].</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>Nexus:
-{w} kicks you.
-#set badguy $1
-#echo $badguy kicked me!
-
-Mudlet:
-(\w+) kicks you\.
-badguy = matches[2]
-echo(badguy .. " kicked me!")</tt></pre>
-</div></div>
-<div class="paragraph"><p>Another example would be the targetting alias:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>Nexus:
-alias name: t
-alias script: #set target $1
-
-Mudlet:
-alias pattern: ^t (.*)$
-alias script: target = matches[2]</tt></pre>
-</div></div>
-<div class="paragraph"><p>The reason the first match goes into matches[2] and not matches[1] is because matches[1] contains the part of the line that matched your trigger / alias.</p></div>
 <h4 id="_ifs_in_mudlet">ifs in Mudlet</h4>
 <div class="paragraph"><p>Next are the <em>#if</em> statements. Here&#8217;s a table comparing the syntaxes of Nexus and Mudlet:</p></div>
 <div class="tableblock">
@@ -21176,11 +20821,6 @@ cellspacing="0" cellpadding="4">
 <a href="http://lua-users.org/wiki/TutorialDirectory">A ton of useful Lua mini-tutorials</a>
 </p>
 </li>
-<li>
-<p>
-<a href="http://wowprogramming.com/utils/weblua">A Lua console in your browser, use when doing tutorials</a>
-</p>
-</li>
 </ul></div>
 </div>
 <h2 id="apiIndex">Alphabetical Function Index</h2>
@@ -21197,8 +20837,7 @@ cellspacing="0" cellpadding="4">
 </div>
 <h2 id="_c">C</h2>
 <div class="sectionbody">
-<div class="paragraph"><p><a href="#calcFontSize">calcFontSize</a>,
-<a href="#clearUserWindow">clearUserWindow</a>,
+<div class="paragraph"><p><a href="#clearUserWindow">clearUserWindow</a>,
 <a href="#copy">copy</a>,
 <a href="#createBuffer">createBuffer</a>,
 <a href="#createLabel">createLabel</a>,
@@ -21208,39 +20847,14 @@ cellspacing="0" cellpadding="4">
 </div>
 <h2 id="_d">D</h2>
 <div class="sectionbody">
-<div class="paragraph"><p><a href="#datetime_parse">datetime:parse</a>
-<a href="#debug">debug</a>
+<div class="paragraph"><p><a href="#debug">debug</a>
 <a href="#deleteLine">deleteLine</a>,
 <a href="#disableAlias">disableAlias</a>,
 <a href="#disableKey">disableKey</a>,
 <a href="#disableTimer">disableTimer</a>,
 <a href="#disableTrigger">disableTrigger</a>,
 <a href="#disconnect">disconnect</a>,
-<a href="#display">display</a>,
-<a href="#db_add">db:add</a>,
-<a href="#db_AND">db:AND</a>,
-<a href="#db_between">db:between</a>,
-<a href="#db_create">db:create</a>,
-<a href="#db_delete">db:delete</a>,
-<a href="#db_eq">db:eq</a>,
-<a href="#db_exp">db:exp</a>,
-<a href="#db_fetch">db:fetch</a>,
-<a href="#db_fetch_database">db:fetch_database</a>,
-<a href="#db_gt">db:gt</a>,
-<a href="#db_gte">db:gte</a>,
-<a href="#db_in_">db:in_</a>,
-<a href="#db_is_nil">db:is_nil</a>,
-<a href="#db_is_not_nil">db:is_not_nil</a>,
-<a href="#db_like">db:like</a>,
-<a href="#db_lt">db:lt</a>,
-<a href="#db_lte">db:lte</a>,
-<a href="#db_not_between">db:not_between</a>,
-<a href="#db_not_eq">db:not_eq</a>,
-<a href="#db_not_in">db:not_in</a>,
-<a href="#db_not_like">db:not_like</a>,
-<a href="#db_OR">db:OR</a>,
-<a href="#db_set">db:set</a>,
-<a href="#db_update">db:update</a>,</p></div>
+<a href="#display">display</a>,</p></div>
 </div>
 <h2 id="_e">E</h2>
 <div class="sectionbody">
@@ -21393,8 +21007,8 @@ send( "Hello Jane", false ) --does not echo the command on the screen</tt></pre>
 </div>
 <h2 id="echo">echo( windowName, text )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>This function appends text at the end of the current line. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.</p></div>
-<div class="paragraph"><p>If the first argument is omitted the main console is used, otherwise the mini console windowName.
+<div class="paragraph"><p>This function appends text at the end of the current line. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
+If the first argument is omitted the main console is used, otherwise the mini console windowName.
 === Example 1:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -21415,7 +21029,7 @@ NOTE: to prevent selection of random data use the error return if not found like
 <div class="sectionbody">
 <div class="paragraph"><p>deletes the current Line under the user cursor. Note: This is a high speed gagging tool and it is very good at this task. It is meant to be used when the line can be omitted entirely in the output. If you want to replace this line with something else have a look at the replace() functions below. Note that scripts such as: deleteLine(); echo("this line is gone"); will not work because lines that have been gagged with deleteLine() will not be rendered even if there is text in the buffer. &#8594; wrapLine() for details on how to force a re-render if this is necessary for some reason. This is not the recommended way of replacing text. <a href="#replace">&#8594; replace()</a> and <a href="#wrapLine">wrapLine()</a></p></div>
 </div>
-<h2 id="_temptimer_seconds_lua_code">tempTimer( seconds, lua code )</h2>
+<h2 id="_temptimer_seconds_lua_code">tempTimer( seconds, Lua_code )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a temporary single shot timer. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed. see <a href="#tempTimer">here</a> for details.</p></div>
 </div>
@@ -21439,375 +21053,38 @@ NOTE: to prevent selection of random data use the error return if not found like
 <div class="sectionbody">
 <div class="paragraph"><p>inserts text at cursor position in window windowName</p></div>
 </div>
-<h2 id="suffix">suffix( text )</h2>
+<h2 id="suffix">suffix( what )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Suffixes text at the end of the current line when used in a trigger.</p></div>
+<div class="paragraph"><p>prints "what" at the end of the line when used in a trigger script</p></div>
 </div>
-<h2 id="prefix">prefix( text )</h2>
+<h2 id="prefix">prefix( what )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Prefixes text at the beginning of the current line when used in a trigger.</p></div>
-<h3 id="_example">Example:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that
-prefix(os.date("%H:%M:%S "))</tt></pre>
-</div></div>
+<div class="paragraph"><p>prints "what" at the beginning of a line when used in a trigger script</p></div>
 </div>
-<h2 id="permAlias">permAlias(name, parent, regex, lua code)</h2>
+<h2 id="permAlias">permAlias(name, parent, regex, Lua_code)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a persistent alias that stays after Mudlet is restarted and shows up in the Script Editor.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-<tt>name</tt> is the name you&#8217;d like the alias to have.
-</p>
-</li>
-<li>
-<p>
-<tt>parent</tt> is the name of the group, or another alias you want the trigger to go in - however if such a group/alias doesn&#8217;t exist, it won&#8217;t do anything. Use "" to make it not go into any groups.
-</p>
-</li>
-<li>
-<p>
-<tt>regex</tt> is the pattern that you&#8217;d like the alias to use.
-</p>
-</li>
-<li>
-<p>
-<tt>lua code</tt> is the script the alias will do when it matches.
-</p>
-</li>
-</ul></div>
+<div class="paragraph"><p>Name is the alias name, parent is the name of the alias group you want the alias to go in. Regex is the alias pattern that you&#8217;d like to have it match,  and Lua_code is a string containing the alias script.</p></div>
 <div class="paragraph"><p>Examples:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>-- creates an alias called "new alias" in a group called "my group"
-permAlias("new alias", "my group", "^test$", [[echo ("say it works! This alias will show up in the script editor too.")]])</tt></pre>
+<pre><tt>permAlias("new alias", "my group", "^test$", [[echo ("say it works! This alias will show up in the script editor momentarily.")]])</tt></pre>
 </div></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Note" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">
-<div class="paragraph"><p>Note that Mudlet by design allows duplicate names - so calling permAlias with the same name will keep creating new aliases. You can check if an alias already exists with the <a href="#exists">exists()</a> function.</p></div>
-</td>
-</tr></table>
 </div>
-</div>
-<h2 id="permSubstringTrigger">permSubstringTrigger( name, parent, pattern, lua code )</h2>
+<h2 id="permSubstringTrigger">permSubstringTrigger( name, parent, pattern, Lua_code )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a persistent trigger with a <tt>substring</tt> pattern that stays after Mudlet is restarted and shows up in the Script Editor.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-<tt>name</tt> is the name you&#8217;d like the trigger to have.
-</p>
-</li>
-<li>
-<p>
-<tt>parent</tt> is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn&#8217;t exist, it won&#8217;t do anything. Use "" to make it not go into any groups.
-</p>
-</li>
-<li>
-<p>
-<tt>pattern table</tt> is a table of patterns that you&#8217;d like the trigger to use - it can be one or many.
-</p>
-</li>
-<li>
-<p>
-<tt>lua code</tt> is the script the trigger will do when it matches.
-</p>
-</li>
-</ul></div>
-<h3 id="_example_3">Example:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- Create a trigger to highlight the word "pixie" for us
-permSubstringTrigger("Highlight stuff", "General", {"pixie"}, [[selectString(line, 1) bg("yellow") resetFormat()]])
-
--- Or another trigger to highlight several different things
-permSubstringTrigger("Highlight stuff", "General", {"pixie", "cat", "dog", "rabbit"}, [[selectString(line, 1) fg ("blue") bg("yellow") resetFormat()]])</tt></pre>
-</div></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Note" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">
-<div class="paragraph"><p>Note that Mudlet by design allows duplicate names - so calling permSubstringTrigger with the same name will keep creating new triggers. You can check if a trigger already exists with the <a href="#exists">exists()</a> function.</p></div>
-</td>
-</tr></table>
+<div class="paragraph"><p><tt>name</tt> is the the trigger name and <tt>parent</tt> is the name of the group you want the trigger to go in. <tt>pattern</tt> is the substring trigger pattern you&#8217;d like to use, and Lua_code is the script the trigger will execute when it matches.</p></div>
 </div>
-</div>
-<h2 id="permRegexTrigger">permRegexTrigger( name, parent, pattern, lua code )</h2>
+<h2 id="permRegexTrigger">permRegexTrigger( name, parent, pattern, Lua_code )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a persistent trigger with a <tt>regex</tt> pattern that stays after Mudlet is restarted and shows up in the Script Editor.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-<tt>name</tt> is the name you&#8217;d like the trigger to have.
-</p>
-</li>
-<li>
-<p>
-<tt>parent</tt> is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn&#8217;t exist, it won&#8217;t do anything. Use "" to make it not go into any groups.
-</p>
-</li>
-<li>
-<p>
-<tt>pattern table</tt> is a table of patterns that you&#8217;d like the trigger to use - it can be one or many.
-</p>
-</li>
-<li>
-<p>
-<tt>lua code</tt> is the script the trigger will do when it matches.
-</p>
-</li>
-</ul></div>
-<h3 id="_example_4">Example:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- Create a regex trigger that will match on the prompt to record your status
-permRegexTrigger("Prompt", "", {"^(\d+)h, (\d+)m"}, [[health = tonumber(matches[2]; mana = tonumber(matches[3])]]</tt></pre>
-</div></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Note" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">
-<div class="paragraph"><p>Note that Mudlet by design allows duplicate names - so calling permRegexTrigger with the same name will keep creating new triggers. You can check if a trigger already exists with the <a href="#exists">exists()</a> function.</p></div>
-</td>
-</tr></table>
+<div class="paragraph"><p><tt>name</tt> is the the trigger name and <tt>parent</tt> is the name of the group you want the trigger to go in. <tt>pattern</tt> is the regex trigger pattern you&#8217;d like to use, and Lua_code is the script the trigger will execute when it matches.</p></div>
 </div>
-</div>
-<h2 id="permBeginOfLineStringTrigger">permBeginOfLineStringTrigger( name, parent, pattern table, lua code )</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Creates a persistent trigger with a <tt>begin of line substring</tt> pattern that shows up in the Script Editor andstays after Mudlet is restarted.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-<tt>name</tt> is the name you&#8217;d like the trigger to have.
-</p>
-</li>
-<li>
-<p>
-<tt>parent</tt> is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn&#8217;t exist, it won&#8217;t do anything. Use "" to make it not go into any groups.
-</p>
-</li>
-<li>
-<p>
-<tt>pattern table</tt> is a table of patterns that you&#8217;d like the trigger to use - it can be one or many.
-</p>
-</li>
-<li>
-<p>
-<tt>lua code</tt> is the script the trigger will do when it matches.
-</p>
-</li>
-</ul></div>
-<h3 id="_example_5">Example:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- Create a trigger that will match on anything that starts with "You sit" and do "stand".
--- It will not go into any groups, so it'll be on the top.
-permBeginOfLineStringTrigger("Stand up", "", {"You sit"}, [[send ("stand")]])
-
--- Another example - lets put our trigger into a "General" folder and give it several patterns.
-permBeginOfLineStringTrigger("Stand up", "General", {"You sit", "You fall", "You are knocked over by"}, [[send ("stand")]])</tt></pre>
-</div></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Note" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">
-<div class="paragraph"><p>Note that Mudlet by design allows duplicate names - so calling permBeginOfLineStringTrigger with the same name will keep creating new triggers. You can check if a trigger already exists with the <a href="#exists">exists()</a> function.</p></div>
-</td>
-</tr></table>
-</div>
-</div>
-<h2 id="permTimer">permTimer(name, parent, seconds, lua code)</h2>
+<h2 id="permTimer">permTimer(name, parent, seconds, Lua_code)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a persistent timer that stays after Mudlet is restarted and shows up in the Script Editor.</p></div>
-<div class="paragraph"><p>Name is the timer name, parent is the name of the timer group you want the timer to go in. Seconds is a number specifying a delay after which the timer will do the lua code you give it as a string.</p></div>
+<div class="paragraph"><p>Name is the timer name, parent is the name of the timer group you want the timer to go in. Seconds is a number specifying a delay after which the timer will execute the Lua_code you give it as a string.</p></div>
 </div>
 <h2 id="_examples">Examples:</h2>
 <div class="sectionbody">
@@ -21815,60 +21092,6 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 <div class="content">
 <pre><tt>permTimer("my timer", "first timer group", 4.5, [[send ("my timer that's in my first timer group fired!")]])</tt></pre>
 </div></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Note" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">
-<div class="paragraph"><p>Note that Mudlet by design allows duplicate names - so calling permTimer with the same name will keep creating new timers. You can check if a timer already exists with the <a href="#exists">exists()</a> function.</p></div>
-</td>
-</tr></table>
-</div>
 </div>
 <h2 id="selectSection">selectSection( from, length_of_string )</h2>
 <div class="sectionbody">
@@ -21885,28 +21108,18 @@ The function returns true on success and false if the selection is not possible.
 </div>
 <h2 id="replace">replace( with )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Replaces the currently selected text with the new text. To select text, use <a href="#selectString">selectString()</a> and similar function.</p></div>
-<div class="paragraph"><p>If you&#8217;d like to delete/gag the whole line, use <a href="#deleteLine">deleteLine()</a>.</p></div>
+<div class="paragraph"><p>Replaces the currently selected text with "with". To delete or gag the selected text use replace("")</p></div>
 <div class="paragraph"><p>example:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>-- replace word "troll" with "cute trolly"
-selectString("troll",1)
-replace("cute trolly")
-
--- lets replace the whole line
-selectString(line, 1)
-replace("Out with the old, in with the new!")</tt></pre>
+<pre><tt>selectString("troll",1)
+replace("my friend the cute trolly")</tt></pre>
 </div></div>
+<div class="paragraph"><p>To gag entire lines you can use the very fast function <a href="#deleteLine">&#8594; deleteLine()</a></p></div>
 </div>
 <h2 id="_replace_windowname_with">replace( windowName, with )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Same as above, but replaces text in a window (miniConsole, label).</p></div>
-<div class="paragraph"><p>Example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt></tt></pre>
-</div></div>
+<div class="paragraph"><p>Replaces the currently selected text with "with". This function operates on window windowName <a href="#replace">&#8594; more</a></p></div>
 </div>
 <h2 id="replaceAll">replaceAll( what, with )</h2>
 <div class="sectionbody">
@@ -21914,14 +21127,14 @@ replace("Out with the old, in with the new!")</tt></pre>
 </div>
 <h2 id="fg">fg( color_name )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Sets the current selection foreground color to color_name which is one of the pre defined colors in the table below.</p></div>
-<div class="paragraph"><p>See also: <a href="#resetFormat">resetFormat()</a> <a href="#setFgColor">setFgColor()</a></p></div>
+<div class="paragraph"><p>Sets the current selection foreground color to color_name which is one of the pre defined colors in the table below.
+see also: <a href="#resetFormat">&#8594;resetFormat()</a> <a href="#setFgColor">&#8594; setFgColor()</a></p></div>
 <div class="tableblock">
 <table rules="all"
 width="100%"
 frame="hsides"
 cellspacing="0" cellpadding="4">
-<caption class="title">Color table (for use in the fg("colorname") and bg("colorname") functions)</caption>
+<caption class="title">Color Table (for use in the fg("colorname") and bg("colorname") functions)</caption>
 <col width="20%" />
 <col width="20%" />
 <col width="20%" />
@@ -22120,37 +21333,216 @@ cellspacing="0" cellpadding="4">
 </tbody>
 </table>
 </div>
-<h3 id="_example_6">Example:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- in a trigger, lets color all words on the current line green
-selectString(line, 1)
-fg("green")
-resetFormat()
-
--- or lets only color Anne's name in tomato color
-selectString("Anne", 1)
-fg("tomato")
-resetFormat()</tt></pre>
-</div></div>
 </div>
 <h2 id="bg">bg( color_name )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Same as fg(), but changes the background color of the text (ie, highlights).</p></div>
-<div class="paragraph"><p>See also: <a href="#fg">fg()</a>, <a href="#setBgColor">setBgColor()</a>.</p></div>
-<h3 id="_example_7">Example:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- in a trigger, lets highlight all words on the current line red
-selectString(line, 1)
-fg("red")
-resetFormat()
-
--- or lets only color dogs in blue
-selectString("dog", 1)
-fg("tomato")
-resetFormat()</tt></pre>
-</div></div>
+<div class="paragraph"><p>same as fg( color_name ) just for the background color. <a href="#fg">&#8594; more</a> <a href="#setBgColor">&#8594; setBgColor()</a></p></div>
+<div class="tableblock" id="colortable">
+<table rules="all"
+width="100%"
+frame="hsides"
+cellspacing="0" cellpadding="4">
+<caption class="title">Color Table (for use in the fg("colorname") and bg("colorname") functions)</caption>
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<thead>
+<tr>
+<th align="left" valign="top"> snow</th>
+<th align="left" valign="top"> ghost_white</th>
+<th align="left" valign="top"> white_smoke</th>
+<th align="left" valign="top">gainsboro</th>
+<th align="left" valign="top">floral_white</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">old_lace</p></td>
+<td align="left" valign="top"><p class="table">linen</p></td>
+<td align="left" valign="top"><p class="table">antique_white</p></td>
+<td align="left" valign="top"><p class="table">papaya_whip</p></td>
+<td align="left" valign="top"><p class="table">blanched_almond</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">bisque</p></td>
+<td align="left" valign="top"><p class="table">peach_puff</p></td>
+<td align="left" valign="top"><p class="table">navajo_white</p></td>
+<td align="left" valign="top"><p class="table">moccasin</p></td>
+<td align="left" valign="top"><p class="table">cornsilk</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">ivory</p></td>
+<td align="left" valign="top"><p class="table">lemon_chiffon</p></td>
+<td align="left" valign="top"><p class="table">seashell</p></td>
+<td align="left" valign="top"><p class="table">honeydew</p></td>
+<td align="left" valign="top"><p class="table">mint_cream</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">azure</p></td>
+<td align="left" valign="top"><p class="table">alice_blue</p></td>
+<td align="left" valign="top"><p class="table">lavender</p></td>
+<td align="left" valign="top"><p class="table">lavender_blush</p></td>
+<td align="left" valign="top"><p class="table">misty_rose</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">white</p></td>
+<td align="left" valign="top"><p class="table">black</p></td>
+<td align="left" valign="top"><p class="table">dark_slate_gray</p></td>
+<td align="left" valign="top"><p class="table">dark_slate_grey</p></td>
+<td align="left" valign="top"><p class="table">dim_gray</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">dim_grey</p></td>
+<td align="left" valign="top"><p class="table">slate_gray</p></td>
+<td align="left" valign="top"><p class="table">slate_grey</p></td>
+<td align="left" valign="top"><p class="table">light_slate_gray</p></td>
+<td align="left" valign="top"><p class="table">light_slate_grey</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">gray</p></td>
+<td align="left" valign="top"><p class="table">grey</p></td>
+<td align="left" valign="top"><p class="table">light_grey</p></td>
+<td align="left" valign="top"><p class="table">light_gray</p></td>
+<td align="left" valign="top"><p class="table">midnight_blue</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">navy</p></td>
+<td align="left" valign="top"><p class="table">navy_blue</p></td>
+<td align="left" valign="top"><p class="table">cornflower_blue</p></td>
+<td align="left" valign="top"><p class="table">dark_slate_blue</p></td>
+<td align="left" valign="top"><p class="table">slate_blue</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">medium_slate_blue</p></td>
+<td align="left" valign="top"><p class="table">light_slate_blue</p></td>
+<td align="left" valign="top"><p class="table">medium_blue</p></td>
+<td align="left" valign="top"><p class="table">royal_blue</p></td>
+<td align="left" valign="top"><p class="table">blue</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">dodger_blue</p></td>
+<td align="left" valign="top"><p class="table">deep_sky_blue</p></td>
+<td align="left" valign="top"><p class="table">sky_blue</p></td>
+<td align="left" valign="top"><p class="table">light_sky_blue</p></td>
+<td align="left" valign="top"><p class="table">steel_blue</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">light_steel_blue</p></td>
+<td align="left" valign="top"><p class="table">light_blue</p></td>
+<td align="left" valign="top"><p class="table">powder_blue</p></td>
+<td align="left" valign="top"><p class="table">pale_turquoise</p></td>
+<td align="left" valign="top"><p class="table">dark_turquoise</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">medium_turquoise</p></td>
+<td align="left" valign="top"><p class="table">turquoise</p></td>
+<td align="left" valign="top"><p class="table">cyan</p></td>
+<td align="left" valign="top"><p class="table">light_cyan</p></td>
+<td align="left" valign="top"><p class="table">cadet_blue</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">medium_aquamarine</p></td>
+<td align="left" valign="top"><p class="table">aquamarine</p></td>
+<td align="left" valign="top"><p class="table">dark_green</p></td>
+<td align="left" valign="top"><p class="table">dark_olive_green</p></td>
+<td align="left" valign="top"><p class="table">dark_sea_green</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">sea_green</p></td>
+<td align="left" valign="top"><p class="table">medium_sea_green</p></td>
+<td align="left" valign="top"><p class="table">light_sea_green</p></td>
+<td align="left" valign="top"><p class="table">pale_green</p></td>
+<td align="left" valign="top"><p class="table">spring_green</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">lawn_green</p></td>
+<td align="left" valign="top"><p class="table">green</p></td>
+<td align="left" valign="top"><p class="table">chartreuse</p></td>
+<td align="left" valign="top"><p class="table">medium_spring_green</p></td>
+<td align="left" valign="top"><p class="table">green_yellow</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">lime_green</p></td>
+<td align="left" valign="top"><p class="table">yellow_green</p></td>
+<td align="left" valign="top"><p class="table">forest_green</p></td>
+<td align="left" valign="top"><p class="table">olive_drab</p></td>
+<td align="left" valign="top"><p class="table">dark_khaki</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">khaki</p></td>
+<td align="left" valign="top"><p class="table">pale_goldenrod</p></td>
+<td align="left" valign="top"><p class="table">light_goldenrod_yellow</p></td>
+<td align="left" valign="top"><p class="table">light_yellow</p></td>
+<td align="left" valign="top"><p class="table">yellow</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">gold</p></td>
+<td align="left" valign="top"><p class="table">light_goldenrod</p></td>
+<td align="left" valign="top"><p class="table">goldenrod</p></td>
+<td align="left" valign="top"><p class="table">dark_goldenrod</p></td>
+<td align="left" valign="top"><p class="table">rosy_brown</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">indian_red</p></td>
+<td align="left" valign="top"><p class="table">saddle_brown</p></td>
+<td align="left" valign="top"><p class="table">sienna</p></td>
+<td align="left" valign="top"><p class="table">peru</p></td>
+<td align="left" valign="top"><p class="table">burlywood</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">beige</p></td>
+<td align="left" valign="top"><p class="table">wheat</p></td>
+<td align="left" valign="top"><p class="table">sandy_brown</p></td>
+<td align="left" valign="top"><p class="table">tan</p></td>
+<td align="left" valign="top"><p class="table">chocolate</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">firebrick</p></td>
+<td align="left" valign="top"><p class="table">brown</p></td>
+<td align="left" valign="top"><p class="table">dark_salmon</p></td>
+<td align="left" valign="top"><p class="table">salmon</p></td>
+<td align="left" valign="top"><p class="table">light_salmon</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">orange</p></td>
+<td align="left" valign="top"><p class="table">dark_orange</p></td>
+<td align="left" valign="top"><p class="table">coral</p></td>
+<td align="left" valign="top"><p class="table">light_coral</p></td>
+<td align="left" valign="top"><p class="table">tomato</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">orange_red</p></td>
+<td align="left" valign="top"><p class="table">red</p></td>
+<td align="left" valign="top"><p class="table">hot_pink</p></td>
+<td align="left" valign="top"><p class="table">deep_pink</p></td>
+<td align="left" valign="top"><p class="table">pink</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">light_pink</p></td>
+<td align="left" valign="top"><p class="table">pale_violet_red</p></td>
+<td align="left" valign="top"><p class="table">maroon</p></td>
+<td align="left" valign="top"><p class="table">medium_violet_red</p></td>
+<td align="left" valign="top"><p class="table">violet_red</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">magenta</p></td>
+<td align="left" valign="top"><p class="table">violet</p></td>
+<td align="left" valign="top"><p class="table">plum</p></td>
+<td align="left" valign="top"><p class="table">orchid</p></td>
+<td align="left" valign="top"><p class="table">medium_orchid</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">dark_orchid</p></td>
+<td align="left" valign="top"><p class="table">blue_violet</p></td>
+<td align="left" valign="top"><p class="table">purple</p></td>
+<td align="left" valign="top"><p class="table">medium_purple</p></td>
+<td align="left" valign="top"><p class="table">thistle</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 <h2 id="resetFormat">resetFormat()</h2>
 <div class="sectionbody">
@@ -22211,7 +21603,6 @@ If the windowName parameters omitted, the main screen will be used.</p></div>
 </div>
 <h2 id="disableTimer">disableTimer( name )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Disables a timer from running it&#8217;s script when it fires - so the timer cycles will still be happening, just no action on them. If you&#8217;d like to permanently delete it, use <a href="#killTrigger">killTrigger()</a> instead.</p></div>
 <div class="paragraph"><p>Use timer name or the id returned by tempTimer() to identify the timer that you want to disable.</p></div>
 </div>
 <h2 id="disableTrigger">disableTrigger( name )</h2>
@@ -22253,18 +21644,6 @@ expandAlias( "Hello Jane" ) sends the command visually unnoticeable by the user
 <div class="content">
 <pre><tt>echo("I have " .. exists("my trigger", "trigger") .. " triggers called 'my trigger'!")</tt></pre>
 </div></div>
-<div class="paragraph"><p>You can also use this alias to avoid creating duplicate things, for example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- this code doesn't check if an alias already exists and will keep creating new aliases
-permAlias("Attack", "General", "^aa$", [[send ("kick rat")]])
-
--- while this code will make sure that such an alias doesn't exist first
--- we do == 0 instead of 'not exists' because 0 is considered true in Lua
-if exists("Attack", "alias") == 0 then
-    permAlias("Attack", "General", "^aa$", [[send ("kick rat")]])
-end</tt></pre>
-</div></div>
 </div>
 <h2 id="raiseEvent">raiseEvent( event_name, arg-1, &#8230; arg-n )</h2>
 <div class="sectionbody">
@@ -22284,7 +21663,7 @@ as the first argument is always the event name. So you can call your own special
 should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees
 and thus help reduce complexity on large systems.</p></div>
 </div>
-<h2 id="tempTimer">tempTimer( seconds, lua code ) returns timer ID, ID is a string and not a number.</h2>
+<h2 id="tempTimer">tempTimer( seconds, Lua_code ) returns timer ID, ID is a string and not a number.</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed.
 example:</p></div>
@@ -22378,7 +21757,7 @@ Result:
 10</tt></pre>
 </div></div>
 </div>
-<h2 id="tempTrigger">tempTrigger( string, lua code ) returns trigger ID, ID is a string and not a number.</h2>
+<h2 id="tempTrigger">tempTrigger( string, Lua_code ) returns trigger ID, ID is a string and not a number.</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>This function creates a temporary trigger using substring matching. Contrary to tempTimers, tempTriggers live throughout the entire session unless they are explicitly disabled or killed. Disabled tempTimers can be re-enabled with enableTrigger(). This is much faster than killing the trigger and creating a new one. This is the second fastest trigger (with begin of line substring patterns being the fastest) and should be used instead of regex triggers whenever possible.</p></div>
 </div>
@@ -22390,7 +21769,7 @@ tempLineTrigger( 20, 2, <a id="send("shout Help")"></a> )
 will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 The function returns the ID of the newly created temporary trigger. You can use this ID to enable/disable or kill this trigger later on.</p></div>
 </div>
-<h2 id="tempRegexTrigger">tempRegexTrigger( regex, lua code ) returns trigger ID</h2>
+<h2 id="tempRegexTrigger">tempRegexTrigger( regex, Lua_code ) returns trigger ID</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>temporary trigger using Perl regex pattern matching &lt;&lt;tempTrigger, This function returns the ID of the newly created temporary trigger. <strong>ID is a string and not a number.</strong> You can use this ID to enable/disable or kill this trigger later on. &#8594; tempTrigger()</p></div>
 </div>
@@ -22409,21 +21788,6 @@ The function returns the ID of the newly created temporary trigger. You can use 
 <h2 id="openUserWindow">openUserWindow( name )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them. Most often a mini console is more useful than a dockable window &#8594; <a href="#createMiniConsole">createMiniConsole</a></p></div>
-</div>
-<h2 id="calcFontSize">x,y = calcFontSize(font_size)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>This returns you the height and the length of letters for the given font size. As the primary intended usage is for calculating the needed dimensions of a miniConsole, it doesn&#8217;t accept a font argument - as the miniConsoles currently only work with the default font for the sake of portability.</p></div>
-<h3 id="_examples_2">Examples:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>-- Create a miniConsole that is 45 letters in length and 25 letters in height for font size 7
-font_size = 7
-
-local x, y = calcFontSize( font_size )
-createMiniConsole("map",0,0,0,0)
-setMiniConsoleFontSize("map", font_size)
-resizeWindow( "map", x*45, y*25 )</tt></pre>
-</div></div>
 </div>
 <h2 id="clearUserWindow">clearUserWindow( window_name )</h2>
 <div class="sectionbody">
@@ -22466,7 +21830,7 @@ Absolute line numbers are used.</p></div>
 <h2 id="moveCursor">moveCursor( windowName, x, y ) returns true or false</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don&#8217;t exist. To determine the correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. If you omit the windowName argument, the main screen will be used.</p></div>
-<h3 id="_example_8">Example:</h3><div style="clear:left"></div>
+<h3 id="_example">Example:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>-- set up the small system message window in the top right corner
@@ -22539,95 +21903,33 @@ echo("sys", "*** This is the end. ***\n");</tt></pre>
 </div>
 <h2 id="appendBuffer">appendBuffer( name )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Pastes the previously copied rich text (including text formats like color etc.) into user window name.</p></div>
-<h3 id="_example_9">Example:</h3><div style="clear:left"></div>
+<div class="paragraph"><p>Pastes the previously copied rich text (including text formats like color etc.) into user window name. example:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>selectString( line, 1 )
 copy()
 appendBuffer( "chat" )</tt></pre>
 </div></div>
-<div class="paragraph"><p>See also: <a href="#selectString">selectString()</a>, <a href="#copy">copy()</a>, <a href="#echo">echo()</a></p></div>
 </div>
 <h2 id="printTable">printTable( table_name )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the Lua table "matches".</p></div>
-<div class="paragraph"><p>This function is defined in LuaGlobal.lua.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<img alt="Note" src="data:image/png;base64,
-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" />
-</td>
-<td class="content">
-<div class="paragraph"><p>This function is old. Use the newer <a href="#display">display()</a> function instead.</p></div>
-</td>
-</tr></table>
-</div>
+<div class="paragraph"><p>Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the Lua table "matches".
+This function is defined in LuaGlobal.Lua. NOTE: This function is old. Use the newer <a href="#display">display( table_or_variable )</a> instead.</p></div>
 </div>
 <h2 id="showCaptureGroups">showCaptureGroups()</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Lua debug function that highlights in random coolors all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. This function is defined in LuaGlobal.lua.</p></div>
-<h3 id="_example_10">Example:</h3><div style="clear:left"></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>Make a trigger with the regex (\w+) and call this function in a trigger. All words in the text will be highlighted in random colors.</tt></pre>
-</div></div>
+<div class="paragraph"><p>Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in LuaGlobal.Lua</p></div>
 </div>
 <h2 id="showMultimatches">showMultimatches()</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers - just doing <tt>showMultimatches()</tt> in your script will make it give the info.</p></div>
+<div class="paragraph"><p>Lua helper function to show you what the table multimatches[n][m] contains. This is very useful when debugging multiline triggers</p></div>
 </div>
 <h2 id="tableload">table.load( file, table )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>restores a Lua table from a data file that has been saved with table.save()</p></div>
 </div>
-<h2 id="tablesave">table.save( file, table )</h2>
+<h2 id="tablesave">table.save( file, table )|saves the given table into the given file</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Saves the given table into the given file.</p></div>
 </div>
 <h2 id="showCaptureGroups">showCaptureGroups()</h2>
 <div class="sectionbody">
@@ -22636,30 +21938,25 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 <h2 id="sendAll">sendAll( command1, command2, &#8230; )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Sends a list of commands to the MUD. You can use this to send some things at once instead of having to use multiple <a href="#send">send()</a> commands one after another.</p></div>
-<h3 id="_example_11">Example:</h3><div style="clear:left"></div>
+<h3 id="_example_3">Example:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
-<pre><tt>sendAll("stand", "wield shield", "say ha!")
-
--- instead of:
-send ("stand")
-send ("wield shield")
-send ("say ha!")</tt></pre>
+<pre><tt>sendAll("stand", "touch shield", "say ha!")</tt></pre>
 </div></div>
+</div>
+<h2 id="debug">debug( arg1 &#8230; argn )</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Prints out debug information to the user debug console.</p></div>
 </div>
 <h2 id="replaceWildcard">replaceWildcard(what, replacement)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Replaces the given wildcard (as a number) with the given text.
-=== Example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>replaceWildcard(1, "hello") -- on a perl regex trigger of ^You wave (goodbye)\.$, it will make</tt></pre>
-</div></div>
+Example: replaceWildcard(1, "hello") on a trigger of <tt>^You wave (goodbye)\.$</tt></p></div>
 </div>
 <h2 id="resetFormat">resetFormat (window)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Resets the user character format to the default. If you don&#8217;t specify a window, it&#8217;ll reset the main console - otherwise it&#8217;ll reset the specified miniConsole.</p></div>
-<h3 id="_example_12">Example:</h3><div style="clear:left"></div>
+<h3 id="_example_4">Example:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>resetFormat() -- resets the format on the main window
@@ -31988,7 +31285,7 @@ see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLa
 <h2 id="moveGauge">moveGauge (gaugeName, newX, newY)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Moves a gauge created with <a href="#createGauge">createGauge</a> to the new x,y coordinates. Remember the coordinates are relative to the top-left corner of the output window.</p></div>
-<h3 id="_example_13">Example:</h3><div style="clear:left"></div>
+<h3 id="_example_5">Example:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>moveGauge("healthBar", 1200, 400)
@@ -32003,7 +31300,7 @@ see also: <a href="#createMiniConsole">createMiniConsole</a>, <a href="#createLa
 <h2 id="setGauge">setGauge(gaugeName, currentValue, maxValue, gaugeText)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Use this function when you want to change the gauges look according to your values. Typical usage would be in a prompt with your current health or whatever value, and throw in some variables instead of the numbers.</p></div>
-<h3 id="_examples_3">Examples:</h3><div style="clear:left"></div>
+<h3 id="_examples_2">Examples:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>setGauge("healthBar", 200, 400)</tt></pre>
@@ -32019,7 +31316,7 @@ to half of its capacity. The height is always remembered.</p></div>
 <h2 id="setGaugeText">setGaugeText(gaugeName, gaugeText, color1, color2, color3)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Set the color and text on a custom gauge built by <a href="#createGauge">createGauge</a>.</p></div>
-<h3 id="_example_14">Example:</h3><div style="clear:left"></div>
+<h3 id="_example_6">Example:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
@@ -32032,7 +31329,7 @@ setGaugeText("healthBar", "HP: 100%", "red")</tt></pre>
 <div class="paragraph"><p>sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), bold(1/0), underline(1/0), italics(1/0)
 <strong>A more convenient way to control the text format in a mini console is to use setFgColor( windowName, r,g,b ), setBold( windowName, true ), setItalics( windowName, true ), setUnderline( windowName, true ) etc.</strong>
 &#8594; <a href="#createMiniConsole">createMiniConsole</a>, <a href="#setBold">setBold</a>, <a href="#setBgColor">setBgColor</a>, <a href="#setFgColor">setFgColor</a>, <a href="#setItalics">setItalics</a>, <a href="#setUnderline">setUnderline</a></p></div>
-<h3 id="_example_15">Example:</h3><div style="clear:left"></div>
+<h3 id="_example_7">Example:</h3><div style="clear:left"></div>
 <div class="listingblock">
 <div class="content">
 <pre><tt>createMiniConsole( "con1", 0,0,300,100);
@@ -32053,10 +31350,9 @@ echo("con1","This is a test")</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>loads an image file (png) as a background image for a label. This can be used to display clickable images etc.</p></div>
 </div>
-<h2 id="setBackgroundColor">setBackgroundColor( window name, red, green, blue, transparency )</h2>
+<h2 id="setBackgroundColor">setBackgroundColor( labelName, red, green, blue, transparency )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Sets rgb color values and the transparency for the given window. Colors are from 0 to 255 (0 being black), and transparency is from - to 255 (0 being completely transparent).</p></div>
-<div class="paragraph"><p>Note that transparency only works on labels, not miniConsoles for efficiency reasons.</p></div>
+<div class="paragraph"><p>Sets rgb color values and the transparency for the given label. Colors are from 0 to 255 (0 being black), and transparency is from - to 255 (0 being completely transparent).</p></div>
 </div>
 <h2 id="setLabelClickCallback">setLabelClickCallback( labelName, luaFunctionName, optional any amount of arguments )</h2>
 <div class="sectionbody">
@@ -32134,429 +31430,15 @@ end;</tt></pre>
 <div class="sectionbody">
 <div class="paragraph"><p>returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files</p></div>
 </div>
-<h2 id="datetime_parse">datetime:parse(source, format, as_epoch)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>parses the specified source string, according to the format if given, to return a representation of the date/time. If as_epoch is provided and true, the return value will be a Unix epoch&#8201;&#8212;&#8201;the number of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch is false, then a Lua time table will be returned. Details of the time tables are provided in the <a href="http://www.lua.org/pil/22.1.html">Lua Manual</a>.</p></div>
-<div class="hdlist"><div class="title">Supported Format Codes</div><table>
-<tr>
-<td class="hdlist1">
-%b
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-Abbreviated Month Name
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%B
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-Full Month Name
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%d
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-Day of Month
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%H
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-Hour (24-hour format)
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%I
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-Hour (12-hour format, requires %p as well)
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%p
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-AM or PM
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%m
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-2-digit month (01-12)
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%M
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-2-digit minutes (00-59)
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%S
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-2-digit seconds (00-59)
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%y
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910.
-</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-%Y
-<br />
-</td>
-<td class="hdlist2">
-<p style="margin-top: 0;">
-4-digit year.
-</p>
-</td>
-</tr>
-</table></div>
-</div>
 <h2 id="display">display( myTable )</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.</p></div>
+<div class="paragraph"><p>generic pretty print function to display tables of any complexity. This is the preferred debug function to print the content of any kind of Lua table or variable to the main screen.</p></div>
 </div>
 <h2 id="_display_myvariable">display( myVariable )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>generic pretty print function to display the content of any Lua variable or table on the main screen</p></div>
 </div>
-<h2 id="_db_create_database_name_schema_table">db:create(database name, schema table)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet script: in fact it is reccommended you run this function at a top-level without any kind of guards. If the named database does not exist it will create it. If the database does exist then it will add any columns or indexes which didn&#8217;t exist before to that database. If the database already has all the specified columns and indexes, it will do nothing.</p></div>
-<div class="paragraph"><p>The database will be called Database_&lt;sanitized database name&gt;.db and will be stored in the Mudlet configuration directory.</p></div>
-<div class="paragraph"><p>Database <em>tables</em> are called <em>sheets</em> consistantly throughout this documentation, to avoid confusion with Lua tables.</p></div>
-<div class="paragraph"><p>The schema table must be a Lua table array containing table dictionaries that define the structure and layout of each sheet.</p></div>
-<div class="paragraph"><p>Examples:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        local mydb = db:create("combat_log",
-                {
-                        kills = {
-                                name = "",
-                                area = "",
-                                killed = db:Timestamp("CURRENT_TIMESTAMP"),
-                                _index = { {"name", "area"} }
-                        },
-                        enemies = {
-                                name = "",
-                                city = "",
-                                reason = "",
-                                enemied = db:Timestamp("CURRENT_TIMESTAMP"),
-                                _index = { "city" },
-                                _unique = { "name" }
-                        }
-                }
-        )</tt></pre>
-</div></div>
-<div class="paragraph"><p>The above will create a database with two sheets; the first is kills and is used to track every successful kill, with both where and when the kill happened. It has one index, a compound inde tracking the combination of name and area. The second sheet has two indexes, but one is unique: it isn&#8217;t possible to add two items to the enemies sheet with the same name.</p></div>
-</div>
-<h2 id="_db_get_database_database_name">db:get_database(database name)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a reference of an already existing database. This instance can be used to get references to the sheets (and from there, fields) that are defined within the database. You use these references to construct queries.</p></div>
-<div class="paragraph"><p>If a database has a sheet named enemies, you can obtain a reference to that sheet by simply doing:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>    local mydb = db:get_database("my database")
-    local enemies_ref = mydb.enemies
-    local name_ref = mydb.enemies.name</tt></pre>
-</div></div>
-<div class="paragraph"><p>These references do not contain any actual data, they only point to parts of the database structure.</p></div>
-</div>
-<h2 id="db_add">db:add(sheet reference, table1, &#8230;, tableN)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index, a lua error will be thrown and execution will cancel. As such it is advisable that if you use a UNIQUE index, you test those values before you attempt to insert a new row.</p></div>
-<div class="paragraph"><p>Each table is a series of key-value pairs to set the values of the sheet, but if any keys do nto exist then they will be set to nil or the default value.</p></div>
-<div class="paragraph"><p>An example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
-        db:add(mydb.enemies,
-                {name="John Smith", city="San Francisco"},
-                {name="Jane Smith", city="San Francisco"},
-                {name="Richard Clark"})</tt></pre>
-</div></div>
-<div class="paragraph"><p>As you can see, all fields are optional.</p></div>
-</div>
-<h2 id="db_fetch">db:fetch(sheet reference, query, order_by, descending)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a table array containing a table for each matching row in the specified sheet. All arguments but sheet are optional. If query is nil, the entire contents of the sheet will be returned.</p></div>
-<div class="paragraph"><p>Query is a string which should be built by calling the various db: expression functions, such as db:eq, db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous. If you don&#8217;t know SQL well, its best to build the expression.</p></div>
-<div class="paragraph"><p>Query may also be a table array of such expressions, if so they will be AND&#8217;d together implicitly.</p></div>
-<div class="paragraph"><p>The results that are returned are not in any guaranteed order, though they are usually the same order as the records were inserted. If you want to rely on the order in any way, you must pass a value to the order_by field. This must be a table array listing the columns you want to sort by. It can be { "column1" }, or { "column1", "column2" }</p></div>
-<div class="paragraph"><p>The results are returned in ascending (smallest to largest) order; to reverse this pass true into the final field.</p></div>
-<div class="paragraph"><p>Examples:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.enemies, nil, {"city", "name"})
-        db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
-        db:fetch(mydb.kills,
-                        {db:eq(mydb.kills.area, "Undervault"),
-                        db:like(mydb.kills.name, "%Drow%")}
-        )</tt></pre>
-</div></div>
-<div class="paragraph"><p>The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.</p></div>
-<div class="paragraph"><p>The second will fetch only the enemies which are in San Francisco.</p></div>
-<div class="paragraph"><p>The third will fetch all the things you&#8217;ve killed in Undervault which have Drow in their name.</p></div>
-</div>
-<h2 id="db_eq">db:eq(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is equal to the value.</p></div>
-</div>
-<h2 id="db_exp">db:exp(string)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns the string as-is to the database.</p></div>
-<div class="paragraph"><p>Use this function with caution, but it is very useful in some circumstances. One of the most common of such is incrementing an existing field in a db:set() operation, as so:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:set(mydb.enemies, db:exp("kills + 1"), db:eq(mydb.enemies.name, "Ixokai"))</tt></pre>
-</div></div>
-<div class="paragraph"><p>This will increment the value of the kills field for the row identified by the name Ixokai.</p></div>
-<div class="paragraph"><p>But there are other uses, as the underlining database layer provides many functions you can call to do certain things. If you want to get a list of all your enemies who have a name longer then 10 characters, you may do:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:fetch(mydb.enemies, db:exp("length(name) &gt; 10"))</tt></pre>
-</div></div>
-<div class="paragraph"><p>Again, take special care with this, as you are doing SQL syntax directly and the library can&#8217;t help you get things right.</p></div>
-</div>
-<h2 id="db_not_eq">db:not_eq(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is NOT equal to the value.</p></div>
-</div>
-<h2 id="db_lt">db:lt(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is less than the value.</p></div>
-</div>
-<h2 id="db_lte">db:lte(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is less than or equal to the value.</p></div>
-</div>
-<h2 id="db_gt">db:gt(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is greater than to the value.</p></div>
-</div>
-<h2 id="db_gte">db:gte(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is greater than or equal to the value.</p></div>
-</div>
-<h2 id="db_is_nil">db:is_nil(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is nil.</p></div>
-</div>
-<h2 id="db_is_not_nil">db:is_not_nil(field reference, value)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is not nil.</p></div>
-</div>
-<h2 id="db_like">db:like(field reference, pattern)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet matches the specified pattern.</p></div>
-<div class="paragraph"><p>LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.</p></div>
-<div class="paragraph"><p>LIKE with "_" is therefore the same as the "." regular expression.</p></div>
-<div class="paragraph"><p>LIKE with "%" is therefore the same as ".*" regular expression.</p></div>
-</div>
-<h2 id="db_not_like">db:not_like(field reference, pattern)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet does not match the specified pattern.</p></div>
-<div class="paragraph"><p>LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.</p></div>
-<div class="paragraph"><p>LIKE with "_" is therefore the same as the "." regular expression.</p></div>
-<div class="paragraph"><p>LIKE with "%" is therefore the same as ".*" regular expression.</p></div>
-</div>
-<h2 id="db_between">db:between(field reference, lower_bound, upper_bound)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps.</p></div>
-</div>
-<h2 id="db_not_between">db:not_between(field reference, lower_bound, upper_bound)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is not a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps.</p></div>
-</div>
-<h2 id="db_in_">db:in_(field reference, table array)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is one of the values in the table array.</p></div>
-<div class="paragraph"><p>First, note the trailing underscore carefully! It is required.</p></div>
-<div class="paragraph"><p>The following example illustrates the use of in_:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        local mydb = db:get_database("my database")
-        local areas = {"Undervault", "Hell", "Purgatory"}
-
-        db:fetch(mydb.kills, db:in_(mydb.kills.area, areas))</tt></pre>
-</div></div>
-<div class="paragraph"><p>This will obtain all of your kills which happened in the Undervault, Hell or Purgatory. Every db:in_ expression can be written as a db:OR, but that quite often gets very complex.</p></div>
-</div>
-<h2 id="db_not_in">db:not_in(field reference, table array)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a database expression to test if the field in the sheet is not one of the values in the table array.</p></div>
-<div class="paragraph"><p>See link: <a href="#db_in_">db:in_</a></p></div>
-</div>
-<h2 id="db_AND">db:AND(sub-expression1, &#8230;, sub-expressionN)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a compound database expression that combines all of the simple expressions passed into it; these expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like.</p></div>
-<div class="paragraph"><p>This compound expression will only find items in the sheet if all sub-expressions match.</p></div>
-</div>
-<h2 id="db_OR">db:OR(sub-expression1, sub-expression2)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>returns a compound database expression that combines both of the simple expressions passed into it; these expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like.</p></div>
-<div class="paragraph"><p>This compound expression will find any item that matches either the first or the second sub-expression.</p></div>
-</div>
-<h2 id="db_delete">db:delete(sheet reference, query)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>Deletes rows from the specified sheet. The argument for query tries to be intelligent:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-if it is a simple number, it deletes a specific row by _row_id
-</p>
-</li>
-<li>
-<p>
-if it is a table that contains a _row_id (e.g., a table returned by db:get) it deletes just that record.
-</p>
-</li>
-<li>
-<p>
-Otherwise, it deletes every record which matches the query pattern which is specified as with db:get.
-</p>
-</li>
-<li>
-<p>
-If the query is simply true, then it will truncate the entire contents of the sheet.
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>Some examples:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        enemies = db:fetch(mydb.enemies)
-
-        db:delete(mydb.enemies, enemies[1])
-        db:delete(mydb.enemies, enemies[1]._row_id)
-        db:delete(mydb.enemies, 5)
-        db:delete(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
-        db:delete(mydb.enemies, true)</tt></pre>
-</div></div>
-<div class="paragraph"><p>Those deletion commands will do in order:</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-When passed an actual result table that was obtained from db:fetch, it will delete the record for that table.
-</p>
-</li>
-<li>
-<p>
-When passed a number, will delete the record for that _row_id. This example shows getting the row id from a table.
-</p>
-</li>
-<li>
-<p>
-As above, but this example just passes in the row id directly.
-</p>
-</li>
-<li>
-<p>
-Here, we will delete anything which matches the same kind of query as db:fetch uses-- namely, anyone who is in the city of San Francisco.
-</p>
-</li>
-<li>
-<p>
-And finally, we will delete the entire contents of the enemies table.
-</p>
-</li>
-</ol></div>
-</div>
-<h2 id="db_update">db:update(sheet reference, table)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>This function updates a row in the specified sheet, but only accepts a row which has been previously obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field or tow, you can save back that table.</p></div>
-<div class="paragraph"><p>For example:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        local mydb = db:get_database("my database")
-        local bob = db:fetch(mydb.friends, db:eq(mydb.friends.name, "Bob"))[1]
-        bob.notes = "He's a really awesome guy."
-        db:update(mydb.friends, bob)</tt></pre>
-</div></div>
-<div class="paragraph"><p>This obtains a database reference, and queries the friends sheet for someone named Bob. As this returns a table array containing only one item, it assigns that one item to the local variable named bob. We then change the notes on Bob, and pass it into db:update() to save the changes back.</p></div>
-</div>
-<h2 id="db_set">db:set(field reference, value, query)</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>The db:set function allows you to set a certain field to a certain value across an entire sheet. Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only the last_read fields which are in a certain city. The query argument can be any value which is appropriate for db:fetch, even nil which will change the value for the specified column for EVERY row in the sheet.</p></div>
-<div class="paragraph"><p>For example, consider a situation in which you are tracking how many times you find a certain type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and then adding a record for each type of egg.</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        local mydb = db:create("egg database", {eggs = {color = "", last_found = db.Timestamp(false), found = 0}})
-        db:add(mydb.eggs,
-                {color = "Red"},
-                {color = "Blue"},
-                {color = "Green"},
-                {color = "Yellow"},
-                {color = "Black"}
-        )</tt></pre>
-</div></div>
-<div class="paragraph"><p>Now, you have three columns. One is a string, one a timestamp (that ends up as nil in the database), and one is a number.</p></div>
-<div class="paragraph"><p>You can then set up a trigger to capture from the mud the string, "You pick up a (.*?) egg!", and you end up arranging to store the value of that expression in a variable called "myegg".</p></div>
-<div class="paragraph"><p>To increment how many we found, we will do this:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        myegg = "Red" -- We will pretend a trigger set this.
-        db:set(mydb.eggs.found, db:exp("found + 1"), db:eq(mydb.eggs.color, myegg))
-        db:set(mydb.eggs.last_found, db.Timestamp("CURRENT_TIMESTAMP"), db:eq(mydb.eggs.color, myegg))</tt></pre>
-</div></div>
-<div class="paragraph"><p>This will go out and set two fields in the Red egg sheet; the first is the found field, which will increment the value of that field (using the special db:exp function). The second will update the last_found field with the current time.</p></div>
-<div class="paragraph"><p>Once this contest is over, you may wish to reset this data but keep the database around. To do that, you may use a more broad use of db:set as such:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><tt>        db:set(mydb.eggs.found, 0)
-        db:set(mydb.eggs.last_found, nil)</tt></pre>
-</div></div>
-</div>
-<h2 id="tempAlias">id = tempAlias(regex, lua code)</h2>
+<h2 id="tempAlias">tempAlias(regex, Lua_code)</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Creates a temporary (lasts only until the profile is closed) alias. This means that after a Mudlet restart, it won&#8217;t exist anymore.</p></div>
 <div class="paragraph"><p>Example:</p></div>
@@ -32565,7 +31447,7 @@ And finally, we will delete the entire contents of the enemies table.
 <pre><tt>tempAlias("^hi$", [[send ("hi") echo ("we said hi!")]]</tt></pre>
 </div></div>
 </div>
-<h2 id="tempColorTrigger">tempColorTrigger( foregroundColor, backgqroundColor, function )</h2>
+<h2 id="tempColorTrigger">tempColorTrigger( foregroundColor, backgroundColor, function )</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be supplied in form of these simplified ANSI 16 color mode codes:
 .Color Codes:</p></div>
@@ -32717,7 +31599,7 @@ Default values are linesLimit = 100000 lines with 10000 lines of batch deletion.
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2010-01-25 00:07:30 CEST
+Last updated 2009-12-20 03:20:49 CEST
 </div>
 </div>
 </body>

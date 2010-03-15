@@ -29,6 +29,14 @@ XMLexport::XMLexport( Host * pH )
     setAutoFormatting(true);
 }
 
+XMLexport::XMLexport( Host * pT, bool b )
+: mpHost( pT )
+, mType( "GenericPackage" )
+{
+    setAutoFormatting(true);
+}
+
+
 XMLexport::XMLexport( TTrigger * pT )
 : mpTrigger( pT )
 , mType( "Trigger" )
@@ -103,6 +111,9 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mNoAntiAlias", pT->mNoAntiAlias ? "yes" : "no" );
     writeAttribute( "mRawStreamDump", pT->mRawStreamDump ? "yes" : "no" );
     writeAttribute( "mAlertOnNewData", pT->mAlertOnNewData ? "yes" : "no" );
+    writeAttribute( "mFORCE_NO_COMPRESSION", pT->mFORCE_NO_COMPRESSION ? "yes" : "no" );
+    writeAttribute( "mFORCE_GA_OFF", pT->mFORCE_GA_OFF ? "yes" : "no" );
+    writeAttribute( "mFORCE_SAVE_ON_EXIT", pT->mFORCE_SAVE_ON_EXIT ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
@@ -120,24 +131,24 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mBgColor", pT->mBgColor.name() );
     writeTextElement( "mCommandFgColor", pT->mCommandFgColor.name() );
     writeTextElement( "mCommandBgColor", pT->mCommandBgColor.name() );
-    writeTextElement( "mBlack", pT->mBlack.name() );    
-    writeTextElement( "mLightBlack", pT->mLightBlack.name() );    
-    writeTextElement( "mRed", pT->mRed.name() );    
+    writeTextElement( "mBlack", pT->mBlack.name() );
+    writeTextElement( "mLightBlack", pT->mLightBlack.name() );
+    writeTextElement( "mRed", pT->mRed.name() );
     writeTextElement( "mLightRed", pT->mLightRed.name() );
-    writeTextElement( "mBlue", pT->mBlue.name() );    
-    writeTextElement( "mLightBlue", pT->mLightBlue.name() );    
-    writeTextElement( "mGreen", pT->mGreen.name() );    
-    writeTextElement( "mLightGreen", pT->mLightGreen.name() );    
-    writeTextElement( "mYellow", pT->mYellow.name() );    
-    writeTextElement( "mLightYellow", pT->mLightYellow.name() );    
-    writeTextElement( "mCyan", pT->mCyan.name() );    
-    writeTextElement( "mLightCyan", pT->mLightCyan.name() );    
-    writeTextElement( "mMagenta", pT->mMagenta.name() );    
-    writeTextElement( "mLightMagenta", pT->mLightMagenta.name() );    
-    writeTextElement( "mWhite", pT->mWhite.name() );    
-    writeTextElement( "mLightWhite", pT->mLightWhite.name() );    
-    writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );    
-    writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() ); 
+    writeTextElement( "mBlue", pT->mBlue.name() );
+    writeTextElement( "mLightBlue", pT->mLightBlue.name() );
+    writeTextElement( "mGreen", pT->mGreen.name() );
+    writeTextElement( "mLightGreen", pT->mLightGreen.name() );
+    writeTextElement( "mYellow", pT->mYellow.name() );
+    writeTextElement( "mLightYellow", pT->mLightYellow.name() );
+    writeTextElement( "mCyan", pT->mCyan.name() );
+    writeTextElement( "mLightCyan", pT->mLightCyan.name() );
+    writeTextElement( "mMagenta", pT->mMagenta.name() );
+    writeTextElement( "mLightMagenta", pT->mLightMagenta.name() );
+    writeTextElement( "mWhite", pT->mWhite.name() );
+    writeTextElement( "mLightWhite", pT->mLightWhite.name() );
+    writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );
+    writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() );
     writeTextElement( "mCommandSeparator", pT->mCommandSeparator );
 
 
@@ -145,7 +156,96 @@ bool XMLexport::writeHost( Host * pT )
     writeEndElement(); // end HostPackage tag
 
     writeStartElement( "TriggerPackage" );
-    bool ret = true;   
+    bool ret = true;
+    typedef list<TTrigger *>::const_iterator ItTriggerUnit;
+    for( ItTriggerUnit it1 = pT->mTriggerUnit.mTriggerRootNodeList.begin(); it1 != pT->mTriggerUnit.mTriggerRootNodeList.end(); it1++)
+    {
+        TTrigger * pChildTrigger = *it1;
+        if( ! pChildTrigger ) continue;
+        if( ! pChildTrigger->isTempTrigger() )
+        {
+            ret = writeTrigger( pChildTrigger );
+        }
+    }
+    writeEndElement(); //end trigger package tag
+
+    writeStartElement("TimerPackage");
+    typedef list<TTimer *>::const_iterator ItTimerUnit;
+    for( ItTimerUnit it2 = pT->mTimerUnit.mTimerRootNodeList.begin(); it2 != pT->mTimerUnit.mTimerRootNodeList.end(); it2++)
+    {
+        TTimer * pChildTimer = *it2;
+        if( ! pChildTimer->isTempTimer() )
+        {
+            ret = writeTimer( pChildTimer );
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("AliasPackage");
+    typedef list<TAlias *>::const_iterator ItAliasUnit;
+    for( ItAliasUnit it3 = pT->mAliasUnit.mAliasRootNodeList.begin(); it3 != pT->mAliasUnit.mAliasRootNodeList.end(); it3++)
+    {
+        TAlias * pChildAlias = *it3;
+        if( ! pChildAlias->isTempAlias() )
+        {
+            ret = writeAlias( pChildAlias );
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("ActionPackage");
+    typedef list<TAction *>::const_iterator ItActionUnit;
+    for( ItActionUnit it4 = pT->mActionUnit.mActionRootNodeList.begin(); it4 != pT->mActionUnit.mActionRootNodeList.end(); it4++)
+    {
+        TAction * pChildAction = *it4;
+        ret = writeAction( pChildAction );
+    }
+    writeEndElement();
+
+    writeStartElement("ScriptPackage");
+    typedef list<TScript *>::const_iterator ItScriptUnit;
+    for( ItScriptUnit it5 = pT->mScriptUnit.mScriptRootNodeList.begin(); it5 != pT->mScriptUnit.mScriptRootNodeList.end(); it5++)
+    {
+        TScript * pChildScript = *it5;
+        ret = writeScript( pChildScript );
+    }
+    writeEndElement();
+
+    writeStartElement("KeyPackage");
+    typedef list<TKey *>::const_iterator ItKeyUnit;
+    for( ItKeyUnit it6 = pT->mKeyUnit.mKeyRootNodeList.begin(); it6 != pT->mKeyUnit.mKeyRootNodeList.end(); it6++)
+    {
+        TKey * pChildKey = *it6;
+        ret = writeKey( pChildKey );
+    }
+    writeEndElement();
+
+    return ret;
+}
+
+bool XMLexport::exportGenericPackage( QIODevice * device )
+{
+    setDevice(device);
+
+    writeStartDocument();
+    writeDTD("<!DOCTYPE MudletPackage>");
+
+    writeStartElement( "MudletPackage" );
+    writeAttribute("version", "1.0");
+
+    writeStartElement( "GenericPackage" );
+    writeGenericPackage( mpHost );
+    writeEndElement();
+
+    writeEndElement();//MudletPackage
+    writeEndDocument();
+    return true;
+}
+
+bool XMLexport::writeGenericPackage( Host * pT )
+{
+    writeStartElement( "TriggerPackage" );
+    bool ret = true;
     typedef list<TTrigger *>::const_iterator ItTriggerUnit;
     for( ItTriggerUnit it1 = pT->mTriggerUnit.mTriggerRootNodeList.begin(); it1 != pT->mTriggerUnit.mTriggerRootNodeList.end(); it1++)
     {
@@ -248,7 +348,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeStartElement( tag );
     writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
-    writeAttribute( "isTempTrigger", pT->mIsTempTrigger ? "yes" : "no" ); 
+    writeAttribute( "isTempTrigger", pT->mIsTempTrigger ? "yes" : "no" );
     writeAttribute( "isMultiline", pT->mIsMultiline ? "yes" : "no" );
     writeAttribute( "isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no" );
     writeAttribute( "isColorizerTrigger", pT->mIsColorizerTrigger ? "yes" : "no" );
@@ -335,7 +435,7 @@ bool XMLexport::writeAlias( TAlias * pT )
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
-    writeTextElement( "regex", pT->mRegexCode );    
+    writeTextElement( "regex", pT->mRegexCode );
 
     typedef list<TAlias *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
@@ -391,17 +491,18 @@ bool XMLexport::writeAction( TAction * pT )
     writeTextElement( "script", pT->mScript );
     writeTextElement( "css", pT->css );
     writeTextElement( "commandButtonUp", pT->mCommandButtonUp );
-    writeTextElement( "commandButtonDown", pT->mCommandButtonDown );    
-    writeTextElement( "icon", pT->mIcon ); 
+    writeTextElement( "commandButtonDown", pT->mCommandButtonDown );
+    writeTextElement( "icon", pT->mIcon );
     writeTextElement( "orientation", QString::number(pT->mOrientation) );
     writeTextElement( "location", QString::number(pT->mLocation) );
     writeTextElement( "posX", QString::number(pT->mPosX) );
     writeTextElement( "posY", QString::number(pT->mPosY) );
+    writeTextElement( "mButtonState", QString::number(pT->mButtonState) );
     writeTextElement( "sizeX", QString::number(pT->mSizeX) );
     writeTextElement( "sizeY", QString::number(pT->mSizeY) );
     writeTextElement( "buttonColumn", QString::number(pT->mButtonColumns) );
     writeTextElement( "buttonRotation", QString::number(pT->mButtonRotation) );
-    writeTextElement( "buttonColor", pT->mButtonColor.name() );     
+    writeTextElement( "buttonColor", pT->mButtonColor.name() );
 
     typedef list<TAction *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
@@ -455,7 +556,7 @@ bool XMLexport::writeTimer( TTimer * pT )
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
-    writeTextElement( "time", pT->mTime.toString( "hh:mm:ss.zzz" ) );    
+    writeTextElement( "time", pT->mTime.toString( "hh:mm:ss.zzz" ) );
 
     typedef list<TTimer *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
@@ -567,7 +668,7 @@ bool XMLexport::writeKey( TKey * pT )
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
     writeTextElement( "keyCode", QString::number( pT->mKeyCode ) );
-    writeTextElement( "keyModifier", QString::number( pT->mKeyModifier ) );    
+    writeTextElement( "keyModifier", QString::number( pT->mKeyModifier ) );
 
     typedef list<TKey *>::const_iterator I;
     for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)

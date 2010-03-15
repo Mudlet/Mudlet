@@ -40,7 +40,7 @@ TConsole *  spDebugConsole = 0;
 
 void debugOutput(QtMsgType type, const char *msg)
 {
-    switch (type) 
+    switch (type)
     {
     case QtDebugMsg:
         cout << msg << endl;
@@ -74,16 +74,16 @@ int main(int argc, char *argv[])
 {
     spDebugConsole = 0;
     qInstallMsgHandler( debugOutput );
-    
+
     Q_INIT_RESOURCE(mudlet_alpha);
     QApplication app(argc, argv);
     app.setApplicationName("Mudlet");
     QPixmap pixmap(":/Mudlet_splashscreen_main");
     QSplashScreen splash(pixmap);
     splash.show();
-    
+
     splash.showMessage("Loading profiles ...");
-    
+
     app.processEvents();
     //qt_ntfs_permission_lookup++; // turn permission checking on on NTFS file systems
 
@@ -91,9 +91,9 @@ int main(int argc, char *argv[])
     QDir dir;
     if( ! dir.exists( directory ) )
     {
-        dir.mkpath( directory ); 
+        dir.mkpath( directory );
     }
-    
+
     QFile file_doc(":/mudlet_documentation.html");
     QFile file_doc_old;
     file_doc_old.setFileName( directory+"/mudlet_documentation.html" );
@@ -174,12 +174,51 @@ int main(int argc, char *argv[])
         }
     }
 
+    QFile file_db(":/db.lua");
+
+    QFile file_db_old( directory+"/db.lua" );
+    if( ! file_db_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+    {
+        cout << "[ERROR] failed to set file permissions for the old version of db.lua" << endl;
+        gSysErrors << "[ERROR] failed to set file permissions for the old version of db.lua";
+    }
+    else
+    {
+        cout << "[OK] successfully set file permissions for the old version of db.lua" << endl;
+    }
+    if( file_db_old.remove() )
+    {
+        cout << "[OK] old db.lua removed successfully" << endl;
+        gSysErrors << "[INFO] old db.lua removed successfully";
+    }
+    else
+    {
+        cout << "[ERROR] failed to remove the old version of db.lua" << endl;
+        gSysErrors << "[ERROR] failed to remove the old version of db.lua";
+    }
+    if( file_db.copy( directory+"/db.lua" ) )
+    {
+        cout << "[OK] new version of db.lua copied successfully" << endl;
+        gSysErrors << "[INFO] db.lua restored successfully";
+        QFile file_db_new(directory+"/db.lua");
+        if( ! file_db_new.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+        {
+            cout << "[ERROR] failed to set file permissions for the new version of db.lua" << endl;
+            gSysErrors << "[ERROR] failed to set file permissions for the new version of db.lua";
+        }
+        else
+        {
+            cout << "[OK] successfully set file permissions for the new version of db.lua" << endl;
+        }
+    }
+
+
     QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
     file_f1.copy( directory+"/COPYRIGHT.TXT" );
 
     QFile file_f2(":/fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT");
     file_f2.copy( directory+"/RELEASENOTES.TXT" );
-    
+
     QFile file_f3(":/fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf");
     file_f3.copy( directory+"/VeraMoIt.ttf" );
 
@@ -212,13 +251,13 @@ int main(int argc, char *argv[])
 
 
     mudlet::self();
-    
+
     mudlet::debugMode = false;
     HostManager::self();
     FontManager fm;
     fm.addFonts();
     mudlet::self()->show();
-    
+
     splash.showMessage("All data has been loaded successfully.\n\nHave fun!");
     QTime t;
     t.start();

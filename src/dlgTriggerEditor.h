@@ -42,6 +42,7 @@
 #include "dlgSearchArea.h"
 #include "TTreeWidget.h"
 #include "TKey.h"
+//#include "TConsole.h"
 
 class dlgTimersMainArea;
 class dlgSystemMessageArea;
@@ -59,6 +60,7 @@ class dlgOptionsAreaAction;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
 class TKey;
+class TConsole;
 
 class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
 {
@@ -78,6 +80,7 @@ public:
     QToolBar *                  toolBar;
     QToolBar *                  toolBar2;
     bool                        mNeedUpdateData;
+    TConsole *                  mpErrorConsole;
 
 signals:
 
@@ -86,6 +89,7 @@ signals:
     void                        update();
 
 public slots:
+    void                        slot_viewErrorsAction();
     void                        slot_cursorPositionChanged();
     void                        slot_set_pattern_type_color( int );
     void                        slot_soundTrigger();
