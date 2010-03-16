@@ -7,7 +7,7 @@ SET(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
 SET(QT_USE_QTNETWORK 1)
 SET(CMAKE_CONFIGURATION_TYPES "Release")
 SET(mudlet_RCCS mudlet_alpha.qrc)
-SET( mudlet_SRCS mudlet.cpp
+SET( mudlet_SRCS 
 TConsole.cpp
 ctelnet.cpp
 main.cpp
@@ -19,7 +19,6 @@ dlgTriggerEditor.cpp
 TTrigger.cpp
 TriggerUnit.cpp
 TLuaInterpreter.cpp
-TForkedProcess.cpp
 dlgTriggersMainArea.cpp
 dlgOptionsAreaTriggers.cpp
 dlgOptionsAreaTimers.cpp
@@ -28,8 +27,6 @@ TCommandLine.cpp
 TTreeWidget.cpp
 TTreeWidgetItem.cpp
 TTimer.cpp
-TToolBar.cpp
-TFlipButton.cpp
 TScript.cpp
 TAlias.cpp
 dlgTimersMainArea.cpp
@@ -57,22 +54,24 @@ TTextEdit.cpp
 XMLexport.cpp
 XMLimport.cpp
 FontManager.cpp
-TToolBar.cpp
 TFlipButton.cpp
-TBuffer.cpp
+TToolBar.cpp
+TLabel.cpp
 TEasyButtonBar.cpp
+TForkedProcess.cpp
 dlgColorTrigger.cpp
+dlgTriggerPatternEdit.cpp
 TSplitter.cpp
 TSplitterHandle.cpp
+mudlet.cpp
 dlgNotepad.cpp
 THighlighter.cpp
-dlgTriggerPatternEdit.cpp
 dlgComposer.cpp
-TArea.cpp
-TMap.cpp
-TLabel.cpp)
+TBuffer.cpp
+)
 
-SET(mudlet_UIS ui/connection_profiles.ui
+SET(mudlet_UIS 
+ui/connection_profiles.ui
 ui/main_window.ui
 ui/trigger_editor.ui
 ui/options_area_triggers.ui
@@ -94,49 +93,71 @@ ui/color_trigger.ui
 ui/notes_editor.ui
 ui/trigger_pattern_edit.ui
 ui/composer.ui
-ui/profile_preferences.ui)
+ui/mapper.ui
+ui/profile_preferences.ui
+)
 
-SET(mudlet_MOC_HDRS mudlet.h
-EAction.h
-TConsole.h
-TToolBar.h
-ctelnet.h
-dlgConnectionProfiles.h
-dlgTriggerEditor.h
-TLuaInterpreter.h
-TForkedProcess.h
-dlgTriggers_main_area.h
-dlgOptionsAreaTriggers.h
-TCommandLine.h
-TTreeWidget.h
-dlgTimersMainArea.h
-dlgSourceEditorArea.h
-dlgSystemMessageArea.h
-dlgScriptsMainArea.h
-dlgAliasMainArea.h
-dlgOptionsAreaAlias.h
-dlgOptionsAreaScripts.h
-dlgOptionsAreaTimers.h
-dlgSearchArea.h
-dlgActionMainArea.h
-dlgOptionsAreaAction.h
-dlgAboutDialog.h
-dlgKeysMainArea.h
-dlgProfilePreferences.h
-TToolBar.h
-TTextEdit.h
-TEasyButtonBar.h
-dlgColorTrigger.h
-TSplitter.h
-TSplitterHandle.h
-dlgNotepad.h
-THighlighter.h
-dlgTriggerPatternEdit.h
-dlgComposer.h
-TRoom.h
-TArea.h
-TMap.h
-TLabel.h)
+SET(mudlet_MOC_HDRS 
+mudlet.h
+    TTimer.h
+    EAction.h
+    TConsole.h
+    ctelnet.h
+    Host.h
+    HostManager.h
+    HostPool.h
+    dlgConnectionProfiles.h
+    dlgTriggerEditor.h
+    TTrigger.h
+    TLuaInterpreter.h
+    dlgTriggers_main_area.h
+    dlgOptionsAreaTriggers.h
+    dlgTriggerPatternEdit.h
+    TCommandLine.h
+    TTreeWidget.h
+    TTreeWidgetItem.h
+    TScript.h
+    TAlias.h
+    dlgTimersMainArea.h
+    dlgSourceEditorArea.h
+    dlgSystemMessageArea.h
+    TimerUnit.h
+    ScriptUnit.h
+    AliasUnit.h
+    dlgScriptsMainArea.h
+    dlgAliasMainArea.h
+    dlgOptionsAreaAlias.h
+    dlgOptionsAreaScripts.h
+    dlgOptionsAreaTimers.h
+    dlgSearchArea.h
+    TAction.h
+    ActionUnit.h
+    dlgActionMainArea.h
+    dlgOptionsAreaAction.h
+    dlgAboutDialog.h
+    TMatchState.h
+    TEvent.h
+    TDebug.h
+    dlgKeysMainArea.h
+    TKey.h
+    KeyUnit.h
+    dlgProfilePreferences.h
+    TTextEdit.h
+    TFlipButton.h
+    TToolBar.h
+    TBuffer.h
+    TriggerUnit.h
+    TLabel.h
+    TEasyButtonBar.h
+    TForkedProcess.h
+    dlgColorTrigger.h
+    TSplitter.h
+    TSplitterHandle.h
+    dlgNotepad.h
+    THighlighter.h
+    dlgComposer.h
+    Tree.h
+)
 
 FIND_PACKAGE(Qt4 REQUIRED)
 FIND_PACKAGE(Lua51 REQUIRED)

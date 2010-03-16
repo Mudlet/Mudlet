@@ -50,7 +50,7 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 ,mHostID( id )
 ,purgeTimer(this)
 {
-  		pGlobalLua = 0;
+                pGlobalLua = 0;
 
     connect(this,SIGNAL(signalEchoMessage(int, QString)), this,SLOT(slotEchoMessage(int,QString)));//,Qt::DirectConnection);
     connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)));//,Qt::QueuedConnection);
@@ -2863,6 +2863,33 @@ int TLuaInterpreter::sendATCP( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::sendTelnetChannel102( lua_State *L )
+{
+    string msg;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        msg = lua_tostring( L, 1 );
+    }
+    string _h;
+    _h += TN_IAC;
+    _h += TN_SB;
+    _h += 102;
+    _h += msg;
+    _h += TN_IAC;
+    _h += TN_SE;
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.socketOutRaw( _h );
+    return 0;
+}
+
+
 int TLuaInterpreter::getButtonState( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -4822,6 +4849,27 @@ void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
     pHost->raiseEvent( & event );
 }
 
+void TLuaInterpreter::setChannel102Table( int & var, int & arg )
+{
+    lua_State * L = pGlobalLua;
+    lua_getglobal( L, "channel102" ); //defined in LuaGlobal.lua
+    lua_pushnumber( L, var );
+    lua_pushnumber( L, arg );
+    lua_rawset( L, -3 );
+    lua_pop( L, 1 );
+
+    TEvent event;
+    QString e = "channel102Message";
+    event.mArgumentList.append( e );
+    event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    event.mArgumentList.append( QString::number(var) );
+    event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+    event.mArgumentList.append( QString::number(arg) );
+    event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->raiseEvent( & event );
+}
+
 bool TLuaInterpreter::call_luafunction( void * pT )
 {
     lua_State * L = pGlobalLua;
@@ -5324,6 +5372,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "hasFocus", TLuaInterpreter::hasFocus );
     lua_register( pGlobalLua, "isPrompt", TLuaInterpreter::isPrompt );
     lua_register( pGlobalLua, "feedTriggers", TLuaInterpreter::feedTriggers );
+    lua_register( pGlobalLua, "sendTelnetChannel102", TLuaInterpreter::sendTelnetChannel102 );
 
     QString n;
     int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
@@ -5403,6 +5452,9 @@ void TLuaInterpreter::initLuaGlobals()
 
     QString tn = "atcp";
     QStringList args;
+    set_lua_table( tn, args );
+
+    tn = "channel102";
     set_lua_table( tn, args );
 
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );

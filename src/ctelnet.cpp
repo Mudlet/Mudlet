@@ -49,6 +49,7 @@ cTelnet::cTelnet( Host * pH )
 , mCommands( 0 )
 , mAlertOnNewData( true )
 , enableATCP( false )
+, enableChannel102( false )
 , mMCCP_version_1( false )
 , mMCCP_version_2( false )
 , mpComposer( 0 )
@@ -77,7 +78,7 @@ cTelnet::cTelnet( Host * pH )
     // initialize telnet session
     reset ();
 
-    mpPostingTimer->setInterval( 500 );//FIXME
+    mpPostingTimer->setInterval( 100 );//FIXME
     connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
 
     mTimerLogin = new QTimer( this );
@@ -400,6 +401,15 @@ void cTelnet::processTelnetCommand( const string & command )
               break;
           }
 
+          //option = command[2];
+          if( option == static_cast<char>(102) ) // Aardwulf channel 102 support
+          {
+              cout << "Aardwulf channel 102 support enabled" << endl;
+              enableChannel102 = true;
+              sendTelnetOption( TN_DO, 102 );
+              break;
+          }
+
           heAnnouncedState[option] = true;
           if( triedToEnable[option] )
           {
@@ -514,6 +524,13 @@ void cTelnet::processTelnetCommand( const string & command )
             sendTelnetOption( TN_WILL, 200 );
             break;
           }
+          if( option == static_cast<char>(102) ) // channel 102 support
+          {
+            cout << "TELNET IAC DO CHANNEL 102" << endl;
+            enableChannel102 = true;
+            sendTelnetOption( TN_WILL, 102 );
+            break;
+          }
               //cout << "server wants us to enable telnet option " << (int)option << "(TN_DO + "<< (int)option<<")"<<endl;
           if(option == OPT_TIMING_MARK)
           {
@@ -547,7 +564,7 @@ void cTelnet::processTelnetCommand( const string & command )
           }
           if( option == OPT_NAWS )
           {
-          				//NAWS
+                                        //NAWS
               setDisplayDimensions();
           }
           break;
@@ -587,6 +604,14 @@ void cTelnet::processTelnetCommand( const string & command )
                   socketOutRaw( _h );
               }
 
+              return;
+          }
+          if( option == static_cast<char>(102) )
+          {
+              QString _m = command.c_str();
+              if( command.size() < 6 ) return;
+              _m = _m.mid( 3, command.size()-5 );
+              setChannel102Variables( _m );
               return;
           }
           switch( option ) //switch 2
@@ -724,6 +749,22 @@ void cTelnet::setATCPVariables( QString & msg )
     }*/
 }
 
+void cTelnet::setChannel102Variables( QString & msg )
+{
+    // messages consist of 2 bytes only
+    if( msg.size() < 2 )
+    {
+        qDebug()<<"ERROR: channel 102 message size != 2 bytes msg<"<<msg<<">";
+        return;
+    }
+    else
+    {
+        int _m = msg.at(0).toAscii();
+        int _a = msg.at(1).toAscii();
+        mpHost->mLuaInterpreter.setChannel102Table( _m, _a );
+    }
+}
+
 void cTelnet::atcpComposerCancel()
 {
     if( ! mpComposer ) return;
@@ -846,14 +887,43 @@ void cTelnet::gotRest( string & mud_data )
         return;
     }
     //if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
-    if( ( mud_data[mud_data.size()-1] == '\n' ) )
+    if( ! mGA_Driver )
+    {
+        int i = mud_data.rfind('\n');
+        if( i != string::npos )
+        {
+            mMudData += mud_data.substr( 0, i+1 );
+            postData();
+            mpPostingTimer->start();
+            mIsTimerPosting = true;
+            if( i+1 < mud_data.size() )
+            {
+                mMudData = mud_data.substr( i+1, mud_data.size() );
+            }
+            else
+            {
+                mMudData = "";
+            }
+        }
+        else
+        {
+            mMudData += mud_data;
+            if( ! mIsTimerPosting )
+            {
+                mpPostingTimer->start();
+                mIsTimerPosting = true;
+            }
+        }
+
+    }
+    else if( mGA_Driver )// if( ( mud_data[mud_data.size()-1] == '\n' ) )
     {
 
-        mpPostingTimer->stop();
+        //mpPostingTimer->stop();
         mMudData += mud_data;
         postData();
         mMudData = "";
-        mIsTimerPosting = false;
+        //mIsTimerPosting = false;
     }
     else
     {
@@ -869,7 +939,7 @@ void cTelnet::gotRest( string & mud_data )
 void cTelnet::slot_timerPosting()
 {
     if( ! mIsTimerPosting ) return;
-    mMudData += "\n";
+    mMudData += "\r";
     postData();
     mMudData = "";
     mIsTimerPosting = false;

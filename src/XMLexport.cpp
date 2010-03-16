@@ -233,9 +233,7 @@ bool XMLexport::exportGenericPackage( QIODevice * device )
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
 
-    writeStartElement( "GenericPackage" );
     writeGenericPackage( mpHost );
-    writeEndElement();
 
     writeEndElement();//MudletPackage
     writeEndDocument();

@@ -1299,7 +1299,7 @@ void TBuffer::translateToPlainText( std::string & s )
         }
         const QString nothing = "";
         TChar stdCh;
-        if( ( ch == '\n' ) || ( ch == '\xff') )
+        if( ( ch == '\n' ) || ( ch == '\xff') || ( ch == '\r' ) )
         {
             // MUD Zeilen werden immer am Zeilenanfang geschrieben
             if( lineBuffer.back().size() > 0 )
@@ -1310,6 +1310,11 @@ void TBuffer::translateToPlainText( std::string & s )
                 }
                 else
                 {
+                    if( ch == '\r' )
+                    {
+                        msPos++;
+                        continue; //empty timer posting
+                    }
                     lineBuffer << QString();
                 }
                 buffer.push_back( mMudBuffer );
@@ -1332,6 +1337,11 @@ void TBuffer::translateToPlainText( std::string & s )
                 }
                 else
                 {
+                    if( ch == '\r' )
+                    {
+                        msPos++;
+                        continue; //empty timer posting
+                    }
                     lineBuffer.back().append(QString());
                 }
                 buffer.back() = mMudBuffer;

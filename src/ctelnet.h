@@ -93,6 +93,7 @@ public:
   void                _loadReplay();
   bool                mResponseProcessed;
   QTime               networkLatencyTime;
+  void                setChannel102Variables( QString & );
   double              networkLatency;
   bool                mGA_Driver;
   bool                mFORCE_GA_OFF;
@@ -169,6 +170,7 @@ private:
   QTime               mConnectionTime;
   int                 lastTimeOffset;
   bool                enableATCP;
+  bool                enableChannel102;
   dlgComposer *       mpComposer;
 };
 

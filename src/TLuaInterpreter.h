@@ -77,6 +77,7 @@ public:
     bool compile( QString & code, QString & error );
     bool compileScript( QString & );
     void setAtcpTable( QString &, QString & );
+    void setChannel102Table( int & var, int & arg );
     bool compileAndExecuteScript( QString & );
     //void execLuaCode( QString code );
     QString get_lua_string( QString & stringName );
@@ -105,6 +106,7 @@ public:
 
     TGatekeeperThread * mpGatekeeperThread;
 
+    static int sendTelnetChannel102( lua_State *L );
     static int isPrompt( lua_State * L );
     static int feedTriggers( lua_State * );
     static int Wait( lua_State * L );
