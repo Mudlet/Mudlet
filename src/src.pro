@@ -161,7 +161,6 @@ FORMS += ui/connection_profiles.ui \
     ui/notes_editor.ui \
     ui/trigger_pattern_edit.ui \
     ui/composer.ui \
-    ui/mapper.ui \
     ui/profile_preferences.ui
 TEMPLATE = app
 TARGET = mudlet
