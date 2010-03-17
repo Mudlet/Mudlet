@@ -65,17 +65,17 @@ class Host  : public QObject
 {
     friend class XMLexport;
     friend class XMLimport;
-    
-public:    
-            
-                       Host( int port, QString mHostName, QString login, QString pass, int host_id );  
+
+public:
+
+                       Host( int port, QString mHostName, QString login, QString pass, int host_id );
                        Host();
-                       ~Host(); 
+                       ~Host();
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     void               setName( QString s )             { QMutexLocker locker(& mLock); mHostName = s; }
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
-    void               setUrl( QString s )              { QMutexLocker locker(& mLock); mUrl = s; }    
-    QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }    
+    void               setUrl( QString s )              { QMutexLocker locker(& mLock); mUrl = s; }
+    QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
     void               setUserDefinedName( QString s )  { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
     void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
@@ -100,7 +100,7 @@ public:
     void               sendRaw( QString s );
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
-    TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }    
+    TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
     void               incomingStreamProcessor( QString & paragraph, QString & prompt, int line );
     void               gotRest( QString & );
     void               gotLine( QString & );
@@ -123,7 +123,7 @@ public:
     //QString            getBufferLine( int );
     bool               serialize();
     bool               blockScripts() { return mBlockScriptCompile; }
-    
+
     void               setIsAutologin( bool b ){ mIsAutologin = b; }
     bool               isAutologin(){ return mIsAutologin; }
     void               setReplacementCommand( QString );
@@ -157,7 +157,7 @@ public:
     QColor             mMagenta;
     QColor             mLightWhite;
     QColor             mWhite;
-    
+
     QColor             mFgColor;
     QColor             mBgColor;
     QColor             mCommandBgColor;
@@ -170,10 +170,10 @@ public:
     int                mScreenWidth;
     QFont              mCommandLineFont;
     QString            mCommandSeperator;
-    bool               mSaveProfileOnExit;    
+    bool               mSaveProfileOnExit;
     //////////////////////////////////////////
     // this is serialized into hostOptions_2
-    int mWrapAt;    
+    int mWrapAt;
     int mWrapIndentCount;
     bool mPrintCommand;
     bool mAutoClearCommandLineAfterSend;
@@ -186,14 +186,14 @@ public:
     bool               mRawStreamDump;
     bool               mCodeCompletion;
     dlgNotepad *       mpNotePad;
-    
+
     //private:
-   
+
     QStringList        mTextBufferList;
-    QString            mRest; 
+    QString            mRest;
     QString            mPrompt;
-    QString            mLine; 
-    QStringList        mParagraphList; 
+    QString            mLine;
+    QStringList        mParagraphList;
     QString            mHostName;
     QString            mUrl;
     QString            mLogin;
@@ -205,14 +205,14 @@ public:
     bool               mIsClosingDown;
     int                mPort;
     QString            mUserDefinedName;
-    
+
     TriggerUnit        mTriggerUnit;
     TimerUnit          mTimerUnit;
     ScriptUnit         mScriptUnit;
     AliasUnit          mAliasUnit;
     ActionUnit         mActionUnit;
     KeyUnit            mKeyUnit;
-    
+
     cTelnet            mTelnet;
     int                mHostID;
     QString            mMudOutputBuffer;
@@ -240,6 +240,7 @@ public:
     bool               mIsProfileLoadingSequence;
     QTextStream        mErrorLogStream;
     QFile              mErrorLogFile;
+    int                commandLineMinimumHeight;
 };
 #endif
 

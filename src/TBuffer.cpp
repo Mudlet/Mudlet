@@ -2443,18 +2443,19 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
                 if( lineBuffer[i][i2] == QChar('\n') )
                 {
                     i2++;
+
+                    if( newLine.size() == 0 )
+                    {
+                        tempList.append(QString());
+                        std::deque<TChar> emptyLine;
+                        queue.push( emptyLine );
+                    }
+                    else
+                    {
+                        queue.push( newLine );
+                        tempList.append( lineText );
+                    }
                     break;
-                }
-                if( newLine.size() == 0 )
-                {
-                    tempList.append(QString());
-                    std::deque<TChar> emptyLine;
-                    queue.push( emptyLine );
-                }
-                else
-                {
-                    queue.push( newLine );
-                    tempList.append( lineText );
                 }
                 newLine.push_back( buffer[i][i2] );
                 lineText.append( lineBuffer[i].at(i2) );
@@ -2470,7 +2471,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         lineCount++;
     }
 
-    if( lineCount <= 1 )
+    if( lineCount < 1 )
     {
         return 0;
     }
@@ -2484,7 +2485,6 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     dirty.removeAt( startLine );
 
     int insertedLines = queue.size()-1;
-
     int i=0;
     while( ! queue.empty() )
     {

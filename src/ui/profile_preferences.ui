@@ -13,8 +13,8 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_7">
-   <item row="0" column="0">
+  <layout class="QVBoxLayout" name="verticalLayout_6">
+   <item>
     <widget class="QTabWidget" name="tabWidgeta">
      <property name="enabled">
       <bool>true</bool>
@@ -26,22 +26,19 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="General">
       <attribute name="title">
        <string>General</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_6">
+      <layout class="QVBoxLayout" name="verticalLayout_5">
        <item>
         <widget class="QGroupBox" name="groupBox_11">
          <property name="title">
           <string>Toolbar Icon Size</string>
          </property>
-         <layout class="QFormLayout" name="formLayout_4">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-          </property>
+         <layout class="QGridLayout" name="gridLayout_6">
           <item row="0" column="0">
            <widget class="QLabel" name="label_34">
             <property name="text">
@@ -75,7 +72,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="showToolbar">
             <property name="toolTip">
              <string>Enables the default button bar in the main window. Requires restart to take effect</string>
@@ -139,6 +136,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="mRawStreamDump">
+            <property name="toolTip">
+             <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
+            </property>
+            <property name="text">
+             <string>Save log files in html format instead of text only.</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -199,8 +206,8 @@
       <attribute name="title">
        <string>Input line</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_6">
-       <item row="0" column="0">
+      <layout class="QVBoxLayout" name="verticalLayout_8">
+       <item>
         <widget class="QGroupBox" name="groupBox_4">
          <property name="enabled">
           <bool>true</bool>
@@ -209,7 +216,7 @@
           <string>Input</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_5">
-          <item row="0" column="0">
+          <item row="0" column="0" colspan="2">
            <widget class="QCheckBox" name="USE_UNIX_EOL">
             <property name="maximumSize">
              <size>
@@ -248,7 +255,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="3" column="0">
            <widget class="QLabel" name="label_18">
             <property name="toolTip">
              <string/>
@@ -261,17 +268,37 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="3" column="1" colspan="2">
            <widget class="QLineEdit" name="command_separator_lineedit">
             <property name="enabled">
              <bool>true</bool>
             </property>
            </widget>
           </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_38">
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="text">
+             <string>Command line minimum height in pixels:</string>
+            </property>
+            <property name="buddy">
+             <cstring>command_separator_lineedit</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">
+           <widget class="QSpinBox" name="commandLineMinimumHeight">
+            <property name="maximum">
+             <number>300</number>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item>
         <spacer name="verticalSpacer_2">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -653,27 +680,6 @@ or some other computer model that has a small screen.</string>
             </property>
             <property name="text">
              <string>Use Mudlet on a netbook with a small screen</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkBox_mUSE_FORCE_LF_AFTER_PROMPT">
-            <property name="toolTip">
-             <string>This option adds a line line break &lt;LF&gt; or &quot;
-&quot; to your command input on empty commands. This option will rarely be necessary.</string>
-            </property>
-            <property name="text">
-             <string>Force new line on empty commands</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="mRawStreamDump">
-            <property name="toolTip">
-             <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
-            </property>
-            <property name="text">
-             <string>Save log files in html format instead of text only.</string>
             </property>
            </widget>
           </item>
@@ -1270,7 +1276,7 @@ or some other computer model that has a small screen.</string>
         <property name="geometry">
          <rect>
           <x>20</x>
-          <y>50</y>
+          <y>70</y>
           <width>421</width>
           <height>22</height>
          </rect>
@@ -1279,11 +1285,28 @@ or some other computer model that has a small screen.</string>
          <string>force telnet GA signal interpretation off (needs restart!)</string>
         </property>
        </widget>
+       <widget class="QCheckBox" name="checkBox_mUSE_FORCE_LF_AFTER_PROMPT">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>110</y>
+          <width>281</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>This option adds a line line break &lt;LF&gt; or &quot;
+&quot; to your command input on empty commands. This option will rarely be necessary.</string>
+        </property>
+        <property name="text">
+         <string>Force new line on empty commands</string>
+        </property>
+       </widget>
       </widget>
      </widget>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item>
     <widget class="QWidget" name="widget" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>

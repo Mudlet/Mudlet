@@ -519,6 +519,11 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mBorderTopHeight = readElementText().toInt();
                 continue;
             }
+            else if( name() == "commandLineMinimumHeight")
+            {
+                pT->commandLineMinimumHeight = readElementText().toInt();
+                continue;
+            }
             else if( name() == "borderBottomHeight")
             {
                 pT->mBorderBottomHeight = readElementText().toInt();

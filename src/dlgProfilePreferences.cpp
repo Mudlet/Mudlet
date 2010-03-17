@@ -219,6 +219,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         else
             showToolbar->setChecked( mudlet::self()->mShowToolbar );
         mRawStreamDump->setChecked( pHost->mRawStreamDump );
+        commandLineMinimumHeight->setValue( pHost->commandLineMinimumHeight );
         mNoAntiAlias->setChecked( ! pHost->mNoAntiAlias );
         mFORCE_MCCP_OFF->setChecked( pHost->mFORCE_NO_COMPRESSION );
         mFORCE_GA_OFF->setChecked( pHost->mFORCE_GA_OFF );
@@ -799,6 +800,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
+    pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     pHost->mMXPMode = mMXPMode->currentIndex();
     pHost->mEncoding = encoding->currentIndex();
     mudlet::self()->mMainIconSize = MainIconSize->value();

@@ -371,12 +371,15 @@ int TCommandLine::adjustHeight()
     int fontH = QFontMetrics( mpHost->mDisplayFont ).height();
     if( lines < 1 ) lines = 1;
     if( lines > 10 ) lines = 10;
-    int _height = fontH * lines;
-    if( _height+fontH > height() || _height+fontH < height() )
+    int _baseHeight = fontH * lines;
+    int _height = _baseHeight + fontH;
+    if( _height < mpHost->commandLineMinimumHeight )
+        _height = mpHost->commandLineMinimumHeight;
+    if( _height > height() || _height < height() )
     {
         qDebug()<<"***resizing commandline: _height="<<_height<<" height()="<<height();
-        mpConsole->layerCommandLine->setMinimumHeight( _height+fontH );
-        mpConsole->layerCommandLine->setMaximumHeight( _height+fontH );
+        mpConsole->layerCommandLine->setMinimumHeight( _height );
+        mpConsole->layerCommandLine->setMaximumHeight( _height );
         int x = mpConsole->width();
         int y = mpConsole->height();
         QSize s = QSize(x,y);

@@ -281,7 +281,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpCommandLine = new TCommandLine( pH, this, mpMainDisplay );
     mpCommandLine->setContentsMargins(0,0,0,0);
     mpCommandLine->setSizePolicy( sizePolicy );
-    //mpCommandLine->setMaximumHeight( 120 );//30 );
     mpCommandLine->setFocusPolicy( Qt::StrongFocus );
 
     layer = new QWidget( mpMainDisplay );
@@ -1924,10 +1923,12 @@ void TConsole::printCommand( QString & msg )
                 format.bgG = mCommandBgColor.green();
                 format.bgB = mCommandBgColor.blue();
                 buffer.insertInLine( P, msg, format );
+                qDebug()<<"lineBeforeNewContent="<<lineBeforeNewContent<<" wrapping line<"<<buffer.lineBuffer[lineBeforeNewContent]<<">";
                 int down = buffer.wrapLine( lineBeforeNewContent,
                                             mpHost->mScreenWidth,
                                             mpHost->mWrapIndentCount,
                                             mFormatCurrent );
+
                 console->needUpdate( lineBeforeNewContent, lineBeforeNewContent+1+down );
                 console2->needUpdate( lineBeforeNewContent, lineBeforeNewContent+1+down );
                 buffer.promptBuffer[lineBeforeNewContent] = false;
@@ -2349,11 +2350,11 @@ void TConsole::showStatistics()
     QString footer = QString("\n+--------------------------------------------------------------+\n" );
     QString msg = h + r;
     printSystemMessage( msg );
-    QString script = "display( atcp )";
+    QString script = "echo(\"\nATCP (table=atcp) messages sent by the server:\n\");display( atcp )";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+    script = "echo(\"\nchannel102 (table=channel102) messages sent by the server:\n\");display( channel102: )";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
     printSystemMessage( footer );
-    //print( "20 triggers\n" );
-
 
 }
 

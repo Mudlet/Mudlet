@@ -150,6 +150,7 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mDisplayFont", pT->mDisplayFont.toString() );
     writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() );
     writeTextElement( "mCommandSeparator", pT->mCommandSeparator );
+    writeTextElement( "commandLineMinimumHeight", QString::number(pT->commandLineMinimumHeight) );
 
 
     writeEndElement(); // end Host tag

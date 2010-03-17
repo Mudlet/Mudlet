@@ -110,6 +110,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mFORCE_NO_COMPRESSION( false )
 , mFORCE_GA_OFF( false )
 , mFORCE_SAVE_ON_EXIT( false )
+, commandLineMinimumHeight( 0 )
 {
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
