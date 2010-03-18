@@ -563,10 +563,16 @@
                             <property name="maximumSize">
                              <size>
                               <width>16777215</width>
-                              <height>20</height>
+                              <height>28</height>
                              </size>
                             </property>
                             <property name="editable">
+                             <bool>true</bool>
+                            </property>
+                            <property name="insertPolicy">
+                             <enum>QComboBox::InsertAtTop</enum>
+                            </property>
+                            <property name="duplicatesEnabled">
                              <bool>true</bool>
                             </property>
                             <property name="frame">
@@ -717,6 +723,15 @@
                       </attribute>
                       <attribute name="headerDefaultSectionSize">
                        <number>80</number>
+                      </attribute>
+                      <attribute name="headerMinimumSectionSize">
+                       <number>20</number>
+                      </attribute>
+                      <attribute name="headerDefaultSectionSize">
+                       <number>80</number>
+                      </attribute>
+                      <attribute name="headerVisible">
+                       <bool>true</bool>
                       </attribute>
                       <attribute name="headerMinimumSectionSize">
                        <number>20</number>

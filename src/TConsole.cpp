@@ -1923,7 +1923,6 @@ void TConsole::printCommand( QString & msg )
                 format.bgG = mCommandBgColor.green();
                 format.bgB = mCommandBgColor.blue();
                 buffer.insertInLine( P, msg, format );
-                qDebug()<<"lineBeforeNewContent="<<lineBeforeNewContent<<" wrapping line<"<<buffer.lineBuffer[lineBeforeNewContent]<<">";
                 int down = buffer.wrapLine( lineBeforeNewContent,
                                             mpHost->mScreenWidth,
                                             mpHost->mWrapIndentCount,

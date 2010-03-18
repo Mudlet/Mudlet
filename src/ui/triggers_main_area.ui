@@ -117,8 +117,17 @@
       <property name="spacing">
        <number>6</number>
       </property>
-      <property name="margin">
+      <property name="leftMargin">
        <number>6</number>
+      </property>
+      <property name="topMargin">
+       <number>2</number>
+      </property>
+      <property name="rightMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
       </property>
       <item>
        <widget class="QLabel" name="label_4">
@@ -230,8 +239,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>463</width>
-              <height>131</height>
+              <width>455</width>
+              <height>137</height>
              </rect>
             </property>
            </widget>
@@ -402,6 +411,12 @@
                  </colorrole>
                 </disabled>
                </palette>
+              </property>
+              <property name="font">
+               <font>
+                <family>Century Schoolbook L</family>
+                <pointsize>11</pointsize>
+               </font>
               </property>
               <property name="toolTip">
                <string>Keep firing the script for x more lines, after the trigger or chain has matched.</string>
@@ -686,8 +701,17 @@
       <property name="spacing">
        <number>0</number>
       </property>
-      <property name="margin">
+      <property name="leftMargin">
        <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>1</number>
       </property>
       <item>
        <widget class="QWidget" name="widget_13" native="true">
@@ -763,13 +787,13 @@
           <number>7</number>
          </property>
          <property name="topMargin">
-          <number>5</number>
+          <number>1</number>
          </property>
          <property name="rightMargin">
           <number>3</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>1</number>
          </property>
          <item row="0" column="0">
           <widget class="QGroupBox" name="checkBox_multlinetrigger">
@@ -875,10 +899,7 @@ as this is a complex topic.</string>
            <property name="checked">
             <bool>false</bool>
            </property>
-           <layout class="QGridLayout" name="gridLayout_4">
-            <property name="margin">
-             <number>3</number>
-            </property>
+           <layout class="QFormLayout" name="formLayout">
             <item row="0" column="0">
              <widget class="QLabel" name="label_3">
               <property name="sizePolicy">
@@ -887,10 +908,16 @@ as this is a complex topic.</string>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
               <property name="font">
                <font>
                 <family>Sans Serif</family>
-                <pointsize>7</pointsize>
+                <pointsize>9</pointsize>
                </font>
               </property>
               <property name="text">
@@ -914,6 +941,18 @@ as this is a complex topic.</string>
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
               </property>
               <property name="toolTip">
                <string>Within how many lines must all condition be true to fire the trigger?</string>
@@ -1000,13 +1039,13 @@ as this is a complex topic.</string>
           <number>5</number>
          </property>
          <property name="topMargin">
-          <number>3</number>
+          <number>1</number>
          </property>
          <property name="rightMargin">
           <number>3</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>1</number>
          </property>
          <item row="0" column="0">
           <widget class="QGroupBox" name="filterTrigger">
@@ -1172,13 +1211,13 @@ as this is a complex topic.</string>
           <number>5</number>
          </property>
          <property name="topMargin">
-          <number>5</number>
+          <number>1</number>
          </property>
          <property name="rightMargin">
           <number>5</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>1</number>
          </property>
          <item>
           <widget class="QGroupBox" name="perlSlashGOption">
@@ -1336,13 +1375,13 @@ Without this option, the pattern matching will stop after the first successful m
           <number>5</number>
          </property>
          <property name="topMargin">
-          <number>5</number>
+          <number>1</number>
          </property>
          <property name="rightMargin">
           <number>5</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>1</number>
          </property>
          <item>
           <widget class="QGroupBox" name="colorizerTrigger">
@@ -1378,8 +1417,17 @@ otherwise highlight the entire match</string>
             <bool>false</bool>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
-            <property name="margin">
+            <property name="leftMargin">
              <number>3</number>
+            </property>
+            <property name="topMargin">
+             <number>1</number>
+            </property>
+            <property name="rightMargin">
+             <number>3</number>
+            </property>
+            <property name="bottomMargin">
+             <number>1</number>
             </property>
             <property name="spacing">
              <number>3</number>
@@ -1419,7 +1467,7 @@ otherwise highlight the entire match</string>
               <property name="maximumSize">
                <size>
                 <width>22</width>
-                <height>11</height>
+                <height>16</height>
                </size>
               </property>
               <property name="text">
@@ -1462,7 +1510,7 @@ otherwise highlight the entire match</string>
               <property name="maximumSize">
                <size>
                 <width>22</width>
-                <height>11</height>
+                <height>16</height>
                </size>
               </property>
               <property name="text">
