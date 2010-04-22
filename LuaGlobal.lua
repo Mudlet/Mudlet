@@ -290,7 +290,7 @@ function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos,
    setMiniConsoleFontSize(consoleName, fontSize)
    local x,y = calcFontSize( fontSize )
    resizeWindow(consoleName, x*charsPerLine, y*numberOfLines)
-   setWindowWrap(consoleName, Xpos)
+   setWindowWrap(consoleName, charsPerLine)
    moveWindow(consoleName, Xpos, Ypos)
 
    setBackgroundColor(consoleName,0,0,0,0)
@@ -897,14 +897,24 @@ function display(what, numformat, recursion)
     echo(" {")
 
     local firstline = true   -- a kludge so empty tables print on one line
-    for k, v in pairs(what) do
-      if firstline then echo("\n"); firstline = false end
-      echo(indent(recursion))
-      echo(printable(k))
-      echo(": ")
-      if not (v == _G) then display(v, numformat, recursion + 1) end
-    end
-
+	if getmetatable(what).isPhpTable == true then
+		for k, v in what:pairs() do
+			if firstline then echo("\n"); firstline = false end
+			echo(indent(recursion))
+			echo(printable(k))
+			echo(": ")
+			display(v, numformat, recursion + 1)
+		end
+	else
+		for k, v in pairs(what) do
+			if firstline then echo("\n"); firstline = false end
+			echo(indent(recursion))
+			echo(printable(k))
+			echo(": ")
+			if not (k == _G) then display(v, numformat, recursion + 1) end
+		end
+	end
+	
     -- so empty tables print as {} instead of {..indent..}
     if not firstline then echo(indent(recursion - 1)) end
     echo("}")
@@ -1232,8 +1242,6 @@ setmetatable( _G, {
 				return h(func, ...)
 			elseif _G[type(func)][func] then
 				_G[type(func)][func](...)
-			else
-				debug("Error attempting to call function " .. func .. ", function does not exist.")
 			end
 		end
 	end,
@@ -1597,4 +1605,33 @@ function SavedVariables:Add(tbl)
 	else
 		hecho"|cff0000Error registering table for persistence: invalid argument to SavedVariables:Add()"
 	end
+end
+
+function phpTable(...) -- abuse to: http://richard.warburton.it
+	local newTable, keys, values = {}, {}, {}
+	newTable.pairs = function(self) -- pairs iterator
+		local count = 0
+		return function() 
+			count = count + 1
+			return keys[count], values[keys[count]]
+		end
+	end
+	setmetatable(newTable, {
+		__newindex = function(self, key, value)
+			if not self[key] then table.insert(keys, key)
+			elseif value == nil then -- Handle item delete
+				local count = 1
+				while keys[count] ~= key do count = count + 1 end
+				table.remove(keys, count)
+			end
+			values[key] = value -- replace/create
+		end,
+		__index=function(self, key) return values[key] end,
+		isPhpTable = true,
+	})
+	local args = {...}
+	for x=1, #args do
+		for k, v in pairs(args[x]) do newTable[k] = v end
+	end
+	return newTable
 end
