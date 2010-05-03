@@ -298,17 +298,15 @@ function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos,
 
 end
 
-function sendAll( what, ... )
-	if table.maxn(arg) == 0 then
-  		send( what )
-    else
-		local echo
-		if arg[table.maxn(arg)] == false then echo = false else echo = true end
-    	send( what, echo )
-    	for i,v in ipairs(arg) do
-	    	send( v, echo )
-	    end
-    end
+function sendAll(...)
+	local args = {...}
+	local echo = true
+	if type(args[#args]) == 'boolean' then
+		echo = table.remove(args, #args)
+	end
+	for i, v in ipairs(args) do
+		if type(v) == 'string' then send(v, echo) end
+	end
 end
 
          
