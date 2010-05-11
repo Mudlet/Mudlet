@@ -1130,6 +1130,7 @@ if rex then
 		local t = Echos.Process(str, style)
 		
 		reset()
+		deselect()
 		
 		for _, v in ipairs(t) do
 			if type(v) == 'table' then
