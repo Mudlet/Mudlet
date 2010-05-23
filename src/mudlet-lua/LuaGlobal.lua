@@ -1348,7 +1348,7 @@ table.union(tableA, tableB, tableC) will return:
 
 --]]-----------------------------------------------------------------------------------------
 function table.union(...)
-	local sets = arg
+	local sets = {...}
 	local union = {}
 	
 	for _, set in ipairs(sets) do
@@ -1374,7 +1374,7 @@ Returns a numerically indexed table that is the union of the provided tables. Th
 a union of unique values. The order and keys of the input tables are not preserved.
 --]]-----------------------------------------------------------------------------------------
 function table.n_union(...)
-	local sets = arg
+	local sets = {...}
 	local union = {}
 	local union_keys = {}
 	
@@ -1429,7 +1429,8 @@ table.intersection(tableA, tableB, tableC) will return:
 
 --]]-----------------------------------------------------------------------------------------
 function table.intersection(...)
-	if #arg < 2 then return false end
+	sets = {...}
+	if #sets < 2 then return false end
 	
 	local intersection = {}
 	
@@ -1443,11 +1444,11 @@ function table.intersection(...)
 		return result
 	end
 	
-	intersection = intersect(arg[1], arg[2])
+	intersection = intersect(sets[1], sets[2])
 	
-	for i, _ in ipairs(arg) do
+	for i, _ in ipairs(sets) do
 		if i > 2 then
-			intersection = intersect(intersection, arg[i])
+			intersection = intersect(intersection, sets[i])
 		end
 	end
 	
@@ -1461,7 +1462,8 @@ This is an intersection of unique values. The order and keys of the input tables
 not preserved.
 --]]-----------------------------------------------------------------------------------------
 function table.n_intersection(...)
-	if #arg < 2 then return false end
+	sets = {...}
+	if #sets < 2 then return false end
 	
 	local intersection = {}
 	
@@ -1479,11 +1481,11 @@ function table.n_intersection(...)
 		return result
 	end
 	
-	intersection = intersect(arg[1], arg[2])
+	intersection = intersect(sets[1], sets[2])
 	
-	for i, _ in ipairs(arg) do
+	for i, _ in ipairs(sets) do
 		if i > 2 then
-			intersection = intersect(intersection, arg[i])
+			intersection = intersect(intersection, sets[i])
 		end
 	end
 
@@ -1531,6 +1533,19 @@ function table.n_complement(set1, set2)
 	
 	return complement
 end
+
+
+function table:update(t1, t2) 
+	for k,v in pairs(t2) do 
+		if type(v) == "table" then 
+			t1[k] = self.update(t1[k] or {}, v) 
+		else 
+			t1[k] = v 
+		end 
+	end 
+	return t1 
+end
+
 
 -- Contribution from Iocun
 walklist = {}
