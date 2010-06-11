@@ -41,8 +41,8 @@
 
 logging = {
 	-- Formatters are used to convert a logging event into a form which is appropriate
-   -- for a certain kind of output device. Handlers actually write to such a device,
-   -- but formatters are used by handlers.
+    -- for a certain kind of output device. Handlers actually write to such a device,
+    -- but formatters are used by handlers.
 	--
 	-- By default, there are four kinds of output devices that are supported and thus
  	-- four default formatters that are used when outputting to devices of that type.
@@ -102,6 +102,7 @@ logging = {
 logging.Handler = {}
 logging.__handlerMT = {__index=logging.Handler}
 
+--- logging.Handler:create(name, device)
 function logging.Handler:create(name, device)
 	assert(name)
 	assert(device)
@@ -111,6 +112,7 @@ function logging.Handler:create(name, device)
 	return handler
 end
 
+--- logging.Handler:process(event)
 function logging.Handler:process(event)
 	if event.level >= self.level then
 		if self.emit then
@@ -120,6 +122,8 @@ function logging.Handler:process(event)
 end
 
 logging.FileHandler = {}
+
+--- logging.FileHandler:create(path)
 function logging.FileHandler:create(path)
 	
 end
@@ -129,6 +133,7 @@ end
 logging.Logger = {}
 logging.__loggerMT = {__index=logging.Logger}
 
+--- logging.Logger:create(name, parent)
 function logging.Logger:create(name, parent)
 	local logger = {
 		_name=name, 
@@ -146,15 +151,18 @@ function logging.Logger:create(name, parent)
 	return logger
 end
 
+--- logging.Logger:add_event_customizer(fn)
 function logging.Logger:add_event_customizer(fn)
 	local customizers = self._customizers
 	customizers[#customizers+1] = fn
 end
 
+--- logging.Logger:clear_event_customizers()
 function logging.Logger:clear_event_customizers()
 	self._customizers = {}
 end
 
+--- logging.Logger:_prepare_event(event)
 function logging.Logger:_prepare_event(event)
 	local name_chunks = {self._name}
 	if self._name ~= "mudlet" then
@@ -171,6 +179,7 @@ function logging.Logger:_prepare_event(event)
 	return event
 end
 
+--- logging.Logger:_customize_event(event)
 function logging.Logger:_customize_event(event)
 	for _, customizer in ipairs(self._customizers) do
 		customizer(event)
@@ -179,6 +188,7 @@ function logging.Logger:_customize_event(event)
 	return event
 end
 
+--- logging.Logger:_do_log(evt, extras, level)
 function logging.Logger:_do_log(evt, extras, level)
 	if type(evt) == "string" then
 		evt = {message=evt}
@@ -199,6 +209,7 @@ function logging.Logger:_do_log(evt, extras, level)
 	self:_log_event(self:_prepare_event(evt))
 end
 
+--- logging.Logger:_log_event(evt)
 function logging.Logger:_log_event(evt)
 	local event = self._customize_event(evt)
 
@@ -213,22 +224,27 @@ function logging.Logger:_log_event(evt)
 	end
 end
 
+--- logging.Logger:debug(event, extras)
 function logging.Logger:debug(event, extras)
 	return self:_do_log(event, extras, logging.DEBUG)
 end
 
+--- logging.Logger:info(event, extras)
 function logging.Logger:info(event, extras)
 	return self:_do_log(event, extras, logging.INFO)
 end
 
+--- logging.Logger:warning(event, extras)
 function logging.Logger:warning(event, extras)
 	return self:_do_log(event, extras, logging.WARNING)
 end
 
+--- logging.Logger:error(event, extras)
 function logging.Logger:error(event, extras)
 	return self:_do_log(event, extras, logging.ERROR)
 end
 
+--- logging.Logger:critical(event, extras)
 function logging.Logger:critical(event, extras)
 	return self:_do_log(event, extras, logging.CRITICAL)
 end
@@ -237,6 +253,7 @@ end
 
 logging._root = logging.Logger:create("mudlet", nil)
 
+--- logging:get_logger(name)
 function logging:get_logger(name)
 	local name = name or "mudlet"
 	local loggers = name:split(".")
@@ -255,6 +272,7 @@ function logging:get_logger(name)
 	return parent
 end
 
+--- logging:format_event(event, formatter) 
 function logging:format_event(event, formatter) 
 	local format = formatter or logging._formatters.default_file
 
