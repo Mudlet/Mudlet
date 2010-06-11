@@ -1,3 +1,8 @@
+----------------------------------------------------------------------------------
+--- Mudlet Lua packages loader
+----------------------------------------------------------------------------------
+
+
 if package.loaded["rex_pcre"] then rex = require "rex_pcre" end
 if package.loaded["lpeg"] then lpeg = require "lpeg" end
 

@@ -1,277 +1,14 @@
-
 ----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
---                                                                              --
--- GUI Utils                                                                    --
---                                                                              --
-----------------------------------------------------------------------------------
+--- Mudlet GUI Utils
 ----------------------------------------------------------------------------------
 
---- Move a custom gauge built by createGauge(...)
----
---- @usage moveGauge("healthBar", 1200, 400)  <br/>
----   This would move the health bar gauge to the location 1200, 400
-function moveGauge(gaugeName, newX, newY)
-	local newX, newY = newX, newY
 
-	assert(gaugesTable[gaugeName], "moveGauge: no such gauge exists.")
-	assert(newX and newY, "moveGauge: need to have both X and Y dimensions.")
+-- undocumented stuff
+-- first we need to make this table which will be used later to store important data in...
+gaugesTable = {} 
 
-	moveWindow(gaugeName, newX, newY)
-	moveWindow(gaugeName .. "_back", newX, newY)
-
-	gaugesTable[gaugeName].xpos, gaugesTable[gaugeName].ypos = newX, newY
-end
-
-
---- Set the text on a custom gauge built by createGauge(...).
----
---- @usage setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
---- @usage setGaugeText("healthBar", "HP: 100%", "red")
----
---- @param gaugeName
---- @param gaugeText An empty gaugeText will clear the text entirely.
---- @param color1 Colors are optional and will default to 0,0,0(black) if not passed as args.
---- @param color2
---- @param color3
----
---- @see createGauge
-function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
-	assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
-
-	local red,green,blue = 0,0,0
-	local l_labelText = gaugeText
-
-	if color1 ~= nil then
-		if color2 == nil then
-			red, green, blue = getRGB(color1)
-		else
-			red, green, blue = color1, color2, color3
-		end
-	end
-
-	-- Check to make sure we had a text to apply, if not, clear the text
-	if l_labelText == nil then
-		l_labelText = ""
-	end
-
-	local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
-
-	echo(gaugeName, l_EchoString)
-	echo(gaugeName .. "_back", l_EchoString)
-
-	gaugesTable[gaugeName].text = l_EchoString
-	gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
-end
-
-
---- Pads a hex number to ensure a minimum of 2 digits.
----
---- @usage PadHexNum("F") returns "F0"
-function PadHexNum(incString)
-	local l_Return = incString
-	if tonumber(incString,16)<16 then
-		if tonumber(incString,16)<10 then
-			l_Return = "0" .. l_Return
-		elseif tonumber(incString,16)>10 then
-			l_Return = l_Return .. "0"
-		end
-	end
-
-	return l_Return
-end
-
-
---- Converts an RGB value into an HTML compliant(label usable) HEX number.
---- This function is colorNames aware and can take any defined global color as its first arg
----
---- @usage RGB2Hex(255,255,255) returns "FFFFFF"
---- @usage RGB2Hex("white") returns "FFFFFF"
-function RGB2Hex(red, green, blue)
-	local l_Red, l_Green, l_Blue = 0,0,0
-	if green == nil then -- Not an RGB but a "color" instead!
-		l_Red, l_Green, l_Blue = getRGB(red)
-	else -- Nope, true color here
-		l_Red, l_Green, l_Blue = red, green, blue
-	end
-
-	return PadHexNum(string.format("%X",l_Red)) ..
-		PadHexNum(string.format("%X",l_Green)) ..
-		PadHexNum(string.format("%X",l_Blue))
-end
-
-
---- Get RGB component from color name. 
----
---- @usage Following will display "0.255.0" on your screen.
----   <pre>
----   local red, green, blue = getRGB("green")
----   echo(red .. "." .. green .. "." .. blue )
----   </pre>
-function getRGB(colorName)
-	local red = color_table[colorName][1]
-	local green = color_table[colorName][2]
-	local blue = color_table[colorName][3]
-	return red, green, blue
-end
-
-
-gaugesTable = {} -- first we need to make this table which will be used later to store important data in...
-
-
---- Make your very own customized gauge with this function.
----
---- @usage createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0) <br/>
----   This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
---- @usage createGauge("healthBar", 300, 20, 30, 300, nil, "green") <br/>
----   The second example is using the same names you'd use for something like fg() or bg().
---- @usage createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0)
---- @usage createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
-function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
-	 -- make a nice background for our gauge
-	createLabel(gaugeName .. "_back",0,0,0,0,1)
-	if color2 == nil then
-		local red, green, blue = getRGB(color1)
-		setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)
-	else
-		setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
-	end
-	moveWindow(gaugeName .. "_back", Xpos, Ypos)
-	resizeWindow(gaugeName .. "_back", width, height)
-	showWindow(gaugeName .. "_back")
-
-	-- make a nicer front for our gauge
-	createLabel(gaugeName,0,0,0,0,1)
-	if color2 == nil then
-		local red, green, blue = getRGB(color1)
-		setBackgroundColor(gaugeName, red , green, blue, 255)
-	else
-		setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
-	end
-	moveWindow(gaugeName, Xpos, Ypos)
-	resizeWindow(gaugeName, width, height)
-	showWindow(gaugeName)
-
-	-- store important data in a table
-	gaugesTable[gaugeName] = {width = width, height = height, xpos = Xpos, ypos = Ypos,text = gaugeText, color1 = color1, color2 = color2, color3 = color3}
-
-	-- Set Gauge text (Defaults to black)
-	-- If no gaugeText was passed, we'll just leave it blank!
-	if gaugeText ~= nil then
-		setGaugeText(gaugeName, gaugeText, "black")
-	else
-		setGaugeText(gaugeName)
-	end
-end
-
-
---- Use this function when you want to change the gauges look according to your values.
---- Typical usage would be in a prompt with your current health or whatever value, and throw
---- in some variables instead of the numbers.
----
---- @usage setGauge("healthBar", 200, 400)  <br/>
----   In that example, we'd change the looks of the gauge named healthBar and make it fill
----   to half of its capacity. The height is always remembered.
---- @usage setGauge("healthBar", 200, 400, "some text")  <br/>
----   change the text on your gauge
-function setGauge(gaugeName, currentValue, maxValue, gaugeText)
-	assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
-	assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
-
-	resizeWindow(gaugeName, gaugesTable[gaugeName].width/100*((100/maxValue)*currentValue), gaugesTable[gaugeName].height)
-
-	-- if we wanted to change the text, we do it
-	if gaugeText ~= nil then
-		echo(gaugeName .. "_back", gaugeText)
-		echo(gaugeName, gaugeText)
-		gaugesTable[gaugeName].text = gaugeText
-	end
-end
-
-
---- Make a new console window with ease. The default background is black and text color white.
---- If you wish to change the color you can easily do this when updating your text or manually somewhere, using
---- setFgColor() and setBackgroundColor().
----
---- @usage createConsole("myConsoleWindow", 8, 80, 20, 200, 400)  <br/>
----   This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width,
----   hold a maximum of 20 lines and be place at 200x400 of your mudlet window.
-function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
-	createMiniConsole(consoleName,0,0,1,1)
-	setMiniConsoleFontSize(consoleName, fontSize)
-	local x,y = calcFontSize( fontSize )
-	resizeWindow(consoleName, x*charsPerLine, y*numberOfLines)
-	setWindowWrap(consoleName, charsPerLine)
-	moveWindow(consoleName, Xpos, Ypos)
-
-	setBackgroundColor(consoleName,0,0,0,0)
-	setFgColor(consoleName, 255,255,255)
-end
-
-
---- Echo something after your line
-function suffix(what, func, fg, bg, window)
-	local length = string.len(line)
-	moveCursor(window or "main", length-1, getLineNumber())
-	if func and (func == cecho or func == decho or func == hecho) then
-		func(what, fg, bg, true, window)
-	else
-		insertText(what)
-	end
-end
-
-
---- Echo something before your line
-function prefix(what, func, fg, bg, window)
-	moveCursor(window or "main", 0, getLineNumber());
-	if func and (func == cecho or func == decho or func == hecho) then
-		func(what, fg, bg, true, window)
-	else
-		insertText(what)
-	end
-end
-
-
---- Function will gag the whole line. <b>Use deleteLine() instead.</b>
-function gagLine()
-	--selectString(line, 1)
-	--replace("")
-	deleteLine()
-end
-
-
---- Replace all words on the current line by your choice
----
---- @usage replaceAll("John", "Doe") <br/>
----   This will replace the word John with the word Doe, everytime the word John occurs on the current line.
-function replaceAll(word, what)
-	while selectString(word, 1) > 0 do replace(what) end
-end
-
-
---- Replace the whole with a string you'd like.
-function replaceLine(what)
-	selectString(line, 1)
-	replace("")
-	insertText(what)
-end
-
-
---- Default resizeEvent handler function. Overwrite this function to make a custom event handler 
---- if the main window is being resized.
-function handleWindowResizeEvent()
-end
-
-
---- deselect()
-function deselect()
-	selectString("",1);
-end
-
-
---- TODO - get it in doc?
---- These color definitions are intended to be used in conjunction with fg()
---- and bg() colorizer functions that are defined further below
+-- These color definitions are intended to be used in conjunction with fg()
+-- and bg() colorizer functions that are defined further below
 color_table = {
 	snow                  = {255, 250, 250},
 	ghost_white           = {248, 248, 255},
@@ -500,19 +237,316 @@ color_table = {
 }
 
 
+
+
+--- Move a custom gauge built by createGauge(...).
+---
+--- @usage This would move the health bar gauge to the location 1200, 400.
+---   <pre>
+---   moveGauge("healthBar", 1200, 400)
+---   </pre>
+---
+--- @see createGauge
+function moveGauge(gaugeName, newX, newY)
+	local newX, newY = newX, newY
+
+	assert(gaugesTable[gaugeName], "moveGauge: no such gauge exists.")
+	assert(newX and newY, "moveGauge: need to have both X and Y dimensions.")
+
+	moveWindow(gaugeName, newX, newY)
+	moveWindow(gaugeName .. "_back", newX, newY)
+
+	gaugesTable[gaugeName].xpos, gaugesTable[gaugeName].ypos = newX, newY
+end
+
+
+--- Set the text on a custom gauge built by createGauge(...).
+---
+--- @usage 
+---   <pre>
+---   setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
+---   </pre>
+--- @usage 
+---   <pre>
+---   setGaugeText("healthBar", "HP: 100%", "red")
+---   </pre>
+---
+--- @param gaugeName
+--- @param gaugeText An empty gaugeText will clear the text entirely.
+--- @param color1 Colors are optional and will default to 0,0,0(black) if not passed as args.
+--- @param color2
+--- @param color3
+---
+--- @see createGauge
+function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
+	assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
+
+	local red,green,blue = 0,0,0
+	local l_labelText = gaugeText
+
+	if color1 ~= nil then
+		if color2 == nil then
+			red, green, blue = getRGB(color1)
+		else
+			red, green, blue = color1, color2, color3
+		end
+	end
+
+	-- Check to make sure we had a text to apply, if not, clear the text
+	if l_labelText == nil then
+		l_labelText = ""
+	end
+
+	local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
+
+	echo(gaugeName, l_EchoString)
+	echo(gaugeName .. "_back", l_EchoString)
+
+	gaugesTable[gaugeName].text = l_EchoString
+	gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
+end
+
+
+--- Pads a hex number to ensure a minimum of 2 digits.
+---
+--- @usage Following command will returns "F0".
+---   <pre>
+---   PadHexNum("F") 
+---   </pre>
+function PadHexNum(incString)
+	local l_Return = incString
+	if tonumber(incString,16)<16 then
+		if tonumber(incString,16)<10 then
+			l_Return = "0" .. l_Return
+		elseif tonumber(incString,16)>10 then
+			l_Return = l_Return .. "0"
+		end
+	end
+
+	return l_Return
+end
+
+
+--- Converts an RGB value into an HTML compliant(label usable) HEX number.
+--- This function is colorNames aware and can take any defined global color as its first argument.
+---
+--- @usage Both folowing commnads will returns "FFFFFF".
+---   <pre>
+---   RGB2Hex(255,255,255) 
+---   RGB2Hex("white")
+---   </pre>
+---
+--- @see showColor
+function RGB2Hex(red, green, blue)
+	local l_Red, l_Green, l_Blue = 0,0,0
+	if green == nil then -- Not an RGB but a "color" instead!
+		l_Red, l_Green, l_Blue = getRGB(red)
+	else -- Nope, true color here
+		l_Red, l_Green, l_Blue = red, green, blue
+	end
+
+	return PadHexNum(string.format("%X",l_Red)) ..
+		PadHexNum(string.format("%X",l_Green)) ..
+		PadHexNum(string.format("%X",l_Blue))
+end
+
+
+--- Get RGB component from color name. 
+---
+--- @usage Following will display "0.255.0" on your screen.
+---   <pre>
+---   local red, green, blue = getRGB("green")
+---   echo(red .. "." .. green .. "." .. blue )
+---   </pre>
+function getRGB(colorName)
+	local red = color_table[colorName][1]
+	local green = color_table[colorName][2]
+	local blue = color_table[colorName][3]
+	return red, green, blue
+end
+
+
+--- Make your very own customized gauge with this function.
+---
+--- @usage This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
+---   <pre>
+---   createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0) <br/>
+---   </pre>
+--- @usage The second example is using the same names you'd use for something like fg() or bg().
+---   <pre>
+---   createGauge("healthBar", 300, 20, 30, 300, nil, "green") <br/>
+---   </pre>
+--- @usage 
+---   <pre>
+---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
+---   </pre>
+function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
+	 -- make a nice background for our gauge
+	createLabel(gaugeName .. "_back",0,0,0,0,1)
+	if color2 == nil then
+		local red, green, blue = getRGB(color1)
+		setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)
+	else
+		setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
+	end
+	moveWindow(gaugeName .. "_back", Xpos, Ypos)
+	resizeWindow(gaugeName .. "_back", width, height)
+	showWindow(gaugeName .. "_back")
+
+	-- make a nicer front for our gauge
+	createLabel(gaugeName,0,0,0,0,1)
+	if color2 == nil then
+		local red, green, blue = getRGB(color1)
+		setBackgroundColor(gaugeName, red , green, blue, 255)
+	else
+		setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
+	end
+	moveWindow(gaugeName, Xpos, Ypos)
+	resizeWindow(gaugeName, width, height)
+	showWindow(gaugeName)
+
+	-- store important data in a table
+	gaugesTable[gaugeName] = {width = width, height = height, xpos = Xpos, ypos = Ypos,text = gaugeText, color1 = color1, color2 = color2, color3 = color3}
+
+	-- Set Gauge text (Defaults to black)
+	-- If no gaugeText was passed, we'll just leave it blank!
+	if gaugeText ~= nil then
+		setGaugeText(gaugeName, gaugeText, "black")
+	else
+		setGaugeText(gaugeName)
+	end
+end
+
+
+--- Use this function when you want to change the gauges look according to your values.
+--- Typical usage would be in a prompt with your current health or whatever value, and throw
+--- in some variables instead of the numbers.
+---
+--- @usage setGauge("healthBar", 200, 400)  <br/>
+---   In that example, we'd change the looks of the gauge named healthBar and make it fill
+---   to half of its capacity. The height is always remembered.
+--- @usage setGauge("healthBar", 200, 400, "some text")  <br/>
+---   change the text on your gauge
+function setGauge(gaugeName, currentValue, maxValue, gaugeText)
+	assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
+	assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
+
+	resizeWindow(gaugeName, gaugesTable[gaugeName].width/100*((100/maxValue)*currentValue), gaugesTable[gaugeName].height)
+
+	-- if we wanted to change the text, we do it
+	if gaugeText ~= nil then
+		echo(gaugeName .. "_back", gaugeText)
+		echo(gaugeName, gaugeText)
+		gaugesTable[gaugeName].text = gaugeText
+	end
+end
+
+
+--- Make a new console window with ease. The default background is black and text color white.
+--- If you wish to change the color you can easily do this when updating your text or manually somewhere, using
+--- setFgColor() and setBackgroundColor().
+---
+--- @usage createConsole("myConsoleWindow", 8, 80, 20, 200, 400)  <br/>
+---   This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width,
+---   hold a maximum of 20 lines and be place at 200x400 of your mudlet window.
+function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+	createMiniConsole(consoleName,0,0,1,1)
+	setMiniConsoleFontSize(consoleName, fontSize)
+	local x,y = calcFontSize( fontSize )
+	resizeWindow(consoleName, x*charsPerLine, y*numberOfLines)
+	setWindowWrap(consoleName, charsPerLine)
+	moveWindow(consoleName, Xpos, Ypos)
+
+	setBackgroundColor(consoleName,0,0,0,0)
+	setFgColor(consoleName, 255,255,255)
+end
+
+
+--- Echo something after your line.
+function suffix(what, func, fg, bg, window)
+	local length = string.len(line)
+	moveCursor(window or "main", length-1, getLineNumber())
+	if func and (func == cecho or func == decho or func == hecho) then
+		func(what, fg, bg, true, window)
+	else
+		insertText(what)
+	end
+end
+
+
+--- Echo something before your line.
+function prefix(what, func, fg, bg, window)
+	moveCursor(window or "main", 0, getLineNumber());
+	if func and (func == cecho or func == decho or func == hecho) then
+		func(what, fg, bg, true, window)
+	else
+		insertText(what)
+	end
+end
+
+
+--- Function will gag the whole line. <b>Use deleteLine() instead.</b>
+function gagLine()
+	--selectString(line, 1)
+	--replace("")
+	deleteLine()
+end
+
+
+--- Replace all words on the current line by your choice.
+---
+--- @usage This will replace the word John with the word Doe, everytime the word John occurs on the current line.
+---   <pre>
+---   replaceAll("John", "Doe")
+---   </pre>
+function replaceAll(word, what)
+	while selectString(word, 1) > 0 do replace(what) end
+end
+
+
+--- Replace the whole with a string you'd like.
+function replaceLine(what)
+	selectString(line, 1)
+	replace("")
+	insertText(what)
+end
+
+
+--- Default resizeEvent handler function. Overwrite this function to make a custom event handler 
+--- if the main window is being resized.
+function handleWindowResizeEvent()
+end
+
+
+--- <u><b>TODO</b></u> deselect()
+function deselect()
+	selectString("",1);
+end
+
+
 --- Sets current background color to a named color.
+---
+--- @usage Set background color to magenta.
+---   <pre>
+---   bg("magenta")
+---   </pre>
+---
 --- @see fg
 --- @see showColors
---- @usage bg("magenta")
 function bg(colorName)
 	setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 end
 
 
 --- Sets current foreground color to a named color.
+---
+--- @usage Set foreground color to black.
+---   <pre>
+---   fg("black")
+---   </pre>
+---
 --- @see bg
 --- @see showColors
---- @usage fg("black")
 function fg(colorName)
 	setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 end
@@ -520,8 +554,10 @@ end
 
 --- Replaces the given wildcard (as a number) with the given text.
 ---
---- @usage replaceWildcard(1, "hello") <br/>
----   on a trigger of `^You wave (goodbye)\.$`
+--- @usage Replace "goodbye" with "hello" on a trigger of "^You wave (goodbye)\.$"
+---   <pre>
+---   replaceWildcard(1, "hello") <br/>
+---   </pre>
 function replaceWildcard(what, replacement)
 	if replacement == nil or what == nil then
 		return
@@ -532,9 +568,15 @@ end
 
 
 --- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3
---- @usage showColors()
---- @usage showColors(2) <br/> 
----   Print list in 2 columns.
+---
+--- @usage Print list in 3 columns by default.
+---   <pre>
+---   showColors()
+---   </pre>
+--- @usage Print list in 2 columns.
+---   <pre>
+---   showColors(2)
+---   </pre>
 function showColors(...)
 	local cols = ... or 3
 	local i = 1
@@ -558,7 +600,7 @@ function showColors(...)
 end
 
 
---- resizeGauge(gaugeName, width, height)
+--- <b><u>TODO</u></b> resizeGauge(gaugeName, width, height)
 function resizeGauge(gaugeName, width, height)
 	assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
 	assert(width and height, "resizeGauge: need to have both width and height.")
@@ -571,7 +613,7 @@ function resizeGauge(gaugeName, width, height)
 end
 
 
---- setGaugeStyleSheet(gaugeName, css, cssback)
+--- <b><u>TODO</u></b> setGaugeStyleSheet(gaugeName, css, cssback)
 function setGaugeStyleSheet(gaugeName, css, cssback)
 	if not setLabelStyleSheet then return end-- mudlet 1.0.5 and lower compatibility
 	assert(gaugesTable[gaugeName], "setGaugeStyleSheet: no such gauge exists.")
@@ -686,7 +728,7 @@ if rex then
 		end,
 		}
 	
-	--- xEcho(style, insert, win, str)
+	--- <b><u>TODO</u></b> xEcho(style, insert, win, str)
 	function xEcho(style, insert, win, str)
 		if not str then str = win; win = nil end
 		local reset, out
@@ -755,7 +797,7 @@ if rex then
 	checho = cecho
 	
 else
-
+	--- <b><u>TODO</u></b> 
 	function cecho(window,text)
        local win = text and window
        local s = text or window
@@ -789,7 +831,7 @@ else
        end
     end
 	
-	--- decho(window, text)
+	--- <b><u>TODO</u></b> decho(window, text)
 	function decho(window, text)
 		local win = text and window
 		local s = text or window

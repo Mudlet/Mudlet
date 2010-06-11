@@ -1,3 +1,8 @@
+----------------------------------------------------------------------------------
+--- Mudlet Logging
+----------------------------------------------------------------------------------
+
+
 -- The basic design of this system is inspired by Python's logging module, which is
 -- in turn inspired by log4J. However it does diverge from both.
 --

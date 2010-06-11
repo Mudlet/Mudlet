@@ -1,11 +1,7 @@
+----------------------------------------------------------------------------------
+--- Mudlet Debug Tools
+----------------------------------------------------------------------------------
 
-----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
---                                                                              --
--- Debug Tools                                                                  --
---                                                                              --
-----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
 
 --- Function colorizes all matched regex capture groups on the screen.
 function showCaptureGroups()
@@ -36,6 +32,7 @@ end
 
 
 --- Pretty display function will try to print out content of any table.
+---
 --- @usage display(mytable)
 function display(what, numformat, recursion)
 	recursion = recursion or 0
@@ -81,8 +78,10 @@ function display(what, numformat, recursion)
 end
 
 
---- Basically like tostring(), except takes a numformat
---- and is a little better suited for working with display().
+--- Basically like tostring(), except takes a numformat and is a little better suited 
+--- for working with display().
+---
+--- @see display
 function printable(what, numformat)
 	local ret
 	if type(what) == 'string' then
@@ -107,7 +106,9 @@ end
 -- simulate a static variable
 do local indents = {}
 
-	--- Handles indentation
+	--- This function handles indentation for display function.
+	---
+	--- @see display
 	function indent(num)
 		if not indents[num] then
 			indents[num] = ""

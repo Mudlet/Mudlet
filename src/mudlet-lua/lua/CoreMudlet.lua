@@ -1,9 +1,8 @@
+----------------------------------------------------------------------------------
+--- Mudlet Core Lua Functions 
+--- (file holds LuaDoc for all function implemented with in Mudlet Core)
+----------------------------------------------------------------------------------
 
---
--- This file hold LuaDoc for all function implemented with in Mudlet Core.
--- It allows us to generate single API documentaion from all sources.
--- (Used   grep -R  lua_register *   for getting initial function list.)
---
 
 -- ensure that those function will not get defined
 if false then
@@ -1193,7 +1192,8 @@ function selectString(text, numberOfMatch) end
 ---   send("Hello Jane", false)
 ---   </pre>
 ---
---- @param echoTheValue true or false, default value is true
+--- @param echoTheValue optional boolean flag (default value is true) which determine if value should 
+---   be echoed back on client.
 ---
 --- @see expandAlias
 function send(command, echoTheValue) end
@@ -1505,6 +1505,7 @@ function tempColorTrigger(foregroundColor, backgqroundColor, luaCode) end
 
 
 
+--- <b><u>TODO</u></b> example with luaCode - 
 --- Temporary trigger that will fire on n consecutive lines following the 
 --- current line. This is useful to parse output that is known to arrive in 
 --- a certain line margin or to delete unwanted output from the MUD.
@@ -1575,7 +1576,7 @@ function tempTrigger(string, luaCode) end
 
 
 --- Wait for specified time in milliseconds. 
---- <b>Use tempTimer instead! (Don't use this function, because it freezes main thread.)</b>
+--- <b>Use tempTimer instead! Don't use this function, because it freezes main thread.</b>
 ---
 --- @usage Preferred use of tempTimer - wait for 2 seconds and than send "kill rat".
 ---   <pre>

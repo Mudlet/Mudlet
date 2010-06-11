@@ -1,11 +1,7 @@
+----------------------------------------------------------------------------------
+--- Mudlet Table Utils                                                                 
+----------------------------------------------------------------------------------
 
-----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
---                                                                              --
--- Table Utils                                                                  --
---                                                                              --
-----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
 
 --- Tests if a table is empty: this is useful in situations where you find
 --- yourself wanting to do 'if my_table == {}' and such.
@@ -27,13 +23,13 @@ function printTable( map )
 end
 
 
---- __printTable( k, v )
+--- <b><u>TODO</u></b> __printTable( k, v )
 function __printTable( k, v )
 	insertText ("\nkey = " .. tostring (k) .. " value = " .. tostring( v )  )
 end
 
 
---- listPrint( map )
+--- <b><u>TODO</u></b> listPrint( map )
 function listPrint( map )
 	echo("-------------------------------------------------------\n");
 	for k,v in ipairs( map ) do
@@ -43,13 +39,13 @@ function listPrint( map )
 end
 
 
---- listAdd( list, what )
+--- <b><u>TODO</u></b> listAdd( list, what )
 function listAdd( list, what )
 	table.insert( list, what );
 end
 
 
---- listRemove( list, what )
+--- <b><u>TODO</u></b> listRemove( list, what )
 function listRemove( list, what )
 	for k,v in ipairs( list ) do
 		if v == what then
@@ -97,36 +93,36 @@ end
 ---   is a gap in numerical indices, ipairs() will cease traversal.
 ---
 --- @usage Example: 
---- <pre>
---- tableA = {   
---- 	[1] = 123,   
---- 	[2] = 456,   
---- 	["test"] = "test",   
---- }   
----    
---- tableB = {   
---- 	[1] = 23,   
---- 	[3] = 7, 
---- 	["test2"] = function() return true end,   
---- }   
----    
---- tableC = {   
---- 	[5] = "c",
---- }   
----    
---- table.union(tableA, tableB, tableC) will return:   
---- {   
---- 	[1] = {   
---- 		123,   
---- 		23,   
---- 	},   
---- 	[2] = 456,   
---- 	[3] = 7,   
---- 	[5] = "c",   
---- 	["test"] = "test",   
---- 	["test2"] = function() return true end,   
---- }
---- </pre>   
+---   <pre>
+---   tableA = {   
+---      [1] = 123,   
+---      [2] = 456,   
+---      ["test"] = "test",   
+---   }   
+---      
+---   tableB = {   
+---      [1] = 23,   
+---      [3] = 7, 
+---      ["test2"] = function() return true end,   
+---   }   
+---      
+---   tableC = {   
+---      [5] = "c",
+---   }   
+---      
+---   table.union(tableA, tableB, tableC) will return:   
+---   {   
+---      [1] = {   
+---         123,   
+---         23,   
+---      },   
+---      [2] = 456,   
+---      [3] = 7,   
+---      [5] = "c",   
+---      ["test"] = "test",   
+---      ["test2"] = function() return true end,   
+---   }
+---   </pre>
 function table.union(...)
 	local sets = {...}
 	local union = {}
@@ -179,35 +175,35 @@ end
 ---   cease traversal.
 ---
 --- @usage Example: 
---- <pre>
---- tableA = {   
---- 	[1] = 123,   
---- 	[2] = 456,   
---- 	[4] = { 1, 2 },   
---- 	[5] = "c",   
---- 	["test"] = "test",   
---- }   
---- 
---- tableB = {   
---- 	[1] = 123,   
---- 	[2] = 4,   
---- 	[3] = 7,   
---- 	[4] = { 1, 2 },   
---- 	["test"] = function() return true end,   
---- }   
---- 
---- tableC = {   
---- 	[1] = 123,   
---- 	[4] = { 1, 2 },   
---- 	[5] = "c",   
---- }   
---- 
---- table.intersection(tableA, tableB, tableC) will return:   
---- {   
---- 	[1] = 123,   
---- 	[4] = { 1, 2 },   
---- }   
---- </pre>
+---   <pre>
+---   tableA = {   
+---      [1] = 123,   
+---      [2] = 456,   
+---      [4] = { 1, 2 },   
+---      [5] = "c",   
+---      ["test"] = "test",   
+---   }   
+---   
+---   tableB = {   
+---      [1] = 123,   
+---      [2] = 4,   
+---      [3] = 7,   
+---      [4] = { 1, 2 },   
+---      ["test"] = function() return true end,   
+---   }   
+---   
+---   tableC = {   
+---      [1] = 123,   
+---      [4] = { 1, 2 },   
+---      [5] = "c",   
+---   }   
+---   
+---   table.intersection(tableA, tableB, tableC) will return:   
+---   {   
+---      [1] = 123,   
+---      [4] = { 1, 2 },   
+---   }   
+---   </pre>
 function table.intersection(...)
 	sets = {...}
 	if #sets < 2 then return false end
@@ -312,7 +308,7 @@ function table.n_complement(set1, set2)
 end
 
 
---- table:update(t1, t2)
+--- <b><u>TODO</u></b> table:update(t1, t2)
 function table:update(t1, t2)
 	for k,v in pairs(t2) do
 		if type(v) == "table" then

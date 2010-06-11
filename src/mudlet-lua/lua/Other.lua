@@ -1,25 +1,47 @@
-
 ----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
---                                                                              --
--- Other                                                                        --
---                                                                              --
-----------------------------------------------------------------------------------
+--- Mudlet Unsorted Stuff
 ----------------------------------------------------------------------------------
 
---- TODO put it in doc
---- atcp
+
+-- some undocumented stuff
 atcp = {}
+
+walklist = {}
+walkdelay = 0
+
+SavedVariables = { }
+
+-- Extending default libraries makes Babelfish happy.
+setmetatable( _G, {
+	["__call"] = function(func, ...)
+		if type(func) == "function" then
+			return func(...)
+		else
+			local h = metatable(func).__call
+			if h then
+				return h(func, ...)
+			elseif _G[type(func)][func] then
+				_G[type(func)][func](...)
+			end
+		end
+	end,
+	})
+
+
 
 
 --- Sends a list of commands to the MUD. You can use this to send some things at once instead of having 
 --- to use multiple send() commands one after another.
 --- 
---- @usage Use sendAll instead of multiple send commnads.
+--- @param ... list of commands
+--- @param echoTheValue optional boolean flag (default value is true) which determine if value should 
+---   be echoed back on client.
+---
+--- @usage Use sendAll instead of multiple send commands.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!")
 ---   
----   -- instead of:
+---   -- instead of calling:
 ---   send ("stand")
 ---   send ("wield shield")
 ---   send ("say ha!")
@@ -64,7 +86,15 @@ function io.exists(fileOfFolderName)
 end
 
 
---- xor(a, b)
+--- Boolean exclusive or implementation.
+---
+--- @usage All following will return false.
+---   <pre>
+---   xor(false, false)
+---   xor(true, true)
+---   </pre>
+---   
+--- @return true or false
 function xor(a, b)
 	if (a and (not b)) or (b and (not a)) then
 		return true
@@ -154,23 +184,25 @@ function saveVars()
 end
 
 
---- Save & Load Variables <br/>
---- The below functions can be used to save individual Lua tables to disc and load <br/>
---- them again at a later time e.g. make a database, collect statistical information etc. <br/>
---- These functions are also used by Mudlet to load & save the entire Lua session variables <br/>
---- <br/>
---- table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this) <br/>
---- table.load(file, table) - loads a serialized file into the given table <br/>
---- table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this) <br/>
---- table.save(file, table) - saves the given table into the given file <br/>
---- <br/>
---- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/>
---- <br/>
---- Notes: <br/>
----  Userdata and indices of these are not saved <br/>
----  Functions are saved via string.dump, so make sure it has no upvalues <br/>
----  References are saved <br/>
----
+--- <b><u>TODO</u></b> 
+--- Save & Load Variables.
+--- <pre>
+--- The below functions can be used to save individual Lua tables to disc and load 
+--- them again at a later time e.g. make a database, collect statistical information etc. 
+--- These functions are also used by Mudlet to load & save the entire Lua session variables 
+--- 
+--- table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this) 
+--- table.load(file, table) - loads a serialized file into the given table 
+--- table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this) 
+--- table.save(file, table) - saves the given table into the given file 
+--- 
+--- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. 
+--- 
+--- Notes: 
+---  Userdata and indices of these are not saved 
+---  Functions are saved via string.dump, so make sure it has no upvalues 
+---  References are saved 
+--- </pre>
 function table.save( sfile, t )
 	if t == nil then 
 		t = _G 
@@ -188,7 +220,7 @@ function table.save( sfile, t )
 end
 
 
---- table.pickle( t, file, tables, lookup )
+--- <b><u>TODO</u></b> table.pickle( t, file, tables, lookup )
 function table.pickle( t, file, tables, lookup )
 	file:write( "{" )
 	for i,v in pairs( t ) do
@@ -222,7 +254,7 @@ function table.pickle( t, file, tables, lookup )
 end
 
 
---- table.load( sfile, loadinto )
+--- <b><u>TODO</u></b> table.load( sfile, loadinto )
 --- @see table.save
 function table.load( sfile, loadinto )
 	local tables = dofile( sfile )
@@ -236,7 +268,7 @@ function table.load( sfile, loadinto )
 end
 
 
---- table.unpickle( t, tables, tcopy, pickled )
+--- <b><u>TODO</u></b> table.unpickle( t, tables, tcopy, pickled )
 function table.unpickle( t, tables, tcopy, pickled )
 	pickled = pickled or {}
 	pickled[t] = tcopy
@@ -266,29 +298,7 @@ function table.unpickle( t, tables, tcopy, pickled )
 end
 
 
---- <b><u>TODO</u></b> check if this was generated
---- Extending default libraries makes Babelfish happy.
-setmetatable( _G, {
-	["__call"] = function(func, ...)
-		if type(func) == "function" then
-			return func(...)
-		else
-			local h = metatable(func).__call
-			if h then
-				return h(func, ...)
-			elseif _G[type(func)][func] then
-				_G[type(func)][func](...)
-			end
-		end
-	end,
-	})
-
-
-walklist = {}
-walkdelay = 0
-
-
---- speedwalktimer()
+--- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer()
 	send(walklist[1])
 	table.remove(walklist, 1)
@@ -298,7 +308,7 @@ function speedwalktimer()
 end
 
 
---- speedwalk(dirString, backwards, delay)
+--- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
 function speedwalk(dirString, backwards, delay)
 	local dirString		= dirString:lower()
 	walklist			= {}
@@ -342,7 +352,7 @@ function speedwalk(dirString, backwards, delay)
 end
 
 
---- _comp(a, b)
+--- <b><u>TODO</u></b> _comp(a, b)
 function _comp(a, b)
 	if type(a) ~= type(b) then return false end
 	if type(a) == 'table' then
@@ -357,11 +367,7 @@ function _comp(a, b)
 end
 
 
---- SavedVariables
-SavedVariables = { }
-
-
---- SavedVariables:Add(tbl)
+--- <b><u>TODO</u></b> SavedVariables:Add(tbl)
 function SavedVariables:Add(tbl)
 	if type(tbl) == 'string' then
 		self[tbl] = _G[tbl]
@@ -377,7 +383,7 @@ function SavedVariables:Add(tbl)
 end
 
 
---- phpTable(...) - abuse to: http://richard.warburton.it
+--- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
 function phpTable(...)
 	local newTable, keys, values = {}, {}, {}
 	newTable.pairs = function(self) -- pairs iterator
