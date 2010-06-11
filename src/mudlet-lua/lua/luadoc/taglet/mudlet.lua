@@ -166,6 +166,28 @@ end
 
 
 -------------------------------------------------------------------------------
+-- Simply tests if trimmed line without pre /pre tags is blank
+-- @return true/false 
+function skipNewline(line)
+	line = string.gsub(line, "<pre>", "")
+	line = string.gsub(line, "</pre>", "")
+	line = string.gsub(line, "^%s*(.-)%s*$", "%1")
+	return line == ""
+end
+
+
+-------------------------------------------------------------------------------
+-- Simply tests if trimmed line without @usage tags is blank
+-- @return true/false 
+function addNewlineAfterUsage(line)
+	line = string.gsub(line, "@usage", "")
+	line = string.gsub(line, "^%s*(.-)%s*$", "%1")
+	return line == ""
+end
+
+
+
+-------------------------------------------------------------------------------
 -- Removes lua comment from the begining of the line and add newLine char.
 -- This was implemented to add <pre> support to LuaDoc.
 -- @param s string to be trimmed
@@ -177,10 +199,18 @@ local function trim_comment_pre(s)
 	-- process line
 	s = string.gsub(s, "%-%-+(.*)$", "%1")
 	if luadoc_taglet_mudlet_pre then
-		return s .. "\n"
+		if not skipNewline(s) then
+			return s .. "\n"
+		else
+			return s			
+		end 
 	else
 		s = string.gsub(s, "^%s*(.-)%s*$", "%1")
-		if string.find(s, "@usage") then s = s .. "\n" end
+		if string.find(s, "@usage") then 
+			if addNewlineAfterUsage(s) then
+				s = s .. "\n"
+			end
+		end
 		return s
 	end
 end
