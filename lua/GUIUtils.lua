@@ -67,7 +67,7 @@ end
 
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---
---- @usage PadHexNum("F") returns "F0
+--- @usage PadHexNum("F") returns "F0"
 function PadHexNum(incString)
 	local l_Return = incString
 	if tonumber(incString,16)<16 then
@@ -103,9 +103,11 @@ end
 
 --- Get RGB component from color name. 
 ---
---- @usage local red, green, blue = getRGB("green") <br/>
----   echo(red .. "." .. green .. "." .. blue ) <br/>
----   This would display "0.255.0" on your screen.
+--- @usage Following will display "0.255.0" on your screen.
+---   <pre>
+---   local red, green, blue = getRGB("green")
+---   echo(red .. "." .. green .. "." .. blue )
+---   </pre>
 function getRGB(colorName)
 	local red = color_table[colorName][1]
 	local green = color_table[colorName][2]
@@ -256,7 +258,7 @@ end
 
 
 --- Default resizeEvent handler function. Overwrite this function to make a custom event handler 
---- if the main window is being resized
+--- if the main window is being resized.
 function handleWindowResizeEvent()
 end
 
@@ -579,29 +581,53 @@ function setGaugeStyleSheet(gaugeName, css, cssback)
 end
 
 
--- TODO
---- Color echo functions: hecho, decho, cecho
--- 
+--- Color echo functions: hecho, decho, cecho.
+-- <b><u>TODO</u></b>
+--
+-- <pre>
 -- Function: hecho()
+-- Arg1: String to echo
+-- Arg2: String containing value for foreground color in hexadecimal RGB format
+-- Arg3: String containing value for background color in hexadecimal RGB format
+-- Arg4: Bool that tells the function to use insertText() rather than echo()
+-- Arg5: Name of the console to echo to. Defaults to main.
 -- 
 -- Color changes can be made within the string using the format |cFRFGFB,BRBGBB
 -- where FR is the foreground red value, FG is the foreground green value, FB
 -- is the foreground blue value, BR is the background red value, etc. ,BRBGBB
 -- is optional. |r can be used within the string to reset the colors to default.
 --
+-- The colors in arg2 and arg3 replace the normal defaults for your console.
+-- So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"),
+-- the first Testing would be red on black and the second would be green on blue.
+-- 
 -- Function: decho()
+-- Arg1: String to echo
+-- Arg2: String containing value for foreground color in decimal format
+-- Arg3: String containing value for background color in decimal format
+-- Arg4: Bool that tells the function to use insertText() rather than echo()
+-- Arg5: Name of the console to echo to. Defaults to main.
 --
 -- Color changes can be made using the format <FR,FG,FB:BR,BG,BB> where
 -- each field is a number from 0 to 255. The background portion can be omitted
 -- using <FR,FG,FB> or the foreground portion can be omitted using <:BR,BG,BB>
+-- Arguments 2 and 3 set the default fore and background colors for the string
+-- using the same format as is used within the string, sans angle brackets,
+-- e.g.  decho("test", "255,0,0", "0,255,0")
 -- 
 -- Function: cecho()
+-- Arg1: String to echo
+-- Arg2: String containing value for foreground color as a named color
+-- Arg3: String containing value for background color as a named color
+-- Arg4: Bool that tells the function to use insertText() rather than echo()
+-- Arg5: Name of the console to echo to. Defaults to main.
 -- 
 -- Color changes can be made using the format <foreground:background>
 -- where each field is one of the colors listed by showColors()
 -- The background portion can be omitted using <foreground> or the foreground 
 -- portion can be omitted using <:background>
-
+-- Arguments 2 and 3 to set the default colors take named colors as well. 
+-- </pre>
 
 if rex then
 	Echos = {
@@ -719,7 +745,7 @@ if rex then
 		if win then resetFormat(win) else resetFormat() end
 	end
 	
-	-- TODO put some doc for each func
+	--- <b><u>TODO</u></b> put some doc for each func
 	function hecho(...) xEcho("Hex", false, ...) end
 	function decho(...) xEcho("Decimal", false, ...) end
 	function cecho(...) xEcho("Color", false, ...) end
@@ -729,6 +755,7 @@ if rex then
 	checho = cecho
 	
 else
+
 	function cecho(window,text)
        local win = text and window
        local s = text or window
@@ -799,7 +826,3 @@ else
 	end
 
 end
-
-
-
-
