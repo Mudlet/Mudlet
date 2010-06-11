@@ -1,12 +1,4 @@
 
-
--- v0.1
--- pulled on Tue 08 Jun 2010 20:13:33 CEST
--- used original cecho, so I was able to test it on Mudlet 1.1.1
-
-
-
-
 ----------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------
 --                                                                              --
@@ -25,7 +17,7 @@ function table.is_empty(tbl)
 end
 
 
---- Function shows the content of a Lua table on the screen
+--- Function shows the content of a Lua table on the screen.
 function printTable( map )
 	echo("-------------------------------------------------------\n");
 	for k, v in pairs( map ) do
@@ -67,7 +59,7 @@ function listRemove( list, what )
 end
 
 
---- Gets the actual size of a non-numerical table
+--- Gets the actual size of a non-numerical table.
 function table.size(t)
 	if not t then
 		return 0
@@ -80,7 +72,7 @@ function table.size(t)
 end
 
 
---- Determines if a table contains a value as a key or as a value (recursive)
+--- Determines if a table contains a value as a key or as a value (recursive).
 function table.contains(t, value)
 	for k, v in pairs(t) do
 		if v == value then
@@ -95,14 +87,17 @@ function table.contains(t, value)
 end
 
 
---- Table Union
---- Returns a table that is the union of the provided tables. This is a union of key/value
---- pairs. If two or more tables contain different values associated with the same key,
---- that key in the returned table will contain a subtable containing all relevant values.
---- See table.n_union() for a union of values. Note that the resulting table may not be
---- reliably traversable with ipairs() due to the fact that it preserves keys. If there
---- is a gap in numerical indices, ipairs() will cease traversal.
---- 
+--- Table Union.
+---
+--- @return Returns a table that is the union of the provided tables. This is a union of key/value
+---   pairs. If two or more tables contain different values associated with the same key,
+---   that key in the returned table will contain a subtable containing all relevant values.
+---   See table.n_union() for a union of values. Note that the resulting table may not be
+---   reliably traversable with ipairs() due to the fact that it preserves keys. If there
+---   is a gap in numerical indices, ipairs() will cease traversal.
+---
+--- @usage Example: 
+--- <pre>
 --- tableA = {   
 --- 	[1] = 123,   
 --- 	[2] = 456,   
@@ -124,13 +119,14 @@ end
 --- 	[1] = {   
 --- 		123,   
 --- 		23,   
---- 		},   
+--- 	},   
 --- 	[2] = 456,   
 --- 	[3] = 7,   
 --- 	[5] = "c",   
 --- 	["test"] = "test",   
 --- 	["test2"] = function() return true end,   
---- }   
+--- }
+--- </pre>   
 function table.union(...)
 	local sets = {...}
 	local union = {}
@@ -153,9 +149,9 @@ function table.union(...)
 end
 
 
---- Table Union
---- Returns a numerically indexed table that is the union of the provided tables. This is
---- a union of unique values. The order and keys of the input tables are not preserved.
+--- Table Union.
+--- @return Returns a numerically indexed table that is the union of the provided tables. This is
+---   a union of unique values. The order and keys of the input tables are not preserved.
 function table.n_union(...)
 	local sets = {...}
 	local union = {}
@@ -174,14 +170,16 @@ function table.n_union(...)
 end
 
 
---- Table Intersection
---- Returns a table that is the intersection of the provided tables. This is an
---- intersection of key/value pairs. See table.n_intersection() for an intersection of values.
---- Note that the resulting table may not be reliably traversable with ipairs() due to
---- the fact that it preserves keys. If there is a gap in numerical indices, ipairs() will
---- cease traversal.
---- 
---- 
+--- Table Intersection.
+---
+--- @return Returns a table that is the intersection of the provided tables. This is an
+---   intersection of key/value pairs. See table.n_intersection() for an intersection of values.
+---   Note that the resulting table may not be reliably traversable with ipairs() due to
+---   the fact that it preserves keys. If there is a gap in numerical indices, ipairs() will
+---   cease traversal.
+---
+--- @usage Example: 
+--- <pre>
 --- tableA = {   
 --- 	[1] = 123,   
 --- 	[2] = 456,   
@@ -209,6 +207,7 @@ end
 --- 	[1] = 123,   
 --- 	[4] = { 1, 2 },   
 --- }   
+--- </pre>
 function table.intersection(...)
 	sets = {...}
 	if #sets < 2 then return false end
@@ -237,10 +236,10 @@ function table.intersection(...)
 end
 
 
---- Table Intersection
---- Returns a numerically indexed table that is the intersection of the provided tables.
---- This is an intersection of unique values. The order and keys of the input tables are
---- not preserved.
+--- Table Intersection.
+--- @return Returns a numerically indexed table that is the intersection of the provided tables.
+---   This is an intersection of unique values. The order and keys of the input tables are
+---   not preserved.
 function table.n_intersection(...)
 	sets = {...}
 	if #sets < 2 then return false end
@@ -273,9 +272,9 @@ function table.n_intersection(...)
 end
 
 
---- Table Complement
---- Returns a table that is the relative complement of the first table with respect to
---- the second table. Returns a complement of key/value pairs.
+--- Table Complement.
+--- @return Returns a table that is the relative complement of the first table with respect to
+---   the second table. Returns a complement of key/value pairs.
 function table.complement(set1, set2)
 	if not set1 and set2 then return false end
 	if type(set1) ~= 'table' or type(set2) ~= 'table' then return false end
@@ -291,9 +290,9 @@ function table.complement(set1, set2)
 end
 
 
---- Table Complement
---- Returns a table that is the relative complement of the first table with respect to
---- the second table. Returns a complement of values.
+--- Table Complement.
+--- @return Returns a table that is the relative complement of the first table with respect to
+---   the second table. Returns a complement of values.
 function table.n_complement(set1, set2)
 	if not set1 and set2 then return false end
 
@@ -324,5 +323,4 @@ function table:update(t1, t2)
 	end
 	return t1
 end
-
 

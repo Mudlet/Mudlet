@@ -1,0 +1,7 @@
+This project should contain all Mudlet lua code (lua folder), which will allow us
+to easily maintain it and generate common documentation with LuaDoc.
+
+
+You can generate doc on linux box with following commnad (mudlet-lua-doc folder).
+You will need LuaDoc 3.0.1 (with custom taglet, which is in lua/luadoc/taglet folder)
+	sh genDoc.sh

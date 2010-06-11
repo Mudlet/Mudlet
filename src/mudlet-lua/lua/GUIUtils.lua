@@ -257,7 +257,7 @@ end
 
 --- Default resizeEvent handler function. Overwrite this function to make a custom event handler 
 --- if the main window is being resized
-function handleResizeEvent()
+function handleWindowResizeEvent()
 end
 
 
