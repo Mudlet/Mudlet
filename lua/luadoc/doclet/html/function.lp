@@ -11,6 +11,7 @@ end
 <dt><%=func.private and "local " or ""%><a name="<%=func.name%>"></a><strong><%=func.name%></strong>&nbsp;(<%=table.concat(func.param, ", ")%>)</dt>
 <dd>
 <%=func.description or ""%>
+<br/><br/>
 
 <%if type(func.param) == "table" and #func.param > 0 then%>
 <h3>Parameters</h3>

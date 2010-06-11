@@ -7,6 +7,7 @@
 ----------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------
 
+
 --- Enclose string by long brackets. <br/>
 --- <b><u>TODO</u></b> what is purpose of this function?
 function string.enclose(s, maxlevel)
