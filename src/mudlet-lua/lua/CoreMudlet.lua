@@ -1384,10 +1384,19 @@ function setPopup(name, commands, hints) end
 
 
 
---- Sets current text format of window windowName: foreground color(r1,g1,b1), background color(r2,g2,b2), 
---- bold(1/0), underline(1/0), italics(1/0) A more convenient way to control the text format in a mini console is to 
---- use setFgColor( windowName, r,g,b ), setBold( windowName, true ), setItalics( windowName, true ), setUnderline( windowName, true ) 
---- etc. ? createMiniConsole, setBold, setBgColor, setFgColor, setItalics, setUnderline
+--- Sets current text format of window. A more convenient way to control the text format in a mini console is to 
+--- use setFgColor, setBold, setItalics, setUnderline etc.
+---
+--- @param windowName
+--- @param fgR foreground color(r,g,b) 
+--- @param fgG foreground color(r,g,b) 
+--- @param fgB foreground color(r,g,b) 
+--- @param bgR background color(r,g,b)
+--- @param bgG background color(r,g,b)
+--- @param bgB background color(r,g,b)
+--- @param bold bold flag (1/0)
+--- @param underline underline flag (1/0)
+--- @param italics italics flag (1/0) 
 --- 
 --- @usage This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
 ---   <pre>
@@ -1395,7 +1404,14 @@ function setPopup(name, commands, hints) end
 ---   setTextFormat("con1",0,0,255,255,255,0,1,1,1);
 ---   echo("con1","This is a test")
 ---   </pre>
-function setTextFormat(windowName, r1, g1, b1, r2, g2, b2, bold, underline, italics) end
+---
+--- @see createMiniConsole
+--- @see setBold
+--- @see setBgColor
+--- @see setFgColor 
+--- @see setItalics
+--- @see setUnderline
+function setTextFormat(windowName, fgR, fgG, fgB, bgR, bgG, bgB, bold, underline, italics) end
 
 
 
