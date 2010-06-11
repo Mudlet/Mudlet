@@ -7,12 +7,23 @@
 ----------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------
 
--- TODO put it in doc
+--- TODO put it in doc
 --- atcp
 atcp = {}
 
 
---- sendAll(...)
+--- Sends a list of commands to the MUD. You can use this to send some things at once instead of having 
+--- to use multiple send() commands one after another.
+--- 
+--- @usage Use sendAll instead of multiple send commnads.
+---   <pre>
+---   sendAll("stand", "wield shield", "say ha!")
+---   
+---   -- instead of:
+---   send ("stand")
+---   send ("wield shield")
+---   send ("say ha!")
+---   </pre>
 function sendAll(...)
 	local args = {...}
 	local echo = true
@@ -25,9 +36,26 @@ function sendAll(...)
 end
 
 
---- Checks to see if a file exists.
-function io.exists(file)
-	local f = io.open(file)
+--- Checks to see if a given file or folder exists. If it exists, it’ll return the Lua true boolean value, otherwise false.
+--- 
+--- @usage
+---   <pre>
+---   if io.exists("/home/user/Desktop") then
+---      echo("This folder exists!")
+---   else
+---      echo("This folder doesn't exist.")
+---   end
+---   
+---   if io.exists("/home/user/Desktop/file.txt") then
+---      echo("This file exists!")
+---   else
+---      echo("This file doesn't exist.")
+---   end
+---   </pre>
+---   
+--- @return true or false
+function io.exists(fileOfFolderName)
+	local f = io.open(fileOfFolderName)
 	if f then
 		io.close(f)
 		return true
@@ -47,6 +75,14 @@ end
 
 
 --- Determine operating system.
+---
+--- @usage
+---   <pre>
+---   if "linux" == getOS() then 
+---	     echo("We are using GNU/Linux!")
+---   end
+---   </pre>
+---
 --- @return "linux", "mac" or "windows" string
 function getOS()
 	if string.char(getMudletHomeDir():byte()) == "/" then
@@ -61,7 +97,10 @@ function getOS()
 end
 
 
---- Opens URL in default browser
+--- Opens the default OS browser for the given URL.
+---
+--- @usage openUrl("www.mudlet.org")
+--- @usage openUrl("http://www.mudlet.org/")
 function openURL(url)
 	local os = getOS()
 	if os == "linux" then _G.os.execute("xdg-open " .. url)
@@ -70,13 +109,13 @@ function openURL(url)
 end
 
 
-
---- This function flags a variable to be saved by Mudlet's variable persistence system. <br/>
---- Usage: remember("varName") <br/>
---- Example: remember("table_Weapons") <br/>
---- Example: remember("var_EnemyHeight") <br/>
---- Variables are automatically unpacked into the global namespace when the profile is loaded. <br/>
---- They are saved to "SavedVariables.lua" when the profile is closed or saved. <br/>
+--- This function flags a variable to be saved by Mudlet's variable persistence system.
+--- Variables are automatically unpacked into the global namespace when the profile is loaded.
+--- They are saved to "SavedVariables.lua" when the profile is closed or saved.
+---
+--- @usage remember("varName")
+---
+--- @see loadVars
 function remember(varName)
 	if not _saveTable then
 		_saveTable = {}
@@ -87,6 +126,8 @@ end
 
 --- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
 --- and unpacks them into the global namespace.
+---
+--- @see remember
 function loadVars()
 	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
 	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
@@ -99,7 +140,10 @@ function loadVars()
 	end
 end
 
+
 --- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
+---
+--- @see loadVars
 function saveVars()
 	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
 	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
@@ -110,22 +154,22 @@ function saveVars()
 end
 
 
---- Save & Load Variables
---- The below functions can be used to save individual Lua tables to disc and load
---- them again at a later time e.g. make a database, collect statistical information etc.
---- These functions are also used by Mudlet to load & save the entire Lua session variables
----
---- table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this)
---- table.load(file, table) - loads a serialized file into the given table
---- table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this)
---- table.save(file, table) - saves the given table into the given file
----
---- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself.
----
---- Notes:
----  Userdata and indices of these are not saved
----  Functions are saved via string.dump, so make sure it has no upvalues
----  References are saved
+--- Save & Load Variables <br/>
+--- The below functions can be used to save individual Lua tables to disc and load <br/>
+--- them again at a later time e.g. make a database, collect statistical information etc. <br/>
+--- These functions are also used by Mudlet to load & save the entire Lua session variables <br/>
+--- <br/>
+--- table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this) <br/>
+--- table.load(file, table) - loads a serialized file into the given table <br/>
+--- table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this) <br/>
+--- table.save(file, table) - saves the given table into the given file <br/>
+--- <br/>
+--- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/>
+--- <br/>
+--- Notes: <br/>
+---  Userdata and indices of these are not saved <br/>
+---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
+---  References are saved <br/>
 ---
 function table.save( sfile, t )
 	if t == nil then 
@@ -179,6 +223,7 @@ end
 
 
 --- table.load( sfile, loadinto )
+--- @see table.save
 function table.load( sfile, loadinto )
 	local tables = dofile( sfile )
 	if tables then
@@ -221,6 +266,7 @@ function table.unpickle( t, tables, tcopy, pickled )
 end
 
 
+--- <b><u>TODO</u></b> check if this was generated
 --- Extending default libraries makes Babelfish happy.
 setmetatable( _G, {
 	["__call"] = function(func, ...)
@@ -360,5 +406,4 @@ function phpTable(...)
 	end
 	return newTable
 end
-
 
