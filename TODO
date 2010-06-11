@@ -1,0 +1,25 @@
+need to sort out single GIT/BZR repozitory for all mudlet-lua code
+	(preferably use git://mudlet.git.sourceforge.net/gitroot/mudlet/mudlet)
+	(so all lua code will be in separate subfolder)
+
+
+
+Lua Code
+	test it properly e.g. that all functions are working
+
+	add all lua files (geyser, db, ...)
+
+	fix cecho function for post Mudlet 1.1.1
+
+	add file comments
+
+
+LuaDoc
+	write LuaDoc usage  guides
+
+	make generated LuaDoc more appealing
+
+	gen doc and link it from main manual
+
+	taglet - fix case sensitive <pre> tag
+
