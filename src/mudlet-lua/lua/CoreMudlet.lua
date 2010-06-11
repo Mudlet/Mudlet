@@ -1473,7 +1473,7 @@ function tempAlias(regex, luaCode) end
 --- Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be 
 --- supplied in form of these simplified ANSI 16 color mode codes:
 --- 
---- <pre>
+---   <pre>
 ---   0 = default text color
 ---   1 = light black
 ---   2 = dark black
@@ -1507,29 +1507,30 @@ function tempColorTrigger(foregroundColor, backgqroundColor, luaCode) end
 
 --- Temporary trigger that will fire on n consecutive lines following the 
 --- current line. This is useful to parse output that is known to arrive in 
---- a certain line margin or to delete unwanted output from the MUD. <br/><br/>
+--- a certain line margin or to delete unwanted output from the MUD.
 --- 
---- Example: 
+--- @usage Following will fire 3 times starting with the line from the MUD. 
 ---   <pre>
 ---   tempLineTrigger( 1, 3, ) 
 ---   </pre>
---- will fire 3 times starting with the 
---- line from the MUD. tempLineTrigger( 20, 2, ) will fire 20 lines after 
---- the current line and fire twice on 2 consecutive lines. The function 
---- returns the ID of the newly created temporary trigger. You can use this 
---- ID to enable/disable or kill this trigger later on. 
---- 
---- @return trigger ID, ID is a string and not a number. 
+--- @usage This will fire 20 lines after the current line and fire twice on 2 consecutive lines.
+---   <pre>
+---   tempLineTrigger( 20, 2, ) 
+---   </pre>
+---
+--- @return the string ID of the newly created temporary trigger. 
+---   You can use this ID to enable/disable or kill this trigger later on. 
 function tempLineTrigger(from, howMany, luaCode) end
 
 
 
---- temporary trigger using Perl regex pattern matching <<tempTrigger, This 
---- function returns the ID of the newly created temporary trigger. ID is a 
---- string and not a number. You can use this ID to enable/disable or kill 
---- this trigger later on. ? tempTrigger() 
+--- Temporary trigger using Perl regex pattern matching. 
+---
+--- @return the string ID of the newly created temporary trigger. 
+---   You can use this ID to enable/disable or kill 
+---   this trigger later on.
 --- 
---- @return trigger ID 
+--- @see tempTrigger
 function tempRegexTrigger(regex, luaCode) end
 
 
