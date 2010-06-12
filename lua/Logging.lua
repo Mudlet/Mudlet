@@ -1,8 +1,7 @@
 ----------------------------------------------------------------------------------
 --- Mudlet Logging
 ----------------------------------------------------------------------------------
-
-
+-- <pre>
 -- The basic design of this system is inspired by Python's logging module, which is
 -- in turn inspired by log4J. However it does diverge from both.
 --
@@ -43,6 +42,8 @@
 -- that a single event will only ever be written to a certain device once, so its
 -- safe to propagate up the chain even if a parent logger would write things out
 -- too. Whatever handler is assigned to the event first for a given device, wins.
+-- </pre>
+
 
 logging = {
 	-- Formatters are used to convert a logging event into a form which is appropriate

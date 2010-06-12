@@ -3,12 +3,22 @@
 ----------------------------------------------------------------------------------
 
 
--- undocumented stuff
--- first we need to make this table which will be used later to store important data in...
+--- The <i>gaugesTable table</i>. First we need to make this table which will be 
+--- used later to store important data in.
+---
+--- @class function
+--- @name gaugesTable
 gaugesTable = {} 
 
--- These color definitions are intended to be used in conjunction with fg()
--- and bg() colorizer functions that are defined further below
+
+--- The <i>color_table table</i> holds definition of color names. These are intended to be 
+--- used in conjunction with fg() and bg() colorizer functions.
+---
+--- @see bg
+--- @see fg
+---
+--- @class function
+--- @name color_table
 color_table = {
 	snow                  = {255, 250, 250},
 	ghost_white           = {248, 248, 255},
@@ -235,8 +245,6 @@ color_table = {
 	MediumPurple          = {147, 112, 219},
 	thistle               = {216, 191, 216}
 }
-
-
 
 
 --- Move a custom gauge built by createGauge(...).

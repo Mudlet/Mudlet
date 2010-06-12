@@ -169,10 +169,14 @@ end
 -- Simply tests if trimmed line without pre /pre tags is blank
 -- @return true/false 
 function skipNewline(line)
-	line = string.gsub(line, "<pre>", "")
-	line = string.gsub(line, "</pre>", "")
-	line = string.gsub(line, "^%s*(.-)%s*$", "%1")
-	return line == ""
+	if string.find(line, "<pre>") or string.find(line, "</pre>") then
+		line = string.gsub(line, "<pre>", "")
+		line = string.gsub(line, "</pre>", "")
+		line = string.gsub(line, "^%s*(.-)%s*$", "%1")
+		return line == ""
+	else
+		return false
+	end
 end
 
 
@@ -282,6 +286,9 @@ local function parse_comment (block, first_line)
 		end
 	end)
 	tags.handle(currenttag, block, currenttext)
+
+	-- Store file name info
+	tags.handle("filename", block, luadoc_taglet_mudlet_filename)
 
 	-- extracts summary information from the description
 	block.summary = parse_summary(block.description)
@@ -542,7 +549,9 @@ function start (files, doc)
 	table.foreachi(files, function (_, path)
 		local attr = lfs.attributes(path)
 		assert(attr, string.format("error stating path `%s'", path))
-		
+	
+		luadoc_taglet_mudlet_filename = path
+	
 		if attr.mode == "file" then
 			doc = file(path, doc)
 		elseif attr.mode == "directory" then
