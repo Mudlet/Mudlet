@@ -836,7 +836,8 @@ function loadRawFile() end
 ---
 --- @usage Let say that you defined following trigger to detect and get droped items.
 ---   <pre>
----   RegEx: ^The (.*) drops (.*)\.$
+---   RegEx: 
+---      ^The (.*) drops (.*)\.$
 ---   Code:
 ---      display(matches)
 ---      send("get " .. matches[3])
