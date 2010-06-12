@@ -830,10 +830,35 @@ function loadRawFile() end
 
 
 
---- <u><b>TODO</b></u> matches
+--- The <i>matches table</i> contains captured group. This available only within trigger context.
+--- First item of matches table (matches[1]) holds current line, all other contains capture groups
+--- defined by regular expression trigger.
+---
+--- @usage Let say that you defined following trigger to detect and get droped items.
+---   <pre>
+---   RegEx: ^The (.*) drops (.*)\.$
+---   Code:
+---      display(matches)
+---      send("get " .. matches[3])
+---   </pre>
+---
+--- Now let's say that MUD will send you following text (which will invoke your trigger).
+---   <pre>
+---   The skeleton drops scimitar.
+---   </pre>
+---
+--- This will send "get scimitar" to your MUD and also print following table:
+---   <pre>
+---   table {
+---     1: 'The skeleton drops scimitar.'
+---     2: 'skeleton'
+---     3: 'scimitar'
+---   }
+---   </pre>
 ---
 --- @see showCaptureGroups
 --- @see multimatches
+--- @fee feedTriggers
 ---
 --- @class function
 --- @name matches
