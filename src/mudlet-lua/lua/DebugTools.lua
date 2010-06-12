@@ -4,6 +4,8 @@
 
 
 --- Function colorizes all matched regex capture groups on the screen.
+---
+--- @see matches
 function showCaptureGroups()
 	for k, v in pairs ( matches ) do
 		selectCaptureGroup( tonumber(k) )
@@ -17,6 +19,8 @@ end
 --- as a tool to help write multiline trigger scripts. This helps you to easily see 
 --- what your multiline trigger actually captured in all regex. You can use these values 
 --- directly in your script by referring to it with multimatches[regex-number][capturegroup].
+---
+--- @see multimatches
 function showMultimatches()
 	echo("\n-------------------------------------------------------");
 	echo("\nThe table multimatches[n][m] contains:");

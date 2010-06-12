@@ -65,6 +65,8 @@ function calcFontSize(fontSize) end
 ---   end
 ---   </pre>
 ---
+--- @see sendTelnetChannel102
+---
 --- @class function
 --- @name channel102
 channel102 = {}
@@ -828,6 +830,17 @@ function loadRawFile() end
 
 
 
+--- <u><b>TODO</b></u> matches
+---
+--- @see showCaptureGroups
+--- @see multimatches
+---
+--- @class function
+--- @name matches
+matches = {}
+
+
+
 --- Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false 
 --- if such a move is impossible e.g. the coordinates don’t exist. To determine the correct coordinates use 
 --- getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user 
@@ -917,6 +930,17 @@ function moveCursorEnd(windowName) end
 --- @see resizeWindow
 --- @see setBorderTop
 function moveWindow(name, x, y) end
+
+
+
+--- <u><b>TODO</b></u> multimatches
+---
+--- @see showMultimatches
+--- @see matches
+---
+--- @class function
+--- @name multimatches
+multimatches = {}
 
 
 
@@ -1083,8 +1107,8 @@ function playSoundFile(fileName) end
 --- have to care about such details. For small systems it will be more
 --- convenient to use regular function calls instead of events, however, the
 --- more complicated your system will get, the more important events will
---- become because they help reduce complexity very much. <br/>
---- <br/>
+--- become because they help reduce complexity very much. <br/><br/>
+--- 
 --- The corresponding event handlers that listen to the events raised with
 --- raiseEvent() need to use the script name as function name and take the
 --- correct number of arguments. NOTE: If you raise an event with 5
@@ -1098,7 +1122,45 @@ function playSoundFile(fileName) end
 --- individual events. The reason behind this is that you should rather use
 --- many individual scripts instead of one huge script that has all your
 --- function code etc. Scripts can be organized very well in trees and thus
---- help reduce complexity on large systems.
+--- help reduce complexity on large systems. <br/><br>
+---
+--- As an example, your prompt trigger could raise an onPrompt event if you want to attach 2 functions to it. 
+--- In your prompt trigger, all you’d need to do is raiseEvent("onPrompt") Now we go about creating functions 
+--- that attach to the event. Lets say the first one is check_health_stuff() and the other is check_salve_stuff(). 
+--- We would like these to be executed when the event is raised. So create a script and give it a name of check_health_stuff. 
+--- In the Add user defined event handler, type onPrompt, and press enter to add it to the list. In the script box, 
+--- create: function check_health_stuff()blah blah end. When the onPrompt event comes along, that script catches it, 
+--- and does check_health_stuff() for you. <br/><br/>
+--- 
+--- <b>Default events raised by Mudlet</b><br/>
+--- Mudlet itself also creates events for your scripts to hook on. The following events are generated currently:<br/>
+--- 
+--- <b><i>sysWindowResizeEvent</i></b><br/>
+--- Raised when the main window is resized, with the new height and width coordinates passed to the event. 
+--- A common usecase for this event is to move/resize your UI elements according to the new dimensions.
+--- This sample code will echo whenever a resize happened with the new dimensions:
+---   <pre>
+---   function resizeEvent( event, x, y )
+---      echo("RESIZE EVENT: event="..event.." x="..x.." y="..y.."\n")
+---   end
+---   </pre>
+--- 
+--- <b><i>sysWindowMousePressEvent</i></b><br/>
+--- Raised when a mouse button is pressed down anywhere on the main window (note that a click is composed of a mouse 
+--- press and mouse release). The button number and the x,y coordinates of the click are reported.
+---   <pre>
+---   function onClickHandler( event, button, x, y )
+---      echo("CLICK event:"..event.." button="..button.." x="..x.." y="..y.."\n")
+---   end
+---   </pre>
+--- 
+--- <b><i>sysWindowMouseReleaseEvent</i></b><br/>
+--- Raised when a mouse button is released after being pressed down anywhere on the main window (note that a click is composed 
+--- of a mouse press and mouse release). See sysWindowMousePressEvent for example use.
+--- 
+--- <b><i>ATCP events</i></b><br/><br/>
+--- Mudlets ATCP implementation generates events for each message that comes, allowing you to trigger on them easily. 
+--- Since ATCP messages vary in name, event names will vary as well. See the atcp section on how to use them.
 function raiseEvent(eventName, ...) end
 
 
@@ -1199,6 +1261,10 @@ function selectSection(windowName, from, lengthOfString) end
 ---      setFgColor(255,0,0)
 ---   end
 ---   </pre>
+--- @usage <b><u>TODO - is this valid?</u></b> 
+---   <pre>
+---   selectString(lineNumber, 1)
+---   </pre>
 ---
 --- @return returns position in line or -1 on error (text not found in line)
 ---
@@ -1233,6 +1299,7 @@ function send(command, echoTheValue) end
 
 
 --- <b><u>TODO</u></b>  sendATCP - TLuaInterpreter::sendATCP
+--- @see atcp
 function sendATCP() end
 
 
@@ -1243,6 +1310,8 @@ function sendATCP() end
 ---   <pre>
 ---   sendTelnetChannel102("\5\1")
 ---   </pre>
+---
+--- @see channel102
 function sendTelnetChannel102() end
 
 
@@ -1560,6 +1629,9 @@ function tempColorTrigger(foregroundColor, backgqroundColor, luaCode) end
 --- current line. This is useful to parse output that is known to arrive in 
 --- a certain line margin or to delete unwanted output from the MUD.
 --- 
+--- @return the string ID of the newly created temporary trigger. 
+---   You can use this ID to enable/disable or kill this trigger later on. 
+---
 --- @usage Following will fire 3 times starting with the line from the MUD. 
 ---   <pre>
 ---   tempLineTrigger( 1, 3, ) 
@@ -1568,9 +1640,6 @@ function tempColorTrigger(foregroundColor, backgqroundColor, luaCode) end
 ---   <pre>
 ---   tempLineTrigger( 20, 2, ) 
 ---   </pre>
----
---- @return the string ID of the newly created temporary trigger. 
----   You can use this ID to enable/disable or kill this trigger later on. 
 function tempLineTrigger(from, howMany, luaCode) end
 
 
@@ -1580,7 +1649,8 @@ function tempLineTrigger(from, howMany, luaCode) end
 --- @return the string ID of the newly created temporary trigger. 
 ---   You can use this ID to enable/disable or kill 
 ---   this trigger later on.
---- 
+---
+--- @see killTrigger
 --- @see tempTrigger
 function tempRegexTrigger(regex, luaCode) end
 
@@ -1621,6 +1691,19 @@ function tempTimer(seconds, luaCode) end
 --- instead of regex triggers whenever possible. 
 --- 
 --- @return trigger ID, ID is a string and not a number. 
+--- 
+--- @usage You can put the following script into your targeting alias highlight your target. <br/>
+---   (Note: trigger will stay active unless you'll kill it.)
+---   <pre>
+---   target = "rat"
+---   if id then
+---      killTrigger(id) 
+---   end
+---   id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold") resetFormat()]])
+---   </pre>
+---
+--- @see killTrigger
+--- @see tempRegexTrigger
 function tempTrigger(string, luaCode) end
 
 
