@@ -20,7 +20,45 @@ setmetatable( _G, {
 	})
 
 
---- <b><u>TODO</u></b> Table atcp.
+--- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough 
+--- such that any it should work on others. <br/><br/>
+--- 
+--- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also 
+--- raised for each ATCP message that arrives. To find out the available messages available in the atcp table and the event names, 
+--- you can use display(atcp). <br/><br/>
+--- 
+--- Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is 
+--- removed - so it becomes CharVitals and RoomExits. Here's an example:
+---   <pre>
+---   room_number = tonumber(atcp.RoomNum)
+---   echo(room_number)
+---   </pre>
+--- 
+--- Triggering on ATCP events: <br/>
+--- If you'd like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages. 
+--- The ATCP handler names follow the same format as the atcp table - RoomNum, RoomExits, CharVitals and so on. <br/><br/>
+--- 
+--- While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place 
+--- the event name you'd like your script to listen to into the Add User Defined Event Handler: field and press the + button 
+--- to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function 
+--- should it call for you when your handler receives a message. You do that by setting the Script name: to the function 
+--- name in the script you'd like to be called. <br/><br/>
+--- 
+--- For example, if you'd like to listen to the RoomExits event and have it call the process_exits() function - 
+--- register RoomExits as the event handler, make the script name be process_exits, and use this in the script:
+---   <pre>
+---   function process_exits(event, args)
+---       echo("Called event: " .. event .. "\nWith args: " .. args)
+---   end
+---   </pre>
+--- 
+--- Feel free to experiment with this to achieve the desired results. A ATCP demo package is also available on the forums 
+--- for using event handlers and parsing its messages into Lua datastructures. <br/>
+--- 
+--- @release Mudlet 1.0.6
+---
+--- @see sendATCP
+---
 --- @class function
 --- @name atcp
 atcp = {}
@@ -72,7 +110,7 @@ function sendAll(...)
 end
 
 
---- Checks to see if a given file or folder exists. If it exists, it’ll return the Lua true boolean value, otherwise false.
+--- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
 --- 
 --- @usage
 ---   <pre>

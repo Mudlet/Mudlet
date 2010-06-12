@@ -15,5 +15,7 @@ Lua Code
 LuaDoc
 	gen doc and link it from main manual
 	make generated LuaDoc more appealing (chekc lua/luadoc/doclet/html folder for it)
+
+	taglet - fix issue with links on tables and variables (@name, @class)	
 	taglet - fix case sensitive <pre> tag - documented for now
 

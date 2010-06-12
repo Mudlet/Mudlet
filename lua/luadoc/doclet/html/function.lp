@@ -29,7 +29,7 @@ end
 <ul>
 	<%for p = 1, #func.param do%>
 	<li>
-	  <%=func.param[p]%>: <%=func.param[func.param[p]] or ""%>
+	  <%=func.param[p]%>: <%end%><%=func.param[func.param[p]] or ""%>
 	</li>
 	<%end%>
 </ul>
