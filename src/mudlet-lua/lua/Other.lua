@@ -3,14 +3,6 @@
 ----------------------------------------------------------------------------------
 
 
--- some undocumented stuff
-atcp = {}
-
-walklist = {}
-walkdelay = 0
-
-SavedVariables = { }
-
 -- Extending default libraries makes Babelfish happy.
 setmetatable( _G, {
 	["__call"] = function(func, ...)
@@ -28,6 +20,28 @@ setmetatable( _G, {
 	})
 
 
+--- <b><u>TODO</u></b> Table atcp.
+--- @class function
+--- @name atcp
+atcp = {}
+
+
+--- <b><u>TODO</u></b> Table walklist.
+--- @class function
+--- @name walklist
+walklist = {}
+
+
+--- <b><u>TODO</u></b> Variable walkdelay.
+--- @class function
+--- @name walkdelay
+walkdelay = 0
+
+
+--- <b><u>TODO</u></b> Table SavedVariables.
+--- @class function
+--- @name SavedVariables
+SavedVariables = {}
 
 
 --- Sends a list of commands to the MUD. You can use this to send some things at once instead of having 
@@ -86,7 +100,7 @@ function io.exists(fileOfFolderName)
 end
 
 
---- Boolean exclusive or implementation.
+--- Implementation of boolean exclusive or.
 ---
 --- @usage All following will return false.
 ---   <pre>
@@ -129,8 +143,11 @@ end
 
 --- Opens the default OS browser for the given URL.
 ---
---- @usage openUrl("www.mudlet.org")
---- @usage openUrl("http://www.mudlet.org/")
+--- @usage Either command will open Mudlet home page.
+---   <pre>
+---   openUrl("www.mudlet.org")
+---   openUrl("http://www.mudlet.org/")
+---   </pre>
 function openURL(url)
 	local os = getOS()
 	if os == "linux" then _G.os.execute("xdg-open " .. url)

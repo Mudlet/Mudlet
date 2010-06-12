@@ -10,7 +10,18 @@ end
 
 <dt><%=func.private and "local " or ""%><a name="<%=func.name%>"></a><strong><%=func.name%></strong>&nbsp;(<%=table.concat(func.param, ", ")%>)</dt>
 <dd>
+
+<%if func.filename then%>
+<i>from <%=func.filename%></i>
+<br/><br/>
+<%end%>
+
 <%=func.description or ""%>
+
+<%if func.release then%>
+<br/><b>Release:</b> <%=func.release%>
+<%end%>
+
 <br/><br/>
 
 <%if type(func.param) == "table" and #func.param > 0 then%>
@@ -23,7 +34,6 @@ end
 	<%end%>
 </ul>
 <%end%>
-
 
 <%if type(func.usage) == "string" then%>
 <h3>Usage:</h3>
@@ -68,4 +78,5 @@ end
 	<%end%>
 </ul>
 <%end%>
+
 </dd>

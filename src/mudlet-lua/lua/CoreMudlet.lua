@@ -45,6 +45,32 @@ function calcFontSize(fontSize) end
 
 
 
+--- The <i>channel102 table</i> is used by Aardwolf mud for returning various information about you state. <br/>
+--- Read <i>http://www.aardwolf.com/blog/2008/07/10/telnet-negotiation-control-mud-client-interaction/</i>
+--- page for details.
+---
+--- @usage Display content of channel10 table.
+---   <pre>
+---   display(channel102)
+---   </pre>
+--- @usage Function for detecting AFK status on Aardwolf mud.
+---   <pre>
+---   function amIafk()
+---      for k,v in pairs(channel102) do
+---         if k==100 and v==4 then
+---            return true
+---         end
+---      end
+---      return false
+---   end
+---   </pre>
+---
+--- @class function
+--- @name channel102
+channel102 = {}
+
+
+
 --- Clears the user window or a mini console with the name given as argument.
 function clearUserWindow(windowName) end
 
@@ -127,7 +153,7 @@ function createButton() end
 ---   -- close the warning message box after 2.3 seconds
 ---   tempTimer(2.3, [[hideWindow("messageBox")]] )
 ---   </pre>
---- @usage see forum for more exaples
+--- @usage see forum for more examples
 ---  <pre>
 ---  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=95
 ---  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=865
@@ -292,7 +318,8 @@ function echo(windowName, text) end
 
 
 --- Echos a piece of text as a clickable link. <br/>
---- Available since 1.1.0-pre1.
+---
+--- @release Mudlet 1.1.0-pre1
 ---
 --- @usage 
 ---   <pre>
@@ -313,7 +340,8 @@ function echoLink(windowName, text, command, hint, useCurrentFormat) end
 
 
 --- Same as setPopup()  except it doesn’t require a selection. echoPopup creates a link from the given text that it echos. <br/>
---- Available since 1.1.0-pre1.
+---
+--- @release Mudlet 1.1.0-pre1
 ---
 --- @usage 
 ---   <pre>
@@ -519,7 +547,7 @@ function getLines(from_line_number, to_line_number) end
 
 
 
---- Return window width and window height ( function with 2 return values ) to calculate the window dimensions and 
+--- Return window width and window height (function have two return values). This is useful for calculating the window dimensions and 
 --- placement of custom GUI toolkit items like labels, buttons, mini consoles etc.
 ---
 --- @usage
@@ -557,8 +585,9 @@ function getStopWatchTime(watchID) end
 
 
 
---- Return time information. <br/>
---- Available since Mudlet 1.0.6.
+--- Return time information.
+--- 
+--- @release Mudlet 1.0.6
 ---
 --- @usage 
 ---   <pre>
@@ -609,8 +638,9 @@ function getTime(returntype, format) end
 
 
 
---- Returns the timestamp string as it's seen when you enable the timestamps view (blue i button bottom right). <br/>
---- Available since 1.1.0-pre1
+--- Returns the timestamp string as it's seen when you enable the timestamps view (blue 'i' button bottom right of the Mudlet screen).
+---
+--- @release Mudlet 1.1.0-pre1
 ---
 --- @usage Echo the timestamp of the current line in a trigger.
 ---   <pre>
@@ -647,8 +677,9 @@ function insertHTML() end
 
 
 --- Same as echoLink() but inserts the text at the current cursor position, while echoLink inserts at the end
---- of the current line. <br/>
---- Available since 1.1.0-pre1.
+--- of the current line.
+---
+--- @release Mudlet 1.1.0-pre1
 ---
 --- @see echoLink
 --- @see setLink
@@ -656,8 +687,9 @@ function insertLink(windowName, text, command, hint, useCurrentFormat) end
 
 
 
---- Same as echoPopup(), but inserts text at the current cursor position. <br/>
---- Available since 1.1.0-pre1.
+--- Same as echoPopup(), but inserts text at the current cursor position.
+---
+--- @release Mudlet 1.1.0-pre1
 ---
 --- @see setPopup
 --- @see echoPopup
@@ -665,7 +697,7 @@ function insertPopup(windowName, text, commands, hints, useCurrentFormat) end
 
 
 
---- Inserts text at the current cursor position in the main window; if the cursor has not been explicitly 
+--- Inserts text at the current cursor position in the main window. If the cursor has not been explicitly 
 --- moved this function will always print at the beginning of the line whereas the echo() function will 
 --- always print at the end of the line.
 function insertText(text) end
@@ -1342,8 +1374,9 @@ function setLabelStyleSheet() end
 
 
 --- Turns the selected text into a clickable link - upon being clicked, the link will do the command code.
---- Tooltip is a string which will be displayed when the mouse is over the selected text. <br/>
---- Available since 1.1.0-pre1.
+--- Tooltip is a string which will be displayed when the mouse is over the selected text.
+---
+--- @release Mudlet 1.1.0-pre1
 ---
 --- @usage In a sewer grate substring trigger, the following code will make clicking on the words do the send("enter grate") command:
 ---   <pre>
@@ -1367,8 +1400,9 @@ function setMiniConsoleFontSize(name, fontSize) end
 
 --- Turns the selected text into a left-clickable link, and a right-click menu. The selected text,
 --- upon being left-clicked, will do the first command in the list. Upon being right-clicked, it’ll
---- display a menu with all possible commands. The menu will be populated with hints, one for each line. <br/>
---- Available since 1.1.0-pre1.
+--- display a menu with all possible commands. The menu will be populated with hints, one for each line.
+---
+--- @release Mudlet 1.1.0-pre1
 ---
 --- @usage In a Raising your hand in greeting, you say "Hello!" exact match trigger, the following code will
 ---   make left-clicking on Hello show you an echo, while left-clicking will show some commands you can do.

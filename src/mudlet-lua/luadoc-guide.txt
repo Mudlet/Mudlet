@@ -22,6 +22,8 @@ Thank you!
 ---   </pre>
 --- You can also force <br/> new line with HTML tag.
 ---
+--- @release Mudlet 1.1.1
+---
 --- @param a is used for ... param description.
 --- @param b LuaDoc will generate basic doc for all omitted parameters.
 ---
@@ -42,6 +44,16 @@ Thank you!
 --- @see anotherFunctionName
 ---
 function test(a, b) end
+
+
+--- You can also document tables, but you have to manually set class and name tag.
+--- Set class to 'function' for all tables or variables or it will not appear in master index!
+---
+--- @see fg
+---
+--- @class function
+--- @name color_table
+color_table = {}
 
 
 
