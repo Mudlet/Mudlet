@@ -30,7 +30,7 @@ end
 
 --- Splits a string into a table by the given delimiter.
 --- 
---- @usage
+--- @usage Split string by ", " delimiter.
 ---   <pre>
 ---   names = "Alice, Bob, Peter"
 ---   name_table = names:split(", ")
@@ -88,11 +88,11 @@ end
 
 --- Generate case insensitive search pattern from string.
 --- 
---- @release post Mudlet 1.1.1 (TODO update before release)
+--- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
 ---
 --- @return case insensitive pattern string 
 ---
---- @usage Following example will generate and print "123[aA][bB][cC]" string.
+--- @usage Following example will generate and print <i>"123[aA][bB][cC]"</i> string.
 ---   <pre>
 ---   echo(string.genNocasePattern("123abc"))
 ---   </pre>
@@ -107,7 +107,7 @@ end
 
 --- Return first matching substring or nil.
 --- 
---- @release post Mudlet 1.1.1 (TODO update before release)
+--- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
 ---
 --- @return nil or first matching substring
 ---
