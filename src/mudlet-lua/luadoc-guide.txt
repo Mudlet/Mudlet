@@ -60,7 +60,6 @@ color_table = {}
 
 OTHER NOTES:
 ------------
-	- <pre></pre> is CASE SENSITIVE
 	- you can document only functions and file
 	- use <pre> </pre> tag for any code - even if it's just one line
 	- you need to escape all html character like

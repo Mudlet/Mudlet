@@ -169,9 +169,9 @@ end
 -- Simply tests if trimmed line without pre /pre tags is blank
 -- @return true/false 
 function skipNewline(line)
-	if string.find(line, "<pre>") or string.find(line, "</pre>") then
-		line = string.gsub(line, "<pre>", "")
-		line = string.gsub(line, "</pre>", "")
+	if string.find(line, "<[pP][rR][eE]>") or string.find(line, "</[pP][rR][eE]>") then
+		line = string.gsub(line, "<[pP][rR][eE]>", "")
+		line = string.gsub(line, "</[pP][rR][eE]>", "")
 		line = string.gsub(line, "^%s*(.-)%s*$", "%1")
 		return line == ""
 	else
@@ -198,15 +198,15 @@ end
 -- @return trimmed string
 local function trim_comment_pre(s) 
 	-- detect start/end of pre block - case sensitive
-	if string.find(s, "<pre>") then luadoc_taglet_mudlet_pre = true end
-	if string.find(s, "</pre>") then luadoc_taglet_mudlet_pre = false end
+	if string.find(s, "<[pP][rR][eE]>") then luadoc_taglet_mudlet_pre = true end
+	if string.find(s, "</[pP][rR][eE]>") then luadoc_taglet_mudlet_pre = false end
 	-- process line
 	s = string.gsub(s, "%-%-+(.*)$", "%1")
 	if luadoc_taglet_mudlet_pre then
 		if not skipNewline(s) then
 			return s .. "\n"
 		else
-			return s			
+			return s
 		end 
 	else
 		s = string.gsub(s, "^%s*(.-)%s*$", "%1")
