@@ -9,7 +9,7 @@ if false then
 
 
 
---- Pastes the previously copied rich text (including text formats like color etc.) into user window name.
+--- Pastes the previously copied rich text (including text formats like color) into user window name.
 ---
 --- @usage
 ---   <pre>
@@ -21,7 +21,7 @@ if false then
 --- @see selectString
 --- @see copy
 --- @see echo
-function appendBuffer(name) end
+function appendBuffer(windowName) end
 
 
 
@@ -29,9 +29,9 @@ function appendBuffer(name) end
 --- usage is for calculating the needed dimensions of a miniConsole, it doesn't accept a font argument -
 --- as the miniConsoles currently only work with the default font for the sake of portability.
 ---
---- @usage 
+--- @usage Get font dimensions in pixes.
 ---   <pre>
----   x,y = calcFontSize(font_size)
+---   x,y = calcFontSize(10)
 ---   </pre>
 --- @usage Create a miniConsole that is 45 letters in length and 25 letters in height for font size 7
 ---   <pre>
@@ -74,6 +74,7 @@ channel102 = {}
 
 
 --- Clears the user window or a mini console with the name given as argument.
+--- <b><u>TODO</u></b> is this still working?
 function clearUserWindow(windowName) end
 
 
@@ -84,7 +85,18 @@ function clearWindow(windowName) end
 
 
 --- <b><u>TODO</u></b>  closeUserWindow - TLuaInterpreter::closeUserWindow
-function closeUserWindow() end
+--- <b><u>TODO</u></b> is this still working?
+function closeUserWindow(windowName) end
+
+
+
+--- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
+---
+--- @see line
+---
+--- @class function
+--- @name command
+command = ""
 
 
 
@@ -258,19 +270,6 @@ function deleteLine() end
 
 
 
---- Clears the current selection in the main window or miniConsole.
---- @usage 
----   <pre>
----   deselect()
----   </pre>
---- @usage 
----   <pre>
----   deselect("myMiniConsole")
----   </pre>
-function deselect(windowName) end
-
-
-
 --- Disables/deactivates an alias with the given name. This means that when you type in text that should 
 --- match it’s pattern, it won’t match and will be sent to the MUD. If several aliases have this name, they’ll all be disabled.
 function disableAlias(name) end
@@ -297,7 +296,7 @@ function disableTrigger(name) end
 
 
 
---- Disconnect from current session.
+--- Disconnect from current session without a proper logout.
 -- @see reconnect
 function disconnect() end
 
@@ -825,6 +824,17 @@ function killTrigger(id) end
 
 
 
+--- The <i>line variable</> holds the content of the current line as being processed by the trigger engine. 
+--- The engine runs all triggers on each line as it arrives from the MUD.
+---
+--- @see command
+---
+--- @class function
+--- @name matches
+line = ""
+
+
+
 --- <b><u>TODO</u></b>  loadRawFile - TLuaInterpreter::loadRawFile
 function loadRawFile() end
 
@@ -959,7 +969,62 @@ function moveWindow(name, x, y) end
 
 
 
---- <u><b>TODO</b></u> multimatches
+--- The <i>multimatches table</i> is being used by Mudlet in the context of multiline triggers that use Perl regular expression. 
+--- It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. 
+--- multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and 
+--- process all relevant data within a single script. <br/><br/>
+---
+--- What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines 
+--- and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines.
+---
+--- @usage Have a look at this example (can be tested on the MUD batmud.bat.org). <br/>
+--- In the case of a multiline trigger with these 2 Perl regex as conditions:
+---   <pre>
+---   ^You have (\w+) (\w+) (\w+) (\w+)
+---   ^You are (\w+).*(\w+).*
+---   </pre>
+--- The command "score" generates the following output on batMUD:
+---   <pre>
+---   You have an almost non-existent ability for avoiding hits.
+---   You are irreproachably kind.
+---   You have not completed any quests.
+---   You are refreshed, hungry, very young and brave.
+---   Conquer leads the human race.
+---   Hp:295/295 Sp:132/132 Ep:182/181 Exp:269 >
+---   </pre>
+--- If you add this script to the trigger:
+---   <pre>
+---   showMultimatches()
+---   </pre>
+--- The script, i.e. the call to the function showMultimatches() generates this output:
+---   <pre>
+---   -------------------------------------------------------
+---   The table multimatches[n][m] contains:
+---   -------------------------------------------------------
+---   regex 1 captured: (multimatches[1][1-n])
+---             key=1 value=You have not completed any quests
+---             key=2 value=not
+---             key=3 value=completed
+---             key=4 value=any
+---             key=5 value=quests
+---   regex 2 captured: (multimatches[2][1-n])
+---             key=1 value=You are refreshed, hungry, very young and brave
+---             key=2 value=refreshed
+---             key=3 value=young
+---             key=4 value=and
+---             key=5 value=brave
+---   -------------------------------------------------------
+---   </pre>
+--- The function showMultimatches() prints out the content of the table multimatches[n][m]. You can now see what the table 
+--- multimatches[][] contains in this case. The first trigger condition (=regex 1) got as the first full match 
+--- "You have not completed any quests". This is stored in multimatches[1][1] as the value of key=1 in the sub-table matches[1] 
+--- which, in turn, is the value of key=1 of the table multimatches[n][m]. <br/><br/>
+---
+--- Following script would use matched values from previously defined regex in the multiline trigger:
+---   <pre>
+---   myGold = myGold + tonumber( multimatches[1][2] )
+---   mySilver = mySilver + tonumber( multimatches[1][3] )
+---   </pre>
 ---
 --- @see showMultimatches
 --- @see matches
@@ -972,10 +1037,18 @@ multimatches = {}
 
 --- Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such
 --- a name already exists, nothing happens. You can move these windows, dock them, make them into notebook
---- tabs or float them. Most often a mini console is more useful than a dockable window.
+--- tabs or float them. Most often a mini console is more useful than a dockable window. <br/><br/>
+---
+--- Note: There isn't currently way how to set size and position of user windows at the moment, so you might
+--- consider to use mini console instead.
+---
+--- @usage This command will open new user windows with name "Chat".
+---   <pre> 
+---   openUserWindow("Chat")
+---   </pre>
 ---
 --- @see createMiniConsole
-function openUserWindow() end
+function openUserWindow(windowName) end
 
 
 
