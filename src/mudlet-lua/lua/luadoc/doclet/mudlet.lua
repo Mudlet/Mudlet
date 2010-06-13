@@ -175,13 +175,11 @@ function symbol_link (symbol, doc, module_doc, file_doc, from)
 	assert(symbol)
 	assert(doc)
 	
-	local href = "#" .. symbol
--- fixes issue with @see links on comment with defined @name and @class
--- everyting seem working, so we don't need following
+	local href =
 --		file_link(symbol, from) or
---		module_link(symbol, doc, from) or 
---		link_to(symbol, doc, module_doc, file_doc, from, "functions") or
---		link_to(symbol, doc, module_doc, file_doc, from, "tables")
+		module_link(symbol, doc, from) or 
+		link_to(symbol, doc, module_doc, file_doc, from, "functions") or
+		link_to(symbol, doc, module_doc, file_doc, from, "tables")
 	
 	if not href then
 		logger:error(string.format("unresolved reference to symbol `%s'", symbol))

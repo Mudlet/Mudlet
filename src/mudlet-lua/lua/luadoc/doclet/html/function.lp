@@ -66,15 +66,13 @@ end
 <%if type(func.see) == "string" then %>
 <h3>See also:</h3>
 <ul>
-	<a href="<%=func.see%>"><%=func.see%></a>
+	<li><a href="#<%=func.see%>"><%=func.see%></a>
 </ul>
 <%elseif type(func.see) == "table" and #func.see > 0 then %>
 <h3>See also:</h3>
 <ul>
 	<%for i = 1, #func.see do%>
-	<li><a href="<%=luadoc.doclet.mudlet.symbol_link(func.see[i], doc, module_doc, file_doc, from)%>">
-		<%=func.see[i]%>
-	</a>
+	<li><a href="#<%=func.see[i]%>"><%=func.see[i]%></a>
 	<%end%>
 </ul>
 <%end%>
