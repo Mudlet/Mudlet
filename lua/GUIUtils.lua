@@ -521,14 +521,41 @@ end
 
 
 --- Default resizeEvent handler function. Overwrite this function to make a custom event handler 
---- if the main window is being resized.
+--- if the main window is being resized. <br/><br/>
+---
+--- The standard implementation of this function does nothing. However, this function gets called whenever 
+--- the main window is being manually resized. You can overwrite this function in your own scripts to handle window 
+--- resize events yourself and e.g. adjust the screen position and size of your mini console windows, labels or 
+--- other relevant GUI elements in your scripts that depend on the size of the main Window. To override this 
+--- function you can simply put a function with the same name in one of your scripts thus overwriting the 
+--- original empty implementation of this function.
+---   <pre>
+---   function handleWindowResizeEvent()
+---      -- determine the size of your screen
+---      WindowWidth=0;
+---      WindowHeight=0;
+---      WindowWidth, WindowHeight = getMainWindowSize();
+---      -- move mini console "sys" to the far right side of the screen whenever the screen gets resized
+---      moveWindow("sys",WindowWidth-300,0)
+---   end
+---   </pre>
 function handleWindowResizeEvent()
 end
 
 
---- <u><b>TODO</b></u> deselect()
+--- Clears the current selection in the main window or miniConsole window. <br/>
+--- (Note: <i>deselect(windowName)</i> is implemented in Core Mudlet.)
+---
+--- @usage Clear selection in main window.
+---   <pre>
+---   deselect()
+---   </pre>
+--- @usage Clear selection in myMiniConsole window.
+---   <pre>
+---   deselect("myMiniConsole")
+---   </pre>
 function deselect()
-	selectString("",1);
+	selectString("", 1)
 end
 
 
@@ -585,6 +612,8 @@ end
 ---   <pre>
 ---   showColors(2)
 ---   </pre>
+---
+--- @see color_table
 function showColors(...)
 	local cols = ... or 3
 	local i = 1
