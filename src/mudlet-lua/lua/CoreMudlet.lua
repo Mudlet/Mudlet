@@ -91,6 +91,7 @@ function closeUserWindow(windowName) end
 
 
 --- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
+--- This is typically used in alias scripts.
 ---
 --- @see line
 ---
@@ -830,7 +831,7 @@ function killTrigger(id) end
 --- @see command
 ---
 --- @class function
---- @name matches
+--- @name line
 line = ""
 
 

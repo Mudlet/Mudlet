@@ -9,10 +9,14 @@ put all lua code in sepate subfolder (mudletHome/lua)
 
 Lua Code
 	test it properly e.g. that all functions are working
-	update and polish docs
+	update doc (as for help - after I'll do visible index)
 
 
 LuaDoc
-	gen doc and link it from main manual
+	change method to generate full link
+	make index visible all the time (e.g. scroll bart with css) or frames
+
+	gen LuaDoc and link it from main manual (e.g. this will be only API documentation)
+		e.g. LuaDoc will replace Alphabetic Function List
 	make generated LuaDoc more appealing (chekc lua/luadoc/doclet/html folder for it)
 

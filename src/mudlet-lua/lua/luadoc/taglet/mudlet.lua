@@ -92,7 +92,7 @@ end
 -- definition
 
 local function check_module (line, currentmodule)
---	line = util.trim(line)
+	line = util.trim(line)
 	
 	-- module"x.y"
 	-- module'x.y'
@@ -102,16 +102,13 @@ local function check_module (line, currentmodule)
 	-- module([[x.y]])
 	-- module(...)
 
---	local r, _, modulename = string.find(line, "^module%s*[%s\"'(%[]+([^,\"')%]]+)")
---	if r then
+	local r, _, modulename = string.find(line, "^module%s*[%s\"'(%[]+([^,\"')%]]+)")
+	if r then
 		-- found module definition
---		logger:debug(string.format("found module `%s'", modulename))
---		return modulename
---	end
---	return currentmodule
-
-	-- misuse module as a global index
-	return "All Functions"
+		logger:debug(string.format("found module `%s'", modulename))
+		return modulename
+	end
+	return currentmodule
 end
 
 -------------------------------------------------------------------------------
@@ -380,7 +377,8 @@ function parse_file (filepath, doc)
 --		functions = class_iterator(blocks, "function"),
 --		tables = class_iterator(blocks, "table"),
 	}
---
+
+	-- added initial file comment
 	local first = doc.files[filepath].doc[1]
 	if first and modulename then
 		doc.files[filepath].author = first.author
@@ -461,7 +459,13 @@ function parse_file (filepath, doc)
 	doc.files[filepath].functions = {}
 	for f in class_iterator(blocks, "function")() do
 		table.insert(doc.files[filepath].functions, f.name)
+		-- added link, so we can refer this function later
+		f.link = string.gsub(filepath, ".lua", ".html") .. "#" .. f.name
 		doc.files[filepath].functions[f.name] = f
+		-- new array for master index of all functions
+		local funcId = f.name
+		table.insert(doc.mIndex, funcId)
+		doc.mIndex[funcId] = f
 	end
 	
 	-- make tables table
@@ -542,6 +546,7 @@ function start (files, doc)
 	doc = doc or {
 		files = {},
 		modules = {},
+		mIndex = {}, -- master index
 	}
 	assert(doc.files, "undefined `files' field")
 	assert(doc.modules, "undefined `modules' field")
@@ -550,6 +555,7 @@ function start (files, doc)
 		local attr = lfs.attributes(path)
 		assert(attr, string.format("error stating path `%s'", path))
 	
+		-- current file
 		luadoc_taglet_mudlet_filename = path
 	
 		if attr.mode == "file" then
@@ -562,6 +568,7 @@ function start (files, doc)
 	-- order arrays alphabetically
 	recsort(doc.files)
 	recsort(doc.modules)
+	table.sort(doc.mIndex)
 
 	return doc
 end
