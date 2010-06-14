@@ -1,13 +1,17 @@
 This file should give you basic guidelines for documenting mudlet-lua code 
 with LuaDoc. (Keep in mind that we did few extensions to LuaDoc,
 so this is not generic LuaDoc guide. All Mudlet LuaDoc extensions are 
-freely available.)
+freely available in lua/luadoc/ folder.)
 
 I hope that everything will be clear from following example. 
 You can always ask for clarification on Mudlet forum...
+Please use <pre></pre> tag for any code - even if it's just one line.
+You will need to to escape all html characters.
+
 We would appreciate if you can follow this as close as 
 possible to keep it consistent and easily maintainable. 
 Thank you!
+
 
 
 
@@ -56,11 +60,4 @@ function test(a, b) end
 color_table = {}
 
 
-
-
-OTHER NOTES:
-------------
-	- you can document only functions and file
-	- use <pre> </pre> tag for any code - even if it's just one line
-	- you need to escape all html character like
 
