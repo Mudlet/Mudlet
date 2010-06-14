@@ -8,7 +8,8 @@ else
 end
 %>
 
-<dt><%=func.private and "local " or ""%><a name="<%=func.name%>"></a><strong><%=func.name%></strong>&nbsp;(<%=table.concat(func.param, ", ")%>)</dt>
+<dt><%=func.private and "local " or ""%><a name="<%=func.name%>"></a>
+<b><big><%=func.name%>&nbsp;</big></b>(<%=table.concat(func.param, ", ")%>)</dt>
 <dd>
 
 <%=func.description or ""%>
@@ -20,7 +21,7 @@ end
 <br/><br/>
 
 <%if type(func.param) == "table" and #func.param > 0 then%>
-<h3>Parameters</h3>
+<b>Parameters</b>
 <ul>
 	<%for p = 1, #func.param do%>
 	<li>
@@ -31,12 +32,12 @@ end
 <%end%>
 
 <%if type(func.usage) == "string" then%>
-<h3>Usage:</h3>
+<b>Usage:</b>
 <ul>
 	<li><%=func.usage%>
 </ul>
 <%elseif type(func.usage) == "table" then%>
-<h3>Usage</h3>
+<b>Usage</b>
 <ul>
 	<%for _, usage in ipairs(func.usage) do%>
 	<li><%= usage %>
@@ -45,12 +46,12 @@ end
 <%end%>
 
 <%if type(func.ret) == "string" then%>
-<h3>Return value:</h3>
+<b>Return value:</b>
 <ul>
 	<li><%=func.ret%>
 </ul>
 <%elseif type(func.ret) == "table" then%>
-<h3>Return values:</h3>
+<b>Return values:</b>
 <ol>
 	<%for _, ret in ipairs(func.ret) do%>
 	<li><%= ret %>
@@ -59,12 +60,12 @@ end
 <%end%>
 
 <%if type(func.see) == "string" then %>
-<h3>See also:</h3>
+<b>See also:</b>
 <ul>
 	<li><%=luadoc.doclet.mudlet.genLinkToFunction(doc, func.see)%>
 </ul>
 <%elseif type(func.see) == "table" and #func.see > 0 then %>
-<h3>See also:</h3>
+<b>See also:</b>
 <ul>
 	<%for i = 1, #func.see do%>
 	<li><%=luadoc.doclet.mudlet.genLinkToFunction(doc, func.see[i])%>
