@@ -136,7 +136,7 @@ function createButton() end
 --- setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. 
 --- If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. 
 --- labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on 
---- screen buttons, micro display, etc. DON’T use labels for larger text displays because they are a lot slower than the highspeed mini consoles.
+--- screen buttons, micro display, etc. DON'T use labels for larger text displays because they are a lot slower than the highspeed mini consoles.
 --- <br/><br/>
 --- Labels accept some HTML and CSS code for text formating.
 --- 
@@ -272,7 +272,7 @@ function deleteLine() end
 
 
 --- Disables/deactivates an alias with the given name. This means that when you type in text that should 
---- match it’s pattern, it won’t match and will be sent to the MUD. If several aliases have this name, they’ll all be disabled.
+--- match it's pattern, it won't match and will be sent to the MUD. If several aliases have this name, they'll all be disabled.
 function disableAlias(name) end
 
 
@@ -282,8 +282,8 @@ function disableKey(name) end
 
 
 
---- Disables a timer from running it’s script when it fires - so the timer 
---- cycles will still be happening, just no action on them. If you’d like to 
+--- Disables a timer from running it's script when it fires - so the timer 
+--- cycles will still be happening, just no action on them. If you'd like to 
 --- permanently delete it, use killTrigger() instead. <br.>
 --- Use timer name or the id returned by tempTimer() to identify the timer 
 --- that you want to disable. 
@@ -341,7 +341,7 @@ function echoLink(windowName, text, command, hint, useCurrentFormat) end
 
 
 
---- Same as setPopup()  except it doesn’t require a selection. echoPopup creates a link from the given text that it echos. <br/>
+--- Same as setPopup()  except it doesn't require a selection. echoPopup creates a link from the given text that it echos. <br/>
 ---
 --- @release Mudlet 1.1.0-pre1
 ---
@@ -364,7 +364,7 @@ function echoUserWindow(windowName, text) end
 
 
 
---- Enables/activates the alias by it’s name. If several aliases have this name, they’ll all be enabled.
+--- Enables/activates the alias by it's name. If several aliases have this name, they'll all be enabled.
 function enableAlias(name) end
 
 
@@ -491,7 +491,7 @@ function getColumnNumber() end
 --- hold an outdated string. line = getCurrentLine() will update line to the 
 --- real content of the current buffer. This is important if you want to 
 --- copy the current line after it has been changed by some triggers. 
---- selectString( line,1 ) will return false and won’t select anything 
+--- selectString( line,1 ) will return false and won't select anything 
 --- because line no longer equals getCurrentLine(). Consequently, 
 --- selectString( getCurrentLine(), 1 ) is what you need. 
 --- 
@@ -879,7 +879,7 @@ matches = {}
 
 
 --- Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false 
---- if such a move is impossible e.g. the coordinates don’t exist. To determine the correct coordinates use 
+--- if such a move is impossible e.g. the coordinates don't exist. To determine the correct coordinates use 
 --- getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user 
 --- cursor at the beginning of the current line before the script is run. If you omit the windowName argument, 
 --- the main screen will be used.
@@ -1072,10 +1072,10 @@ function pasteWindow() end
 --- Note that Mudlet by design allows duplicate names - so calling permAlias with the same name will keep creating 
 --- new aliases. You can check if an alias already exists with the exists() function.
 --- 
---- @param name is the name you’d like the alias to have.
+--- @param name is the name you'd like the alias to have.
 --- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias 
---- doesn’t exist, it won’t do anything. Use "" to make it not go into any groups.
---- @param regex is the pattern that you’d like the alias to use.
+--- doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+--- @param regex is the pattern that you'd like the alias to use.
 --- @param luaCode is the script the alias will do when it matches.
 --- 
 --- @usage Creates an alias called "new alias" in a group called "my group".
@@ -1094,10 +1094,10 @@ function permAlias(name, parent, regex, luaCode) end
 --- Note that Mudlet by design allows duplicate names - so calling permBeginOfLineStringTrigger with the same 
 --- name will keep creating new triggers. You can check if a trigger already exists with the exists() function.
 --- 
---- @param name is the name you’d like the trigger to have.
+--- @param name is the name you'd like the trigger to have.
 --- @param parent is the name of the group, or another trigger you want the trigger to go in - however 
----   if such a group/trigger doesn’t exist, it won’t do anything. Use "" to make it not go into any groups.
---- @param patternTable is a table of patterns that you’d like the trigger to use - it can be one or many.
+---   if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+--- @param patternTable is a table of patterns that you'd like the trigger to use - it can be one or many.
 --- @param luaCode is the script the trigger will do when it matches.
 --- 
 --- @usage Create a trigger that will match on anything that starts with "You sit" and do "stand".
@@ -1119,10 +1119,10 @@ function permBeginOfLineStringTrigger(name, parent, patternTable, luaCode) end
 --- Note that Mudlet by design allows duplicate names - so calling permRegexTrigger with the same name will keep creating 
 --- new aliases. You can check if an alias already exists with the exists() function.
 --- 
---- @param name is the name you’d like the alias to have.
+--- @param name is the name you'd like the alias to have.
 --- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias 
----   doesn’t exist, it won’t do anything. Use "" to make it not go into any groups.
---- @param regex is the pattern that you’d like the alias to use.
+---   doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+--- @param regex is the pattern that you'd like the alias to use.
 --- @param luaCode is the script the alias will do when it matches.
 --- 
 --- @usage Create a regex trigger that will match on the prompt to record your status.
@@ -1141,10 +1141,10 @@ function permRegexTrigger(name, parent, pattern, luaCode) end
 --- Note that Mudlet by design allows duplicate names - so calling permSubstringTrigger with the same name will keep creating 
 --- new aliases. You can check if an alias already exists with the exists() function.
 --- 
---- @param name is the name you’d like the alias to have.
+--- @param name is the name you'd like the alias to have.
 --- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias 
----   doesn’t exist, it won’t do anything. Use "" to make it not go into any groups.
---- @param regex is the pattern that you’d like the alias to use.
+---   doesn't exist, it won't do anything. Use "" to make it not go into any groups.
+--- @param regex is the pattern that you'd like the alias to use.
 --- @param luaCode is the script the alias will do when it matches.
 --- 
 --- @usage Create a trigger to highlight the word "pixie" for us.
@@ -1203,7 +1203,7 @@ function playSoundFile(fileName) end
 --- specifically how it is implemented. Your triggers raise an event to tell
 --- the system that they have detected a certain condition to be true or
 --- that a certain event has happened. How - and if - the system is going to
---- respond to this event is up to the system and your trigger scripts don’t
+--- respond to this event is up to the system and your trigger scripts don't
 --- have to care about such details. For small systems it will be more
 --- convenient to use regular function calls instead of events, however, the
 --- more complicated your system will get, the more important events will
@@ -1225,7 +1225,7 @@ function playSoundFile(fileName) end
 --- help reduce complexity on large systems. <br/><br>
 ---
 --- As an example, your prompt trigger could raise an onPrompt event if you want to attach 2 functions to it. 
---- In your prompt trigger, all you’d need to do is raiseEvent("onPrompt") Now we go about creating functions 
+--- In your prompt trigger, all you'd need to do is raiseEvent("onPrompt") Now we go about creating functions 
 --- that attach to the event. Lets say the first one is check_health_stuff() and the other is check_salve_stuff(). 
 --- We would like these to be executed when the event is raised. So create a script and give it a name of check_health_stuff. 
 --- In the Add user defined event handler, type onPrompt, and press enter to add it to the list. In the script box, 
@@ -1279,7 +1279,7 @@ function reconnect() end
 ---   replace("cute trolly")
 ---   </pre>
 ---   
---- @usage Lets replace the whole line. If you’d like to delete/gag the whole line, use deleteLine()!
+--- @usage Lets replace the whole line. If you'd like to delete/gag the whole line, use deleteLine()!
 ---   <pre>
 ---   selectString(line, 1)
 ---   replace("Out with the old, in with the new!")
@@ -1568,7 +1568,7 @@ function setMiniConsoleFontSize(name, fontSize) end
 
 
 --- Turns the selected text into a left-clickable link, and a right-click menu. The selected text,
---- upon being left-clicked, will do the first command in the list. Upon being right-clicked, it’ll
+--- upon being left-clicked, will do the first command in the list. Upon being right-clicked, it'll
 --- display a menu with all possible commands. The menu will be populated with hints, one for each line.
 ---
 --- @release Mudlet 1.1.0-pre1
@@ -1677,7 +1677,7 @@ function stopStopWatch() end
 
 
 
---- Creates a temporary (lasts only until the profile is closed) alias. This means that it won’t exist anymore after Mudlet restarts.
+--- Creates a temporary (lasts only until the profile is closed) alias. This means that it won't exist anymore after Mudlet restarts.
 --- 
 --- @usage
 ---   <pre>
@@ -1760,7 +1760,7 @@ function tempRegexTrigger(regex, luaCode) end
 --- You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed. <br/><br/>
 --- 
 --- Note [[ ]] can be used to quote strings in Lua. The difference to the usual `" " quote syntax is that `[[ ]] also accepts the 
----   character ". Consequently, you don’t have to escape the " character in the above script. The other advantage is that it can be 
+---   character ". Consequently, you don't have to escape the " character in the above script. The other advantage is that it can be 
 ---   used as a multiline quote.
 --- 
 --- @usage This script will send the command "kill rat" 0.3 seconds after this function has been called. Note that this function
