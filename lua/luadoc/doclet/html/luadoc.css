@@ -139,6 +139,9 @@ div.header, div.footer { margin-left: 0em; }
 	vertical-align: top;
 	background-color: #f0f0f0;
 	overflow:visible;
+	position:fixed;
+	left: 17px;
+	top: 1px
 }
 
 #navigation h1 {
