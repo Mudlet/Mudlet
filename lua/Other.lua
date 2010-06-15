@@ -20,6 +20,7 @@ setmetatable( _G, {
 	})
 
 
+
 --- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough 
 --- such that any it should work on others. <br/><br/>
 --- 
@@ -64,22 +65,29 @@ setmetatable( _G, {
 atcp = {}
 
 
+
 --- <b><u>TODO</u></b> Table walklist.
+---
 --- @class function
 --- @name walklist
 walklist = {}
 
 
+
 --- <b><u>TODO</u></b> Variable walkdelay.
+---
 --- @class function
 --- @name walkdelay
 walkdelay = 0
 
 
+
 --- <b><u>TODO</u></b> Table SavedVariables.
+---
 --- @class function
 --- @name SavedVariables
 SavedVariables = {}
+
 
 
 --- Sends a list of commands to the MUD. You can use this to send some things at once instead of having 
@@ -110,6 +118,7 @@ function sendAll(...)
 end
 
 
+
 --- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
 --- 
 --- @usage
@@ -138,6 +147,7 @@ function io.exists(fileOfFolderName)
 end
 
 
+
 --- Implementation of boolean exclusive or.
 ---
 --- @usage All following will return false.
@@ -154,6 +164,7 @@ function xor(a, b)
 		return false
 	end
 end
+
 
 
 --- Determine operating system.
@@ -179,6 +190,7 @@ function getOS()
 end
 
 
+
 --- Opens the default OS browser for the given URL.
 ---
 --- @usage Either command will open Mudlet home page.
@@ -194,6 +206,7 @@ function openURL(url)
 end
 
 
+
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
 --- Variables are automatically unpacked into the global namespace when the profile is loaded.
 --- They are saved to "SavedVariables.lua" when the profile is closed or saved.
@@ -207,6 +220,7 @@ function remember(varName)
 	end
     _saveTable[varName] = _G[varName]
 end
+
 
 
 --- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
@@ -226,6 +240,7 @@ function loadVars()
 end
 
 
+
 --- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
 ---
 --- @see loadVars
@@ -239,25 +254,28 @@ function saveVars()
 end
 
 
---- <b><u>TODO</u></b> 
---- Save & Load Variables.
---- <pre>
---- The below functions can be used to save individual Lua tables to disc and load 
+
+--- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load 
 --- them again at a later time e.g. make a database, collect statistical information etc. 
---- These functions are also used by Mudlet to load & save the entire Lua session variables 
+--- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
 --- 
---- table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this) 
---- table.load(file, table) - loads a serialized file into the given table 
---- table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this) 
---- table.save(file, table) - saves the given table into the given file 
+--- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
 --- 
---- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. 
---- 
---- Notes: 
----  Userdata and indices of these are not saved 
----  Functions are saved via string.dump, so make sure it has no upvalues 
----  References are saved 
---- </pre>
+--- Notes: <br/>
+---  Userdata and indices of these are not saved <br/>
+---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
+---  References are saved <br/>
+---
+--- @usage Saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this).
+---   <pre>
+---   table.save(file)
+---   </pre>
+--- @usage Saves the given table into the given file.
+---   <pre>
+---   table.save(file, table)
+---   </pre>
+---
+--- @see table.load
 function table.save( sfile, t )
 	if t == nil then 
 		t = _G 
@@ -273,6 +291,7 @@ function table.save( sfile, t )
 	file:write( "}" )
 	file:close()
 end
+
 
 
 --- <b><u>TODO</u></b> table.pickle( t, file, tables, lookup )
@@ -309,7 +328,18 @@ function table.pickle( t, file, tables, lookup )
 end
 
 
---- <b><u>TODO</u></b> table.load( sfile, loadinto )
+
+--- Restores a Lua table from a data file that has been saved with table.save().
+---
+--- @usage Loads a serialized file into the globals table (only Mudlet should use this).
+---   <pre>
+---   table.load(file)
+---   </pre>
+--- @usage Loads a serialized file into the given table.
+---   <pre>
+---   table.load(file, table)
+---   </pre>
+---
 --- @see table.save
 function table.load( sfile, loadinto )
 	local tables = dofile( sfile )
@@ -321,6 +351,7 @@ function table.load( sfile, loadinto )
 		end
 	end
 end
+
 
 
 --- <b><u>TODO</u></b> table.unpickle( t, tables, tcopy, pickled )
@@ -353,6 +384,7 @@ function table.unpickle( t, tables, tcopy, pickled )
 end
 
 
+
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer()
 	send(walklist[1])
@@ -361,6 +393,7 @@ function speedwalktimer()
 		tempTimer(walkdelay, [[speedwalktimer()]])
 	end
 end
+
 
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
@@ -407,6 +440,7 @@ function speedwalk(dirString, backwards, delay)
 end
 
 
+
 --- <b><u>TODO</u></b> _comp(a, b)
 function _comp(a, b)
 	if type(a) ~= type(b) then return false end
@@ -420,6 +454,7 @@ function _comp(a, b)
 	end
 	return true
 end
+
 
 
 --- <b><u>TODO</u></b> SavedVariables:Add(tbl)
@@ -436,6 +471,7 @@ function SavedVariables:Add(tbl)
 		hecho"|cff0000Error registering table for persistence: invalid argument to SavedVariables:Add()"
 	end
 end
+
 
 
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it

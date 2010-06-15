@@ -20,12 +20,14 @@ function string.enclose(s, maxlevel)
 end
 
 
+
 --- Test if string is ending with specified suffix.
 ---
 --- @see string.starts
 function string.ends(String, Suffix)
 	return Suffix=='' or string.sub(String,-string.len(Suffix))==Suffix
 end
+
 
 
 --- Splits a string into a table by the given delimiter.
@@ -61,12 +63,14 @@ function string:split(delimiter)
 end
 
 
+
 --- Test if string is starting with specified prefix.
 ---
 --- @see string.ends
 function string.starts(String, Prefix)
 	return string.sub(String,1,string.len(Prefix))==Prefix
 end
+
 
 
 --- Capitalize first character in a string.
@@ -86,6 +90,7 @@ function string:title()
 end
 
 
+
 --- Generate case insensitive search pattern from string.
 --- 
 --- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
@@ -103,6 +108,7 @@ function string.genNocasePattern(s)
 		end)
 	return s
 end
+
 
 
 --- Return first matching substring or nil.
