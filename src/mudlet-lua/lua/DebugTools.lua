@@ -94,6 +94,7 @@ function display(what, numformat, recursion)
 end
 
 
+
 --- Basically like tostring(), except takes a numformat and is a little better suited 
 --- for working with display().
 ---
@@ -117,6 +118,7 @@ function printable(what, numformat)
 	end
 	return ret
 end
+
 
 
 -- simulate a static variable

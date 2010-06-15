@@ -141,18 +141,6 @@ function createButton() end
 --- <br/><br/>
 --- Labels accept some HTML and CSS code for text formating.
 --- 
---- @see createMiniConsole
---- @see hideWindow
---- @see showWindow
---- @see resizeWindow
---- @see setLabelClickCallback
---- @see setTextFormat
---- @see moveWindow
---- @see setMiniConsoleFontSize
---- @see handleWindowResizeEvent
---- @see setBorderTop
---- @see setBorderColor
---- 
 --- @return true or false
 --- 
 --- @usage This example creates a transparent overlay message box to show a big warning message "You are under attack!" in the middle of the screen. 
@@ -174,6 +162,18 @@ function createButton() end
 ---  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=95
 ---  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=865
 ---  </pre>
+--- 
+--- @see createMiniConsole
+--- @see hideWindow
+--- @see showWindow
+--- @see resizeWindow
+--- @see setLabelClickCallback
+--- @see setTextFormat
+--- @see moveWindow
+--- @see setMiniConsoleFontSize
+--- @see handleWindowResizeEvent
+--- @see setBorderTop
+--- @see setBorderColor
 function createLabel(name, posX, posY, width, height, fillBackground) end
 
 
@@ -464,7 +464,9 @@ function feedTriggers(text) end
 
 
 
---- Get the rgb values of the first character of the current selection
+--- Get the rgb values of the first character of the current selection.
+---
+--- @param windowName optional
 ---
 --- @usage 
 ---   <pre>
@@ -520,7 +522,9 @@ function getCurrentLine() end
 
 
 --- This function returns the rgb values of the color of the first character of the current selection
---- on mini console (window) windowName. If windowName is omitted Mudlet will use the main screen.
+--- on mini console (window) windowName.
+---
+--- @param windowName optional -  if windowName is omitted Mudlet will use the main screen.
 ---
 --- @usage 
 ---   <pre>
@@ -757,6 +761,7 @@ function isActive(name, type) end
 
 
 --- This function tests if the first character of the current selection has the background color specified by ansiBgColorCode.
+---
 --- @see isAnsiFgColor
 function isAnsiBgColor(ansiBgColorCode) end
 
@@ -978,7 +983,7 @@ function moveCursorEnd(windowName) end
 
 
 --- This function moves window name to the given x/y coordinate. The main screen cannot
---- be moved. Instead you'll have to set appropriate border values ? preferences to move
+--- be moved. Instead you'll have to set appropriate border values in preferences to move
 --- the main screen e.g. to make room for chat or information mini consoles, or other GUI
 --- elements. In the future moveWindow() will set the border values automatically if the name
 --- parameter is omitted.
@@ -1325,6 +1330,7 @@ function resetFormat(windowName) end
 
 
 --- This function resets the time to 0:0:0.0, but does not start the stop watch. You can start it with startStopWatch.
+---
 --- @see createStopWatch
 --- @see startStopWatch
 function resetStopWatch(watchID) end
@@ -1332,6 +1338,7 @@ function resetStopWatch(watchID) end
 
 
 --- Resizes a mini console or label.
+---
 --- @see createMiniConsole
 --- @see createLabel
 --- @see handleWindowResizeEvent
@@ -1349,8 +1356,7 @@ function resizeWindow(name, width, height) end
 ---   selectCaptureGroup(1);
 ---   </pre>
 ---
---- @param groupNumber with first group = 0 <br/>
----   <b><u>TODO</u></b> this is probably wrong - first group = 1
+--- @param groupNumber with first group = 1
 function selectCaptureGroup() end
 
 
@@ -1491,6 +1497,7 @@ function setBold(windowName, bool) end
 
 --- Sets the height of the bottom border to size pixel and thus effectively moves down the main console
 --- window by size pixels to make room for e.g. mini console windows, buttons etc..
+---
 --- @see setBorderTop
 --- @see setBorderLeft
 --- @see setBorderRight
@@ -1499,6 +1506,7 @@ function setBorderBottom(size) end
 
 
 --- Sets the color of the border in RGB color.
+---
 --- @usage Sets the border to red.
 ---   <pre>
 ---   setBorderColor( 255, 0, 0 )
@@ -1509,6 +1517,7 @@ function setBorderColor(red, green, blue) end
 
 --- Sets the width of the left border and thus effectively moves down the main console
 --- window by size pixels to make room for e.g. mini console windows, buttons etc..
+
 --- @see setBorderTop
 --- @see setBorderBottom
 --- @see setBorderRight
@@ -1518,6 +1527,7 @@ function setBorderLeft(size) end
 
 --- Sets the width of the right border and thus effectively moves down the main console
 --- window by size pixels to make room for e.g. mini console windows, buttons etc..
+---
 --- @see setBorderTop
 --- @see setBorderBottom
 --- @see setBorderLeft
@@ -1527,6 +1537,7 @@ function setBorderRight(size) end
 
 --- Sets the height of the top border to size pixel and thus effectively moves down the main console
 --- window by size pixels to make room for e.g. mini console windows, buttons etc..
+---
 --- @see setBorderBottom
 --- @see setBorderLeft
 --- @see setBorderRight
@@ -1872,8 +1883,8 @@ function wait(time) end
 --- apply word wrap and display the new lines on the screen. This function may be necessary if you use
 --- deleteLine() and thus erase the entire current line in the buffer, but you want to do some further
 --- echo() calls after calling deleteLine(). You will then need to re-wrap the last line of the buffer
---- to actually see what you have echoed and get you \n interpreted as newline characters properly. <br/>
---- <br/>
+--- to actually see what you have echoed and get you \n interpreted as newline characters properly. <br/><br/>
+--- 
 --- Using this function is not good programming practice and should be avoided. There are better ways of
 --- handling situations where you would call deleteLine() and echo afterwards e.g.:
 ---   <pre>

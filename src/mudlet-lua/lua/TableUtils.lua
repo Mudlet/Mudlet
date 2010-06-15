@@ -13,6 +13,7 @@ function table.is_empty(tbl)
 end
 
 
+
 --- Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. 
 --- Useful if you want to see what the capture groups contain i. e. the Lua table "matches".
 ---
@@ -26,10 +27,12 @@ function printTable( map )
 end
 
 
+
 --- <b><u>TODO</u></b> __printTable( k, v )
 function __printTable( k, v )
 	insertText ("\nkey = " .. tostring (k) .. " value = " .. tostring( v )  )
 end
+
 
 
 --- <b><u>TODO</u></b> listPrint( map )
@@ -42,10 +45,12 @@ function listPrint( map )
 end
 
 
+
 --- <b><u>TODO</u></b> listAdd( list, what )
 function listAdd( list, what )
 	table.insert( list, what );
 end
+
 
 
 --- <b><u>TODO</u></b> listRemove( list, what )
@@ -58,7 +63,16 @@ function listRemove( list, what )
 end
 
 
---- Gets the actual size of a non-numerical table.
+
+--- Gets the actual size of non-index based tables. <br/><br/>
+---
+--- For index based tables you can get the size with the # operator:
+--- This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with 
+--- numerical indices. To get the size of tables that use user defined keys instead of automatic indices 
+--- (pairs() type) you need to use the function table.size() referenced above.
+---   <pre>
+---   myTableSize = # myTable 
+---   </pre>
 function table.size(t)
 	if not t then
 		return 0
@@ -69,6 +83,7 @@ function table.size(t)
 	end
 	return i
 end
+
 
 
 --- Determines if a table contains a value as a key or as a value (recursive).
@@ -84,6 +99,7 @@ function table.contains(t, value)
 	end
 	return false
 end
+
 
 
 --- Table Union.
@@ -148,7 +164,9 @@ function table.union(...)
 end
 
 
+
 --- Table Union.
+---
 --- @return Returns a numerically indexed table that is the union of the provided tables. This is
 ---   a union of unique values. The order and keys of the input tables are not preserved.
 function table.n_union(...)
@@ -167,6 +185,7 @@ function table.n_union(...)
 
 	return union
 end
+
 
 
 --- Table Intersection.
@@ -235,7 +254,9 @@ function table.intersection(...)
 end
 
 
+
 --- Table Intersection.
+---
 --- @return Returns a numerically indexed table that is the intersection of the provided tables.
 ---   This is an intersection of unique values. The order and keys of the input tables are
 ---   not preserved.
@@ -271,7 +292,9 @@ function table.n_intersection(...)
 end
 
 
+
 --- Table Complement.
+---
 --- @return Returns a table that is the relative complement of the first table with respect to
 ---   the second table. Returns a complement of key/value pairs.
 function table.complement(set1, set2)
@@ -289,7 +312,9 @@ function table.complement(set1, set2)
 end
 
 
+
 --- Table Complement.
+---
 --- @return Returns a table that is the relative complement of the first table with respect to
 ---   the second table. Returns a complement of values.
 function table.n_complement(set1, set2)
@@ -309,6 +334,7 @@ function table.n_complement(set1, set2)
 
 	return complement
 end
+
 
 
 --- <b><u>TODO</u></b> table:update(t1, t2)
