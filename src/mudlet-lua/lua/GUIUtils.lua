@@ -600,7 +600,12 @@ end
 ---
 --- @usage Replace "goodbye" with "hello" on a trigger of "^You wave (goodbye)\.$"
 ---   <pre>
----   replaceWildcard(1, "hello") <br/>
+---   replaceWildcard(2, "hello") <br/>
+---   </pre>
+---   Is equivalent to doing:
+---   <pre>
+---   selectString(matches[2], 1)
+---   replace("hello")
 ---   </pre>
 function replaceWildcard(what, replacement)
 	if replacement == nil or what == nil then

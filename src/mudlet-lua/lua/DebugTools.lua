@@ -3,7 +3,9 @@
 ----------------------------------------------------------------------------------
 
 
+
 --- Function colorizes all matched regex capture groups on the screen.
+--- This is very handy if you make complex regex and want to see what really matches in the text.
 ---
 --- @see matches
 function showCaptureGroups()
@@ -15,10 +17,16 @@ function showCaptureGroups()
 end
 
 
+
 --- Prints the content of the table multimatches[n][m] to the screen. This is meant 
 --- as a tool to help write multiline trigger scripts. This helps you to easily see 
 --- what your multiline trigger actually captured in all regex. You can use these values 
 --- directly in your script by referring to it with multimatches[regex-number][capturegroup].
+---
+--- @usage Just call this s function from your trigger to show the info.
+---   <pre>	
+---   showMultimatches()
+---   </pre>
 ---
 --- @see multimatches
 function showMultimatches()
@@ -33,6 +41,7 @@ function showMultimatches()
 	end
 	echo("\n-------------------------------------------------------\n");
 end
+
 
 
 --- Pretty display function will try to print out content of any table.<br/><br/>
