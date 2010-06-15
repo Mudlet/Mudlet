@@ -11,6 +11,7 @@
 gaugesTable = {} 
 
 
+
 --- The <i>color_table table</i> holds definition of color names. These are intended to be 
 --- used in conjunction with fg() and bg() colorizer functions.
 ---
@@ -247,6 +248,7 @@ color_table = {
 }
 
 
+
 --- Move a custom gauge built by createGauge(...).
 ---
 --- @usage This would move the health bar gauge to the location 1200, 400.
@@ -266,6 +268,7 @@ function moveGauge(gaugeName, newX, newY)
 
 	gaugesTable[gaugeName].xpos, gaugesTable[gaugeName].ypos = newX, newY
 end
+
 
 
 --- Set the text on a custom gauge built by createGauge(...).
@@ -315,6 +318,7 @@ function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
 end
 
 
+
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---
 --- @usage Following command will returns "F0".
@@ -333,6 +337,7 @@ function PadHexNum(incString)
 
 	return l_Return
 end
+
 
 
 --- Converts an RGB value into an HTML compliant(label usable) HEX number.
@@ -359,6 +364,7 @@ function RGB2Hex(red, green, blue)
 end
 
 
+
 --- Get RGB component from color name. 
 ---
 --- @usage Following will display "0.255.0" on your screen.
@@ -372,6 +378,7 @@ function getRGB(colorName)
 	local blue = color_table[colorName][3]
 	return red, green, blue
 end
+
 
 
 --- Make your very own customized gauge with this function.
@@ -426,6 +433,7 @@ function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, co
 end
 
 
+
 --- Use this function when you want to change the gauges look according to your values.
 --- Typical usage would be in a prompt with your current health or whatever value, and throw
 --- in some variables instead of the numbers.
@@ -450,6 +458,7 @@ function setGauge(gaugeName, currentValue, maxValue, gaugeText)
 end
 
 
+
 --- Make a new console window with ease. The default background is black and text color white.
 --- If you wish to change the color you can easily do this when updating your text or manually somewhere, using
 --- setFgColor() and setBackgroundColor().
@@ -470,6 +479,7 @@ function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos,
 end
 
 
+
 --- Suffixes text at the end of the current line when used in a trigger.
 ---
 --- @see prefix
@@ -482,6 +492,7 @@ function suffix(what, func, fg, bg, window)
 		insertText(what)
 	end
 end
+
 
 
 --- Prefixes text at the beginning of the current line when used in a trigger.
@@ -502,12 +513,12 @@ function prefix(what, func, fg, bg, window)
 end
 
 
+
 --- Function will gag the whole line. <b>Use deleteLine() instead.</b>
 function gagLine()
-	--selectString(line, 1)
-	--replace("")
 	deleteLine()
 end
+
 
 
 --- Replaces all occurrences of what in the current line with <i>with</i>.
@@ -521,12 +532,16 @@ function replaceAll(word, what)
 end
 
 
+
 --- Replace the whole with a string you'd like.
+---
+--- @see deleteLine
 function replaceLine(what)
 	selectString(line, 1)
 	replace("")
 	insertText(what)
 end
+
 
 
 --- Default resizeEvent handler function. Overwrite this function to make a custom event handler 
@@ -552,6 +567,7 @@ function handleWindowResizeEvent()
 end
 
 
+
 --- Clears the current selection in the main window or miniConsole window. <br/>
 --- (Note: <i>deselect(windowName)</i> is implemented in Core Mudlet.)
 ---
@@ -568,6 +584,7 @@ function deselect()
 end
 
 
+
 --- Sets current background color to a named color.
 ---
 --- @usage Set background color to magenta.
@@ -582,6 +599,7 @@ function bg(colorName)
 end
 
 
+
 --- Sets current foreground color to a named color.
 ---
 --- @usage Set foreground color to black.
@@ -594,6 +612,7 @@ end
 function fg(colorName)
 	setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 end
+
 
 
 --- Replaces the given wildcard (as a number) with the given text.
@@ -614,6 +633,7 @@ function replaceWildcard(what, replacement)
 	selectCaptureGroup(what)
 	replace(replacement)
 end
+
 
 
 --- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3
@@ -651,6 +671,7 @@ function showColors(...)
 end
 
 
+
 --- <b><u>TODO</u></b> resizeGauge(gaugeName, width, height)
 function resizeGauge(gaugeName, width, height)
 	assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
@@ -664,6 +685,7 @@ function resizeGauge(gaugeName, width, height)
 end
 
 
+
 --- <b><u>TODO</u></b> setGaugeStyleSheet(gaugeName, css, cssback)
 function setGaugeStyleSheet(gaugeName, css, cssback)
 	if not setLabelStyleSheet then return end-- mudlet 1.0.5 and lower compatibility
@@ -672,6 +694,7 @@ function setGaugeStyleSheet(gaugeName, css, cssback)
 	setLabelStyleSheet(gaugeName, css)
 	setLabelStyleSheet(gaugeName .. "_back", cssback or css)
 end
+
 
 
 --- Color echo functions: hecho, decho, cecho.
@@ -721,7 +744,6 @@ end
 -- portion can be omitted using <:background>
 -- Arguments 2 and 3 to set the default colors take named colors as well. 
 -- </pre>
-
 if rex then
 	Echos = {
 		Patterns = {
@@ -778,6 +800,7 @@ if rex then
 			return t
 		end,
 		}
+
 	
 	--- <b><u>TODO</u></b> xEcho(style, insert, win, str)
 	function xEcho(style, insert, win, str)
@@ -837,6 +860,7 @@ if rex then
 		end
 		if win then resetFormat(win) else resetFormat() end
 	end
+
 	
 	--- <b><u>TODO</u></b> put some doc for each func
 	function hecho(...) xEcho("Hex", false, ...) end
@@ -847,7 +871,10 @@ if rex then
 	function cinsertText(...) xEcho("Color", true, ...) end
 	checho = cecho
 	
+
 else
+
+
 	--- <b><u>TODO</u></b> 
 	function cecho(window,text)
        local win = text and window
@@ -882,6 +909,7 @@ else
        end
     end
 	
+
 	--- <b><u>TODO</u></b> decho(window, text)
 	function decho(window, text)
 		local win = text and window
