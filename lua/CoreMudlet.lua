@@ -259,7 +259,8 @@ function cut() end
 --- Deletes the current Line under the user cursor. Note: This is a high speed gagging tool
 --- and it is very good at this task. It is meant to be used when the line can be omitted
 --- entirely in the output. If you want to replace this line with something else have a look
---- at the replace() functions below. <br/>
+--- at the replace() functions below. <br/><br/>
+---
 --- Note that scripts such as: deleteLine(); echo("this line is gone"); will not work because
 --- lines that have been gagged with deleteLine() will not be rendered even if there is text
 --- in the buffer. See wrapLine for details on how to force a re-render if this is necessary
@@ -287,18 +288,23 @@ function disableKey(name) end
 --- permanently delete it, use killTrigger() instead. <br.>
 --- Use timer name or the id returned by tempTimer() to identify the timer 
 --- that you want to disable. 
+---
+--- @see tempTimer
 function disableTimer(name) end
 
 
 
 --- Use trigger name or the id returned by tempTrigger() to identify the 
 --- timer that you want to disable. 
+---
+--- @see tempTrigger
 function disableTrigger(name) end
 
 
 
 --- Disconnect from current session without a proper logout.
--- @see reconnect
+---
+--- @see reconnect
 function disconnect() end
 
 
@@ -306,6 +312,8 @@ function disconnect() end
 --- This function appends text at the end of the current line. The current cursor position is ignored.
 --- Use moveCursor() and insertText() if you want to print at a different cursor position. <br/>
 --- If the first argument is omitted the main console is used, otherwise the mini console windowName.
+---
+--- @param windowName optional
 ---
 --- @usage 
 ---   <pre>
@@ -315,6 +323,9 @@ function disconnect() end
 ---   <pre>
 ---   echo("info", "Hello this is the info window\n")
 ---   </pre>
+---
+--- @see moveCursor
+--- @see insertText
 function echo(windowName, text) end
 
 
@@ -323,7 +334,7 @@ function echo(windowName, text) end
 ---
 --- @release Mudlet 1.1.0-pre1
 ---
---- @usage 
+--- @usage Following will create "click me now" link.
 ---   <pre>
 ---   echoLink("hi", [[echo("hey bub!")]], "click me now")
 ---   </pre>
@@ -341,7 +352,7 @@ function echoLink(windowName, text, command, hint, useCurrentFormat) end
 
 
 
---- Same as setPopup()  except it doesn't require a selection. echoPopup creates a link from the given text that it echos. <br/>
+--- Same as setPopup() except it doesn't require a selection. Method echoPopup creates a link from the given text that it echos.
 ---
 --- @release Mudlet 1.1.0-pre1
 ---
@@ -382,6 +393,8 @@ function enableTimer(name) end
 
 
 --- Enables a Trigger. see enableTimer() for more details. 
+---
+--- @see enableTimer
 function enableTrigger(name) end
 
 
@@ -702,7 +715,11 @@ function insertPopup(windowName, text, commands, hints, useCurrentFormat) end
 --- Inserts text at the current cursor position in the main window. If the cursor has not been explicitly 
 --- moved this function will always print at the beginning of the line whereas the echo() function will 
 --- always print at the end of the line.
-function insertText(text) end
+---
+--- @param windowName optional
+---
+--- @see echo
+function insertText(windowName, text) end
 
 
 
@@ -1351,7 +1368,7 @@ function selectSection(windowName, from, lengthOfString) end
 --- cursor is in the correct line if you want to call one of the select functions. To deselect
 --- text, see deselect().
 ---
---- @usage 
+--- @usage Select "big monster" in the line.
 ---   <pre>
 ---   selectString("big monster", 1)
 ---   </pre>
@@ -1361,9 +1378,11 @@ function selectSection(windowName, from, lengthOfString) end
 ---      setFgColor(255,0,0)
 ---   end
 ---   </pre>
---- @usage <b><u>TODO - is this valid?</u></b> 
+--- @usage In a trigger, lets color all words on the current line green.
 ---   <pre>
----   selectString(lineNumber, 1)
+---   selectString(line, 1)
+---   fg("green")
+---   resetFormat()
 ---   </pre>
 ---
 --- @return returns position in line or -1 on error (text not found in line)
@@ -1433,6 +1452,8 @@ function setBackgroundImage(labelName, imageFileName) end
 --- text prior to this call, the selection will be highlightd otherwise the current text background color will be changed. If you set a 
 --- foreground or background color, the color will be used until you call resetFormat() on all further print commands.
 --- 
+--- @param windowName optional
+---
 --- @usage Highlights the first occurrence of the string "Tom" in the current line with a red background color.
 ---   <pre>
 ---   selectString( "Tom", 1 ) 
@@ -1447,11 +1468,15 @@ function setBackgroundImage(labelName, imageFileName) end
 ---   echo(" You!")
 ---   resetFormat()
 ---   </pre>
+---
+--- @see setFgColor
 function setBgColor(windowName, r, g, b) end
 
 
 
 --- Sets the current text font to bold (true) or non-bold (false) mode. If the windowName parameters omitted, the main screen will be used.
+---
+--- @param windowName optional
 function setBold(windowName, bool) end
 
 
@@ -1513,16 +1538,22 @@ function setConsoleBufferSize(consoleName, linesLimit, sizeOfBatchDeletion) end
 
 --- Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. 
 ---
+--- @param windowName optional
+---
 --- @usage Set blue foreground.
 ---   <pre>
 ---   setBgColor(0,0,255)
 ---   </pre>
 --- @param windowName optional
+---
+--- @setBgColor
 function setFgColor(windowName, r, g, b) end
 
 
 
 --- Sets the current text font to italics/non-italics mode. If the windowName parameters omitted, the main screen will be used.
+---
+--- @param windowName optional
 function setItalics(windowName, bool) end
 
 
@@ -1627,6 +1658,8 @@ function setTriggerStayOpen(name, number) end
 
 
 --- Sets the current text font to underline/non-underline mode. If the windowName parameters omitted, the main screen will be used.
+---
+--- @param windowName optional
 function setUnderline(windowName, bool) end
 
 

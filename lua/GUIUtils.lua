@@ -470,7 +470,9 @@ function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos,
 end
 
 
---- Echo something after your line.
+--- Suffixes text at the end of the current line when used in a trigger.
+---
+--- @see prefix
 function suffix(what, func, fg, bg, window)
 	local length = string.len(line)
 	moveCursor(window or "main", length-1, getLineNumber())
@@ -482,7 +484,14 @@ function suffix(what, func, fg, bg, window)
 end
 
 
---- Echo something before your line.
+--- Prefixes text at the beginning of the current line when used in a trigger.
+---
+--- @usage Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that.
+--- <pre>
+--- prefix(os.date("%H:%M:%S "))
+--- </pre>
+---
+--- @see suffix
 function prefix(what, func, fg, bg, window)
 	moveCursor(window or "main", 0, getLineNumber());
 	if func and (func == cecho or func == decho or func == hecho) then
@@ -501,9 +510,9 @@ function gagLine()
 end
 
 
---- Replace all words on the current line by your choice.
+--- Replaces all occurrences of what in the current line with <i>with</i>.
 ---
---- @usage This will replace the word John with the word Doe, everytime the word John occurs on the current line.
+--- @usage This will replace all occurrences of John with the word Doe.
 ---   <pre>
 ---   replaceAll("John", "Doe")
 ---   </pre>
