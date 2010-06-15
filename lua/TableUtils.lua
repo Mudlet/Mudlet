@@ -13,7 +13,10 @@ function table.is_empty(tbl)
 end
 
 
---- Function shows the content of a Lua table on the screen.
+--- Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. 
+--- Useful if you want to see what the capture groups contain i. e. the Lua table "matches".
+---
+--- @see display
 function printTable( map )
 	echo("-------------------------------------------------------\n");
 	for k, v in pairs( map ) do

@@ -84,8 +84,9 @@ function clearWindow(windowName) end
 
 
 
---- <b><u>TODO</u></b>  closeUserWindow - TLuaInterpreter::closeUserWindow
---- <b><u>TODO</u></b> is this still working?
+--- Clears the user window or a mini console with the name given as argument.
+---
+--- @param windowName optinal
 function closeUserWindow(windowName) end
 
 
@@ -231,6 +232,8 @@ function createMiniConsole(name, posX, posY, width, height) end
 --- In a global script you create all stop watches that you need in your
 --- system and store the respective stopWatch-IDs in global variables:
 ---
+--- @return stop watch ID
+---
 --- @usage
 ---   <pre>
 ---   fightStopWatchID = createStopWatch();
@@ -241,8 +244,6 @@ function createMiniConsole(name, posX, posY, width, height) end
 ---   echo("The fight lasted for " .. fightTime .. " seconds.")
 ---   resetStopWatch(fightStopWatchID);
 ---   </pre>
----
---- @return stop watch ID
 ---
 --- @see startStopWatch
 --- @see resetStopWatch
@@ -546,6 +547,7 @@ function getLastLineNumber() end
 
 
 --- Gets the absolute amount of lines in the current console buffer.
+---
 --- @return number
 function getLineCount() end
 
@@ -557,6 +559,7 @@ function getLineNumber() end
 
 
 --- Returns a Lua table with the content of the lines on a per line basis. Absolute line numbers are used.
+---
 --- @return section of the content of the screen text buffer. The form of the return value is: Lua_table[relative_linenumber, content]
 function getLines(from_line_number, to_line_number) end
 
@@ -679,9 +682,9 @@ function hideToolBar(name) end
 
 
 --- This function hides a mini console label. To show it again use showWindow.
+---
 --- @see showWindow
 --- @see createMiniConsole
---- @see createLabel
 function hideWindow(name) end
 
 
@@ -901,6 +904,8 @@ matches = {}
 --- cursor at the beginning of the current line before the script is run. If you omit the windowName argument, 
 --- the main screen will be used.
 --- 
+--- @return true or false
+---
 --- @usage Set up the small system message window in the top right corner.
 ---   <pre>
 ---   -- determine the size of your screen
@@ -959,15 +964,15 @@ matches = {}
 ---   setBgColor("sys", 155,155,0)
 ---   echo("sys", "*** This is the end. ***\n");
 ---   </pre>
----   
---- @return true or false
 function moveCursor(windowName, x, y) end
 
 
 
 --- Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
---- @see moveCursor
+---
 --- @return true or false
+---
+--- @see moveCursor
 function moveCursorEnd(windowName) end
 
 
@@ -1313,7 +1318,9 @@ function replace(with) end
 --- or changed the current foreground or background color, but you don't want to keep using these
 --- colors for further prints. If you set a foreground or background color, the color will be used
 --- until you call resetFormat() on all further print commands.
-function resetFormat() end
+---
+--- @param windowName optional
+function resetFormat(windowName) end
 
 
 
