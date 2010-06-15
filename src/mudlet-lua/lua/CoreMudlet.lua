@@ -278,18 +278,20 @@ function disableAlias(name) end
 
 
 
---- Uses trigger name as id or the id returned by tempTrigger() 
+--- Uses trigger name as id or the id returned by tempTrigger() <b><u>TODO tempKey?</b></u>
 function disableKey(name) end
 
 
 
 --- Disables a timer from running it's script when it fires - so the timer 
 --- cycles will still be happening, just no action on them. If you'd like to 
---- permanently delete it, use killTrigger() instead. <br.>
+--- permanently delete it, use killTimer() instead. <br/><br/>
+---
 --- Use timer name or the id returned by tempTimer() to identify the timer 
 --- that you want to disable. 
 ---
 --- @see tempTimer
+--- @see killTimer
 function disableTimer(name) end
 
 
@@ -426,16 +428,14 @@ function exists(name, type) end
 
 
 
---- Like send(), but without bypassing alias expansion. This function may lead to infinite recursion if
---- you are not careful. This function can be used to make recursive alias expansion. expandAlias("Hello Tom")
---- echos the command on the screen expandAlias("Hello Jane") sends the command visually unnoticeable
---- by the user send. <br/>
---- <br/>
+--- Like send(), but without bypassing alias expansion. This function may lead to <b>infinite recursion</b> if
+--- you are not careful! <br/><br/>
+---
 --- Now, while in Mudlet you can call another alias with the expandAlias() function, this is strongly
 --- discouraged. What you do instead if create a function (for example, send()  and echo()  are functions)
 --- that you can then call from your alias or trigger. This has many advantages - it's faster, you can
---- easily give your function values, and your function can return you values, too.<br/>
---- <br/>
+--- easily give your function values, and your function can return you values, too.<br/><br/>
+--- 
 --- Note: The variable "command" contains what was entered in the command line or issued via the expandAlias()
 --- function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have
 --- to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass
@@ -1055,7 +1055,7 @@ multimatches = {}
 
 --- Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such
 --- a name already exists, nothing happens. You can move these windows, dock them, make them into notebook
---- tabs or float them. Most often a mini console is more useful than a dockable window. <br/><br/>
+--- tabs or float them.<br/><br/>
 ---
 --- Note: There isn't currently way how to set size and position of user windows at the moment, so you might
 --- consider to use mini console instead.
@@ -1283,7 +1283,8 @@ function raiseEvent(eventName, ...) end
 
 
 --- Reconnect to currect session.
--- @see disconnect
+---
+--- @see disconnect
 function reconnect() end
 
 
@@ -1767,11 +1768,11 @@ function tempColorTrigger(foregroundColor, backgqroundColor, luaCode) end
 ---
 --- @usage Following will fire 3 times starting with the line from the MUD. 
 ---   <pre>
----   tempLineTrigger( 1, 3, ) 
+---   tempLineTrigger( 1, 3, [[send("shout Help")]]) 
 ---   </pre>
 --- @usage This will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 ---   <pre>
----   tempLineTrigger( 20, 2, ) 
+---   tempLineTrigger( 20, 2, [[send("shout Help")]]) 
 ---   </pre>
 function tempLineTrigger(from, howMany, luaCode) end
 
