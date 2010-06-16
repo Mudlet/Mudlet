@@ -5,6 +5,7 @@
 
 if package.loaded["rex_pcre"] then rex = require "rex_pcre" end
 if package.loaded["lpeg"] then lpeg = require "lpeg" end
+--if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
 
 local PATH_SEP = string.char(getMudletHomeDir():byte()) == "/" and "/" or "\\"
 local MUDLET_DIR = string.format(getMudletHomeDir().."%s..%s..%s", PATH_SEP, PATH_SEP, PATH_SEP)
@@ -14,6 +15,8 @@ local packages = {
 	"TableUtils.lua",
 	"Logging.lua",
 	"DebugTools.lua",
+--	"DB.lua",
+--	"Geyser.lua",
 	"GUIUtils.lua",
 	"Other.lua"
 	}
