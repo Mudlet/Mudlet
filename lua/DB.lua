@@ -10,6 +10,7 @@ if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
 
 
+-- TODO those funciton are already definde elsewhere
 -- Tests if a table is empty: this is useful in situations where you find
 -- yourself wanting to do 'if my_table == {}' and such.
 function table.is_empty(tbl)
@@ -26,6 +27,9 @@ end
 function string.ends(String,End)
    return End=='' or string.sub(String,-string.len(End))==End
 end
+
+
+
 
 -----------------------------------------------------------------------------
 -- Some Date / Time parsing functions.
@@ -76,7 +80,7 @@ datetime = {
    }
 }
 
--- datetime:_get_pattern(format)
+--- datetime:_get_pattern(format)
 --  The rex.match function does not return named patterns even if you use named capture
 --  groups, but the r:tfind does -- but this only operates on compiled patterns. So,
 --  we are caching the conversion of 'simple format' date patterns into a regex, and
@@ -95,7 +99,7 @@ function datetime:_get_pattern(format)
    return datetime._pattern_cache[format]
 end
 
--- datetime:parse(source, format, as_epoch)
+--- datetime:parse(source, format, as_epoch)
 --   Parse the source for a date time value, according to the specified format. The
 --   default format if not specified is: "^%Y-%m-%d %H:%M:%S$"
 --   If as_epoch is true, the return value will be a single number. Otherwise, it will
@@ -166,7 +170,9 @@ db.__conn = {}
    
 db.debug_sql = false
 
--- db:_sql_type(v)
+
+
+--- db:_sql_type(v)
 --   Converts the type of a lua object to the equivalent type in SQL 
 function db:_sql_type(value)
    local t = type(value)
@@ -182,7 +188,9 @@ function db:_sql_type(value)
    end
 end
 
--- db:_sql_convert(v)
+
+
+--- db:_sql_convert(v)
 --   Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to 
 --   prevent inadvertant SQL injection.
 function db:_sql_convert(value)
@@ -205,7 +213,9 @@ function db:_sql_convert(value)
    end
 end
 
--- db:_index_name(sheet_name, index_contents)
+
+
+--- db:_index_name(sheet_name, index_contents)
 --   Given a sheet name and the details of an index, this function will return a unique index name to
 --   add to the database. The purpose of this is to create unique index names as indexes are tested
 --   for existance on each call of db:create and not only on creation. That way new indexes can be 
@@ -224,7 +234,9 @@ function db:_index_name(tbl_name, params)
    end
 end
 
--- db:_index_valid(sheet_columns, index_columns)
+
+
+--- db:_index_valid(sheet_columns, index_columns)
 --   This function returns true if all of the columns referenced in index_columns also exist within
 --   the sheet_columns table array. The purpose of this is to raise an error if someone tries to index
 --   a column which doesn't currently exist in the schema.
@@ -245,7 +257,10 @@ function db:_index_valid(sheet_columns, index_columns)
    end
    return true
 end
--- db:_sql_columns(column_spec)
+
+
+
+--- db:_sql_columns(column_spec)
 --   The column_spec is either a string or an indexed table. This function returns either "column" or
 --   "column1", "column2" for use in the column specification of INSERT.
 function db:_sql_columns(value)
@@ -266,7 +281,9 @@ function db:_sql_columns(value)
    return colstr
 end
 
--- db:_sql_fields(field_spec)
+
+
+--- db:_sql_fields(field_spec)
 --   This serves as a very similar function to db:_sql_columns, quoting column names properly but for
 --   uses outside of INSERTs.
 function db:_sql_fields(values)
@@ -279,7 +296,9 @@ function db:_sql_fields(values)
    return   "("..table.concat(sql_fields, ",")..")"
 end
 
--- db:_sql_values(value_spec)
+
+
+--- db:_sql_values(value_spec)
 --   This quotes values to be passed into an INSERT or UPDATE operation in a SQL list. Meaning, it turns
 --   {x="this", y="that", z=1} into ('this', 'that', 1).
 --   It is intelligent with data-types; strings are automatically quoted (with internal single quotes 
@@ -311,7 +330,9 @@ function db:_sql_values(values)
    return "("..table.concat(sql_values, ",")..")"
 end
 
--- db:safe_name(name)
+
+
+--- db:safe_name(name)
 --   On a filesystem level, names are restricted to being alphanumeric only. So, "my_database" becomes
 --   "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible 
 --   security issues with database names.
@@ -321,7 +342,9 @@ function db:safe_name(name)
    return name
 end
 
--- db:create(db_name, ...)
+
+
+--- db:create(db_name, ...)
 --   Creates and/or modifies an existing database. This function is safe to define at a top-level of a
 --   Mudlet script: in fact it is reccommended you run this function at a top-level without any kind
 --   of guards. If the named database does not exist it will ccreate it. If the database does exist
@@ -375,7 +398,9 @@ function db:create(db_name, sheets)
    return db:get_database(db_name)
 end
 
--- db:_migrate(db_name, sheet_name)
+
+
+--- db:_migrate(db_name, sheet_name)
 --   The migrate function is meant to upgrade an existing database live, to maintain a consistant
 --   and correct set of sheets and fields, along with their indexes. It should be safe to run 
 --   at any time, and must not cause any data loss. It simply adds to what is there: in perticular
@@ -467,7 +492,9 @@ function db:_migrate(db_name, s_name)
    conn:execute("VACUUM")
 end
 
--- db:_migrate_indexes(connection, sheet_name, schema, existing_columns)
+
+
+--- db:_migrate_indexes(connection, sheet_name, schema, existing_columns)
 --   Creates any indexes which do not yet exist in the given database.
 function db:_migrate_indexes(conn, s_name, schema, current_columns)      
    local sql_create_index = "CREATE %s IF NOT EXISTS %s ON %s (%s);"
@@ -495,7 +522,9 @@ function db:_migrate_indexes(conn, s_name, schema, current_columns)
    end
 end
 
--- db:add(sheet, table1, ..., tableN)
+
+
+--- db:add(sheet, table1, ..., tableN)
 --   Adds one or more new rows to the specified sheet. If any of these rows would violate a
 --   UNIQUE index, a lua error will be thrown and execution will cancel. As such it is
 --   advisable that if you use a UNIQUE index, you test those values before you attempt to
@@ -526,7 +555,9 @@ function db:add(sheet, ...)
    end
 end
 
--- db:fetch(sheet, query, order_by, descending)
+
+
+--- db:fetch(sheet, query, order_by, descending)
 --   Returns a table array of table dictionaries representing each row in the specified sheet.
 --   If query is not specified, it returns EVERY row in the sheet. 
 function db:fetch(sheet, query, order_by, descending)
@@ -576,9 +607,10 @@ function db:fetch(sheet, query, order_by, descending)
    end
 end   
 
--- db:aggregate(field, function, query)
---   Runs an aggregate function over the specified field, in the specified sheet. Query is optional.
 
+
+--- db:aggregate(field, function, query)
+--   Runs an aggregate function over the specified field, in the specified sheet. Query is optional.
 function db:aggregate(field, fn, query)
    local db_name = field.database
    local s_name = field.sheet
@@ -628,7 +660,8 @@ function db:aggregate(field, fn, query)
 end   
 
 
--- db:delete(sheet, query)
+
+--- db:delete(sheet, query)
 --   Deletes rows from the specified sheet. The argument for query tries to be intelligent: 
 --      - if it is a simple number, it deletes a specific row by _row_id
 --      - if it is a table that contains a _row_id (e.g., a table returned by db:get) it 
@@ -665,7 +698,8 @@ function db:delete(sheet, query)
 end
 
 
--- db:merge(sheet, tables)
+
+--- db:merge(sheet, tables)
 function db:merge_unique(sheet, tables)
    local db_name = sheet._db_name
    local s_name = sheet._sht_name
@@ -709,7 +743,9 @@ function db:merge_unique(sheet, tables)
    mydb:_end()
 end
 
--- db:update(sheet, table)
+
+
+--- db:update(sheet, table)
 --   This function updates a row in the specified sheet, but only accepts a row which has
 --   been previously obtained by db:get. Its primary purpose is that if you do a db:get,
 --   then change the value of a field or tow, you can save back that table.
@@ -745,7 +781,9 @@ function db:update(sheet, tbl)
    end
 end
 
--- db:set(field, value, query)
+
+
+--- db:set(field, value, query)
 --   The db:set function allows you to set a certain field to a certain value across
 --   an entire sheet. Meaning, you can change all of the last_read fields in the
 --   sheet to a certain value, or possibly only the last_read fields which are in
@@ -771,7 +809,9 @@ function db:set(field, value, query)
    end
 end
 
--- db:echo_eql(sql)
+
+
+--- db:echo_eql(sql)
 --   This is a debugging function, which echos any SQL commands if db.debug_sql is
 --   true
 function db:echo_sql(sql)
@@ -780,7 +820,9 @@ function db:echo_sql(sql)
    end
 end
 
--- db:_coerce_sheet(sheet, tbl)
+
+
+--- db:_coerce_sheet(sheet, tbl)
 --   After a table so retrieved from the database, this function coerces values to
 --   their proper types. Specifically, numbers and datetimes become the proper 
 --   types.
@@ -802,7 +844,9 @@ function db:_coerce_sheet(sheet, tbl)
    end
 end
 
--- db:_coerce(field, value)
+
+
+--- db:_coerce(field, value)
 --   The function converts a Lua value into its SQL representation, depending on the
 --   type of the specified field. Strings will be single-quoted (and single-quotes 
 --   within will be properly escaped), numbers will be rendered properly, and such.
@@ -820,11 +864,12 @@ function db:_coerce(field, value)
    end
 end
 
--- SQL Expression Functions
+
+
+--- SQL Expression Functions
 --   The following functions form the basis of defining basic database expressions.
 --   If a value is equal to a field, if a value is less then a field, and so
 --   forth.
-
 function db:eq(field, value, case_insensitive)
    if case_insensitive then
       local v = db:_coerce(field, value):lower()
@@ -834,6 +879,9 @@ function db:eq(field, value, case_insensitive)
       return field.name.." == "..v
    end
 end
+
+
+
 
 function db:not_eq(field, value, case_insensitive)
    if case_insensitive then
@@ -845,43 +893,61 @@ function db:not_eq(field, value, case_insensitive)
    end
 end
 
+
+
 function db:lt(field, value)
    local v = db:_coerce(field, value)
    return field.name.." < "..v
 end
+
+
 
 function db:lte(field, value)
    local v = db:_coerce(field, value)
    return field.name.." <= "..v
 end
 
+
+
 function db:gt(field, value)
    local v = db:_coerce(field, value)
    return field.name.." > "..v
 end
+
+
 
 function db:gte(field, value)
    local v = db:_coerce(field, value)
    return field.name.." >= "..v
 end
 
+
+
 function db:is_nil(field)
    return field.name.." IS NULL"
 end
 
+
+
 function db:is_not_nil(field)
    return field.name.." IS NOT NULL"
 end
+
+
 
 function db:like(field, value)
    local v = db:_coerce(field, value)
    return field.name.." LIKE "..v
 end
 
+
+
 function db:not_like(field, value)
    local v = db:_coerce(field, value)
    return field.name.." NOT LIKE "..v
 end
+
+
 
 function db:between(field, left_bound, right_bound)
    local x = db:_coerce(field, left_bound)
@@ -889,11 +955,15 @@ function db:between(field, left_bound, right_bound)
    return field.name.." BETWEEN "..x.." AND "..y
 end
 
+
+
 function db:not_between(field, left_bound, right_bound)
    local x = db:_coerce(field, left_bound)
    local y = db:_coerce(field, right_bound)
    return field.name.." NOT BETWEEN "..x.." AND "..y
 end
+
+
 
 function db:in_(field, tbl)
    local parts = {}
@@ -904,6 +974,8 @@ function db:in_(field, tbl)
    return field.name.." IN ("..table.concat(parts, ",")..")"
 end
 
+
+
 function db:not_in(field, tbl)
    local parts = {}
    for _, v in ipairs(tbl) do
@@ -913,9 +985,13 @@ function db:not_in(field, tbl)
    return field.name.." NOT IN ("..table.concat(parts, ",")..")"
 end
 
+
+
 function db:exp(text)
    return text
 end
+
+
 
 function db:AND(...)
    local parts = {}
@@ -926,6 +1002,8 @@ function db:AND(...)
 
    return "("..table.concat(parts, " AND ")..")"
 end   
+
+
 
 function db:OR(left, right)
    if not string.starts(left, "(") then
@@ -939,6 +1017,8 @@ function db:OR(left, right)
    return left.." OR "..right
 end
 
+
+
 function db:close()
    for _, c in pairs(db.__conn) do
       c:close()
@@ -946,13 +1026,18 @@ function db:close()
    db.__env:close()
 end
 
--- Timestamp support
 
+
+-- Timestamp support
 db.__Timestamp = {}
+
+
 
 db.__TimestampMT = {
    __index = db.__Timestamp
 }
+
+
 
 function db.__Timestamp:as_string(format)
    if not format then
@@ -962,13 +1047,19 @@ function db.__Timestamp:as_string(format)
    return os.date(format, self._timestamp)
 end
 
+
+
 function db.__Timestamp:as_table()
    return os.date("*t", self._timestamp)
 end
 
+
+
 function db.__Timestamp:as_number()
    return self._timestamp
 end
+
+
 
 function db:Timestamp(ts, fmt)
    local dt = {}
@@ -987,6 +1078,8 @@ function db:Timestamp(ts, fmt)
    return setmetatable(dt, db.__TimestampMT)
 end
 
+
+
 -- function db.Timestamp:new(ts, fmt)
 --    local dt = {}
 --    if type(ts) == "table" then
@@ -999,10 +1092,14 @@ end
 --    return setmetatable(dt, db.__TimestampMT)
 -- end
 
+
+
 db.Field = {}
 db.__FieldMT = {
    __index = db.Field
 }
+
+
 
 db.Sheet = {}
 db.__SheetMT = {
@@ -1033,8 +1130,9 @@ db.__SheetMT = {
    end
 }
 
-db.Database = {}
 
+
+db.Database = {}
 db.__DatabaseMT = {
    __index = function(t, k)
       local v = rawget(t, k)
@@ -1056,23 +1154,33 @@ db.__DatabaseMT = {
    end
 }
 
+
+
 function db.Database:_begin()
    db.__autocommit[self._db_name] = false
 end
+
+
 
 function db.Database:_commit()
    local conn = db.__conn[self._db_name]
    conn:commit()
 end
 
+
+
 function db.Database:_rollback()
    local conn = db.__conn[self._db_name]
    conn:rollback()
 end
 
+
+
 function db.Database:_end()
    db.__autocommit[self._db_name] = true
 end
+
+
 
 function db.Database._drop(s_name)
    local conn = db.__conn[self._db_name]
@@ -1093,6 +1201,8 @@ function db.Database._drop(s_name)
    conn:execute("DROP TABLE IF EXISTS "..s_name)
    conn:commit()
 end
+
+
 
 function db:get_database(db_name)
    db_name = db:safe_name(db_name)
