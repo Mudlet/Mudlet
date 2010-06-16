@@ -44,7 +44,7 @@ end
 
 
 
---- Pretty display function will try to print out content of any table.<br/><br/>
+--- Pretty display function will try to print out content of any table. <br/><br/>
 ---
 --- Note: This version of display can lead to infinite loop depending on your data. There is also
 --- <i>Geyser.display()</i>, which will use only one level of recursion.

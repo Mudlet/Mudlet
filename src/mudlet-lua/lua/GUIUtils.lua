@@ -391,7 +391,7 @@ end
 ---   <pre>
 ---   createGauge("healthBar", 300, 20, 30, 300, nil, "green") <br/>
 ---   </pre>
---- @usage 
+--- @usage Finally we'll add some text to our gauche.
 ---   <pre>
 ---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
 ---   </pre>
@@ -498,9 +498,9 @@ end
 --- Prefixes text at the beginning of the current line when used in a trigger.
 ---
 --- @usage Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that.
---- <pre>
---- prefix(os.date("%H:%M:%S "))
---- </pre>
+---   <pre>
+---   prefix(os.date("%H:%M:%S "))
+---   </pre>
 ---
 --- @see suffix
 function prefix(what, func, fg, bg, window)
@@ -697,53 +697,7 @@ end
 
 
 
---- Color echo functions: hecho, decho, cecho.
--- <b><u>TODO</u></b>
---
--- <pre>
--- Function: hecho()
--- Arg1: String to echo
--- Arg2: String containing value for foreground color in hexadecimal RGB format
--- Arg3: String containing value for background color in hexadecimal RGB format
--- Arg4: Bool that tells the function to use insertText() rather than echo()
--- Arg5: Name of the console to echo to. Defaults to main.
--- 
--- Color changes can be made within the string using the format |cFRFGFB,BRBGBB
--- where FR is the foreground red value, FG is the foreground green value, FB
--- is the foreground blue value, BR is the background red value, etc. ,BRBGBB
--- is optional. |r can be used within the string to reset the colors to default.
---
--- The colors in arg2 and arg3 replace the normal defaults for your console.
--- So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"),
--- the first Testing would be red on black and the second would be green on blue.
--- 
--- Function: decho()
--- Arg1: String to echo
--- Arg2: String containing value for foreground color in decimal format
--- Arg3: String containing value for background color in decimal format
--- Arg4: Bool that tells the function to use insertText() rather than echo()
--- Arg5: Name of the console to echo to. Defaults to main.
---
--- Color changes can be made using the format <FR,FG,FB:BR,BG,BB> where
--- each field is a number from 0 to 255. The background portion can be omitted
--- using <FR,FG,FB> or the foreground portion can be omitted using <:BR,BG,BB>
--- Arguments 2 and 3 set the default fore and background colors for the string
--- using the same format as is used within the string, sans angle brackets,
--- e.g.  decho("test", "255,0,0", "0,255,0")
--- 
--- Function: cecho()
--- Arg1: String to echo
--- Arg2: String containing value for foreground color as a named color
--- Arg3: String containing value for background color as a named color
--- Arg4: Bool that tells the function to use insertText() rather than echo()
--- Arg5: Name of the console to echo to. Defaults to main.
--- 
--- Color changes can be made using the format <foreground:background>
--- where each field is one of the colors listed by showColors()
--- The background portion can be omitted using <foreground> or the foreground 
--- portion can be omitted using <:background>
--- Arguments 2 and 3 to set the default colors take named colors as well. 
--- </pre>
+-- TODO is rex mandatory requirement now?
 if rex then
 	Echos = {
 		Patterns = {
@@ -802,7 +756,19 @@ if rex then
 		}
 
 	
-	--- <b><u>TODO</u></b> xEcho(style, insert, win, str)
+--- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
+---
+--- @param style Hex, Decimal or Color
+--- @param insert boolean flag to determine echo/insert behaviour
+--- @param win windowName optional
+--- @param str text with embedded color information
+---
+--- @see cecho
+--- @see decho
+--- @see hecho
+--- @see cinsertText
+--- @see dinsertText
+--- @see hinsertText
 	function xEcho(style, insert, win, str)
 		if not str then str = win; win = nil end
 		local reset, out
@@ -861,22 +827,76 @@ if rex then
 		if win then resetFormat(win) else resetFormat() end
 	end
 
+
 	
-	--- <b><u>TODO</u></b> put some doc for each func
+--- Echo string with embedded hex color information. <br/><br/>
+--- 
+--- Color changes can be made within the string using the format |cFRFGFB,BRBGBB where FR is the foreground red value, 
+--- FG is the foreground green value, FB is the foreground blue value, BR is the background red value, etc., BRBGBB is optional. 
+--- |r can be used within the string to reset the colors to default.
+---  
+--- @see xEcho
 	function hecho(...) xEcho("Hex", false, ...) end
+
+
+
+--- Echo string with embedded decimal color information. <br/><br/>
+--- 
+--- Color changes can be made using the format <FR,FG,FB:BR,BG,BB> where each field is a number from 0 to 255. 
+--- The background portion can be omitted using <FR,FG,FB> or the foreground portion can be omitted using <:BR,BG,BB>. 
+--- 
+--- @usage Print red test on green background.
+---   <pre>
+---   decho("<255,0,0:0,255,0>test")
+---   </pre>
+--- 
+--- @see xEcho
 	function decho(...) xEcho("Decimal", false, ...) end
+
+
+
+--- Echo string with embedded color name information.
+---
+--- @usage Consider following example:
+---   <pre>
+---   cecho("<green>green text <blue>blue text <red>red text")
+---   </pre>
+---
+--- @see xEcho
 	function cecho(...) xEcho("Color", false, ...) end
+
+
+--- Inserts string with embedded hex color information.
+---
+--- @see xEcho
+--- @see hecho
 	function hinsertText(...) xEcho("Hex", true, ...) end
+
+
+--- Inserts string with embedded decimal color information.
+---
+--- @see xEcho
+--- @see decho
 	function dinsertText(...) xEcho("Decimal", true, ...) end
+
+
+--- Inserts string with embedded color name information.
+---
+--- @see xEcho
+--- @see cecho
 	function cinsertText(...) xEcho("Color", true, ...) end
+
+
+	-- TODO - what is this one
 	checho = cecho
 	
 
 else
 
 
-	--- <b><u>TODO</u></b> 
-	function cecho(window,text)
+	-- This is not LuaDoc.
+	-- See xEcho/another cecho for description.
+	function cecho(window, text)
        local win = text and window
        local s = text or window
        if win then
@@ -910,7 +930,8 @@ else
     end
 	
 
-	--- <b><u>TODO</u></b> decho(window, text)
+	-- This is not LuaDoc.
+	-- See xEcho/antoher decho for description.
 	function decho(window, text)
 		local win = text and window
 		local s = text or window
@@ -946,4 +967,6 @@ else
 		reset()
 	end
 
+
 end
+
