@@ -1514,7 +1514,7 @@ end
 ---   local mydb = db:get_database("my database")
 ---   local enemies_ref = mydb.enemies
 ---   local name_ref = mydb.enemies.name
----   <pre>
+---   </pre>
 function db:get_database(db_name)
    db_name = db:safe_name(db_name)
    assert(db.__schema[db_name], "Attempt to access database that does not exist.")

@@ -18,7 +18,7 @@ end
 <br/><b>Release:</b> <%=func.release%>
 <%end%>
 
-<br/><br/>
+<br/>
 
 <%if type(func.param) == "table" and #func.param > 0 then%>
 <b>Parameters</b>
