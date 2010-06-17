@@ -750,12 +750,12 @@ function invokeFileDialog(selection, dialogTitle) end
 --- You can use this function to check if something, or somethings, are active. Type can be either
 --- "alias", "trigger", or "timer", and name is the name of the said item you'd like to check.
 ---
---- @usage 
+--- @param type could be "alias", "trigger", or "timer"
+---
+--- @usage This will check is my "my trigger" is active.
 ---   <pre>
 ---   echo("I have " .. isActive("my trigger", "trigger") .. " currently active triggers called 'my trigger'!")
 ---   </pre>
----
---- @param type could be "alias", "trigger", or "timer"
 function isActive(name, type) end
 
 
@@ -1197,7 +1197,7 @@ function permSubstringTrigger(name, parent, pattern, luaCode) end
 --- @param seconds number specifying a delay after which the timer will execute the lua code.
 --- @param luaCode code to execute
 --- 
---- @usage 
+--- @usage Creates new time that will tick each 4.5s.
 ---   <pre>
 ---   permTimer("my timer", "first timer group", 4.5, [[send ("my timer that's in my first timer group fired!")]])
 ---   </pre>
@@ -1731,9 +1731,9 @@ function stopStopWatch() end
 
 --- Creates a temporary (lasts only until the profile is closed) alias. This means that it won't exist anymore after Mudlet restarts.
 --- 
---- @usage
+--- @usage This triggers waits for "hi" string.
 ---   <pre>
----   tempAlias("^hi$", [[send ("hi") echo ("we said hi!")]]
+---   tempAlias("^hi$", [[send ("hi") echo ("we said hi!")]] 
 ---   </pre>
 ---
 --- @return id

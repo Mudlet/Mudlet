@@ -249,7 +249,7 @@ color_table = {
 
 
 
---- Move a custom gauge built by createGauge(...).
+--- Move a custom gauge.
 ---
 --- @usage This would move the health bar gauge to the location 1200, 400.
 ---   <pre>
@@ -271,7 +271,7 @@ end
 
 
 
---- Set the text on a custom gauge built by createGauge(...).
+--- Set the text on a custom gauge.
 ---
 --- @usage 
 ---   <pre>
@@ -385,11 +385,11 @@ end
 ---
 --- @usage This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
 ---   <pre>
----   createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0) <br/>
+---   createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0)
 ---   </pre>
 --- @usage The second example is using the same names you'd use for something like fg() or bg().
 ---   <pre>
----   createGauge("healthBar", 300, 20, 30, 300, nil, "green") <br/>
+---   createGauge("healthBar", 300, 20, 30, 300, nil, "green")
 ---   </pre>
 --- @usage Finally we'll add some text to our gauche.
 ---   <pre>
@@ -619,7 +619,7 @@ end
 ---
 --- @usage Replace "goodbye" with "hello" on a trigger of "^You wave (goodbye)\.$"
 ---   <pre>
----   replaceWildcard(2, "hello") <br/>
+---   replaceWildcard(2, "hello")
 ---   </pre>
 ---   Is equivalent to doing:
 ---   <pre>
@@ -842,12 +842,12 @@ if rex then
 
 --- Echo string with embedded decimal color information. <br/><br/>
 --- 
---- Color changes can be made using the format <FR,FG,FB:BR,BG,BB> where each field is a number from 0 to 255. 
---- The background portion can be omitted using <FR,FG,FB> or the foreground portion can be omitted using <:BR,BG,BB>. 
+--- Color changes can be made using the format &lt;FR,FG,FB:BR,BG,BB&gt; where each field is a number from 0 to 255. 
+--- The background portion can be omitted using &lt;FR,FG,FB&gt; or the foreground portion can be omitted using &lt;:BR,BG,BB&gt;. 
 --- 
 --- @usage Print red test on green background.
 ---   <pre>
----   decho("<255,0,0:0,255,0>test")
+---   decho("&lt;255,0,0:0,255,0&gt;test")
 ---   </pre>
 --- 
 --- @see xEcho
@@ -859,7 +859,7 @@ if rex then
 ---
 --- @usage Consider following example:
 ---   <pre>
----   cecho("<green>green text <blue>blue text <red>red text")
+---   cecho("&lt;green&gt;green text &lt;blue&gt;blue text &lt;red&gt;red text")
 ---   </pre>
 ---
 --- @see xEcho
