@@ -6,6 +6,8 @@
 
 --- Cut string to max length.
 ---
+--- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
+---
 --- @usage Following call will return 'abc'.
 ---   <pre>
 ---   string.cut("abcde", 3)
@@ -161,6 +163,8 @@ end
 
 
 --- Trim string (remove all white spaces around string).
+---
+--- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
 ---
 --- @usage Example will print 'Troll is here!'.
 ---   <pre>
