@@ -5,6 +5,14 @@
 
 --- Tests if a table is empty: this is useful in situations where you find
 --- yourself wanting to do 'if my_table == {}' and such.
+---
+--- @usage Testing if the table is empty.
+---   <pre>
+---   myTable = {}
+---   if table.is_empty(myTable) then
+---      echo("myTable is empty")
+---   end
+---   </pre>
 function table.is_empty(tbl)
 	for k, v in pairs(tbl) do
 		return false
@@ -46,7 +54,8 @@ end
 
 
 
---- <b><u>TODO</u></b> listAdd( list, what )
+--- <b><u>TODO</u></b> listAdd( list, what ) <br/>
+--- Use table.insert(list, what) instead
 function listAdd( list, what )
 	table.insert( list, what );
 end
@@ -66,7 +75,7 @@ end
 
 --- Gets the actual size of non-index based tables. <br/><br/>
 ---
---- For index based tables you can get the size with the # operator:
+--- For index based tables you can get the size with the # operator: <br/>
 --- This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with
 --- numerical indices. To get the size of tables that use user defined keys instead of automatic indices
 --- (pairs() type) you need to use the function table.size() referenced above.
