@@ -21,41 +21,41 @@ setmetatable( _G, {
 
 
 
---- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough 
+--- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough
 --- such that any it should work on others. <br/><br/>
---- 
---- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also 
---- raised for each ATCP message that arrives. To find out the available messages available in the atcp table and the event names, 
+---
+--- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also
+--- raised for each ATCP message that arrives. To find out the available messages available in the atcp table and the event names,
 --- you can use display(atcp). <br/><br/>
---- 
---- Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is 
+---
+--- Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is
 --- removed - so it becomes CharVitals and RoomExits. Here's an example:
 ---   <pre>
 ---   room_number = tonumber(atcp.RoomNum)
 ---   echo(room_number)
 ---   </pre>
---- 
+---
 --- Triggering on ATCP events: <br/>
---- If you'd like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages. 
+--- If you'd like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages.
 --- The ATCP handler names follow the same format as the atcp table - RoomNum, RoomExits, CharVitals and so on. <br/><br/>
---- 
---- While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place 
---- the event name you'd like your script to listen to into the Add User Defined Event Handler: field and press the + button 
---- to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function 
---- should it call for you when your handler receives a message. You do that by setting the Script name: to the function 
+---
+--- While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place
+--- the event name you'd like your script to listen to into the Add User Defined Event Handler: field and press the + button
+--- to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function
+--- should it call for you when your handler receives a message. You do that by setting the Script name: to the function
 --- name in the script you'd like to be called. <br/><br/>
---- 
---- For example, if you'd like to listen to the RoomExits event and have it call the process_exits() function - 
+---
+--- For example, if you'd like to listen to the RoomExits event and have it call the process_exits() function -
 --- register RoomExits as the event handler, make the script name be process_exits, and use this in the script:
 ---   <pre>
 ---   function process_exits(event, args)
 ---       echo("Called event: " .. event .. "\nWith args: " .. args)
 ---   end
 ---   </pre>
---- 
---- Feel free to experiment with this to achieve the desired results. A ATCP demo package is also available on the forums 
+---
+--- Feel free to experiment with this to achieve the desired results. A ATCP demo package is also available on the forums
 --- for using event handlers and parsing its messages into Lua datastructures. <br/>
---- 
+---
 --- @release Mudlet 1.0.6
 ---
 --- @see sendATCP
@@ -90,18 +90,19 @@ SavedVariables = {}
 
 
 
---- Sends a list of commands to the MUD. You can use this to send some things at once instead of having 
+--- Sends a list of commands to the MUD. You can use this to send some things at once instead of having
 --- to use multiple send() commands one after another.
---- 
+---
 --- @param ... list of commands
---- @param echoTheValue optional boolean flag (default value is true) which determine if value should 
+--- @param echoTheValue optional boolean flag (default value is true) which determine if value should
 ---   be echoed back on client.
 ---
 --- @usage Use sendAll instead of multiple send commands.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!")
----   
----   -- instead of calling:
+---   </pre>
+---   Instead of calling:
+---   <pre>
 ---   send ("stand")
 ---   send ("wield shield")
 ---   send ("say ha!")
@@ -120,7 +121,7 @@ end
 
 
 --- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
---- 
+---
 --- @usage
 ---   <pre>
 ---   if io.exists("/home/user/Desktop") then
@@ -128,14 +129,14 @@ end
 ---   else
 ---      echo("This folder doesn't exist.")
 ---   end
----   
+---
 ---   if io.exists("/home/user/Desktop/file.txt") then
 ---      echo("This file exists!")
 ---   else
 ---      echo("This file doesn't exist.")
 ---   end
 ---   </pre>
----   
+---
 --- @return true or false
 function io.exists(fileOfFolderName)
 	local f = io.open(fileOfFolderName)
@@ -155,7 +156,7 @@ end
 ---   xor(false, false)
 ---   xor(true, true)
 ---   </pre>
----   
+---
 --- @return true or false
 function xor(a, b)
 	if (a and (not b)) or (b and (not a)) then
@@ -171,7 +172,7 @@ end
 ---
 --- @usage
 ---   <pre>
----   if "linux" == getOS() then 
+---   if "linux" == getOS() then
 ---	     echo("We are using GNU/Linux!")
 ---   end
 ---   </pre>
@@ -255,12 +256,12 @@ end
 
 
 
---- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load 
---- them again at a later time e.g. make a database, collect statistical information etc. 
+--- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
+--- them again at a later time e.g. make a database, collect statistical information etc.
 --- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
---- 
+---
 --- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
---- 
+---
 --- Notes: <br/>
 ---  Userdata and indices of these are not saved <br/>
 ---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
@@ -277,8 +278,8 @@ end
 ---
 --- @see table.load
 function table.save( sfile, t )
-	if t == nil then 
-		t = _G 
+	if t == nil then
+		t = _G
 	end
 	local tables = {}
 	table.insert( tables, t )
@@ -434,8 +435,8 @@ function speedwalk(dirString, backwards, delay)
 			end
 		end
 	end
-	if walkdelay then 
-		speedwalktimer() 
+	if walkdelay then
+		speedwalktimer()
 	end
 end
 

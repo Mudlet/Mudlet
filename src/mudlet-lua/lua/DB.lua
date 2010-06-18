@@ -90,12 +90,12 @@ datetime = {
 --  then compiling them.
 function datetime:_get_pattern(format)
    if not datetime._pattern_cache[format] then
-      local fmt = rex.gsub(format, "(%[A-Za-z])", 
+      local fmt = rex.gsub(format, "(%[A-Za-z])",
          function(m)
                return datetime._directives[m] or m
          end
          )
-      
+
       datetime._pattern_cache[format] = rex.new(fmt, rex.flags().CASELESS)
    end
 
@@ -104,14 +104,14 @@ end
 
 
 
---- Parses the specified source string, according to the format if given, to return a representation of 
+--- Parses the specified source string, according to the format if given, to return a representation of
 --- the date/time. The default format if not specified is: "^%Y-%m-%d %H:%M:%S$" <br/><br/>
 ---
---- If as_epoch is provided and true, the return value will be a Unix epoch -- the number 
---- of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch 
---- is false, then a Lua time table will be returned. Details of the time tables are provided 
+--- If as_epoch is provided and true, the return value will be a Unix epoch -- the number
+--- of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch
+--- is false, then a Lua time table will be returned. Details of the time tables are provided
 --- in the http://www.lua.org/pil/22.1.html. <br/><br/>
---- 
+---
 --- Supported Format Codes
 ---   </pre>
 ---   %b   Abbreviated Month Name
@@ -133,11 +133,11 @@ function datetime:parse(source, format, as_epoch)
 
    local fmt = datetime:_get_pattern(format)
    local m = {fmt:tfind(source)}
-   
+
    if m then
       m = m[3]
       dt = {}
-      
+
       if m.year_half then
          dt.year = tonumber("20"..m.year_half)
       elseif m.year_full then
@@ -153,7 +153,7 @@ function datetime:parse(source, format, as_epoch)
       end
 
       dt.day = m.day_of_month
-      
+
       if m.hour_12 then
          assert(m.ampm, "You must use %p (AM|PM) with %I (12-hour time)")
          if m.ampm == "PM" then
@@ -168,7 +168,7 @@ function datetime:parse(source, format, as_epoch)
       dt.min = tonumber(m.minute)
       dt.sec = tonumber(m.second)
       dt.isdst = false
-      
+
       if as_epoch then
          return os.time(dt)
       else
@@ -190,13 +190,13 @@ db = {}
 db.__autocommit = {}
 db.__schema = {}
 db.__conn = {}
-   
+
 db.debug_sql = false
 
 
 
 --- <b><u>TODO</u></b> db:_sql_type(v)
---   Converts the type of a lua object to the equivalent type in SQL 
+--   Converts the type of a lua object to the equivalent type in SQL
 function db:_sql_type(value)
    local t = type(value)
 
@@ -214,11 +214,11 @@ end
 
 
 --- <b><u>TODO</u></b> db:_sql_convert(v)
---   Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to 
+--   Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to
 --   prevent inadvertant SQL injection.
 function db:_sql_convert(value)
    local t = db:_sql_type(value)
-   
+
    if value == nil then
       return "NULL"
    elseif t == "TEXT" then
@@ -241,11 +241,11 @@ end
 --- <b><u>TODO</u></b> db:_index_name(sheet_name, index_contents)
 --   Given a sheet name and the details of an index, this function will return a unique index name to
 --   add to the database. The purpose of this is to create unique index names as indexes are tested
---   for existance on each call of db:create and not only on creation. That way new indexes can be 
+--   for existance on each call of db:create and not only on creation. That way new indexes can be
 --   added after initial creation.
 function db:_index_name(tbl_name, params)
    local t = type(params)
-   
+
    if t == "string" then
       return "idx_" .. tbl_name .. "_c_" .. params
    elseif assert(t == "table", "Indexes must be either a string or a table.") then
@@ -289,15 +289,15 @@ end
 function db:_sql_columns(value)
    local colstr = ''
    local t = type(value)
-   
+
    if t == "table" then
       col_chunks = {}
       for _, v in ipairs(value) do
          col_chunks[#col_chunks+1] = '"'..v:lower()..'"'
       end
-      
-      colstr = table.concat(col_chunks, ',') 
-   elseif assert(t == "string", 
+
+      colstr = table.concat(col_chunks, ',')
+   elseif assert(t == "string",
          "Must specify either a table array or string for index, not "..type(value)) then
       colstr = '"'..value:lower()..'"'
    end
@@ -324,7 +324,7 @@ end
 --- <b><u>TODO</u></b> db:_sql_values(value_spec)
 --   This quotes values to be passed into an INSERT or UPDATE operation in a SQL list. Meaning, it turns
 --   {x="this", y="that", z=1} into ('this', 'that', 1).
---   It is intelligent with data-types; strings are automatically quoted (with internal single quotes 
+--   It is intelligent with data-types; strings are automatically quoted (with internal single quotes
 --   escaped), nil turned into NULL, timestamps converted to integers, and such.
 function db:_sql_values(values)
    local sql_values = {}
@@ -346,7 +346,7 @@ function db:_sql_values(values)
       else
          s = tostring(v)
       end
-      
+
       sql_values[#sql_values+1] = s
    end
 
@@ -357,7 +357,7 @@ end
 
 --- <b><u>TODO</u></b> db:safe_name(name)
 --   On a filesystem level, names are restricted to being alphanumeric only. So, "my_database" becomes
---   "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible 
+--   "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible
 --   security issues with database names.
 function db:safe_name(name)
    name = name:gsub("[^%ad]", "")
@@ -367,31 +367,31 @@ end
 
 
 
---- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet 
---- script: in fact it is reccommended you run this function at a top-level without any kind of guards. 
---- If the named database does not exist it will create it. If the database does exist then it will add 
---- any columns or indexes which didn't exist before to that database. If the database already has all the 
+--- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
+--- script: in fact it is reccommended you run this function at a top-level without any kind of guards.
+--- If the named database does not exist it will create it. If the database does exist then it will add
+--- any columns or indexes which didn't exist before to that database. If the database already has all the
 --- specified columns and indexes, it will do nothing. <br/><br/>
---- 
---- The database will be called Database_<sanitized database name>.db and will be stored in the 
+---
+--- The database will be called Database_<sanitized database name>.db and will be stored in the
 --- Mudlet configuration directory. <br/><br/>
---- 
---- Database 'tables' are called 'sheets' consistently throughout this documentation, to avoid confusion 
+---
+--- Database 'tables' are called 'sheets' consistently throughout this documentation, to avoid confusion
 --- with Lua tables. <br/><br/>
---- 
---- The schema table must be a Lua table array containing table dictionaries that define the structure and 
+---
+--- The schema table must be a Lua table array containing table dictionaries that define the structure and
 --- layout of each sheet. <br/><br/>
---- 
---- For sheets with unique indexes, you may specify a _violations key to indicate how the db layer handle 
+---
+--- For sheets with unique indexes, you may specify a _violations key to indicate how the db layer handle
 --- cases where the unique index is violated. The options you may use are:
 ---   <pre>
 ---   FAIL - the default. A hard error is thrown, cancelling the script.
 ---   IGNORE - The command that would add a record that violates uniqueness just fails silently.
 ---   REPLACE - The old record which matched the unique index is dropped, and the new one is added to replace it.
 ---   </pre>
---- 
---- @usage Example bellow will create a database with two sheets; the first is kills and is used to track every successful kill, 
----   with both where and when the kill happened. It has one index, a compound index tracking the combination of name and area. 
+---
+--- @usage Example bellow will create a database with two sheets; the first is kills and is used to track every successful kill,
+---   with both where and when the kill happened. It has one index, a compound index tracking the combination of name and area.
 ---   The second sheet has two indexes, but one is unique: it isn't possible to add two items to the enemies sheet with the same name.
 ---   <pre>
 ---   local mydb = db:create("combat_log",
@@ -418,17 +418,17 @@ function db:create(db_name, sheets)
    if not db.__env then
       db.__env = luasql.sqlite3()
    end
-   
+
    db_name = db:safe_name(db_name)
-   
+
    if not db.__conn[db_name] then
       db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
       db.__conn[db_name]:setautocommit(false)
       db.__autocommit[db_name] = true
    end
-   
+
    db.__schema[db_name] = {}
-   
+
    -- We need to separate the actual column configuration from the meta-configuration of the desired
    -- sheet. {sheet={"column"}} verses {sheet={"column"}, _index={"column"}}. In the former we are
    -- creating a database with a single field; in the latter we are also adding an index on that
@@ -451,11 +451,11 @@ function db:create(db_name, sheets)
             end
          end
       end
-      
+
       if not options._violations then
          options._violations = "FAIL"
       end
-      
+
       db.__schema[db_name][s_name] = {columns=sht, options=options}
       db:_migrate(db_name, s_name)
    end
@@ -465,46 +465,46 @@ end
 
 
 ---   <b><u>TODO</u></b> The migrate function is meant to upgrade an existing database live, to maintain a consistant
---   and correct set of sheets and fields, along with their indexes. It should be safe to run 
+--   and correct set of sheets and fields, along with their indexes. It should be safe to run
 --   at any time, and must not cause any data loss. It simply adds to what is there: in perticular
 --   it is not capable of removing indexes, columns, or sheets after they have been defined.
 function db:_migrate(db_name, s_name)
    local conn = db.__conn[db_name]
    local schema = db.__schema[db_name][s_name]
-   
+
    local current_columns = {}
-   
-   -- The PRAGMA table_info command is a query which returns all of the columns currently 
+
+   -- The PRAGMA table_info command is a query which returns all of the columns currently
    -- defined in the specified table. The purpose of this section is to see if any new columns
    -- have been added.
    local cur = conn:execute("PRAGMA table_info('"..s_name.."')")
-   
+
    if cur ~= 0 then
       local row = cur:fetch({}, "a")
-      
+
       while row do
          current_columns[row.name:lower()] = row.type
          row = cur:fetch({}, "a")
       end
       cur:close()
    end
-   
+
    -- The SQL definition of a column is:
    --    "column_name" column_type NULL
    -- The db module does not presently support columns that are required. Everything is optional,
    -- everything may be NULL / nil.
-   -- If you specify a column's type, you also specify its default value. 
+   -- If you specify a column's type, you also specify its default value.
    local sql_column = ', "%s" %s NULL'
    local sql_column_default = sql_column..' DEFAULT %s'
-   
+
    if table.is_empty(current_columns) then
       -- At this point, we know that the specified table does not exist in the database and so we
       -- should create it.
-      
+
       -- Every sheet has an implicit _row_id column. It is not presently (and likely never will be)
       -- supported to define the primary key of any sheet.
       local sql_chunks = {"CREATE TABLE ", s_name,  '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT'}
-      
+
       -- We iterate over every defined column, and add a line which creates it.
       for key, value in pairs(schema.columns) do
          local sql = ""
@@ -517,23 +517,23 @@ function db:_migrate(db_name, s_name)
       end
 
       sql_chunks[#sql_chunks+1] = ")"
-      
+
       local sql = table.concat(sql_chunks, "")
       db:echo_sql(sql)
       conn:execute(sql)
 
    else
-      -- At this point we know that the sheet already exists, but we are concerned if the current 
+      -- At this point we know that the sheet already exists, but we are concerned if the current
       -- definition includes columns which may be added.
-      
+
       local sql_chunks = {}
       local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
-      
+
       for k, v in pairs(schema.columns) do
          k = k:lower()
          t = db:_sql_type(v)
          v = db:_sql_convert(v)
-         
+
          -- Here we test it a given column exists in the sheet already, and if not, we add that
          -- column.
          if not current_columns[k] then
@@ -543,13 +543,13 @@ function db:_migrate(db_name, s_name)
          end
       end
    end
-   
+
    -- On every invocation of db:create we run the code that creates indexes, as that code will
    -- do nothing if the specific indexes already exist. This is enforced by the db:_index_name
    -- function creating a unique index.
    --
-   -- Note that in no situation will an existing index be deleted. 
-   db:_migrate_indexes(conn, s_name, schema, current_columns)      
+   -- Note that in no situation will an existing index be deleted.
+   db:_migrate_indexes(conn, s_name, schema, current_columns)
    db:echo_sql("COMMIT")
    conn:commit()
    conn:execute("VACUUM")
@@ -559,19 +559,19 @@ end
 
 --- <b><u>TODO</u></b> db:_migrate_indexes(connection, sheet_name, schema, existing_columns)
 --   Creates any indexes which do not yet exist in the given database.
-function db:_migrate_indexes(conn, s_name, schema, current_columns)      
+function db:_migrate_indexes(conn, s_name, schema, current_columns)
    local sql_create_index = "CREATE %s IF NOT EXISTS %s ON %s (%s);"
    local opt = {_unique = "UNIQUE INDEX", _index = "INDEX"} -- , _check = "CHECK"}
 
    for option_type, options in pairs(schema.options) do
       if option_type == "_unique" or option_type == "_index" then
          for _, value in pairs(options) do
-         
+
             -- If an index references a column which does not presently exist within the schema
-            -- this will fail. 
+            -- this will fail.
 
             if db:_index_valid(current_columns, value) then
-               --assert(db:_index_valid(current_columns, value), 
+               --assert(db:_index_valid(current_columns, value),
                --      "In sheet "..s_name.." an index field is specified that does not exist.")
 
                sql = sql_create_index:format(
@@ -587,13 +587,13 @@ end
 
 
 
---- Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index, 
---- a lua error will be thrown and execution will cancel. As such it is advisable that if you use a UNIQUE 
+--- Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index,
+--- a lua error will be thrown and execution will cancel. As such it is advisable that if you use a UNIQUE
 --- index, you test those values before you attempt to insert a new row. <br/><br/>
---- 
---- Each table is a series of key-value pairs to set the values of the sheet, but if any keys do not exist 
+---
+--- Each table is a series of key-value pairs to set the values of the sheet, but if any keys do not exist
 --- then they will be set to nil or the default value. As you can see, all fields are optional.
---- 
+---
 --- @usage An example:
 ---   <pre>
 ---   db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
@@ -609,13 +609,13 @@ function db:add(sheet, ...)
 
    local conn = db.__conn[db_name]
    local sql_insert = "INSERT OR %s INTO %s %s VALUES %s"
-   
+
    for _, t in ipairs({...}) do
       if t._row_id then
          -- You are not permitted to change a _row_id
          t._row_id = nil
       end
-      
+
       local sql = sql_insert:format(db.__schema[db_name][s_name].options._violations, s_name, db:_sql_fields(t), db:_sql_values(t))
       db:echo_sql(sql)
       assert(conn:execute(sql), "Failed to add item: this is probably a violation of a UNIQUE index or other constraint.")
@@ -627,22 +627,22 @@ end
 
 
 
---- Returns a table array containing a table for each matching row in the specified sheet. All arguments 
+--- Returns a table array containing a table for each matching row in the specified sheet. All arguments
 --- but sheet are optional. If query is nil, the entire contents of the sheet will be returned. <br/><br/>
---- 
---- Query is a string which should be built by calling the various db: expression functions, such as db:eq, 
---- db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous. 
+---
+--- Query is a string which should be built by calling the various db: expression functions, such as db:eq,
+--- db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous.
 --- If you don't know SQL well, its best to build the expression.<br/><br/>
---- 
+---
 --- Query may also be a table array of such expressions, if so they will be AND'd together implicitly.<br/><br/>
---- 
---- The results that are returned are not in any guaranteed order, though they are usually the same order 
---- as the records were inserted. If you want to rely on the order in any way, you must pass a value to the 
---- order_by field. This must be a table array listing the columns you want to sort by. 
+---
+--- The results that are returned are not in any guaranteed order, though they are usually the same order
+--- as the records were inserted. If you want to rely on the order in any way, you must pass a value to the
+--- order_by field. This must be a table array listing the columns you want to sort by.
 --- It can be { "column1" }, or { "column1", "column2" } <br/><br/>
---- 
+---
 --- The results are returned in ascending (smallest to largest) order; to reverse this pass true into the final field.
---- 
+---
 --- @usage The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.
 ---   <pre>
 ---   db:fetch(mydb.enemies, nil, {"city", "name"})
@@ -653,7 +653,7 @@ end
 ---   </pre>
 --- @usage The third will fetch all the things you've killed in Undervault which have Drow in their name.
 ---   <pre>
----   db:fetch(mydb.kills, 
+---   db:fetch(mydb.kills,
 ---       {db:eq(mydb.kills.area, "Undervault"),
 ---       db:like(mydb.kills.name, "%Drow%")}
 ---   )
@@ -664,7 +664,7 @@ function db:fetch(sheet, query, order_by, descending)
 
    local conn = db.__conn[db_name]
    local sql = "SELECT * FROM "..s_name
-   
+
    if query then
       if type(query) == "table" then
          sql = sql.." WHERE "..db:AND(unpack(query))
@@ -672,21 +672,21 @@ function db:fetch(sheet, query, order_by, descending)
          sql = sql.." WHERE "..query
       end
    end
-   
+
    if order_by then
       local o = {}
       for _, v in ipairs(order_by) do
          assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
          o[#o+1] = v.name
       end
-      
+
       sql = sql.." ORDER BY "..db:_sql_columns(o)
-      
+
       if descending then
          sql = sql.." DESC"
       end
    end
-   
+
    db:echo_sql(sql)
    local cur = conn:execute(sql)
 
@@ -703,12 +703,12 @@ function db:fetch(sheet, query, order_by, descending)
    else
       return nil
    end
-end   
+end
 
 
 
 --- Returns the result of calling the specified aggregate function on the field and its sheet. <br/><br/>
---- 
+---
 --- The supported aggregate functions are:
 ---   <pre>
 ---   COUNT - Returns the total number of records that are in the sheet or match the query.
@@ -717,7 +717,7 @@ end
 ---   MIN - Returns the lowest number in the specified field.
 ---   TOTAL - Returns the value of adding all the contents of the specified field.
 ---   </pre>
----  
+---
 --- @param query optional
 ---
 --- @usage Example:
@@ -729,12 +729,12 @@ function db:aggregate(field, fn, query)
    local db_name = field.database
    local s_name = field.sheet
    local conn = db.__conn[db_name]
-   
+
    assert(type(field) == "table", "Field must be a field reference.")
    assert(field.name, "Field must be a real field reference.")
-   
+
    local sql_chunks = {"SELECT", fn, "(", field.name, ")", "AS", fn, "FROM", s_name}
-   
+
    if query then
       if type(query) == "table" then
          sql_chunks[#sql_chunks+1] = db:AND(unpack(query))
@@ -742,24 +742,24 @@ function db:aggregate(field, fn, query)
          sql_chunks[#sql_chunks+1] = query
       end
    end
-   
+
    if order_by then
       local o = {}
       for _, v in ipairs(order_by) do
          assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
          o[#o+1] = v.name
       end
-      
+
       sql_chunks[#sql_chunks+1] = "ORDER BY"
       sql_chunks[#sql_chunks+1] = db:_sql_columns(o)
-      
+
       if descending then
          sql_chunks[#sql_chunks+1] = "DESC"
       end
    end
-   
+
    local sql = table.concat(sql_chunks, " ")
-   
+
    db:echo_sql(sql)
    local cur = conn:execute(sql)
 
@@ -771,7 +771,7 @@ function db:aggregate(field, fn, query)
    else
       return 0
    end
-end   
+end
 
 
 
@@ -780,29 +780,36 @@ end
 --- * if it is a table that contains a _row_id (e.g., a table returned by db:get) it deletes just that record. <br/>
 --- * Otherwise, it deletes every record which matches the query pattern which is specified as with db:get. <br/>
 --- * If the query is simply true, then it will truncate the entire contents of the sheet. <br/>
---- 
---- @usage Some examples:
+---
+--- @usage When passed an actual result table that was obtained from db:fetch, it will delete the record for that table.
 ---   <pre>
 ---   enemies = db:fetch(mydb.enemies)
 ---   db:delete(mydb.enemies, enemies[1])
+---   </pre>
+--- @usage When passed a number, will delete the record for that _row_id. This example shows getting the row id from a table.
+---   <pre>
+---   enemies = db:fetch(mydb.enemies)
 ---   db:delete(mydb.enemies, enemies[1]._row_id)
+---   </pre>
+--- @usage As above, but this example just passes in the row id directly.
+---   <pre>
 ---   db:delete(mydb.enemies, 5)
+---   </pre>
+--- @usage Here, we will delete anything which matches the same kind of query as db:fetch uses - namely,
+---   anyone who is in the city of San Francisco.
+---   <pre>
 ---   db:delete(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+---   </pre>
+--- @usage And finally, we will delete the entire contents of the enemies table.
+---   <pre>
 ---   db:delete(mydb.enemies, true)
 ---   </pre>
---- 
----   Those deletion commands will do in order: <br/>
----   * When passed an actual result table that was obtained from db:fetch, it will delete the record for that table. <br/>
----   * When passed a number, will delete the record for that _row_id. This example shows getting the row id from a table. <br/>
----   * As above, but this example just passes in the row id directly. <br/>
----   * Here, we will delete anything which matches the same kind of query as db:fetch uses - namely, anyone who is in the city of San Francisco. <br/>
----   * And finally, we will delete the entire contents of the enemies table.  
 function db:delete(sheet, query)
    local db_name = sheet._db_name
    local s_name = sheet._sht_name
-   
+
    local conn = db.__conn[db_name]
-   
+
    assert(query, "must pass a query argument to db:delete()")
    if type(query) == "number" then
       query = "_row_id = "..tostring(query)
@@ -810,13 +817,13 @@ function db:delete(sheet, query)
       assert(query._row_id, "Passed a non-result table to db:delete, need a _row_id field to continue.")
       query = "_row_id = "..tostring(query._row_id)
    end
-   
+
    local sql = "DELETE FROM "..s_name
-   
+
    if query ~= true then
       sql = sql.." WHERE "..query
    end
-   
+
    db:echo_sql(sql)
    assert(conn:execute(sql))
    if db.__autocommit[db_name] then
@@ -827,16 +834,16 @@ end
 
 
 --- Merges the specified table array into the sheet, modifying any existing rows and adding any that don't exist.
---- 
---- This function is a convenience utility that allows you to quickly modify a sheet, changing 
---- existing rows and add new ones as appropriate. It ONLY works on sheets which have a unique 
---- index, and only when that unique index is only on a single field. For more complex situations 
+---
+--- This function is a convenience utility that allows you to quickly modify a sheet, changing
+--- existing rows and add new ones as appropriate. It ONLY works on sheets which have a unique
+--- index, and only when that unique index is only on a single field. For more complex situations
 --- you'll have to do the logic yourself.
---- 
---- The table array may contain tables that were either returned previously by db:fetch, or new tables 
---- that you've constructed with the correct fields, or any mix of both. Each table must have a value 
+---
+--- The table array may contain tables that were either returned previously by db:fetch, or new tables
+--- that you've constructed with the correct fields, or any mix of both. Each table must have a value
 --- for the unique key that has been set on this sheet.
---- 
+---
 --- @usage For example, consider this database:
 ---   <pre>
 ---   local mydb = db:create("peopledb",
@@ -852,37 +859,37 @@ end
 ---     }
 ---   )
 ---   </pre>
---- 
----   Here you have a database with one sheet, which contains your friends, their race, level, 
+---
+---   Here you have a database with one sheet, which contains your friends, their race, level,
 ---   and what city they live in. Let's say you want to fetch everyone who lives in San Francisco, you could do:
 ---   <pre>
 ---   local results = db:fetch(mydb.friends, db:eq(mydb.friends.city, "San Francisco"))
 ---   </pre>
---- 
----   The tables in results are static, any changes to them are not saved back to the database. 
----   But after a major radioactive cataclysm rendered everyone in San Francisco a mutant, 
+---
+---   The tables in results are static, any changes to them are not saved back to the database.
+---   But after a major radioactive cataclysm rendered everyone in San Francisco a mutant,
 ---   you could make changes to the tables as so:
 ---   <pre>
 ---   for _, friend in ipairs(results) do
 ---     friend.race = "Mutant"
 ---   end
 ---   </pre>
---- 
+---
 ---   If you are also now aware of a new arrival in San Francisco, you could add them to that existing table array:
 ---   <pre>
 ---   results[#results+1] = {name="Bobette", race="Mutant", city="San Francisco"}
 ---   </pre>
---- 
+---
 ---   And commit all of these changes back to the database at once with:
 ---   <pre>
 ---   db:merge_unique(mydb.friends, results)
 ---   </pre>
---- 
+---
 ---   The db:merge_unique function will change the 'city' values for all the people who we previously fetched, but then add a new record as well.
 function db:merge_unique(sheet, tables)
    local db_name = sheet._db_name
    local s_name = sheet._sht_name
-   
+
    local unique_options = db.__schema[db_name][s_name].options._unique
    assert(unique_options, "db:merge_unique only works on a sheet with a unique index.")
    assert(#unique_options == 1, "db:merge_unique only works on a sheet with a single unique index.")
@@ -895,41 +902,41 @@ function db:merge_unique(sheet, tables)
    else
       unique_key = unique_index
    end
-   
+
    db:echo_sql(":: Unique index = "..unique_key)
-   
+
    local conn = db.__conn[db_name]
    local mydb = db:get_database(db_name)
    mydb:_begin()
-   
+
    for _, tbl in ipairs(tables) do
       assert(tbl[unique_key], "attempting to db:merge_unique with a table that does not have the unique key.")
-      
+
       local results = db:fetch(sheet, db:eq(sheet[unique_key], tbl[unique_key]))
       if results and results[1] then
          local t = results[1]
          for k, v in pairs(tbl) do
             t[k] = v
          end
-         
-         db:update(sheet, t)         
+
+         db:update(sheet, t)
       else
          db:add(sheet, tbl)
       end
    end
-   
+
    mydb:_commit()
    mydb:_end()
 end
 
 
 
---- This function updates a row in the specified sheet, but only accepts a row which has been previously 
---- obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field 
+--- This function updates a row in the specified sheet, but only accepts a row which has been previously
+--- obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field
 --- or tow, you can save back that table.
---- 
---- @usage This obtains a database reference, and queries the friends sheet for someone named Bob. As this 
----   returns a table array containing only one item, it assigns that one item to the local variable named bob. 
+---
+--- @usage This obtains a database reference, and queries the friends sheet for someone named Bob. As this
+---   returns a table array containing only one item, it assigns that one item to the local variable named bob.
 ---   We then change the notes on Bob, and pass it into db:update() to save the changes back.
 ---   <pre>
 ---   local mydb = db:get_database("my database")
@@ -940,27 +947,27 @@ end
 function db:update(sheet, tbl)
    assert(tbl._row_id, "Can only update a table with a _row_id")
    assert(not table.is_empty(tbl), "An empty table was passed to db:update")
-   
+
    local db_name = sheet._db_name
    local s_name = sheet._sht_name
-   
+
    local conn = db.__conn[db_name]
-   
+
    local sql_chunks = {"UPDATE OR", db.__schema[db_name][s_name].options._violations, s_name, "SET"}
-   
+
    local set_chunks = {}
-   local set_block = [["%s" = %s]] 
-   
+   local set_block = [["%s" = %s]]
+
    for k, v in pairs(db.__schema[db_name][s_name]['columns']) do
       if tbl[k] then
          local field = sheet[k]
          set_chunks[#set_chunks+1] = set_block:format(k, db:_coerce(field, tbl[k]))
       end
    end
-   
+
    sql_chunks[#sql_chunks+1] = table.concat(set_chunks, ",")
    sql_chunks[#sql_chunks+1] = "WHERE _row_id = "..tbl._row_id
-   
+
    local sql = table.concat(sql_chunks, " ")
    db:echo_sql(sql)
    assert(conn:execute(sql))
@@ -971,13 +978,13 @@ end
 
 
 
---- The db:set function allows you to set a certain field to a certain value across an entire sheet. 
---- Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only 
---- the last_read fields which are in a certain city. The query argument can be any value which is appropriate 
+--- The db:set function allows you to set a certain field to a certain value across an entire sheet.
+--- Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only
+--- the last_read fields which are in a certain city. The query argument can be any value which is appropriate
 --- for db:fetch, even nil which will change the value for the specified column for EVERY row in the sheet.
---- 
---- For example, consider a situation in which you are tracking how many times you find a certain 
---- type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and 
+---
+--- For example, consider a situation in which you are tracking how many times you find a certain
+--- type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and
 --- then adding a record for each type of egg.
 ---   <pre>
 ---   local mydb = db:create("egg database", {eggs = {color = "", last_found = db.Timestamp(false), found = 0}})
@@ -989,25 +996,25 @@ end
 ---     {color = "Black"}
 ---   )
 ---   </pre>
---- 
---- Now, you have three columns. One is a string, one a timestamp (that ends up as nil in the database), 
+---
+--- Now, you have three columns. One is a string, one a timestamp (that ends up as nil in the database),
 --- and one is a number. <br/><br/>
---- 
---- You can then set up a trigger to capture from the mud the string, "You pick up a (.*) egg!", and you 
+---
+--- You can then set up a trigger to capture from the mud the string, "You pick up a (.*) egg!", and you
 --- end up arranging to store the value of that expression in a variable called "myegg". <br/><br/>
---- 
+---
 --- To increment how many we found, we will do this:
 ---   <pre>
 ---   myegg = "Red" -- We will pretend a trigger set this.
 ---   db:set(mydb.eggs.found, db:exp("found + 1"), db:eq(mydb.eggs.color, myegg))
 ---   db:set(mydb.eggs.last_found, db.Timestamp("CURRENT_TIMESTAMP"), db:eq(mydb.eggs.color, myegg))
 ---   </pre>
---- 
---- This will go out and set two fields in the Red egg sheet; the first is the found field, which will 
---- increment the value of that field (using the special db:exp function). The second will update the 
+---
+--- This will go out and set two fields in the Red egg sheet; the first is the found field, which will
+--- increment the value of that field (using the special db:exp function). The second will update the
 --- last_found field with the current time. <br/><br/>
---- 
---- Once this contest is over, you may wish to reset this data but keep the database around. 
+---
+--- Once this contest is over, you may wish to reset this data but keep the database around.
 --- To do that, you may use a more broad use of db:set as such:
 ---   <pre>
 ---   db:set(mydb.eggs.found, 0)
@@ -1023,7 +1030,7 @@ function db:set(field, value, query)
    if query then
        sql_update = sql_update .. [[ WHERE %s]]
    end
-   
+
    local sql = sql_update:format(db.__schema[db_name][s_name].options._violations, s_name, field.name, db:_coerce(field, value), query)
 
    db:echo_sql(sql)
@@ -1048,12 +1055,12 @@ end
 
 --- <b><u>TODO</u></b> db:_coerce_sheet(sheet, tbl)
 --   After a table so retrieved from the database, this function coerces values to
---   their proper types. Specifically, numbers and datetimes become the proper 
+--   their proper types. Specifically, numbers and datetimes become the proper
 --   types.
 function db:_coerce_sheet(sheet, tbl)
    if tbl then
       tbl._row_id = tonumber(tbl._row_id)
-      
+
       for k, v in pairs(tbl) do
          if k ~= "_row_id" then
             local field = sheet[k]
@@ -1062,7 +1069,7 @@ function db:_coerce_sheet(sheet, tbl)
             elseif field.type == "datetime" then
                tbl[k] = db:Timestamp(datetime:parse(tbl[k], nil, true))
             end
-         end   
+         end
       end
       return tbl
    end
@@ -1072,7 +1079,7 @@ end
 
 --- <b><u>TODO</u></b> db:_coerce(field, value)
 --   The function converts a Lua value into its SQL representation, depending on the
---   type of the specified field. Strings will be single-quoted (and single-quotes 
+--   type of the specified field. Strings will be single-quoted (and single-quotes
 --   within will be properly escaped), numbers will be rendered properly, and such.
 function db:_coerce(field, value)
    if field.type == "number" then
@@ -1094,7 +1101,7 @@ end
 function db:eq(field, value, case_insensitive)
    if case_insensitive then
       local v = db:_coerce(field, value):lower()
-      return "lower("..field.name..") == "..v      
+      return "lower("..field.name..") == "..v
    else
       local v = db:_coerce(field, value)
       return field.name.." == "..v
@@ -1107,7 +1114,7 @@ end
 function db:not_eq(field, value, case_insensitive)
    if case_insensitive then
       local v = db:_coerce(field, value):lower()
-      return "lower("..field.name..") != "..v      
+      return "lower("..field.name..") != "..v
    else
       local v = db:_coerce(field, value)
       return field.name.." != "..v
@@ -1164,7 +1171,7 @@ end
 
 --- Returns a database expression to test if the field in the sheet matches the specified pattern. <br/><br/>
 ---
---- LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches 
+--- LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches
 --- any single one character. The second is a percent symbol which matches zero or more of any character.
 ---   <pre>
 ---   LIKE with "_" is therefore the same as the "." regular expression.
@@ -1179,7 +1186,7 @@ end
 
 --- Returns a database expression to test if the field in the sheet does not match the specified pattern.
 ---
---- LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches 
+--- LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches
 --- any single one character. The second is a percent symbol which matches zero or more of any character.
 ---   <pre>
 ---   LIKE with "_" is therefore the same as the "." regular expression.
@@ -1192,7 +1199,7 @@ end
 
 
 
---- Returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound. 
+--- Returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound.
 --- This only really makes sense for numbers and Timestamps.
 function db:between(field, left_bound, right_bound)
    local x = db:_coerce(field, left_bound)
@@ -1202,7 +1209,7 @@ end
 
 
 
---- Returns a database expression to test if the field in the sheet is NOT a value between lower_bound and upper_bound. 
+--- Returns a database expression to test if the field in the sheet is NOT a value between lower_bound and upper_bound.
 --- This only really makes sense for numbers and Timestamps.
 function db:not_between(field, left_bound, right_bound)
    local x = db:_coerce(field, left_bound)
@@ -1214,10 +1221,10 @@ end
 
 --- Returns a database expression to test if the field in the sheet is one of the values in the table array. <br/><br/>
 ---
---- First, note the trailing underscore carefully! It is required. 
+--- First, note the trailing underscore carefully! It is required.
 ---
 --- @usage The following example illustrates the use of <b>in_</b>:
----   This will obtain all of your kills which happened in the Undervault, Hell or Purgatory. Every db:in_ expression 
+---   This will obtain all of your kills which happened in the Undervault, Hell or Purgatory. Every db:in_ expression
 ---   can be written as a db:OR, but that quite often gets very complex.
 ---   <pre>
 ---   local mydb = db:get_database("my database")
@@ -1250,23 +1257,23 @@ end
 
 
 --- Returns the string as-is to the database. <br/><br/>
---- 
---- Use this function with caution, but it is very useful in some circumstances. One of the most 
+---
+--- Use this function with caution, but it is very useful in some circumstances. One of the most
 --- common of such is incrementing an existing field in a db:set() operation, as so:
 ---   <pre>
 ---   db:set(mydb.enemies, db:exp("kills + 1"), db:eq(mydb.enemies.name, "Ixokai"))
 ---   </pre>
---- 
+---
 --- This will increment the value of the kills field for the row identified by the name Ixokai. <br/><br/>
---- 
---- But there are other uses, as the underlining database layer provides many functions you can call 
---- to do certain things. If you want to get a list of all your enemies who have a name longer then 
+---
+--- But there are other uses, as the underlining database layer provides many functions you can call
+--- to do certain things. If you want to get a list of all your enemies who have a name longer then
 --- 10 characters, you may do:
 ---   <pre>
 ---   db:fetch(mydb.enemies, db:exp("length(name) > 10"))
 ---   </pre>
---- 
---- Again, take special care with this, as you are doing SQL syntax directly and the library can't 
+---
+--- Again, take special care with this, as you are doing SQL syntax directly and the library can't
 --- help you get things right.
 function db:exp(text)
    return text
@@ -1274,7 +1281,7 @@ end
 
 
 
---- Returns a compound database expression that combines all of the simple expressions passed into it. 
+--- Returns a compound database expression that combines all of the simple expressions passed into it.
 --- These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>
 ---
 --- This compound expression will only find items in the sheet if all sub-expressions match.
@@ -1286,7 +1293,7 @@ function db:AND(...)
    end
 
    return "("..table.concat(parts, " AND ")..")"
-end   
+end
 
 
 
@@ -1308,7 +1315,7 @@ end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db:close()
    for _, c in pairs(db.__conn) do
       c:close()
@@ -1329,39 +1336,39 @@ db.__TimestampMT = {
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.__Timestamp:as_string(format)
    if not format then
       format = "%m-%d-%Y %H:%M:%S"
    end
-   
+
    return os.date(format, self._timestamp)
 end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.__Timestamp:as_table()
    return os.date("*t", self._timestamp)
 end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.__Timestamp:as_number()
    return self._timestamp
 end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db:Timestamp(ts, fmt)
    local dt = {}
    if type(ts) == "table" then
       dt._timestamp = os.time(ts)
    elseif type(ts) == "number" then
       dt._timestamp = ts
-   elseif type(ts) == "string" and 
+   elseif type(ts) == "string" and
            assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
       dt._timestamp = "CURRENT_TIMESTAMP"
    elseif ts == nil then
@@ -1408,14 +1415,14 @@ db.__SheetMT = {
       local f_name = k:lower()
 
       local errormsg = "Attempt to access field %s in sheet %s in database %s that does not exist."
-      
+
       local field = db.__schema[db_name][sht_name]['columns'][f_name]
       if assert(field, errormsg:format(k, sht_name, db_name)) then
          type_ = type(field)
          if type_ == "table" and field._timestamp then
             type_ = "datetime"
          end
-         
+
          rt = setmetatable({database=db_name, sheet=sht_name, type=type_, name=f_name}, db.__FieldMT)
          rawset(t,k,rt)
          return rt
@@ -1450,14 +1457,14 @@ db.__DatabaseMT = {
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.Database:_begin()
    db.__autocommit[self._db_name] = false
 end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.Database:_commit()
    local conn = db.__conn[self._db_name]
    conn:commit()
@@ -1465,7 +1472,7 @@ end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.Database:_rollback()
    local conn = db.__conn[self._db_name]
    conn:rollback()
@@ -1473,18 +1480,18 @@ end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.Database:_end()
    db.__autocommit[self._db_name] = true
 end
 
 
 
---- <b><u>TODO</u></b> 
+--- <b><u>TODO</u></b>
 function db.Database._drop(s_name)
    local conn = db.__conn[self._db_name]
    local schema = db.__schema[self._db_name]
-   
+
    if schema.options._index then
       for _, value in schema.options._index do
          conn:execute("DROP INDEX IF EXISTS " .. db:_index_name(s_name, value))
@@ -1496,19 +1503,19 @@ function db.Database._drop(s_name)
          conn:execute("DROP INDEX IF EXISTS " .. db:_index_name(s_name, value))
       end
    end
-   
+
    conn:execute("DROP TABLE IF EXISTS "..s_name)
    conn:commit()
 end
 
 
 
---- Returns a reference of an already existing database. This instance can be used to get references 
---- to the sheets (and from there, fields) that are defined within the database. You use these 
+--- Returns a reference of an already existing database. This instance can be used to get references
+--- to the sheets (and from there, fields) that are defined within the database. You use these
 --- references to construct queries. <br/><br/>
 ---
 --- These references do not contain any actual data, they only point to parts of the database structure.
---- 
+---
 --- @usage If a database has a sheet named enemies, you can obtain a reference to that sheet by simply doing:
 ---   <pre>
 ---   local mydb = db:get_database("my database")

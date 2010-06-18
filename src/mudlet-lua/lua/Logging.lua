@@ -7,12 +7,12 @@
 --
 -- The system creates a hierarchy of Loggers. A logger is the interface through which
 -- code sends messages into the logging system. These messages can be simple strings
--- (commonly), or tables. In either case, the logger converts the message into an 
+-- (commonly), or tables. In either case, the logger converts the message into an
 -- event which is a table with certain standard keys, and a number of custom keys
 -- that a logger can provide if it wishes.
 --
 -- Events have a number of standard properties: a timestamp, the name of the logger,
--- a severity(level) of the event, and the message itself. 
+-- a severity(level) of the event, and the message itself.
 --
 -- By default, a logger has a level of ANY, which means that any events passed into
 -- it are handled. You can set this level higher if you want, in which case the
@@ -54,11 +54,11 @@ logging = {
  	-- four default formatters that are used when outputting to devices of that type.
 	-- A specific logger can override this for specific handlers, of course.
 	--
-	-- The file default is used when writing to the actual filesystem, and is the 
+	-- The file default is used when writing to the actual filesystem, and is the
 	-- most verbose output format.
 	--
 	-- The console default is meant to write to the actual main mud window.
-	-- 
+	--
 	-- The miniconsole is meant to write to miniconsoles, which we assume may be
 	-- much smaller then the main window and so we write only the message by default.
 	--
@@ -84,7 +84,7 @@ logging = {
 			display = "%Y-%m-%d %H:%M:%S",
 			filesystem = "%Y-%m-%d_%H.%M.%S"
 	},
-	
+
 	-- Levels:
 	ANY = 0,
 	DEBUG = 10,
@@ -92,7 +92,7 @@ logging = {
 	WARNING = 30,
 	ERROR = 40,
 	CRITICAL = 50,
-	
+
 	_levelnames = {
 		[0] = "ANY",
 		[10] = "DEBUG",
@@ -131,7 +131,7 @@ logging.FileHandler = {}
 
 --- logging.FileHandler:create(path)
 function logging.FileHandler:create(path)
-	
+
 end
 
 -- Logger Interface
@@ -142,17 +142,17 @@ logging.__loggerMT = {__index=logging.Logger}
 --- logging.Logger:create(name, parent)
 function logging.Logger:create(name, parent)
 	local logger = {
-		_name=name, 
-		_parent=parent, 
+		_name=name,
+		_parent=parent,
 		_children={},
 		_handlers = {},
-		
+
 		_customizers = {},
 
 		propagate=true,
 		level=logging.ANY,
 	}
-	
+
 	setmetatable(logger, logging.__loggerMT)
 	return logger
 end
@@ -181,7 +181,7 @@ function logging.Logger:_prepare_event(event)
 
 	event.system = table.concat(name_chunks, ".")
 	event.timestamp = os.time()
-	
+
 	return event
 end
 
@@ -205,7 +205,7 @@ function logging.Logger:_do_log(evt, extras, level)
 
 	assert(level)
 	evt.level = level
-	
+
 	if extras then
 		for k, v in pairs(extras) do
 			evt[k] = v
@@ -264,7 +264,7 @@ function logging:get_logger(name)
 	local name = name or "mudlet"
 	local loggers = name:split(".")
 	local parent = logging._root
-	
+
 	for _, logger in ipairs(loggers) do
 		if parent._children[logger] == nil then
 			local child = logging.Logger:create(logger, parent)
@@ -278,12 +278,12 @@ function logging:get_logger(name)
 	return parent
 end
 
---- logging:format_event(event, formatter) 
-function logging:format_event(event, formatter) 
+--- logging:format_event(event, formatter)
+function logging:format_event(event, formatter)
 	local format = formatter or logging._formatters.default_file
 
 	local pattern = "(\${(.-)})"
-	local output = format:gsub(pattern, 
+	local output = format:gsub(pattern,
 		function(complete, chunk)
 			local compound = {chunk:match("([^:]+):([^:]+):(.+)")}
 			if table.is_empty(compound) then
