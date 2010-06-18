@@ -594,13 +594,17 @@ end
 --- Each table is a series of key-value pairs to set the values of the sheet, but if any keys do not exist
 --- then they will be set to nil or the default value. As you can see, all fields are optional.
 ---
---- @usage An example:
+--- @usage Adding one record.
 ---   <pre>
 ---   db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
+---   </pre>
+--- @usage Adding multiple records.
+---   <pre>
 ---   db:add(mydb.enemies,
 ---     {name="John Smith", city="San Francisco"},
 ---     {name="Jane Smith", city="San Francisco"},
----     {name="Richard Clark"})
+---     {name="Richard Clark"}
+---   )
 ---   </pre>
 function db:add(sheet, ...)
    local db_name = sheet._db_name
@@ -654,8 +658,10 @@ end
 --- @usage The third will fetch all the things you've killed in Undervault which have Drow in their name.
 ---   <pre>
 ---   db:fetch(mydb.kills,
----       {db:eq(mydb.kills.area, "Undervault"),
----       db:like(mydb.kills.name, "%Drow%")}
+---      {
+---         db:eq(mydb.kills.area, "Undervault"),
+---         db:like(mydb.kills.name, "%Drow%")
+---      }
 ---   )
 ---   </pre>
 function db:fetch(sheet, query, order_by, descending)
@@ -712,9 +718,9 @@ end
 --- The supported aggregate functions are:
 ---   <pre>
 ---   COUNT - Returns the total number of records that are in the sheet or match the query.
----   AVG - Returns the average of all the numbers in the specified field.
----   MAX - Returns the highest number in the specified field.
----   MIN - Returns the lowest number in the specified field.
+---   AVG   - Returns the average of all the numbers in the specified field.
+---   MAX   - Returns the highest number in the specified field.
+---   MIN   - Returns the lowest number in the specified field.
 ---   TOTAL - Returns the value of adding all the contents of the specified field.
 ---   </pre>
 ---
@@ -1098,6 +1104,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is equal to the value.
+---
+--- @see db:fetch
 function db:eq(field, value, case_insensitive)
    if case_insensitive then
       local v = db:_coerce(field, value):lower()
@@ -1111,6 +1119,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is NOT equal to the value.
+---
+--- @see db:fetch
 function db:not_eq(field, value, case_insensitive)
    if case_insensitive then
       local v = db:_coerce(field, value):lower()
@@ -1124,6 +1134,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is less than the value.
+---
+--- @see db:fetch
 function db:lt(field, value)
    local v = db:_coerce(field, value)
    return field.name.." < "..v
@@ -1132,6 +1144,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is less than or equal to the value.
+---
+--- @see db:fetch
 function db:lte(field, value)
    local v = db:_coerce(field, value)
    return field.name.." <= "..v
@@ -1140,6 +1154,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is greater than to the value.
+---
+--- @see db:fetch
 function db:gt(field, value)
    local v = db:_coerce(field, value)
    return field.name.." > "..v
@@ -1148,6 +1164,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is greater than or equal to the value.
+---
+--- @see db:fetch
 function db:gte(field, value)
    local v = db:_coerce(field, value)
    return field.name.." >= "..v
@@ -1156,6 +1174,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is nil.
+---
+--- @see db:fetch
 function db:is_nil(field)
    return field.name.." IS NULL"
 end
@@ -1163,6 +1183,8 @@ end
 
 
 --- Returns a database expression to test if the field in the sheet is not nil.
+---
+--- @see db:fetch
 function db:is_not_nil(field)
    return field.name.." IS NOT NULL"
 end
@@ -1177,6 +1199,9 @@ end
 ---   LIKE with "_" is therefore the same as the "." regular expression.
 ---   LIKE with "%" is therefore the same as ".*" regular expression.
 ---   </pre>
+---
+--- @see db:not_like
+--- @see db:fetch
 function db:like(field, value)
    local v = db:_coerce(field, value)
    return field.name.." LIKE "..v
@@ -1192,6 +1217,9 @@ end
 ---   LIKE with "_" is therefore the same as the "." regular expression.
 ---   LIKE with "%" is therefore the same as ".*" regular expression.
 ---   </pre>
+---
+--- @see db:like
+--- @see db:fetch
 function db:not_like(field, value)
    local v = db:_coerce(field, value)
    return field.name.." NOT LIKE "..v
@@ -1201,6 +1229,9 @@ end
 
 --- Returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound.
 --- This only really makes sense for numbers and Timestamps.
+---
+--- @see db:not_between
+--- @see db:fetch
 function db:between(field, left_bound, right_bound)
    local x = db:_coerce(field, left_bound)
    local y = db:_coerce(field, right_bound)
@@ -1211,6 +1242,9 @@ end
 
 --- Returns a database expression to test if the field in the sheet is NOT a value between lower_bound and upper_bound.
 --- This only really makes sense for numbers and Timestamps.
+---
+--- @see db:between
+--- @see db:fetch
 function db:not_between(field, left_bound, right_bound)
    local x = db:_coerce(field, left_bound)
    local y = db:_coerce(field, right_bound)
@@ -1231,6 +1265,8 @@ end
 ---   local areas = {"Undervault", "Hell", "Purgatory"}
 ---   db:fetch(mydb.kills, db:in_(mydb.kills.area, areas))
 ---   </pre>
+---
+--- @see db:fetch
 function db:in_(field, tbl)
    local parts = {}
    for _, v in ipairs(tbl) do
@@ -1245,6 +1281,7 @@ end
 --- Returns a database expression to test if the field in the sheet is not one of the values in the table array.
 ---
 --- @see db:in_
+--- @see db:fetch
 function db:not_in(field, tbl)
    local parts = {}
    for _, v in ipairs(tbl) do
@@ -1275,6 +1312,8 @@ end
 ---
 --- Again, take special care with this, as you are doing SQL syntax directly and the library can't
 --- help you get things right.
+---
+--- @see db:fetch
 function db:exp(text)
    return text
 end
@@ -1285,6 +1324,8 @@ end
 --- These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>
 ---
 --- This compound expression will only find items in the sheet if all sub-expressions match.
+---
+--- @see db:fetch
 function db:AND(...)
    local parts = {}
 
@@ -1301,6 +1342,8 @@ end
 --- These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>
 ---
 --- This compound expression will find any item that matches either the first or the second sub-expression.
+---
+--- @see db:fetch
 function db:OR(left, right)
    if not string.starts(left, "(") then
       left = "("..left..")"
