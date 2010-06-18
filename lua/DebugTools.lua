@@ -18,13 +18,13 @@ end
 
 
 
---- Prints the content of the table multimatches[n][m] to the screen. This is meant 
---- as a tool to help write multiline trigger scripts. This helps you to easily see 
---- what your multiline trigger actually captured in all regex. You can use these values 
+--- Prints the content of the table multimatches[n][m] to the screen. This is meant
+--- as a tool to help write multiline trigger scripts. This helps you to easily see
+--- what your multiline trigger actually captured in all regex. You can use these values
 --- directly in your script by referring to it with multimatches[regex-number][capturegroup].
 ---
 --- @usage Just call this s function from your trigger to show the info.
----   <pre>	
+---   <pre>
 ---   showMultimatches()
 ---   </pre>
 ---
@@ -82,8 +82,8 @@ function display(what, numformat, recursion)
 		end
 
 		-- so empty tables print as {} instead of {..indent..}
-		if not firstline then 
-			echo(indent(recursion - 1)) 
+		if not firstline then
+			echo(indent(recursion - 1))
 		end
 		echo("}")
 	end
@@ -95,7 +95,7 @@ end
 
 
 
---- Basically like tostring(), except takes a numformat and is a little better suited 
+--- Basically like tostring(), except takes a numformat and is a little better suited
 --- for working with display().
 ---
 --- @see display
@@ -104,10 +104,10 @@ function printable(what, numformat)
 	if type(what) == 'string' then
 		ret = "'"..what.."'"
 	elseif type(what) == 'number' then
-		if numformat then 
+		if numformat then
 			ret = string.format(numformat, what)
-		else 
-			ret = what 
+		else
+			ret = what
 		end
 	elseif type(what) == 'boolean' then
 		ret = tostring(what)

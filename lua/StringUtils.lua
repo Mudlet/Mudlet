@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
---- Mudlet String Utils                                                                 
+--- Mudlet String Utils
 ----------------------------------------------------------------------------------
 
 
@@ -31,14 +31,14 @@ end
 
 
 --- Splits a string into a table by the given delimiter.
---- 
+---
 --- @usage Split string by ", " delimiter.
 ---   <pre>
 ---   names = "Alice, Bob, Peter"
 ---   name_table = names:split(", ")
 ---   display(name_table)
 ---   </pre>
----   
+---
 ---   Previous code will print out:
 ---   <pre>
 ---   table {
@@ -47,7 +47,7 @@ end
 ---     3: 'Peter'
 ---   }
 ---   </pre>
----   
+---
 --- @return array with split strings
 function string:split(delimiter)
 	local result = { }
@@ -92,17 +92,17 @@ end
 
 
 --- Generate case insensitive search pattern from string.
---- 
+---
 --- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
 ---
---- @return case insensitive pattern string 
+--- @return case insensitive pattern string
 ---
 --- @usage Following example will generate and print <i>"123[aA][bB][cC]"</i> string.
 ---   <pre>
 ---   echo(string.genNocasePattern("123abc"))
 ---   </pre>
 function string.genNocasePattern(s)
-	s = string.gsub(s, "%a", 
+	s = string.gsub(s, "%a",
 		function (c)
 			return string.format("[%s%s]", string.lower(c), string.upper(c))
 		end)
@@ -112,7 +112,7 @@ end
 
 
 --- Return first matching substring or nil.
---- 
+---
 --- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
 ---
 --- @return nil or first matching substring

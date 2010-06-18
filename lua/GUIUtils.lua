@@ -3,16 +3,16 @@
 ----------------------------------------------------------------------------------
 
 
---- The <i>gaugesTable table</i>. First we need to make this table which will be 
+--- The <i>gaugesTable table</i>. First we need to make this table which will be
 --- used later to store important data in.
 ---
 --- @class function
 --- @name gaugesTable
-gaugesTable = {} 
+gaugesTable = {}
 
 
 
---- The <i>color_table table</i> holds definition of color names. These are intended to be 
+--- The <i>color_table table</i> holds definition of color names. These are intended to be
 --- used in conjunction with fg() and bg() colorizer functions.
 ---
 --- @see bg
@@ -273,11 +273,11 @@ end
 
 --- Set the text on a custom gauge.
 ---
---- @usage 
+--- @usage
 ---   <pre>
 ---   setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
 ---   </pre>
---- @usage 
+--- @usage
 ---   <pre>
 ---   setGaugeText("healthBar", "HP: 100%", "red")
 ---   </pre>
@@ -323,7 +323,7 @@ end
 ---
 --- @usage Following command will returns "F0".
 ---   <pre>
----   PadHexNum("F") 
+---   PadHexNum("F")
 ---   </pre>
 function PadHexNum(incString)
 	local l_Return = incString
@@ -345,7 +345,7 @@ end
 ---
 --- @usage Both folowing commnads will returns "FFFFFF".
 ---   <pre>
----   RGB2Hex(255,255,255) 
+---   RGB2Hex(255,255,255)
 ---   RGB2Hex("white")
 ---   </pre>
 ---
@@ -365,7 +365,7 @@ end
 
 
 
---- Get RGB component from color name. 
+--- Get RGB component from color name.
 ---
 --- @usage Following will display "0.255.0" on your screen.
 ---   <pre>
@@ -544,14 +544,14 @@ end
 
 
 
---- Default resizeEvent handler function. Overwrite this function to make a custom event handler 
+--- Default resizeEvent handler function. Overwrite this function to make a custom event handler
 --- if the main window is being resized. <br/><br/>
 ---
---- The standard implementation of this function does nothing. However, this function gets called whenever 
---- the main window is being manually resized. You can overwrite this function in your own scripts to handle window 
---- resize events yourself and e.g. adjust the screen position and size of your mini console windows, labels or 
---- other relevant GUI elements in your scripts that depend on the size of the main Window. To override this 
---- function you can simply put a function with the same name in one of your scripts thus overwriting the 
+--- The standard implementation of this function does nothing. However, this function gets called whenever
+--- the main window is being manually resized. You can overwrite this function in your own scripts to handle window
+--- resize events yourself and e.g. adjust the screen position and size of your mini console windows, labels or
+--- other relevant GUI elements in your scripts that depend on the size of the main Window. To override this
+--- function you can simply put a function with the same name in one of your scripts thus overwriting the
 --- original empty implementation of this function.
 ---   <pre>
 ---   function handleWindowResizeEvent()
@@ -721,7 +721,7 @@ if rex then
 		Process = function(str, style)
 			local t = {}
 			for s, c, r in rex.split(str, Echos.Patterns[style][1]) do
-				if c and (c:byte(1) == 92) then 
+				if c and (c:byte(1) == 92) then
 					c = c:sub(2)
 					if s then s = s .. c else s = c end
 					c = nil
@@ -732,7 +732,7 @@ if rex then
 					if style == 'Hex' or style == 'Decimal' then
 						local fr, fg, fb, br, bg, bb = Echos.Patterns[style][2]:match(c)
 						local color = {}
-						if style == 'Hex' then 
+						if style == 'Hex' then
 							if fr and fg and fb then fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16) end
 							if br and bg and bb then br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16) end
 						end
@@ -755,7 +755,7 @@ if rex then
 		end,
 		}
 
-	
+
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
 ---
 --- @param style Hex, Decimal or Color
@@ -802,12 +802,12 @@ if rex then
 				resetFormat()
 			end
 		end
-		
+
 		local t = Echos.Process(str, style)
-		
+
 		deselect()
 		reset()
-		
+
 		for _, v in ipairs(t) do
 			if type(v) == 'table' then
 				if v.fg then
@@ -828,28 +828,28 @@ if rex then
 	end
 
 
-	
+
 --- Echo string with embedded hex color information. <br/><br/>
---- 
---- Color changes can be made within the string using the format |cFRFGFB,BRBGBB where FR is the foreground red value, 
---- FG is the foreground green value, FB is the foreground blue value, BR is the background red value, etc., BRBGBB is optional. 
+---
+--- Color changes can be made within the string using the format |cFRFGFB,BRBGBB where FR is the foreground red value,
+--- FG is the foreground green value, FB is the foreground blue value, BR is the background red value, etc., BRBGBB is optional.
 --- |r can be used within the string to reset the colors to default.
----  
+---
 --- @see xEcho
 	function hecho(...) xEcho("Hex", false, ...) end
 
 
 
 --- Echo string with embedded decimal color information. <br/><br/>
---- 
---- Color changes can be made using the format &lt;FR,FG,FB:BR,BG,BB&gt; where each field is a number from 0 to 255. 
---- The background portion can be omitted using &lt;FR,FG,FB&gt; or the foreground portion can be omitted using &lt;:BR,BG,BB&gt;. 
---- 
+---
+--- Color changes can be made using the format &lt;FR,FG,FB:BR,BG,BB&gt; where each field is a number from 0 to 255.
+--- The background portion can be omitted using &lt;FR,FG,FB&gt; or the foreground portion can be omitted using &lt;:BR,BG,BB&gt;.
+---
 --- @usage Print red test on green background.
 ---   <pre>
 ---   decho("&lt;255,0,0:0,255,0&gt;test")
 ---   </pre>
---- 
+---
 --- @see xEcho
 	function decho(...) xEcho("Decimal", false, ...) end
 
@@ -889,7 +889,7 @@ if rex then
 
 	-- TODO - what is this one
 	checho = cecho
-	
+
 
 else
 
@@ -928,7 +928,7 @@ else
           resetFormat()
        end
     end
-	
+
 
 	-- This is not LuaDoc.
 	-- See xEcho/antoher decho for description.
@@ -936,14 +936,14 @@ else
 		local win = text and window
 		local s = text or window
 		local reset
-		if win then 
-			reset = function() resetFormat(win) end 
-		else 
+		if win then
+			reset = function() resetFormat(win) end
+		else
 			reset = function() resetFormat() end
 		end
 		reset()
-		for color, text in s:gmatch("<([0-9,:]+)>([^<>]+)") do  
-			if color == "reset" then 
+		for color, text in s:gmatch("<([0-9,:]+)>([^<>]+)") do
+			if color == "reset" then
 				reset()
 				if win then echo(win, text) else echo(text) end
 			else
@@ -952,7 +952,7 @@ else
 				local bgcol   =   colist[2] ~= "" and colist[2] or "black"
 				local FGrgb   =   color_table[fgcol] or string.split(fgcol, ",")
 				local BGrgb   =   color_table[bgcol] or string.split(bgcol, ",")
-				
+
 				if win then
 					setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
 					setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])

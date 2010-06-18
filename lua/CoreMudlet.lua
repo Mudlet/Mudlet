@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
---- Mudlet Core Lua Functions 
+--- Mudlet Core Lua Functions
 --- (file holds LuaDoc for all function implemented with in Mudlet Core)
 ----------------------------------------------------------------------------------
 
@@ -133,18 +133,18 @@ function createButton() end
 
 
 
---- Labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with 
---- setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse. 
---- If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color. 
---- labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on 
+--- Labels are intended for very small variable or prompt displays or images. labels are clickable and if you specify a callback function with
+--- setLabelClickCallback( labelName, myLabelOnClickFunction ) your function will get called if the user clicks on the label with the mouse.
+--- If fillBackground = 0, the background will be hidden, if fillBackground = 1 the background will be shown i.e. you can see the background color.
+--- labels can be transparent. You can place labels anywhere within then main display, also als overlays over the main displays e.g. for on
 --- screen buttons, micro display, etc. DON'T use labels for larger text displays because they are a lot slower than the highspeed mini consoles.
 --- <br/><br/>
 --- Labels accept some HTML and CSS code for text formating.
---- 
+---
 --- @return true or false
---- 
---- @usage This example creates a transparent overlay message box to show a big warning message "You are under attack!" in the middle of the screen. 
----   Because the background color has a transparency level of 150 (0-255, with 0 being completely transparent and 255 non-transparent) the background 
+---
+--- @usage This example creates a transparent overlay message box to show a big warning message "You are under attack!" in the middle of the screen.
+---   Because the background color has a transparency level of 150 (0-255, with 0 being completely transparent and 255 non-transparent) the background
 ---   text can still be read through. The message box will disappear after 2.3 seconds.
 ---   <pre>
 ---   local width, height = getMainWindowSize();
@@ -162,7 +162,7 @@ function createButton() end
 ---  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=95
 ---  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=865
 ---  </pre>
---- 
+---
 --- @see createMiniConsole
 --- @see hideWindow
 --- @see showWindow
@@ -273,7 +273,7 @@ function deleteLine() end
 
 
 
---- Disables/deactivates an alias with the given name. This means that when you type in text that should 
+--- Disables/deactivates an alias with the given name. This means that when you type in text that should
 --- match it's pattern, it won't match and will be sent to the MUD. If several aliases have this name, they'll all be disabled.
 function disableAlias(name) end
 
@@ -284,12 +284,12 @@ function disableKey(name) end
 
 
 
---- Disables a timer from running it's script when it fires - so the timer 
---- cycles will still be happening, just no action on them. If you'd like to 
+--- Disables a timer from running it's script when it fires - so the timer
+--- cycles will still be happening, just no action on them. If you'd like to
 --- permanently delete it, use killTimer() instead. <br/><br/>
 ---
---- Use timer name or the id returned by tempTimer() to identify the timer 
---- that you want to disable. 
+--- Use timer name or the id returned by tempTimer() to identify the timer
+--- that you want to disable.
 ---
 --- @see tempTimer
 --- @see killTimer
@@ -297,8 +297,8 @@ function disableTimer(name) end
 
 
 
---- Use trigger name or the id returned by tempTrigger() to identify the 
---- timer that you want to disable. 
+--- Use trigger name or the id returned by tempTrigger() to identify the
+--- timer that you want to disable.
 ---
 --- @see tempTrigger
 function disableTrigger(name) end
@@ -318,7 +318,7 @@ function disconnect() end
 ---
 --- @param windowName optional
 ---
---- @usage 
+--- @usage Writes text to main window.
 ---   <pre>
 ---   echo("Hello world\n")
 ---   </pre>
@@ -359,7 +359,7 @@ function echoLink(windowName, text, command, hint, useCurrentFormat) end
 ---
 --- @release Mudlet 1.1.0-pre1
 ---
---- @usage 
+--- @usage
 ---   <pre>
 ---   echoPopup("activities to do", {[[send "sleep"]], [[send "sit"]], [[send "stand"]]}, {"sleep", "sit", "stand"})
 ---   </pre>
@@ -370,7 +370,7 @@ function echoPopup() end
 
 
 
---- This function will print text to both mini console windows, dock windows and labels. 
+--- This function will print text to both mini console windows, dock windows and labels.
 --- <b>This function is outdated. Use echo( windowName, text ) instead. </b>
 ---
 --- @see echo
@@ -388,14 +388,14 @@ function enableKey(name) end
 
 
 
---- Enables or activates a timer that was previously disabled. The parameter 
---- "name" expects the timer ID that was returned by tempTimer() on creation 
---- of the timer or the name of the timer in case of a GUI timer 
+--- Enables or activates a timer that was previously disabled. The parameter
+--- "name" expects the timer ID that was returned by tempTimer() on creation
+--- of the timer or the name of the timer in case of a GUI timer
 function enableTimer(name) end
 
 
 
---- Enables a Trigger. see enableTimer() for more details. 
+--- Enables a Trigger. see enableTimer() for more details.
 ---
 --- @see enableTimer
 function enableTrigger(name) end
@@ -408,7 +408,7 @@ function enableTrigger(name) end
 ---
 --- @return number
 ---
---- @usage 
+--- @usage
 ---   <pre>
 ---   echo("I have " .. exists("my trigger", "trigger") .. " triggers called 'my trigger'!")
 ---   </pre>
@@ -436,7 +436,7 @@ function exists(name, type) end
 --- discouraged. What you do instead if create a function (for example, send()  and echo()  are functions)
 --- that you can then call from your alias or trigger. This has many advantages - it's faster, you can
 --- easily give your function values, and your function can return you values, too.<br/><br/>
---- 
+---
 --- Note: The variable "command" contains what was entered in the command line or issued via the expandAlias()
 --- function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have
 --- to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass
@@ -451,7 +451,7 @@ function expandAlias(command, print=1) end
 --- is trigger testing. You can use \n to represent a new line. The function also accept ANSI color codes that
 --- are used in MUDs. A sample table can be found here.
 ---
---- @usage 
+--- @usage Usage of new line characters.
 ---   <pre>
 ---   feedTriggers("\nYou sit yourself down.\n")
 ---   </pre>
@@ -464,11 +464,11 @@ function feedTriggers(text) end
 
 
 
---- Get the rgb values of the first character of the current selection.
+--- Get the RGB values of the first character of the current selection.
 ---
 --- @param windowName optional
 ---
---- @usage 
+--- @usage Getting RGB component.
 ---   <pre>
 ---   r,g,b = getBgColor(windowName)
 ---   </pre>
@@ -479,7 +479,7 @@ function getBgColor(windowName) end
 
 
 --- This function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox.
---- 
+---
 --- @usage
 ---   <pre>
 ---   checked = getButtonStated();
@@ -489,7 +489,7 @@ function getBgColor(windowName) end
 ---       showExits()
 ---   end;
 ---   </pre>
----   
+---
 --- @return numneric state; state = 1 button is checked and state = 0, button is not checked
 function getButtonState() end
 
@@ -500,33 +500,33 @@ function getColumnNumber() end
 
 
 
---- Returns the content of the current line under the user cursor in the 
---- buffer. The Lua variable line holds the content of getCurrentLine() 
---- before any triggers have been run on this line. When triggers change the 
---- content of the buffer, the variable line will not be adjusted and thus 
---- hold an outdated string. line = getCurrentLine() will update line to the 
---- real content of the current buffer. This is important if you want to 
---- copy the current line after it has been changed by some triggers. 
---- selectString( line,1 ) will return false and won't select anything 
---- because line no longer equals getCurrentLine(). Consequently, 
---- selectString( getCurrentLine(), 1 ) is what you need. 
---- 
---- @usage 
+--- Returns the content of the current line under the user cursor in the
+--- buffer. The Lua variable line holds the content of getCurrentLine()
+--- before any triggers have been run on this line. When triggers change the
+--- content of the buffer, the variable line will not be adjusted and thus
+--- hold an outdated string. line = getCurrentLine() will update line to the
+--- real content of the current buffer. This is important if you want to
+--- copy the current line after it has been changed by some triggers.
+--- selectString( line,1 ) will return false and won't select anything
+--- because line no longer equals getCurrentLine(). Consequently,
+--- selectString( getCurrentLine(), 1 ) is what you need.
+---
+--- @usage Update line variable with content of current line.
 ---   <pre>
 ---   line = getCurrentLine()
 ---   </pre>
---- 	
+---
 --- @see selectString
 function getCurrentLine() end
 
 
 
---- This function returns the rgb values of the color of the first character of the current selection
+--- This function returns the RGB values of the color of the first character of the current selection
 --- on mini console (window) windowName.
 ---
 --- @param windowName optional -  if windowName is omitted Mudlet will use the main screen.
 ---
---- @usage 
+--- @usage
 ---   <pre>
 ---   r,g,b = getFgColor(windowName)
 ---   </pre>
@@ -569,7 +569,7 @@ function getLines(from_line_number, to_line_number) end
 
 
 
---- Return window width and window height (function have two return values). This is useful for calculating the window dimensions and 
+--- Return window width and window height (function have two return values). This is useful for calculating the window dimensions and
 --- placement of custom GUI toolkit items like labels, buttons, mini consoles etc.
 ---
 --- @usage
@@ -585,7 +585,7 @@ function getMainWindowSize() end
 --- Returns the current home directory of the current profile. This can be used to store data,
 --- save statistical information or load resource files.
 ---
---- @usage 
+--- @usage Get directory to current profile.
 ---   <pre>
 ---   homedir = getMudletHomeDir()
 ---   </pre>
@@ -608,26 +608,28 @@ function getStopWatchTime(watchID) end
 
 
 --- Return time information.
---- 
+---
 --- @release Mudlet 1.0.6
 ---
---- @usage 
+--- @usage Get time as a table.
 ---   <pre>
 ---   getTime()
 ---   </pre>
---- @usage 
+--- @usage Get time as a string (with default formatting).
 ---   <pre>
 ---   getTime(true)
 ---   </pre>
---- @usage 
+--- @usage Get time as a string with user defined formatting.
 ---   <pre>
 ---   getTime(true, "hh:mm")
 ---   </pre>
 ---
---- @param returntype Takes a boolean value (in Lua anything but false or nil will translate to true). If true, the function will return a table in the following format: <br/>
+--- @param returnType Takes a boolean value (in Lua anything but false or nil will translate to true). If true, 
+---   the function will return a table in the following format: <br/>
 ---   { hour = #, min = #, sec = #, msec = # } <br/>
----   If false or nil, it will return the time as a string using a format passed to the second arg or the default of hh:mm:ss.zzz
----   <br/><br/>
+---   If false or nil, it will return the time as a string using a format passed to the second arg or the 
+---   default of hh:mm:ss.zzz
+---
 --- @param format Format expressions built from following elements:
 ---   <pre>
 ---   h               the hour without a leading zero (0 to 23 or 1 to 12 if AM/PM display)
@@ -656,7 +658,7 @@ function getStopWatchTime(watchID) end
 ---   </pre>
 ---   All other input characters will be ignored. Any sequence of characters that are enclosed in singlequotes will be treated as text and not be
 ---   used as an expression. Two consecutive singlequotes ("''") are replaced by a singlequote in the output.
-function getTime(returntype, format) end
+function getTime(returnType, format) end
 
 
 
@@ -679,7 +681,7 @@ function hasFocus() end
 
 
 
---- Hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) 
+--- Hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right)
 --- are hidden, the entire tool bar area disappears automatically.
 function hideToolBar(name) end
 
@@ -719,8 +721,8 @@ function insertPopup(windowName, text, commands, hints, useCurrentFormat) end
 
 
 
---- Inserts text at the current cursor position in the main window. If the cursor has not been explicitly 
---- moved this function will always print at the beginning of the line whereas the echo() function will 
+--- Inserts text at the current cursor position in the main window. If the cursor has not been explicitly
+--- moved this function will always print at the beginning of the line whereas the echo() function will
 --- always print at the end of the line.
 ---
 --- @param windowName optional
@@ -767,9 +769,9 @@ function isAnsiBgColor(ansiBgColorCode) end
 
 
 
---- This function tests if the first character of the current selection has the foreground color specified by 
+--- This function tests if the first character of the current selection has the foreground color specified by
 --- ansiFgColorCode. Codes are:
---- 
+---
 ---   <pre>
 ---   0 = default text color
 ---   1 = light black
@@ -789,7 +791,7 @@ function isAnsiBgColor(ansiBgColorCode) end
 ---   15 = light white
 ---   16 = dark white
 ---   </pre>
---- 
+---
 --- @usage
 ---   <pre>
 ---   selectString( matches[1], 1 )
@@ -801,11 +803,11 @@ function isAnsiBgColor(ansiBgColorCode) end
 ---       echo( "no sorry, some other foreground color" )
 ---   end
 ---   </pre>
----   
----   Note that matches[1] holds the matched trigger pattern - even in substring, exact match, begin of line substring trigger 
----   patterns or even color triggers that do not know about the concept of capture groups. Consequently, you can always test 
+---
+---   Note that matches[1] holds the matched trigger pattern - even in substring, exact match, begin of line substring trigger
+---   patterns or even color triggers that do not know about the concept of capture groups. Consequently, you can always test
 ---   if the text that has fired the trigger has a certain color and react accordingly. This function is faster than using
----   getFgColor() and then handling the color comparison in Lua.                                                        
+---   getFgColor() and then handling the color comparison in Lua.
 function isAnsiFgColor(ansiFgColorCode) end
 
 
@@ -850,7 +852,7 @@ function killTrigger(id) end
 
 
 
---- The <i>line variable</> holds the content of the current line as being processed by the trigger engine. 
+--- The <i>line variable</> holds the content of the current line as being processed by the trigger engine.
 --- The engine runs all triggers on each line as it arrives from the MUD.
 ---
 --- @see command
@@ -872,7 +874,7 @@ function loadRawFile() end
 ---
 --- @usage Let say that you defined following trigger to detect and get droped items.
 ---   <pre>
----   RegEx: 
+---   RegEx:
 ---      ^The (.*) drops (.*)\.$
 ---   Code:
 ---      display(matches)
@@ -903,12 +905,12 @@ matches = {}
 
 
 
---- Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false 
---- if such a move is impossible e.g. the coordinates don't exist. To determine the correct coordinates use 
---- getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user 
---- cursor at the beginning of the current line before the script is run. If you omit the windowName argument, 
+--- Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false
+--- if such a move is impossible e.g. the coordinates don't exist. To determine the correct coordinates use
+--- getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user
+--- cursor at the beginning of the current line before the script is run. If you omit the windowName argument,
 --- the main screen will be used.
---- 
+---
 --- @return true or false
 ---
 --- @usage Set up the small system message window in the top right corner.
@@ -917,11 +919,11 @@ matches = {}
 ---   WindowWidth=0;
 ---   WindowHeight=0;
 ---   WindowWidth, WindowHeight = getMainWindowSize();
----   
+---
 ---   -- define a mini console named "sys" and set its background color
 ---   createMiniConsole("sys",WindowWidth-650,0,650,300)
 ---   setBackgroundColor("sys",85,55,0,255);
----   
+---
 ---   -- you *must* set the font size, otherwise mini windows will not work properly
 ---   setMiniConsoleFontSize("sys", 12);
 ---   -- wrap lines in window "sys" at 65 characters per line
@@ -930,7 +932,7 @@ matches = {}
 ---   setTextFormat("sys",0,35,255,50,50,50,0,0,0);
 ---   -- clear the window
 ---   clearUserWindow("sys")
----   
+---
 ---   moveCursorEnd("sys")
 ---   setFgColor("sys", 10,10,0)
 ---   setBgColor("sys", 0,0,255)
@@ -942,17 +944,17 @@ matches = {}
 ---   echo("sys", "test1---line4\n")
 ---   echo("sys", "test1---line5\n")
 ---   moveCursor("sys", 1,1)
----   
+---
 ---   -- deleting lines 2+3
 ---   deleteLine("sys");
 ---   deleteLine("sys");
----   
+---
 ---   -- inserting a line at pos 5,2
 ---   moveCursor("sys", 5,2);
 ---   setFgColor("sys", 100,100,0)
 ---   setBgColor("sys", 255,100,0)
 ---   insertText("sys","############## line inserted at pos 5/2 ##############");
----   
+---
 ---   -- inserting a line at pos 0,0
 ---   moveCursor("sys", 0,0)
 ---   selectCurrentLine("sys");
@@ -961,7 +963,7 @@ matches = {}
 ---   setUnderline( "sys", true );
 ---   setItalics( "sys", true );
 ---   insertText("sys", "------- line inserted at: 0/0 -----\n");
----   
+---
 ---   setBold( "sys", true )
 ---   setUnderline( "sys", false )
 ---   setItalics( "sys", false )
@@ -997,12 +999,12 @@ function moveWindow(name, x, y) end
 
 
 
---- The <i>multimatches table</i> is being used by Mudlet in the context of multiline triggers that use Perl regular expression. 
---- It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. 
---- multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and 
+--- The <i>multimatches table</i> is being used by Mudlet in the context of multiline triggers that use Perl regular expression.
+--- It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger.
+--- multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and
 --- process all relevant data within a single script. <br/><br/>
 ---
---- What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines 
+--- What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines
 --- and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines.
 ---
 --- @usage Have a look at this example (can be tested on the MUD batmud.bat.org). <br/>
@@ -1043,9 +1045,9 @@ function moveWindow(name, x, y) end
 ---             key=5 value=brave
 ---   -------------------------------------------------------
 ---   </pre>
---- The function showMultimatches() prints out the content of the table multimatches[n][m]. You can now see what the table 
---- multimatches[][] contains in this case. The first trigger condition (=regex 1) got as the first full match 
---- "You have not completed any quests". This is stored in multimatches[1][1] as the value of key=1 in the sub-table matches[1] 
+--- The function showMultimatches() prints out the content of the table multimatches[n][m]. You can now see what the table
+--- multimatches[][] contains in this case. The first trigger condition (=regex 1) got as the first full match
+--- "You have not completed any quests". This is stored in multimatches[1][1] as the value of key=1 in the sub-table matches[1]
 --- which, in turn, is the value of key=1 of the table multimatches[n][m]. <br/><br/>
 ---
 --- Following script would use matched values from previously defined regex in the multiline trigger:
@@ -1071,7 +1073,7 @@ multimatches = {}
 --- consider to use mini console instead.
 ---
 --- @usage This command will open new user windows with name "Chat".
----   <pre> 
+---   <pre>
 ---   openUserWindow("Chat")
 ---   </pre>
 ---
@@ -1095,38 +1097,38 @@ function pasteWindow() end
 
 
 --- Creates a persistent alias that stays after Mudlet is restarted and shows up in the Script Editor. <br/><br/>
---- 
---- Note that Mudlet by design allows duplicate names - so calling permAlias with the same name will keep creating 
+---
+--- Note that Mudlet by design allows duplicate names - so calling permAlias with the same name will keep creating
 --- new aliases. You can check if an alias already exists with the exists() function.
---- 
+---
 --- @param name is the name you'd like the alias to have.
---- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias 
+--- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias
 --- doesn't exist, it won't do anything. Use "" to make it not go into any groups.
 --- @param regex is the pattern that you'd like the alias to use.
 --- @param luaCode is the script the alias will do when it matches.
---- 
+---
 --- @usage Creates an alias called "new alias" in a group called "my group".
 ---   <pre>
 ---   permAlias("new alias", "my group", "^test$", [[echo ("say it works! This alias will show up in the script editor too.")]])
 ---   </pre>
---- 
+---
 --- @see exists
 function permAlias(name, parent, regex, luaCode) end
 
 
 
---- Creates a persistent trigger with a begin of line substring pattern that shows up in the Script Editor 
+--- Creates a persistent trigger with a begin of line substring pattern that shows up in the Script Editor
 --- and stays after Mudlet is restarted. <br/>
 --- <br/>
---- Note that Mudlet by design allows duplicate names - so calling permBeginOfLineStringTrigger with the same 
+--- Note that Mudlet by design allows duplicate names - so calling permBeginOfLineStringTrigger with the same
 --- name will keep creating new triggers. You can check if a trigger already exists with the exists() function.
---- 
+---
 --- @param name is the name you'd like the trigger to have.
---- @param parent is the name of the group, or another trigger you want the trigger to go in - however 
+--- @param parent is the name of the group, or another trigger you want the trigger to go in - however
 ---   if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
 --- @param patternTable is a table of patterns that you'd like the trigger to use - it can be one or many.
 --- @param luaCode is the script the trigger will do when it matches.
---- 
+---
 --- @usage Create a trigger that will match on anything that starts with "You sit" and do "stand".
 ---   It will not go into any groups, so it'll be on the top.
 ---   <pre>
@@ -1140,40 +1142,40 @@ function permBeginOfLineStringTrigger(name, parent, patternTable, luaCode) end
 
 
 
---- Creates a persistent trigger with a regex pattern that stays after Mudlet is restarted and shows up in the 
+--- Creates a persistent trigger with a regex pattern that stays after Mudlet is restarted and shows up in the
 --- Script Editor. <br/><br/>
---- 
---- Note that Mudlet by design allows duplicate names - so calling permRegexTrigger with the same name will keep creating 
+---
+--- Note that Mudlet by design allows duplicate names - so calling permRegexTrigger with the same name will keep creating
 --- new aliases. You can check if an alias already exists with the exists() function.
---- 
+---
 --- @param name is the name you'd like the alias to have.
---- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias 
+--- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias
 ---   doesn't exist, it won't do anything. Use "" to make it not go into any groups.
 --- @param regex is the pattern that you'd like the alias to use.
 --- @param luaCode is the script the alias will do when it matches.
---- 
+---
 --- @usage Create a regex trigger that will match on the prompt to record your status.
 ---   <pre>
 ---   permRegexTrigger("Prompt", "", {"^(\d+)h, (\d+)m"}, [[health = tonumber(matches[2]; mana = tonumber(matches[3])]]
 ---   </pre>
---- 
+---
 --- @see exists
 function permRegexTrigger(name, parent, pattern, luaCode) end
 
 
 
---- Creates a persistent trigger with a substring pattern that stays after Mudlet is restarted and shows up in 
+--- Creates a persistent trigger with a substring pattern that stays after Mudlet is restarted and shows up in
 --- the Script Editor. <br/><br/>
---- 
---- Note that Mudlet by design allows duplicate names - so calling permSubstringTrigger with the same name will keep creating 
+---
+--- Note that Mudlet by design allows duplicate names - so calling permSubstringTrigger with the same name will keep creating
 --- new aliases. You can check if an alias already exists with the exists() function.
---- 
+---
 --- @param name is the name you'd like the alias to have.
---- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias 
+--- @param parent is the name of the group, or another alias you want the trigger to go in - however if such a group/alias
 ---   doesn't exist, it won't do anything. Use "" to make it not go into any groups.
 --- @param regex is the pattern that you'd like the alias to use.
 --- @param luaCode is the script the alias will do when it matches.
---- 
+---
 --- @usage Create a trigger to highlight the word "pixie" for us.
 ---   <pre>
 ---   permSubstringTrigger("Highlight stuff", "General", {"pixie"}, [[selectString(line, 1) bg("yellow") resetFormat()]])
@@ -1182,21 +1184,21 @@ function permRegexTrigger(name, parent, pattern, luaCode) end
 ---   <pre>
 ---   permSubstringTrigger("Highlight stuff", "General", {"pixie", "cat", "dog", "rabbit"}, [[selectString(line, 1) fg ("blue") bg("yellow") resetFormat()]])
 ---   </pre>
---- 
+---
 --- @see exists
 function permSubstringTrigger(name, parent, pattern, luaCode) end
 
 
 
 --- Creates a persistent timer that stays after Mudlet is restarted and shows up in the Script Editor. <br/><br/>
---- 
---- Note that Mudlet by design allows duplicate names - so calling permTimer with the same name will keep creating 
+---
+--- Note that Mudlet by design allows duplicate names - so calling permTimer with the same name will keep creating
 --- new timers. You can check if a timer already exists with the exists() function.
---- 
---- @param name timer name, parent is the name of the timer group you want the timer to go in. 
+---
+--- @param name timer name, parent is the name of the timer group you want the timer to go in.
 --- @param seconds number specifying a delay after which the timer will execute the lua code.
 --- @param luaCode code to execute
---- 
+---
 --- @usage Creates new time that will tick each 4.5s.
 ---   <pre>
 ---   permTimer("my timer", "first timer group", 4.5, [[send ("my timer that's in my first timer group fired!")]])
@@ -1235,7 +1237,7 @@ function playSoundFile(fileName) end
 --- convenient to use regular function calls instead of events, however, the
 --- more complicated your system will get, the more important events will
 --- become because they help reduce complexity very much. <br/><br/>
---- 
+---
 --- The corresponding event handlers that listen to the events raised with
 --- raiseEvent() need to use the script name as function name and take the
 --- correct number of arguments. NOTE: If you raise an event with 5
@@ -1251,19 +1253,19 @@ function playSoundFile(fileName) end
 --- function code etc. Scripts can be organized very well in trees and thus
 --- help reduce complexity on large systems. <br/><br>
 ---
---- As an example, your prompt trigger could raise an onPrompt event if you want to attach 2 functions to it. 
---- In your prompt trigger, all you'd need to do is raiseEvent("onPrompt") Now we go about creating functions 
---- that attach to the event. Lets say the first one is check_health_stuff() and the other is check_salve_stuff(). 
---- We would like these to be executed when the event is raised. So create a script and give it a name of check_health_stuff. 
---- In the Add user defined event handler, type onPrompt, and press enter to add it to the list. In the script box, 
---- create: function check_health_stuff()blah blah end. When the onPrompt event comes along, that script catches it, 
+--- As an example, your prompt trigger could raise an onPrompt event if you want to attach 2 functions to it.
+--- In your prompt trigger, all you'd need to do is raiseEvent("onPrompt") Now we go about creating functions
+--- that attach to the event. Lets say the first one is check_health_stuff() and the other is check_salve_stuff().
+--- We would like these to be executed when the event is raised. So create a script and give it a name of check_health_stuff.
+--- In the Add user defined event handler, type onPrompt, and press enter to add it to the list. In the script box,
+--- create: function check_health_stuff()blah blah end. When the onPrompt event comes along, that script catches it,
 --- and does check_health_stuff() for you. <br/><br/>
---- 
+---
 --- <b>Default events raised by Mudlet</b><br/>
 --- Mudlet itself also creates events for your scripts to hook on. The following events are generated currently:<br/>
---- 
+---
 --- <b><i>sysWindowResizeEvent</i></b><br/>
---- Raised when the main window is resized, with the new height and width coordinates passed to the event. 
+--- Raised when the main window is resized, with the new height and width coordinates passed to the event.
 --- A common usecase for this event is to move/resize your UI elements according to the new dimensions.
 --- This sample code will echo whenever a resize happened with the new dimensions:
 ---   <pre>
@@ -1271,22 +1273,22 @@ function playSoundFile(fileName) end
 ---      echo("RESIZE EVENT: event="..event.." x="..x.." y="..y.."\n")
 ---   end
 ---   </pre>
---- 
+---
 --- <b><i>sysWindowMousePressEvent</i></b><br/>
---- Raised when a mouse button is pressed down anywhere on the main window (note that a click is composed of a mouse 
+--- Raised when a mouse button is pressed down anywhere on the main window (note that a click is composed of a mouse
 --- press and mouse release). The button number and the x,y coordinates of the click are reported.
 ---   <pre>
 ---   function onClickHandler( event, button, x, y )
 ---      echo("CLICK event:"..event.." button="..button.." x="..x.." y="..y.."\n")
 ---   end
 ---   </pre>
---- 
+---
 --- <b><i>sysWindowMouseReleaseEvent</i></b><br/>
---- Raised when a mouse button is released after being pressed down anywhere on the main window (note that a click is composed 
+--- Raised when a mouse button is released after being pressed down anywhere on the main window (note that a click is composed
 --- of a mouse press and mouse release). See sysWindowMousePressEvent for example use.
---- 
+---
 --- <b><i>ATCP events</i></b><br/><br/>
---- Mudlets ATCP implementation generates events for each message that comes, allowing you to trigger on them easily. 
+--- Mudlets ATCP implementation generates events for each message that comes, allowing you to trigger on them easily.
 --- Since ATCP messages vary in name, event names will vary as well. See the atcp section on how to use them.
 function raiseEvent(eventName, ...) end
 
@@ -1300,19 +1302,19 @@ function reconnect() end
 
 
 --- Replaces the currently selected text with the new text. To select text, use selectString() and similar function.
---- 
+---
 --- @usage Replace word "troll" with "cute trolly".
 ---   <pre>
 ---   selectString("troll",1)
 ---   replace("cute trolly")
 ---   </pre>
----   
+---
 --- @usage Lets replace the whole line. If you'd like to delete/gag the whole line, use deleteLine()!
 ---   <pre>
 ---   selectString(line, 1)
 ---   replace("Out with the old, in with the new!")
 ---   </pre>
----   
+---
 --- @see selectString
 --- @see deleteLine
 function replace(with) end
@@ -1423,7 +1425,7 @@ function selectString(text, numberOfMatch) end
 ---   send("Hello Jane", false)
 ---   </pre>
 ---
---- @param echoTheValue optional boolean flag (default value is true) which determine if value should 
+--- @param echoTheValue optional boolean flag (default value is true) which determine if value should
 ---   be echoed back on client.
 ---
 --- @see expandAlias
@@ -1449,9 +1451,9 @@ function sendTelnetChannel102() end
 
 
 
---- Sets rgb color values and the transparency for the given window. Colors are from 0 to 255 (0 being black), 
+--- Sets RGB color values and the transparency for the given window. Colors are from 0 to 255 (0 being black),
 --- and transparency is from - to 255 (0 being completely transparent). <br/><br/>
---- 
+---
 --- Note that transparency only works on labels, not miniConsoles for efficiency reasons.
 function setBackgroundColor(windowName, red, green, blue, transparency) end
 
@@ -1462,18 +1464,18 @@ function setBackgroundImage(labelName, imageFileName) end
 
 
 
---- Sets the current text background color in window windowName (or in main windows if you haven't specified that). If you have selected 
---- text prior to this call, the selection will be highlightd otherwise the current text background color will be changed. If you set a 
+--- Sets the current text background color in window windowName (or in main windows if you haven't specified that). If you have selected
+--- text prior to this call, the selection will be highlightd otherwise the current text background color will be changed. If you set a
 --- foreground or background color, the color will be used until you call resetFormat() on all further print commands.
---- 
+---
 --- @param windowName optional
 ---
 --- @usage Highlights the first occurrence of the string "Tom" in the current line with a red background color.
 ---   <pre>
----   selectString( "Tom", 1 ) 
+---   selectString( "Tom", 1 )
 ---   setBgColor( 255,0,0 )
 ---   </pre>
---- 
+---
 --- @usage Prints "Hello" on red background and "You" on blue.
 ---   <pre>
 ---   setBgColor(255,0,0)
@@ -1555,7 +1557,7 @@ function setConsoleBufferSize(consoleName, linesLimit, sizeOfBatchDeletion) end
 
 
 
---- Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g. 
+--- Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g.
 ---
 --- @param windowName optional
 ---
@@ -1577,11 +1579,11 @@ function setItalics(windowName, bool) end
 
 
 
---- Specify a Lua function to be called if the user clicks on the 
+--- Specify a Lua function to be called if the user clicks on the
 --- label/image. E.g. setLabelClickCallback( "compassNorthImage", "onClickGoNorth" ) <br/><br/>
---- 
---- UPDATE: this function can now pass any number of string or integer number values as additional parameters. 
---- These parameters are then used in the callback. Thus you can associate data with the label/button. 
+---
+--- UPDATE: this function can now pass any number of string or integer number values as additional parameters.
+--- These parameters are then used in the callback. Thus you can associate data with the label/button.
 --- Check the forum for more information on how to use this. <b>FIXME</b>
 function setLabelClickCallback(labelName, luaFunctionName, ...) end
 
@@ -1609,7 +1611,7 @@ function setLink(command, tooltip) end
 
 
 
---- Sets the font size of the mini console. 
+--- Sets the font size of the mini console.
 ---
 --- @see createMiniConsole
 --- @see createLabel
@@ -1637,20 +1639,20 @@ function setPopup(name, commands, hints) end
 
 
 
---- Sets current text format of window. A more convenient way to control the text format in a mini console is to 
+--- Sets current text format of window. A more convenient way to control the text format in a mini console is to
 --- use setFgColor, setBold, setItalics, setUnderline etc.
 ---
 --- @param windowName
---- @param fgR foreground color(r,g,b) 
---- @param fgG foreground color(r,g,b) 
---- @param fgB foreground color(r,g,b) 
+--- @param fgR foreground color(r,g,b)
+--- @param fgG foreground color(r,g,b)
+--- @param fgB foreground color(r,g,b)
 --- @param bgR background color(r,g,b)
 --- @param bgG background color(r,g,b)
 --- @param bgB background color(r,g,b)
 --- @param bold bold flag (1/0)
 --- @param underline underline flag (1/0)
---- @param italics italics flag (1/0) 
---- 
+--- @param italics italics flag (1/0)
+---
 --- @usage This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
 ---   <pre>
 ---   createMiniConsole( "con1", 0,0,300,100);
@@ -1661,14 +1663,14 @@ function setPopup(name, commands, hints) end
 --- @see createMiniConsole
 --- @see setBold
 --- @see setBgColor
---- @see setFgColor 
+--- @see setFgColor
 --- @see setItalics
 --- @see setUnderline
 function setTextFormat(windowName, fgR, fgG, fgB, bgR, bgG, bgB, bold, underline, italics) end
 
 
 
---- Set for how many more lines a trigger script should fire or a chain should stay open after the trigger has matched. 
+--- Set for how many more lines a trigger script should fire or a chain should stay open after the trigger has matched.
 --- The main use of this function is to close a chain when a certain condition has been met.
 ---
 --- @param number should be 0 to close the chain, or a positive number to keep the chain open that much longer.
@@ -1730,10 +1732,10 @@ function stopStopWatch() end
 
 
 --- Creates a temporary (lasts only until the profile is closed) alias. This means that it won't exist anymore after Mudlet restarts.
---- 
+---
 --- @usage This triggers waits for "hi" string.
 ---   <pre>
----   tempAlias("^hi$", [[send ("hi") echo ("we said hi!")]] 
+---   tempAlias("^hi$", [[send ("hi") echo ("we said hi!")]]
 ---   </pre>
 ---
 --- @return id
@@ -1741,9 +1743,9 @@ function tempAlias(regex, luaCode) end
 
 
 
---- Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be 
+--- Makes a color trigger that triggers on the specified foreground and background color. Both colors need to be
 --- supplied in form of these simplified ANSI 16 color mode codes:
---- 
+---
 ---   <pre>
 ---   0 = default text color
 ---   1 = light black
@@ -1763,11 +1765,11 @@ function tempAlias(regex, luaCode) end
 ---   15 = light white
 ---   16 = dark white
 ---   </pre>
----   
---- @usage This script will re-highlight all text in blue foreground colors on a black background with a red foreground 
----   color on a blue background color until another color in the current line is being met. temporary color triggers 
----   do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. 
----   A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors 
+---
+--- @usage This script will re-highlight all text in blue foreground colors on a black background with a red foreground
+---   color on a blue background color until another color in the current line is being met. temporary color triggers
+---   do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting.
+---   A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors
 ---   in a particular context.
 ---   <pre>
 ---   tempColorTrigger(9,2,[[selectString(matches[1],1); fg("red"); bg("blue");]] );
@@ -1776,30 +1778,30 @@ function tempColorTrigger(foregroundColor, backgqroundColor, luaCode) end
 
 
 
---- <b><u>TODO</u></b> example with luaCode - 
---- Temporary trigger that will fire on n consecutive lines following the 
---- current line. This is useful to parse output that is known to arrive in 
+--- <b><u>TODO</u></b> example with luaCode -
+--- Temporary trigger that will fire on n consecutive lines following the
+--- current line. This is useful to parse output that is known to arrive in
 --- a certain line margin or to delete unwanted output from the MUD.
---- 
---- @return the string ID of the newly created temporary trigger. 
----   You can use this ID to enable/disable or kill this trigger later on. 
 ---
---- @usage Following will fire 3 times starting with the line from the MUD. 
+--- @return the string ID of the newly created temporary trigger.
+---   You can use this ID to enable/disable or kill this trigger later on.
+---
+--- @usage Following will fire 3 times starting with the line from the MUD.
 ---   <pre>
----   tempLineTrigger( 1, 3, [[send("shout Help")]]) 
+---   tempLineTrigger( 1, 3, [[send("shout Help")]])
 ---   </pre>
 --- @usage This will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 ---   <pre>
----   tempLineTrigger( 20, 2, [[send("shout Help")]]) 
+---   tempLineTrigger( 20, 2, [[send("shout Help")]])
 ---   </pre>
 function tempLineTrigger(from, howMany, luaCode) end
 
 
 
---- Temporary trigger using Perl regex pattern matching. 
+--- Temporary trigger using Perl regex pattern matching.
 ---
---- @return the string ID of the newly created temporary trigger. 
----   You can use this ID to enable/disable or kill 
+--- @return the string ID of the newly created temporary trigger.
+---   You can use this ID to enable/disable or kill
 ---   this trigger later on.
 ---
 --- @see killTrigger
@@ -1808,48 +1810,48 @@ function tempRegexTrigger(regex, luaCode) end
 
 
 
---- Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls. 
+--- Creates a temporary single shot timer and returns the timer ID for subsequent enableTimer(), disableTimer() and killTimer() calls.
 --- You can use 2.3 seconds or 0.45 etc. After it has fired, the timer will be deactivated and killed. <br/><br/>
---- 
---- Note [[ ]] can be used to quote strings in Lua. The difference to the usual `" " quote syntax is that `[[ ]] also accepts the 
----   character ". Consequently, you don't have to escape the " character in the above script. The other advantage is that it can be 
+---
+--- Note [[ ]] can be used to quote strings in Lua. The difference to the usual `" " quote syntax is that `[[ ]] also accepts the
+---   character ". Consequently, you don't have to escape the " character in the above script. The other advantage is that it can be
 ---   used as a multiline quote.
---- 
+---
 --- @usage This script will send the command "kill rat" 0.3 seconds after this function has been called. Note that this function
----   does not wait until 0.3 seconds have been passed, but it will start a timer that will run the Lua script that you have provided 
+---   does not wait until 0.3 seconds have been passed, but it will start a timer that will run the Lua script that you have provided
 ---   as a second argument after 0.3 seconds.
 ---   <pre>
 ---   tempTimer(0.3, [[send("kill rat")]] )
 ---   </pre>
----   
+---
 --- @usage Also note that the Lua code that you provide as an argument is compiled from a string value when the timer fires.
----   This means that if you want to pass any parameters by value e.g. you want to make a function call that uses the value 
----   of your variable myGold as a parameter you have to do things like this:  
+---   This means that if you want to pass any parameters by value e.g. you want to make a function call that uses the value
+---   of your variable myGold as a parameter you have to do things like this:
 ---   <pre>
 ---   tempTimer(3.8, [[echo("at the time of the tempTimer call I had ]] .. myGold .. [[ gold.")]] )
 ---   </pre>
----   
+---
 --- @return timer ID, ID is a string and not a number.
 function tempTimer(seconds, luaCode) end
 
 
 
---- This function creates a temporary trigger using substring matching. 
---- Contrary to tempTimers, tempTriggers lives throughout the entire session 
---- until it is explicitly disabled or killed. Disabled tempTimers can be 
---- re-enabled with enableTrigger(). This is much faster than killing the 
---- trigger and creating a new one. This is the second fastest trigger (with 
---- begin of line substring patterns being the fastest) and should be used 
---- instead of regex triggers whenever possible. 
---- 
---- @return trigger ID, ID is a string and not a number. 
---- 
+--- This function creates a temporary trigger using substring matching.
+--- Contrary to tempTimers, tempTriggers lives throughout the entire session
+--- until it is explicitly disabled or killed. Disabled tempTimers can be
+--- re-enabled with enableTrigger(). This is much faster than killing the
+--- trigger and creating a new one. This is the second fastest trigger (with
+--- begin of line substring patterns being the fastest) and should be used
+--- instead of regex triggers whenever possible.
+---
+--- @return trigger ID, ID is a string and not a number.
+---
 --- @usage You can put the following script into your targeting alias highlight your target. <br/>
 ---   (Note: trigger will stay active unless you'll kill it.)
 ---   <pre>
 ---   target = "rat"
 ---   if id then
----      killTrigger(id) 
+---      killTrigger(id)
 ---   end
 ---   id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold") resetFormat()]])
 ---   </pre>
@@ -1860,7 +1862,7 @@ function tempTrigger(string, luaCode) end
 
 
 
---- Wait for specified time in milliseconds. 
+--- Wait for specified time in milliseconds.
 --- <b>Use tempTimer instead! Don't use this function, because it freezes main thread.</b>
 ---
 --- @usage Preferred use of tempTimer - wait for 2 seconds and than send "kill rat".
@@ -1870,8 +1872,8 @@ function tempTrigger(string, luaCode) end
 --- @usage <b>Discouraged</b> use of wait function.
 ---   <pre>
 ---   -- This will freeze Mudlet for 2 seconds!!!
----   wait(2000)      
----   send("kill rat")	
+---   wait(2000)
+---   send("kill rat")
 ---   </pre>
 ---
 --- @see tempTimer
@@ -1884,7 +1886,7 @@ function wait(time) end
 --- deleteLine() and thus erase the entire current line in the buffer, but you want to do some further
 --- echo() calls after calling deleteLine(). You will then need to re-wrap the last line of the buffer
 --- to actually see what you have echoed and get you \n interpreted as newline characters properly. <br/><br/>
---- 
+---
 --- Using this function is not good programming practice and should be avoided. There are better ways of
 --- handling situations where you would call deleteLine() and echo afterwards e.g.:
 ---   <pre>

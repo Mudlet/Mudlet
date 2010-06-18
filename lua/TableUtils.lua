@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
---- Mudlet Table Utils                                                                 
+--- Mudlet Table Utils
 ----------------------------------------------------------------------------------
 
 
@@ -14,7 +14,7 @@ end
 
 
 
---- Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. 
+--- Lua debug function that prints the content of a Lua table on the screen, split up in keys and values.
 --- Useful if you want to see what the capture groups contain i. e. the Lua table "matches".
 ---
 --- @see display
@@ -67,11 +67,11 @@ end
 --- Gets the actual size of non-index based tables. <br/><br/>
 ---
 --- For index based tables you can get the size with the # operator:
---- This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with 
---- numerical indices. To get the size of tables that use user defined keys instead of automatic indices 
+--- This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with
+--- numerical indices. To get the size of tables that use user defined keys instead of automatic indices
 --- (pairs() type) you need to use the function table.size() referenced above.
 ---   <pre>
----   myTableSize = # myTable 
+---   myTableSize = # myTable
 ---   </pre>
 function table.size(t)
 	if not t then
@@ -111,35 +111,35 @@ end
 ---   reliably traversable with ipairs() due to the fact that it preserves keys. If there
 ---   is a gap in numerical indices, ipairs() will cease traversal.
 ---
---- @usage Example: 
+--- @usage Example:
 ---   <pre>
----   tableA = {   
----      [1] = 123,   
----      [2] = 456,   
----      ["test"] = "test",   
----   }   
----      
----   tableB = {   
----      [1] = 23,   
----      [3] = 7, 
----      ["test2"] = function() return true end,   
----   }   
----      
----   tableC = {   
+---   tableA = {
+---      [1] = 123,
+---      [2] = 456,
+---      ["test"] = "test",
+---   }
+---
+---   tableB = {
+---      [1] = 23,
+---      [3] = 7,
+---      ["test2"] = function() return true end,
+---   }
+---
+---   tableC = {
 ---      [5] = "c",
----   }   
----      
----   table.union(tableA, tableB, tableC) will return:   
----   {   
----      [1] = {   
----         123,   
----         23,   
----      },   
----      [2] = 456,   
----      [3] = 7,   
----      [5] = "c",   
----      ["test"] = "test",   
----      ["test2"] = function() return true end,   
+---   }
+---
+---   table.union(tableA, tableB, tableC) will return:
+---   {
+---      [1] = {
+---         123,
+---         23,
+---      },
+---      [2] = 456,
+---      [3] = 7,
+---      [5] = "c",
+---      ["test"] = "test",
+---      ["test2"] = function() return true end,
 ---   }
 ---   </pre>
 function table.union(...)
@@ -196,35 +196,35 @@ end
 ---   the fact that it preserves keys. If there is a gap in numerical indices, ipairs() will
 ---   cease traversal.
 ---
---- @usage Example: 
+--- @usage Example:
 ---   <pre>
----   tableA = {   
----      [1] = 123,   
----      [2] = 456,   
----      [4] = { 1, 2 },   
----      [5] = "c",   
----      ["test"] = "test",   
----   }   
----   
----   tableB = {   
----      [1] = 123,   
----      [2] = 4,   
----      [3] = 7,   
----      [4] = { 1, 2 },   
----      ["test"] = function() return true end,   
----   }   
----   
----   tableC = {   
----      [1] = 123,   
----      [4] = { 1, 2 },   
----      [5] = "c",   
----   }   
----   
----   table.intersection(tableA, tableB, tableC) will return:   
----   {   
----      [1] = 123,   
----      [4] = { 1, 2 },   
----   }   
+---   tableA = {
+---      [1] = 123,
+---      [2] = 456,
+---      [4] = { 1, 2 },
+---      [5] = "c",
+---      ["test"] = "test",
+---   }
+---
+---   tableB = {
+---      [1] = 123,
+---      [2] = 4,
+---      [3] = 7,
+---      [4] = { 1, 2 },
+---      ["test"] = function() return true end,
+---   }
+---
+---   tableC = {
+---      [1] = 123,
+---      [4] = { 1, 2 },
+---      [5] = "c",
+---   }
+---
+---   table.intersection(tableA, tableB, tableC) will return:
+---   {
+---      [1] = 123,
+---      [4] = { 1, 2 },
+---   }
 ---   </pre>
 function table.intersection(...)
 	sets = {...}
