@@ -13,7 +13,7 @@
 ---   string.cut("abcde", 3)
 ---   </pre>
 --- @usage You can easily pad string to certain length. 
----   Example bellow will print 'abcde     ' e.g. pat/cut string to 10 characters.
+---   Example bellow will print 'abcde     ' e.g. pad/cut string to 10 characters.
 ---   <pre>
 ---   local s = "abcde"
 ---   s = string.cut(s .. "          ", 10)   -- append 10 spaces

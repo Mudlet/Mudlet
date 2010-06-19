@@ -1875,6 +1875,23 @@ function tempTrigger(string, luaCode) end
 ---   wait(2000)
 ---   send("kill rat")
 ---   </pre>
+--- @usage This example is demonstrating transition from Nexus/Zmud wait.
+---   You can simply rewrote following nexus/zmud code bellow with <b>tempTimers</b>.
+---   <pre>
+---   #send jerk fish
+---   #wait 1500
+---   #send pull line
+---   #wait 500
+---   #send jump
+---   </pre>
+---   Since timers are created instantly, if you want two or more, or means the times 
+---   for consecutive timers should be to the starting point, unlike relatives times you do with waits.
+---   <pre>
+---   -- Mudlet code
+---   send ("jerk fish")
+---   tempTimer (1.5, [[send ("pull line")]])
+---   tempTimer (2,   [[send ("jump")]])
+---   </pre>
 ---
 --- @see tempTimer
 function wait(time) end
