@@ -4,13 +4,20 @@
 
 
 
---- Cut string to max length.
+--- Cut string to specified maximum length.
 ---
 --- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
 ---
 --- @usage Following call will return 'abc'.
 ---   <pre>
 ---   string.cut("abcde", 3)
+---   </pre>
+--- @usage You can easily pad string to certain length. 
+---   Example bellow will print 'abcde     ' e.g. pat/cut string to 10 characters.
+---   <pre>
+---   local s = "abcde"
+---   s = string.cut(s .. "          ", 10)   -- append 10 spaces
+---   echo("'" .. s .. "'")
 ---   </pre>
 function string.cut(s, maxLen)
 	if string.len(s) > maxLen then
@@ -173,7 +180,7 @@ end
 ---   </pre>
 function string.trim(s)
 	if s then
-		return string.gsub(s, "%-%-+(.*)$", "%1")
+		return string.gsub(s, "^%s*(.-)%s*$", "%1")
 	else
 		return s
 	end
