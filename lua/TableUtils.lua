@@ -54,8 +54,7 @@ end
 
 
 
---- <b><u>TODO</u></b> listAdd( list, what ) <br/>
---- Use table.insert(list, what) instead
+--- <b><u>TODO</u></b> listAdd( list, what )
 function listAdd( list, what )
 	table.insert( list, what );
 end
