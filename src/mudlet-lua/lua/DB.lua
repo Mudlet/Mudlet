@@ -633,6 +633,41 @@ end
 
 
 
+--- Execute SQL select query against database. This only useful for some very specific cases. <br/>
+--- Use db:fetch if possible instead - this function should not be normally used!
+---
+--- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
+---
+--- @usage Following will select all distinct area from my kills DB.
+---   <pre>
+---   db:fetch_sql(mydb.kills, "SELECT distinct area FROM kills")
+---   </pre>
+---
+--- @see db:fetch
+function db:fetch_sql(sheet, sql)
+   local db_name = sheet._db_name
+   local conn = db.__conn[db_name]
+
+   db:echo_sql(sql)
+   local cur = conn:execute(sql)
+
+   if cur ~= 0 then
+      local results = {}
+      local row = cur:fetch({}, "a")
+
+      while row do
+         results[#results+1] = db:_coerce_sheet(sheet, row)
+         row = cur:fetch({}, "a")
+      end
+      cur:close()
+      return results
+   else
+      return nil
+   end
+end
+
+
+
 --- Returns a table array containing a table for each matching row in the specified sheet. All arguments
 --- but sheet are optional. If query is nil, the entire contents of the sheet will be returned. <br/><br/>
 ---
@@ -666,11 +701,11 @@ end
 ---      }
 ---   )
 ---   </pre>
+---
+--- @see db:fetch_sql
 function db:fetch(sheet, query, order_by, descending)
-   local db_name = sheet._db_name
    local s_name = sheet._sht_name
 
-   local conn = db.__conn[db_name]
    local sql = "SELECT * FROM "..s_name
 
    if query then
@@ -695,22 +730,7 @@ function db:fetch(sheet, query, order_by, descending)
       end
    end
 
-   db:echo_sql(sql)
-   local cur = conn:execute(sql)
-
-   if cur ~= 0 then
-      local results = {}
-      local row = cur:fetch({}, "a")
-
-      while row do
-         results[#results+1] = db:_coerce_sheet(sheet, row)
-         row = cur:fetch({}, "a")
-      end
-      cur:close()
-      return results
-   else
-      return nil
-   end
+   return db:fetch_sql(sheet, sql)
 end
 
 
