@@ -107,6 +107,8 @@ SavedVariables = {}
 ---   send ("wield shield")
 ---   send ("say ha!")
 ---   </pre>
+---
+--- @see send
 function sendAll(...)
 	local args = {...}
 	local echo = true
