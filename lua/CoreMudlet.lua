@@ -1410,7 +1410,8 @@ function selectString(text, numberOfMatch) end
 
 --- This sends "command" directly to the network layer, skipping the alias matching. The optional
 --- second argument of type boolean (print) determines if the outgoing command is to be echoed on the screen.
---- If you want your command to be checked if it's an alias, use expandAlias() instead.
+--- Send honours command separator defined within Mudlet settings. If you want your command to be checked 
+--- if it's an alias, use expandAlias() instead.
 ---
 --- @usage Echos the command on the screen.
 ---   <pre>
@@ -1429,6 +1430,7 @@ function selectString(text, numberOfMatch) end
 ---   be echoed back on client.
 ---
 --- @see expandAlias
+--- @see sendAll
 function send(command, echoTheValue) end
 
 
