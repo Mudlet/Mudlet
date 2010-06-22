@@ -83,11 +83,11 @@ datetime = {
 
 
 
---- <b><u>TODO</u></b> datetime:_get_pattern(format)
---  The rex.match function does not return named patterns even if you use named capture
---  groups, but the r:tfind does -- but this only operates on compiled patterns. So,
---  we are caching the conversion of 'simple format' date patterns into a regex, and
---  then compiling them.
+-- NOT LUADOC
+-- The rex.match function does not return named patterns even if you use named capture
+-- groups, but the r:tfind does -- but this only operates on compiled patterns. So,
+-- we are caching the conversion of 'simple format' date patterns into a regex, and
+-- then compiling them.
 function datetime:_get_pattern(format)
    if not datetime._pattern_cache[format] then
       local fmt = rex.gsub(format, "(%[A-Za-z])",
@@ -195,8 +195,8 @@ db.debug_sql = false
 
 
 
---- <b><u>TODO</u></b> db:_sql_type(v)
---   Converts the type of a lua object to the equivalent type in SQL
+-- NOT LUADOC
+-- Converts the type of a lua object to the equivalent type in SQL
 function db:_sql_type(value)
    local t = type(value)
 
@@ -213,9 +213,9 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_sql_convert(v)
---   Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to
---   prevent inadvertant SQL injection.
+-- NOT LUADOC
+-- Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to
+-- prevent inadvertant SQL injection.
 function db:_sql_convert(value)
    local t = db:_sql_type(value)
 
@@ -238,11 +238,11 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_index_name(sheet_name, index_contents)
---   Given a sheet name and the details of an index, this function will return a unique index name to
---   add to the database. The purpose of this is to create unique index names as indexes are tested
---   for existance on each call of db:create and not only on creation. That way new indexes can be
---   added after initial creation.
+-- NOT LUADOC
+-- Given a sheet name and the details of an index, this function will return a unique index name to
+-- add to the database. The purpose of this is to create unique index names as indexes are tested
+-- for existance on each call of db:create and not only on creation. That way new indexes can be
+-- added after initial creation.
 function db:_index_name(tbl_name, params)
    local t = type(params)
 
@@ -259,10 +259,10 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_index_valid(sheet_columns, index_columns)
---   This function returns true if all of the columns referenced in index_columns also exist within
---   the sheet_columns table array. The purpose of this is to raise an error if someone tries to index
---   a column which doesn't currently exist in the schema.
+-- NOT LUADOC
+-- This function returns true if all of the columns referenced in index_columns also exist within
+-- the sheet_columns table array. The purpose of this is to raise an error if someone tries to index
+-- a column which doesn't currently exist in the schema.
 function db:_index_valid(sheet_columns, index_columns)
    if type(index_columns) == "string" then
       if sheet_columns[index_columns] ~= nil then
@@ -283,9 +283,9 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_sql_columns(column_spec)
---   The column_spec is either a string or an indexed table. This function returns either "column" or
---   "column1", "column2" for use in the column specification of INSERT.
+-- NOT LUADOC
+-- The column_spec is either a string or an indexed table. This function returns either "column" or
+-- "column1", "column2" for use in the column specification of INSERT.
 function db:_sql_columns(value)
    local colstr = ''
    local t = type(value)
@@ -306,9 +306,9 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_sql_fields(field_spec)
---   This serves as a very similar function to db:_sql_columns, quoting column names properly but for
---   uses outside of INSERTs.
+-- NOT LUADOC
+-- This serves as a very similar function to db:_sql_columns, quoting column names properly but for
+-- uses outside of INSERTs.
 function db:_sql_fields(values)
    local sql_fields = {}
 
@@ -321,11 +321,11 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_sql_values(value_spec)
---   This quotes values to be passed into an INSERT or UPDATE operation in a SQL list. Meaning, it turns
---   {x="this", y="that", z=1} into ('this', 'that', 1).
---   It is intelligent with data-types; strings are automatically quoted (with internal single quotes
---   escaped), nil turned into NULL, timestamps converted to integers, and such.
+-- NOT LUADOC
+-- This quotes values to be passed into an INSERT or UPDATE operation in a SQL list. Meaning, it turns
+-- {x="this", y="that", z=1} into ('this', 'that', 1).
+-- It is intelligent with data-types; strings are automatically quoted (with internal single quotes
+-- escaped), nil turned into NULL, timestamps converted to integers, and such.
 function db:_sql_values(values)
    local sql_values = {}
 
@@ -400,7 +400,7 @@ end
 ---         name = "",
 ---         area = "",
 ---         killed = db:Timestamp("CURRENT_TIMESTAMP"),
----         _index = { {"name", "area"} }
+---         _index = {{"name", "area"}}
 ---       },
 ---       enemies = {
 ---         name = "",
@@ -414,6 +414,7 @@ end
 ---     }
 ---   )
 ---   </pre>
+---   Note that you have to use double {{ }} if you have composite index/unique constrain.
 function db:create(db_name, sheets)
    if not db.__env then
       db.__env = luasql.sqlite3()
@@ -464,10 +465,11 @@ end
 
 
 
----   <b><u>TODO</u></b> The migrate function is meant to upgrade an existing database live, to maintain a consistant
---   and correct set of sheets and fields, along with their indexes. It should be safe to run
---   at any time, and must not cause any data loss. It simply adds to what is there: in perticular
---   it is not capable of removing indexes, columns, or sheets after they have been defined.
+-- NOT LUADOC
+-- The migrate function is meant to upgrade an existing database live, to maintain a consistant
+-- and correct set of sheets and fields, along with their indexes. It should be safe to run
+-- at any time, and must not cause any data loss. It simply adds to what is there: in perticular
+-- it is not capable of removing indexes, columns, or sheets after they have been defined.
 function db:_migrate(db_name, s_name)
    local conn = db.__conn[db_name]
    local schema = db.__schema[db_name][s_name]
@@ -557,8 +559,8 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_migrate_indexes(connection, sheet_name, schema, existing_columns)
---   Creates any indexes which do not yet exist in the given database.
+-- NOT LUADOC
+-- Creates any indexes which do not yet exist in the given database.
 function db:_migrate_indexes(conn, s_name, schema, current_columns)
    local sql_create_index = "CREATE %s IF NOT EXISTS %s ON %s (%s);"
    local opt = {_unique = "UNIQUE INDEX", _index = "INDEX"} -- , _check = "CHECK"}
@@ -631,6 +633,41 @@ end
 
 
 
+--- Execute SQL select query against database. This only useful for some very specific cases. <br/>
+--- Use db:fetch if possible instead - this function should not be normally used!
+---
+--- @release post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>)
+---
+--- @usage Following will select all distinct area from my kills DB.
+---   <pre>
+---   db:fetch_sql(mydb.kills, "SELECT distinct area FROM kills")
+---   </pre>
+---
+--- @see db:fetch
+function db:fetch_sql(sheet, sql)
+   local db_name = sheet._db_name
+   local conn = db.__conn[db_name]
+
+   db:echo_sql(sql)
+   local cur = conn:execute(sql)
+
+   if cur ~= 0 then
+      local results = {}
+      local row = cur:fetch({}, "a")
+
+      while row do
+         results[#results+1] = db:_coerce_sheet(sheet, row)
+         row = cur:fetch({}, "a")
+      end
+      cur:close()
+      return results
+   else
+      return nil
+   end
+end
+
+
+
 --- Returns a table array containing a table for each matching row in the specified sheet. All arguments
 --- but sheet are optional. If query is nil, the entire contents of the sheet will be returned. <br/><br/>
 ---
@@ -664,11 +701,11 @@ end
 ---      }
 ---   )
 ---   </pre>
+---
+--- @see db:fetch_sql
 function db:fetch(sheet, query, order_by, descending)
-   local db_name = sheet._db_name
    local s_name = sheet._sht_name
 
-   local conn = db.__conn[db_name]
    local sql = "SELECT * FROM "..s_name
 
    if query then
@@ -693,22 +730,7 @@ function db:fetch(sheet, query, order_by, descending)
       end
    end
 
-   db:echo_sql(sql)
-   local cur = conn:execute(sql)
-
-   if cur ~= 0 then
-      local results = {}
-      local row = cur:fetch({}, "a")
-
-      while row do
-         results[#results+1] = db:_coerce_sheet(sheet, row)
-         row = cur:fetch({}, "a")
-      end
-      cur:close()
-      return results
-   else
-      return nil
-   end
+   return db:fetch_sql(sheet, sql)
 end
 
 
@@ -1048,9 +1070,13 @@ end
 
 
 
---- <b><u>TODO</u></b> db:echo_eql(sql)
---   This is a debugging function, which echos any SQL commands if db.debug_sql is
---   true
+--- This is a debugging function, which echos any SQL commands if db.debug_sql is true.
+--- You should not call this function directly from Mudlet.
+---
+--- @usage Set following lua variable to enable SQL echos.
+---   <pre>
+---   db.debug_sql=true
+---   </pre>
 function db:echo_sql(sql)
    if db.debug_sql then
       echo("\n"..sql.."\n")
@@ -1059,10 +1085,10 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_coerce_sheet(sheet, tbl)
---   After a table so retrieved from the database, this function coerces values to
---   their proper types. Specifically, numbers and datetimes become the proper
---   types.
+-- NOT LUADOC
+-- After a table so retrieved from the database, this function coerces values to
+-- their proper types. Specifically, numbers and datetimes become the proper
+-- types.
 function db:_coerce_sheet(sheet, tbl)
    if tbl then
       tbl._row_id = tonumber(tbl._row_id)
@@ -1083,10 +1109,10 @@ end
 
 
 
---- <b><u>TODO</u></b> db:_coerce(field, value)
---   The function converts a Lua value into its SQL representation, depending on the
---   type of the specified field. Strings will be single-quoted (and single-quotes
---   within will be properly escaped), numbers will be rendered properly, and such.
+-- NOT LUADOC
+-- The function converts a Lua value into its SQL representation, depending on the
+-- type of the specified field. Strings will be single-quoted (and single-quotes
+-- within will be properly escaped), numbers will be rendered properly, and such.
 function db:_coerce(field, value)
    if field.type == "number" then
       return tonumber(value) or "'"..value.."'"
@@ -1379,7 +1405,6 @@ db.__TimestampMT = {
 
 
 
---- <b><u>TODO</u></b>
 function db.__Timestamp:as_string(format)
    if not format then
       format = "%m-%d-%Y %H:%M:%S"
@@ -1390,14 +1415,12 @@ end
 
 
 
---- <b><u>TODO</u></b>
 function db.__Timestamp:as_table()
    return os.date("*t", self._timestamp)
 end
 
 
 
---- <b><u>TODO</u></b>
 function db.__Timestamp:as_number()
    return self._timestamp
 end
@@ -1500,14 +1523,12 @@ db.__DatabaseMT = {
 
 
 
---- <b><u>TODO</u></b>
 function db.Database:_begin()
    db.__autocommit[self._db_name] = false
 end
 
 
 
---- <b><u>TODO</u></b>
 function db.Database:_commit()
    local conn = db.__conn[self._db_name]
    conn:commit()
@@ -1515,7 +1536,6 @@ end
 
 
 
---- <b><u>TODO</u></b>
 function db.Database:_rollback()
    local conn = db.__conn[self._db_name]
    conn:rollback()
@@ -1523,14 +1543,12 @@ end
 
 
 
---- <b><u>TODO</u></b>
 function db.Database:_end()
    db.__autocommit[self._db_name] = true
 end
 
 
 
---- <b><u>TODO</u></b>
 function db.Database._drop(s_name)
    local conn = db.__conn[self._db_name]
    local schema = db.__schema[self._db_name]

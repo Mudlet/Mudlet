@@ -15,6 +15,7 @@ gaugesTable = {}
 --- The <i>color_table table</i> holds definition of color names. These are intended to be
 --- used in conjunction with fg() and bg() colorizer functions.
 ---
+--- @see showColors
 --- @see bg
 --- @see fg
 ---
@@ -343,7 +344,7 @@ end
 --- Converts an RGB value into an HTML compliant(label usable) HEX number.
 --- This function is colorNames aware and can take any defined global color as its first argument.
 ---
---- @usage Both folowing commnads will returns "FFFFFF".
+--- @usage Both following commands will returns "FFFFFF".
 ---   <pre>
 ---   RGB2Hex(255,255,255)
 ---   RGB2Hex("white")
@@ -438,11 +439,15 @@ end
 --- Typical usage would be in a prompt with your current health or whatever value, and throw
 --- in some variables instead of the numbers.
 ---
---- @usage setGauge("healthBar", 200, 400)  <br/>
----   In that example, we'd change the looks of the gauge named healthBar and make it fill
+--- @usage In that example, we'd change the looks of the gauge named healthBar and make it fill
 ---   to half of its capacity. The height is always remembered.
---- @usage setGauge("healthBar", 200, 400, "some text")  <br/>
----   change the text on your gauge
+---   <pre>
+---   setGauge("healthBar", 200, 400)
+---   </pre>
+--- @usage Change the text on your gauge.
+---   <pre>
+---   setGauge("healthBar", 200, 400, "some text")
+---   </pre>
 function setGauge(gaugeName, currentValue, maxValue, gaugeText)
 	assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
 	assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
@@ -463,9 +468,11 @@ end
 --- If you wish to change the color you can easily do this when updating your text or manually somewhere, using
 --- setFgColor() and setBackgroundColor().
 ---
---- @usage createConsole("myConsoleWindow", 8, 80, 20, 200, 400)  <br/>
----   This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width,
----   hold a maximum of 20 lines and be place at 200x400 of your mudlet window.
+--- @usage This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width,
+---   hold a maximum of 20 lines and be place at 200x400 of your Mudlet window.
+---   <pre>
+---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
+---   </pre>
 function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
 	createMiniConsole(consoleName,0,0,1,1)
 	setMiniConsoleFontSize(consoleName, fontSize)
@@ -836,6 +843,7 @@ if rex then
 --- |r can be used within the string to reset the colors to default.
 ---
 --- @see xEcho
+--- @see hinsertText
 	function hecho(...) xEcho("Hex", false, ...) end
 
 
@@ -851,6 +859,7 @@ if rex then
 ---   </pre>
 ---
 --- @see xEcho
+--- @see dinsertText
 	function decho(...) xEcho("Decimal", false, ...) end
 
 
@@ -863,6 +872,7 @@ if rex then
 ---   </pre>
 ---
 --- @see xEcho
+--- @see cinsertText
 	function cecho(...) xEcho("Color", false, ...) end
 
 
@@ -894,7 +904,7 @@ if rex then
 else
 
 
-	-- This is not LuaDoc.
+	-- NOT LUADOC
 	-- See xEcho/another cecho for description.
 	function cecho(window, text)
        local win = text and window
@@ -930,8 +940,8 @@ else
     end
 
 
-	-- This is not LuaDoc.
-	-- See xEcho/antoher decho for description.
+	-- NOT LUADOC
+	-- See xEcho/another decho for description.
 	function decho(window, text)
 		local win = text and window
 		local s = text or window
