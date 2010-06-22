@@ -1,0 +1,4170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li><strong>CoreMudlet.lua</strong></li>
+	
+	<li>
+		<a href="../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/LuaGlobalLoader.html">LuaGlobalLoader.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/__NilAllExistingFunctions.html">__NilAllExistingFunctions.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>CoreMudlet.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#appendBuffer">appendBuffer</a>&nbsp;(name)</td>
+	<td class="summary">Pastes the previously copied rich text (including text formats like color etc.) into user window name.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#calcFontSize">calcFontSize</a>&nbsp;(fontSize)</td>
+	<td class="summary">This returns you the height and the length of letters for the given font size.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#clearUserWindow">clearUserWindow</a>&nbsp;(windowName)</td>
+	<td class="summary">Clears the user window or a mini console with the name given as argument.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#clearWindow">clearWindow</a>&nbsp;(windowName)</td>
+	<td class="summary">TODO  clearWindow - TLuaInterpreter::clearUserWindow </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#closeUserWindow">closeUserWindow</a>&nbsp;()</td>
+	<td class="summary">TODO  closeUserWindow - TLuaInterpreter::closeUserWindow </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#copy">copy</a>&nbsp;()</td>
+	<td class="summary">Copies the current selection to the clipboard.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#createBuffer">createBuffer</a>&nbsp;(name)</td>
+	<td class="summary">Creates a named buffer for formatted text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#createButton">createButton</a>&nbsp;()</td>
+	<td class="summary">TODO  createButton - TLuaInterpreter::createButton </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#createLabel">createLabel</a>&nbsp;()</td>
+	<td class="summary">TODO  createLabel - TLuaInterpreter::createLabel </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#createMiniConsole">createMiniConsole</a>&nbsp;(name, posX, posY, width, height)</td>
+	<td class="summary">Opens a console window inside the main window of Mudlet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#createStopWatch">createStopWatch</a>&nbsp;()</td>
+	<td class="summary">This function creates a stop watch.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#cut">cut</a>&nbsp;()</td>
+	<td class="summary">TODO  cut - TLuaInterpreter::cut </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#deleteLine">deleteLine</a>&nbsp;()</td>
+	<td class="summary">Deletes the current Line under the user cursor.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#deselect">deselect</a>&nbsp;(windowName)</td>
+	<td class="summary">Clears the current selection in the main window or miniConsole.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#disableAlias">disableAlias</a>&nbsp;()</td>
+	<td class="summary">TODO  disableAlias - TLuaInterpreter::disableAlias </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#disableKey">disableKey</a>&nbsp;()</td>
+	<td class="summary">TODO  disableKey - TLuaInterpreter::disableKey </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#disableTimer">disableTimer</a>&nbsp;()</td>
+	<td class="summary">TODO  disableTimer - TLuaInterpreter::disableTimer </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#disableTrigger">disableTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  disableTrigger - TLuaInterpreter::disableTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#disconnect">disconnect</a>&nbsp;()</td>
+	<td class="summary">Disconnect from current session.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#echo">echo</a>&nbsp;(windowName, text)</td>
+	<td class="summary">This function appends text at the end of the current line.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#echoLink">echoLink</a>&nbsp;(windowName, text, command, hint, useCurrentFormat)</td>
+	<td class="summary">Echos a piece of text as a clickable link.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#echoPopup">echoPopup</a>&nbsp;()</td>
+	<td class="summary">Same as setPopup()  except it doesn’t require a selection.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#echoUserWindow">echoUserWindow</a>&nbsp;()</td>
+	<td class="summary">TODO  echoUserWindow - TLuaInterpreter::echoUserWindow </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#enableAlias">enableAlias</a>&nbsp;()</td>
+	<td class="summary">TODO  enableAlias - TLuaInterpreter::enableAlias </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#enableKey">enableKey</a>&nbsp;()</td>
+	<td class="summary">TODO  enableKey - TLuaInterpreter::enableKey </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#enableTimer">enableTimer</a>&nbsp;()</td>
+	<td class="summary">TODO  enableTimer - TLuaInterpreter::enableTimer </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#enableTrigger">enableTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  enableTrigger - TLuaInterpreter::enableTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#exists">exists</a>&nbsp;(name, type)</td>
+	<td class="summary">Tells you how many things of the given type exist.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#exists">exists</a>&nbsp;(name, type)</td>
+	<td class="summary">Tells you how many things of the given type exist.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#expandAlias">expandAlias</a>&nbsp;(command, print=1)</td>
+	<td class="summary">Like send(), but without bypassing alias expansion.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#feedTriggers">feedTriggers</a>&nbsp;(text)</td>
+	<td class="summary">This function will have Mudlet parse the given text as if it came from the MUD - one great application is trigger testing.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getBgColor">getBgColor</a>&nbsp;(windowName)</td>
+	<td class="summary">Get the rgb values of the first character of the current selection </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getButtonState">getButtonState</a>&nbsp;()</td>
+	<td class="summary">TODO  getButtonState - TLuaInterpreter::getButtonState </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getColumnNumber">getColumnNumber</a>&nbsp;()</td>
+	<td class="summary">Gets the absolute column number of the current user cursor.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getCurrentLine">getCurrentLine</a>&nbsp;()</td>
+	<td class="summary">TODO  getCurrentLine - TLuaInterpreter::getCurrentLine </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getFgColor">getFgColor</a>&nbsp;(windowName)</td>
+	<td class="summary">This function returns the rgb values of the color of the first character of the current selection on mini console (window) windowName.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getLastLineNumber">getLastLineNumber</a>&nbsp;()</td>
+	<td class="summary">Returns number of the last line in the text buffer.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getLineCount">getLineCount</a>&nbsp;()</td>
+	<td class="summary">Gets the absolute amount of lines in the current console buffer.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getLineNumber">getLineNumber</a>&nbsp;()</td>
+	<td class="summary">Gets the absolute line number of the current user cursor.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getLines">getLines</a>&nbsp;(from_line_number, to_line_number)</td>
+	<td class="summary">Returns a Lua table with the content of the lines on a per line basis.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getMainWindowSize">getMainWindowSize</a>&nbsp;()</td>
+	<td class="summary">TODO  getMainWindowSize - TLuaInterpreter::getMainWindowSize </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getMudletHomeDir">getMudletHomeDir</a>&nbsp;()</td>
+	<td class="summary">Returns the current home directory of the current profile.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getNetworkLatency">getNetworkLatency</a>&nbsp;()</td>
+	<td class="summary">Returns the last measured response time between the sent command and the server reply.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getStopWatchTime">getStopWatchTime</a>&nbsp;(watchID)</td>
+	<td class="summary">Returns the time without stoping stop watch (milliseconds based) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped).</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getTime">getTime</a>&nbsp;(returntype, format)</td>
+	<td class="summary">Return time information.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getTimestamp">getTimestamp</a>&nbsp;(console_name, lineNumber)</td>
+	<td class="summary">Returns the timestamp string as it's seen when you enable the timestamps view (blue i button bottom right).</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#hasFocus">hasFocus</a>&nbsp;()</td>
+	<td class="summary">TODO  hasFocus - TLuaInterpreter::hasFocus </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#hideToolBar">hideToolBar</a>&nbsp;()</td>
+	<td class="summary">TODO  hideToolBar - TLuaInterpreter::hideToolBar </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#hideWindow">hideWindow</a>&nbsp;(name)</td>
+	<td class="summary">This function hides a mini console label.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#insertHTML">insertHTML</a>&nbsp;()</td>
+	<td class="summary">TODO  insertHTML - TLuaInterpreter::insertHTML </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#insertLink">insertLink</a>&nbsp;(windowName, text, command, hint, useCurrentFormat)</td>
+	<td class="summary">Same as echoLink() but inserts the text at the current cursor position, while echoLink inserts at the end of the current line.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#insertPopup">insertPopup</a>&nbsp;(windowName, text, commands, hints, useCurrentFormat)</td>
+	<td class="summary">Same as echoPopup(), but inserts text at the current cursor position.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#insertText">insertText</a>&nbsp;()</td>
+	<td class="summary">TODO  insertText - TLuaInterpreter::insertText </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#invokeFileDialog">invokeFileDialog</a>&nbsp;(selection, dialogTitle)</td>
+	<td class="summary">Opens a file chooser dialog, allowing the user to select a file or a folder visually.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#isActive">isActive</a>&nbsp;(name, type)</td>
+	<td class="summary">You can use this function to check if something, or somethings, are active.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#isAnsiBgColor">isAnsiBgColor</a>&nbsp;(ansiBgColorCode)</td>
+	<td class="summary">This function tests if the first character of the current selection has the background color specified by ansiBgColorCode.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#isAnsiFgColor">isAnsiFgColor</a>&nbsp;()</td>
+	<td class="summary">TODO  isAnsiFgColor - TLuaInterpreter::isAnsiFgColor </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#isPrompt">isPrompt</a>&nbsp;()</td>
+	<td class="summary">Returns true or false depending on if the current line being processed is a prompt.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#killAlias">killAlias</a>&nbsp;(name)</td>
+	<td class="summary">Deletes an alias with the given name.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#killTimer">killTimer</a>&nbsp;(id)</td>
+	<td class="summary">Deletes a tempTimer.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#killTrigger">killTrigger</a>&nbsp;(id)</td>
+	<td class="summary">Deletes a tempTrigger according to trigger ID.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#loadRawFile">loadRawFile</a>&nbsp;()</td>
+	<td class="summary">TODO  loadRawFile - TLuaInterpreter::loadRawFile </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#moveCursor">moveCursor</a>&nbsp;()</td>
+	<td class="summary">TODO  moveCursor - TLuaInterpreter::moveCursor </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#moveCursorEnd">moveCursorEnd</a>&nbsp;(windowName)</td>
+	<td class="summary">Moves the cursor to the end of the buffer.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#moveWindow">moveWindow</a>&nbsp;(name, x, y)</td>
+	<td class="summary">This function moves window name to the given x/y coordinate.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#openUserWindow">openUserWindow</a>&nbsp;()</td>
+	<td class="summary">Opens a user dockable console window for user output e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#paste">paste</a>&nbsp;(windowName)</td>
+	<td class="summary">Pastes the previously copied text including all format codes like color, font etc.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#pasteWindow">pasteWindow</a>&nbsp;()</td>
+	<td class="summary">TODO  pasteWindow - TLuaInterpreter::pasteWindow </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#permAlias">permAlias</a>&nbsp;()</td>
+	<td class="summary">TODO  permAlias - TLuaInterpreter::permAlias </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#permBeginOfLineStringTrigger">permBeginOfLineStringTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  permBeginOfLineStringTrigger - TLuaInterpreter::permBeginOfLineStringTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#permRegexTrigger">permRegexTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  permRegexTrigger - TLuaInterpreter::permRegexTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#permSubstringTrigger">permSubstringTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  permSubstringTrigger - TLuaInterpreter::permSubstringTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#permTimer">permTimer</a>&nbsp;()</td>
+	<td class="summary">TODO  permTimer - TLuaInterpreter::permTimer </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#playSoundFile">playSoundFile</a>&nbsp;(fileName)</td>
+	<td class="summary">This function plays a sound file.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#raiseEvent">raiseEvent</a>&nbsp;(eventName, ...)</td>
+	<td class="summary">Raises the event event_name.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#reconnect">reconnect</a>&nbsp;()</td>
+	<td class="summary">Reconnect to currect session.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#replace">replace</a>&nbsp;()</td>
+	<td class="summary">TODO  replace - TLuaInterpreter::replace </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#resetFormat">resetFormat</a>&nbsp;()</td>
+	<td class="summary">Resets the character format to default.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#resetStopWatch">resetStopWatch</a>&nbsp;(watchID)</td>
+	<td class="summary">This function resets the time to 0:0:0.0, but does not start the stop watch.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#resizeWindow">resizeWindow</a>&nbsp;(name, width, height)</td>
+	<td class="summary">Resizes a mini console or label.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#selectCaptureGroup">selectCaptureGroup</a>&nbsp;(groupNumber)</td>
+	<td class="summary">Selects the content of the capture group number in your Perl regular expression e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#selectCurrentLine">selectCurrentLine</a>&nbsp;()</td>
+	<td class="summary">TODO  selectCurrentLine - TLuaInterpreter::selectCurrentLine </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#selectSection">selectSection</a>&nbsp;(windowName, from, lengthOfString)</td>
+	<td class="summary">Select text on the line under the current cursor position.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#selectString">selectString</a>&nbsp;(text, numberOfMatch)</td>
+	<td class="summary">Selects a substring from the line where the user cursor is currently positioned.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#send">send</a>&nbsp;(command, echoTheValue)</td>
+	<td class="summary">This sends "command" directly to the network layer, skipping the alias matching.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#sendATCP">sendATCP</a>&nbsp;()</td>
+	<td class="summary">TODO  sendATCP - TLuaInterpreter::sendATCP </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#sendTelnetChannel102">sendTelnetChannel102</a>&nbsp;()</td>
+	<td class="summary">Send telnet channel 102 commands to MUD.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBackgroundColor">setBackgroundColor</a>&nbsp;()</td>
+	<td class="summary">TODO  setBackgroundColor - TLuaInterpreter::setBackgroundColor </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBackgroundImage">setBackgroundImage</a>&nbsp;()</td>
+	<td class="summary">TODO  setBackgroundImage - TLuaInterpreter::setBackgroundImage </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBgColor">setBgColor</a>&nbsp;()</td>
+	<td class="summary">TODO  setBgColor - TLuaInterpreter::setBgColor </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBold">setBold</a>&nbsp;()</td>
+	<td class="summary">TODO  setBold - TLuaInterpreter::setBold </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBorderBottom">setBorderBottom</a>&nbsp;(size)</td>
+	<td class="summary">Sets the height of the bottom border to size pixel and thus effectively moves down the main console window by size pixels to make room for e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBorderColor">setBorderColor</a>&nbsp;(red, green, blue)</td>
+	<td class="summary">Sets the color of the border in RGB color.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBorderLeft">setBorderLeft</a>&nbsp;(size)</td>
+	<td class="summary">Sets the width of the left border and thus effectively moves down the main console window by size pixels to make room for e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBorderRight">setBorderRight</a>&nbsp;(size)</td>
+	<td class="summary">Sets the width of the right border and thus effectively moves down the main console window by size pixels to make room for e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setBorderTop">setBorderTop</a>&nbsp;(size)</td>
+	<td class="summary">Sets the height of the top border to size pixel and thus effectively moves down the main console window by size pixels to make room for e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setConsoleBufferSize">setConsoleBufferSize</a>&nbsp;(consoleName, linesLimit, sizeOfBatchDeletion)</td>
+	<td class="summary">Set the scrollback buffer size to linesLimit and determine how many lines are deleted at once in case the lines limit is reached.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setFgColor">setFgColor</a>&nbsp;()</td>
+	<td class="summary">TODO  setFgColor - TLuaInterpreter::setFgColor </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setItalics">setItalics</a>&nbsp;()</td>
+	<td class="summary">TODO  setItalics - TLuaInterpreter::setItalics </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setLabelClickCallback">setLabelClickCallback</a>&nbsp;()</td>
+	<td class="summary">TODO  setLabelClickCallback - TLuaInterpreter::setLabelClickCallback </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setLabelStyleSheet">setLabelStyleSheet</a>&nbsp;()</td>
+	<td class="summary">TODO  setLabelStyleSheet - TLuaInterpreter::setLabelStyleSheet </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setLink">setLink</a>&nbsp;(command, tooltip)</td>
+	<td class="summary">Turns the selected text into a clickable link - upon being clicked, the link will do the command code.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setMiniConsoleFontSize">setMiniConsoleFontSize</a>&nbsp;()</td>
+	<td class="summary">TODO  setMiniConsoleFontSize - TLuaInterpreter::setMiniConsoleFontSize </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setPopup">setPopup</a>&nbsp;(name, commands, hints)</td>
+	<td class="summary">Turns the selected text into a left-clickable link, and a right-click menu.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setTextFormat">setTextFormat</a>&nbsp;()</td>
+	<td class="summary">TODO  setTextFormat - TLuaInterpreter::setTextFormat </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setTriggerStayOpen">setTriggerStayOpen</a>&nbsp;()</td>
+	<td class="summary">TODO  setTriggerStayOpen - TLuaInterpreter::setTriggerStayOpen </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setUnderline">setUnderline</a>&nbsp;()</td>
+	<td class="summary">TODO  setUnderline - TLuaInterpreter::setUnderline </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setWindowWrap">setWindowWrap</a>&nbsp;(windowName, wrapAt)</td>
+	<td class="summary">Sets at what position in the line the console or miniconsole will start word wrap.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setWindowWrapIndent">setWindowWrapIndent</a>&nbsp;()</td>
+	<td class="summary">TODO  setWindowWrapIndent - TLuaInterpreter::setWindowWrapIndent </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#showToolBar">showToolBar</a>&nbsp;()</td>
+	<td class="summary">TODO  showToolBar - TLuaInterpreter::showToolBar </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#showWindow">showWindow</a>&nbsp;(name)</td>
+	<td class="summary">This function shows a mini console or label.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#spawn">spawn</a>&nbsp;()</td>
+	<td class="summary">TODO  spawn - TLuaInterpreter::spawn </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#startLogging">startLogging</a>&nbsp;()</td>
+	<td class="summary">TODO  startLogging - TLuaInterpreter::startLogging </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#startStopWatch">startStopWatch</a>&nbsp;(watchID)</td>
+	<td class="summary">Starts the stop watch.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#stopStopWatch">stopStopWatch</a>&nbsp;()</td>
+	<td class="summary">Stops the stop watch and returns the elapsed time in milliseconds in form of 0.001.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#tempAlias">tempAlias</a>&nbsp;()</td>
+	<td class="summary">TODO  tempAlias - TLuaInterpreter::tempAlias </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#tempColorTrigger">tempColorTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  tempColorTrigger - TLuaInterpreter::tempColorTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#tempLineTrigger">tempLineTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  tempLineTrigger - TLuaInterpreter::tempLineTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#tempRegexTrigger">tempRegexTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  tempRegexTrigger - TLuaInterpreter::tempRegexTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#tempTimer">tempTimer</a>&nbsp;()</td>
+	<td class="summary">TODO  tempTimer - TLuaInterpreter::tempTimer </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#tempTrigger">tempTrigger</a>&nbsp;()</td>
+	<td class="summary">TODO  tempTrigger - TLuaInterpreter::tempTrigger </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#wait">wait</a>&nbsp;(time)</td>
+	<td class="summary">Wait for specified time in milliseconds.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#wrapLine">wrapLine</a>&nbsp;()</td>
+	<td class="summary">Wrap line lineNumber of mini console (window) windowName.</td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="appendBuffer"></a><strong>appendBuffer</strong>&nbsp;(name)</dt>
+<dd>
+Pastes the previously copied rich text (including text formats like color etc.) into user window name. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+selectString(line, 1)  <br/> copy() appendBuffer("chat") 
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#selectString">
+		selectString
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#copy">
+		copy
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#echo">
+		echo
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="calcFontSize"></a><strong>calcFontSize</strong>&nbsp;(fontSize)</dt>
+<dd>
+This returns you the height and the length of letters for the given font size. As the primary intended usage is for calculating the needed dimensions of a miniConsole, it doesn't accept a font argument - as the miniConsoles currently only work with the default font for the sake of portability. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  fontSize: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>x,y = calcFontSize(font_size)
+	
+	<li>Create a miniConsole that is 45 letters in length and 25 letters in height for font size 7 <br/> font_size = 7 <br/> local x, y = calcFontSize( font_size ) <br/> createMiniConsole("map",0,0,0,0) <br/> setMiniConsoleFontSize("map", font_size) <br/> resizeWindow( "map", x*45, y*25 ) <br/>
+	
+</ul>
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="clearUserWindow"></a><strong>clearUserWindow</strong>&nbsp;(windowName)</dt>
+<dd>
+Clears the user window or a mini console with the name given as argument.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="clearWindow"></a><strong>clearWindow</strong>&nbsp;(windowName)</dt>
+<dd>
+TODO  clearWindow - TLuaInterpreter::clearUserWindow
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="closeUserWindow"></a><strong>closeUserWindow</strong>&nbsp;()</dt>
+<dd>
+TODO  closeUserWindow - TLuaInterpreter::closeUserWindow
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="copy"></a><strong>copy</strong>&nbsp;()</dt>
+<dd>
+Copies the current selection to the clipboard. This function operates on rich text, i.e. the selected text including all its format codes like colors, fonts etc. in the clipboard until it gets overwritten by another copy operation. example: This script copies the current line on the main screen to a user window (mini console) named chat and gags the output on the main screen. 
+
+
+
+
+
+<h3>Usage:</h3>
+selectString(line); <br/> copy(); <br/> appendBuffer("chat"); <br/> replace("This line has been moved to the chat window!") 
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#paste">
+		paste
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#appendBuffer">
+		appendBuffer
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="createBuffer"></a><strong>createBuffer</strong>&nbsp;(name)</dt>
+<dd>
+Creates a named buffer for formatted text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="createButton"></a><strong>createButton</strong>&nbsp;()</dt>
+<dd>
+TODO  createButton - TLuaInterpreter::createButton
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="createLabel"></a><strong>createLabel</strong>&nbsp;()</dt>
+<dd>
+TODO  createLabel - TLuaInterpreter::createLabel
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="createMiniConsole"></a><strong>createMiniConsole</strong>&nbsp;(name, posX, posY, width, height)</dt>
+<dd>
+Opens a console window inside the main window of Mudlet. MiniConsole is openes at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy & paste functions for colored text copies from the main window or normal echoUserWindow(name, text) for normal printing. To set word wrap see setWindowWrap. To move the main window to make room for miniconsole windows on your screen (if you want to do this as you can also layer mini console and label windows) see setBorderTop, setBorderColor To have your screen layout adjusted after the window size of the main screen gets resized see handleWindowResizeEvent 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  posX: 
+	</li>
+	
+	<li>
+	  posY: 
+	</li>
+	
+	<li>
+	  width: 
+	</li>
+	
+	<li>
+	  height: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+Set up the small system message window in the top right corner <br/> -- determine the size of your screen <br/> WindowWidth = 0; <br/> WindowHeight = 0; <br/> WindowWidth, WindowHeight = getMainWindowSize(); <br/> <br/> createMiniConsole("sys",WindowWidth-650,0,650,300) <br/> setBackgroundColor("sys",85,55,0,255) <br/> setMiniConsoleFontSize("sys", 8) <br/> -- wrap lines in window "sys" at 65 characters per line <br/> setWindowWrap("sys", 40) <br/> -- set default font colors and font style for window "sys" <br/> setTextFormat("sys",0,35,255,50,50,50,0,0,0) <br/> <br/> echo("sys","Hello world!") 
+
+
+
+<h3>Return value:</h3>
+true or false
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createLabel">
+		createLabel
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#hideWindow">
+		hideWindow
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#showWindow">
+		showWindow
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#resizeWindow">
+		resizeWindow
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setTextFormat">
+		setTextFormat
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#moveWindow">
+		moveWindow
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setMiniConsoleFontSize">
+		setMiniConsoleFontSize
+	</a>
+	
+	<li><a href="">
+		handleWindowResizeEvent
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderTop">
+		setBorderTop
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderColor">
+		setBorderColor
+	</a>
+	
+	<li><a href="">
+		setWindowWrap 
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="createStopWatch"></a><strong>createStopWatch</strong>&nbsp;()</dt>
+<dd>
+This function creates a stop watch. It is high resolution time measurement tool. Stop watches can be started, stopped, reset and asked how much time has passed since the stop watch has been started. Returns the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines ? startStopWatch, stopStopWatch, resetStopWatch, getStopWatchTime example: In a global script you create all stop watches that you need in your system and store the respective stopWatch-IDs in global variables: 
+
+
+
+
+
+<h3>Usage:</h3>
+fightStopWatchID = createStopWatch(); <br/> -- you store the watchID in a global variable to access it from anywhere <br/> startStopWatch(fightStopWatch); <br/> -- To stop the watch and measure its time in e.g. a trigger script you can write: <br/> fightTime = stopStopWatch(fightStopWatchID) <br/> echo("The fight lasted for " .. fightTime .. " seconds.") <br/> resetStopWatch(fightStopWatchID); 
+
+
+
+<h3>Return value:</h3>
+stop watch ID 
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#startStopWatch">
+		startStopWatch
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#resetStopWatch">
+		resetStopWatch
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#getStopWatchTime">
+		getStopWatchTime
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="cut"></a><strong>cut</strong>&nbsp;()</dt>
+<dd>
+TODO  cut - TLuaInterpreter::cut
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="deleteLine"></a><strong>deleteLine</strong>&nbsp;()</dt>
+<dd>
+Deletes the current Line under the user cursor. Note: This is a high speed gagging tool and it is very good at this task. It is meant to be used when the line can be omitted entirely in the output. If you want to replace this line with something else have a look at the replace() functions below. <br/> Note that scripts such as: deleteLine(); echo("this line is gone"); will not work because lines that have been gagged with deleteLine() will not be rendered even if there is text in the buffer. See wrapLine for details on how to force a re-render if this is necessary for some reason. This is not the recommended way of replacing text. 
+
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#wrapLine">
+		wrapLine
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#replace">
+		replace
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="deselect"></a><strong>deselect</strong>&nbsp;(windowName)</dt>
+<dd>
+Clears the current selection in the main window or miniConsole.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>deselect()
+	
+	<li>deselect("myMiniConsole")
+	
+</ul>
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="disableAlias"></a><strong>disableAlias</strong>&nbsp;()</dt>
+<dd>
+TODO  disableAlias - TLuaInterpreter::disableAlias
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="disableKey"></a><strong>disableKey</strong>&nbsp;()</dt>
+<dd>
+TODO  disableKey - TLuaInterpreter::disableKey
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="disableTimer"></a><strong>disableTimer</strong>&nbsp;()</dt>
+<dd>
+TODO  disableTimer - TLuaInterpreter::disableTimer
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="disableTrigger"></a><strong>disableTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  disableTrigger - TLuaInterpreter::disableTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="disconnect"></a><strong>disconnect</strong>&nbsp;()</dt>
+<dd>
+Disconnect from current session.
+
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#reconnect">
+		reconnect
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="echo"></a><strong>echo</strong>&nbsp;(windowName, text)</dt>
+<dd>
+This function appends text at the end of the current line. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position. <br/> If the first argument is omitted the main console is used, otherwise the mini console windowName. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+	<li>
+	  text: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>echo("Hello world\n")
+	
+	<li>echo("info", "Hello this is the info window\n") <br/> -- writes text to the mini console named "info" if such a window exists
+	
+</ul>
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="echoLink"></a><strong>echoLink</strong>&nbsp;(windowName, text, command, hint, useCurrentFormat)</dt>
+<dd>
+Echos a piece of text as a clickable link. <br/> Available since 1.1.0-pre1. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: optional window name
+	</li>
+	
+	<li>
+	  text: to display in the echo. Same as a normal echo().
+	</li>
+	
+	<li>
+	  command: lua code to do when the link is clicked.
+	</li>
+	
+	<li>
+	  hint: text for the tooltip to be displayed when the mouse is over the link.
+	</li>
+	
+	<li>
+	  useCurrentFormat: true/false - controls whenever the current text formatting (colors, underline, bold, etc) should be used, or the default link format. 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+echoLink("hi", [[echo("hey bub!")]], "click me now") 
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#setLink">
+		setLink
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#insertLink">
+		insertLink
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="echoPopup"></a><strong>echoPopup</strong>&nbsp;()</dt>
+<dd>
+Same as setPopup()  except it doesn’t require a selection. echoPopup creates a link from the given text that it echos. <br/> Available since 1.1.0-pre1. 
+
+
+
+
+
+<h3>Usage:</h3>
+echoPopup("activities to do", {[[send "sleep"]], [[send "sit"]], [[send "stand"]]}, {"sleep", "sit", "stand"}) 
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#setPopup">
+		setPopup
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#insertPopup">
+		insertPopup
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="echoUserWindow"></a><strong>echoUserWindow</strong>&nbsp;()</dt>
+<dd>
+TODO  echoUserWindow - TLuaInterpreter::echoUserWindow
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="enableAlias"></a><strong>enableAlias</strong>&nbsp;()</dt>
+<dd>
+TODO  enableAlias - TLuaInterpreter::enableAlias
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="enableKey"></a><strong>enableKey</strong>&nbsp;()</dt>
+<dd>
+TODO  enableKey - TLuaInterpreter::enableKey
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="enableTimer"></a><strong>enableTimer</strong>&nbsp;()</dt>
+<dd>
+TODO  enableTimer - TLuaInterpreter::enableTimer
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="enableTrigger"></a><strong>enableTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  enableTrigger - TLuaInterpreter::enableTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="exists"></a><strong>exists</strong>&nbsp;(name, type)</dt>
+<dd>
+Tells you how many things of the given type exist.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  type: can be "alias", "trigger", or "timer".
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>echo("I have " .. exists("my trigger", "trigger") .. " triggers called 'my trigger'!")
+	
+	<li>You can also use this alias to avoid creating duplicate things, for example: <br/>  -- this code doesn't check if an alias already exists and will keep creating new aliases <br/> permAlias("Attack", "General", "^aa$", [[send ("kick rat")]]) <br/> <br/> -- while this code will make sure that such an alias doesn't exist first <br/> -- we do == 0 instead of 'not exists' because 0 is considered true in Lua <br/> if exists("Attack", "alias") == 0 then <br/> permAlias("Attack", "General", "^aa$", [[send ("kick rat")]]) <br/> end <br/> 
+	
+</ul>
+
+
+
+<h3>Return value:</h3>
+number
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#isActive">
+		isActive
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="exists"></a><strong>exists</strong>&nbsp;(name, type)</dt>
+<dd>
+Tells you how many things of the given type exist.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  type: can be "alias", "trigger", or "timer".
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>echo("I have " .. exists("my trigger", "trigger") .. " triggers called 'my trigger'!")
+	
+	<li>You can also use this alias to avoid creating duplicate things, for example: <br/>  -- this code doesn't check if an alias already exists and will keep creating new aliases <br/> permAlias("Attack", "General", "^aa$", [[send ("kick rat")]]) <br/> <br/> -- while this code will make sure that such an alias doesn't exist first <br/> -- we do == 0 instead of 'not exists' because 0 is considered true in Lua <br/> if exists("Attack", "alias") == 0 then <br/> permAlias("Attack", "General", "^aa$", [[send ("kick rat")]]) <br/> end <br/> 
+	
+</ul>
+
+
+
+<h3>Return value:</h3>
+number
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#isActive">
+		isActive
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="expandAlias"></a><strong>expandAlias</strong>&nbsp;(command, print=1)</dt>
+<dd>
+Like send(), but without bypassing alias expansion. This function may lead to infinite recursion if you are not careful. This function can be used to make recursive alias expansion. expandAlias("Hello Tom") echos the command on the screen expandAlias("Hello Jane") sends the command visually unnoticeable by the user send. <br/> <br/> Now, while in Mudlet you can call another alias with the expandAlias() function, this is strongly discouraged. What you do instead if create a function (for example, send()  and echo()  are functions) that you can then call from your alias or trigger. This has many advantages - it's faster, you can easily give your function values, and your function can return you values, too.<br/> <br/> Note: The variable "command" contains what was entered in the command line or issued via the expandAlias() function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass the alias expansion. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  command: 
+	</li>
+	
+	<li>
+	  print=1: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#send">
+		send
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="feedTriggers"></a><strong>feedTriggers</strong>&nbsp;(text)</dt>
+<dd>
+This function will have Mudlet parse the given text as if it came from the MUD - one great application is trigger testing. You can use \n to represent a new line. The function also accept ANSI color codes that are used in MUDs. A sample table can be found here. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  text: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>feedTriggers("\nYou sit yourself down.\n") <br/> Usage of new line character.
+	
+	<li>feedTriggers("\nThis is \27[1;32mgreen\27[0;37m, \27[1;31mred\27[0;37m, " .. "\27[46mcyan background\27[0;37m,\27[32;47mwhite background and green foreground\27[0;37m.\n") <br/> Demonstration of ANSI color.
+	
+</ul>
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getBgColor"></a><strong>getBgColor</strong>&nbsp;(windowName)</dt>
+<dd>
+Get the rgb values of the first character of the current selection
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+r,g,b = getBgColor(windowName)
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#getFgColor">
+		getFgColor
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="getButtonState"></a><strong>getButtonState</strong>&nbsp;()</dt>
+<dd>
+TODO  getButtonState - TLuaInterpreter::getButtonState
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getColumnNumber"></a><strong>getColumnNumber</strong>&nbsp;()</dt>
+<dd>
+Gets the absolute column number of the current user cursor.
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getCurrentLine"></a><strong>getCurrentLine</strong>&nbsp;()</dt>
+<dd>
+TODO  getCurrentLine - TLuaInterpreter::getCurrentLine
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getFgColor"></a><strong>getFgColor</strong>&nbsp;(windowName)</dt>
+<dd>
+This function returns the rgb values of the color of the first character of the current selection on mini console (window) windowName. If windowName is omitted Mudlet will use the main screen. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>r,g,b = getFgColor(windowName)
+	
+	<li>local r,g,b; <br/> selectString("troll",1) <br/> r,g,b = getFgColor() <br/> if r == 255 and g == 0 and b == 0 then <br/> echo("HELP! troll is written in red letters, the monster is aggressive!\n"); <br/> end <br/> 
+	
+</ul>
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#getBgColor">
+		getBgColor
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="getLastLineNumber"></a><strong>getLastLineNumber</strong>&nbsp;()</dt>
+<dd>
+Returns number of the last line in the text buffer.
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getLineCount"></a><strong>getLineCount</strong>&nbsp;()</dt>
+<dd>
+Gets the absolute amount of lines in the current console buffer.
+
+
+
+
+
+
+
+<h3>Return value:</h3>
+number
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getLineNumber"></a><strong>getLineNumber</strong>&nbsp;()</dt>
+<dd>
+Gets the absolute line number of the current user cursor.
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getLines"></a><strong>getLines</strong>&nbsp;(from_line_number, to_line_number)</dt>
+<dd>
+Returns a Lua table with the content of the lines on a per line basis. Absolute line numbers are used.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  from_line_number: 
+	</li>
+	
+	<li>
+	  to_line_number: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+<h3>Return value:</h3>
+section of the content of the screen text buffer. The form of the return value is: Lua_table[relative_linenumber, content]
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getMainWindowSize"></a><strong>getMainWindowSize</strong>&nbsp;()</dt>
+<dd>
+TODO  getMainWindowSize - TLuaInterpreter::getMainWindowSize
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getMudletHomeDir"></a><strong>getMudletHomeDir</strong>&nbsp;()</dt>
+<dd>
+Returns the current home directory of the current profile. This can be used to store data, save statistical information or load resource files.
+
+
+
+
+
+<h3>Usage:</h3>
+homedir = getMudletHomeDir()
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getNetworkLatency"></a><strong>getNetworkLatency</strong>&nbsp;()</dt>
+<dd>
+Returns the last measured response time between the sent command and the server reply. 
+
+
+
+
+
+
+
+<h3>Return value:</h3>
+number of seconds (0.058 (=58 milliseconds lag) or 0.309 (=309 milliseconds))
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getStopWatchTime"></a><strong>getStopWatchTime</strong>&nbsp;(watchID)</dt>
+<dd>
+Returns the time without stoping stop watch (milliseconds based) in form of 0.058 (= clock ran for 58 milliseconds before it was stopped).
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  watchID: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createStopWatch">
+		createStopWatch
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="getTime"></a><strong>getTime</strong>&nbsp;(returntype, format)</dt>
+<dd>
+Return time information. <br/> Available since Mudlet 1.0.6. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  returntype: Takes a boolean value (in Lua anything but false or nil will translate to true). If true, the function will return a table in the following format: <br/> { hour = #, min = #, sec = #, msec = # } <br/> If false or nil, it will return the time as a string using a format passed to the second arg or the default of hh:mm:ss.zzz
+	</li>
+	
+	<li>
+	  format: Format expressions built from following elements: <br/> <br/> h -              the hour without a leading zero (0 to 23 or 1 to 12 if AM/PM display) <br/> hh -             the hour with a leading zero (00 to 23 or 01 to 12 if AM/PM display) <br/> H -              the hour without a leading zero (0 to 23, even with AM/PM display) <br/> HH -             the hour with a leading zero (00 to 23, even with AM/PM display) <br/> m -              the minute without a leading zero (0 to 59) <br/> mm -             the minute with a leading zero (00 to 59) <br/> s -              the second without a leading zero (0 to 59) <br/> ss -             the second with a leading zero (00 to 59) <br/> z -              the milliseconds without leading zeroes (0 to 999) <br/> zzz -            the milliseconds with leading zeroes (000 to 999) <br/> AP or A -        use AM/PM display. AP will be replaced by either "AM" or "PM". <br/> ap or a -        use am/pm display. ap will be replaced by either "am" or "pm". <br/> <br/> d -              the day as number without a leading zero (1 to 31) <br/> dd -             the day as number with a leading zero (01 to 31) <br/> ddd -            the abbreviated localized day name (e.g. 'Mon' to 'Sun'). Uses QDate::shortDayName(). <br/> dddd -           the long localized day name (e.g. 'Monday' to 'Qt::Sunday'). Uses QDate::longDayName(). <br/> M -              the month as number without a leading zero (1-12) <br/> MM -             the month as number with a leading zero (01-12) <br/> MMM -            the abbreviated localized month name (e.g. 'Jan' to 'Dec'). Uses QDate::shortMonthName(). <br/> MMMM -           the long localized month name (e.g. 'January' to 'December'). Uses QDate::longMonthName(). <br/> yy -             the year as two digit number (00-99) <br/> yyyy -           the year as four digit number <br/> <br/> All other input characters will be ignored. Any sequence of characters that are enclosed in singlequotes will be treated as text and not be used as an expression. Two consecutive singlequotes ("''") are replaced by a singlequote in the output.
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>getTime()
+	
+	<li>getTime(true)
+	
+	<li>getTime(true, "hh:mm") 
+	
+</ul>
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getTimestamp"></a><strong>getTimestamp</strong>&nbsp;(console_name, lineNumber)</dt>
+<dd>
+Returns the timestamp string as it's seen when you enable the timestamps view (blue i button bottom right). <br/> Available since 1.1.0-pre1 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  console_name: optional parameter
+	</li>
+	
+	<li>
+	  lineNumber: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+echo( getTimestamp(getLineCount()) ) <br/> Echo the timestamp of the current line in a trigger 
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="hasFocus"></a><strong>hasFocus</strong>&nbsp;()</dt>
+<dd>
+TODO  hasFocus - TLuaInterpreter::hasFocus
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="hideToolBar"></a><strong>hideToolBar</strong>&nbsp;()</dt>
+<dd>
+TODO  hideToolBar - TLuaInterpreter::hideToolBar
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="hideWindow"></a><strong>hideWindow</strong>&nbsp;(name)</dt>
+<dd>
+This function hides a mini console label. To show it again use showWindow.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#showWindow">
+		showWindow
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#createMiniConsole">
+		createMiniConsole
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#createLabel">
+		createLabel
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="insertHTML"></a><strong>insertHTML</strong>&nbsp;()</dt>
+<dd>
+TODO  insertHTML - TLuaInterpreter::insertHTML
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="insertLink"></a><strong>insertLink</strong>&nbsp;(windowName, text, command, hint, useCurrentFormat)</dt>
+<dd>
+Same as echoLink() but inserts the text at the current cursor position, while echoLink inserts at the end of the current line. <br/> Available since 1.1.0-pre1.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+	<li>
+	  text: 
+	</li>
+	
+	<li>
+	  command: 
+	</li>
+	
+	<li>
+	  hint: 
+	</li>
+	
+	<li>
+	  useCurrentFormat: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#echoLink">
+		echoLink
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setLink">
+		setLink
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="insertPopup"></a><strong>insertPopup</strong>&nbsp;(windowName, text, commands, hints, useCurrentFormat)</dt>
+<dd>
+Same as echoPopup(), but inserts text at the current cursor position. <br/> Available since 1.1.0-pre1. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+	<li>
+	  text: 
+	</li>
+	
+	<li>
+	  commands: 
+	</li>
+	
+	<li>
+	  hints: 
+	</li>
+	
+	<li>
+	  useCurrentFormat: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#setPopup">
+		setPopup
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#echoPopup">
+		echoPopup
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="insertText"></a><strong>insertText</strong>&nbsp;()</dt>
+<dd>
+TODO  insertText - TLuaInterpreter::insertText
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="invokeFileDialog"></a><strong>invokeFileDialog</strong>&nbsp;(selection, dialogTitle)</dt>
+<dd>
+Opens a file chooser dialog, allowing the user to select a file or a folder visually. The function returns the selected path or nil if there was none chosen. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  selection: true for file selection, false for folder selection.
+	</li>
+	
+	<li>
+	  dialogTitle: name that the dialog (file chooser window) will have
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+local path = invokeFileDialog(false, "Find me the gfx folder, please") <br/> if path then echo(path) end 
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="isActive"></a><strong>isActive</strong>&nbsp;(name, type)</dt>
+<dd>
+You can use this function to check if something, or somethings, are active. Type can be either "alias", "trigger", or "timer", and name is the name of the said item you'd like to check. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  type: could be "alias", "trigger", or "timer"
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+echo("I have " .. isActive("my trigger", "trigger") .. " currently active triggers called 'my trigger'!") 
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="isAnsiBgColor"></a><strong>isAnsiBgColor</strong>&nbsp;(ansiBgColorCode)</dt>
+<dd>
+This function tests if the first character of the current selection has the background color specified by ansiBgColorCode.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  ansiBgColorCode: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#isAnsiFgColor">
+		isAnsiFgColor
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="isAnsiFgColor"></a><strong>isAnsiFgColor</strong>&nbsp;()</dt>
+<dd>
+TODO  isAnsiFgColor - TLuaInterpreter::isAnsiFgColor
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="isPrompt"></a><strong>isPrompt</strong>&nbsp;()</dt>
+<dd>
+Returns true or false depending on if the current line being processed is a prompt. This infallible feature is available for MUDs that supply GA events (to check if yours is one, look to bottom-right of the main window - if it doesn't say &lt;No&nbsp;GA&gt;, then it supplies them).
+
+
+
+
+
+
+
+<h3>Return value:</h3>
+true/false
+
+
+
+</dd>
+
+
+
+
+<dt><a name="killAlias"></a><strong>killAlias</strong>&nbsp;(name)</dt>
+<dd>
+Deletes an alias with the given name. If several aliases have this name, they'll all be deleted. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#killTimer">
+		killTimer
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#killTrigger">
+		killTrigger
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="killTimer"></a><strong>killTimer</strong>&nbsp;(id)</dt>
+<dd>
+Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. ID is a string and not a number. This function returns true on success and false if the timer id doesn't exist anymore (=timer has already fired) or the timer is not a temp timer. Note that non-temporary timers that you have set up in the GUI cannot be deleted with this function. Use disableTimer() to turn them on or off. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  id: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+<h3>Return value:</h3>
+true or false
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#killAlias">
+		killAlias
+	</a>
+	
+	<li><a href="">
+		killTrigger 
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="killTrigger"></a><strong>killTrigger</strong>&nbsp;(id)</dt>
+<dd>
+Deletes a tempTrigger according to trigger ID. ID is a string value, not a number. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  id: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+<h3>Return value:</h3>
+true or false
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#killAlias">
+		killAlias
+	</a>
+	
+	<li><a href="">
+		killTimer 
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="loadRawFile"></a><strong>loadRawFile</strong>&nbsp;()</dt>
+<dd>
+TODO  loadRawFile - TLuaInterpreter::loadRawFile
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="moveCursor"></a><strong>moveCursor</strong>&nbsp;()</dt>
+<dd>
+TODO  moveCursor - TLuaInterpreter::moveCursor
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="moveCursorEnd"></a><strong>moveCursorEnd</strong>&nbsp;(windowName)</dt>
+<dd>
+Moves the cursor to the end of the buffer. "main" is the name of the main window, otherwise use the name of your user window.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+<h3>Return value:</h3>
+true or false
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#moveCursor">
+		moveCursor
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="moveWindow"></a><strong>moveWindow</strong>&nbsp;(name, x, y)</dt>
+<dd>
+This function moves window name to the given x/y coordinate. The main screen cannot be moved. Instead you'll have to set appropriate border values → preferences to move the main screen e.g. to make room for chat or information mini consoles, or other GUI elements. In the future moveWindow() will set the border values automatically if the name parameter is omitted. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  x: 
+	</li>
+	
+	<li>
+	  y: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createMiniConsole">
+		createMiniConsole
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#createLabel">
+		createLabel
+	</a>
+	
+	<li><a href="">
+		handleWindowResizeEvent
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#resizeWindow">
+		resizeWindow
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderTop">
+		setBorderTop
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="openUserWindow"></a><strong>openUserWindow</strong>&nbsp;()</dt>
+<dd>
+Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such a name already exists, nothing happens. You can move these windows, dock them, make them into notebook tabs or float them. Most often a mini console is more useful than a dockable window. 
+
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createMiniConsole">
+		createMiniConsole
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="paste"></a><strong>paste</strong>&nbsp;(windowName)</dt>
+<dd>
+Pastes the previously copied text including all format codes like color, font etc. at the current user cursor position. The copy() and paste() functions can be used to copy formated text from the main window to a user window without losing colors e. g. for chat windows, map windows etc. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#copy">
+		copy
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="pasteWindow"></a><strong>pasteWindow</strong>&nbsp;()</dt>
+<dd>
+TODO  pasteWindow - TLuaInterpreter::pasteWindow
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="permAlias"></a><strong>permAlias</strong>&nbsp;()</dt>
+<dd>
+TODO  permAlias - TLuaInterpreter::permAlias
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="permBeginOfLineStringTrigger"></a><strong>permBeginOfLineStringTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  permBeginOfLineStringTrigger - TLuaInterpreter::permBeginOfLineStringTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="permRegexTrigger"></a><strong>permRegexTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  permRegexTrigger - TLuaInterpreter::permRegexTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="permSubstringTrigger"></a><strong>permSubstringTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  permSubstringTrigger - TLuaInterpreter::permSubstringTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="permTimer"></a><strong>permTimer</strong>&nbsp;()</dt>
+<dd>
+TODO  permTimer - TLuaInterpreter::permTimer
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="playSoundFile"></a><strong>playSoundFile</strong>&nbsp;(fileName)</dt>
+<dd>
+This function plays a sound file. To make sound work on your operating system you may need to install additional packages: <br/> Microsoft Windows: The underlying multimedia system is used; only WAVE format sound files are supported. (works out of the box) <br/> Mac OS X: NSSound is used. All formats that NSSound supports, including QuickTime formats, are supported by Qt for Mac OS X (should work out of the box). <br/> X11: The Network Audio System is used if available, otherwise all operations work silently. NAS supports WAVE and AU files. Please use following workaround for Linux systems: <br/><br/> if "linux" == getOS() then <br/> os.execute("aplay /usr/share/sounds/alsa/Front_Center.wav")<br/> end
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  fileName: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="raiseEvent"></a><strong>raiseEvent</strong>&nbsp;(eventName, ...)</dt>
+<dd>
+Raises the event event_name. The event system will call the main function (the one that is called exactly like the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without having to care if the actual event handling has been implemented yet - or more specifically how it is implemented. Your triggers raise an event to tell the system that they have detected a certain condition to be true or that a certain event has happened. How - and if - the system is going to respond to this event is up to the system and your trigger scripts don’t have to care about such details. For small systems it will be more convenient to use regular function calls instead of events, however, the more complicated your system will get, the more important events will become because they help reduce complexity very much. <br/> <br/> The corresponding event handlers that listen to the events raised with raiseEvent() need to use the script name as function name and take the correct number of arguments. NOTE: If you raise an event with 5 arguments but your event handlers functions only take 2,10 or 0 arguments, the functions will not be called. For example: raiseEvent("fight") a correct event handler function would be: myScript(event_name). In this example raiseEvent uses minimal arguments, name the event name. There can only be one event handler function per script, but a script can still handle multiple events as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees and thus help reduce complexity on large systems.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  eventName: 
+	</li>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="reconnect"></a><strong>reconnect</strong>&nbsp;()</dt>
+<dd>
+Reconnect to currect session.
+
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#disconnect">
+		disconnect
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="replace"></a><strong>replace</strong>&nbsp;()</dt>
+<dd>
+TODO  replace - TLuaInterpreter::replace
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="resetFormat"></a><strong>resetFormat</strong>&nbsp;()</dt>
+<dd>
+Resets the character format to default. This should be used after you have highlighted some text or changed the current foreground or background color, but you don't want to keep using these colors for further prints. If you set a foreground or background color, the color will be used until you call resetFormat() on all further print commands.
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="resetStopWatch"></a><strong>resetStopWatch</strong>&nbsp;(watchID)</dt>
+<dd>
+This function resets the time to 0:0:0.0, but does not start the stop watch. You can start it with startStopWatch.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  watchID: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createStopWatch">
+		createStopWatch
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#startStopWatch">
+		startStopWatch
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="resizeWindow"></a><strong>resizeWindow</strong>&nbsp;(name, width, height)</dt>
+<dd>
+Resizes a mini console or label.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  width: 
+	</li>
+	
+	<li>
+	  height: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createMiniConsole">
+		createMiniConsole
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#createLabel">
+		createLabel
+	</a>
+	
+	<li><a href="">
+		handleWindowResizeEvent
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderTop">
+		setBorderTop
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="selectCaptureGroup"></a><strong>selectCaptureGroup</strong>&nbsp;(groupNumber)</dt>
+<dd>
+Selects the content of the capture group number in your Perl regular expression e.g. "you have (\d+) Euro". If you want to color the amount of money you have green you do: 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  groupNumber: with first group = 0 <br/> TODO this is probably wrong - first group = 1
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+selectCaptureGroup(1); <br/> setFgColor(0,255,0)
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="selectCurrentLine"></a><strong>selectCurrentLine</strong>&nbsp;()</dt>
+<dd>
+TODO  selectCurrentLine - TLuaInterpreter::selectCurrentLine
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="selectSection"></a><strong>selectSection</strong>&nbsp;(windowName, from, lengthOfString)</dt>
+<dd>
+Select text on the line under the current cursor position. Use absolute column number for start of selection and length of selection The function returns true on success and false if the selection is not possible. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: is optional
+	</li>
+	
+	<li>
+	  from: 
+	</li>
+	
+	<li>
+	  lengthOfString: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="selectString"></a><strong>selectString</strong>&nbsp;(text, numberOfMatch)</dt>
+<dd>
+Selects a substring from the line where the user cursor is currently positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that the cursor is in the correct line if you want to call one of the select functions. To deselect text, see deselect(). 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  text: 
+	</li>
+	
+	<li>
+	  numberOfMatch: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>selectString("big monster", 1)
+	
+	<li>if selectString("big monster", 1) > -1 then setFgColor(255,0,0) end <br> Note: To prevent selection of random data use the error return if not found like this. 
+	
+</ul>
+
+
+
+<h3>Return value:</h3>
+returns position in line or -1 on error (text not found in line) 
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#deselect">
+		deselect
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="send"></a><strong>send</strong>&nbsp;(command, echoTheValue)</dt>
+<dd>
+This sends "command" directly to the network layer, skipping the alias matching. The optional second argument of type boolean (print) determines if the outgoing command is to be echoed on the screen. If you want your command to be checked if it's an alias, use expandAlias() instead. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  command: 
+	</li>
+	
+	<li>
+	  echoTheValue: true or false, default value is true 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage</h3>
+<ul>
+	
+	<li>send("Hello Jane") <br/> --echos the command on the screen
+	
+	<li>send("Hello Jane", true) <br/> --echos the command on the screen
+	
+	<li>send("Hello Jane", false) <br/> --does not echo the command on the screen 
+	
+</ul>
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#expandAlias">
+		expandAlias
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="sendATCP"></a><strong>sendATCP</strong>&nbsp;()</dt>
+<dd>
+TODO  sendATCP - TLuaInterpreter::sendATCP
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="sendTelnetChannel102"></a><strong>sendTelnetChannel102</strong>&nbsp;()</dt>
+<dd>
+Send telnet channel 102 commands to MUD. This is widely used on Aardwolf for setting up user tags. <br/>
+
+
+
+
+
+<h3>Usage:</h3>
+sendTelnetChannel102("\5\1") <br/> Command will enable all Aardwolf channel tags. You need to have active session.
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setBackgroundColor"></a><strong>setBackgroundColor</strong>&nbsp;()</dt>
+<dd>
+TODO  setBackgroundColor - TLuaInterpreter::setBackgroundColor
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setBackgroundImage"></a><strong>setBackgroundImage</strong>&nbsp;()</dt>
+<dd>
+TODO  setBackgroundImage - TLuaInterpreter::setBackgroundImage
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setBgColor"></a><strong>setBgColor</strong>&nbsp;()</dt>
+<dd>
+TODO  setBgColor - TLuaInterpreter::setBgColor
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setBold"></a><strong>setBold</strong>&nbsp;()</dt>
+<dd>
+TODO  setBold - TLuaInterpreter::setBold
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setBorderBottom"></a><strong>setBorderBottom</strong>&nbsp;(size)</dt>
+<dd>
+Sets the height of the bottom border to size pixel and thus effectively moves down the main console window by size pixels to make room for e.g. mini console windows, buttons etc..
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  size: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderTop">
+		setBorderTop
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderLeft">
+		setBorderLeft
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderRight">
+		setBorderRight
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="setBorderColor"></a><strong>setBorderColor</strong>&nbsp;(red, green, blue)</dt>
+<dd>
+Sets the color of the border in RGB color.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  red: 
+	</li>
+	
+	<li>
+	  green: 
+	</li>
+	
+	<li>
+	  blue: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+setBorderColor( 255, 0, 0 ) <br/> sets the border to red.
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setBorderLeft"></a><strong>setBorderLeft</strong>&nbsp;(size)</dt>
+<dd>
+Sets the width of the left border and thus effectively moves down the main console window by size pixels to make room for e.g. mini console windows, buttons etc..
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  size: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderTop">
+		setBorderTop
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderBottom">
+		setBorderBottom
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderRight">
+		setBorderRight
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="setBorderRight"></a><strong>setBorderRight</strong>&nbsp;(size)</dt>
+<dd>
+Sets the width of the right border and thus effectively moves down the main console window by size pixels to make room for e.g. mini console windows, buttons etc..
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  size: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderTop">
+		setBorderTop
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderBottom">
+		setBorderBottom
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderLeft">
+		setBorderLeft
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="setBorderTop"></a><strong>setBorderTop</strong>&nbsp;(size)</dt>
+<dd>
+Sets the height of the top border to size pixel and thus effectively moves down the main console window by size pixels to make room for e.g. mini console windows, buttons etc..
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  size: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderBottom">
+		setBorderBottom
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderLeft">
+		setBorderLeft
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#setBorderRight">
+		setBorderRight
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="setConsoleBufferSize"></a><strong>setConsoleBufferSize</strong>&nbsp;(consoleName, linesLimit, sizeOfBatchDeletion)</dt>
+<dd>
+Set the scrollback buffer size to linesLimit and determine how many lines are deleted at once in case the lines limit is reached. The lower the limit the less memory being used. On machines with low RAM you should consider limiting the size of buffers that don't need a lot of scrollback e.g. system notification windows, chat windows etc.. <br/> Default values are linesLimit = 100000 lines with 10000 lines of batch deletion. <br/> Minimum buffer size is 100 lines with 10 lines batch deletion.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  consoleName: 
+	</li>
+	
+	<li>
+	  linesLimit: 
+	</li>
+	
+	<li>
+	  sizeOfBatchDeletion: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setFgColor"></a><strong>setFgColor</strong>&nbsp;()</dt>
+<dd>
+TODO  setFgColor - TLuaInterpreter::setFgColor
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setItalics"></a><strong>setItalics</strong>&nbsp;()</dt>
+<dd>
+TODO  setItalics - TLuaInterpreter::setItalics
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setLabelClickCallback"></a><strong>setLabelClickCallback</strong>&nbsp;()</dt>
+<dd>
+TODO  setLabelClickCallback - TLuaInterpreter::setLabelClickCallback
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setLabelStyleSheet"></a><strong>setLabelStyleSheet</strong>&nbsp;()</dt>
+<dd>
+TODO  setLabelStyleSheet - TLuaInterpreter::setLabelStyleSheet
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setLink"></a><strong>setLink</strong>&nbsp;(command, tooltip)</dt>
+<dd>
+Turns the selected text into a clickable link - upon being clicked, the link will do the command code. Tooltip is a string which will be displayed when the mouse is over the selected text. <br/> Available since 1.1.0-pre1. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  command: 
+	</li>
+	
+	<li>
+	  tooltip: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+In a sewer grate substring trigger, the following code will make clicking on the words do the send("enter grate") command: <br/> selectString(matches[1], 1) <br/> setLink([[send("enter grate")]], "Clicky to enter grate") <br/> 
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#echoLink">
+		echoLink
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#insertLink">
+		insertLink
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="setMiniConsoleFontSize"></a><strong>setMiniConsoleFontSize</strong>&nbsp;()</dt>
+<dd>
+TODO  setMiniConsoleFontSize - TLuaInterpreter::setMiniConsoleFontSize
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setPopup"></a><strong>setPopup</strong>&nbsp;(name, commands, hints)</dt>
+<dd>
+Turns the selected text into a left-clickable link, and a right-click menu. The selected text, upon being left-clicked, will do the first command in the list. Upon being right-clicked, it’ll display a menu with all possible commands. The menu will be populated with hints, one for each line. <br/> Available since 1.1.0-pre1. 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: the name of the console to operate on. If not using this in a miniConsole, use "main" as the name.
+	</li>
+	
+	<li>
+	  commands: a table of lua code strings to do e.g. {[[send("hello")]], [[echo("hi!"]]}.
+	</li>
+	
+	<li>
+	  hints: a table of strings which will be shown on the popup and right-click menu e.g. {"send the hi command", "echo hi to yourself"}.
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+In a Raising your hand in greeting, you say "Hello!" exact match trigger, the following code will make left-clicking on Hello show you an echo, while left-clicking will show some commands you can do. <br/> selectString("Hello", 1) <br/> setPopup("main", {[[send("bye")]], [[echo("hi!")]]}, {"left-click or right-click and do first item to send bye", "click to echo hi"}) <br/> 
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setTextFormat"></a><strong>setTextFormat</strong>&nbsp;()</dt>
+<dd>
+TODO  setTextFormat - TLuaInterpreter::setTextFormat
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setTriggerStayOpen"></a><strong>setTriggerStayOpen</strong>&nbsp;()</dt>
+<dd>
+TODO  setTriggerStayOpen - TLuaInterpreter::setTriggerStayOpen
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setUnderline"></a><strong>setUnderline</strong>&nbsp;()</dt>
+<dd>
+TODO  setUnderline - TLuaInterpreter::setUnderline
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setWindowWrap"></a><strong>setWindowWrap</strong>&nbsp;(windowName, wrapAt)</dt>
+<dd>
+Sets at what position in the line the console or miniconsole will start word wrap.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  windowName: 
+	</li>
+	
+	<li>
+	  wrapAt: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setWindowWrapIndent"></a><strong>setWindowWrapIndent</strong>&nbsp;()</dt>
+<dd>
+TODO  setWindowWrapIndent - TLuaInterpreter::setWindowWrapIndent
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="showToolBar"></a><strong>showToolBar</strong>&nbsp;()</dt>
+<dd>
+TODO  showToolBar - TLuaInterpreter::showToolBar
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="showWindow"></a><strong>showWindow</strong>&nbsp;(name)</dt>
+<dd>
+This function shows a mini console or label. To hide it use hideWindow.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#hideWindow">
+		hideWindow
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#createMiniConsole">
+		createMiniConsole
+	</a>
+	
+	<li><a href="../files/CoreMudlet.html#createLabel">
+		createLabel
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="spawn"></a><strong>spawn</strong>&nbsp;()</dt>
+<dd>
+TODO  spawn - TLuaInterpreter::spawn
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="startLogging"></a><strong>startLogging</strong>&nbsp;()</dt>
+<dd>
+TODO  startLogging - TLuaInterpreter::startLogging
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="startStopWatch"></a><strong>startStopWatch</strong>&nbsp;(watchID)</dt>
+<dd>
+Starts the stop watch.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  watchID: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createStopWatch">
+		createStopWatch
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="stopStopWatch"></a><strong>stopStopWatch</strong>&nbsp;()</dt>
+<dd>
+Stops the stop watch and returns the elapsed time in milliseconds in form of 0.001.
+
+
+
+
+
+
+
+<h3>Return value:</h3>
+returns time as a number
+
+
+
+<h3>See also:</h3>
+<ul>
+	
+	<li><a href="../files/CoreMudlet.html#createStopWatch">
+		createStopWatch
+	</a>
+	
+</ul>
+
+</dd>
+
+
+
+
+<dt><a name="tempAlias"></a><strong>tempAlias</strong>&nbsp;()</dt>
+<dd>
+TODO  tempAlias - TLuaInterpreter::tempAlias
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="tempColorTrigger"></a><strong>tempColorTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  tempColorTrigger - TLuaInterpreter::tempColorTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="tempLineTrigger"></a><strong>tempLineTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  tempLineTrigger - TLuaInterpreter::tempLineTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="tempRegexTrigger"></a><strong>tempRegexTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  tempRegexTrigger - TLuaInterpreter::tempRegexTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="tempTimer"></a><strong>tempTimer</strong>&nbsp;()</dt>
+<dd>
+TODO  tempTimer - TLuaInterpreter::tempTimer
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="tempTrigger"></a><strong>tempTrigger</strong>&nbsp;()</dt>
+<dd>
+TODO  tempTrigger - TLuaInterpreter::tempTrigger
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="wait"></a><strong>wait</strong>&nbsp;(time)</dt>
+<dd>
+Wait for specified time in milliseconds.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  time: 
+	</li>
+	
+</ul>
+
+
+
+
+<h3>Usage:</h3>
+wait(2000) <br/> wait for 2 seconds
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="wrapLine"></a><strong>wrapLine</strong>&nbsp;()</dt>
+<dd>
+Wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters, apply word wrap and display the new lines on the screen. This function may be necessary if you use deleteLine() and thus erase the entire current line in the buffer, but you want to do some further echo() calls after calling deleteLine(). You will then need to re-wrap the last line of the buffer to actually see what you have echoed and get you \n interpreted as newline characters properly. <br/> <br/> Using this function is no good programming practice and should be avoided. There are better ways of handling situations where you would call deleteLine() and echo afterwards e.g.: <br/> selectString(line,1); <br/> replace(""); <br/> This will effectively have the same result as a call to deleteLine() but the buffer line will not be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible without using wrapLine() unnecessarily.
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

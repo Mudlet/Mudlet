@@ -1,25 +1,108 @@
-
 ----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
---                                                                              --
--- Other                                                                        --
---                                                                              --
-----------------------------------------------------------------------------------
+--- Mudlet Unsorted Stuff
 ----------------------------------------------------------------------------------
 
---- TODO put it in doc
---- atcp
+
+-- Extending default libraries makes Babelfish happy.
+setmetatable( _G, {
+	["__call"] = function(func, ...)
+		if type(func) == "function" then
+			return func(...)
+		else
+			local h = metatable(func).__call
+			if h then
+				return h(func, ...)
+			elseif _G[type(func)][func] then
+				_G[type(func)][func](...)
+			end
+		end
+	end,
+	})
+
+
+
+--- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough
+--- such that any it should work on others. <br/><br/>
+---
+--- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also
+--- raised for each ATCP message that arrives. To find out the available messages available in the atcp table and the event names,
+--- you can use display(atcp). <br/><br/>
+---
+--- Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is
+--- removed - so it becomes CharVitals and RoomExits. Here's an example:
+---   <pre>
+---   room_number = tonumber(atcp.RoomNum)
+---   echo(room_number)
+---   </pre>
+---
+--- Triggering on ATCP events: <br/>
+--- If you'd like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages.
+--- The ATCP handler names follow the same format as the atcp table - RoomNum, RoomExits, CharVitals and so on. <br/><br/>
+---
+--- While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place
+--- the event name you'd like your script to listen to into the Add User Defined Event Handler: field and press the + button
+--- to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function
+--- should it call for you when your handler receives a message. You do that by setting the Script name: to the function
+--- name in the script you'd like to be called. <br/><br/>
+---
+--- For example, if you'd like to listen to the RoomExits event and have it call the process_exits() function -
+--- register RoomExits as the event handler, make the script name be process_exits, and use this in the script:
+---   <pre>
+---   function process_exits(event, args)
+---       echo("Called event: " .. event .. "\nWith args: " .. args)
+---   end
+---   </pre>
+---
+--- Feel free to experiment with this to achieve the desired results. A ATCP demo package is also available on the forums
+--- for using event handlers and parsing its messages into Lua datastructures. <br/>
+---
+--- @release Mudlet 1.0.6
+---
+--- @see sendATCP
+---
+--- @class function
+--- @name atcp
 atcp = {}
 
 
---- Sends a list of commands to the MUD. You can use this to send some things at once instead of having 
+
+--- <b><u>TODO</u></b> Table walklist.
+---
+--- @class function
+--- @name walklist
+walklist = {}
+
+
+
+--- <b><u>TODO</u></b> Variable walkdelay.
+---
+--- @class function
+--- @name walkdelay
+walkdelay = 0
+
+
+
+--- <b><u>TODO</u></b> Table SavedVariables.
+---
+--- @class function
+--- @name SavedVariables
+SavedVariables = {}
+
+
+
+--- Sends a list of commands to the MUD. You can use this to send some things at once instead of having
 --- to use multiple send() commands one after another.
---- 
---- @usage Use sendAll instead of multiple send commnads.
+---
+--- @param ... list of commands
+--- @param echoTheValue optional boolean flag (default value is true) which determine if value should
+---   be echoed back on client.
+---
+--- @usage Use sendAll instead of multiple send commands.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!")
----   
----   -- instead of:
+---   </pre>
+---   Instead of calling:
+---   <pre>
 ---   send ("stand")
 ---   send ("wield shield")
 ---   send ("say ha!")
@@ -36,8 +119,9 @@ function sendAll(...)
 end
 
 
---- Checks to see if a given file or folder exists. If it exists, it’ll return the Lua true boolean value, otherwise false.
---- 
+
+--- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
+---
 --- @usage
 ---   <pre>
 ---   if io.exists("/home/user/Desktop") then
@@ -45,14 +129,14 @@ end
 ---   else
 ---      echo("This folder doesn't exist.")
 ---   end
----   
+---
 ---   if io.exists("/home/user/Desktop/file.txt") then
 ---      echo("This file exists!")
 ---   else
 ---      echo("This file doesn't exist.")
 ---   end
 ---   </pre>
----   
+---
 --- @return true or false
 function io.exists(fileOfFolderName)
 	local f = io.open(fileOfFolderName)
@@ -64,7 +148,16 @@ function io.exists(fileOfFolderName)
 end
 
 
---- xor(a, b)
+
+--- Implementation of boolean exclusive or.
+---
+--- @usage All following will return false.
+---   <pre>
+---   xor(false, false)
+---   xor(true, true)
+---   </pre>
+---
+--- @return true or false
 function xor(a, b)
 	if (a and (not b)) or (b and (not a)) then
 		return true
@@ -74,11 +167,12 @@ function xor(a, b)
 end
 
 
+
 --- Determine operating system.
 ---
 --- @usage
 ---   <pre>
----   if "linux" == getOS() then 
+---   if "linux" == getOS() then
 ---	     echo("We are using GNU/Linux!")
 ---   end
 ---   </pre>
@@ -97,16 +191,21 @@ function getOS()
 end
 
 
+
 --- Opens the default OS browser for the given URL.
 ---
---- @usage openUrl("www.mudlet.org")
---- @usage openUrl("http://www.mudlet.org/")
+--- @usage Either command will open Mudlet home page.
+---   <pre>
+---   openUrl("www.mudlet.org")
+---   openUrl("http://www.mudlet.org/")
+---   </pre>
 function openURL(url)
 	local os = getOS()
 	if os == "linux" then _G.os.execute("xdg-open " .. url)
 	elseif os == "mac" then _G.os.execute("open " .. url)
 	elseif os == "windows" then _G.os.execute("start " .. url) end
 end
+
 
 
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
@@ -122,6 +221,7 @@ function remember(varName)
 	end
     _saveTable[varName] = _G[varName]
 end
+
 
 
 --- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
@@ -141,6 +241,7 @@ function loadVars()
 end
 
 
+
 --- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
 ---
 --- @see loadVars
@@ -154,26 +255,31 @@ function saveVars()
 end
 
 
---- Save & Load Variables <br/>
---- The below functions can be used to save individual Lua tables to disc and load <br/>
---- them again at a later time e.g. make a database, collect statistical information etc. <br/>
---- These functions are also used by Mudlet to load & save the entire Lua session variables <br/>
---- <br/>
---- table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this) <br/>
---- table.load(file, table) - loads a serialized file into the given table <br/>
---- table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this) <br/>
---- table.save(file, table) - saves the given table into the given file <br/>
---- <br/>
---- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/>
---- <br/>
+
+--- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
+--- them again at a later time e.g. make a database, collect statistical information etc.
+--- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
+---
+--- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
+---
 --- Notes: <br/>
 ---  Userdata and indices of these are not saved <br/>
 ---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
 ---  References are saved <br/>
 ---
+--- @usage Saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this).
+---   <pre>
+---   table.save(file)
+---   </pre>
+--- @usage Saves the given table into the given file.
+---   <pre>
+---   table.save(file, table)
+---   </pre>
+---
+--- @see table.load
 function table.save( sfile, t )
-	if t == nil then 
-		t = _G 
+	if t == nil then
+		t = _G
 	end
 	local tables = {}
 	table.insert( tables, t )
@@ -188,7 +294,8 @@ function table.save( sfile, t )
 end
 
 
---- table.pickle( t, file, tables, lookup )
+
+--- <b><u>TODO</u></b> table.pickle( t, file, tables, lookup )
 function table.pickle( t, file, tables, lookup )
 	file:write( "{" )
 	for i,v in pairs( t ) do
@@ -222,7 +329,18 @@ function table.pickle( t, file, tables, lookup )
 end
 
 
---- table.load( sfile, loadinto )
+
+--- Restores a Lua table from a data file that has been saved with table.save().
+---
+--- @usage Loads a serialized file into the globals table (only Mudlet should use this).
+---   <pre>
+---   table.load(file)
+---   </pre>
+--- @usage Loads a serialized file into the given table.
+---   <pre>
+---   table.load(file, table)
+---   </pre>
+---
 --- @see table.save
 function table.load( sfile, loadinto )
 	local tables = dofile( sfile )
@@ -236,7 +354,8 @@ function table.load( sfile, loadinto )
 end
 
 
---- table.unpickle( t, tables, tcopy, pickled )
+
+--- <b><u>TODO</u></b> table.unpickle( t, tables, tcopy, pickled )
 function table.unpickle( t, tables, tcopy, pickled )
 	pickled = pickled or {}
 	pickled[t] = tcopy
@@ -266,29 +385,8 @@ function table.unpickle( t, tables, tcopy, pickled )
 end
 
 
---- <b><u>TODO</u></b> check if this was generated
---- Extending default libraries makes Babelfish happy.
-setmetatable( _G, {
-	["__call"] = function(func, ...)
-		if type(func) == "function" then
-			return func(...)
-		else
-			local h = metatable(func).__call
-			if h then
-				return h(func, ...)
-			elseif _G[type(func)][func] then
-				_G[type(func)][func](...)
-			end
-		end
-	end,
-	})
 
-
-walklist = {}
-walkdelay = 0
-
-
---- speedwalktimer()
+--- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer()
 	send(walklist[1])
 	table.remove(walklist, 1)
@@ -298,7 +396,8 @@ function speedwalktimer()
 end
 
 
---- speedwalk(dirString, backwards, delay)
+
+--- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
 function speedwalk(dirString, backwards, delay)
 	local dirString		= dirString:lower()
 	walklist			= {}
@@ -336,13 +435,14 @@ function speedwalk(dirString, backwards, delay)
 			end
 		end
 	end
-	if walkdelay then 
-		speedwalktimer() 
+	if walkdelay then
+		speedwalktimer()
 	end
 end
 
 
---- _comp(a, b)
+
+--- <b><u>TODO</u></b> _comp(a, b)
 function _comp(a, b)
 	if type(a) ~= type(b) then return false end
 	if type(a) == 'table' then
@@ -357,11 +457,8 @@ function _comp(a, b)
 end
 
 
---- SavedVariables
-SavedVariables = { }
 
-
---- SavedVariables:Add(tbl)
+--- <b><u>TODO</u></b> SavedVariables:Add(tbl)
 function SavedVariables:Add(tbl)
 	if type(tbl) == 'string' then
 		self[tbl] = _G[tbl]
@@ -377,7 +474,8 @@ function SavedVariables:Add(tbl)
 end
 
 
---- phpTable(...) - abuse to: http://richard.warburton.it
+
+--- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
 function phpTable(...)
 	local newTable, keys, values = {}, {}, {}
 	newTable.pairs = function(self) -- pairs iterator

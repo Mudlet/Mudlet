@@ -1,12 +1,12 @@
 
-Taglet is extension to LuaDoc Standard Taglet
-    which is supporting <pre> formatted text (see simple example bellow)
-	based on  standard.lua,v 1.39 2007/12/21 17:50:48 tomas Exp $
-	(Note: we are (mis) using modules for building global function index.)
+Mudlet taglet and doclet are extension to LuaDoc which is
+  - supporting <pre> formatted text (see simple example bellow)
+  - generating master index of function (we are assuming that all function names are unique)
+  - correctly linking to functions from different file
+  - keeping link menu accessible in the top left corner all the time
+  - improving visual side of generated documentation
 
-
-Doclet is extension to LuaDoc HTML Doclet
-    with few minor visual changes.
+based on LuaDoc 3.0.1
 
 
 
