@@ -1,0 +1,838 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li><strong>Logging.lua</strong></li>
+	
+	<li>
+		<a href="../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGauge.html">geyser/GeyserGauge.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserUtil.html">geyser/GeyserUtil.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserWindow.html">geyser/GeyserWindow.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>Logging.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.FileHandler:create">logging.FileHandler:create</a>&nbsp;(path)</td>
+	<td class="summary">logging.FileHandler:create(path) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Handler:create">logging.Handler:create</a>&nbsp;(name, device)</td>
+	<td class="summary">logging.Handler:create(name, device) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Handler:process">logging.Handler:process</a>&nbsp;(event)</td>
+	<td class="summary">logging.Handler:process(event) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:_customize_event">logging.Logger:_customize_event</a>&nbsp;(event)</td>
+	<td class="summary">logging.Logger:_customize_event(event) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:_do_log">logging.Logger:_do_log</a>&nbsp;(evt, extras, level)</td>
+	<td class="summary">logging.Logger:_do_log(evt, extras, level) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:_log_event">logging.Logger:_log_event</a>&nbsp;(evt)</td>
+	<td class="summary">logging.Logger:_log_event(evt) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:_prepare_event">logging.Logger:_prepare_event</a>&nbsp;(event)</td>
+	<td class="summary">logging.Logger:_prepare_event(event) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:add_event_customizer">logging.Logger:add_event_customizer</a>&nbsp;(fn)</td>
+	<td class="summary">logging.Logger:add_event_customizer(fn) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:clear_event_customizers">logging.Logger:clear_event_customizers</a>&nbsp;()</td>
+	<td class="summary">logging.Logger:clear_event_customizers() </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:create">logging.Logger:create</a>&nbsp;(name, parent)</td>
+	<td class="summary">logging.Logger:create(name, parent) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:critical">logging.Logger:critical</a>&nbsp;(event, extras)</td>
+	<td class="summary">logging.Logger:critical(event, extras) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:debug">logging.Logger:debug</a>&nbsp;(event, extras)</td>
+	<td class="summary">logging.Logger:debug(event, extras) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:error">logging.Logger:error</a>&nbsp;(event, extras)</td>
+	<td class="summary">logging.Logger:error(event, extras) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:info">logging.Logger:info</a>&nbsp;(event, extras)</td>
+	<td class="summary">logging.Logger:info(event, extras) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging.Logger:warning">logging.Logger:warning</a>&nbsp;(event, extras)</td>
+	<td class="summary">logging.Logger:warning(event, extras) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging:format_event">logging:format_event</a>&nbsp;(event, formatter)</td>
+	<td class="summary">logging:format_event(event, formatter) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#logging:get_logger">logging:get_logger</a>&nbsp;(name)</td>
+	<td class="summary">logging:get_logger(name) </td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="logging.FileHandler:create"></a>
+<b><big>logging.FileHandler:create&nbsp;</big></b>(path)</dt>
+<dd>
+
+logging.FileHandler:create(path)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  path: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Handler:create"></a>
+<b><big>logging.Handler:create&nbsp;</big></b>(name, device)</dt>
+<dd>
+
+logging.Handler:create(name, device)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  device: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Handler:process"></a>
+<b><big>logging.Handler:process&nbsp;</big></b>(event)</dt>
+<dd>
+
+logging.Handler:process(event)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:_customize_event"></a>
+<b><big>logging.Logger:_customize_event&nbsp;</big></b>(event)</dt>
+<dd>
+
+logging.Logger:_customize_event(event)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:_do_log"></a>
+<b><big>logging.Logger:_do_log&nbsp;</big></b>(evt, extras, level)</dt>
+<dd>
+
+logging.Logger:_do_log(evt, extras, level)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  evt: 
+	</li>
+	
+	<li>
+	  extras: 
+	</li>
+	
+	<li>
+	  level: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:_log_event"></a>
+<b><big>logging.Logger:_log_event&nbsp;</big></b>(evt)</dt>
+<dd>
+
+logging.Logger:_log_event(evt)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  evt: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:_prepare_event"></a>
+<b><big>logging.Logger:_prepare_event&nbsp;</big></b>(event)</dt>
+<dd>
+
+logging.Logger:_prepare_event(event)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:add_event_customizer"></a>
+<b><big>logging.Logger:add_event_customizer&nbsp;</big></b>(fn)</dt>
+<dd>
+
+logging.Logger:add_event_customizer(fn)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  fn: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:clear_event_customizers"></a>
+<b><big>logging.Logger:clear_event_customizers&nbsp;</big></b>()</dt>
+<dd>
+
+logging.Logger:clear_event_customizers()
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:create"></a>
+<b><big>logging.Logger:create&nbsp;</big></b>(name, parent)</dt>
+<dd>
+
+logging.Logger:create(name, parent)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+	<li>
+	  parent: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:critical"></a>
+<b><big>logging.Logger:critical&nbsp;</big></b>(event, extras)</dt>
+<dd>
+
+logging.Logger:critical(event, extras)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+	<li>
+	  extras: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:debug"></a>
+<b><big>logging.Logger:debug&nbsp;</big></b>(event, extras)</dt>
+<dd>
+
+logging.Logger:debug(event, extras)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+	<li>
+	  extras: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:error"></a>
+<b><big>logging.Logger:error&nbsp;</big></b>(event, extras)</dt>
+<dd>
+
+logging.Logger:error(event, extras)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+	<li>
+	  extras: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:info"></a>
+<b><big>logging.Logger:info&nbsp;</big></b>(event, extras)</dt>
+<dd>
+
+logging.Logger:info(event, extras)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+	<li>
+	  extras: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging.Logger:warning"></a>
+<b><big>logging.Logger:warning&nbsp;</big></b>(event, extras)</dt>
+<dd>
+
+logging.Logger:warning(event, extras)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+	<li>
+	  extras: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging:format_event"></a>
+<b><big>logging:format_event&nbsp;</big></b>(event, formatter)</dt>
+<dd>
+
+logging:format_event(event, formatter)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  event: 
+	</li>
+	
+	<li>
+	  formatter: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="logging:get_logger"></a>
+<b><big>logging:get_logger&nbsp;</big></b>(name)</dt>
+<dd>
+
+logging:get_logger(name)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserGauge.html">geyser/GeyserGauge.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li><strong>geyser/GeyserUtil.lua</strong></li>
+	
+	<li>
+		<a href="../../files/geyser/GeyserWindow.html">geyser/GeyserWindow.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>geyser/GeyserUtil.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.copyTable">Geyser.copyTable</a>&nbsp;(table)</td>
+	<td class="summary">Clone a table, for good fun and profit.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.display">Geyser.display</a>&nbsp;(table)</td>
+	<td class="summary">Non-recursive display of an item, because the normal 'display' was causing Mudlet to hang.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.hideAll">Geyser.hideAll</a>&nbsp;(type)</td>
+	<td class="summary">Hide all managed windows.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.nameGen">Geyser.nameGen</a>&nbsp;(type)</td>
+	<td class="summary">Generate a window name unique to this session.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.showAll">Geyser.showAll</a>&nbsp;(type)</td>
+	<td class="summary">Show all managed windows.</td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="Geyser.copyTable"></a>
+<b><big>Geyser.copyTable&nbsp;</big></b>(table)</dt>
+<dd>
+
+Clone a table, for good fun and profit.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  table: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.display"></a>
+<b><big>Geyser.display&nbsp;</big></b>(table)</dt>
+<dd>
+
+Non-recursive display of an item, because the normal 'display' was causing Mudlet to hang. Not sure why.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  table: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.hideAll"></a>
+<b><big>Geyser.hideAll&nbsp;</big></b>(type)</dt>
+<dd>
+
+Hide all managed windows.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  type: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.nameGen"></a>
+<b><big>Geyser.nameGen&nbsp;</big></b>(type)</dt>
+<dd>
+
+Generate a window name unique to this session.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  type: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.showAll"></a>
+<b><big>Geyser.showAll&nbsp;</big></b>(type)</dt>
+<dd>
+
+Show all managed windows.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  type: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>
