@@ -175,7 +175,7 @@ function symbol_link (symbol, doc, module_doc, file_doc, from)
 	assert(symbol)
 	assert(doc)
 	
-	local href = 
+	local href =
 --		file_link(symbol, from) or
 		module_link(symbol, doc, from) or 
 		link_to(symbol, doc, module_doc, file_doc, from, "functions") or
@@ -187,6 +187,23 @@ function symbol_link (symbol, doc, module_doc, file_doc, from)
 	
 	return href or ""
 end
+
+
+-------------------------------------------------------------------------------
+--- Generate link to function e.g. CoreMudlet.html#wait.
+function genLinkToFunction(doc, funcId) 
+	if funcId then
+		funcIdTrim = string.gsub(funcId, "^%s*(.-)%s*$", "%1")  -- trim
+		local miFunc = doc.mIndex[funcIdTrim]
+		if miFunc then
+			local htmlFile = string.gsub(miFunc.filename, "[.]lua", ".html")
+		return string.format("<a href='%s'>%s</a>", (htmlFile .. "#" .. funcIdTrim), funcIdTrim)
+		else
+			return "<b>MISSING LINK: '" .. funcId .. "'</b>"
+		end
+	end
+end
+
 
 -------------------------------------------------------------------------------
 -- Assembly the output filename for an input file.
@@ -217,13 +234,24 @@ end
 
 function start (doc)
 	-- Generate index file
-	if (#doc.files > 0 or #doc.modules > 0) and (not options.noindexpage) then
+--	if (#doc.files > 0 or #doc.modules > 0) and (not options.noindexpage) then
+--		local filename = options.output_dir.."index.html"
+--		logger:info(string.format("generating file `%s'", filename))
+--		local f = lfs.open(filename, "w")
+--		assert(f, string.format("could not open `%s' for writing", filename))
+--		io.output(f)
+--		include("index.lp", { doc = doc })
+--		f:close()
+--	end
+
+	-- Generate Mudlet master index file
+	if (#doc.mIndex > 0) and (not options.noindexpage) then
 		local filename = options.output_dir.."index.html"
 		logger:info(string.format("generating file `%s'", filename))
 		local f = lfs.open(filename, "w")
 		assert(f, string.format("could not open `%s' for writing", filename))
 		io.output(f)
-		include("index.lp", { doc = doc })
+		include("mIndex.lp", { doc = doc })
 		f:close()
 	end
 	

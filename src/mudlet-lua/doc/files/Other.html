@@ -1,0 +1,677 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/LuaGlobalLoader.html">LuaGlobalLoader.lua</a>
+	</li>
+
+	<li><strong>Other.lua</strong></li>
+	
+	<li>
+		<a href="../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/__NilAllExistingFunctions.html">__NilAllExistingFunctions.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>Other.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#SavedVariables:Add">SavedVariables:Add</a>&nbsp;(tbl)</td>
+	<td class="summary">SavedVariables:Add(tbl) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#_comp">_comp</a>&nbsp;(a, b)</td>
+	<td class="summary">_comp(a, b) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getOS">getOS</a>&nbsp;()</td>
+	<td class="summary">Determine operating system.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#io.exists">io.exists</a>&nbsp;(file)</td>
+	<td class="summary">Checks to see if a file exists.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#loadVars">loadVars</a>&nbsp;()</td>
+	<td class="summary">This function should be primarily used by Mudlet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#openURL">openURL</a>&nbsp;(url)</td>
+	<td class="summary">Opens URL in default browser </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#phpTable">phpTable</a>&nbsp;(...)</td>
+	<td class="summary">phpTable(...) - abuse to: http://richard.warburton.it </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#remember">remember</a>&nbsp;(varName)</td>
+	<td class="summary">This function flags a variable to be saved by Mudlet's variable persistence system.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#saveVars">saveVars</a>&nbsp;()</td>
+	<td class="summary">This function should primarily be used by Mudlet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#sendAll">sendAll</a>&nbsp;(...)</td>
+	<td class="summary">sendAll(...) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#speedwalk">speedwalk</a>&nbsp;(dirString, backwards, delay)</td>
+	<td class="summary">speedwalk(dirString, backwards, delay) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#speedwalktimer">speedwalktimer</a>&nbsp;()</td>
+	<td class="summary">speedwalktimer() </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.load">table.load</a>&nbsp;(sfile, loadinto)</td>
+	<td class="summary">table.load( sfile, loadinto ) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.pickle">table.pickle</a>&nbsp;(t, file, tables, lookup)</td>
+	<td class="summary">table.pickle( t, file, tables, lookup ) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.save">table.save</a>&nbsp;(sfile, t)</td>
+	<td class="summary">Save & Load Variables The below functions can be used to save individual Lua tables to disc and load them again at a later time e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.unpickle">table.unpickle</a>&nbsp;(t, tables, tcopy, pickled)</td>
+	<td class="summary">table.unpickle( t, tables, tcopy, pickled ) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#xor">xor</a>&nbsp;(a, b)</td>
+	<td class="summary">xor(a, b) </td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="SavedVariables:Add"></a><strong>SavedVariables:Add</strong>&nbsp;(tbl)</dt>
+<dd>
+SavedVariables:Add(tbl)
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  tbl: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="_comp"></a><strong>_comp</strong>&nbsp;(a, b)</dt>
+<dd>
+_comp(a, b)
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  a: 
+	</li>
+	
+	<li>
+	  b: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getOS"></a><strong>getOS</strong>&nbsp;()</dt>
+<dd>
+Determine operating system.
+
+
+
+
+
+
+
+<h3>Return value:</h3>
+"linux", "mac" or "windows" string
+
+
+
+</dd>
+
+
+
+
+<dt><a name="io.exists"></a><strong>io.exists</strong>&nbsp;(file)</dt>
+<dd>
+Checks to see if a file exists.
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  file: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="loadVars"></a><strong>loadVars</strong>&nbsp;()</dt>
+<dd>
+This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory and unpacks them into the global namespace.
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="openURL"></a><strong>openURL</strong>&nbsp;(url)</dt>
+<dd>
+Opens URL in default browser
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  url: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="phpTable"></a><strong>phpTable</strong>&nbsp;(...)</dt>
+<dd>
+phpTable(...) - abuse to: http://richard.warburton.it
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="remember"></a><strong>remember</strong>&nbsp;(varName)</dt>
+<dd>
+This function flags a variable to be saved by Mudlet's variable persistence system. <br/> Usage: remember("varName") <br/> Example: remember("table_Weapons") <br/> Example: remember("var_EnemyHeight") <br/> Variables are automatically unpacked into the global namespace when the profile is loaded. <br/> They are saved to "SavedVariables.lua" when the profile is closed or saved. <br/>
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  varName: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="saveVars"></a><strong>saveVars</strong>&nbsp;()</dt>
+<dd>
+This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="sendAll"></a><strong>sendAll</strong>&nbsp;(...)</dt>
+<dd>
+sendAll(...)
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="speedwalk"></a><strong>speedwalk</strong>&nbsp;(dirString, backwards, delay)</dt>
+<dd>
+speedwalk(dirString, backwards, delay)
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  dirString: 
+	</li>
+	
+	<li>
+	  backwards: 
+	</li>
+	
+	<li>
+	  delay: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="speedwalktimer"></a><strong>speedwalktimer</strong>&nbsp;()</dt>
+<dd>
+speedwalktimer()
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.load"></a><strong>table.load</strong>&nbsp;(sfile, loadinto)</dt>
+<dd>
+table.load( sfile, loadinto )
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  sfile: 
+	</li>
+	
+	<li>
+	  loadinto: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.pickle"></a><strong>table.pickle</strong>&nbsp;(t, file, tables, lookup)</dt>
+<dd>
+table.pickle( t, file, tables, lookup )
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  t: 
+	</li>
+	
+	<li>
+	  file: 
+	</li>
+	
+	<li>
+	  tables: 
+	</li>
+	
+	<li>
+	  lookup: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.save"></a><strong>table.save</strong>&nbsp;(sfile, t)</dt>
+<dd>
+Save & Load Variables The below functions can be used to save individual Lua tables to disc and load them again at a later time e.g. make a database, collect statistical information etc. These functions are also used by Mudlet to load & save the entire Lua session variables  table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this) table.load(file, table) - loads a serialized file into the given table table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this) table.save(file, table) - saves the given table into the given file  Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself.  Notes: Userdata and indices of these are not saved Functions are saved via string.dump, so make sure it has no upvalues References are saved 
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  sfile: 
+	</li>
+	
+	<li>
+	  t: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.unpickle"></a><strong>table.unpickle</strong>&nbsp;(t, tables, tcopy, pickled)</dt>
+<dd>
+table.unpickle( t, tables, tcopy, pickled )
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  t: 
+	</li>
+	
+	<li>
+	  tables: 
+	</li>
+	
+	<li>
+	  tcopy: 
+	</li>
+	
+	<li>
+	  pickled: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="xor"></a><strong>xor</strong>&nbsp;(a, b)</dt>
+<dd>
+xor(a, b)
+
+
+<h3>Parameters</h3>
+<ul>
+	
+	<li>
+	  a: 
+	</li>
+	
+	<li>
+	  b: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

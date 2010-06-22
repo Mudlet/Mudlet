@@ -92,7 +92,7 @@ end
 -- definition
 
 local function check_module (line, currentmodule)
---	line = util.trim(line)
+	line = util.trim(line)
 	
 	-- module"x.y"
 	-- module'x.y'
@@ -102,16 +102,13 @@ local function check_module (line, currentmodule)
 	-- module([[x.y]])
 	-- module(...)
 
---	local r, _, modulename = string.find(line, "^module%s*[%s\"'(%[]+([^,\"')%]]+)")
---	if r then
+	local r, _, modulename = string.find(line, "^module%s*[%s\"'(%[]+([^,\"')%]]+)")
+	if r then
 		-- found module definition
---		logger:debug(string.format("found module `%s'", modulename))
---		return modulename
---	end
---	return currentmodule
-
-	-- misuse module as a global index
-	return "All Functions"
+		logger:debug(string.format("found module `%s'", modulename))
+		return modulename
+	end
+	return currentmodule
 end
 
 -------------------------------------------------------------------------------
@@ -166,21 +163,55 @@ end
 
 
 -------------------------------------------------------------------------------
+-- Simply tests if trimmed line without pre /pre tags is blank
+-- @return true/false 
+function skipNewline(line)
+	if string.find(line, "<[pP][rR][eE]>") or string.find(line, "</[pP][rR][eE]>") then
+		line = string.gsub(line, "<[pP][rR][eE]>", "")
+		line = string.gsub(line, "</[pP][rR][eE]>", "")
+		line = string.gsub(line, "^%s*(.-)%s*$", "%1")
+		return line == ""
+	else
+		return false
+	end
+end
+
+
+-------------------------------------------------------------------------------
+-- Simply tests if trimmed line without @usage tags is blank
+-- @return true/false 
+function addNewlineAfterUsage(line)
+	line = string.gsub(line, "@usage", "")
+	line = string.gsub(line, "^%s*(.-)%s*$", "%1")
+	return line == ""
+end
+
+
+
+-------------------------------------------------------------------------------
 -- Removes lua comment from the begining of the line and add newLine char.
 -- This was implemented to add <pre> support to LuaDoc.
 -- @param s string to be trimmed
 -- @return trimmed string
 local function trim_comment_pre(s) 
 	-- detect start/end of pre block - case sensitive
-	if string.find(s, "<pre>") then luadoc_taglet_mudlet_pre = true end
-	if string.find(s, "</pre>") then luadoc_taglet_mudlet_pre = false end
+	if string.find(s, "<[pP][rR][eE]>") then luadoc_taglet_mudlet_pre = true end
+	if string.find(s, "</[pP][rR][eE]>") then luadoc_taglet_mudlet_pre = false end
 	-- process line
 	s = string.gsub(s, "%-%-+(.*)$", "%1")
 	if luadoc_taglet_mudlet_pre then
-		return s .. "\n"
+		if not skipNewline(s) then
+			return s .. "\n"
+		else
+			return s
+		end 
 	else
 		s = string.gsub(s, "^%s*(.-)%s*$", "%1")
-		if string.find(s, "@usage") then s = s .. "\n" end
+		if string.find(s, "@usage") then 
+			if addNewlineAfterUsage(s) then
+				s = s .. "\n"
+			end
+		end
 		return s
 	end
 end
@@ -252,6 +283,9 @@ local function parse_comment (block, first_line)
 		end
 	end)
 	tags.handle(currenttag, block, currenttext)
+
+	-- Store file name info
+	tags.handle("filename", block, luadoc_taglet_mudlet_filename)
 
 	-- extracts summary information from the description
 	block.summary = parse_summary(block.description)
@@ -343,7 +377,8 @@ function parse_file (filepath, doc)
 --		functions = class_iterator(blocks, "function"),
 --		tables = class_iterator(blocks, "table"),
 	}
---
+
+	-- added initial file comment
 	local first = doc.files[filepath].doc[1]
 	if first and modulename then
 		doc.files[filepath].author = first.author
@@ -424,7 +459,13 @@ function parse_file (filepath, doc)
 	doc.files[filepath].functions = {}
 	for f in class_iterator(blocks, "function")() do
 		table.insert(doc.files[filepath].functions, f.name)
+		-- added link, so we can refer this function later
+		f.link = string.gsub(filepath, ".lua", ".html") .. "#" .. f.name
 		doc.files[filepath].functions[f.name] = f
+		-- new array for master index of all functions
+		local funcId = f.name
+		table.insert(doc.mIndex, funcId)
+		doc.mIndex[funcId] = f
 	end
 	
 	-- make tables table
@@ -505,6 +546,7 @@ function start (files, doc)
 	doc = doc or {
 		files = {},
 		modules = {},
+		mIndex = {}, -- master index
 	}
 	assert(doc.files, "undefined `files' field")
 	assert(doc.modules, "undefined `modules' field")
@@ -512,7 +554,10 @@ function start (files, doc)
 	table.foreachi(files, function (_, path)
 		local attr = lfs.attributes(path)
 		assert(attr, string.format("error stating path `%s'", path))
-		
+	
+		-- current file
+		luadoc_taglet_mudlet_filename = path
+	
 		if attr.mode == "file" then
 			doc = file(path, doc)
 		elseif attr.mode == "directory" then
@@ -523,6 +568,7 @@ function start (files, doc)
 	-- order arrays alphabetically
 	recsort(doc.files)
 	recsort(doc.modules)
+	table.sort(doc.mIndex)
 
 	return doc
 end

@@ -1,0 +1,349 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li><strong>geyser/GeyserGauge.lua</strong></li>
+	
+	<li>
+		<a href="../../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserUtil.html">geyser/GeyserUtil.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserWindow.html">geyser/GeyserWindow.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>geyser/GeyserGauge.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Gauge:setColor">Geyser.Gauge:setColor</a>&nbsp;(r, g, b, text)</td>
+	<td class="summary">Sets the gauge color.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Gauge:setText">Geyser.Gauge:setText</a>&nbsp;(text)</td>
+	<td class="summary">Sets the text on the gauge.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Gauge:setValue">Geyser.Gauge:setValue</a>&nbsp;(currentValue, maxValue, text)</td>
+	<td class="summary">Sets the gauge amount.</td>
+	</tr>
+
+</table>
+
+
+
+
+<h2>Tables</h2>
+<table class="table_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Gauge">Geyser.Gauge</a></td>
+	<td class="summary">Represents a gauge that can be either vertical or horizontal.</td>
+	</tr>
+
+</table>
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="Geyser.Gauge:setColor"></a>
+<b><big>Geyser.Gauge:setColor&nbsp;</big></b>(r, g, b, text)</dt>
+<dd>
+
+Sets the gauge color.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  r: The red component, or a named color like "green".
+	</li>
+	
+	<li>
+	  g: the green component, or nil if using a named color.
+	</li>
+	
+	<li>
+	  b: the blue component, or nil if using a named color.
+	</li>
+	
+	<li>
+	  text: The text to display on the gauge, it is optional.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Gauge:setText"></a>
+<b><big>Geyser.Gauge:setText&nbsp;</big></b>(text)</dt>
+<dd>
+
+Sets the text on the gauge.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  text: The text to set.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Gauge:setValue"></a>
+<b><big>Geyser.Gauge:setValue&nbsp;</big></b>(currentValue, maxValue, text)</dt>
+<dd>
+
+Sets the gauge amount.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  currentValue: Current numeric value, or if maxValue is ommitted, then it is assumed that currentValue is a value between 0 and 100 and is used to set the gauge.
+	</li>
+	
+	<li>
+	  maxValue: Maximum numeric value.  Optionally nil, see above.
+	</li>
+	
+	<li>
+	  text: The text to display on the gauge, it is optional.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+<h2><a name="tables"></a>Tables</h2>
+<dl class="table">
+
+<dt><a name="Geyser.Gauge"></a><strong>Geyser.Gauge</strong></dt>
+<dd>Represents a gauge that can be either vertical or horizontal.
+
+
+<em>Fields</em>
+<ul>
+	
+	<li>
+	  value: Percentage value of how "full" the gauge is.
+	</li>
+	
+	<li>
+	  orientation: "horizontal" is the default and creates a horizontal gauge that fills from left to right. "vertical" creates a gauge that fills from bottom to top. "goofy" is horizontal but fills right to left. "batty" is vertical but fills from top to bottom.
+	</li>
+	
+	<li>
+	  color: Color base for this gauge.  Default is #808080
+	</li>
+	
+</ul>
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

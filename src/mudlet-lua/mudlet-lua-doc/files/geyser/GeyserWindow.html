@@ -1,0 +1,787 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserGauge.html">geyser/GeyserGauge.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li>
+		<a href="../../files/geyser/GeyserUtil.html">geyser/GeyserUtil.lua</a>
+	</li>
+
+	<li><strong>geyser/GeyserWindow.lua</strong></li>
+	
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>geyser/GeyserWindow.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:cecho">Geyser.Window:cecho</a>&nbsp;(message)</td>
+	<td class="summary">Prints a message to the window.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:decho">Geyser.Window:decho</a>&nbsp;(message)</td>
+	<td class="summary">Prints a message to the window.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:echo">Geyser.Window:echo</a>&nbsp;(message)</td>
+	<td class="summary">Prints a message to the window </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:getBgColor">Geyser.Window:getBgColor</a>&nbsp;()</td>
+	<td class="summary">Get the window's background color </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:getFgColor">Geyser.Window:getFgColor</a>&nbsp;()</td>
+	<td class="summary">Get the window's foreground color.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:hecho">Geyser.Window:hecho</a>&nbsp;(message)</td>
+	<td class="summary">Prints a message to the window.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:paste">Geyser.Window:paste</a>&nbsp;()</td>
+	<td class="summary">Pastes text from the clipboard into this window primitive.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:setBgColor">Geyser.Window:setBgColor</a>&nbsp;(r, g, b)</td>
+	<td class="summary">Sets the background color of this window primitive.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:setBold">Geyser.Window:setBold</a>&nbsp;(bool)</td>
+	<td class="summary">Sets bolded text.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:setColor">Geyser.Window:setColor</a>&nbsp;(r, g, b, a)</td>
+	<td class="summary">Sets the background color and alpha.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:setFgColor">Geyser.Window:setFgColor</a>&nbsp;(r, g, b)</td>
+	<td class="summary">Sets the foreground color of this window primitive.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:setItalics">Geyser.Window:setItalics</a>&nbsp;(bool)</td>
+	<td class="summary">Sets italicized text.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:setTextFormat">Geyser.Window:setTextFormat</a>&nbsp;(r1, g1, b1, r1, g2, b2, bold, underline, italics, r2)</td>
+	<td class="summary">Sets the text format for this window.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window:setUnderline">Geyser.Window:setUnderline</a>&nbsp;(bool)</td>
+	<td class="summary">Sets underlined text.</td>
+	</tr>
+
+</table>
+
+
+
+
+<h2>Tables</h2>
+<table class="table_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#Geyser.Window">Geyser.Window</a></td>
+	<td class="summary">Represents an abstract window class designed to be subclassed for windows that are built on Mudlet primitives, like labels.</td>
+	</tr>
+
+</table>
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="Geyser.Window:cecho"></a>
+<b><big>Geyser.Window:cecho&nbsp;</big></b>(message)</dt>
+<dd>
+
+Prints a message to the window.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  message: The message to print. Uses color formatting information - a message of "<red>Hi" would make 'Hi' red.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:decho"></a>
+<b><big>Geyser.Window:decho&nbsp;</big></b>(message)</dt>
+<dd>
+
+Prints a message to the window.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  message: The message to print. Uses color formatting information - a message of "<255,0,0>Hi" would make 'Hi' red.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:echo"></a>
+<b><big>Geyser.Window:echo&nbsp;</big></b>(message)</dt>
+<dd>
+
+Prints a message to the window
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  message: The message to print. Can contain html formatting.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:getBgColor"></a>
+<b><big>Geyser.Window:getBgColor&nbsp;</big></b>()</dt>
+<dd>
+
+Get the window's background color
+
+
+
+<br/>
+
+
+
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>The background color of this window primitive as a Geyser.Color object.
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:getFgColor"></a>
+<b><big>Geyser.Window:getFgColor&nbsp;</big></b>()</dt>
+<dd>
+
+Get the window's foreground color.
+
+
+
+<br/>
+
+
+
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>The foreground color of this window primitive as a Geyser.Color object.
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:hecho"></a>
+<b><big>Geyser.Window:hecho&nbsp;</big></b>(message)</dt>
+<dd>
+
+Prints a message to the window.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  message: The message to print. Uses color formatting information - a message of "|cff0000Hi" would make 'Hi' red.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:paste"></a>
+<b><big>Geyser.Window:paste&nbsp;</big></b>()</dt>
+<dd>
+
+Pastes text from the clipboard into this window primitive.
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:setBgColor"></a>
+<b><big>Geyser.Window:setBgColor&nbsp;</big></b>(r, g, b)</dt>
+<dd>
+
+Sets the background color of this window primitive.  If this primitive was using a shared color, then it creates a new, personal color.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  r: The red value, or a quoted color name, like "green".
+	</li>
+	
+	<li>
+	  g: The green value, or nil if using a name.
+	</li>
+	
+	<li>
+	  b: The blue value, or nil if using a name.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:setBold"></a>
+<b><big>Geyser.Window:setBold&nbsp;</big></b>(bool)</dt>
+<dd>
+
+Sets bolded text.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  bool: True for bold.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:setColor"></a>
+<b><big>Geyser.Window:setColor&nbsp;</big></b>(r, g, b, a)</dt>
+<dd>
+
+Sets the background color and alpha.  If this primitive was using a shared color, then it creates a new, personal color.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  r: The red component of the color, or a named color like "green".
+	</li>
+	
+	<li>
+	  g: The green component, or nil if using named colors.
+	</li>
+	
+	<li>
+	  b: The blue component, or nil if using named colors.
+	</li>
+	
+	<li>
+	  a: The alpha component. If nil, uses current alpha value.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:setFgColor"></a>
+<b><big>Geyser.Window:setFgColor&nbsp;</big></b>(r, g, b)</dt>
+<dd>
+
+Sets the foreground color of this window primitive.  If this primitive was using a shared color, then it creates a new, personal color.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  r: The red value, or a quoted color name, like "green".
+	</li>
+	
+	<li>
+	  g: The green value, or nil if using a name.
+	</li>
+	
+	<li>
+	  b: The blue value, or nil if using a name.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:setItalics"></a>
+<b><big>Geyser.Window:setItalics&nbsp;</big></b>(bool)</dt>
+<dd>
+
+Sets italicized text.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  bool: True for italicized.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:setTextFormat"></a>
+<b><big>Geyser.Window:setTextFormat&nbsp;</big></b>(r1, g1, b1, r1, g2, b2, bold, underline, italics, r2)</dt>
+<dd>
+
+Sets the text format for this window. Note that the *echo() functions will override these settings.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  r1: The red foreground component.
+	</li>
+	
+	<li>
+	  g1: The green foreground component.
+	</li>
+	
+	<li>
+	  b1: The blue foreground component.
+	</li>
+	
+	<li>
+	  r1: The red foreground component.
+	</li>
+	
+	<li>
+	  g2: The green background component.
+	</li>
+	
+	<li>
+	  b2: The blue background component.
+	</li>
+	
+	<li>
+	  bold: The bolded status. 1 is bold, 0 is normal.
+	</li>
+	
+	<li>
+	  underline: The underlined status. 1 is underlined, 0 is normal.
+	</li>
+	
+	<li>
+	  italics: The italicized status. 1 is italicized, 0 is normal.
+	</li>
+	
+	<li>
+	  r2: The red background component.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="Geyser.Window:setUnderline"></a>
+<b><big>Geyser.Window:setUnderline&nbsp;</big></b>(bool)</dt>
+<dd>
+
+Sets underlined text.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  bool: True for underlined.
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+<h2><a name="tables"></a>Tables</h2>
+<dl class="table">
+
+<dt><a name="Geyser.Window"></a><strong>Geyser.Window</strong></dt>
+<dd>Represents an abstract window class designed to be subclassed for windows that are built on Mudlet primitives, like labels.
+
+
+<em>Fields</em>
+<ul>
+	
+	<li>
+	  message: The message last *echo()'d to this window. Default is “”.
+	</li>
+	
+	<li>
+	  bgColor: Text background color, default "white"
+	</li>
+	
+	<li>
+	  fgColor: Text foreground color, default "black"
+	</li>
+	
+	<li>
+	  color: Window background color, default "#202020"
+	</li>
+	
+</ul>
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

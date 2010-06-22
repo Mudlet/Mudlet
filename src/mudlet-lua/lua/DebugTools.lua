@@ -1,13 +1,13 @@
+----------------------------------------------------------------------------------
+--- Mudlet Debug Tools
+----------------------------------------------------------------------------------
 
-----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
---                                                                              --
--- Debug Tools                                                                  --
---                                                                              --
-----------------------------------------------------------------------------------
-----------------------------------------------------------------------------------
+
 
 --- Function colorizes all matched regex capture groups on the screen.
+--- This is very handy if you make complex regex and want to see what really matches in the text.
+---
+--- @see matches
 function showCaptureGroups()
 	for k, v in pairs ( matches ) do
 		selectCaptureGroup( tonumber(k) )
@@ -17,10 +17,18 @@ function showCaptureGroups()
 end
 
 
---- Prints the content of the table multimatches[n][m] to the screen. This is meant 
---- as a tool to help write multiline trigger scripts. This helps you to easily see 
---- what your multiline trigger actually captured in all regex. You can use these values 
+
+--- Prints the content of the table multimatches[n][m] to the screen. This is meant
+--- as a tool to help write multiline trigger scripts. This helps you to easily see
+--- what your multiline trigger actually captured in all regex. You can use these values
 --- directly in your script by referring to it with multimatches[regex-number][capturegroup].
+---
+--- @usage Just call this s function from your trigger to show the info.
+---   <pre>
+---   showMultimatches()
+---   </pre>
+---
+--- @see multimatches
 function showMultimatches()
 	echo("\n-------------------------------------------------------");
 	echo("\nThe table multimatches[n][m] contains:");
@@ -35,7 +43,12 @@ function showMultimatches()
 end
 
 
---- Pretty display function will try to print out content of any table.
+
+--- Pretty display function will try to print out content of any table. <br/><br/>
+---
+--- Note: This version of display can lead to infinite loop depending on your data. There is also
+--- <i>Geyser.display()</i>, which will use only one level of recursion.
+---
 --- @usage display(mytable)
 function display(what, numformat, recursion)
 	recursion = recursion or 0
@@ -69,8 +82,8 @@ function display(what, numformat, recursion)
 		end
 
 		-- so empty tables print as {} instead of {..indent..}
-		if not firstline then 
-			echo(indent(recursion - 1)) 
+		if not firstline then
+			echo(indent(recursion - 1))
 		end
 		echo("}")
 	end
@@ -81,17 +94,20 @@ function display(what, numformat, recursion)
 end
 
 
---- Basically like tostring(), except takes a numformat
---- and is a little better suited for working with display().
+
+--- Basically like tostring(), except takes a numformat and is a little better suited
+--- for working with display().
+---
+--- @see display
 function printable(what, numformat)
 	local ret
 	if type(what) == 'string' then
 		ret = "'"..what.."'"
 	elseif type(what) == 'number' then
-		if numformat then 
+		if numformat then
 			ret = string.format(numformat, what)
-		else 
-			ret = what 
+		else
+			ret = what
 		end
 	elseif type(what) == 'boolean' then
 		ret = tostring(what)
@@ -104,10 +120,13 @@ function printable(what, numformat)
 end
 
 
+
 -- simulate a static variable
 do local indents = {}
 
-	--- Handles indentation
+	--- This function handles indentation for display function.
+	---
+	--- @see display
 	function indent(num)
 		if not indents[num] then
 			indents[num] = ""
