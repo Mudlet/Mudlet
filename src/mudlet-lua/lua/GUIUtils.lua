@@ -734,7 +734,7 @@ if rex then
 					c = nil
 				end
 				if s then table.insert(t, s) end
-				if r then table.insert(t, "r") end
+				if r then table.insert(t, "\27reset") end
 				if c then
 					if style == 'Hex' or style == 'Decimal' then
 						local fr, fg, fb, br, bg, bb = Echos.Patterns[style][2]:match(c)
@@ -747,7 +747,7 @@ if rex then
 						if br and bg and bb then color.bg = { br, bg, bb } end
 						table.insert(t, color)
 					elseif style == 'Color' then
-						if c == "<reset>" then table.insert(t, "r")
+						if c == "<reset>" then table.insert(t, "\27reset")
 						else
 							local fcolor, bcolor = Echos.Patterns[style][2]:match(c)
 							local color = {}
@@ -825,7 +825,7 @@ if rex then
 					local br, bg, bb = unpack(v.bg)
 					if win then setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb) end
 				end
-			elseif v == "r" then
+			elseif v == "\27reset" then
 				reset()
 			else
 				if win then out(win, v) else out(v) end
