@@ -3,8 +3,12 @@ need to sort out single GIT repozitory for all mudlet code
 
 
 put all lua code in sepate subfolder (mudletHome/lua)
-	amend LuaGlobal to load scripts from: mudletHome/lua
-	add all lua files there (Geyser, DB, ...)
+	amend LuaGlobal to load scripts from: mudletHome/lua - nearly done
+		mudletHome/mudlet-lua/lua
+
+
+change genScript to generate documentation into (to make it more accesible)
+	mudletHome/mudlet-lua/doc
 
 
 Lua Code
@@ -15,6 +19,5 @@ LuaDoc
 	gen LuaDoc and link it from main manual (e.g. this will be only API documentation)
 		e.g. LuaDoc will replace Alphabetic Function List
 
-	make generated LuaDoc more appealing (chekc lua/luadoc/doclet/html folder for it)
-
-
+	make generated LuaDoc more appealing (check lua/luadoc/doclet/html folder for it)
+		this mainly includes better css
