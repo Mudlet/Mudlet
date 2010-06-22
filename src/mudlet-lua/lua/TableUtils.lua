@@ -36,14 +36,19 @@ end
 
 
 
---- <b><u>TODO</u></b> __printTable( k, v )
+-- NOT LUADOC
+-- This is supporting function for printTable().
 function __printTable( k, v )
 	insertText ("\nkey = " .. tostring (k) .. " value = " .. tostring( v )  )
 end
 
 
 
---- <b><u>TODO</u></b> listPrint( map )
+--- Lua debug function that prints the content of a Lua table on the screen. <br/>
+--- There are currently 3 functions with similar behaviour.
+---
+--- @see display
+--- @see printTable 
 function listPrint( map )
 	echo("-------------------------------------------------------\n");
 	for k,v in ipairs( map ) do
