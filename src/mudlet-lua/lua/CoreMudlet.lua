@@ -1410,7 +1410,8 @@ function selectString(text, numberOfMatch) end
 
 --- This sends "command" directly to the network layer, skipping the alias matching. The optional
 --- second argument of type boolean (print) determines if the outgoing command is to be echoed on the screen.
---- If you want your command to be checked if it's an alias, use expandAlias() instead.
+--- Send honours command separator defined within Mudlet settings. If you want your command to be checked 
+--- if it's an alias, use expandAlias() instead.
 ---
 --- @usage Echos the command on the screen.
 ---   <pre>
@@ -1429,6 +1430,7 @@ function selectString(text, numberOfMatch) end
 ---   be echoed back on client.
 ---
 --- @see expandAlias
+--- @see sendAll
 function send(command, echoTheValue) end
 
 
@@ -1874,6 +1876,23 @@ function tempTrigger(string, luaCode) end
 ---   -- This will freeze Mudlet for 2 seconds!!!
 ---   wait(2000)
 ---   send("kill rat")
+---   </pre>
+--- @usage This example is demonstrating transition from Nexus/Zmud wait.
+---   You can simply rewrote following nexus/zmud code bellow with <b>tempTimers</b>.
+---   <pre>
+---   #send jerk fish
+---   #wait 1500
+---   #send pull line
+---   #wait 500
+---   #send jump
+---   </pre>
+---   Since timers are created instantly, if you want two or more, or means the times 
+---   for consecutive timers should be to the starting point, unlike relatives times you do with waits.
+---   <pre>
+---   -- Mudlet code
+---   send ("jerk fish")
+---   tempTimer (1.5, [[send ("pull line")]])
+---   tempTimer (2,   [[send ("jump")]])
 ---   </pre>
 ---
 --- @see tempTimer
