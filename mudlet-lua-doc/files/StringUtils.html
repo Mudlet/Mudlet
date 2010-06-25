@@ -142,6 +142,11 @@
 <table class="function_list">
 
 	<tr>
+	<td class="name" nowrap><a href="#string.cut">string.cut</a>&nbsp;(s, maxLen)</td>
+	<td class="summary">Cut string to specified maximum length.</td>
+	</tr>
+
+	<tr>
 	<td class="name" nowrap><a href="#string.enclose">string.enclose</a>&nbsp;(s, maxlevel)</td>
 	<td class="summary">Enclose string by long brackets.</td>
 	</tr>
@@ -164,6 +169,11 @@
 	<tr>
 	<td class="name" nowrap><a href="#string.starts">string.starts</a>&nbsp;(String, Prefix)</td>
 	<td class="summary">Test if string is starting with specified prefix.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#string.trim">string.trim</a>&nbsp;(s)</td>
+	<td class="summary">Trim string (remove all white spaces around string).</td>
 	</tr>
 
 	<tr>
@@ -191,6 +201,57 @@
 
 <h2><a name="functions"></a>Functions</h2>
 <dl class="function">
+
+
+
+<dt><a name="string.cut"></a>
+<b><big>string.cut&nbsp;</big></b>(s, maxLen)</dt>
+<dd>
+
+Cut string to specified maximum length. 
+
+
+<br/><b>Release:</b> post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>) 
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  s: 
+	</li>
+	
+	<li>
+	  maxLen: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>Following call will return 'abc'.    <pre>    string.cut("abcde", 3)
+ </pre>
+	
+	<li>You can easily pad string to certain length. Example bellow will print 'abcde     ' e.g. pad/cut string to 10 characters.    <pre>    local s = "abcde"
+    s = string.cut(s .. "          ", 10)   -- append 10 spaces
+    echo("'" .. s .. "'")
+ </pre>
+	
+</ul>
+
+
+
+
+
+
+</dd>
+
 
 
 
@@ -421,6 +482,47 @@ Test if string is starting with specified prefix.
 	<li><a href='StringUtils.html#string.ends'>string.ends</a>
 	
 </ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="string.trim"></a>
+<b><big>string.trim&nbsp;</big></b>(s)</dt>
+<dd>
+
+Trim string (remove all white spaces around string). 
+
+
+<br/><b>Release:</b> post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>) 
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  s: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Example will print 'Troll is here!'.    <pre>    local str = string.trim("  Troll is here!  ")
+    echo("'" .. str .. "'")
+ </pre>
+</ul>
+
+
+
+
 
 
 </dd>
