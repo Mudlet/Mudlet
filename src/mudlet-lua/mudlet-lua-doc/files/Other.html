@@ -682,18 +682,30 @@ Sends a list of commands to the MUD. You can use this to send some things at onc
 
 
 
-<b>Usage:</b>
+<b>Usage</b>
 <ul>
+	
 	<li>Use sendAll instead of multiple send commands.    <pre>    sendAll("stand", "wield shield", "say ha!")
  </pre> Instead of calling:    <pre>    send ("stand")
     send ("wield shield")
     send ("say ha!")
  </pre>
+	
+	<li>Use sendAll and do not echo sent commnad on the main window.    <pre>    sendAll("stand", "wield shield", "say ha!", false)
+ </pre> 
+	
 </ul>
 
 
 
 
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='CoreMudlet.html#send'>send</a>
+	
+</ul>
 
 
 </dd>

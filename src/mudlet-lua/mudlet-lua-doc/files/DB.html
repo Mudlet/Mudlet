@@ -142,53 +142,8 @@
 <table class="function_list">
 
 	<tr>
-	<td class="name" nowrap><a href="#datetime:_get_pattern">datetime:_get_pattern</a>&nbsp;(format)</td>
-	<td class="summary"><b><u>TODO</u></b> datetime:_get_pattern(format) The rex.match function does not return named patterns even if you use named capture groups, but the r:tfind does -- but this only operates on compiled patterns.</td>
-	</tr>
-
-	<tr>
 	<td class="name" nowrap><a href="#datetime:parse">datetime:parse</a>&nbsp;(source, format, as_epoch)</td>
 	<td class="summary">Parses the specified source string, according to the format if given, to return a representation of the date/time.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.Database._drop">db.Database._drop</a>&nbsp;(s_name)</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.Database:_begin">db.Database:_begin</a>&nbsp;()</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.Database:_commit">db.Database:_commit</a>&nbsp;()</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.Database:_end">db.Database:_end</a>&nbsp;()</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.Database:_rollback">db.Database:_rollback</a>&nbsp;()</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.__Timestamp:as_number">db.__Timestamp:as_number</a>&nbsp;()</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.__Timestamp:as_string">db.__Timestamp:as_string</a>&nbsp;(format)</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db.__Timestamp:as_table">db.__Timestamp:as_table</a>&nbsp;()</td>
-	<td class="summary"><b><u>TODO</u></b> </td>
 	</tr>
 
 	<tr>
@@ -204,61 +159,6 @@
 	<tr>
 	<td class="name" nowrap><a href="#db:Timestamp">db:Timestamp</a>&nbsp;(ts, fmt)</td>
 	<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_coerce">db:_coerce</a>&nbsp;(field, value)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_coerce(field, value) The function converts a Lua value into its SQL representation, depending on the type of the specified field.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_coerce_sheet">db:_coerce_sheet</a>&nbsp;(sheet, tbl)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_coerce_sheet(sheet, tbl) After a table so retrieved from the database, this function coerces values to their proper types.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_index_name">db:_index_name</a>&nbsp;(tbl_name, params)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_index_name(sheet_name, index_contents) Given a sheet name and the details of an index, this function will return a unique index name to add to the database.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_index_valid">db:_index_valid</a>&nbsp;(sheet_columns, index_columns)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_index_valid(sheet_columns, index_columns) This function returns true if all of the columns referenced in index_columns also exist within the sheet_columns table array.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_migrate">db:_migrate</a>&nbsp;(db_name, s_name)</td>
-	<td class="summary"><b><u>TODO</u></b> The migrate function is meant to upgrade an existing database live, to maintain a consistant and correct set of sheets and fields, along with their indexes.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_migrate_indexes">db:_migrate_indexes</a>&nbsp;(conn, s_name, schema, current_columns)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_migrate_indexes(connection, sheet_name, schema, existing_columns) Creates any indexes which do not yet exist in the given database.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_sql_columns">db:_sql_columns</a>&nbsp;(value)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_sql_columns(column_spec) The column_spec is either a string or an indexed table.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_sql_convert">db:_sql_convert</a>&nbsp;(value)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_sql_convert(v) Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to prevent inadvertant SQL injection.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_sql_fields">db:_sql_fields</a>&nbsp;(values)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_sql_fields(field_spec) This serves as a very similar function to db:_sql_columns, quoting column names properly but for uses outside of INSERTs.</td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_sql_type">db:_sql_type</a>&nbsp;(value)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_sql_type(v) Converts the type of a lua object to the equivalent type in SQL </td>
-	</tr>
-
-	<tr>
-	<td class="name" nowrap><a href="#db:_sql_values">db:_sql_values</a>&nbsp;(values)</td>
-	<td class="summary"><b><u>TODO</u></b> db:_sql_values(value_spec) This quotes values to be passed into an INSERT or UPDATE operation in a SQL list.</td>
 	</tr>
 
 	<tr>
@@ -293,7 +193,7 @@
 
 	<tr>
 	<td class="name" nowrap><a href="#db:echo_sql">db:echo_sql</a>&nbsp;(sql)</td>
-	<td class="summary"><b><u>TODO</u></b> db:echo_eql(sql) This is a debugging function, which echos any SQL commands if db.debug_sql is true </td>
+	<td class="summary">This is a debugging function, which echos any SQL commands if db.debug_sql is true.</td>
 	</tr>
 
 	<tr>
@@ -309,6 +209,11 @@
 	<tr>
 	<td class="name" nowrap><a href="#db:fetch">db:fetch</a>&nbsp;(sheet, query, order_by, descending)</td>
 	<td class="summary">Returns a table array containing a table for each matching row in the specified sheet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:fetch_sql">db:fetch_sql</a>&nbsp;(sheet, sql)</td>
+	<td class="summary">Execute SQL select query against database.</td>
 	</tr>
 
 	<tr>
@@ -414,38 +319,6 @@
 
 
 
-<dt><a name="datetime:_get_pattern"></a>
-<b><big>datetime:_get_pattern&nbsp;</big></b>(format)</dt>
-<dd>
-
-<b><u>TODO</u></b> datetime:_get_pattern(format) The rex.match function does not return named patterns even if you use named capture groups, but the r:tfind does -- but this only operates on compiled patterns. So, we are caching the conversion of 'simple format' date patterns into a regex, and then compiling them.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  format: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
 <dt><a name="datetime:parse"></a>
 <b><big>datetime:parse&nbsp;</big></b>(source, format, as_epoch)</dt>
 <dd>
@@ -473,208 +346,6 @@ Parses the specified source string, according to the format if given, to return 
 	</li>
 	
 </ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.Database._drop"></a>
-<b><big>db.Database._drop&nbsp;</big></b>(s_name)</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  s_name: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.Database:_begin"></a>
-<b><big>db.Database:_begin&nbsp;</big></b>()</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.Database:_commit"></a>
-<b><big>db.Database:_commit&nbsp;</big></b>()</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.Database:_end"></a>
-<b><big>db.Database:_end&nbsp;</big></b>()</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.Database:_rollback"></a>
-<b><big>db.Database:_rollback&nbsp;</big></b>()</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.__Timestamp:as_number"></a>
-<b><big>db.__Timestamp:as_number&nbsp;</big></b>()</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.__Timestamp:as_string"></a>
-<b><big>db.__Timestamp:as_string&nbsp;</big></b>(format)</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  format: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db.__Timestamp:as_table"></a>
-<b><big>db.__Timestamp:as_table&nbsp;</big></b>()</dt>
-<dd>
-
-<b><u>TODO</u></b>
-
-
-
-<br/>
-
 
 
 
@@ -790,390 +461,6 @@ Returns a compound database expression that combines both of the simple expressi
 	
 	<li>
 	  fmt: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_coerce"></a>
-<b><big>db:_coerce&nbsp;</big></b>(field, value)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_coerce(field, value) The function converts a Lua value into its SQL representation, depending on the type of the specified field. Strings will be single-quoted (and single-quotes within will be properly escaped), numbers will be rendered properly, and such.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  field: 
-	</li>
-	
-	<li>
-	  value: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_coerce_sheet"></a>
-<b><big>db:_coerce_sheet&nbsp;</big></b>(sheet, tbl)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_coerce_sheet(sheet, tbl) After a table so retrieved from the database, this function coerces values to their proper types. Specifically, numbers and datetimes become the proper types.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  sheet: 
-	</li>
-	
-	<li>
-	  tbl: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_index_name"></a>
-<b><big>db:_index_name&nbsp;</big></b>(tbl_name, params)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_index_name(sheet_name, index_contents) Given a sheet name and the details of an index, this function will return a unique index name to add to the database. The purpose of this is to create unique index names as indexes are tested for existance on each call of db:create and not only on creation. That way new indexes can be added after initial creation.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  tbl_name: 
-	</li>
-	
-	<li>
-	  params: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_index_valid"></a>
-<b><big>db:_index_valid&nbsp;</big></b>(sheet_columns, index_columns)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_index_valid(sheet_columns, index_columns) This function returns true if all of the columns referenced in index_columns also exist within the sheet_columns table array. The purpose of this is to raise an error if someone tries to index a column which doesn't currently exist in the schema.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  sheet_columns: 
-	</li>
-	
-	<li>
-	  index_columns: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_migrate"></a>
-<b><big>db:_migrate&nbsp;</big></b>(db_name, s_name)</dt>
-<dd>
-
-<b><u>TODO</u></b> The migrate function is meant to upgrade an existing database live, to maintain a consistant and correct set of sheets and fields, along with their indexes. It should be safe to run at any time, and must not cause any data loss. It simply adds to what is there: in perticular it is not capable of removing indexes, columns, or sheets after they have been defined.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  db_name: 
-	</li>
-	
-	<li>
-	  s_name: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_migrate_indexes"></a>
-<b><big>db:_migrate_indexes&nbsp;</big></b>(conn, s_name, schema, current_columns)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_migrate_indexes(connection, sheet_name, schema, existing_columns) Creates any indexes which do not yet exist in the given database.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  conn: 
-	</li>
-	
-	<li>
-	  s_name: 
-	</li>
-	
-	<li>
-	  schema: 
-	</li>
-	
-	<li>
-	  current_columns: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_sql_columns"></a>
-<b><big>db:_sql_columns&nbsp;</big></b>(value)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_sql_columns(column_spec) The column_spec is either a string or an indexed table. This function returns either "column" or "column1", "column2" for use in the column specification of INSERT.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  value: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_sql_convert"></a>
-<b><big>db:_sql_convert&nbsp;</big></b>(value)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_sql_convert(v) Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to prevent inadvertant SQL injection.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  value: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_sql_fields"></a>
-<b><big>db:_sql_fields&nbsp;</big></b>(values)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_sql_fields(field_spec) This serves as a very similar function to db:_sql_columns, quoting column names properly but for uses outside of INSERTs.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  values: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_sql_type"></a>
-<b><big>db:_sql_type&nbsp;</big></b>(value)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_sql_type(v) Converts the type of a lua object to the equivalent type in SQL
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  value: 
-	</li>
-	
-</ul>
-
-
-
-
-
-
-
-
-</dd>
-
-
-
-
-<dt><a name="db:_sql_values"></a>
-<b><big>db:_sql_values&nbsp;</big></b>(values)</dt>
-<dd>
-
-<b><u>TODO</u></b> db:_sql_values(value_spec) This quotes values to be passed into an INSERT or UPDATE operation in a SQL list. Meaning, it turns {x="this", y="that", z=1} into ('this', 'that', 1). It is intelligent with data-types; strings are automatically quoted (with internal single quotes escaped), nil turned into NULL, timestamps converted to integers, and such.
-
-
-
-<br/>
-
-
-<b>Parameters</b>
-<ul>
-	
-	<li>
-	  values: 
 	</li>
 	
 </ul>
@@ -1402,7 +689,7 @@ Creates and/or modifies an existing database. This function is safe to define at
           name = "",
           area = "",
           killed = db:Timestamp("CURRENT_TIMESTAMP"),
-          _index = { {"name", "area"} }
+          _index = {{"name", "area"}}
         },
         enemies = {
           name = "",
@@ -1415,7 +702,7 @@ Creates and/or modifies an existing database. This function is safe to define at
         }
       }
     )
- </pre>
+ </pre> Note that you have to use double {{ }} if you have composite index/unique constrain.
 </ul>
 
 
@@ -1490,7 +777,7 @@ Deletes rows from the specified sheet. The argument for query tries to be intell
 <b><big>db:echo_sql&nbsp;</big></b>(sql)</dt>
 <dd>
 
-<b><u>TODO</u></b> db:echo_eql(sql) This is a debugging function, which echos any SQL commands if db.debug_sql is true
+This is a debugging function, which echos any SQL commands if db.debug_sql is true. You should not call this function directly from Mudlet. 
 
 
 
@@ -1507,6 +794,12 @@ Deletes rows from the specified sheet. The argument for query tries to be intell
 </ul>
 
 
+
+<b>Usage:</b>
+<ul>
+	<li>Set following lua variable to enable SQL echos.    <pre>    db.debug_sql=true
+ </pre>
+</ul>
 
 
 
@@ -1655,13 +948,71 @@ Returns a table array containing a table for each matching row in the specified 
           db:like(mydb.kills.name, "%Drow%")
        }
     )
- </pre>
+ </pre> 
 	
 </ul>
 
 
 
 
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch_sql'>db:fetch_sql</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:fetch_sql"></a>
+<b><big>db:fetch_sql&nbsp;</big></b>(sheet, sql)</dt>
+<dd>
+
+Execute SQL select query against database. This only useful for some very specific cases. <br/> Use db:fetch if possible instead - this function should not be normally used! 
+
+
+<br/><b>Release:</b> post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>) 
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sheet: 
+	</li>
+	
+	<li>
+	  sql: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Following will select all distinct area from my kills DB.    <pre>    db:fetch_sql(mydb.kills, "SELECT distinct area FROM kills")
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
 
 
 </dd>
