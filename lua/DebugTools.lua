@@ -63,7 +63,7 @@ function display(what, numformat, recursion)
 		echo(" {")
 
 		local firstline = true   -- a kludge so empty tables print on one line
-		if getmetatable(what).isPhpTable == true then
+		if getmetatable(what) and getmetatable(what).isPhpTable == true then
 			for k, v in what:pairs() do
 				if firstline then echo("\n"); firstline = false end
 				echo(indent(recursion))

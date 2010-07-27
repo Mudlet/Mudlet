@@ -666,7 +666,7 @@ function showColors(...)
 		else
 			fg = "white"
 		end
-		cecho("<"..fg..":"..k..">"..k..string.rep(" ", 23-k:len()))
+		cecho(string.format("<%s:%s>%s%s", fg, k, k, string.rep(" ", 23-k:len())))
 		echo"  "
 		if i == cols then
 			echo"\n"
