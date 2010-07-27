@@ -60,4 +60,15 @@ function test(a, b) end
 color_table = {}
 
 
+-- NOT LUADOC
+-- This is function will not be in generated LuaDoc, but you can still 
+-- document it in save fashion.
+--
+-- normal lua comments   --
+-- LuaDoc documentation  ---
+--
+function _privateFunction()
+end
+
+
 
