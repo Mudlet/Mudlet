@@ -107,6 +107,10 @@ SavedVariables = {}
 ---   send ("wield shield")
 ---   send ("say ha!")
 ---   </pre>
+--- @usage Use sendAll and do not echo sent commnad on the main window.
+---   <pre>
+---   sendAll("stand", "wield shield", "say ha!", false)
+---   </pre>
 ---
 --- @see send
 function sendAll(...)

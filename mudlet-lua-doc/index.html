@@ -505,12 +505,6 @@
 	</tr>
 
 	<tr>
-		<td>TableUtils.lua</td>
-		<td class="name"><a href="files/TableUtils.html#__printTable">__printTable</a></td>
-		<td class="summary"><b><u>TODO</u></b> __printTable( k, v ) </td>
-	</tr>
-
-	<tr>
 		<td>Other.lua</td>
 		<td class="name"><a href="files/Other.html#_comp">_comp</a></td>
 		<td class="summary"><b><u>TODO</u></b> _comp(a, b) </td>
@@ -644,62 +638,8 @@
 
 	<tr>
 		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#datetime:_get_pattern">datetime:_get_pattern</a></td>
-		<td class="summary"><b><u>TODO</u></b> datetime:_get_pattern(format) The rex.match function does not return named patterns even if you use named capture groups, but the r:tfind does -- but this only operates on compiled patterns.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
 		<td class="name"><a href="files/DB.html#datetime:parse">datetime:parse</a></td>
 		<td class="summary">Parses the specified source string, according to the format if given, to return a representation of the date/time.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.Database._drop">db.Database._drop</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.Database:_begin">db.Database:_begin</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.Database:_commit">db.Database:_commit</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.Database:_end">db.Database:_end</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.Database:_rollback">db.Database:_rollback</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.__Timestamp:as_number">db.__Timestamp:as_number</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.__Timestamp:as_string">db.__Timestamp:as_string</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db.__Timestamp:as_table">db.__Timestamp:as_table</a></td>
-		<td class="summary"><b><u>TODO</u></b> </td>
 	</tr>
 
 	<tr>
@@ -718,72 +658,6 @@
 		<td>DB.lua</td>
 		<td class="name"><a href="files/DB.html#db:Timestamp">db:Timestamp</a></td>
 		<td class="summary"><b><u>TODO</u></b> </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_coerce">db:_coerce</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_coerce(field, value) The function converts a Lua value into its SQL representation, depending on the type of the specified field.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_coerce_sheet">db:_coerce_sheet</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_coerce_sheet(sheet, tbl) After a table so retrieved from the database, this function coerces values to their proper types.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_index_name">db:_index_name</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_index_name(sheet_name, index_contents) Given a sheet name and the details of an index, this function will return a unique index name to add to the database.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_index_valid">db:_index_valid</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_index_valid(sheet_columns, index_columns) This function returns true if all of the columns referenced in index_columns also exist within the sheet_columns table array.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_migrate">db:_migrate</a></td>
-		<td class="summary"><b><u>TODO</u></b> The migrate function is meant to upgrade an existing database live, to maintain a consistant and correct set of sheets and fields, along with their indexes.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_migrate_indexes">db:_migrate_indexes</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_migrate_indexes(connection, sheet_name, schema, existing_columns) Creates any indexes which do not yet exist in the given database.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_sql_columns">db:_sql_columns</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_sql_columns(column_spec) The column_spec is either a string or an indexed table.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_sql_convert">db:_sql_convert</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_sql_convert(v) Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to prevent inadvertant SQL injection.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_sql_fields">db:_sql_fields</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_sql_fields(field_spec) This serves as a very similar function to db:_sql_columns, quoting column names properly but for uses outside of INSERTs.</td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_sql_type">db:_sql_type</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_sql_type(v) Converts the type of a lua object to the equivalent type in SQL </td>
-	</tr>
-
-	<tr>
-		<td>DB.lua</td>
-		<td class="name"><a href="files/DB.html#db:_sql_values">db:_sql_values</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:_sql_values(value_spec) This quotes values to be passed into an INSERT or UPDATE operation in a SQL list.</td>
 	</tr>
 
 	<tr>
@@ -825,7 +699,7 @@
 	<tr>
 		<td>DB.lua</td>
 		<td class="name"><a href="files/DB.html#db:echo_sql">db:echo_sql</a></td>
-		<td class="summary"><b><u>TODO</u></b> db:echo_eql(sql) This is a debugging function, which echos any SQL commands if db.debug_sql is true </td>
+		<td class="summary">This is a debugging function, which echos any SQL commands if db.debug_sql is true.</td>
 	</tr>
 
 	<tr>
@@ -844,6 +718,12 @@
 		<td>DB.lua</td>
 		<td class="name"><a href="files/DB.html#db:fetch">db:fetch</a></td>
 		<td class="summary">Returns a table array containing a table for each matching row in the specified sheet.</td>
+	</tr>
+
+	<tr>
+		<td>DB.lua</td>
+		<td class="name"><a href="files/DB.html#db:fetch_sql">db:fetch_sql</a></td>
+		<td class="summary">Execute SQL select query against database.</td>
 	</tr>
 
 	<tr>
@@ -1335,13 +1215,13 @@
 	<tr>
 		<td>TableUtils.lua</td>
 		<td class="name"><a href="files/TableUtils.html#listAdd">listAdd</a></td>
-		<td class="summary"><b><u>TODO</u></b> listAdd( list, what ) <br/> Use table.insert(list, what) instead </td>
+		<td class="summary"><b><u>TODO</u></b> listAdd( list, what ) </td>
 	</tr>
 
 	<tr>
 		<td>TableUtils.lua</td>
 		<td class="name"><a href="files/TableUtils.html#listPrint">listPrint</a></td>
-		<td class="summary"><b><u>TODO</u></b> listPrint( map ) </td>
+		<td class="summary">Lua debug function that prints the content of a Lua table on the screen.</td>
 	</tr>
 
 	<tr>
@@ -1916,6 +1796,12 @@
 
 	<tr>
 		<td>StringUtils.lua</td>
+		<td class="name"><a href="files/StringUtils.html#string.cut">string.cut</a></td>
+		<td class="summary">Cut string to specified maximum length.</td>
+	</tr>
+
+	<tr>
+		<td>StringUtils.lua</td>
 		<td class="name"><a href="files/StringUtils.html#string.enclose">string.enclose</a></td>
 		<td class="summary">Enclose string by long brackets.</td>
 	</tr>
@@ -1942,6 +1828,12 @@
 		<td>StringUtils.lua</td>
 		<td class="name"><a href="files/StringUtils.html#string.starts">string.starts</a></td>
 		<td class="summary">Test if string is starting with specified prefix.</td>
+	</tr>
+
+	<tr>
+		<td>StringUtils.lua</td>
+		<td class="name"><a href="files/StringUtils.html#string.trim">string.trim</a></td>
+		<td class="summary">Trim string (remove all white spaces around string).</td>
 	</tr>
 
 	<tr>

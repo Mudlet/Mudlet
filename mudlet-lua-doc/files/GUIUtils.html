@@ -379,7 +379,7 @@ Converts an RGB value into an HTML compliant(label usable) HEX number. This func
 
 <b>Usage:</b>
 <ul>
-	<li>Both folowing commnads will returns "FFFFFF".    <pre>    RGB2Hex(255,255,255)
+	<li>Both following commands will returns "FFFFFF".    <pre>    RGB2Hex(255,255,255)
     RGB2Hex("white")
  </pre> 
 </ul>
@@ -485,6 +485,8 @@ Echo string with embedded color name information.
 	
 	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
 	
+	<li><a href='GUIUtils.html#cinsertText'>cinsertText</a>
+	
 </ul>
 
 
@@ -554,6 +556,8 @@ The <i>color_table table</i> holds definition of color names. These are intended
 <b>See also:</b>
 <ul>
 	
+	<li><a href='GUIUtils.html#showColors'>showColors</a>
+	
 	<li><a href='GUIUtils.html#bg'>bg</a>
 	
 	<li><a href='GUIUtils.html#fg'>fg</a>
@@ -610,7 +614,8 @@ Make a new console window with ease. The default background is black and text co
 
 <b>Usage:</b>
 <ul>
-	<li>createConsole("myConsoleWindow", 8, 80, 20, 200, 400)  <br/> This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width, hold a maximum of 20 lines and be place at 200x400 of your mudlet window.
+	<li>This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width, hold a maximum of 20 lines and be place at 200x400 of your Mudlet window.    <pre>    createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
+ </pre>
 </ul>
 
 
@@ -737,6 +742,8 @@ Echo string with embedded decimal color information. <br/><br/>  Color changes c
 <ul>
 	
 	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#dinsertText'>dinsertText</a>
 	
 </ul>
 
@@ -1014,6 +1021,8 @@ Echo string with embedded hex color information. <br/><br/>  Color changes can b
 <ul>
 	
 	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#hinsertText'>hinsertText</a>
 	
 </ul>
 
@@ -1380,9 +1389,11 @@ Use this function when you want to change the gauges look according to your valu
 <b>Usage</b>
 <ul>
 	
-	<li>setGauge("healthBar", 200, 400)  <br/> In that example, we'd change the looks of the gauge named healthBar and make it fill to half of its capacity. The height is always remembered.
+	<li>In that example, we'd change the looks of the gauge named healthBar and make it fill to half of its capacity. The height is always remembered.    <pre>    setGauge("healthBar", 200, 400)
+ </pre>
 	
-	<li>setGauge("healthBar", 200, 400, "some text")  <br/> change the text on your gauge
+	<li>Change the text on your gauge.    <pre>    setGauge("healthBar", 200, 400, "some text")
+ </pre>
 	
 </ul>
 

@@ -110,9 +110,9 @@ command = ""
 ---
 --- @usage
 ---   <pre>
----   selectString(line);
----   copy();
----   appendBuffer("chat");
+---   selectString(line)
+---   copy()
+---   appendBuffer("chat")
 ---   replace("This line has been moved to the chat window!")
 ---   </pre>
 ---
@@ -147,13 +147,13 @@ function createButton() end
 ---   Because the background color has a transparency level of 150 (0-255, with 0 being completely transparent and 255 non-transparent) the background
 ---   text can still be read through. The message box will disappear after 2.3 seconds.
 ---   <pre>
----   local width, height = getMainWindowSize();
----   createLabel("messageBox",(width/2)-300,(height/2)-100,250,150,1);
----   resizeWindow("messageBox",500,70);
----   moveWindow("messageBox", (width/2)-300,(height/2)-100 );
----   setBackgroundColor("messageBox", 150,100,100,200);
----   echo("messageBox", [[&lt;p style=&quot;font-size:35px&quot;&gt;&lt;b&gt;&lt;center&gt;&lt;font color=&quot;red&quot;&gt;You are under attack!&lt;/font&gt;&lt;/center&gt;&lt;/b&gt;&lt;/p&gt;]] );
----   showWindow("messageBox");
+---   local width, height = getMainWindowSize()
+---   createLabel("messageBox",(width/2)-300,(height/2)-100,250,150,1)
+---   resizeWindow("messageBox",500,70)
+---   moveWindow("messageBox", (width/2)-300,(height/2)-100 )
+---   setBackgroundColor("messageBox", 150,100,100,200)
+---   echo("messageBox", [[&lt;p style=&quot;font-size:35px&quot;&gt;&lt;b&gt;&lt;center&gt;&lt;font color=&quot;red&quot;&gt;You are under attack!&lt;/font&gt;&lt;/center&gt;&lt;/b&gt;&lt;/p&gt;]] )
+---   showWindow("messageBox")
 ---   -- close the warning message box after 2.3 seconds
 ---   tempTimer(2.3, [[hideWindow("messageBox")]] )
 ---   </pre>
@@ -191,9 +191,9 @@ function createLabel(name, posX, posY, width, height, fillBackground) end
 --- @usage Set up the small system message window in the top right corner
 ---   <pre>
 ---   -- determine the size of your screen
----   WindowWidth = 0;
----   WindowHeight = 0;
----   WindowWidth, WindowHeight = getMainWindowSize();
+---   WindowWidth = 0
+---   WindowHeight = 0
+---   WindowWidth, WindowHeight = getMainWindowSize()
 ---
 ---   createMiniConsole("sys",WindowWidth-650,0,650,300)
 ---   setBackgroundColor("sys",85,55,0,255)
@@ -236,13 +236,13 @@ function createMiniConsole(name, posX, posY, width, height) end
 ---
 --- @usage
 ---   <pre>
----   fightStopWatchID = createStopWatch();
+---   fightStopWatchID = createStopWatch()
 ---   -- you store the watchID in a global variable to access it from anywhere
----   startStopWatch(fightStopWatch);
+---   startStopWatch(fightStopWatch)
 ---   -- To stop the watch and measure its time in e.g. a trigger script you can write:
 ---   fightTime = stopStopWatch(fightStopWatchID)
 ---   echo("The fight lasted for " .. fightTime .. " seconds.")
----   resetStopWatch(fightStopWatchID);
+---   resetStopWatch(fightStopWatchID)
 ---   </pre>
 ---
 --- @see startStopWatch
@@ -482,12 +482,12 @@ function getBgColor(windowName) end
 ---
 --- @usage
 ---   <pre>
----   checked = getButtonStated();
+---   checked = getButtonStated()
 ---   if checked == 1 then
 ---       hideExits()
 ---   else
 ---       showExits()
----   end;
+---   end
 ---   </pre>
 ---
 --- @return numneric state; state = 1 button is checked and state = 0, button is not checked
@@ -524,7 +524,7 @@ function getCurrentLine() end
 --- This function returns the RGB values of the color of the first character of the current selection
 --- on mini console (window) windowName.
 ---
---- @param windowName optional -  if windowName is omitted Mudlet will use the main screen.
+--- @param windowName optional - if windowName is omitted Mudlet will use the main screen.
 ---
 --- @usage
 ---   <pre>
@@ -532,11 +532,11 @@ function getCurrentLine() end
 ---   </pre>
 --- @usage
 ---   <pre>
----   local r,g,b;
----   selectString("troll",1)
+---   local r,g,b
+---   selectString("troll", 1)
 ---   r,g,b = getFgColor()
 ---   if r == 255 and g == 0 and b == 0 then
----       echo("HELP! troll is written in red letters, the monster is aggressive!\n");
+---       echo("HELP! troll is written in red letters, the monster is aggressive!\n")
 ---   end
 ---   </pre>
 ---
@@ -574,7 +574,7 @@ function getLines(from_line_number, to_line_number) end
 ---
 --- @usage
 ---   <pre>
----   mainWindowWidth, mainWindowHeight = getMainWindowSize();
+---   mainWindowWidth, mainWindowHeight = getMainWindowSize()
 ---   </pre>
 ---
 --- @return 2 numbers, width and height in pixels
@@ -794,10 +794,10 @@ function isAnsiBgColor(ansiBgColorCode) end
 ---
 --- @usage
 ---   <pre>
----   selectString( matches[1], 1 )
----   if isAnsiFgColor( 5 ) then
----       bg("red");
----       resetFormat();
+---   selectString(matches[1], 1)
+---   if isAnsiFgColor(5) then
+---       bg("red")
+---       resetFormat()
 ---       echo("yes, the text is light green")
 ---   else
 ---       echo( "no sorry, some other foreground color" )
@@ -872,7 +872,7 @@ function loadRawFile() end
 --- First item of matches table (matches[1]) holds current line, all other contains capture groups
 --- defined by regular expression trigger.
 ---
---- @usage Let say that you defined following trigger to detect and get droped items.
+--- @usage Let say that you defined following trigger to detect and get dropped items.
 ---   <pre>
 ---   RegEx:
 ---      ^The (.*) drops (.*)\.$
@@ -1355,7 +1355,7 @@ function resizeWindow(name, width, height) end
 --- @usage
 ---   <pre>
 ---   setFgColor(0,255,0)
----   selectCaptureGroup(1);
+---   selectCaptureGroup(1)
 ---   </pre>
 ---
 --- @param groupNumber with first group = 1
@@ -1364,7 +1364,7 @@ function selectCaptureGroup() end
 
 
 --- Selects the content of the current buffer line.
---- <pre><b><u>TODO</u></b> It this valid? selectCurrentLine("sys");</pre>
+--- <pre><b><u>TODO</u></b> It this valid? selectCurrentLine("sys")</pre>
 function selectCurrentLine() end
 
 
@@ -1657,9 +1657,9 @@ function setPopup(name, commands, hints) end
 ---
 --- @usage This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
 ---   <pre>
----   createMiniConsole( "con1", 0,0,300,100);
----   setTextFormat("con1",0,0,255,255,255,0,1,1,1);
----   echo("con1","This is a test")
+---   createMiniConsole("con1", 0, 0, 300, 100)
+---   setTextFormat("con1", 0,0,255, 255,255,0, 1,1,1)
+---   echo("con1", "This is a test")
 ---   </pre>
 ---
 --- @see createMiniConsole
@@ -1909,8 +1909,8 @@ function wait(time) end
 --- Using this function is not good programming practice and should be avoided. There are better ways of
 --- handling situations where you would call deleteLine() and echo afterwards e.g.:
 ---   <pre>
----   selectString(line,1);
----   replace("");
+---   selectString(line,1)
+---   replace("")
 ---   </pre>
 --- This will effectively have the same result as a call to deleteLine() but the buffer line will not
 --- be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible
