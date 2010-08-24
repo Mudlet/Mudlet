@@ -736,7 +736,7 @@ void cTelnet::setATCPVariables( QString & msg )
         var = var.section( " ", 0, 0 );
     }
     mpHost->mLuaInterpreter.setAtcpTable( var, arg );
-    /*if( var.startsWith("RoomNum") )
+    if( var.startsWith("RoomNum") )
     {
         if( mpHost->mpMap )
         {
@@ -746,7 +746,7 @@ void cTelnet::setATCPVariables( QString & msg )
                 mpHost->mpMap->mpM->update();
             }
         }
-    }*/
+    }
 }
 
 void cTelnet::setChannel102Variables( QString & msg )

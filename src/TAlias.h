@@ -43,15 +43,15 @@ class TAlias : public Tree<TAlias>
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
-    
-    
+
+
     virtual          ~TAlias();
                      TAlias( TAlias * parent, Host * pHost );
                      TAlias( QString name, Host * pHost );
                      TAlias& clone(const TAlias& );
-    
+    void             compileAll();
     QString          getName()                       { return mName; }
     void             setName( QString name );
     void             compile();
@@ -60,7 +60,7 @@ public:
     QString          getScript()                     { return mScript; }
     bool             setScript( QString & script );
     QString          getRegexCode()                  { return mRegexCode; }
-    void             setRegexCode( QString );   
+    void             setRegexCode( QString );
     void             setCommand( QString command )   { mCommand = command; }
     QString          getCommand()                    { return mCommand; }
     bool             isFolder()                      { return mIsFolder; }
@@ -71,8 +71,8 @@ public:
     bool             isTempAlias()                   { return mIsTempAlias; }
     void             setIsTempAlias( bool b )        { mIsTempAlias = b; }
     bool             mIsTempAlias;
-    
-    
+
+
                      TAlias(){};
     QString          mName;
     QString          mCommand;

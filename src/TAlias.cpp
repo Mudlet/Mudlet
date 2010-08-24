@@ -328,6 +328,22 @@ bool TAlias::registerAlias()
     return mpHost->getAliasUnit()->registerAlias( this );
 }
 
+void TAlias::compileAll()
+{
+    mNeedsToBeCompiled = true;
+    if( ! compileScript() )
+    {
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
+        mOK_code = false;
+    }
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TAlias * pChild = *it;
+        pChild->compileAll();
+    }
+}
+
 void TAlias::compile()
 {
     if( mNeedsToBeCompiled )

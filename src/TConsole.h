@@ -95,6 +95,7 @@ public:
                         TConsole( Host *, bool isDebugConsole, QWidget * parent=0 );
 
       void              reset();
+      void              resetMainConsole();
       void              echoUserWindow( QString & );
       Host *            getHost() { return mpHost; }
       TCommandLine *    mpCommandLine;
@@ -125,6 +126,7 @@ public:
       void              luaWrapLine( std::string & buf, int line );
 
       int               getColumnNumber();
+      void              createMapper( int, int, int, int );
       void              loadRawFile( std::string );
       void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
       void              setIndentCount( int count ){ mIndentCount = count; buffer.setWrapIndent( count ); }
@@ -175,6 +177,7 @@ public:
       bool              mWindowIsHidden;
       int               mOldX;
       int               mOldY;
+      dlgMapper *       mpMapper;
       TTextEdit *       console;
       TTextEdit *       console2;
       Host *            mpHost;

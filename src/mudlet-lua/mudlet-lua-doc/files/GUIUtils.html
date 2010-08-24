@@ -1,0 +1,1698 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li><strong>GUIUtils.lua</strong></li>
+	
+	<li>
+		<a href="../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGauge.html">geyser/GeyserGauge.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserUtil.html">geyser/GeyserUtil.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserWindow.html">geyser/GeyserWindow.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>GUIUtils.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#PadHexNum">PadHexNum</a>&nbsp;(incString)</td>
+	<td class="summary">Pads a hex number to ensure a minimum of 2 digits.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#RGB2Hex">RGB2Hex</a>&nbsp;(red, green, blue)</td>
+	<td class="summary">Converts an RGB value into an HTML compliant(label usable) HEX number.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#bg">bg</a>&nbsp;(colorName)</td>
+	<td class="summary">Sets current background color to a named color.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#cecho">cecho</a>&nbsp;(...)</td>
+	<td class="summary">Echo string with embedded color name information.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#cinsertText">cinsertText</a>&nbsp;(...)</td>
+	<td class="summary">Inserts string with embedded color name information.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#color_table">color_table</a>&nbsp;()</td>
+	<td class="summary">The <i>color_table table</i> holds definition of color names.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#createConsole">createConsole</a>&nbsp;(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)</td>
+	<td class="summary">Make a new console window with ease.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#createGauge">createGauge</a>&nbsp;(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)</td>
+	<td class="summary">Make your very own customized gauge with this function.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#decho">decho</a>&nbsp;(...)</td>
+	<td class="summary">Echo string with embedded decimal color information.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#deselect">deselect</a>&nbsp;()</td>
+	<td class="summary">Clears the current selection in the main window or miniConsole window.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#dinsertText">dinsertText</a>&nbsp;(...)</td>
+	<td class="summary">Inserts string with embedded decimal color information.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#fg">fg</a>&nbsp;(colorName)</td>
+	<td class="summary">Sets current foreground color to a named color.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#gagLine">gagLine</a>&nbsp;()</td>
+	<td class="summary">Function will gag the whole line.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#gaugesTable">gaugesTable</a>&nbsp;()</td>
+	<td class="summary">The <i>gaugesTable table</i>.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getRGB">getRGB</a>&nbsp;(colorName)</td>
+	<td class="summary">Get RGB component from color name.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#handleWindowResizeEvent">handleWindowResizeEvent</a>&nbsp;()</td>
+	<td class="summary">Default resizeEvent handler function.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#hecho">hecho</a>&nbsp;(...)</td>
+	<td class="summary">Echo string with embedded hex color information.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#hinsertText">hinsertText</a>&nbsp;(...)</td>
+	<td class="summary">Inserts string with embedded hex color information.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#moveGauge">moveGauge</a>&nbsp;(gaugeName, newX, newY)</td>
+	<td class="summary">Move a custom gauge.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#prefix">prefix</a>&nbsp;(what, func, fg, bg, window)</td>
+	<td class="summary">Prefixes text at the beginning of the current line when used in a trigger.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#replaceAll">replaceAll</a>&nbsp;(word, what)</td>
+	<td class="summary">Replaces all occurrences of what in the current line with <i>with</i>.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#replaceLine">replaceLine</a>&nbsp;(what)</td>
+	<td class="summary">Replace the whole with a string you'd like.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#replaceWildcard">replaceWildcard</a>&nbsp;(what, replacement)</td>
+	<td class="summary">Replaces the given wildcard (as a number) with the given text.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#resizeGauge">resizeGauge</a>&nbsp;(gaugeName, width, height)</td>
+	<td class="summary"><b><u>TODO</u></b> resizeGauge(gaugeName, width, height) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setGauge">setGauge</a>&nbsp;(gaugeName, currentValue, maxValue, gaugeText)</td>
+	<td class="summary">Use this function when you want to change the gauges look according to your values.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setGaugeStyleSheet">setGaugeStyleSheet</a>&nbsp;(gaugeName, css, cssback)</td>
+	<td class="summary"><b><u>TODO</u></b> setGaugeStyleSheet(gaugeName, css, cssback) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#setGaugeText">setGaugeText</a>&nbsp;(gaugeName, gaugeText, color1, color2, color3)</td>
+	<td class="summary">Set the text on a custom gauge.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#showColors">showColors</a>&nbsp;(...)</td>
+	<td class="summary">Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3  </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#suffix">suffix</a>&nbsp;(what, func, fg, bg, window)</td>
+	<td class="summary">Suffixes text at the end of the current line when used in a trigger.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#xEcho">xEcho</a>&nbsp;(style, insert, win, str)</td>
+	<td class="summary">Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).</td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="PadHexNum"></a>
+<b><big>PadHexNum&nbsp;</big></b>(incString)</dt>
+<dd>
+
+Pads a hex number to ensure a minimum of 2 digits. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  incString: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Following command will returns "F0".    <pre>    PadHexNum("F")
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="RGB2Hex"></a>
+<b><big>RGB2Hex&nbsp;</big></b>(red, green, blue)</dt>
+<dd>
+
+Converts an RGB value into an HTML compliant(label usable) HEX number. This function is colorNames aware and can take any defined global color as its first argument. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  red: 
+	</li>
+	
+	<li>
+	  green: 
+	</li>
+	
+	<li>
+	  blue: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Both following commands will returns "FFFFFF".    <pre>    RGB2Hex(255,255,255)
+    RGB2Hex("white")
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><b>MISSING LINK: 'showColor'</b>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="bg"></a>
+<b><big>bg&nbsp;</big></b>(colorName)</dt>
+<dd>
+
+Sets current background color to a named color. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  colorName: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Set background color to magenta.    <pre>    bg("magenta")
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#fg'>fg</a>
+	
+	<li><a href='GUIUtils.html#showColors'>showColors</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="cecho"></a>
+<b><big>cecho&nbsp;</big></b>(...)</dt>
+<dd>
+
+Echo string with embedded color name information. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Consider following example:    <pre>    cecho("&lt;green&gt;green text &lt;blue&gt;blue text &lt;red&gt;red text")
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#cinsertText'>cinsertText</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="cinsertText"></a>
+<b><big>cinsertText&nbsp;</big></b>(...)</dt>
+<dd>
+
+Inserts string with embedded color name information. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#cecho'>cecho</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="color_table"></a>
+<b><big>color_table&nbsp;</big></b>()</dt>
+<dd>
+
+The <i>color_table table</i> holds definition of color names. These are intended to be used in conjunction with fg() and bg() colorizer functions. 
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#showColors'>showColors</a>
+	
+	<li><a href='GUIUtils.html#bg'>bg</a>
+	
+	<li><a href='GUIUtils.html#fg'>fg</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="createConsole"></a>
+<b><big>createConsole&nbsp;</big></b>(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)</dt>
+<dd>
+
+Make a new console window with ease. The default background is black and text color white. If you wish to change the color you can easily do this when updating your text or manually somewhere, using setFgColor() and setBackgroundColor(). 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  consoleName: 
+	</li>
+	
+	<li>
+	  fontSize: 
+	</li>
+	
+	<li>
+	  charsPerLine: 
+	</li>
+	
+	<li>
+	  numberOfLines: 
+	</li>
+	
+	<li>
+	  Xpos: 
+	</li>
+	
+	<li>
+	  Ypos: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width, hold a maximum of 20 lines and be place at 200x400 of your Mudlet window.    <pre>    createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="createGauge"></a>
+<b><big>createGauge&nbsp;</big></b>(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)</dt>
+<dd>
+
+Make your very own customized gauge with this function. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  gaugeName: 
+	</li>
+	
+	<li>
+	  width: 
+	</li>
+	
+	<li>
+	  height: 
+	</li>
+	
+	<li>
+	  Xpos: 
+	</li>
+	
+	<li>
+	  Ypos: 
+	</li>
+	
+	<li>
+	  gaugeText: 
+	</li>
+	
+	<li>
+	  color1: 
+	</li>
+	
+	<li>
+	  color2: 
+	</li>
+	
+	<li>
+	  color3: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.    <pre>    createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0)
+ </pre>
+	
+	<li>The second example is using the same names you'd use for something like fg() or bg().    <pre>    createGauge("healthBar", 300, 20, 30, 300, nil, "green")
+ </pre>
+	
+	<li>Finally we'll add some text to our gauche.    <pre>    createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
+ </pre>
+	
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="decho"></a>
+<b><big>decho&nbsp;</big></b>(...)</dt>
+<dd>
+
+Echo string with embedded decimal color information. <br/><br/>  Color changes can be made using the format &lt;FR,FG,FB:BR,BG,BB&gt; where each field is a number from 0 to 255. The background portion can be omitted using &lt;FR,FG,FB&gt; or the foreground portion can be omitted using &lt;:BR,BG,BB&gt;. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Print red test on green background.    <pre>    decho("&lt;255,0,0:0,255,0&gt;test")
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#dinsertText'>dinsertText</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="deselect"></a>
+<b><big>deselect&nbsp;</big></b>()</dt>
+<dd>
+
+Clears the current selection in the main window or miniConsole window. <br/> (Note: <i>deselect(windowName)</i> is implemented in Core Mudlet.) 
+
+
+
+<br/>
+
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>Clear selection in main window.    <pre>    deselect()
+ </pre>
+	
+	<li>Clear selection in myMiniConsole window.    <pre>    deselect("myMiniConsole")
+ </pre>
+	
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="dinsertText"></a>
+<b><big>dinsertText&nbsp;</big></b>(...)</dt>
+<dd>
+
+Inserts string with embedded decimal color information. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#decho'>decho</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="fg"></a>
+<b><big>fg&nbsp;</big></b>(colorName)</dt>
+<dd>
+
+Sets current foreground color to a named color. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  colorName: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Set foreground color to black.    <pre>    fg("black")
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#bg'>bg</a>
+	
+	<li><a href='GUIUtils.html#showColors'>showColors</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="gagLine"></a>
+<b><big>gagLine&nbsp;</big></b>()</dt>
+<dd>
+
+Function will gag the whole line. <b>Use deleteLine() instead.</b>
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="gaugesTable"></a>
+<b><big>gaugesTable&nbsp;</big></b>()</dt>
+<dd>
+
+The <i>gaugesTable table</i>. First we need to make this table which will be used later to store important data in. 
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="getRGB"></a>
+<b><big>getRGB&nbsp;</big></b>(colorName)</dt>
+<dd>
+
+Get RGB component from color name. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  colorName: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Following will display "0.255.0" on your screen.    <pre>    local red, green, blue = getRGB("green")
+    echo(red .. "." .. green .. "." .. blue )
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="handleWindowResizeEvent"></a>
+<b><big>handleWindowResizeEvent&nbsp;</big></b>()</dt>
+<dd>
+
+Default resizeEvent handler function. Overwrite this function to make a custom event handler if the main window is being resized. <br/><br/>  The standard implementation of this function does nothing. However, this function gets called whenever the main window is being manually resized. You can overwrite this function in your own scripts to handle window resize events yourself and e.g. adjust the screen position and size of your mini console windows, labels or other relevant GUI elements in your scripts that depend on the size of the main Window. To override this function you can simply put a function with the same name in one of your scripts thus overwriting the original empty implementation of this function.    <pre>    function handleWindowResizeEvent()
+       -- determine the size of your screen
+       WindowWidth=0;
+       WindowHeight=0;
+       WindowWidth, WindowHeight = getMainWindowSize();
+       -- move mini console "sys" to the far right side of the screen whenever the screen gets resized
+       moveWindow("sys",WindowWidth-300,0)
+    end
+ </pre>
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="hecho"></a>
+<b><big>hecho&nbsp;</big></b>(...)</dt>
+<dd>
+
+Echo string with embedded hex color information. <br/><br/>  Color changes can be made within the string using the format |cFRFGFB,BRBGBB where FR is the foreground red value, FG is the foreground green value, FB is the foreground blue value, BR is the background red value, etc., BRBGBB is optional. |r can be used within the string to reset the colors to default. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#hinsertText'>hinsertText</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="hinsertText"></a>
+<b><big>hinsertText&nbsp;</big></b>(...)</dt>
+<dd>
+
+Inserts string with embedded hex color information. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#xEcho'>xEcho</a>
+	
+	<li><a href='GUIUtils.html#hecho'>hecho</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="moveGauge"></a>
+<b><big>moveGauge&nbsp;</big></b>(gaugeName, newX, newY)</dt>
+<dd>
+
+Move a custom gauge. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  gaugeName: 
+	</li>
+	
+	<li>
+	  newX: 
+	</li>
+	
+	<li>
+	  newY: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>This would move the health bar gauge to the location 1200, 400.    <pre>    moveGauge("healthBar", 1200, 400)
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#createGauge'>createGauge</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="prefix"></a>
+<b><big>prefix&nbsp;</big></b>(what, func, fg, bg, window)</dt>
+<dd>
+
+Prefixes text at the beginning of the current line when used in a trigger. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  what: 
+	</li>
+	
+	<li>
+	  func: 
+	</li>
+	
+	<li>
+	  fg: 
+	</li>
+	
+	<li>
+	  bg: 
+	</li>
+	
+	<li>
+	  window: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Prefix the hours, minutes and seconds onto our prompt even though Mudlet has a button for that.    <pre>    prefix(os.date("%H:%M:%S "))
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#suffix'>suffix</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="replaceAll"></a>
+<b><big>replaceAll&nbsp;</big></b>(word, what)</dt>
+<dd>
+
+Replaces all occurrences of what in the current line with <i>with</i>. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  word: 
+	</li>
+	
+	<li>
+	  what: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>This will replace all occurrences of John with the word Doe.    <pre>    replaceAll("John", "Doe")
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="replaceLine"></a>
+<b><big>replaceLine&nbsp;</big></b>(what)</dt>
+<dd>
+
+Replace the whole with a string you'd like. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  what: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='CoreMudlet.html#deleteLine'>deleteLine</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="replaceWildcard"></a>
+<b><big>replaceWildcard&nbsp;</big></b>(what, replacement)</dt>
+<dd>
+
+Replaces the given wildcard (as a number) with the given text. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  what: 
+	</li>
+	
+	<li>
+	  replacement: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Replace "goodbye" with "hello" on a trigger of "^You wave (goodbye)\.$"    <pre>    replaceWildcard(2, "hello")
+ </pre> Is equivalent to doing:    <pre>    selectString(matches[2], 1)
+    replace("hello")
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="resizeGauge"></a>
+<b><big>resizeGauge&nbsp;</big></b>(gaugeName, width, height)</dt>
+<dd>
+
+<b><u>TODO</u></b> resizeGauge(gaugeName, width, height)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  gaugeName: 
+	</li>
+	
+	<li>
+	  width: 
+	</li>
+	
+	<li>
+	  height: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setGauge"></a>
+<b><big>setGauge&nbsp;</big></b>(gaugeName, currentValue, maxValue, gaugeText)</dt>
+<dd>
+
+Use this function when you want to change the gauges look according to your values. Typical usage would be in a prompt with your current health or whatever value, and throw in some variables instead of the numbers. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  gaugeName: 
+	</li>
+	
+	<li>
+	  currentValue: 
+	</li>
+	
+	<li>
+	  maxValue: 
+	</li>
+	
+	<li>
+	  gaugeText: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>In that example, we'd change the looks of the gauge named healthBar and make it fill to half of its capacity. The height is always remembered.    <pre>    setGauge("healthBar", 200, 400)
+ </pre>
+	
+	<li>Change the text on your gauge.    <pre>    setGauge("healthBar", 200, 400, "some text")
+ </pre>
+	
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setGaugeStyleSheet"></a>
+<b><big>setGaugeStyleSheet&nbsp;</big></b>(gaugeName, css, cssback)</dt>
+<dd>
+
+<b><u>TODO</u></b> setGaugeStyleSheet(gaugeName, css, cssback)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  gaugeName: 
+	</li>
+	
+	<li>
+	  css: 
+	</li>
+	
+	<li>
+	  cssback: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="setGaugeText"></a>
+<b><big>setGaugeText&nbsp;</big></b>(gaugeName, gaugeText, color1, color2, color3)</dt>
+<dd>
+
+Set the text on a custom gauge. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  gaugeName: 
+	</li>
+	
+	<li>
+	  gaugeText: An empty gaugeText will clear the text entirely.
+	</li>
+	
+	<li>
+	  color1: Colors are optional and will default to 0,0,0(black) if not passed as args.
+	</li>
+	
+	<li>
+	  color2: 
+	</li>
+	
+	<li>
+	  color3: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>   <pre>    setGaugeText("healthBar", "HP: 100%", 40, 40, 40)
+ </pre>
+	
+	<li>   <pre>    setGaugeText("healthBar", "HP: 100%", "red")
+ </pre> 
+	
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#createGauge'>createGauge</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="showColors"></a>
+<b><big>showColors&nbsp;</big></b>(...)</dt>
+<dd>
+
+Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>Print list in 3 columns by default.    <pre>    showColors()
+ </pre>
+	
+	<li>Print list in 2 columns.    <pre>    showColors(2)
+ </pre> 
+	
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#color_table'>color_table</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="suffix"></a>
+<b><big>suffix&nbsp;</big></b>(what, func, fg, bg, window)</dt>
+<dd>
+
+Suffixes text at the end of the current line when used in a trigger. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  what: 
+	</li>
+	
+	<li>
+	  func: 
+	</li>
+	
+	<li>
+	  fg: 
+	</li>
+	
+	<li>
+	  bg: 
+	</li>
+	
+	<li>
+	  window: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#prefix'>prefix</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="xEcho"></a>
+<b><big>xEcho&nbsp;</big></b>(style, insert, win, str)</dt>
+<dd>
+
+Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText). 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  style: Hex, Decimal or Color
+	</li>
+	
+	<li>
+	  insert: boolean flag to determine echo/insert behaviour
+	</li>
+	
+	<li>
+	  win: windowName optional
+	</li>
+	
+	<li>
+	  str: text with embedded color information 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='GUIUtils.html#cecho'>cecho</a>
+	
+	<li><a href='GUIUtils.html#decho'>decho</a>
+	
+	<li><a href='GUIUtils.html#hecho'>hecho</a>
+	
+	<li><a href='GUIUtils.html#cinsertText'>cinsertText</a>
+	
+	<li><a href='GUIUtils.html#dinsertText'>dinsertText</a>
+	
+	<li><a href='GUIUtils.html#hinsertText'>hinsertText</a>
+	
+</ul>
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

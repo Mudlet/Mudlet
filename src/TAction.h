@@ -46,15 +46,15 @@ class TAction : public Tree<TAction>, QObject
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
-    
-    
+
+
     virtual          ~TAction();
-                     TAction( TAction * parent, Host * pHost ); 
-                     TAction( QString name, Host * pHost ); 
+                     TAction( TAction * parent, Host * pHost );
+                     TAction( QString name, Host * pHost );
                      TAction & clone(const TAction & );
-    
+    void             compileAll();
     QString          getName()                                 { return mName; }
     void             setName( QString name )                   { mName = name; }
     void             setButtonColor( QColor c )                { mButtonColor = c; }
@@ -65,12 +65,12 @@ public:
     int              getButtonColumns()                        { return mButtonColumns; }
     bool             getButtonFlat()                           { return mButtonFlat; }
     void             setButtonFlat( bool flat )                { mButtonFlat = flat; }
-    
+
     void             setSizeX( int s )                         { mSizeX = s; }
     int              getSizeX()                                { return mSizeX; }
     void             setSizeY( int s )                         { mSizeY = s; }
     int              getSizeY()                                { return mSizeY; }
-    
+
     void             fillMenu( TEasyButtonBar * pT, QMenu * menu );
     void             compile();
     bool             compileScript();
@@ -129,9 +129,9 @@ public:
     bool             mIsLabel;
     bool             mUseCustomLayout;
     QString          css;
-    
+
 private:
-    
+
     TAction(){};
     QString          mFuncName;
     TLuaInterpreter * mpLua;

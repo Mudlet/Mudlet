@@ -81,7 +81,7 @@ mudlet::mudlet()
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet 1.1.0 March 2010");
+    setWindowTitle("Mudlet 1.2.0-pre3 August 2010");
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
@@ -162,6 +162,11 @@ mudlet::mudlet()
     actionKeys->setStatusTip(tr("Options"));
     actionKeys->setEnabled( true );
     mpMainToolBar->addAction( actionKeys );
+
+    QAction * actionMapper = new QAction(QIcon(":/icons/applications-internet.png"), tr("Map"), this);
+    actionMapper->setStatusTip(tr("show map"));
+    mpMainToolBar->addAction( actionMapper );
+
 
     QAction * actionHelp = new QAction(QIcon(":/icons/help-hint.png"), tr("Manual"), this);
     actionHelp->setStatusTip(tr("Browse Reference Material and Documentation"));
@@ -260,6 +265,7 @@ mudlet::mudlet()
     connect(actionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
     connect(actionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
     connect(actionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
+    connect(actionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
 
     QAction * mactionConnect = new QAction(tr("Connect"), this);
     QAction * mactionTriggers = new QAction(tr("Triggers"), this);
@@ -268,6 +274,7 @@ mudlet::mudlet()
     QAction * mactionButtons = new QAction(tr("Actions"), this);
     QAction * mactionScripts = new QAction(tr("Scripts"), this);
     QAction * mactionKeys = new QAction(tr("Keys"), this);
+    QAction * mactionMapper = new QAction(tr("Map"), this);
     QAction * mactionHelp = new QAction(tr("Help"), this);
     QAction * mactionOptions = new QAction(tr("Preferences"), this);
     QAction * mactionMultiView = new QAction(tr("MultiView"), this);
@@ -281,6 +288,7 @@ mudlet::mudlet()
     connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
     connect(dactionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
 
+
     connect(mactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(dactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(dactionVideo, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_video()));
@@ -290,7 +298,7 @@ mudlet::mudlet()
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
-
+    connect(mactionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(mactionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
     connect(mactionAlias, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
     connect(mactionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
@@ -1368,6 +1376,38 @@ void mudlet::slot_show_help_dialog_irc()
     QDesktopServices::openUrl(QUrl("http://webchat.freenode.net/?channels=mudlet"));
 }
 
+#include "dlgMapper.h"
+
+void mudlet::slot_mapper()
+{
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+    if( pHost->mpMap->mpMapper )
+    {
+        pHost->mpMap->mpMapper->setVisible( ! pHost->mpMap->mpMapper->isVisible() );
+        return;
+    }
+    QDockWidget * pDock = new QDockWidget("Mudlet Mapper");
+    pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap );//FIXME: mpHost definieren
+    pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
+    pDock->setWidget( pHost->mpMap->mpMapper );
+
+    if( pHost->mpMap->rooms.size() < 1 )
+    {
+        pHost->mpMap->restore();
+        pHost->mpMap->init( pHost );
+        pHost->mpMap->mpMapper->show();
+    }
+    else
+    {
+        if( pHost->mpMap->mpMapper )
+        {
+            pHost->mpMap->mpMapper->show();
+        }
+    }
+    addDockWidget(Qt::RightDockWidgetArea, pDock);
+}
+
 void mudlet::slot_show_help_dialog_download()
 {
     QDesktopServices::openUrl(QUrl("http://sourceforge.net/projects/mudlet/files/"));
@@ -1600,6 +1640,7 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     pHost->mIsProfileLoadingSequence = true;
     addConsoleForNewHost( pHost );
     pHost->mBlockScriptCompile = false;
+    pHost->mLuaInterpreter.loadGlobal();
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 

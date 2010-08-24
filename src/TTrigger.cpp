@@ -1386,6 +1386,24 @@ bool TTrigger::registerTrigger()
     return mpHost->getTriggerUnit()->registerTrigger(this);
 }
 
+void TTrigger::compileAll()
+{
+    mNeedsToBeCompiled = true;
+    if( ! compileScript() )
+    {
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of Trigger:"<<mName<<"\n">>0;}
+        mOK_code = false;
+    }
+    setRegexCodeList(  mRegexCodeList, mRegexCodePropertyList );
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TTrigger * pChild = *it;
+        pChild->compileAll();
+    }
+}
+
+
 void TTrigger::compile()
 {
     if( mNeedsToBeCompiled )

@@ -37,15 +37,15 @@
 
 using namespace std;
 
-TKey::TKey( TKey * parent, Host * pHost ) 
+TKey::TKey( TKey * parent, Host * pHost )
 : Tree<TKey>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpLua( pHost->getLuaInterpreter() )
 {
-} 
+}
 
-TKey::TKey( QString name, Host * pHost ) 
+TKey::TKey( QString name, Host * pHost )
 : Tree<TKey>(0)
 , mName( name )
 , mpHost( pHost )
@@ -63,6 +63,7 @@ TKey::~TKey()
     mpHost->getKeyUnit()->unregisterKey(this);
 }
 
+
 bool TKey::match( int key, int modifier )
 {
     if( isActive() )
@@ -75,7 +76,7 @@ bool TKey::match( int key, int modifier )
                 return true;
             }
         }
-        
+
         typedef list<TKey *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
@@ -94,7 +95,7 @@ bool TKey::registerKey()
         qDebug() << "ERROR: TAlias::registerTrigger() pHost=0";
         return false;
     }
-    return mpHost->getKeyUnit()->registerKey( this );    
+    return mpHost->getKeyUnit()->registerKey( this );
 }
 
 
@@ -123,6 +124,22 @@ void TKey::disableKey( QString & name )
     {
         TKey * pChild = *it;
         pChild->disableKey( name );
+    }
+}
+
+void TKey::compileAll()
+{
+    mNeedsToBeCompiled = true;
+    if( ! compileScript() )
+    {
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of key binding:"<<mName<<"\n">>0;}
+        mOK_code = false;
+    }
+    typedef list<TKey *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TKey * pChild = *it;
+        pChild->compileAll();
     }
 }
 
@@ -186,8 +203,6 @@ void TKey::execute()
     }
     mpLua->call( mFuncName, mName );
 }
-
-
 
 TKey& TKey::clone(const TKey& b)
 {

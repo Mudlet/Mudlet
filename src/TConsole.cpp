@@ -51,6 +51,7 @@
 #include "dlgNotepad.h"
 //#define NDEBUG
 #include <assert.h>
+#include "dlgMapper.h"
 
 using namespace std;
 
@@ -95,6 +96,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mOldX( 0 )
 , mOldY( 0 )
 , mUserConsole( false )
+, mpMapper( 0 )
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -159,6 +161,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mFormatSystemMessage.fgG = 0;
     mFormatSystemMessage.fgB = 0;
     setAttribute( Qt::WA_DeleteOnClose );
+    setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
     mWaitingForHighColorCode = false;
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
@@ -646,6 +649,24 @@ void TConsole::closeEvent( QCloseEvent *event )
                 file_xml.close();
 
             }
+qDebug()<<"rooms.size()="<<mpHost->mpMap->rooms.size();
+            if( mpHost->mpMap->rooms.size() > 0 )
+            {
+                QDir dir_map;
+                QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
+                QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
+                if( ! dir_map.exists( directory_map ) )
+                {
+                    dir_map.mkpath( directory_map );
+                }
+                QFile file_map( filename_map );
+                if ( file_map.open( QIODevice::WriteOnly ) )
+                {
+                    QDataStream out( & file_map );
+                    mpHost->mpMap->serialize( out );
+                    file_map.close();
+                }
+            }
             event->accept();
             return;
         }
@@ -669,6 +690,24 @@ void TConsole::closeEvent( QCloseEvent *event )
                 XMLexport writer( mpHost );
                 writer.exportHost( & file_xml );
                 file_xml.close();
+                qDebug()<<"rooms.size()="<<mpHost->mpMap->rooms.size();
+                if( mpHost->mpMap->rooms.size() > 0 )
+                {
+                    QDir dir_map;
+                    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
+                    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
+                    if( ! dir_map.exists( directory_map ) )
+                    {
+                        dir_map.mkpath( directory_map );
+                    }
+                    QFile file_map( filename_map );
+                    if ( file_map.open( QIODevice::WriteOnly ) )
+                    {
+                        QDataStream out( & file_map );
+                        mpHost->mpMap->serialize( out );
+                        file_map.close();
+                    }
+                }
                 event->accept();
                 return;
             }
@@ -677,6 +716,7 @@ void TConsole::closeEvent( QCloseEvent *event )
                 QMessageBox::critical( this, "ERROR: Not closing profile.", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
                 goto ASK;
             }
+
         }
         else if( choice == QMessageBox::No )
         {
@@ -1945,8 +1985,16 @@ void TConsole::echoLink( QString & text, QStringList & func, QStringList & hint,
         buffer.addLink( text, func, hint, mFormatCurrent );
     else
     {
-        TChar f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true);
-        buffer.addLink( text, func, hint, f );
+        if( ! mIsSubConsole && ! mIsDebugConsole )
+        {
+            TChar f = TChar(0, 0, 255, mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(), false, false, true);
+            buffer.addLink( text, func, hint, f );
+        }
+        else
+        {
+            TChar f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true);
+            buffer.addLink( text, func, hint, f );
+        }
     }
 }
 
@@ -2032,8 +2080,33 @@ TConsole * TConsole::createBuffer( QString & name )
     }
 }
 
+void TConsole::resetMainConsole()
+{
+    std::map<string, TConsole *>::const_iterator it;
+    it = mSubConsoleMap.begin();
+    for( ; it != mSubConsoleMap.end(); it++ )
+    {
+        QMap<QString, TConsole *> & dockWindowConsoleMap = mudlet::self()->mHostConsoleMap[mpHost];
+        QString n = it->first.c_str();
+        dockWindowConsoleMap.remove( n );
+        (*it->second).close();
+    }
+
+    std::map<string, TLabel *>::const_iterator it2;
+    for( it2 = mLabelMap.begin(); it2 != mLabelMap.end(); it2++ )
+    {
+        QMap<QString, TLabel *> & dockWindowConsoleMap = mudlet::self()->mHostLabelMap[mpHost];
+        QString n = it2->first.c_str();
+        dockWindowConsoleMap.remove( n );
+        (*it2->second).close();
+    }
+    mSubConsoleMap.clear();
+    mLabelMap.clear();
+}
+
 TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width, int height )
 {
+    qDebug()<<"createMiniConsole: name="<<name;
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
     {
@@ -2072,10 +2145,31 @@ TLabel * TConsole::createLabel( QString & name, int x, int y, int width, int hei
         pC->setContentsMargins(0,0,0,0);
         pC->move( x, y );
         pC->show();
+   qDebug()<<"created new miniconsole name="<<name;
         return pC;
     }
     else
+    {
+        qDebug()<<"ERROR: couldn't create miniconsole name="<<name;
         return 0;
+    }
+}
+
+void TConsole::createMapper( int x, int y, int width, int height )
+{
+    if( ! mpMapper )
+    {
+        mpMapper = new dlgMapper( mpMainFrame, mpHost, mpHost->mpMap );
+        mpHost->mpMap->mpM = mpMapper->glWidget;
+        mpHost->mpMap->mpHost = mpHost;
+        mpHost->mpMap->mpMapper = mpMapper;
+        mpMapper->mpHost = mpHost;
+        mpHost->mpMap->restore();
+        mpHost->mpMap->init( mpHost );
+    }
+    mpMapper->resize( width, height );
+    mpMapper->move( x, y );
+    mpMapper->show();
 }
 
 bool TConsole::createButton( QString & name, int x, int y, int width, int height, bool fillBackground )
@@ -2349,9 +2443,9 @@ void TConsole::showStatistics()
     QString footer = QString("\n+--------------------------------------------------------------+\n" );
     QString msg = h + r;
     printSystemMessage( msg );
-    QString script = "echo(\"\nATCP (table=atcp) messages sent by the server:\n\");display( atcp )";
+    QString script = "echo(\[[\nATCP messages sent by the server (table=atcp):\n]]);display( atcp )";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-    script = "echo(\"\nchannel102 (table=channel102) messages sent by the server:\n\");display( channel102: )";
+    script = "echo([[\nchannel102 messages sent by the server (table=channel102):\n]]);display( channel102 )";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
     printSystemMessage( footer );
 

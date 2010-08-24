@@ -107,5 +107,8 @@
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/errors.png</file>
+        <file>icons/applications-internet.png</file>
+        <file>icons/mudlet_editor.png</file>
+        <file>icons/mudlet_notepad.png</file>
     </qresource>
 </RCC>

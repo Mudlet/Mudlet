@@ -55,6 +55,19 @@ bool KeyUnit::processDataStream( int key, int modifier )
     return false;
 }
 
+void KeyUnit::compileAll()
+{
+    typedef list<TKey *>::const_iterator I;
+    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    {
+        TKey * pChild = *it;
+        if( pChild->isActive() )
+        {
+            pChild->compileAll();
+        }
+    }
+}
+
 bool KeyUnit::enableKey( QString & name )
 {
     bool found = false;

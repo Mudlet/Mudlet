@@ -1,20 +1,21 @@
-CONFIG += release warn_off
+CONFIG += release warn_off 
+#CONFIG += libircclient-qt
 QMAKE_CXXFLAGS_RELEASE += -O3
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
-QT += network
+QT += network opengl
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 unix:LIBS += -lpcre \
     $$LIBLUA
-win32:LIBS += -Lc:\lua-5.1.4 \
+win32:LIBS += -Lc:\mudlet_package \
     -llua51 \
-    -Lc:\pcre-7.6\build \
     -lpcre
 unix:INCLUDEPATH += /usr/include/lua5.1
-win32:INCLUDEPATH += c:\lua-5.1.4\src \
-    c:\zlib-1.2.3 \
-    c:\pcre-7.6\build
+win32:INCLUDEPATH += c:\Lua\include \
+    c:\zlib-1.2.5\
+    c:\boost_1_44_0 \
+    c:\pcre-8.0-lib\include
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: { 
     SHARE_DIR = /usr/local/share/mudlet
@@ -78,7 +79,12 @@ SOURCES += TConsole.cpp \
     mudlet.cpp \
     dlgNotepad.cpp \
     THighlighter.cpp \
-    dlgComposer.cpp \  
+    dlgComposer.cpp \ 
+    TArea.cpp \
+    glwidget.cpp \
+    dlgMapper.cpp \
+    TRoom.cpp \
+	TMap.cpp \
     TBuffer.cpp
 HEADERS += mudlet.h \
     TTimer.h \
@@ -86,6 +92,8 @@ HEADERS += mudlet.h \
     TConsole.h \
     ctelnet.h \
     Host.h \
+	TMap.h \
+	TAStar.h \
     HostManager.h \
     HostPool.h \
     dlgConnectionProfiles.h \
@@ -138,6 +146,11 @@ HEADERS += mudlet.h \
     dlgNotepad.h \
     THighlighter.h \
     dlgComposer.h \
+    TRoom.h \
+    TArea.h \
+    TMap.h \
+    glwidget.h \
+    dlgMapper.h \
     Tree.h
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \
@@ -161,6 +174,7 @@ FORMS += ui/connection_profiles.ui \
     ui/notes_editor.ui \
     ui/trigger_pattern_edit.ui \
     ui/composer.ui \
+    ui/mapper.ui \
     ui/profile_preferences.ui
 TEMPLATE = app
 TARGET = mudlet

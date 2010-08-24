@@ -37,15 +37,15 @@
 using namespace std;
 
 
-TScript::TScript( TScript * parent, Host * pHost ) 
+TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mpLua( pHost->getLuaInterpreter() )
 {
-} 
+}
 
-TScript::TScript( QString name, Host * pHost ) 
+TScript::TScript( QString name, Host * pHost )
 : Tree<TScript>(0)
 , mName( name )
 , mpHost( pHost )
@@ -75,7 +75,7 @@ bool TScript::registerScript()
     {
         return false;
     }
-    return mpHost->getScriptUnit()->registerScript(this);    
+    return mpHost->getScriptUnit()->registerScript(this);
 }
 
 void TScript::setEventHandlerList( QStringList handlerList )
@@ -88,10 +88,10 @@ void TScript::setEventHandlerList( QStringList handlerList )
     for( int i=0; i<handlerList.size(); i++ )
     {
         if( handlerList[i].size() < 1 ) continue;
-        
+
         mEventHandlerList.append( handlerList[i] );
         mpHost->registerEventHandler( handlerList[i], this );
-    } 
+    }
 }
 
 
@@ -113,7 +113,7 @@ void TScript::callEventHandler( TEvent * pE )
 
 void TScript::compile()
 {
-    if( mNeedsToBeCompiled )
+    if( mNeedsToBeCompiled || mpHost->mResetProfile )
     {
         if( ! compileScript() )
         {

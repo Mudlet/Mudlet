@@ -36,16 +36,16 @@
 
 using namespace std;
 
-TTimer::TTimer( TTimer * parent, Host * pHost ) 
+TTimer::TTimer( TTimer * parent, Host * pHost )
 : Tree<TTimer>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mIsTempTimer( false )
 , mpLua( mpHost->getLuaInterpreter() )
 {
-} 
+}
 
-TTimer::TTimer( QString name, QTime time, Host * pHost ) 
+TTimer::TTimer( QString name, QTime time, Host * pHost )
 : Tree<TTimer>(0)
 , mName( name )
 , mTime( time )
@@ -76,7 +76,7 @@ bool TTimer::registerTimer()
     setTime( mTime );
     mudlet::self()->registerTimer( this, &mTimer );
     mTimer.connect(&mTimer, SIGNAL(timeout()), mudlet::self(),SLOT(slot_timer_fires()));
-    return mpHost->getTimerUnit()->registerTimer( this );    
+    return mpHost->getTimerUnit()->registerTimer( this );
 }
 
 void TTimer::setName( QString name )
@@ -94,13 +94,13 @@ void TTimer::setName( QString name )
 
 void TTimer::setTime( QTime time )
 {
-    QMutexLocker locker(& mLock); 
-    mTime = time; 
+    QMutexLocker locker(& mLock);
+    mTime = time;
     mTimer.setInterval( mTime.msec()+(1000*mTime.second())+(1000*60*mTime.minute())+(1000*60*60*mTime.hour()));
-}       
+}
 
 // children of folder = regular timers
-// children of timers = offset timers 
+// children of timers = offset timers
 //     offset timers: -> their time interval is interpreted as an offset to their parent timer
 bool TTimer::isOffsetTimer()
 {
@@ -125,11 +125,11 @@ bool TTimer::setIsActive( bool b )
     bool condition2 = canBeUnlocked(0);
     if( condition1 && condition2 )
     {
-        start(); 
+        start();
     }
     else
     {
-        stop(); 
+        stop();
     }
     return condition1 && condition2;
 }
@@ -137,7 +137,7 @@ bool TTimer::setIsActive( bool b )
 
 void TTimer::start()
 {
-    if( mIsTempTimer ) 
+    if( mIsTempTimer )
         mTimer.setSingleShot( true );
     else
         mTimer.setSingleShot( false );
@@ -146,7 +146,7 @@ void TTimer::start()
 
 void TTimer::stop()
 {
-    mTimer.stop();    
+    mTimer.stop();
 }
 
 void TTimer::compile()
@@ -164,6 +164,22 @@ void TTimer::compile()
     {
         TTimer * pChild = *it;
         pChild->compile();
+    }
+}
+
+void TTimer::compileAll()
+{
+    mNeedsToBeCompiled = true;
+    if( ! compileScript() )
+    {
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of timer:"<<mName<<"\n">>0;}
+        mOK_code = false;
+    }
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TTimer * pChild = *it;
+        pChild->compileAll();
     }
 }
 
@@ -233,7 +249,7 @@ void TTimer::execute()
         mpHost->mTimerUnit.markCleanup( this );
         return;
     }
-    
+
     if( ( ! isFolder() && hasChildren() ) || ( isOffsetTimer() ) )
     {
         typedef list<TTimer *>::const_iterator I;
@@ -251,12 +267,12 @@ void TTimer::execute()
             deactivate();
         }
     }
-    
+
     if( mCommand.size() > 0 )
     {
         mpHost->send( mCommand );
     }
-    
+
     if( mNeedsToBeCompiled )
     {
         if( ! compileScript() )
@@ -277,7 +293,7 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
     {
         if( ! mpParent )
         {
-            return true;    
+            return true;
         }
         else
             return mpParent->canBeUnlocked( 0 );
@@ -287,7 +303,7 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
         //DumpFamily();
         return false;
     }
-    
+
 }
 
 void TTimer::enableTimer( qint64 id )
@@ -311,7 +327,7 @@ void TTimer::enableTimer( qint64 id )
             }
         }
     }
-    
+
     if( ! isOffsetTimer() )
     {
         typedef list<TTimer *>::const_iterator I;
@@ -330,7 +346,7 @@ void TTimer::disableTimer( qint64 id )
         deactivate();
         mTimer.stop();
     }
-    
+
     typedef list<TTimer *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
@@ -402,7 +418,7 @@ void TTimer::enableTimer( QString & name )
             }
         }
     }
-    
+
     if( ! isOffsetTimer() )
     {
         typedef list<TTimer *>::const_iterator I;
@@ -421,7 +437,7 @@ void TTimer::disableTimer( QString & name )
         deactivate();
         mTimer.stop();
     }
-    
+
     typedef list<TTimer *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {

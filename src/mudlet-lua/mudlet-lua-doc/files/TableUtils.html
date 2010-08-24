@@ -1,0 +1,841 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li><strong>TableUtils.lua</strong></li>
+	
+	<li>
+		<a href="../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGauge.html">geyser/GeyserGauge.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserUtil.html">geyser/GeyserUtil.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserWindow.html">geyser/GeyserWindow.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>TableUtils.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#listAdd">listAdd</a>&nbsp;(list, what)</td>
+	<td class="summary"><b><u>TODO</u></b> listAdd( list, what ) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#listPrint">listPrint</a>&nbsp;(map)</td>
+	<td class="summary">Lua debug function that prints the content of a Lua table on the screen.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#listRemove">listRemove</a>&nbsp;(list, what)</td>
+	<td class="summary"><b><u>TODO</u></b> listRemove( list, what ) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#printTable">printTable</a>&nbsp;(map)</td>
+	<td class="summary">Lua debug function that prints the content of a Lua table on the screen, split up in keys and values.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.complement">table.complement</a>&nbsp;(set1, set2)</td>
+	<td class="summary">Table Complement.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.contains">table.contains</a>&nbsp;(t, value)</td>
+	<td class="summary">Determines if a table contains a value as a key or as a value (recursive).</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.intersection">table.intersection</a>&nbsp;(...)</td>
+	<td class="summary">Table Intersection.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.is_empty">table.is_empty</a>&nbsp;(tbl)</td>
+	<td class="summary">Tests if a table is empty: this is useful in situations where you find yourself wanting to do 'if my_table == {}' and such.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.n_complement">table.n_complement</a>&nbsp;(set1, set2)</td>
+	<td class="summary">Table Complement.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.n_intersection">table.n_intersection</a>&nbsp;(...)</td>
+	<td class="summary">Table Intersection.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.n_union">table.n_union</a>&nbsp;(...)</td>
+	<td class="summary">Table Union.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.size">table.size</a>&nbsp;(t)</td>
+	<td class="summary">Gets the actual size of non-index based tables.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.union">table.union</a>&nbsp;(...)</td>
+	<td class="summary">Table Union.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table:update">table:update</a>&nbsp;(t1, t2)</td>
+	<td class="summary"><b><u>TODO</u></b> table:update(t1, t2) </td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="listAdd"></a>
+<b><big>listAdd&nbsp;</big></b>(list, what)</dt>
+<dd>
+
+<b><u>TODO</u></b> listAdd( list, what )
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  list: 
+	</li>
+	
+	<li>
+	  what: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="listPrint"></a>
+<b><big>listPrint&nbsp;</big></b>(map)</dt>
+<dd>
+
+Lua debug function that prints the content of a Lua table on the screen. <br/> There are currently 3 functions with similar behaviour. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  map: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DebugTools.html#display'>display</a>
+	
+	<li><a href='TableUtils.html#printTable'>printTable</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="listRemove"></a>
+<b><big>listRemove&nbsp;</big></b>(list, what)</dt>
+<dd>
+
+<b><u>TODO</u></b> listRemove( list, what )
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  list: 
+	</li>
+	
+	<li>
+	  what: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="printTable"></a>
+<b><big>printTable&nbsp;</big></b>(map)</dt>
+<dd>
+
+Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the Lua table "matches". 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  map: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DebugTools.html#display'>display</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="table.complement"></a>
+<b><big>table.complement&nbsp;</big></b>(set1, set2)</dt>
+<dd>
+
+Table Complement. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  set1: 
+	</li>
+	
+	<li>
+	  set2: 
+	</li>
+	
+</ul>
+
+
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>Returns a table that is the relative complement of the first table with respect to the second table. Returns a complement of key/value pairs.
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.contains"></a>
+<b><big>table.contains&nbsp;</big></b>(t, value)</dt>
+<dd>
+
+Determines if a table contains a value as a key or as a value (recursive).
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  t: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.intersection"></a>
+<b><big>table.intersection&nbsp;</big></b>(...)</dt>
+<dd>
+
+Table Intersection. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Example:    <pre>    tableA = {
+       [1] = 123,
+       [2] = 456,
+       [4] = { 1, 2 },
+       [5] = "c",
+       ["test"] = "test",
+    }
+ 
+    tableB = {
+       [1] = 123,
+       [2] = 4,
+       [3] = 7,
+       [4] = { 1, 2 },
+       ["test"] = function() return true end,
+    }
+ 
+    tableC = {
+       [1] = 123,
+       [4] = { 1, 2 },
+       [5] = "c",
+    }
+ 
+    table.intersection(tableA, tableB, tableC) will return:
+    {
+       [1] = 123,
+       [4] = { 1, 2 },
+    }
+ </pre>
+</ul>
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>Returns a table that is the intersection of the provided tables. This is an intersection of key/value pairs. See table.n_intersection() for an intersection of values. Note that the resulting table may not be reliably traversable with ipairs() due to the fact that it preserves keys. If there is a gap in numerical indices, ipairs() will cease traversal. 
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.is_empty"></a>
+<b><big>table.is_empty&nbsp;</big></b>(tbl)</dt>
+<dd>
+
+Tests if a table is empty: this is useful in situations where you find yourself wanting to do 'if my_table == {}' and such. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  tbl: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Testing if the table is empty.    <pre>    myTable = {}
+    if table.is_empty(myTable) then
+       echo("myTable is empty")
+    end
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.n_complement"></a>
+<b><big>table.n_complement&nbsp;</big></b>(set1, set2)</dt>
+<dd>
+
+Table Complement. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  set1: 
+	</li>
+	
+	<li>
+	  set2: 
+	</li>
+	
+</ul>
+
+
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>Returns a table that is the relative complement of the first table with respect to the second table. Returns a complement of values.
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.n_intersection"></a>
+<b><big>table.n_intersection&nbsp;</big></b>(...)</dt>
+<dd>
+
+Table Intersection. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>Returns a numerically indexed table that is the intersection of the provided tables. This is an intersection of unique values. The order and keys of the input tables are not preserved.
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.n_union"></a>
+<b><big>table.n_union&nbsp;</big></b>(...)</dt>
+<dd>
+
+Table Union. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>Returns a numerically indexed table that is the union of the provided tables. This is a union of unique values. The order and keys of the input tables are not preserved.
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.size"></a>
+<b><big>table.size&nbsp;</big></b>(t)</dt>
+<dd>
+
+Gets the actual size of non-index based tables. <br/><br/>  For index based tables you can get the size with the # operator: <br/> This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.    <pre>    myTableSize = # myTable
+ </pre>
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  t: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.union"></a>
+<b><big>table.union&nbsp;</big></b>(...)</dt>
+<dd>
+
+Table Union. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Example:    <pre>    tableA = {
+       [1] = 123,
+       [2] = 456,
+       ["test"] = "test",
+    }
+ 
+    tableB = {
+       [1] = 23,
+       [3] = 7,
+       ["test2"] = function() return true end,
+    }
+ 
+    tableC = {
+       [5] = "c",
+    }
+ 
+    table.union(tableA, tableB, tableC) will return:
+    {
+       [1] = {
+          123,
+          23,
+       },
+       [2] = 456,
+       [3] = 7,
+       [5] = "c",
+       ["test"] = "test",
+       ["test2"] = function() return true end,
+    }
+ </pre>
+</ul>
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>Returns a table that is the union of the provided tables. This is a union of key/value pairs. If two or more tables contain different values associated with the same key, that key in the returned table will contain a subtable containing all relevant values. See table.n_union() for a union of values. Note that the resulting table may not be reliably traversable with ipairs() due to the fact that it preserves keys. If there is a gap in numerical indices, ipairs() will cease traversal. 
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table:update"></a>
+<b><big>table:update&nbsp;</big></b>(t1, t2)</dt>
+<dd>
+
+<b><u>TODO</u></b> table:update(t1, t2)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  t1: 
+	</li>
+	
+	<li>
+	  t2: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

@@ -103,6 +103,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true ); //MAC OSX: make window moveable
     setWindowTitle( mpHost->getName() );
+    QIcon winIcon(":/icons/mudlet_editor.png");
+    setWindowIcon( winIcon );
     QStatusBar * statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled( true );
     setStatusBar( statusBar );
@@ -2889,7 +2891,7 @@ void dlgTriggerEditor::saveTrigger()
         TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
         if( pT )
         {
-	    QString old_name = pT->getName();
+            QString old_name = pT->getName();
             pT->setName( name );
             pT->setCommand( command );
             bool check = pT->setRegexCodeList( regexList, regexPropertyList );
@@ -3251,7 +3253,7 @@ void dlgTriggerEditor::saveAlias()
         TAlias * pT = mpHost->getAliasUnit()->getAlias( triggerID );
         if( pT )
         {
-	    QString old_name = pT->getName();
+            QString old_name = pT->getName();
             pT->setName( name );
             pT->setCommand( substitution );
             pT->setRegexCode( regex );

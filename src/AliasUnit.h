@@ -35,11 +35,12 @@ class AliasUnit
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
                                     AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
     std::list<TAlias *>             getAliasRootNodeList()   { return mAliasRootNodeList; }
     TAlias *                        getAlias( int id );
+    void                            compileAll();
     TAlias *                        findAlias( QString & name );
     bool                            enableAlias( QString & );
     bool                            disableAlias( QString & );
@@ -75,8 +76,8 @@ public:
     int                             statsMinLineProcessingTime;
     int                             statsRegexAliass;
 
-  
-private: 
+
+private:
                                     AliasUnit(){;}
     void                            initStats();
     void                            _assembleReport( TAlias * );
@@ -85,7 +86,7 @@ private:
     void                            addAlias( TAlias * pT );
     void                            removeAliasRootNode( TAlias * pT );
     void                            removeAlias( TAlias *);
-    
+
     Host *                          mpHost;
     QMap<int, TAlias *>             mAliasMap;
     std::list<TAlias *>             mAliasRootNodeList;

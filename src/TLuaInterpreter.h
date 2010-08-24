@@ -69,6 +69,7 @@ public:
     TLuaInterpreter( Host * mpHost, int id );
     void startLuaExecThread();
     void threadLuaInterpreterExec( std::string code );
+    void initLuaGlobals();
     bool call( QString & function, QString & mName );
     bool callMulti( QString & function, QString & mName );
     bool callConditionFunction( std::string & function, QString & mName );
@@ -79,6 +80,7 @@ public:
     void setAtcpTable( QString &, QString & );
     void setChannel102Table( int & var, int & arg );
     bool compileAndExecuteScript( QString & );
+    void loadGlobal();
     //void execLuaCode( QString code );
     QString get_lua_string( QString & stringName );
     void set_lua_string( const QString & varName, QString & varValue );
@@ -105,7 +107,14 @@ public:
     int startPermAlias( QString & name, QString & parent, QString & regex, QString & function );
 
     TGatekeeperThread * mpGatekeeperThread;
-
+    static int getAreaTable( lua_State *L );
+    static int getPath( lua_State * );
+    static int getAreaRooms( lua_State * );
+    static int clearCmdLine( lua_State * );
+    static int printCmdLine( lua_State * );
+    static int searchRoom( lua_State * );
+    static int resetProfile( lua_State * );
+    static int createMapper( lua_State * );
     static int sendTelnetChannel102( lua_State *L );
     static int isPrompt( lua_State * L );
     static int feedTriggers( lua_State * );
@@ -114,9 +123,12 @@ public:
     static int sendRaw( lua_State * L );
     static int Echo( lua_State * L );
     static int select( lua_State * L );
+    static int getMainConsoleWidth( lua_State * L );
     static int selectSection( lua_State * L );
     static int replace( lua_State * L );
     static int deselect( lua_State * L );
+    static int getRoomExits( lua_State * L );
+    static int lockRoom( lua_State * L );
     static int hasFocus( lua_State * L );
     static int setFgColor( lua_State * L );
     static int setBgColor( lua_State * L );
@@ -149,7 +161,10 @@ public:
     static int cut( lua_State * L );
     static int paste( lua_State * L );
     static int pasteWindow( lua_State * L );
-
+    static int setRoomWeight( lua_State * L );
+    static int getRoomWeight( lua_State * L );
+    static int gotoRoom( lua_State * L );
+    static int setMapperView( lua_State * L );
     static int enableKey( lua_State * );
     static int disableKey( lua_State * );
     static int debug( lua_State * L );
@@ -282,7 +297,7 @@ public slots:
 
     //public:
 private:
-    void initLuaGlobals();
+
     lua_State * getLuaExecutionUnit( int unit );
     lua_State* pGlobalLua;
     TLuaMainThread * mpLuaSessionThread;

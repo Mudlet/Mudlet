@@ -46,10 +46,10 @@ class TLuaInterpreter;
 #include "TEvent.h"
 #include "TKey.h"
 #include "KeyUnit.h"
-//#include <QVector3D>
-//#include "TArea.h"
-//#include "TRoom.h"
-//#include "TMap.h"
+#include <QVector3D>
+#include "TArea.h"
+#include "TRoom.h"
+#include "TMap.h"
 
 
 class dlgTriggerEditor;
@@ -88,6 +88,7 @@ public:
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
     bool               closingDown();
+    void               assemblePath();
     void               orderShutDown();
     TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
     TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }
@@ -118,7 +119,7 @@ public:
     bool               startStopWatch( int );
     double             getStopWatchTime( int );
     int                createStopWatch();
-
+    void               startSpeedWalk();
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
     bool               serialize();
@@ -130,6 +131,7 @@ public:
     void               registerEventHandler( QString, TScript * );
     void               unregisterEventHandler( QString, TScript * );
     void               raiseEvent( TEvent * event );
+    void               resetProfile();
     void               callEventHandlers();
     void               stopAllTriggers();
     void               reenableAllTriggers();
@@ -140,6 +142,7 @@ public:
     class              Exception_NoConnectionAvailable{};
     TConsole *         mpConsole;
     dlgTriggerEditor * mpEditorDialog;
+    bool               mResetProfile;
     bool               mInsertedMissingLF;
     QColor             mBlack;
     QColor             mLightBlack;
@@ -233,7 +236,7 @@ public:
     bool               mIsGoingDown;
     bool               mLF_ON_GA;
     bool               mAlertOnNewData;
-//Map *             mpMap;
+    TMap *             mpMap;
     bool               mFORCE_NO_COMPRESSION;
     bool               mFORCE_GA_OFF;
     bool               mFORCE_SAVE_ON_EXIT;

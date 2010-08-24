@@ -52,6 +52,20 @@ void TriggerUnit::initStats()
     statsRegexTriggers = 0;
 }
 
+void TriggerUnit::removeAllTempTriggers()
+{
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        if( pChild->isTempTrigger() )
+        {
+            pChild->setIsActive( false );
+            markCleanup( pChild );
+        }
+    }
+}
+
 void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int childPosition, bool moveTrigger )
 {
     if( ! pT ) return;
@@ -243,8 +257,24 @@ void TriggerUnit::processDataStream( QString & data, int line )
         }
         mCleanupList.clear();
     }
+    if( mpHost->mResetProfile )
+    {
+        mpHost->resetProfile();
+    }
 }
 
+void TriggerUnit::compileAll()
+{
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        if( pChild->isActive() )
+        {
+            pChild->compileAll();
+        }
+    }
+}
 
 void TriggerUnit::stopAllTriggers()
 {

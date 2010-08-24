@@ -35,11 +35,12 @@ class TriggerUnit
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
                           TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
     std::list<TTrigger *> getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
     TTrigger *            getTrigger( int id );
+    void                  removeAllTempTriggers();
     TTrigger *            findTrigger( QString & );
     bool                  enableTrigger( QString & );
     bool                  disableTrigger( QString & );
@@ -51,6 +52,7 @@ public:
     void                  reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  processDataStream( QString &, int );
     void                  dump();
+    void                  compileAll();
     void                  setTriggerStayOpen( QString, int );
     void                  stopAllTriggers();
     void                  reenableAllTriggers();
@@ -75,8 +77,8 @@ public:
     int                   statsMinLineProcessingTime;
     int                   statsRegexTriggers;
 
-  
-private: 
+
+private:
                               TriggerUnit(){;}
     void                      initStats();
     void                      _assembleReport( TTrigger * );
@@ -85,13 +87,13 @@ private:
     void                      addTrigger( TTrigger * pT );
     void                      removeTriggerRootNode( TTrigger * pT );
     void                      removeTrigger( TTrigger *);
-    
+
     Host *                    mpHost;
     QMap<int, TTrigger *>     mTriggerMap;
     std::list<TTrigger *>     mTriggerRootNodeList;
     qint64                    mMaxID;
-   
-   
+
+
 };
 
 

@@ -34,12 +34,13 @@ class KeyUnit
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
-    
+
                           KeyUnit( Host * pHost );
     std::list<TKey *>     getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
     TKey *                getKey( int id );
+    void                  compileAll();
     bool                  enableKey( QString & name );
     bool                  disableKey( QString & name );
     bool                  registerKey( TKey * pT );
@@ -50,8 +51,8 @@ public:
     void                  setupKeyNames();
     bool                  processDataStream( int, int );
     QMutex                mKeyUnitLock;
-    
-private: 
+
+private:
     KeyUnit(){;}
     TKey *                getKeyPrivate( int id );
     void                  addKeyRootNode( TKey * pT, int parentPosition = -1, int childPosition = -1 );
@@ -63,7 +64,7 @@ private:
     std::list<TKey *>     mKeyRootNodeList;
     qint64                mMaxID;
     QMap<int, QString>    mKeys;
-    
+
 };
 
 

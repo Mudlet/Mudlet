@@ -1,0 +1,1085 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DB.html">DB.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li><strong>Other.lua</strong></li>
+	
+	<li>
+		<a href="../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGauge.html">geyser/GeyserGauge.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserUtil.html">geyser/GeyserUtil.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserWindow.html">geyser/GeyserWindow.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>Other.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#SavedVariables">SavedVariables</a>&nbsp;()</td>
+	<td class="summary"><b><u>TODO</u></b> Table SavedVariables.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#SavedVariables:Add">SavedVariables:Add</a>&nbsp;(tbl)</td>
+	<td class="summary"><b><u>TODO</u></b> SavedVariables:Add(tbl) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#_comp">_comp</a>&nbsp;(a, b)</td>
+	<td class="summary"><b><u>TODO</u></b> _comp(a, b) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#atcp">atcp</a>&nbsp;()</td>
+	<td class="summary">Mudlet's support for ATCP.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#getOS">getOS</a>&nbsp;()</td>
+	<td class="summary">Determine operating system.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#io.exists">io.exists</a>&nbsp;(fileOfFolderName)</td>
+	<td class="summary">Checks to see if a given file or folder exists.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#loadVars">loadVars</a>&nbsp;()</td>
+	<td class="summary">This function should be primarily used by Mudlet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#openURL">openURL</a>&nbsp;(url)</td>
+	<td class="summary">Opens the default OS browser for the given URL.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#phpTable">phpTable</a>&nbsp;(...)</td>
+	<td class="summary"><b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#remember">remember</a>&nbsp;(varName)</td>
+	<td class="summary">This function flags a variable to be saved by Mudlet's variable persistence system.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#saveVars">saveVars</a>&nbsp;()</td>
+	<td class="summary">This function should primarily be used by Mudlet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#sendAll">sendAll</a>&nbsp;(..., echoTheValue)</td>
+	<td class="summary">Sends a list of commands to the MUD.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#speedwalk">speedwalk</a>&nbsp;(dirString, backwards, delay)</td>
+	<td class="summary"><b><u>TODO</u></b> speedwalk(dirString, backwards, delay) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#speedwalktimer">speedwalktimer</a>&nbsp;()</td>
+	<td class="summary"><b><u>TODO</u></b> speedwalktimer() </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.load">table.load</a>&nbsp;(sfile, loadinto)</td>
+	<td class="summary">Restores a Lua table from a data file that has been saved with table.save().</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.pickle">table.pickle</a>&nbsp;(t, file, tables, lookup)</td>
+	<td class="summary"><b><u>TODO</u></b> table.pickle( t, file, tables, lookup ) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.save">table.save</a>&nbsp;(sfile, t)</td>
+	<td class="summary">The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load them again at a later time e.g.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#table.unpickle">table.unpickle</a>&nbsp;(t, tables, tcopy, pickled)</td>
+	<td class="summary"><b><u>TODO</u></b> table.unpickle( t, tables, tcopy, pickled ) </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#walkdelay">walkdelay</a>&nbsp;()</td>
+	<td class="summary"><b><u>TODO</u></b> Variable walkdelay.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#walklist">walklist</a>&nbsp;()</td>
+	<td class="summary"><b><u>TODO</u></b> Table walklist.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#xor">xor</a>&nbsp;(a, b)</td>
+	<td class="summary">Implementation of boolean exclusive or.</td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="SavedVariables"></a>
+<b><big>SavedVariables&nbsp;</big></b>()</dt>
+<dd>
+
+<b><u>TODO</u></b> Table SavedVariables. 
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="SavedVariables:Add"></a>
+<b><big>SavedVariables:Add&nbsp;</big></b>(tbl)</dt>
+<dd>
+
+<b><u>TODO</u></b> SavedVariables:Add(tbl)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  tbl: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="_comp"></a>
+<b><big>_comp&nbsp;</big></b>(a, b)</dt>
+<dd>
+
+<b><u>TODO</u></b> _comp(a, b)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  a: 
+	</li>
+	
+	<li>
+	  b: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="atcp"></a>
+<b><big>atcp&nbsp;</big></b>()</dt>
+<dd>
+
+Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough such that any it should work on others. <br/><br/>  The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also raised for each ATCP message that arrives. To find out the available messages available in the atcp table and the event names, you can use display(atcp). <br/><br/>  Note that while the typical message comes in the format of Module.Submodule, ie Char.Vitals or Room.Exits, in Mudlet the dot is removed - so it becomes CharVitals and RoomExits. Here's an example:    <pre>    room_number = tonumber(atcp.RoomNum)
+    echo(room_number)
+ </pre>  Triggering on ATCP events: <br/> If you'd like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages. The ATCP handler names follow the same format as the atcp table - RoomNum, RoomExits, CharVitals and so on. <br/><br/>  While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place the event name you'd like your script to listen to into the Add User Defined Event Handler: field and press the + button to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function should it call for you when your handler receives a message. You do that by setting the Script name: to the function name in the script you'd like to be called. <br/><br/>  For example, if you'd like to listen to the RoomExits event and have it call the process_exits() function - register RoomExits as the event handler, make the script name be process_exits, and use this in the script:    <pre>    function process_exits(event, args)
+        echo("Called event: " .. event .. "\nWith args: " .. args)
+    end
+ </pre>  Feel free to experiment with this to achieve the desired results. A ATCP demo package is also available on the forums for using event handlers and parsing its messages into Lua datastructures. <br/> 
+
+
+<br/><b>Release:</b> Mudlet 1.0.6 
+
+
+<br/>
+
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='CoreMudlet.html#sendATCP'>sendATCP</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="getOS"></a>
+<b><big>getOS&nbsp;</big></b>()</dt>
+<dd>
+
+Determine operating system. 
+
+
+
+<br/>
+
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>   <pre>    if "linux" == getOS() then
+ 	     echo("We are using GNU/Linux!")
+    end
+ </pre> 
+</ul>
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>"linux", "mac" or "windows" string
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="io.exists"></a>
+<b><big>io.exists&nbsp;</big></b>(fileOfFolderName)</dt>
+<dd>
+
+Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  fileOfFolderName: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>   <pre>    if io.exists("/home/user/Desktop") then
+       echo("This folder exists!")
+    else
+       echo("This folder doesn't exist.")
+    end
+ 
+    if io.exists("/home/user/Desktop/file.txt") then
+       echo("This file exists!")
+    else
+       echo("This file doesn't exist.")
+    end
+ </pre> 
+</ul>
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>true or false
+</ul>
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="loadVars"></a>
+<b><big>loadVars&nbsp;</big></b>()</dt>
+<dd>
+
+This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory and unpacks them into the global namespace. 
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='Other.html#remember'>remember</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="openURL"></a>
+<b><big>openURL&nbsp;</big></b>(url)</dt>
+<dd>
+
+Opens the default OS browser for the given URL. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  url: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Either command will open Mudlet home page.    <pre>    openUrl("www.mudlet.org")
+    openUrl("http://www.mudlet.org/")
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="phpTable"></a>
+<b><big>phpTable&nbsp;</big></b>(...)</dt>
+<dd>
+
+<b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="remember"></a>
+<b><big>remember&nbsp;</big></b>(varName)</dt>
+<dd>
+
+This function flags a variable to be saved by Mudlet's variable persistence system. Variables are automatically unpacked into the global namespace when the profile is loaded. They are saved to "SavedVariables.lua" when the profile is closed or saved. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  varName: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>remember("varName") 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='Other.html#loadVars'>loadVars</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="saveVars"></a>
+<b><big>saveVars&nbsp;</big></b>()</dt>
+<dd>
+
+This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence. 
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='Other.html#loadVars'>loadVars</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="sendAll"></a>
+<b><big>sendAll&nbsp;</big></b>(..., echoTheValue)</dt>
+<dd>
+
+Sends a list of commands to the MUD. You can use this to send some things at once instead of having to use multiple send() commands one after another. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: list of commands
+	</li>
+	
+	<li>
+	  echoTheValue: optional boolean flag (default value is true) which determine if value should be echoed back on client. 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>Use sendAll instead of multiple send commands.    <pre>    sendAll("stand", "wield shield", "say ha!")
+ </pre> Instead of calling:    <pre>    send ("stand")
+    send ("wield shield")
+    send ("say ha!")
+ </pre>
+	
+	<li>Use sendAll and do not echo sent commnad on the main window.    <pre>    sendAll("stand", "wield shield", "say ha!", false)
+ </pre> 
+	
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='CoreMudlet.html#send'>send</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="speedwalk"></a>
+<b><big>speedwalk&nbsp;</big></b>(dirString, backwards, delay)</dt>
+<dd>
+
+<b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  dirString: 
+	</li>
+	
+	<li>
+	  backwards: 
+	</li>
+	
+	<li>
+	  delay: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="speedwalktimer"></a>
+<b><big>speedwalktimer&nbsp;</big></b>()</dt>
+<dd>
+
+<b><u>TODO</u></b> speedwalktimer()
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.load"></a>
+<b><big>table.load&nbsp;</big></b>(sfile, loadinto)</dt>
+<dd>
+
+Restores a Lua table from a data file that has been saved with table.save(). 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sfile: 
+	</li>
+	
+	<li>
+	  loadinto: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>Loads a serialized file into the globals table (only Mudlet should use this).    <pre>    table.load(file)
+ </pre>
+	
+	<li>Loads a serialized file into the given table.    <pre>    table.load(file, table)
+ </pre> 
+	
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='Other.html#table.save'>table.save</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="table.pickle"></a>
+<b><big>table.pickle&nbsp;</big></b>(t, file, tables, lookup)</dt>
+<dd>
+
+<b><u>TODO</u></b> table.pickle( t, file, tables, lookup )
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  t: 
+	</li>
+	
+	<li>
+	  file: 
+	</li>
+	
+	<li>
+	  tables: 
+	</li>
+	
+	<li>
+	  lookup: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="table.save"></a>
+<b><big>table.save&nbsp;</big></b>(sfile, t)</dt>
+<dd>
+
+The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load them again at a later time e.g. make a database, collect statistical information etc. These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>  Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>  Notes: <br/> Userdata and indices of these are not saved <br/> Functions are saved via string.dump, so make sure it has no upvalues <br/> References are saved <br/> 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sfile: 
+	</li>
+	
+	<li>
+	  t: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>Saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this).    <pre>    table.save(file)
+ </pre>
+	
+	<li>Saves the given table into the given file.    <pre>    table.save(file, table)
+ </pre> 
+	
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='Other.html#table.load'>table.load</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="table.unpickle"></a>
+<b><big>table.unpickle&nbsp;</big></b>(t, tables, tcopy, pickled)</dt>
+<dd>
+
+<b><u>TODO</u></b> table.unpickle( t, tables, tcopy, pickled )
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  t: 
+	</li>
+	
+	<li>
+	  tables: 
+	</li>
+	
+	<li>
+	  tcopy: 
+	</li>
+	
+	<li>
+	  pickled: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="walkdelay"></a>
+<b><big>walkdelay&nbsp;</big></b>()</dt>
+<dd>
+
+<b><u>TODO</u></b> Variable walkdelay. 
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="walklist"></a>
+<b><big>walklist&nbsp;</big></b>()</dt>
+<dd>
+
+<b><u>TODO</u></b> Table walklist. 
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="xor"></a>
+<b><big>xor&nbsp;</big></b>(a, b)</dt>
+<dd>
+
+Implementation of boolean exclusive or. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  a: 
+	</li>
+	
+	<li>
+	  b: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>All following will return false.    <pre>    xor(false, false)
+    xor(true, true)
+ </pre> 
+</ul>
+
+
+
+<b>Return value:</b>
+<ul>
+	<li>true or false
+</ul>
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

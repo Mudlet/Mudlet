@@ -13,6 +13,9 @@ atcp = {}
 function handleWindowResizeEvent()
 end
 
+function doSpeedWalk()
+end
+
 -----------------------------------------------------------------------------
 -- General-purpose useful tools that were needed during development:
 -----------------------------------------------------------------------------
@@ -44,41 +47,41 @@ end
 -- Usage: remember("varName")
 -- Example: remember("table_Weapons")
 -- Example: remember("var_EnemyHeight")
--- Variables are automatically unpacked into the global namespace when the profile is loaded. 
+-- Variables are automatically unpacked into the global namespace when the profile is loaded.
 -- They are saved to "SavedVariables.lua" when the profile is closed or saved.
 
 function remember(varName)
-	if not _saveTable then
-		_saveTable = {}
-	end
+        if not _saveTable then
+                _saveTable = {}
+        end
 
     _saveTable[varName] = _G[varName]
 end
 
 
 --- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
---- and unpacks them into the global namespace. 
+--- and unpacks them into the global namespace.
 function loadVars()
-	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
-	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
-	local lt_VariableHolder = {}
-	if (io.exists(l_SettingsFile)) then
-		table.load(l_SettingsFile, lt_VariableHolder)
-		for k,v in pairs(lt_VariableHolder) do
-				_G[k] = v
-		end
-	end
+        if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
+        local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+        local lt_VariableHolder = {}
+        if (io.exists(l_SettingsFile)) then
+                table.load(l_SettingsFile, lt_VariableHolder)
+                for k,v in pairs(lt_VariableHolder) do
+                                _G[k] = v
+                end
+        end
 end
 
 -- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
 
 function saveVars()
-	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
-	local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+        if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
+        local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
     for k,_ in pairs(_saveTable) do
         remember(k)
     end
-	table.save(l_SettingsFile, _saveTable)
+        table.save(l_SettingsFile, _saveTable)
 end
 
 -- Move a custom gauge built by createGauge(...)
@@ -87,15 +90,15 @@ end
 
 function moveGauge(gaugeName, newX, newY)
         local newX, newY = newX, newY
-       
+
         assert(gaugesTable[gaugeName], "moveGauge: no such gauge exists.")
         assert(newX and newY, "moveGauge: need to have both X and Y dimensions.")
-       
+
         moveWindow(gaugeName, newX, newY)
         moveWindow(gaugeName .. "_back", newX, newY)
-                       
+
         gaugesTable[gaugeName].xpos, gaugesTable[gaugeName].ypos = newX, newY
- 
+
 end
 
 -- Set the text on a custom gauge built by createGauge(...)
@@ -106,10 +109,10 @@ end
 
 function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
         assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
- 
+
         local red,green,blue = 0,0,0
         local l_labelText = gaugeText
-       
+
         if color1 ~= nil then
                 if color2 == nil then
                         red, green, blue = getRGB(color1)
@@ -117,19 +120,19 @@ function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
                         red, green, blue = color1, color2, color3
                 end
         end
-       
+
         -- Check to make sure we had a text to apply, if not, clear the text
         if l_labelText == nil then
                 l_labelText = ""
         end
-       
+
         local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
-       
- 
+
+
         echo(gaugeName, l_EchoString)
         echo(gaugeName .. "_back", l_EchoString)
-       
-       
+
+
         gaugesTable[gaugeName].text = l_EchoString
         gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
 end
@@ -139,102 +142,102 @@ end
 -- Example: RGB2Hex(255,255,255) returns "FFFFFF"
 -- Example: RGB2Hex("white") returns "FFFFFF"
 function RGB2Hex(red,green,blue)
-	local l_Red, l_Green, l_Blue = 0,0,0
-	if green == nil then -- Not an RGB but a "color" instead!
-		l_Red, l_Green, l_Blue = getRGB(red)
-	else -- Nope, true color here
-		l_Red, l_Green, l_Blue = red, green, blue
-	end
-									
-	return PadHexNum(string.format("%X",l_Red)) .. 
-			PadHexNum(string.format("%X",l_Green)) .. 
-			PadHexNum(string.format("%X",l_Blue))
+        local l_Red, l_Green, l_Blue = 0,0,0
+        if green == nil then -- Not an RGB but a "color" instead!
+                l_Red, l_Green, l_Blue = getRGB(red)
+        else -- Nope, true color here
+                l_Red, l_Green, l_Blue = red, green, blue
+        end
+
+        return PadHexNum(string.format("%X",l_Red)) ..
+                        PadHexNum(string.format("%X",l_Green)) ..
+                        PadHexNum(string.format("%X",l_Blue))
 end
 
 -- Pads a hex number to ensure a minimum of 2 digits.
 -- Example: PadHexNum("F") returns "F0
 function PadHexNum(incString)
-	local l_Return = incString
-	if tonumber(incString,16)<16 then
-		if tonumber(incString,16)<10 then
-			l_Return = "0" .. l_Return
-		elseif tonumber(incString,16)>10 then
-			l_Return = l_Return .. "0"
-		end
-	end
+        local l_Return = incString
+        if tonumber(incString,16)<16 then
+                if tonumber(incString,16)<10 then
+                        l_Return = "0" .. l_Return
+                elseif tonumber(incString,16)>10 then
+                        l_Return = l_Return .. "0"
+                end
+        end
 
-	return l_Return
+        return l_Return
 end
 
 -----------------------------------------------------------
 -- Functions written by John Dahlstrom November 2008
 -----------------------------------------------------------
-  
--- Example: 
+
+-- Example:
 --
 -- local red, green, blue = getRGB("green")
--- echo(red .. "." .. green .. "." .. blue ) 
+-- echo(red .. "." .. green .. "." .. blue )
 --
 -- This would then display 0.255.0 on your screen.
 
 function getRGB(colorName)
 
-	local red = color_table[colorName][1]
-	local green = color_table[colorName][2]
-	local blue = color_table[colorName][3]
+        local red = color_table[colorName][1]
+        local green = color_table[colorName][2]
+        local blue = color_table[colorName][3]
 
-	return red, green, blue
-	
+        return red, green, blue
+
 end
 
 
 -- Make your very own customized gauge with this function.
 --
--- Example: 
+-- Example:
 --
--- createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0) 
--- or 
+-- createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0)
+-- or
 -- createGauge("healthBar", 300, 20, 30, 300, nil, "green")
 --
 -- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
 -- The second example is using the same names you'd use for something like fg() or bg().
 --
 -- If you wish to have some text on your label, you'll change the nil part and make it look like this:
--- createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0) 
--- or 
+-- createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0)
+-- or
 -- createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
 
 gaugesTable = {} -- first we need to make this table which will be used later to store important data in...
 
 function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
- 
+
         -- make a nice background for our gauge
         createLabel(gaugeName .. "_back",0,0,0,0,1)
         if color2 == nil then
                 local red, green, blue = getRGB(color1)
-                setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)               
+                setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)
         else
                 setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
         end
         moveWindow(gaugeName .. "_back", Xpos, Ypos)
         resizeWindow(gaugeName .. "_back", width, height)
         showWindow(gaugeName .. "_back")
- 
+
         -- make a nicer front for our gauge
         createLabel(gaugeName,0,0,0,0,1)
         if color2 == nil then
                 local red, green, blue = getRGB(color1)
-                setBackgroundColor(gaugeName, red , green, blue, 255)          
+                setBackgroundColor(gaugeName, red , green, blue, 255)
         else
                 setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
         end
         moveWindow(gaugeName, Xpos, Ypos)
         resizeWindow(gaugeName, width, height)
         showWindow(gaugeName)
- 
+
         -- store important data in a table
         gaugesTable[gaugeName] = {width = width, height = height, xpos = Xpos, ypos = Ypos,text = gaugeText, color1 = color1, color2 = color2, color3 = color3}
- 
+
         -- Set Gauge text (Defaults to black)
         -- If no gaugeText was passed, we'll just leave it blank!
         if gaugeText ~= nil then
@@ -242,13 +245,13 @@ function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, co
         else
                 setGaugeText(gaugeName)
         end
- 
+
 end
 
 
 -- Use this function when you want to change the gauges look according to your values.
 --
--- Example: 
+-- Example:
 --
 -- setGauge("healthBar", 200, 400)
 --
@@ -265,14 +268,14 @@ end
 function setGauge(gaugeName, currentValue, maxValue, gaugeText)
         assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
         assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
-       
+
         resizeWindow(gaugeName, gaugesTable[gaugeName].width/100*((100/maxValue)*currentValue), gaugesTable[gaugeName].height)
- 
+
         -- if we wanted to change the text, we do it
         if gaugeText ~= nil then
                 echo(gaugeName .. "_back", gaugeText)
                 echo(gaugeName, gaugeText)
-               
+
            gaugesTable[gaugeName].text = gaugeText
         end
 end
@@ -281,9 +284,9 @@ end
 -- Make a new console window with ease. The default background is black and text color white.
 --
 -- Example:
--- 
+--
 -- createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
--- 
+--
 -- This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width,
 -- hold a maximum of 20 lines and be place at 200x400 of your mudlet window.
 -- If you wish to change the color you can easily do this when updating your text or manually somewhere, using
@@ -304,46 +307,46 @@ function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos,
 end
 
 function sendAll( what, ... )
-	if table.maxn(arg) == 0 then
-  		send( what )
+        if table.maxn(arg) == 0 then
+                send( what )
     else
-		local echo
-		if arg[table.maxn(arg)] == false then echo = false else echo = true end
-    	send( what, echo )
-    	for i,v in ipairs(arg) do
-	    	send( v, echo )
-	    end
+                local echo
+                if arg[table.maxn(arg)] == false then echo = false else echo = true end
+        send( what, echo )
+        for i,v in ipairs(arg) do
+                send( v, echo )
+            end
     end
 end
 
-         
+
 -- Echo something after your line
 function suffix(what, func, fg, bg, window)
-	local length = string.len(line)
-	moveCursor(window or "main", length-1, getLineNumber())
-	if func and (func == cecho or func == decho or func == hecho) then 
-		func(what, fg, bg, true, window)
-	else
-		insertText(what)
-	end
+        local length = string.len(line)
+        moveCursor(window or "main", length-1, getLineNumber())
+        if func and (func == cecho or func == decho or func == hecho) then
+                func(what, fg, bg, true, window)
+        else
+                insertText(what)
+        end
 end
 
 
 -- Echo something before your line
 function prefix(what, func, fg, bg, window)
     moveCursor(window or "main", 0, getLineNumber());
-	if func and (func == cecho or func == decho or func == hecho) then 
-		func(what, fg, bg, true, window)
-	else
-		insertText(what)
-	end
+        if func and (func == cecho or func == decho or func == hecho) then
+                func(what, fg, bg, true, window)
+        else
+                insertText(what)
+        end
 end
 
 
 -- Gag the whole line
 function gagLine()
-	--selectString(line, 1)
-	--replace("")
+        --selectString(line, 1)
+        --replace("")
  deleteLine()
 end
 
@@ -353,15 +356,15 @@ end
 -- Example: replaceAll("John", "Doe")
 -- This will replace the word John with the word Doe, everytime the word John occurs on the current line.
 function replaceAll(word, what)
-	while selectString(word, 1) > 0 do replace(what) end
+        while selectString(word, 1) > 0 do replace(what) end
 end
 
 
 -- Replace the whole with a string you'd like.
 function replaceLine(what)
-	selectString(line, 1)
-	replace("")
-	insertText(what)
+        selectString(line, 1)
+        replace("")
+        insertText(what)
 end
 
 
@@ -375,23 +378,23 @@ function handleResizeEvent()
 end
 
 function deselect()
-	selectString("",1);
+        selectString("",1);
 end
 
 -- Function shows the content of a Lua table on the screen
 function printTable( map )
-	echo("-------------------------------------------------------\n");
-	for k, v in pairs( map ) do
-		echo( "key=" .. k .. " value=" .. v .. "\n" )
-	end
-	echo("-------------------------------------------------------\n");
+        echo("-------------------------------------------------------\n");
+        for k, v in pairs( map ) do
+                echo( "key=" .. k .. " value=" .. v .. "\n" )
+        end
+        echo("-------------------------------------------------------\n");
 end
 
 function __printTable( k, v )
   insertText ("\nkey = " .. tostring (k) .. " value = " .. tostring( v )  )
-end 
+end
 
--- Function colorizes all matched regex capture groups on the screen 
+-- Function colorizes all matched regex capture groups on the screen
 function showCaptureGroups()
     for k, v in pairs ( matches ) do
         selectCaptureGroup( tonumber(k) )
@@ -409,33 +412,33 @@ function showMultimatches()
     echo("\nThe table multimatches[n][m] contains:");
     echo("\n-------------------------------------------------------");
     for k,v in ipairs(multimatches) do
-       	echo("\nregex " .. k .. " captured: (multimatches["..k .."][1-n])");
-       	for k2,v2 in ipairs(v) do
-           	echo("\n          key="..k2.." value="..v2);
-       	end
+        echo("\nregex " .. k .. " captured: (multimatches["..k .."][1-n])");
+        for k2,v2 in ipairs(v) do
+                echo("\n          key="..k2.." value="..v2);
+        end
     end
     echo("\n-------------------------------------------------------\n");
 end
 
 function listPrint( map )
-	echo("-------------------------------------------------------\n");
-	for k,v in ipairs( map ) do
-		echo( k .. ". ) "..v .. "\n" );
-	end
-	echo("-------------------------------------------------------\n");
+        echo("-------------------------------------------------------\n");
+        for k,v in ipairs( map ) do
+                echo( k .. ". ) "..v .. "\n" );
+        end
+        echo("-------------------------------------------------------\n");
 end
 
 function listAdd( list, what )
-	table.insert( list, what );
+        table.insert( list, what );
 end
 
 
 function listRemove( list, what )
-	for k,v in ipairs( list ) do
-		if v == what then
-			table.remove( list, k )
-		end
-	end
+        for k,v in ipairs( list ) do
+                if v == what then
+                        table.remove( list, k )
+                end
+        end
 end
 
 -------------------------------------------------------------------
@@ -502,10 +505,10 @@ end
 -------------------------------------------------------------------------------
 --                     Color Definitions
 --------------------------------------------------------------------------------
--- These color definitions are intended to be used in conjunction with fg() 
+-- These color definitions are intended to be used in conjunction with fg()
 -- and bg() colorizer functions that are defined further below
---------------------------------------------------------------------------------        
-        
+--------------------------------------------------------------------------------
+
 color_table = {
         snow                  = {255, 250, 250},
         ghost_white           = {248, 248, 255},
@@ -758,12 +761,12 @@ end
 --
 -- table.load(file)   - loads a serialized file into the globals table (only Mudlet should use this)
 -- table.load(file, table) - loads a serialized file into the given table
- 
+
 -- table.save(file)  - saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this)
 -- table.save(file, table) - saves the given table into the given file
--- 
+--
 -- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself.
--- 
+--
 -- Notes:
 --  Userdata and indices of these are not saved
 --  Functions are saved via string.dump, so make sure it has no upvalues
@@ -783,7 +786,7 @@ function table.save( sfile, t )
  file:write( "}" )
  file:close()
 end
- 
+
 function table.pickle( t, file, tables, lookup )
  file:write( "{" )
  for i,v in pairs( t ) do
@@ -813,9 +816,9 @@ function table.pickle( t, file, tables, lookup )
    end
   end
  end
- file:write( "},\n" )  
+ file:write( "},\n" )
 end
- 
+
 -- enclose string by long brakets ( string, maxlevel )
 function string.enclose( s, maxlevel )
  s = "["..s.."]"
@@ -823,7 +826,7 @@ function string.enclose( s, maxlevel )
  while 1 do
   if maxlevel and level == maxlevel then
    error( "error: maxlevel too low, "..maxlevel )
-  -- 
+  --
   elseif string.find( s, "%["..string.rep( "=", level ).."%[" ) or string.find( s, "]"..string.rep( "=", level ).."]" ) then
    level = level + 1
   else
@@ -842,7 +845,7 @@ function table.load( sfile, loadinto )
   end
  end
 end
- 
+
 function table.unpickle( t, tables, tcopy, pickled )
  pickled = pickled or {}
  pickled[t] = tcopy
@@ -875,8 +878,8 @@ end
 --
 -- -- Example: replaceWildcard(1, "hello") on a trigger of `^You wave (goodbye)\.$`
 function replaceWildcard(what, replacement)
-    if replacement == nil or what == nil then 
-        return 
+    if replacement == nil or what == nil then
+        return
     end
     selectCaptureGroup(what)
     replace(replacement)
@@ -950,34 +953,34 @@ end
 
 -- Handles indentation
 do local indents = {}  -- simulate a static variable
-	function indent(num)
+        function indent(num)
 
-	  if not indents[num] then
-	    indents[num] = ""
-	    for i = 0, num do
-	      indents[num] = indents[num].."  "
-	    end
-	  end
+          if not indents[num] then
+            indents[num] = ""
+            for i = 0, num do
+              indents[num] = indents[num].."  "
+            end
+          end
 
-	  return indents[num]
-	end
+          return indents[num]
+        end
 end
 
 function resizeGauge(gaugeName, width, height)
     assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
     assert(width and height, "resizeGauge: need to have both width and height.")
- 
-	resizeWindow(gaugeName, width, height)
-	resizeWindow(gaugeName .. "_back", width, height)
- 
+
+        resizeWindow(gaugeName, width, height)
+        resizeWindow(gaugeName .. "_back", width, height)
+
     -- save in the table
     gaugesTable[gaugeName].width, gaugesTable[gaugeName].height = width, height
 end
- 
+
 function setGaugeStyleSheet(gaugeName, css, cssback)
     if not setLabelStyleSheet then return end-- mudlet 1.0.5 and lower compatibility
     assert(gaugesTable[gaugeName], "setGaugeStyleSheet: no such gauge exists.")
- 
+
     setLabelStyleSheet(gaugeName, css)
     setLabelStyleSheet(gaugeName .. "_back", cssback or css)
 end
@@ -1028,132 +1031,132 @@ Arg5: Name of the console to echo to. Defaults to main.
 
 Color changes can be made using the format <foreground:background>
 where each field is one of the colors listed by showColors()
-The background portion can be omitted using <foreground> or the foreground 
+The background portion can be omitted using <foreground> or the foreground
 portion can be omitted using <:background>
 Arguments 2 and 3 to set the default colors take named colors as well.
 --]]------------------------------------------------------------------------------
 
 if rex then
-	Echos = {
-		Patterns = {
-			Hex = {
-				[[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
-				rex.new[[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
-				},
-			Decimal = {
-				[[(\x5c?<[0-9,:]+>)|(<r>)]],
-				rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
-				},
-			Color = {
-				[[(\x5c?<[a-zA-Z_,:]+>)]],
-				rex.new[[<([a-zA-Z_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z_]+))?>]],
-				},
-			Ansi = {
-				[[(\x5c?<[0-9,:]+>)]],
-				rex.new[[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
-				},
-			},
-		Process = function(str, style)
-			local t = {}
-			for s, c, r in rex.split(str, Echos.Patterns[style][1]) do
-				if c and (c:byte(1) == 92) then 
-					c = c:sub(2)
-					if s then s = s .. c else s = c end
-					c = nil
-				end
-				if s then table.insert(t, s) end
-				if r then table.insert(t, "r") end
-				if c then
-					if style == 'Hex' or style == 'Decimal' then
-						local fr, fg, fb, br, bg, bb = Echos.Patterns[style][2]:match(c)
-						local color = {}
-						if style == 'Hex' then 
-							if fr and fg and fb then fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16) end
-							if br and bg and bb then br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16) end
-						end
-						if fr and fg and fb then color.fg = { fr, fg, fb } end
-						if br and bg and bb then color.bg = { br, bg, bb } end
-						table.insert(t, color)
-					elseif style == 'Color' then
-						if c == "<reset>" then table.insert(t, "r")
-						else
-							local fcolor, bcolor = Echos.Patterns[style][2]:match(c)
-							local color = {}
-							if fcolor and color_table[fcolor] then color.fg = color_table[fcolor] end
-							if bcolor and color_table[bcolor] then color.bg = color_table[bcolor] end
-							table.insert(t, color)
-						end
-					end
-				end
-			end
-			return t
-		end,
-		}
-	
-	function xEcho(style, insert, win, str)
-		if not str then str = win; win = nil end
-		local reset, out
-		if insert then
-			if win then
-				out = function(win, str)
-					insertText(win, str)
-				end
-			else
-				out = function(str)
-					insertText(str)
-				end
-			end
-		else
-			if win then
-				out = function(win, str)
-					echo(win, str)
-				end
-			else
-				out = function(str)
-					echo(str)
-				end
-			end
-		end
-		if win then
-			reset = function()
-				resetFormat(win)
-			end
-		else
-			reset = function()
-				resetFormat()
-			end
-		end
-		
-		local t = Echos.Process(str, style)
-		
-		reset()
-		
-		for _, v in ipairs(t) do
-			if type(v) == 'table' then
-				if v.fg then
-					local fr, fg, fb = unpack(v.fg)
-					if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
-				end
-				if v.bg then
-					local br, bg, bb = unpack(v.bg)
-					if win then setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb) end
-				end
-			elseif v == "r" then
-				reset()
-			else
-				if win then out(win, v) else out(v) end
-			end
-		end
-		if win then resetFormat(win) else resetFormat() end
-	end
-	
-	function hecho(...) xEcho("Hex", false, ...) end
-	function decho(...) xEcho("Decimal", false, ...) end
-	function cecho(...) xEcho("Color", false, ...) end
-	function hinsertText(...) xEcho("Hex", true, ...) end
-	function dinsertText(...) xEcho("Decimal", true, ...) end
-	function cinsertText(...) xEcho("Color", true, ...) end
-	checho = cecho
+        Echos = {
+                Patterns = {
+                        Hex = {
+                                [[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
+                                rex.new[[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
+                                },
+                        Decimal = {
+                                [[(\x5c?<[0-9,:]+>)|(<r>)]],
+                                rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
+                                },
+                        Color = {
+                                [[(\x5c?<[a-zA-Z_,:]+>)]],
+                                rex.new[[<([a-zA-Z_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z_]+))?>]],
+                                },
+                        Ansi = {
+                                [[(\x5c?<[0-9,:]+>)]],
+                                rex.new[[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
+                                },
+                        },
+                Process = function(str, style)
+                        local t = {}
+                        for s, c, r in rex.split(str, Echos.Patterns[style][1]) do
+                                if c and (c:byte(1) == 92) then
+                                        c = c:sub(2)
+                                        if s then s = s .. c else s = c end
+                                        c = nil
+                                end
+                                if s then table.insert(t, s) end
+                                if r then table.insert(t, "r") end
+                                if c then
+                                        if style == 'Hex' or style == 'Decimal' then
+                                                local fr, fg, fb, br, bg, bb = Echos.Patterns[style][2]:match(c)
+                                                local color = {}
+                                                if style == 'Hex' then
+                                                        if fr and fg and fb then fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16) end
+                                                        if br and bg and bb then br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16) end
+                                                end
+                                                if fr and fg and fb then color.fg = { fr, fg, fb } end
+                                                if br and bg and bb then color.bg = { br, bg, bb } end
+                                                table.insert(t, color)
+                                        elseif style == 'Color' then
+                                                if c == "<reset>" then table.insert(t, "r")
+                                                else
+                                                        local fcolor, bcolor = Echos.Patterns[style][2]:match(c)
+                                                        local color = {}
+                                                        if fcolor and color_table[fcolor] then color.fg = color_table[fcolor] end
+                                                        if bcolor and color_table[bcolor] then color.bg = color_table[bcolor] end
+                                                        table.insert(t, color)
+                                                end
+                                        end
+                                end
+                        end
+                        return t
+                end,
+                }
+
+        function xEcho(style, insert, win, str)
+                if not str then str = win; win = nil end
+                local reset, out
+                if insert then
+                        if win then
+                                out = function(win, str)
+                                        insertText(win, str)
+                                end
+                        else
+                                out = function(str)
+                                        insertText(str)
+                                end
+                        end
+                else
+                        if win then
+                                out = function(win, str)
+                                        echo(win, str)
+                                end
+                        else
+                                out = function(str)
+                                        echo(str)
+                                end
+                        end
+                end
+                if win then
+                        reset = function()
+                                resetFormat(win)
+                        end
+                else
+                        reset = function()
+                                resetFormat()
+                        end
+                end
+
+                local t = Echos.Process(str, style)
+
+                reset()
+
+                for _, v in ipairs(t) do
+                        if type(v) == 'table' then
+                                if v.fg then
+                                        local fr, fg, fb = unpack(v.fg)
+                                        if win then setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb) end
+                                end
+                                if v.bg then
+                                        local br, bg, bb = unpack(v.bg)
+                                        if win then setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb) end
+                                end
+                        elseif v == "r" then
+                                reset()
+                        else
+                                if win then out(win, v) else out(v) end
+                        end
+                end
+                if win then resetFormat(win) else resetFormat() end
+        end
+
+        function hecho(...) xEcho("Hex", false, ...) end
+        function decho(...) xEcho("Decimal", false, ...) end
+        function cecho(...) xEcho("Color", false, ...) end
+        function hinsertText(...) xEcho("Hex", true, ...) end
+        function dinsertText(...) xEcho("Decimal", true, ...) end
+        function cinsertText(...) xEcho("Color", true, ...) end
+        checho = cecho
 else
 -- HEIKO: using this as a replacement until the problems of the real function
 --        are fixed.
@@ -1224,65 +1227,65 @@ else
 --		end
 --		reset()
 --	end
-	
-	function decho(window, text)
-		local win = text and window
-		local s = text or window
-		local reset
-		if win then 
-			reset = function() resetFormat(win) end 
-		else 
-			reset = function() resetFormat() end
-		end
-		reset()
-		for color, text in s:gmatch("<([0-9,:]+)>([^<>]+)") do  
-			if color == "reset" then 
-				reset()
-				if win then echo(win, text) else echo(text) end
-			else
-				local colist  =   string.split(color..":", "%s*:%s*")
-				local fgcol   =   colist[1] ~= "" and colist[1] or "white"
-				local bgcol   =   colist[2] ~= "" and colist[2] or "black"
-				local FGrgb   =   color_table[fgcol] or string.split(fgcol, ",")
-				local BGrgb   =   color_table[bgcol] or string.split(bgcol, ",")
-				
-				if win then
-					setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
-					setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
-					echo(win,text)
-				else
-					setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
-					setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
-					echo(text)
-				end
-			end
-		end
-		reset()
-	end
+
+        function decho(window, text)
+                local win = text and window
+                local s = text or window
+                local reset
+                if win then
+                        reset = function() resetFormat(win) end
+                else
+                        reset = function() resetFormat() end
+                end
+                reset()
+                for color, text in s:gmatch("<([0-9,:]+)>([^<>]+)") do
+                        if color == "reset" then
+                                reset()
+                                if win then echo(win, text) else echo(text) end
+                        else
+                                local colist  =   string.split(color..":", "%s*:%s*")
+                                local fgcol   =   colist[1] ~= "" and colist[1] or "white"
+                                local bgcol   =   colist[2] ~= "" and colist[2] or "black"
+                                local FGrgb   =   color_table[fgcol] or string.split(fgcol, ",")
+                                local BGrgb   =   color_table[bgcol] or string.split(bgcol, ",")
+
+                                if win then
+                                        setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
+                                        setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
+                                        echo(win,text)
+                                else
+                                        setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
+                                        setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
+                                        echo(text)
+                                end
+                        end
+                end
+                reset()
+        end
 end
 
 -- Extending default libraries makes Babelfish happy.
-setmetatable( _G, { 
-	["__call"] = function(func, ...)
-		if type(func) == "function" then
-			return func(...)
-		else
-			local h = metatable(func).__call
-			if h then
-				return h(func, ...)
-			elseif _G[type(func)][func] then
-				_G[type(func)][func](...)
-			else
-				debug("Error attempting to call function " .. func .. ", function does not exist.")
-			end
-		end
-	end,
-	})
-	
+setmetatable( _G, {
+        ["__call"] = function(func, ...)
+                if type(func) == "function" then
+                        return func(...)
+                else
+                        local h = metatable(func).__call
+                        if h then
+                                return h(func, ...)
+                        elseif _G[type(func)][func] then
+                                _G[type(func)][func](...)
+                        else
+                                debug("Error attempting to call function " .. func .. ", function does not exist.")
+                        end
+                end
+        end,
+        })
+
 function xor(a, b) if (a and (not b)) or (b and (not a)) then return true else return false end end
-	
+
 function getOS()
-    if string.char(getMudletHomeDir():byte()) == "/" then 
+    if string.char(getMudletHomeDir():byte()) == "/" then
         if string.find(os.getenv("HOME"), "home") == 2 then return "linux" else return "mac" end
         else return "windows"
     end
@@ -1290,54 +1293,54 @@ end
 
 -- Opens URL in default browser
 function openURL(url)
-	local os = getOS()
-	if os == "linux" then _G.os.execute("xdg-open " .. url)
-	elseif os == "mac" then _G.os.execute("open " .. url)
-	elseif os == "windows" then _G.os.execute("start " .. url) end
+        local os = getOS()
+        if os == "linux" then _G.os.execute("xdg-open " .. url)
+        elseif os == "mac" then _G.os.execute("open " .. url)
+        elseif os == "windows" then _G.os.execute("start " .. url) end
 end
 
 -- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 3
 function showColors(...)
-	local cols = ... or 3
-	local i = 1
-	for k,v in pairs(color_table) do
-		local fg
-		local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
-		if luminosity > 0.5 then
-			fg = "black"
-		else
-			fg = "white"
-		end
-		cecho("<"..fg..":"..k..">"..k..string.rep(" ", 23-k:len()))
-		echo"  "
-		if i == cols then 
-			echo"\n"
-			i = 1
-		else 
-			i = i + 1
-		end
-	end
+        local cols = ... or 3
+        local i = 1
+        for k,v in pairs(color_table) do
+                local fg
+                local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
+                if luminosity > 0.5 then
+                        fg = "black"
+                else
+                        fg = "white"
+                end
+                cecho("<"..fg..":"..k..">"..k..string.rep(" ", 23-k:len()))
+                echo"  "
+                if i == cols then
+                        echo"\n"
+                        i = 1
+                else
+                        i = i + 1
+                end
+        end
 end
 
 -- Capitalize first character in a string
 function string:title()
-	self = self:gsub("^%l", string.upper, 1)
-	return self
+        self = self:gsub("^%l", string.upper, 1)
+        return self
 end
 
 --// Set functions //
 
 function _comp(a, b)
-	if type(a) ~= type(b) then return false end
-	if type(a) == 'table' then
-		for k, v in pairs(a) do
-			if not b[k] then return false end
-			if not _comp(v, b[k]) then return false end
-		end
-	else
-		if a ~= b then return false end
-	end
-	return true
+        if type(a) ~= type(b) then return false end
+        if type(a) == 'table' then
+                for k, v in pairs(a) do
+                        if not b[k] then return false end
+                        if not _comp(v, b[k]) then return false end
+                end
+        else
+                if a ~= b then return false end
+        end
+        return true
 end
 
 --[[-----------------------------------------------------------------------------------------
@@ -1351,176 +1354,176 @@ is a gap in numerical indices, ipairs() will cease traversal.
 
 Ex.
 tableA = {
-	[1] = 123,
-	[2] = 456,
-	["test"] = "test",
-	}
+        [1] = 123,
+        [2] = 456,
+        ["test"] = "test",
+        }
 
 tableB = {
-	[1] = 23,
-	[3] = 7,
-	["test2"] = function() return true end,
-	}
-	
+        [1] = 23,
+        [3] = 7,
+        ["test2"] = function() return true end,
+        }
+
 tableC = {
-	[5] = "c",
-	}
-	
+        [5] = "c",
+        }
+
 table.union(tableA, tableB, tableC) will return:
 {
-	[1] = {
-		123,
-		23,
-		},
-	[2] = 456,
-	[3] = 7,
-	[5] = "c",
-	["test"] = "test",
-	["test2"] = function() return true end,
+        [1] = {
+                123,
+                23,
+                },
+        [2] = 456,
+        [3] = 7,
+        [5] = "c",
+        ["test"] = "test",
+        ["test2"] = function() return true end,
 }
 
 --]]-----------------------------------------------------------------------------------------
 function table.union(...)
-	local sets = arg
-	local union = {}
-	
-	for _, set in ipairs(sets) do
-		for key, val in pairs(set) do
-			if union[key] and union[key] ~= val then
-				if type(union[key]) == 'table' then
-					table.insert(union[key], val)
-				else
-					union[key] = { union[key], val }
-				end
-			else
-				union[key] = val
-			end
-		end
-	end
-	
-	return union
+        local sets = arg
+        local union = {}
+
+        for _, set in ipairs(sets) do
+                for key, val in pairs(set) do
+                        if union[key] and union[key] ~= val then
+                                if type(union[key]) == 'table' then
+                                        table.insert(union[key], val)
+                                else
+                                        union[key] = { union[key], val }
+                                end
+                        else
+                                union[key] = val
+                        end
+                end
+        end
+
+        return union
 end
 
 --[[-----------------------------------------------------------------------------------------
 Table Union
-Returns a numerically indexed table that is the union of the provided tables. This is 
+Returns a numerically indexed table that is the union of the provided tables. This is
 a union of unique values. The order and keys of the input tables are not preserved.
 --]]-----------------------------------------------------------------------------------------
 function table.n_union(...)
-	local sets = arg
-	local union = {}
-	local union_keys = {}
-	
-	for _, set in ipairs(sets) do
-		for key, val in pairs(set) do
-			if not union_keys[val] then
-				union_keys[val] = true
-				table.insert(union, val)
-			end
-		end
-	end
-	
-	return union
+        local sets = arg
+        local union = {}
+        local union_keys = {}
+
+        for _, set in ipairs(sets) do
+                for key, val in pairs(set) do
+                        if not union_keys[val] then
+                                union_keys[val] = true
+                                table.insert(union, val)
+                        end
+                end
+        end
+
+        return union
 end
 
 --[[-----------------------------------------------------------------------------------------
 Table Intersection
-Returns a table that is the intersection of the provided tables. This is an 
-intersection of key/value pairs. See table.n_intersection() for an intersection of values. 
-Note that the resulting table may not be reliably traversable with ipairs() due to 
-the fact that it preserves keys. If there is a gap in numerical indices, ipairs() will 
+Returns a table that is the intersection of the provided tables. This is an
+intersection of key/value pairs. See table.n_intersection() for an intersection of values.
+Note that the resulting table may not be reliably traversable with ipairs() due to
+the fact that it preserves keys. If there is a gap in numerical indices, ipairs() will
 cease traversal.
 
 Ex.
 tableA = {
-	[1] = 123,
-	[2] = 456,
-	[4] = { 1, 2 },
-	[5] = "c",
-	["test"] = "test",
-	}
+        [1] = 123,
+        [2] = 456,
+        [4] = { 1, 2 },
+        [5] = "c",
+        ["test"] = "test",
+        }
 
 tableB = {
-	[1] = 123,
-	[2] = 4,
-	[3] = 7,
-	[4] = { 1, 2 },
-	["test"] = function() return true end,
-	}
-	
+        [1] = 123,
+        [2] = 4,
+        [3] = 7,
+        [4] = { 1, 2 },
+        ["test"] = function() return true end,
+        }
+
 tableC = {
-	[1] = 123,
-	[4] = { 1, 2 },
-	[5] = "c",
-	}
-	
+        [1] = 123,
+        [4] = { 1, 2 },
+        [5] = "c",
+        }
+
 table.intersection(tableA, tableB, tableC) will return:
 {
-	[1] = 123,
-	[4] = { 1, 2 },
+        [1] = 123,
+        [4] = { 1, 2 },
 }
 
 --]]-----------------------------------------------------------------------------------------
 function table.intersection(...)
-	if #arg < 2 then return false end
-	
-	local intersection = {}
-	
-	local function intersect(set1, set2)
-		local result = {}
-		for key, val in pairs(set1) do
-			if set2[key] then
-				if _comp(val, set2[key]) then result[key] = val end
-			end
-		end
-		return result
-	end
-	
-	intersection = intersect(arg[1], arg[2])
-	
-	for i, _ in ipairs(arg) do
-		if i > 2 then
-			intersection = intersect(intersection, arg[i])
-		end
-	end
-	
-	return intersection
+        if #arg < 2 then return false end
+
+        local intersection = {}
+
+        local function intersect(set1, set2)
+                local result = {}
+                for key, val in pairs(set1) do
+                        if set2[key] then
+                                if _comp(val, set2[key]) then result[key] = val end
+                        end
+                end
+                return result
+        end
+
+        intersection = intersect(arg[1], arg[2])
+
+        for i, _ in ipairs(arg) do
+                if i > 2 then
+                        intersection = intersect(intersection, arg[i])
+                end
+        end
+
+        return intersection
 end
 
 --[[-----------------------------------------------------------------------------------------
 Table Intersection
-Returns a numerically indexed table that is the intersection of the provided tables. 
-This is an intersection of unique values. The order and keys of the input tables are 
+Returns a numerically indexed table that is the intersection of the provided tables.
+This is an intersection of unique values. The order and keys of the input tables are
 not preserved.
 --]]-----------------------------------------------------------------------------------------
 function table.n_intersection(...)
-	if #arg < 2 then return false end
-	
-	local intersection = {}
-	
-	local function intersect(set1, set2)
-		local intersection_keys = {}
-		local result = {}
-		for _, val1 in pairs(set1) do
-			for _, val2 in pairs(set2) do
-				if _comp(val1, val2) and not intersection_keys[val1] then
-					table.insert(result, val1)
-					intersection_keys[val1] = true
-				end
-			end
-		end
-		return result
-	end
-	
-	intersection = intersect(arg[1], arg[2])
-	
-	for i, _ in ipairs(arg) do
-		if i > 2 then
-			intersection = intersect(intersection, arg[i])
-		end
-	end
+        if #arg < 2 then return false end
 
-	return intersection
+        local intersection = {}
+
+        local function intersect(set1, set2)
+                local intersection_keys = {}
+                local result = {}
+                for _, val1 in pairs(set1) do
+                        for _, val2 in pairs(set2) do
+                                if _comp(val1, val2) and not intersection_keys[val1] then
+                                        table.insert(result, val1)
+                                        intersection_keys[val1] = true
+                                end
+                        end
+                end
+                return result
+        end
+
+        intersection = intersect(arg[1], arg[2])
+
+        for i, _ in ipairs(arg) do
+                if i > 2 then
+                        intersection = intersect(intersection, arg[i])
+                end
+        end
+
+        return intersection
 end
 
 --[[-----------------------------------------------------------------------------------------
@@ -1529,17 +1532,17 @@ Returns a table that is the relative complement of the first table with respect 
 the second table. Returns a complement of key/value pairs.
 --]]-----------------------------------------------------------------------------------------
 function table.complement(set1, set2)
-	if not set1 and set2 then return false end
-	if type(set1) ~= 'table' or type(set2) ~= 'table' then return false end
-	
-	local complement = {}
-	
-	for key, val in pairs(set1) do
-		if not _comp(set2[key], val) then
-			complement[key] = val
-		end
-	end
-	return complement
+        if not set1 and set2 then return false end
+        if type(set1) ~= 'table' or type(set2) ~= 'table' then return false end
+
+        local complement = {}
+
+        for key, val in pairs(set1) do
+                if not _comp(set2[key], val) then
+                        complement[key] = val
+                end
+        end
+        return complement
 end
 
 --[[-----------------------------------------------------------------------------------------
@@ -1548,21 +1551,21 @@ Returns a table that is the relative complement of the first table with respect 
 the second table. Returns a complement of values.
 --]]-----------------------------------------------------------------------------------------
 function table.n_complement(set1, set2)
-	if not set1 and set2 then return false end
-	
-	local complement = {}
-	
-	for _, val1 in pairs(set1) do
-		local insert = true
-		for _, val2 in pairs(set2) do
-			if _comp(val1, val2) then
-				insert = false
-			end
-		end
-		if insert then table.insert(complement, val1) end
-	end
-	
-	return complement
+        if not set1 and set2 then return false end
+
+        local complement = {}
+
+        for _, val1 in pairs(set1) do
+                local insert = true
+                for _, val2 in pairs(set2) do
+                        if _comp(val1, val2) then
+                                insert = false
+                        end
+                end
+                if insert then table.insert(complement, val1) end
+        end
+
+        return complement
 end
 
 -- Contribution from Iocun
@@ -1570,53 +1573,53 @@ walklist = {}
 walkdelay = 0
 
 function speedwalktimer()
-	send(walklist[1])
-	table.remove(walklist, 1)
-	if #walklist>0 then
-		tempTimer(walkdelay, [[speedwalktimer()]])
-	end
+        send(walklist[1])
+        table.remove(walklist, 1)
+        if #walklist>0 then
+                tempTimer(walkdelay, [[speedwalktimer()]])
+        end
 end
 
 function speedwalk(dirString, backwards, delay)
-	local dirString		= dirString:lower()
-	walklist			= {}
-	walkdelay			= delay
-	local reversedir	= {
-		n	= "s",
-		en	= "sw",
-		e	= "w",
-		es	= "nw",
-		s	= "n",
-		ws	= "ne",
-		w	= "e",
-		wn	= "se",
-		u	= "d",
-		d	= "u",
-		ni	= "out",
-		tuo	= "in"
-	}
-	
-	if not backwards then
-		for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do      
-			count = (count == "" and 1 or count)
-			for i=1, count do
-				if delay then walklist[#walklist+1] = direction 
-				else send(direction)
-				end
-			end
-		end
-	else
-		for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do      
-			count = (count == "" and 1 or count)
-			for i=1, count do
-				if delay then walklist[#walklist+1] = reversedir[direction]
-				else send(reversedir[direction])
-				end
-			end
-		end
-	end
-	
-	if walkdelay then speedwalktimer() end
+        local dirString		= dirString:lower()
+        walklist			= {}
+        walkdelay			= delay
+        local reversedir	= {
+                n	= "s",
+                en	= "sw",
+                e	= "w",
+                es	= "nw",
+                s	= "n",
+                ws	= "ne",
+                w	= "e",
+                wn	= "se",
+                u	= "d",
+                d	= "u",
+                ni	= "out",
+                tuo	= "in"
+        }
+
+        if not backwards then
+                for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
+                        count = (count == "" and 1 or count)
+                        for i=1, count do
+                                if delay then walklist[#walklist+1] = direction
+                                else send(direction)
+                                end
+                        end
+                end
+        else
+                for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
+                        count = (count == "" and 1 or count)
+                        for i=1, count do
+                                if delay then walklist[#walklist+1] = reversedir[direction]
+                                else send(reversedir[direction])
+                                end
+                        end
+                end
+        end
+
+        if walkdelay then speedwalktimer() end
 end
 
 --[[-----------------------------------------------------------------------------------------
@@ -1626,15 +1629,15 @@ Variable Persistence
 SavedVariables = { }
 
 function SavedVariables:Add(tbl)
-	if type(tbl) == 'string' then
-		self[tbl] = _G[tbl]
-	elseif type(tbl) == 'table' then
-		for k,v in pairs(_G) do
-			if _comp(v, tbl) then
-				self[k] = tbl
-			end
-		end
-	else
-		hecho"|cff0000Error registering table for persistence: invalid argument to SavedVariables:Add()"
-	end
+        if type(tbl) == 'string' then
+                self[tbl] = _G[tbl]
+        elseif type(tbl) == 'table' then
+                for k,v in pairs(_G) do
+                        if _comp(v, tbl) then
+                                self[k] = tbl
+                        end
+                end
+        else
+                hecho"|cff0000Error registering table for persistence: invalid argument to SavedVariables:Add()"
+        end
 end

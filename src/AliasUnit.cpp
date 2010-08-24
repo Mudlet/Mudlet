@@ -36,6 +36,19 @@
 
 using namespace std;
 
+void AliasUnit::compileAll()
+{
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    {
+        TAlias * pChild = *it;
+        if( pChild->isActive() )
+        {
+            pChild->compileAll();
+        }
+    }
+}
+
 void AliasUnit::initStats()
 {
     statsAliasTotal = 0;
@@ -57,7 +70,7 @@ void AliasUnit::addAliasRootNode( TAlias * pT, int parentPosition, int childPosi
     if( ! pT ) return;
     if( ! pT->getID() )
     {
-        pT->setID( getNewID() );    
+        pT->setID( getNewID() );
     }
     if( ( parentPosition == -1 ) || ( childPosition >= mAliasRootNodeList.size() ) )
     {
@@ -102,7 +115,7 @@ void AliasUnit::reParentAlias( int childID, int oldParentID, int newParentID, in
     {
         mAliasRootNodeList.remove( pChild );
     }
-    if( pNewParent ) 
+    if( pNewParent )
     {
         pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
@@ -132,7 +145,7 @@ void AliasUnit::removeAliasRootNode( TAlias * pT )
 }
 
 TAlias * AliasUnit::getAlias( int id )
-{ 
+{
     QMutexLocker locker(& mAliasUnitLock);
     if( mAliasMap.find( id ) != mAliasMap.end() )
     {
@@ -145,7 +158,7 @@ TAlias * AliasUnit::getAlias( int id )
 }
 
 TAlias * AliasUnit::getAliasPrivate( int id )
-{ 
+{
     if( mAliasMap.find( id ) != mAliasMap.end() )
     {
         return mAliasMap.value( id );
@@ -159,7 +172,7 @@ TAlias * AliasUnit::getAliasPrivate( int id )
 bool AliasUnit::registerAlias( TAlias * pT )
 {
     if( ! pT ) return false;
-    
+
     if( pT->getParent() )
     {
         addAlias( pT );
@@ -191,12 +204,12 @@ void AliasUnit::unregisterAlias( TAlias * pT )
 void AliasUnit::addAlias( TAlias * pT )
 {
     if( ! pT ) return;
-    
+
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );
     }
-    
+
     mAliasMap.insert( pT->getID(), pT );
 }
 
@@ -246,7 +259,7 @@ bool AliasUnit::processDataStream( QString & data )
 
 
 void AliasUnit::stopAllTriggers()
-{    
+{
     typedef list<TAlias *>::const_iterator I;
     for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
@@ -346,10 +359,10 @@ bool AliasUnit::killAlias( QString & name )
 void AliasUnit::dump()
 {
     bool ret = true;
-    
+
     typedef list<TAlias *>::const_iterator I;
     cout << "AliasUnit::dump() entries="<<mAliasRootNodeList.size()<<endl;
-    
+
     for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;

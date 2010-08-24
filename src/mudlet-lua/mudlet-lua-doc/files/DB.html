@@ -1,0 +1,1804 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../luadoc.css" type="text/css" />
+	<!--meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/-->
+</head>
+
+<body>
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+<div id="main">
+
+<div id="navigation">
+
+
+<h1>LuaDoc</h1>
+<ul>
+	
+	<li><a href="../index.html">Index</a></li>
+	
+</ul>
+
+
+<!-- Module list -->
+
+
+
+<!-- File list -->
+
+<h1>Files</h1>
+<ul>
+
+	<li>
+		<a href="../files/CoreMudlet.html">CoreMudlet.lua</a>
+	</li>
+
+	<li><strong>DB.lua</strong></li>
+	
+	<li>
+		<a href="../files/DebugTools.html">DebugTools.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/GUIUtils.html">GUIUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Logging.html">Logging.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/LuaGlobal.html">LuaGlobal.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/Other.html">Other.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/StringUtils.html">StringUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/TableUtils.html">TableUtils.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/Geyser.html">geyser/Geyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserColor.html">geyser/GeyserColor.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserContainer.html">geyser/GeyserContainer.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGauge.html">geyser/GeyserGauge.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserGeyser.html">geyser/GeyserGeyser.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserLabel.html">geyser/GeyserLabel.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserMiniConsole.html">geyser/GeyserMiniConsole.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserReposition.html">geyser/GeyserReposition.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserSetConstraints.html">geyser/GeyserSetConstraints.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserTests.html">geyser/GeyserTests.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserUtil.html">geyser/GeyserUtil.lua</a>
+	</li>
+
+	<li>
+		<a href="../files/geyser/GeyserWindow.html">geyser/GeyserWindow.lua</a>
+	</li>
+
+</ul>
+
+
+
+
+
+</div> <!-- id="navigation" -->
+
+<div id="content">
+
+<h1>File <code>DB.lua</code></h1>
+
+
+
+
+
+
+
+<h2>Functions</h2>
+<table class="function_list">
+
+	<tr>
+	<td class="name" nowrap><a href="#datetime:parse">datetime:parse</a>&nbsp;(source, format, as_epoch)</td>
+	<td class="summary">Parses the specified source string, according to the format if given, to return a representation of the date/time.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:AND">db:AND</a>&nbsp;(...)</td>
+	<td class="summary">Returns a compound database expression that combines all of the simple expressions passed into it.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:OR">db:OR</a>&nbsp;(left, right)</td>
+	<td class="summary">Returns a compound database expression that combines both of the simple expressions passed into it.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:Timestamp">db:Timestamp</a>&nbsp;(ts, fmt)</td>
+	<td class="summary"><b><u>TODO</u></b> </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:add">db:add</a>&nbsp;(sheet, ...)</td>
+	<td class="summary">Adds one or more new rows to the specified sheet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:aggregate">db:aggregate</a>&nbsp;(field, fn, query)</td>
+	<td class="summary">Returns the result of calling the specified aggregate function on the field and its sheet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:between">db:between</a>&nbsp;(field, left_bound, right_bound)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:close">db:close</a>&nbsp;()</td>
+	<td class="summary"><b><u>TODO</u></b> </td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:create">db:create</a>&nbsp;(db_name, sheets)</td>
+	<td class="summary">Creates and/or modifies an existing database.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:delete">db:delete</a>&nbsp;(sheet, query)</td>
+	<td class="summary">Deletes rows from the specified sheet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:echo_sql">db:echo_sql</a>&nbsp;(sql)</td>
+	<td class="summary">This is a debugging function, which echos any SQL commands if db.debug_sql is true.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:eq">db:eq</a>&nbsp;(field, value, case_insensitive)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is equal to the value.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:exp">db:exp</a>&nbsp;(text)</td>
+	<td class="summary">Returns the string as-is to the database.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:fetch">db:fetch</a>&nbsp;(sheet, query, order_by, descending)</td>
+	<td class="summary">Returns a table array containing a table for each matching row in the specified sheet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:fetch_sql">db:fetch_sql</a>&nbsp;(sheet, sql)</td>
+	<td class="summary">Execute SQL select query against database.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:get_database">db:get_database</a>&nbsp;(db_name)</td>
+	<td class="summary">Returns a reference of an already existing database.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:gt">db:gt</a>&nbsp;(field, value)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is greater than to the value.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:gte">db:gte</a>&nbsp;(field, value)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is greater than or equal to the value.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:in_">db:in_</a>&nbsp;(field, tbl)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is one of the values in the table array.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:is_nil">db:is_nil</a>&nbsp;(field)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is nil.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:is_not_nil">db:is_not_nil</a>&nbsp;(field)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is not nil.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:like">db:like</a>&nbsp;(field, value)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet matches the specified pattern.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:lt">db:lt</a>&nbsp;(field, value)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is less than the value.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:lte">db:lte</a>&nbsp;(field, value)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is less than or equal to the value.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:merge_unique">db:merge_unique</a>&nbsp;(sheet, tables)</td>
+	<td class="summary">Merges the specified table array into the sheet, modifying any existing rows and adding any that don't exist.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:not_between">db:not_between</a>&nbsp;(field, left_bound, right_bound)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is NOT a value between lower_bound and upper_bound.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:not_eq">db:not_eq</a>&nbsp;(field, value, case_insensitive)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is NOT equal to the value.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:not_in">db:not_in</a>&nbsp;(field, tbl)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet is not one of the values in the table array.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:not_like">db:not_like</a>&nbsp;(field, value)</td>
+	<td class="summary">Returns a database expression to test if the field in the sheet does not match the specified pattern.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:safe_name">db:safe_name</a>&nbsp;(name)</td>
+	<td class="summary"><b><u>TODO</u></b> db:safe_name(name) On a filesystem level, names are restricted to being alphanumeric only.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:set">db:set</a>&nbsp;(field, value, query)</td>
+	<td class="summary">The db:set function allows you to set a certain field to a certain value across an entire sheet.</td>
+	</tr>
+
+	<tr>
+	<td class="name" nowrap><a href="#db:update">db:update</a>&nbsp;(sheet, tbl)</td>
+	<td class="summary">This function updates a row in the specified sheet, but only accepts a row which has been previously obtained by db:fetch.</td>
+	</tr>
+
+</table>
+
+
+
+
+
+
+<br/>
+<br/>
+
+
+
+
+<h2><a name="functions"></a>Functions</h2>
+<dl class="function">
+
+
+
+<dt><a name="datetime:parse"></a>
+<b><big>datetime:parse&nbsp;</big></b>(source, format, as_epoch)</dt>
+<dd>
+
+Parses the specified source string, according to the format if given, to return a representation of the date/time. The default format if not specified is: "^%Y-%m-%d %H:%M:%S$" <br/><br/>  If as_epoch is provided and true, the return value will be a Unix epoch -- the number of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch is false, then a Lua time table will be returned. Details of the time tables are provided in the http://www.lua.org/pil/22.1.html. <br/><br/>  Supported Format Codes </pre> %b   Abbreviated Month Name %B   Full Month Name %d   Day of Month %H   Hour (24-hour format) %I   Hour (12-hour format, requires %p as well) %p   AM or PM %m   2-digit month (01-12) %M   2-digit minutes (00-59) %S   2-digit seconds (00-59) %y   2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910. %Y   4-digit year. </pre>
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  source: 
+	</li>
+	
+	<li>
+	  format: 
+	</li>
+	
+	<li>
+	  as_epoch: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:AND"></a>
+<b><big>db:AND&nbsp;</big></b>(...)</dt>
+<dd>
+
+Returns a compound database expression that combines all of the simple expressions passed into it. These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>  This compound expression will only find items in the sheet if all sub-expressions match. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:OR"></a>
+<b><big>db:OR&nbsp;</big></b>(left, right)</dt>
+<dd>
+
+Returns a compound database expression that combines both of the simple expressions passed into it. These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>  This compound expression will find any item that matches either the first or the second sub-expression. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  left: 
+	</li>
+	
+	<li>
+	  right: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:Timestamp"></a>
+<b><big>db:Timestamp&nbsp;</big></b>(ts, fmt)</dt>
+<dd>
+
+<b><u>TODO</u></b>
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  ts: 
+	</li>
+	
+	<li>
+	  fmt: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:add"></a>
+<b><big>db:add&nbsp;</big></b>(sheet, ...)</dt>
+<dd>
+
+Adds one or more new rows to the specified sheet. If any of these rows would violate a UNIQUE index, a lua error will be thrown and execution will cancel. As such it is advisable that if you use a UNIQUE index, you test those values before you attempt to insert a new row. <br/><br/>  Each table is a series of key-value pairs to set the values of the sheet, but if any keys do not exist then they will be set to nil or the default value. As you can see, all fields are optional. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sheet: 
+	</li>
+	
+	<li>
+	  ...: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>Adding one record.    <pre>    db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
+ </pre>
+	
+	<li>Adding multiple records.    <pre>    db:add(mydb.enemies,
+      {name="John Smith", city="San Francisco"},
+      {name="Jane Smith", city="San Francisco"},
+      {name="Richard Clark"}
+    )
+ </pre>
+	
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:aggregate"></a>
+<b><big>db:aggregate&nbsp;</big></b>(field, fn, query)</dt>
+<dd>
+
+Returns the result of calling the specified aggregate function on the field and its sheet. <br/><br/>  The supported aggregate functions are:    <pre>    COUNT - Returns the total number of records that are in the sheet or match the query.
+    AVG   - Returns the average of all the numbers in the specified field.
+    MAX   - Returns the highest number in the specified field.
+    MIN   - Returns the lowest number in the specified field.
+    TOTAL - Returns the value of adding all the contents of the specified field.
+ </pre> 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  fn: 
+	</li>
+	
+	<li>
+	  query: optional 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Example:    <pre>    local mydb = db:get_database("my database")
+    echo(db:aggregate(mydb.enemies.name, "count"))
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:between"></a>
+<b><big>db:between&nbsp;</big></b>(field, left_bound, right_bound)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  left_bound: 
+	</li>
+	
+	<li>
+	  right_bound: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:not_between'>db:not_between</a>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:close"></a>
+<b><big>db:close&nbsp;</big></b>()</dt>
+<dd>
+
+<b><u>TODO</u></b>
+
+
+
+<br/>
+
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:create"></a>
+<b><big>db:create&nbsp;</big></b>(db_name, sheets)</dt>
+<dd>
+
+Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet script: in fact it is reccommended you run this function at a top-level without any kind of guards. If the named database does not exist it will create it. If the database does exist then it will add any columns or indexes which didn't exist before to that database. If the database already has all the specified columns and indexes, it will do nothing. <br/><br/>  The database will be called Database_<sanitized database name>.db and will be stored in the Mudlet configuration directory. <br/><br/>  Database 'tables' are called 'sheets' consistently throughout this documentation, to avoid confusion with Lua tables. <br/><br/>  The schema table must be a Lua table array containing table dictionaries that define the structure and layout of each sheet. <br/><br/>  For sheets with unique indexes, you may specify a _violations key to indicate how the db layer handle cases where the unique index is violated. The options you may use are:    <pre>    FAIL - the default. A hard error is thrown, cancelling the script.
+    IGNORE - The command that would add a record that violates uniqueness just fails silently.
+    REPLACE - The old record which matched the unique index is dropped, and the new one is added to replace it.
+ </pre> 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  db_name: 
+	</li>
+	
+	<li>
+	  sheets: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Example bellow will create a database with two sheets; the first is kills and is used to track every successful kill, with both where and when the kill happened. It has one index, a compound index tracking the combination of name and area. The second sheet has two indexes, but one is unique: it isn't possible to add two items to the enemies sheet with the same name.    <pre>    local mydb = db:create("combat_log",
+      {
+        kills = {
+          name = "",
+          area = "",
+          killed = db:Timestamp("CURRENT_TIMESTAMP"),
+          _index = {{"name", "area"}}
+        },
+        enemies = {
+          name = "",
+          city = "",
+          reason = "",
+          enemied = db:Timestamp("CURRENT_TIMESTAMP"),
+          _index = { "city" },
+          _unique = { "name" },
+          _violations = "IGNORE"
+        }
+      }
+    )
+ </pre> Note that you have to use double {{ }} if you have composite index/unique constrain.
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:delete"></a>
+<b><big>db:delete&nbsp;</big></b>(sheet, query)</dt>
+<dd>
+
+Deletes rows from the specified sheet. The argument for query tries to be intelligent: <br/> * if it is a simple number, it deletes a specific row by _row_id <br/> * if it is a table that contains a _row_id (e.g., a table returned by db:get) it deletes just that record. <br/> * Otherwise, it deletes every record which matches the query pattern which is specified as with db:get. <br/> * If the query is simply true, then it will truncate the entire contents of the sheet. <br/> 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sheet: 
+	</li>
+	
+	<li>
+	  query: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>When passed an actual result table that was obtained from db:fetch, it will delete the record for that table.    <pre>    enemies = db:fetch(mydb.enemies)
+    db:delete(mydb.enemies, enemies[1])
+ </pre>
+	
+	<li>When passed a number, will delete the record for that _row_id. This example shows getting the row id from a table.    <pre>    enemies = db:fetch(mydb.enemies)
+    db:delete(mydb.enemies, enemies[1]._row_id)
+ </pre>
+	
+	<li>As above, but this example just passes in the row id directly.    <pre>    db:delete(mydb.enemies, 5)
+ </pre>
+	
+	<li>Here, we will delete anything which matches the same kind of query as db:fetch uses - namely, anyone who is in the city of San Francisco.    <pre>    db:delete(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+ </pre>
+	
+	<li>And finally, we will delete the entire contents of the enemies table.    <pre>    db:delete(mydb.enemies, true)
+ </pre>
+	
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:echo_sql"></a>
+<b><big>db:echo_sql&nbsp;</big></b>(sql)</dt>
+<dd>
+
+This is a debugging function, which echos any SQL commands if db.debug_sql is true. You should not call this function directly from Mudlet. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sql: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Set following lua variable to enable SQL echos.    <pre>    db.debug_sql=true
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:eq"></a>
+<b><big>db:eq&nbsp;</big></b>(field, value, case_insensitive)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is equal to the value. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+	<li>
+	  case_insensitive: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:exp"></a>
+<b><big>db:exp&nbsp;</big></b>(text)</dt>
+<dd>
+
+Returns the string as-is to the database. <br/><br/>  Use this function with caution, but it is very useful in some circumstances. One of the most common of such is incrementing an existing field in a db:set() operation, as so:    <pre>    db:set(mydb.enemies, db:exp("kills + 1"), db:eq(mydb.enemies.name, "Ixokai"))
+ </pre>  This will increment the value of the kills field for the row identified by the name Ixokai. <br/><br/>  But there are other uses, as the underlining database layer provides many functions you can call to do certain things. If you want to get a list of all your enemies who have a name longer then 10 characters, you may do:    <pre>    db:fetch(mydb.enemies, db:exp("length(name) > 10"))
+ </pre>  Again, take special care with this, as you are doing SQL syntax directly and the library can't help you get things right. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  text: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:fetch"></a>
+<b><big>db:fetch&nbsp;</big></b>(sheet, query, order_by, descending)</dt>
+<dd>
+
+Returns a table array containing a table for each matching row in the specified sheet. All arguments but sheet are optional. If query is nil, the entire contents of the sheet will be returned. <br/><br/>  Query is a string which should be built by calling the various db: expression functions, such as db:eq, db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous. If you don't know SQL well, its best to build the expression.<br/><br/>  Query may also be a table array of such expressions, if so they will be AND'd together implicitly.<br/><br/>  The results that are returned are not in any guaranteed order, though they are usually the same order as the records were inserted. If you want to rely on the order in any way, you must pass a value to the order_by field. This must be a table array listing the columns you want to sort by. It can be { "column1" }, or { "column1", "column2" } <br/><br/>  The results are returned in ascending (smallest to largest) order; to reverse this pass true into the final field. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sheet: 
+	</li>
+	
+	<li>
+	  query: 
+	</li>
+	
+	<li>
+	  order_by: 
+	</li>
+	
+	<li>
+	  descending: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage</b>
+<ul>
+	
+	<li>The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.    <pre>    db:fetch(mydb.enemies, nil, {"city", "name"})
+ </pre>
+	
+	<li>The second will fetch only the enemies which are in San Francisco.    <pre>    db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+ </pre>
+	
+	<li>The third will fetch all the things you've killed in Undervault which have Drow in their name.    <pre>    db:fetch(mydb.kills,
+       {
+          db:eq(mydb.kills.area, "Undervault"),
+          db:like(mydb.kills.name, "%Drow%")
+       }
+    )
+ </pre> 
+	
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch_sql'>db:fetch_sql</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:fetch_sql"></a>
+<b><big>db:fetch_sql&nbsp;</big></b>(sheet, sql)</dt>
+<dd>
+
+Execute SQL select query against database. This only useful for some very specific cases. <br/> Use db:fetch if possible instead - this function should not be normally used! 
+
+
+<br/><b>Release:</b> post Mudlet 1.1.1 (<b><u>TODO update before release</u></b>) 
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sheet: 
+	</li>
+	
+	<li>
+	  sql: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>Following will select all distinct area from my kills DB.    <pre>    db:fetch_sql(mydb.kills, "SELECT distinct area FROM kills")
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:get_database"></a>
+<b><big>db:get_database&nbsp;</big></b>(db_name)</dt>
+<dd>
+
+Returns a reference of an already existing database. This instance can be used to get references to the sheets (and from there, fields) that are defined within the database. You use these references to construct queries. <br/><br/>  These references do not contain any actual data, they only point to parts of the database structure. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  db_name: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>If a database has a sheet named enemies, you can obtain a reference to that sheet by simply doing:    <pre>    local mydb = db:get_database("my database")
+    local enemies_ref = mydb.enemies
+    local name_ref = mydb.enemies.name
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:gt"></a>
+<b><big>db:gt&nbsp;</big></b>(field, value)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is greater than to the value. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:gte"></a>
+<b><big>db:gte&nbsp;</big></b>(field, value)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is greater than or equal to the value. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:in_"></a>
+<b><big>db:in_&nbsp;</big></b>(field, tbl)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is one of the values in the table array. <br/><br/>  First, note the trailing underscore carefully! It is required. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  tbl: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>The following example illustrates the use of <b>in_</b>: This will obtain all of your kills which happened in the Undervault, Hell or Purgatory. Every db:in_ expression can be written as a db:OR, but that quite often gets very complex.    <pre>    local mydb = db:get_database("my database")
+    local areas = {"Undervault", "Hell", "Purgatory"}
+    db:fetch(mydb.kills, db:in_(mydb.kills.area, areas))
+ </pre> 
+</ul>
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:is_nil"></a>
+<b><big>db:is_nil&nbsp;</big></b>(field)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is nil. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:is_not_nil"></a>
+<b><big>db:is_not_nil&nbsp;</big></b>(field)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is not nil. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:like"></a>
+<b><big>db:like&nbsp;</big></b>(field, value)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet matches the specified pattern. <br/><br/>  LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.    <pre>    LIKE with "_" is therefore the same as the "." regular expression.
+    LIKE with "%" is therefore the same as ".*" regular expression.
+ </pre> 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:not_like'>db:not_like</a>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:lt"></a>
+<b><big>db:lt&nbsp;</big></b>(field, value)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is less than the value. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:lte"></a>
+<b><big>db:lte&nbsp;</big></b>(field, value)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is less than or equal to the value. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:merge_unique"></a>
+<b><big>db:merge_unique&nbsp;</big></b>(sheet, tables)</dt>
+<dd>
+
+Merges the specified table array into the sheet, modifying any existing rows and adding any that don't exist.  This function is a convenience utility that allows you to quickly modify a sheet, changing existing rows and add new ones as appropriate. It ONLY works on sheets which have a unique index, and only when that unique index is only on a single field. For more complex situations you'll have to do the logic yourself.  The table array may contain tables that were either returned previously by db:fetch, or new tables that you've constructed with the correct fields, or any mix of both. Each table must have a value for the unique key that has been set on this sheet. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sheet: 
+	</li>
+	
+	<li>
+	  tables: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>For example, consider this database:    <pre>    local mydb = db:create("peopledb",
+      {
+        friends = {
+          name = "",
+          race = "",
+          level = 0,
+          city = "",
+          _index = { "city" },
+          _unique = { "name" }
+        }
+      }
+    )
+ </pre>  Here you have a database with one sheet, which contains your friends, their race, level, and what city they live in. Let's say you want to fetch everyone who lives in San Francisco, you could do:    <pre>    local results = db:fetch(mydb.friends, db:eq(mydb.friends.city, "San Francisco"))
+ </pre>  The tables in results are static, any changes to them are not saved back to the database. But after a major radioactive cataclysm rendered everyone in San Francisco a mutant, you could make changes to the tables as so:    <pre>    for _, friend in ipairs(results) do
+      friend.race = "Mutant"
+    end
+ </pre>  If you are also now aware of a new arrival in San Francisco, you could add them to that existing table array:    <pre>    results[#results+1] = {name="Bobette", race="Mutant", city="San Francisco"}
+ </pre>  And commit all of these changes back to the database at once with:    <pre>    db:merge_unique(mydb.friends, results)
+ </pre>  The db:merge_unique function will change the 'city' values for all the people who we previously fetched, but then add a new record as well.
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:not_between"></a>
+<b><big>db:not_between&nbsp;</big></b>(field, left_bound, right_bound)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is NOT a value between lower_bound and upper_bound. This only really makes sense for numbers and Timestamps. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  left_bound: 
+	</li>
+	
+	<li>
+	  right_bound: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:between'>db:between</a>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:not_eq"></a>
+<b><big>db:not_eq&nbsp;</big></b>(field, value, case_insensitive)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is NOT equal to the value. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+	<li>
+	  case_insensitive: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:not_in"></a>
+<b><big>db:not_in&nbsp;</big></b>(field, tbl)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet is not one of the values in the table array. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  tbl: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:in_'>db:in_</a>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:not_like"></a>
+<b><big>db:not_like&nbsp;</big></b>(field, value)</dt>
+<dd>
+
+Returns a database expression to test if the field in the sheet does not match the specified pattern.  LIKE patterns are not case-sensitive, and allow two wild cards. The first is an underscore which matches any single one character. The second is a percent symbol which matches zero or more of any character.    <pre>    LIKE with "_" is therefore the same as the "." regular expression.
+    LIKE with "%" is therefore the same as ".*" regular expression.
+ </pre> 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+<b>See also:</b>
+<ul>
+	
+	<li><a href='DB.html#db:like'>db:like</a>
+	
+	<li><a href='DB.html#db:fetch'>db:fetch</a>
+	
+</ul>
+
+
+</dd>
+
+
+
+
+<dt><a name="db:safe_name"></a>
+<b><big>db:safe_name&nbsp;</big></b>(name)</dt>
+<dd>
+
+<b><u>TODO</u></b> db:safe_name(name) On a filesystem level, names are restricted to being alphanumeric only. So, "my_database" becomes "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible security issues with database names.
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  name: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:set"></a>
+<b><big>db:set&nbsp;</big></b>(field, value, query)</dt>
+<dd>
+
+The db:set function allows you to set a certain field to a certain value across an entire sheet. Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only the last_read fields which are in a certain city. The query argument can be any value which is appropriate for db:fetch, even nil which will change the value for the specified column for EVERY row in the sheet.  For example, consider a situation in which you are tracking how many times you find a certain type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and then adding a record for each type of egg.    <pre>    local mydb = db:create("egg database", {eggs = {color = "", last_found = db.Timestamp(false), found = 0}})
+    db:add(mydb.eggs,
+      {color = "Red"},
+      {color = "Blue"},
+      {color = "Green"},
+      {color = "Yellow"},
+      {color = "Black"}
+    )
+ </pre>  Now, you have three columns. One is a string, one a timestamp (that ends up as nil in the database), and one is a number. <br/><br/>  You can then set up a trigger to capture from the mud the string, "You pick up a (.*) egg!", and you end up arranging to store the value of that expression in a variable called "myegg". <br/><br/>  To increment how many we found, we will do this:    <pre>    myegg = "Red" -- We will pretend a trigger set this.
+    db:set(mydb.eggs.found, db:exp("found + 1"), db:eq(mydb.eggs.color, myegg))
+    db:set(mydb.eggs.last_found, db.Timestamp("CURRENT_TIMESTAMP"), db:eq(mydb.eggs.color, myegg))
+ </pre>  This will go out and set two fields in the Red egg sheet; the first is the found field, which will increment the value of that field (using the special db:exp function). The second will update the last_found field with the current time. <br/><br/>  Once this contest is over, you may wish to reset this data but keep the database around. To do that, you may use a more broad use of db:set as such:    <pre>    db:set(mydb.eggs.found, 0)
+    db:set(mydb.eggs.last_found, nil)
+ </pre>
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  field: 
+	</li>
+	
+	<li>
+	  value: 
+	</li>
+	
+	<li>
+	  query: 
+	</li>
+	
+</ul>
+
+
+
+
+
+
+
+
+</dd>
+
+
+
+
+<dt><a name="db:update"></a>
+<b><big>db:update&nbsp;</big></b>(sheet, tbl)</dt>
+<dd>
+
+This function updates a row in the specified sheet, but only accepts a row which has been previously obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field or tow, you can save back that table. 
+
+
+
+<br/>
+
+
+<b>Parameters</b>
+<ul>
+	
+	<li>
+	  sheet: 
+	</li>
+	
+	<li>
+	  tbl: 
+	</li>
+	
+</ul>
+
+
+
+<b>Usage:</b>
+<ul>
+	<li>This obtains a database reference, and queries the friends sheet for someone named Bob. As this returns a table array containing only one item, it assigns that one item to the local variable named bob. We then change the notes on Bob, and pass it into db:update() to save the changes back.    <pre>    local mydb = db:get_database("my database")
+    local bob = db:fetch(mydb.friends, db:eq(mydb.friends.name, "Bob"))[1]
+    bob.notes = "He's a really awesome guy."
+    db:update(mydb.friends, bob)
+ </pre>
+</ul>
+
+
+
+
+
+
+</dd>
+
+
+</dl>
+
+
+
+
+
+
+
+</div> <!-- id="content" -->
+
+</div> <!-- id="main" -->
+
+<div id="about">
+	<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0!" height="31" width="88" /></a></p>
+</div> <!-- id="about" -->
+
+</div> <!-- id="container" -->	
+</body>
+</html>

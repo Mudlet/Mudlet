@@ -94,123 +94,123 @@ int main(int argc, char *argv[])
         dir.mkpath( directory );
     }
 
-    QFile file_doc(":/mudlet_documentation.html");
-    QFile file_doc_old;
-    file_doc_old.setFileName( directory+"/mudlet_documentation.html" );
-    if( file_doc_old.exists() )
-    {
+    // QFile file_doc(":/mudlet_documentation.html");
+    // QFile file_doc_old;
+    // file_doc_old.setFileName( directory+"/mudlet_documentation.html" );
+    // if( file_doc_old.exists() )
+    // {
         //NOTE: B. von Roeder found out that the removal of old versions may *sometimes* fail on windows 7 due permission issues
-        if( ! file_doc_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
-        {
-            cout << "[ERROR] could not set file permissions of the old version of the manual" << endl;
-            gSysErrors << "[ERROR] could not set file permissions of the old version of the manual";
-        }
-        string old_man_path = directory.toLatin1().data();
-        old_man_path += "/mudlet_documentation.html";
-        bool ok=file_doc_old.remove();
-        if( ok )
-        {
-            cout << "[INFO] deleted old version of the manual: " << old_man_path << endl;
-        }
-        else
-        {
-            cout << "[ERROR] could not remove old version of the manual: " << old_man_path << endl;
-            QString _m = "[ERROR] could not remove old version of the manual: ";
-            _m.append( old_man_path.c_str() );
-            gSysErrors << _m;
-        }
-    }
-    else
-    {
-        gSysErrors << "[INFO] no old version of the manual found";
-    }
-    if( file_doc.copy( directory+"/mudlet_documentation.html" ) )
-    {
-        cout << "[OK] successfully copied new version of the manual" << endl;
-        QString _m = "[INFO] local manual: ";
-        _m.append( directory );
-        gSysErrors << _m;
-    }
-    else
-    {
-        cout << "[ERROR] copy of new version of the manual failed" << endl;
-        gSysErrors << "[ERROR] copy of new version of the manual failed";
-    }
-    QFile file_lua(":/LuaGlobal.lua");
+        // if( ! file_doc_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+        // {
+            // cout << "[ERROR] could not set file permissions of the old version of the manual" << endl;
+            // gSysErrors << "[ERROR] could not set file permissions of the old version of the manual";
+        // }
+        // string old_man_path = directory.toLatin1().data();
+        // old_man_path += "/mudlet_documentation.html";
+        // bool ok=file_doc_old.remove();
+        // if( ok )
+        // {
+            // cout << "[INFO] deleted old version of the manual: " << old_man_path << endl;
+        // }
+        // else
+        // {
+            // cout << "[ERROR] could not remove old version of the manual: " << old_man_path << endl;
+            // QString _m = "[ERROR] could not remove old version of the manual: ";
+            // _m.append( old_man_path.c_str() );
+            // gSysErrors << _m;
+        // }
+    // }
+    // else
+    // {
+        // gSysErrors << "[INFO] no old version of the manual found";
+    // }
+    // if( file_doc.copy( directory+"/mudlet_documentation.html" ) )
+    // {
+        // cout << "[OK] successfully copied new version of the manual" << endl;
+        // QString _m = "[INFO] local manual: ";
+        // _m.append( directory );
+        // gSysErrors << _m;
+    // }
+    // else
+    // {
+        // cout << "[ERROR] copy of new version of the manual failed" << endl;
+        // gSysErrors << "[ERROR] copy of new version of the manual failed";
+    // }
+    // QFile file_lua(":/LuaGlobal.lua");
 
-    QFile file_lua_old( directory+"/LuaGlobal.lua" );
-    if( ! file_lua_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
-    {
-        cout << "[ERROR] failed to set file permissions for the old version of LuaGlobal.lua" << endl;
-        gSysErrors << "[ERROR] failed to set file permissions for the old version of LuaGlobal.lua";
-    }
-    else
-    {
-        cout << "[OK] successfully set file permissions for the old version of LuaGlobal.lua" << endl;
-    }
-    if( file_lua_old.remove() )
-    {
-        cout << "[OK] old LuaGlobal.lua removed successfully" << endl;
-        gSysErrors << "[INFO] old LuaGlobal.lua removed successfully";
-    }
-    else
-    {
-        cout << "[ERROR] failed to remove the old version of LuaGlobal.lua" << endl;
-        gSysErrors << "[ERROR] failed to remove the old version of LuaGlobal.lua";
-    }
-    if( file_lua.copy( directory+"/LuaGlobal.lua" ) )
-    {
-        cout << "[OK] new version of LuaGlobal.lua copied successfully" << endl;
-        gSysErrors << "[INFO] LuaGlobal.lua restored successfully";
-        QFile file_lua_new(directory+"/LuaGlobal.lua");
-        if( ! file_lua_new.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
-        {
-            cout << "[ERROR] failed to set file permissions for the new version of LuaGlobal.lua" << endl;
-            gSysErrors << "[ERROR] failed to set file permissions for the new version of LuaGlobal.lua";
-        }
-        else
-        {
-            cout << "[OK] successfully set file permissions for the new version of LuaGlobal.lua" << endl;
-        }
-    }
+    // QFile file_lua_old( directory+"/LuaGlobal.lua" );
+    // if( ! file_lua_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+    // {
+        // cout << "[ERROR] failed to set file permissions for the old version of LuaGlobal.lua" << endl;
+        // gSysErrors << "[ERROR] failed to set file permissions for the old version of LuaGlobal.lua";
+    // }
+    // else
+    // {
+        // cout << "[OK] successfully set file permissions for the old version of LuaGlobal.lua" << endl;
+    // }
+    // if( file_lua_old.remove() )
+    // {
+        // cout << "[OK] old LuaGlobal.lua removed successfully" << endl;
+        // gSysErrors << "[INFO] old LuaGlobal.lua removed successfully";
+    // }
+    // else
+    // {
+        // cout << "[ERROR] failed to remove the old version of LuaGlobal.lua" << endl;
+        // gSysErrors << "[ERROR] failed to remove the old version of LuaGlobal.lua";
+    // }
+    // if( file_lua.copy( directory+"/LuaGlobal.lua" ) )
+    // {
+        // cout << "[OK] new version of LuaGlobal.lua copied successfully" << endl;
+        // gSysErrors << "[INFO] LuaGlobal.lua restored successfully";
+        // QFile file_lua_new(directory+"/LuaGlobal.lua");
+        // if( ! file_lua_new.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+        // {
+            // cout << "[ERROR] failed to set file permissions for the new version of LuaGlobal.lua" << endl;
+            // gSysErrors << "[ERROR] failed to set file permissions for the new version of LuaGlobal.lua";
+        // }
+        // else
+        // {
+            // cout << "[OK] successfully set file permissions for the new version of LuaGlobal.lua" << endl;
+        // }
+    // }
 
-    QFile file_db(":/db.lua");
+    // QFile file_db(":/db.lua");
 
-    QFile file_db_old( directory+"/db.lua" );
-    if( ! file_db_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
-    {
-        cout << "[ERROR] failed to set file permissions for the old version of db.lua" << endl;
-        gSysErrors << "[ERROR] failed to set file permissions for the old version of db.lua";
-    }
-    else
-    {
-        cout << "[OK] successfully set file permissions for the old version of db.lua" << endl;
-    }
-    if( file_db_old.remove() )
-    {
-        cout << "[OK] old db.lua removed successfully" << endl;
-        gSysErrors << "[INFO] old db.lua removed successfully";
-    }
-    else
-    {
-        cout << "[ERROR] failed to remove the old version of db.lua" << endl;
-        gSysErrors << "[ERROR] failed to remove the old version of db.lua";
-    }
-    if( file_db.copy( directory+"/db.lua" ) )
-    {
-        cout << "[OK] new version of db.lua copied successfully" << endl;
-        gSysErrors << "[INFO] db.lua restored successfully";
-        QFile file_db_new(directory+"/db.lua");
-        if( ! file_db_new.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
-        {
-            cout << "[ERROR] failed to set file permissions for the new version of db.lua" << endl;
-            gSysErrors << "[ERROR] failed to set file permissions for the new version of db.lua";
-        }
-        else
-        {
-            cout << "[OK] successfully set file permissions for the new version of db.lua" << endl;
-        }
-    }
+    // QFile file_db_old( directory+"/db.lua" );
+    // if( ! file_db_old.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+    // {
+        // cout << "[ERROR] failed to set file permissions for the old version of db.lua" << endl;
+        // gSysErrors << "[ERROR] failed to set file permissions for the old version of db.lua";
+    // }
+    // else
+    // {
+        // cout << "[OK] successfully set file permissions for the old version of db.lua" << endl;
+    // }
+    // if( file_db_old.remove() )
+    // {
+        // cout << "[OK] old db.lua removed successfully" << endl;
+        // gSysErrors << "[INFO] old db.lua removed successfully";
+    // }
+    // else
+    // {
+        // cout << "[ERROR] failed to remove the old version of db.lua" << endl;
+        // gSysErrors << "[ERROR] failed to remove the old version of db.lua";
+    // }
+    // if( file_db.copy( directory+"/db.lua" ) )
+    // {
+        // cout << "[OK] new version of db.lua copied successfully" << endl;
+        // gSysErrors << "[INFO] db.lua restored successfully";
+        // QFile file_db_new(directory+"/db.lua");
+        // if( ! file_db_new.setPermissions( QFile::WriteOwner | QFile::ReadOwner | QFile::ReadUser | QFile::WriteUser | QFile::ReadOther | QFile::WriteOther ) )
+        // {
+            // cout << "[ERROR] failed to set file permissions for the new version of db.lua" << endl;
+            // gSysErrors << "[ERROR] failed to set file permissions for the new version of db.lua";
+        // }
+        // else
+        // {
+            // cout << "[OK] successfully set file permissions for the new version of db.lua" << endl;
+        // }
+    // }
 
 
     QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");

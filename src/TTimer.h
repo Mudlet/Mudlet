@@ -45,13 +45,14 @@ class TTimer : public Tree<TTimer>
     friend class TimerUnit;
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
-    
+
     virtual         ~TTimer();
-                     TTimer( TTimer * parent, Host * pHost ); 
-                     TTimer( QString name, QTime time, Host * pHost ); 
+                     TTimer( TTimer * parent, Host * pHost );
+                     TTimer( QString name, QTime time, Host * pHost );
                      TTimer& clone(const TTimer& );
+    void             compileAll();
     QString &        getName()                       { return mName; }
     void             setName( QString name );
     QTime &          getTime()                       { return mTime; }
@@ -59,7 +60,7 @@ public:
     bool             checkRestart();
     bool             compileScript();
     void             execute();
-    void             setTime( QTime time );         
+    void             setTime( QTime time );
     QString          getCommand()                    { return mCommand; }
     void             setCommand( QString & cmd )     { mCommand = cmd; }
     QString          getScript()                     { return mScript; }
@@ -80,12 +81,12 @@ public:
     void             enableTimer( qint64 );
     void             disableTimer( qint64 );
     void             killTimer();
-    
+
     bool             isClone(TTimer &b) const;
     bool             isOffsetTimer();
-    
+
 private:
-    
+
                        TTimer(){};
     QString            mName;
     QString            mScript;
@@ -99,7 +100,7 @@ private:
     QMutex             mLock;
     QTimer             mTimer;
     TLuaInterpreter *  mpLua;
-        
+
 };
 
 #endif

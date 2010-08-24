@@ -54,12 +54,18 @@ private:
     void      readAliasPackage();
     void      readActionPackage();
     void      readScriptPackage();
+    void      readRooms();
     void      readKeyPackage();
     void      readUnknownMapElement();
     void      readMap();
     void      readRoom();
+    void      readEnvColor();
+    void      readEnvColors();
+    void      readAreaNames();
+    void      readAreas();
 
     void      readUnknownHostElement();
+    void      readUnknownRoomElement();
     void      readUnknownTriggerElement();
     void      readUnknownTimerElement();
     void      readUnknownAliasElement();

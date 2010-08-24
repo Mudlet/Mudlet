@@ -36,12 +36,14 @@ class TimerUnit
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
-    TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
+                          TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
+    void                  removeAllTempTimers();
     std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
     TTimer *              getTimer( int id );
     TTimer *              findTimer( QString & name );
+    void                  compileAll();
     bool                  enableTimer( QString & );
     bool                  disableTimer( QString & );
     bool                  killTimer( QString & name );
@@ -55,7 +57,7 @@ public:
     qint64                getNewID();
     QMultiMap<QString, TTimer *> mLookupTable;
     QMutex                mTimerUnitLock;
-    
+
 private:
     TimerUnit(){;}
     TTimer *              getTimerPrivate( int id );
@@ -68,8 +70,8 @@ private:
     std::list<TTimer *>   mTimerRootNodeList;
     qint64                mMaxID;
     std::list<TTimer *>   mCleanupList;
-  
-    
+
+
 };
 
 

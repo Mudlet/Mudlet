@@ -48,7 +48,7 @@
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
 
-#define OVECCOUNT 30    // should be a multiple of 3 
+#define OVECCOUNT 30    // should be a multiple of 3
 
 struct TColorTable
 {
@@ -64,21 +64,22 @@ struct TColorTable
 
 class TTrigger : public Tree<TTrigger>
 {
-    
+
     friend class XMLexport;
     friend class XMLimport;
-        
+
 public:
-    
-                      
+
+
                       //TTrigger(const TTrigger &);
     virtual          ~TTrigger();
-                     TTrigger( TTrigger * parent, Host * pHost ); 
+                     TTrigger( TTrigger * parent, Host * pHost );
                      TTrigger( QString name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
                      TTrigger & clone( const TTrigger & );
                       //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
                       //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
     QString          getCommand()                    { return mCommand; }
+    void             compileAll();
     void             setCommand( QString b )         { mCommand = b; }
     QString          getName()                       { return mName; }
     void             setName( QString name );
@@ -152,7 +153,7 @@ public:
     bool                                   mIsTempTrigger;
 
 private:
-    
+
                                            TTrigger(){};
     void                                   updateMultistates( int regexNumber,
                                                               std::list<std::string> & captureList,

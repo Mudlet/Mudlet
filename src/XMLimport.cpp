@@ -46,14 +46,14 @@ bool XMLimport::importPackage( QIODevice * device )
             {
                 readPackage();
             }
-            /*else if( name() == "map" )
+            else if( name() == "map" )
             {
                 maxAreas = 0;
                 maxRooms = 0;
                 areaMap.clear();
                 readMap();
-                mpHost->mpMap->init();
-            }*/
+                mpHost->mpMap->init(mpHost);
+            }
             else
             {
                 qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
@@ -66,7 +66,101 @@ bool XMLimport::importPackage( QIODevice * device )
 
 void XMLimport::readMap()
 {
-    /*while( ! atEnd() )
+    while( ! atEnd() )
+    {
+        readNext();
+        qDebug()<<"ELEMENT:"<<name();
+       /* if( isEndElement() )
+        {
+            break;
+        }*/
+
+        if( isStartElement() )
+        {
+
+            if( name() == "areas" )
+            {
+                qDebug()<<"##  reading area table:";
+                mpHost->mpMap->areaNamesMap.clear();
+                readAreas();
+                //readNext(); //end element
+                //continue;
+            }
+            else if( name() == "rooms" )
+            {
+                qDebug()<<"#################rooms starting:";
+                readRooms();
+            }
+            else if( name() == "environments" )
+            {
+                qDebug()<<"################# ENV starting:";
+                readEnvColors();
+            }
+           /* else
+            {
+                qDebug()<<"READING UNKONWN MAP ELEMENT!!!!!";
+                readUnknownMapElement();
+            }*/
+        }
+    }
+}
+
+void XMLimport::readEnvColors()
+{
+    while( ! atEnd() )
+    {
+        readNext();
+        if( name() == "environment" )
+        {
+            qDebug()<<"################# new env color starting:";
+            readEnvColor();
+        }
+        /*else
+        {
+            readUnknownMapElement();
+        }*/
+    }
+    qDebug()<<"ENV COLORS:"<<mpHost->mpMap->envColors;
+}
+
+void XMLimport::readEnvColor()
+{
+
+    int id = attributes().value("id").toString().toInt();
+    int color = attributes().value("color").toString().toInt();
+    mpHost->mpMap->envColors[id] = color;
+}
+
+void XMLimport::readAreas()
+{
+    while( ! atEnd() )
+    {
+        readNext();
+        if( name() == "areas")
+        {
+            qDebug()<<"===> end of area list reached";
+            break;
+        }
+        if( name() == "area" )
+        {
+            readAreaNames();
+        }
+
+    }
+    qDebug()<<"done reading areas - AREAS:"<<mpHost->mpMap->areaNamesMap;
+}
+
+void XMLimport::readAreaNames()
+{
+    int id = attributes().value("id").toString().toInt();
+    QString name = attributes().value("name").toString();
+    mpHost->mpMap->areaNamesMap[id] = name;
+    qDebug()<<"+ NEW AREA:"<<name;
+}
+
+void XMLimport::readRooms()
+{
+    while( ! atEnd() )
     {
         readNext();
         if( isEndElement() )
@@ -83,116 +177,105 @@ void XMLimport::readMap()
 
             else
             {
-                readUnknownHostElement();
-            }
-        }
-    }*/
-}
-
-void XMLimport::readRoom()
-{
-    /*TRoom * pT = new TRoom;
-    while( ! atEnd() )
-    {
-        readNext();
-        if( isEndElement() ) break;
-
-        if( isStartElement() )
-        {
-            if( name() == "id" )
-            {
-                pT->id = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "area")
-            {
-                pT->area = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "x")
-            {
-                pT->x = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "y")
-            {
-                pT->y = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "z")
-            {
-                pT->z = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "north")
-            {
-                pT->north = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "northeast")
-            {
-                pT->northeast = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "east")
-            {
-                pT->east = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "southeast")
-            {
-                pT->southeast = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "south")
-            {
-                pT->south = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "southwest")
-            {
-                pT->southwest = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "west")
-            {
-                pT->west = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "northwest")
-            {
-                pT->northwest = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "up")
-            {
-                pT->up = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "down")
-            {
-                pT->down = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "in")
-            {
-                pT->in = readElementText().toInt();
-                continue;
-            }
-            else if( name() == "out")
-            {
-                pT->out = readElementText().toInt();
-                continue;
-            }
-            else
-            {
                 readUnknownMapElement();
             }
         }
     }
-    mpHost->mpMap->rooms[pT->id] = pT;
-    maxRooms++;
-    //qDebug()<<"adding room:"<<pT->id<<" area:"<<pT->area<<" rooms:"<<maxRooms;*/
+}
+
+
+void XMLimport::readRoom()
+{
+    TRoom * pT = new TRoom;
+    pT->id = attributes().value("id").toString().toInt();
+    pT->area = attributes().value("area").toString().toInt();
+    pT->name = attributes().value("title").toString();
+    pT->environment = attributes().value("environment").toString().toInt();
+
+    while( ! atEnd() )
+    {
+        readNext();
+
+        if( name() == "" ) continue;
+        if( name() == "coord" )
+        {
+            if( attributes().value("x").toString() == "" ) continue;
+            pT->x = attributes().value("x").toString().toInt();
+            pT->y = attributes().value("y").toString().toInt();
+            pT->z = attributes().value("z").toString().toInt();
+            qDebug()<<"------>coordinates:"<<pT->x<<"/"<<pT->y<<"/"<<pT->z;
+            continue;
+        }
+        else if( name() == "exit")
+        {
+            QString dir = attributes().value("direction").toString();
+            int e = attributes().value("target").toString().toInt();
+            if( dir == "" ) continue;
+            qDebug()<<"------->exit: dir="<<dir<<" e="<<e;
+            if( dir == "north" )
+            {
+                pT->north = e;
+            }
+            if( dir == "south" )
+            {
+                pT->south = e;
+            }
+            if( dir == "northwest" )
+            {
+                pT->northwest = e;
+            }
+            if( dir == "southwest" )
+            {
+                pT->southwest = e;
+            }
+            if( dir == "northeast" )
+            {
+                pT->northeast = e;
+            }
+            if( dir == "southeast" )
+            {
+                pT->southeast = e;
+            }
+            if( dir == "west" )
+            {
+                pT->west = e;
+            }
+            if( dir == "east" )
+            {
+                pT->east = e;
+            }
+            if( dir == "up" )
+            {
+                pT->up = e;
+            }
+            if( dir == "down" )
+            {
+                pT->down = e;
+            }
+            if( dir == "in" )
+            {
+                pT->in = e;
+            }
+            if( dir == "out" )
+            {
+                pT->out = e;
+            }
+            continue;
+        }
+        if( isEndElement() )
+        {
+            break;
+        }
+    }
+    if( pT->id != 0 )
+    {
+        mpHost->mpMap->rooms[pT->id] = pT;
+        maxRooms++;
+        qDebug()<<"adding room:"<<pT->id<<" area:"<<pT->area<<" rooms:"<<maxRooms;
+        qDebug()<<"-- n:"<<pT->north<<" s:"<<pT->south<<" w:"<<pT->west<<" e:"<<pT->east<<" ne:"<<pT->northeast<<" nw:"<<pT->northwest<<" se:"<<pT->southeast<<" nw:"<<pT->northwest<<" ne:"<<pT->northeast<<" up:"<<pT->up<<" down:"<<pT->down;
+    }
+    else
+        delete pT;
 }
 
 void XMLimport::readUnknownMapElement()
@@ -201,7 +284,27 @@ void XMLimport::readUnknownMapElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN map element:name="<<name().toString()<<"text:"<<text().toString();
+        qDebug()<<"[ERROR]: UNKNOWN map element:name="<<name().toString();
+
+        if( isEndElement() )
+        {
+            break;
+        }
+
+        if( isStartElement() )
+        {
+            readMap();
+        }
+    }
+}
+
+void XMLimport::readUnknownRoomElement()
+{
+    while( ! atEnd() )
+    {
+
+        readNext();
+        qDebug()<<"[ERROR]: UNKNOWN room element:name="<<name().toString();
 
         if( isEndElement() )
         {
@@ -214,6 +317,7 @@ void XMLimport::readUnknownMapElement()
         }
     }
 }
+
 
 
 void XMLimport::readPackage()

@@ -46,6 +46,19 @@ void TimerUnit::stopAllTriggers()
     }
 }
 
+void TimerUnit::compileAll()
+{
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    {
+        TTimer * pChild = *it;
+        if( pChild->isActive() )
+        {
+            pChild->mNeedsToBeCompiled = true;
+        }
+    }
+}
+
 void TimerUnit::reenableAllTriggers()
 {
     typedef list<TTimer *>::const_iterator I;
@@ -62,9 +75,9 @@ void TimerUnit::addTimerRootNode( TTimer * pT, int parentPosition, int childPosi
     if( ! pT ) return;
     if( ! pT->getID() )
     {
-        pT->setID( getNewID() );    
+        pT->setID( getNewID() );
     }
-    
+
     if( ( parentPosition == -1 ) || ( childPosition >= mTimerRootNodeList.size() ) )
     {
         mTimerRootNodeList.push_back( pT );
@@ -98,9 +111,9 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
     {
         return;
     }
-    
+
     pChild->disableTimer( childID );
-    
+
     if( pOldParent )
     {
         pOldParent->popChild( pChild );
@@ -122,8 +135,24 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
         pChild->Tree<TTimer>::setParent( 0 );
         addTimerRootNode( pChild, parentPosition, childPosition );
     }
-    
+
     pChild->enableTimer( childID );
+}
+
+void TimerUnit::removeAllTempTimers()
+{
+    qDebug()<<"vorher: TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    {
+        TTimer * pChild = *it;
+        if( pChild->isTempTimer() )
+        {
+            pChild->killTimer();
+            markCleanup( pChild );
+        }
+    }
+    qDebug()<<"TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
 }
 
 void TimerUnit::_removeTimerRootNode( TTimer * pT )
@@ -143,7 +172,7 @@ void TimerUnit::_removeTimerRootNode( TTimer * pT )
 }
 
 TTimer * TimerUnit::getTimer( int id )
-{ 
+{
     if( mTimerMap.find( id ) != mTimerMap.end() )
     {
         return mTimerMap.value( id );
@@ -155,7 +184,7 @@ TTimer * TimerUnit::getTimer( int id )
 }
 
 TTimer * TimerUnit::getTimerPrivate( int id )
-{ 
+{
     if( mTimerMap.find( id ) != mTimerMap.end() )
     {
         return mTimerMap.value( id );
@@ -169,7 +198,7 @@ TTimer * TimerUnit::getTimerPrivate( int id )
 bool TimerUnit::registerTimer( TTimer * pT )
 {
     if( ! pT ) return false;
-    
+
     if( pT->getParent() )
     {
         addTimer( pT );
@@ -178,7 +207,7 @@ bool TimerUnit::registerTimer( TTimer * pT )
     }
     else
     {
-        addTimerRootNode( pT );   
+        addTimerRootNode( pT );
         pT->setIsActive( false );
         return true;
     }
@@ -204,12 +233,12 @@ void TimerUnit::unregisterTimer( TTimer * pT )
 void TimerUnit::addTimer( TTimer * pT )
 {
     if( ! pT ) return;
-    
+
     if( ! pT->getID() )
     {
         pT->setID( getNewID() );
     }
-    
+
     mTimerMap.insert( pT->getID(), pT );
     // in den lookup table wird der timer erst dann eingetragen, wenn er auch einen namen hat -> setName()
 }

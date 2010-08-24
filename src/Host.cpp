@@ -106,11 +106,12 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mInsertedMissingLF( false )
 , mLF_ON_GA( true )
 , mAlertOnNewData( true )
-//, mpMap( new TMap )
+, mpMap( new TMap( this ) )
 , mFORCE_NO_COMPRESSION( false )
 , mFORCE_GA_OFF( false )
 , mFORCE_SAVE_ON_EXIT( false )
 , commandLineMinimumHeight( 30 )
+, mResetProfile( false )
 {
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
@@ -196,7 +197,8 @@ Host::Host()
 , mInsertedMissingLF( false )
 
 , mAlertOnNewData( true )
-//, mpMap( new TMap )
+, mpMap( new TMap(this) )
+, mResetProfile( false )
 
 {
     qDebug()<<"######################################################################################";
@@ -208,6 +210,68 @@ Host::~Host()
 {
     mErrorLogStream.flush();
     mErrorLogFile.close();
+}
+
+void Host::resetProfile()
+{
+    getTriggerUnit()->removeAllTempTriggers();
+    getTimerUnit()->removeAllTempTimers();
+    mTimerUnit.doCleanup();
+    mTriggerUnit.doCleanup();
+    mpConsole->resetMainConsole();
+    mLuaInterpreter.initLuaGlobals();
+    mLuaInterpreter.loadGlobal();
+    mBlockScriptCompile = false;
+    getScriptUnit()->compileAll();
+    getTimerUnit()->compileAll();
+    getTriggerUnit()->compileAll();
+    getAliasUnit()->compileAll();
+    getActionUnit()->compileAll();
+    getKeyUnit()->compileAll();
+    mResetProfile = false;
+}
+
+void Host::assemblePath()
+{
+    QStringList list;
+    for( int i=0; i<mpMap->mPathList.size(); i++ )
+    {
+        QString n = QString::number( mpMap->mPathList[i]);
+        list.append( n );
+    }
+    QStringList list2;
+    for( int i=0; i<mpMap->mDirList.size(); i++ )
+    {
+        QString n = mpMap->mDirList[i];
+        list2.append( n );
+    }
+    QString t1 = "speedWalkPath";
+    mLuaInterpreter.set_lua_table( t1, list );
+    QString t2 = "speedWalkDir";
+    mLuaInterpreter.set_lua_table( t2, list2 );
+}
+
+void Host::startSpeedWalk()
+{
+    QStringList list;
+    for( int i=0; i<mpMap->mPathList.size(); i++ )
+    {
+        QString n = QString::number( mpMap->mPathList[i]);
+        list.append( n );
+    }
+    QStringList list2;
+    for( int i=0; i<mpMap->mDirList.size(); i++ )
+    {
+        QString n = mpMap->mDirList[i];
+        list2.append( n );
+    }
+    QString t1 = "speedWalkPath";
+    mLuaInterpreter.set_lua_table( t1, list );
+    QString t2 = "speedWalkDir";
+    mLuaInterpreter.set_lua_table( t2, list2 );
+    QString f = "doSpeedWalk";
+    QString n = "";
+    mLuaInterpreter.call( f, n );
 }
 
 void Host::adjustNAWS()
@@ -506,6 +570,14 @@ bool Host::serialize()
     {
         dir_xml.mkpath( directory_xml );
     }
+    QDir dir_map;
+    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/map";
+    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
+    if( ! dir_map.exists( directory_map ) )
+    {
+        dir_map.mkpath( directory_map );
+    }
+
     QFile file_xml( filename_xml );
     if ( file_xml.open( QIODevice::WriteOnly ) )
     {
@@ -518,6 +590,20 @@ bool Host::serialize()
         QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
     }
 
+    if( mpMap->rooms.size() > 10 )
+    {
+        QFile file_map( filename_map );
+        if ( file_map.open( QIODevice::WriteOnly ) )
+        {
+            QDataStream out( & file_map );
+            mpMap->serialize( out );
+            file_map.close();
+        }
+        else
+        {
+            QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+        }
+    }
     return true;
 }
 

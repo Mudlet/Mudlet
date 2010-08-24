@@ -136,6 +136,7 @@ public:
 
 public slots:
 
+   void                          slot_mapper();
    void                          slot_replayTimeChanged();
    void                          slot_replaySpeedUp();
    void                          slot_replaySpeedDown();

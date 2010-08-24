@@ -35,6 +35,18 @@
 
 using namespace std;
 
+void ActionUnit::compileAll()
+{
+    typedef list<TAction *>::const_iterator I;
+    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
+    {
+        TAction * pChild = *it;
+        if( pChild->isActive() )
+        {
+            pChild->compileAll();
+        }
+    }
+}
 
 void ActionUnit::addActionRootNode( TAction * pT, int parentPosition, int childPosition )
 {

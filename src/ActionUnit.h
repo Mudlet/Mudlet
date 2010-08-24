@@ -39,11 +39,12 @@ class ActionUnit
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
                           ActionUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     std::list<TAction *>  getActionRootNodeList()   { QMutexLocker locker(& mActionUnitLock); return mActionRootNodeList; }
     TAction *             getAction( int id );
+    void                  compileAll();
     bool                  registerAction( TAction * pT );
     void                  unregisterAction( TAction * pT );
     bool                  serialize( QDataStream & );
@@ -62,8 +63,8 @@ public:
     void                  hideToolBar( QString & );
 
     QMutex                mActionUnitLock;
-    
-private: 
+
+private:
                           ActionUnit(){;}
     TAction *             getActionPrivate( int id );
     void                  addActionRootNode( TAction * pT, int parentPosition = -1, int childPosition = -1 );
@@ -78,7 +79,7 @@ private:
     TEasyButtonBar *      mpEasyButtonBar;
     std::list<TToolBar *> mToolBarList;
     std::list<TEasyButtonBar *> mEasyButtonBarList;
-    
+
 };
 
 

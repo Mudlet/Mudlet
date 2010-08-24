@@ -95,6 +95,22 @@ bool TAction::registerAction()
     return mpHost->getActionUnit()->registerAction( this );
 }
 
+void TAction::compileAll()
+{
+    mNeedsToBeCompiled = true;
+    if( ! compileScript() )
+    {
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of action:"<<mName<<"\n">>0;}
+        mOK_code = false;
+    }
+    typedef list<TAction *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TAction * pChild = *it;
+        pChild->compileAll();
+    }
+}
+
 void TAction::compile()
 {
     if( mNeedsToBeCompiled )
