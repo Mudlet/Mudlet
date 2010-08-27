@@ -48,6 +48,8 @@ const char TN_DO = 253;
 const char TN_DONT = 254;
 const char TN_IAC = 255;
 
+const char GMCP = 201; /* GMCP */
+
 const char OPT_ECHO = 1;
 const char OPT_SUPPRESS_GA = 3;
 const char OPT_STATUS = 5;
@@ -80,6 +82,7 @@ public:
   bool                sendData ( QString & data );
   void                setCommandEcho( bool cmdEcho );
   void                setATCPVariables( QString & _msg );
+  void                setGMCPVariables( QString & _msg );
   void                atcpComposerCancel();
   void                atcpComposerSave( QString );
   void                setLPMudStyle ( bool lpmustyle );
@@ -170,6 +173,7 @@ private:
   QTime               mConnectionTime;
   int                 lastTimeOffset;
   bool                enableATCP;
+  bool                enableGMCP;
   bool                enableChannel102;
   dlgComposer *       mpComposer;
 };

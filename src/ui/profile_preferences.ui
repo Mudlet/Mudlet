@@ -26,7 +26,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="General">
       <attribute name="title">
@@ -142,7 +142,7 @@
              <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
             </property>
             <property name="text">
-             <string>Save log files in html format instead of text only.</string>
+             <string>Save log files in html format instead of text only</string>
             </property>
            </widget>
           </item>
@@ -182,6 +182,25 @@
               <string>MXP always on</string>
              </property>
             </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_13">
+         <property name="title">
+          <string>GMCP</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_13">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="mEnableGMCP">
+            <property name="toolTip">
+             <string>Note: On IRE games, because Rapture is buggy, if you enable GMCP it will stop sending you ATCP</string>
+            </property>
+            <property name="text">
+             <string>Enable GMCP</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -1247,62 +1266,55 @@ or some other computer model that has a small screen.</string>
       <attribute name="title">
        <string>Special Options</string>
       </attribute>
-      <widget class="QGroupBox" name="groupBox_7">
-       <property name="geometry">
-        <rect>
-         <x>50</x>
-         <y>20</y>
-         <width>491</width>
-         <height>311</height>
-        </rect>
-       </property>
-       <property name="title">
-        <string>special options needed for some older MUD drivers</string>
-       </property>
-       <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
-        <property name="geometry">
-         <rect>
-          <x>20</x>
-          <y>30</y>
-          <width>421</width>
-          <height>31</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>force compression off (needs restart!)</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="mFORCE_GA_OFF">
-        <property name="geometry">
-         <rect>
-          <x>20</x>
-          <y>70</y>
-          <width>421</width>
-          <height>22</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>force telnet GA signal interpretation off (needs restart!)</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="checkBox_mUSE_FORCE_LF_AFTER_PROMPT">
-        <property name="geometry">
-         <rect>
-          <x>20</x>
-          <y>110</y>
-          <width>281</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="toolTip">
-         <string>This option adds a line line break &lt;LF&gt; or &quot;
+      <layout class="QGridLayout" name="gridLayout_7">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_7">
+         <property name="title">
+          <string>Special options needed for some older MUD drivers</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_12">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
+            <property name="text">
+             <string>Force compression off (needs restart)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="mFORCE_GA_OFF">
+            <property name="text">
+             <string>Force telnet GA signal interpretation off (needs restart)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_mUSE_FORCE_LF_AFTER_PROMPT">
+            <property name="toolTip">
+             <string>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</string>
-        </property>
-        <property name="text">
-         <string>Force new line on empty commands</string>
-        </property>
-       </widget>
-      </widget>
+            </property>
+            <property name="text">
+             <string>Force new line on empty commands</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <spacer name="verticalSpacer_6">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>

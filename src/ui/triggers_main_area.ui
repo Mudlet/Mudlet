@@ -239,8 +239,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>455</width>
-              <height>137</height>
+              <width>457</width>
+              <height>139</height>
              </rect>
             </property>
            </widget>
@@ -936,15 +936,9 @@ as this is a complex topic.</string>
             </item>
             <item row="0" column="1">
              <widget class="QSpinBox" name="spinBox_linemargin">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
               <property name="minimumSize">
                <size>
-                <width>0</width>
+                <width>25</width>
                 <height>25</height>
                </size>
               </property>

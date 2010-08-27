@@ -49,6 +49,7 @@ cTelnet::cTelnet( Host * pH )
 , mCommands( 0 )
 , mAlertOnNewData( true )
 , enableATCP( false )
+, enableGMCP( false )
 , enableChannel102( false )
 , mMCCP_version_1( false )
 , mMCCP_version_2( false )
@@ -199,11 +200,11 @@ void cTelnet::handle_socket_signal_connected()
     QString msg = "[INFO] A connection has been established successfully.\n";
     postMessage( msg );
     mConnectionTime.start();
-    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0) )
-    {
+    if( (mpHost->getLogin().size()>0) && !mpHost->mEnableGMCP  && (mpHost->getPass().size()>0))
         mTimerLogin->start(2000);
+    if( (mpHost->getPass().size()>0)  && !mpHost->mEnableGMCP  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
-    }
+
     /*
     //negotiate some telnet options, if allowed
     string cmd;
@@ -395,10 +396,68 @@ void cTelnet::processTelnetCommand( const string & command )
           option = command[2];
           if( option == static_cast<char>(200) ) // ATCP support
           {
+              if (mpHost->mEnableGMCP) break;
+
               cout << "ATCP enabled" << endl;
               enableATCP = true;
               sendTelnetOption( TN_DO, 200 );
+
+                  string _h;
+                  _h += TN_IAC;
+                  _h += TN_SB;
+                  _h += 200;
+                  _h += "hello Mudlet 1.2.0\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n";
+                  _h += TN_IAC;
+                  _h += TN_SE;
+                  socketOutRaw( _h );
+					cout<<_h<<endl;
+
               break;
+          }
+
+          if (option == GMCP)
+          {
+              if (!mpHost->mEnableGMCP) break;
+
+              enableGMCP = true;
+              sendTelnetOption( TN_DO, GMCP );
+              cout << "GMCP enabled" << endl;
+
+              string _h;
+              _h = TN_IAC;
+              _h += TN_SB;
+              _h += GMCP;
+              _h += "Core.Hello { \"client\": \"Mudlet\", \"version\": \"1.2.0\" }";
+              _h += TN_IAC;
+              _h += TN_SE;
+
+              socketOutRaw( _h );
+
+              _h = TN_IAC;
+              _h += TN_SB;
+              _h += GMCP;
+              _h += "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\", \"Char.Items 1\", \"Comm.Channel 1\", \"Room 1\", \"Redirect 1\"]";
+              _h += TN_IAC;
+              _h += TN_SE;
+
+              socketOutRaw( _h );
+
+              if ((mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0)) {
+                _h = TN_IAC;
+                _h += TN_SB;
+                _h += GMCP;
+                _h += "Char.Login { \"name\": \"";
+                _h += mpHost->getLogin().toLatin1().data();
+                _h += "\", \"password\": \"";
+                _h += mpHost->getPass().toLatin1().data();
+                _h += "\" }";
+                _h += TN_IAC;
+                _h += TN_SE;
+
+                cout << "  sending: " << _h << endl;
+                socketOutRaw( _h );
+              }
+            break;
           }
 
           //option = command[2];
@@ -586,6 +645,10 @@ void cTelnet::processTelnetCommand( const string & command )
       {
           //subcommand - we analyze and respond...
           option = command[2];
+          //~ unsigned char c = option;
+          //~ printf("SB option: %d\n", (int)c);
+
+          /* ATCP */
           if( option == static_cast<char>(200) )
           {
               QString _m = command.c_str();
@@ -606,6 +669,18 @@ void cTelnet::processTelnetCommand( const string & command )
 
               return;
           }
+
+          /* GMCP */
+          if( option == GMCP )
+          {
+              QString _m = command.c_str();
+              if( command.size() < 6 ) return;
+              _m = _m.mid( 3, command.size()-5 );
+              setGMCPVariables( _m );
+
+              return;
+          }
+
           if( option == static_cast<char>(102) )
           {
               QString _m = command.c_str();
@@ -747,6 +822,72 @@ void cTelnet::setATCPVariables( QString & msg )
             }
         }
     }
+}
+
+void cTelnet::setGMCPVariables( QString & msg )
+{
+    QString var;
+    QString arg;
+    bool single = true;
+    if( msg.indexOf( '\n' ) > -1 )
+    {
+        var = msg.section( "\n", 0, 0 );
+        arg = msg.section( "\n", 1 );
+        single = false;
+    }
+    else
+    {
+        var = msg.section( " ", 0, 0 );
+        arg = msg.section( " ", 1 );
+    }
+
+    if( var.startsWith("Client.Compose") )
+    {
+        QString title;
+        if( ! single )
+            title = var.section( " ", 1 );
+        else
+        {
+            title = arg;
+            arg = "";
+        }
+        if( mpComposer )
+        {
+            return;
+        }
+        mpComposer = new dlgComposer( mpHost );
+        //FIXME
+        if( arg.startsWith(" ") )
+        {
+            arg.remove(0,1);
+        }
+        mpComposer->init( title, arg );
+        mpComposer->raise();
+        mpComposer->show();
+        return;
+    }
+    var.remove( '.' );
+    arg.remove( '\n' );
+    int space = var.indexOf( ' ' );
+    if( space > -1 )
+    {
+        arg.prepend(" ");
+        arg = arg.prepend( var.section( " ", 1 ) );
+        var = var.section( " ", 0, 0 );
+    }
+    //~ printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
+    mpHost->mLuaInterpreter.setGMCPTable( var, arg );
+    /*if( var.startsWith("RoomNum") )
+    {
+        if( mpHost->mpMap )
+        {
+            mpHost->mpMap->mRoomId = arg.toInt();
+            if( mpHost->mpMap->mpM )
+            {
+                mpHost->mpMap->mpM->update();
+            }
+        }
+    }*/
 }
 
 void cTelnet::setChannel102Variables( QString & msg )

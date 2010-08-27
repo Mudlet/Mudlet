@@ -227,6 +227,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         mMXPMode->setCurrentIndex( pHost->mMXPMode );
         encoding->setCurrentIndex( pHost->mEncoding );
         mFORCE_SAVE_ON_EXIT->setChecked( pHost->mFORCE_SAVE_ON_EXIT );
+        mEnableGMCP->setChecked( pHost->mEnableGMCP );
     }
 }
 
@@ -795,6 +796,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
     pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
     pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
+    pHost->mEnableGMCP = mEnableGMCP->isChecked();
 
     pHost->mBorderTopHeight = topBorderHeight->value();
     pHost->mBorderBottomHeight = bottomBorderHeight->value();

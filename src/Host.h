@@ -240,6 +240,7 @@ public:
     bool               mFORCE_NO_COMPRESSION;
     bool               mFORCE_GA_OFF;
     bool               mFORCE_SAVE_ON_EXIT;
+    bool               mEnableGMCP;
     bool               mIsProfileLoadingSequence;
     QTextStream        mErrorLogStream;
     QFile              mErrorLogFile;

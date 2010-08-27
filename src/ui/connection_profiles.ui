@@ -2228,8 +2228,8 @@ p, li { white-space: pre-wrap; }
                <font>
                 <family>DejaVu Sans</family>
                 <pointsize>9</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
+                <weight>50</weight>
+                <bold>false</bold>
                </font>
               </property>
               <property name="text">
@@ -2340,7 +2340,7 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="2" column="1" colspan="2">
+            <item row="2" column="1" colspan="3">
              <widget class="QComboBox" name="profile_history">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -2444,8 +2444,8 @@ p, li { white-space: pre-wrap; }
                <font>
                 <family>DejaVu Sans</family>
                 <pointsize>10</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
+                <weight>50</weight>
+                <bold>false</bold>
                </font>
               </property>
               <property name="toolTip">

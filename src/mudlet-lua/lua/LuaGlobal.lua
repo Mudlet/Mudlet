@@ -8,6 +8,11 @@ if package.loaded["lpeg"] then lpeg = require "lpeg" end
 -- TODO this is required by DB.lua, so we might load it all at one place
 if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
 
+yajl = require "yajl"
+json_to_value = yajl.to_value
+
+gmcp = {}
+
 local PATH_SEP = string.char(getMudletHomeDir():byte()) == "/" and "/" or "\\"
 local LUA_DIR = string.format("mudlet-lua%slua%s", PATH_SEP, PATH_SEP)
 
@@ -35,6 +40,5 @@ local packages = {
 	}
 
 for _, package in ipairs(packages) do
-	echo("Loading: ".. package .. "\n")
 	local result = pcall(dofile, LUA_DIR .. package) or echo("Error attempting to load file: " .. package .. "\n")
 end

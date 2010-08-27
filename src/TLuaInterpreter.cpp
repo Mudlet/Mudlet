@@ -50,7 +50,7 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 ,mHostID( id )
 ,purgeTimer(this)
 {
-                pGlobalLua = 0;
+    pGlobalLua = 0;
 
     connect(this,SIGNAL(signalEchoMessage(int, QString)), this,SLOT(slotEchoMessage(int,QString)));//,Qt::DirectConnection);
     connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)));//,Qt::QueuedConnection);
@@ -109,7 +109,7 @@ int TLuaInterpreter::Wait( lua_State *L )
   int n = lua_gettop( L );
   if(n!=1)
   {
-      lua_pushstring( L, "wrong number of arguments" );
+      lua_pushstring( L, "Wait: wrong number of arguments" );
       lua_error( L );
       return 1;
   }
@@ -117,7 +117,7 @@ int TLuaInterpreter::Wait( lua_State *L )
   int luaSleepMsec;
   if( ! lua_isnumber( L, 1 ) )
   {
-      lua_pushstring( L, "wrong argument type" );
+      lua_pushstring( L, "Wait: wrong argument type" );
       lua_error( L );
       return 1;
   }
@@ -170,7 +170,7 @@ int TLuaInterpreter::select( lua_State * L )
     {
         if( ! lua_isstring( L, s ) )
         {
-          lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "select: wrong argument type" );
           lua_error( L );
           return 1;
         }
@@ -183,7 +183,7 @@ int TLuaInterpreter::select( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "select: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -195,7 +195,7 @@ int TLuaInterpreter::select( lua_State * L )
     int luaNumOfMatch;
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "select: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -230,7 +230,7 @@ int TLuaInterpreter::selectCurrentLine( lua_State * L )
     {
         if( ! lua_isstring( L, 1 ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "selectCurrentLine: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -252,7 +252,7 @@ int TLuaInterpreter::isAnsiFgColor( lua_State * L )
 
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "isAnsiFgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -322,7 +322,7 @@ int TLuaInterpreter::isAnsiBgColor( lua_State * L )
 
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "isAnsiBgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -396,7 +396,7 @@ int TLuaInterpreter::getFgColor( lua_State * L )
     {
         if( ! lua_isstring( L, 1 ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "getFgColor: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -429,7 +429,7 @@ int TLuaInterpreter::getBgColor( lua_State * L )
     {
         if( ! lua_isstring( L, 1 ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "getBgColor: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -460,7 +460,7 @@ int TLuaInterpreter::wrapLine( lua_State * L )
     {
         if( ! lua_isstring( L, s ) )
         {
-          lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "wrapLine: wrong argument type" );
           lua_error( L );
           return 1;
         }
@@ -474,7 +474,7 @@ int TLuaInterpreter::wrapLine( lua_State * L )
     int luaNumOfMatch;
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "wrapLine: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -504,7 +504,7 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
     int luaNumOfMatch;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "selectCaptureGroup: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -555,7 +555,7 @@ int TLuaInterpreter::getLines( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "getLines: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -567,7 +567,7 @@ int TLuaInterpreter::getLines( lua_State * L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "getLines: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -594,7 +594,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "getBufferTable: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -606,7 +606,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "getBufferTable: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -632,7 +632,7 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "loadRawFile: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -657,7 +657,7 @@ int TLuaInterpreter::getCurrentLine( lua_State * L )
     {
         if( ! lua_isstring( L, 1 ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "getCurrentLine: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -678,7 +678,7 @@ int TLuaInterpreter::setMiniConsoleFontSize( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setMiniConsoleFontSize: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -689,7 +689,7 @@ int TLuaInterpreter::setMiniConsoleFontSize( lua_State * L )
     int luaNumOfMatch;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setMiniConsoleFontSize: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -788,7 +788,7 @@ int TLuaInterpreter::setWindowWrap( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setWindowWrap: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -799,7 +799,7 @@ int TLuaInterpreter::setWindowWrap( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setWindowWrap: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -819,7 +819,7 @@ int TLuaInterpreter::setWindowWrapIndent( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setWindowWrapIndent: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -830,7 +830,7 @@ int TLuaInterpreter::setWindowWrapIndent( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setWindowWrapIndent: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -866,7 +866,7 @@ int TLuaInterpreter::getStopWatchTime( lua_State * L )
     int watchID;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "getStopWatchTime: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -931,7 +931,7 @@ int TLuaInterpreter::resetStopWatch( lua_State * L )
     int watchID;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "resetStopWatch: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -958,7 +958,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
     {
         if( ! lua_isstring( L, s ) )
         {
-          lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "selectSection: wrong argument type" );
           lua_error( L );
           return 1;
         }
@@ -971,7 +971,7 @@ int TLuaInterpreter::selectSection( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "selectSection: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1019,7 +1019,7 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     {
         if( ! lua_isstring( L, s ) )
         {
-          lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "moveCursor: wrong argument type" );
           lua_error( L );
           return 1;
         }
@@ -1032,7 +1032,7 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "moveCursor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1045,7 +1045,7 @@ int TLuaInterpreter::moveCursor( lua_State * L )
     int luaTo;
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "moveCursor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1075,7 +1075,7 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
     {
         if( ! lua_isstring( L, s ) )
         {
-          lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "setConsoleBufferSize: wrong argument type" );
           lua_error( L );
           return 1;
         }
@@ -1088,7 +1088,7 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
     int luaFrom;
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setConsoleBufferSize: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1101,7 +1101,7 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
     int luaTo;
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setConsoleBufferSize: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1129,7 +1129,7 @@ int TLuaInterpreter::getBufferLine( lua_State * L )
     int luaLine;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "getBufferLine: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1154,7 +1154,7 @@ int TLuaInterpreter::replace( lua_State * L )
     int s = 1;
     if( ! lua_isstring( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "replace: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1170,7 +1170,7 @@ int TLuaInterpreter::replace( lua_State * L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "replace: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -1195,7 +1195,7 @@ int TLuaInterpreter::deleteLine( lua_State * L )
     {
         if( ! lua_isstring( L, 1 ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "deleteLine: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -1221,7 +1221,7 @@ int TLuaInterpreter::enableTimer( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "enableTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1242,7 +1242,7 @@ int TLuaInterpreter::disableTimer( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "disableTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1262,7 +1262,7 @@ int TLuaInterpreter::enableKey( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "enableKey: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1283,7 +1283,7 @@ int TLuaInterpreter::disableKey( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "disableKey: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1303,7 +1303,7 @@ int TLuaInterpreter::enableAlias( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "enableAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1324,7 +1324,7 @@ int TLuaInterpreter::disableAlias( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "disableAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1344,7 +1344,7 @@ int TLuaInterpreter::killAlias( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "killAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1364,7 +1364,7 @@ int TLuaInterpreter::enableTrigger( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "enableTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1385,7 +1385,7 @@ int TLuaInterpreter::disableTrigger( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "disableTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1406,7 +1406,7 @@ int TLuaInterpreter::killTimer( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "killTimer: killTimer requires a string ID" );
         lua_error( L );
         return 1;
     }
@@ -1426,7 +1426,7 @@ int TLuaInterpreter::killTrigger( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "killTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1446,7 +1446,7 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "openUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1465,7 +1465,7 @@ int TLuaInterpreter::createMiniConsole( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createMiniConsole: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1476,7 +1476,7 @@ int TLuaInterpreter::createMiniConsole( lua_State *L )
     int x,y,width,height;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createMiniConsole: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1486,7 +1486,7 @@ int TLuaInterpreter::createMiniConsole( lua_State *L )
     }
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createMiniConsole: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1496,7 +1496,7 @@ int TLuaInterpreter::createMiniConsole( lua_State *L )
     }
     if( ! lua_isnumber( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createMiniConsole: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1506,7 +1506,7 @@ int TLuaInterpreter::createMiniConsole( lua_State *L )
     }
     if( ! lua_isnumber( L, 5 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createMiniConsole: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1525,7 +1525,7 @@ int TLuaInterpreter::createLabel( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createLabel: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1537,7 +1537,7 @@ int TLuaInterpreter::createLabel( lua_State *L )
     bool fillBackground=false;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createLabel: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1547,7 +1547,7 @@ int TLuaInterpreter::createLabel( lua_State *L )
     }
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createLabel: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1557,7 +1557,7 @@ int TLuaInterpreter::createLabel( lua_State *L )
     }
     if( ! lua_isnumber( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createLabel: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1567,7 +1567,7 @@ int TLuaInterpreter::createLabel( lua_State *L )
     }
     if( ! lua_isnumber( L, 5 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createLabel: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1577,7 +1577,7 @@ int TLuaInterpreter::createLabel( lua_State *L )
     }
     if( ! lua_isnumber( L, 6 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createLabel: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1645,7 +1645,7 @@ int TLuaInterpreter::createButton( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createButton: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1657,7 +1657,7 @@ int TLuaInterpreter::createButton( lua_State *L )
     bool fillBackground=false;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createButton: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1667,7 +1667,7 @@ int TLuaInterpreter::createButton( lua_State *L )
     }
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createButton: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1677,7 +1677,7 @@ int TLuaInterpreter::createButton( lua_State *L )
     }
     if( ! lua_isnumber( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createButton: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1687,7 +1687,7 @@ int TLuaInterpreter::createButton( lua_State *L )
     }
     if( ! lua_isnumber( L, 5 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createButton: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1697,7 +1697,7 @@ int TLuaInterpreter::createButton( lua_State *L )
     }
     if( ! lua_isnumber( L, 6 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createButton: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1718,7 +1718,7 @@ int TLuaInterpreter::createBuffer( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "createBuffer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1737,7 +1737,7 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "clearUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1757,7 +1757,7 @@ int TLuaInterpreter::closeUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "closeUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1777,7 +1777,7 @@ int TLuaInterpreter::hideUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "hideUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1798,7 +1798,7 @@ int TLuaInterpreter::setBorderTop( lua_State *L )
     int x1;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBorderTop: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1822,7 +1822,7 @@ int TLuaInterpreter::setBorderBottom( lua_State *L )
     int x1;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBorderBottom: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1846,7 +1846,7 @@ int TLuaInterpreter::setBorderLeft( lua_State *L )
     int x1;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBorderLeft: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1870,7 +1870,7 @@ int TLuaInterpreter::setBorderRight( lua_State *L )
     int x1;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBorderRight: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1894,7 +1894,7 @@ int TLuaInterpreter::resizeUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "resizeUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1905,7 +1905,7 @@ int TLuaInterpreter::resizeUserWindow( lua_State *L )
     double x1;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "resizeUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1916,7 +1916,7 @@ int TLuaInterpreter::resizeUserWindow( lua_State *L )
     double y1;
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "resizeUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1937,7 +1937,7 @@ int TLuaInterpreter::moveWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "moveWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1948,7 +1948,7 @@ int TLuaInterpreter::moveWindow( lua_State *L )
     double x1;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "moveWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1959,7 +1959,7 @@ int TLuaInterpreter::moveWindow( lua_State *L )
     double y1;
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "moveWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1981,7 +1981,7 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBackgroundColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -1992,7 +1992,7 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     double x1;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBackgroundColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2003,7 +2003,7 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     double y1;
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBackgroundColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2014,7 +2014,7 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     double x2;
     if( ! lua_isnumber( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBackgroundColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2025,7 +2025,7 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     double y2;
     if( ! lua_isnumber( L, 5 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBackgroundColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2059,7 +2059,7 @@ int TLuaInterpreter::calcFontSize( lua_State *L )
     int x = 0;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "calcFontSize: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2078,7 +2078,7 @@ int TLuaInterpreter::startLogging( lua_State *L )
     bool logOn = true;
     if( ! lua_isboolean( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "startLogging: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2098,7 +2098,7 @@ int TLuaInterpreter::setBackgroundImage( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBackgroundImage: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2109,7 +2109,7 @@ int TLuaInterpreter::setBackgroundImage( lua_State *L )
     string luaName="";
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBackgroundImage: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2131,7 +2131,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2142,7 +2142,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
     string luaName="";
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2181,7 +2181,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2192,7 +2192,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double r1;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2203,7 +2203,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double g1;
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2214,7 +2214,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double b1;
     if( ! lua_isnumber( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2225,7 +2225,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double r2;
     if( ! lua_isnumber( L, 5 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2236,7 +2236,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double g2;
     if( ! lua_isnumber( L, 6 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2247,7 +2247,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double b2;
     if( ! lua_isnumber( L, 7 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2258,7 +2258,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double bold;
     if( ! lua_isnumber( L, 8 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2269,7 +2269,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double underline;
     if( ! lua_isnumber( L, 9 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2280,7 +2280,7 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     double italics;
     if( ! lua_isnumber( L, 10 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTextFormat: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2317,7 +2317,7 @@ int TLuaInterpreter::showUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "showUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2767,7 +2767,7 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     string luaWindowName="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "echoUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2779,7 +2779,7 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "echoUserWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2798,7 +2798,7 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "playSoundFile: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -2890,7 +2890,7 @@ int TLuaInterpreter::setTriggerStayOpen( lua_State *L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "setTriggerStayOpen: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -2902,7 +2902,7 @@ int TLuaInterpreter::setTriggerStayOpen( lua_State *L )
     }
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setTriggerStayOpen: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3105,7 +3105,7 @@ int TLuaInterpreter::setBold( lua_State * L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "setBold: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -3117,7 +3117,7 @@ int TLuaInterpreter::setBold( lua_State * L )
     }
     if( ! lua_isboolean( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBold: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3144,7 +3144,7 @@ int TLuaInterpreter::setItalics( lua_State *L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "setItalics: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -3156,7 +3156,7 @@ int TLuaInterpreter::setItalics( lua_State *L )
     }
     if( ! lua_isboolean( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setItalics: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3182,7 +3182,7 @@ int TLuaInterpreter::setUnderline( lua_State *L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "setUnderline: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -3194,7 +3194,7 @@ int TLuaInterpreter::setUnderline( lua_State *L )
     }
     if( ! lua_isboolean( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setUnderline: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3228,7 +3228,7 @@ int TLuaInterpreter::hideToolBar( lua_State *L )
     string luaWindowName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "hideToolBar: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3248,7 +3248,7 @@ int TLuaInterpreter::showToolBar( lua_State *L )
     string luaWindowName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "showToolBar: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3268,7 +3268,7 @@ int TLuaInterpreter::sendATCP( lua_State *L )
     string msg;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "sendATCP: what do you want to send?" );
         lua_error( L );
         return 1;
     }
@@ -3276,6 +3276,7 @@ int TLuaInterpreter::sendATCP( lua_State *L )
     {
         msg = lua_tostring( L, 1 );
     }
+
     string what;
     if( ! lua_isstring( L, 2 ) )
     {
@@ -3292,8 +3293,46 @@ int TLuaInterpreter::sendATCP( lua_State *L )
     _h += TN_SB;
     _h += 200;
     _h += msg;
-    _h += " ";
-    _h += what;
+    if (what != "") {
+      _h += " ";
+      _h += what;
+    }
+    _h += TN_IAC;
+    _h += TN_SE;
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.socketOutRaw( _h );
+    return 0;
+}
+
+int TLuaInterpreter::sendGMCP( lua_State *L )
+{
+    string msg;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "sendGMCP: what do you want to send?" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        msg = lua_tostring( L, 1 );
+    }
+
+    string what;
+    if( lua_isstring( L, 2 ) )
+    {
+      what = lua_tostring( L, 2 );
+    }
+    string _h;
+    _h += TN_IAC;
+    _h += TN_SB;
+    _h += GMCP;
+    _h += msg;
+    if (what != "") {
+      _h += " ";
+      _h += what;
+    }
     _h += TN_IAC;
     _h += TN_SE;
 
@@ -3376,7 +3415,7 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     double luaTimeout;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3401,7 +3440,7 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     }
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3425,7 +3464,7 @@ int TLuaInterpreter::tempTrigger( lua_State *L )
     string luaRegex;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3437,7 +3476,7 @@ int TLuaInterpreter::tempTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3462,7 +3501,7 @@ int TLuaInterpreter::tempColorTrigger( lua_State *L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempColorTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3473,7 +3512,7 @@ int TLuaInterpreter::tempColorTrigger( lua_State *L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempColorTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3485,7 +3524,7 @@ int TLuaInterpreter::tempColorTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempColorTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3509,7 +3548,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempLineTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3520,7 +3559,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     int luaTo;
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempLineTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3532,7 +3571,7 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempLineTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3556,7 +3595,7 @@ int TLuaInterpreter::tempRegexTrigger( lua_State *L )
     string luaRegex;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempRegexTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3568,7 +3607,7 @@ int TLuaInterpreter::tempRegexTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempRegexTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3591,7 +3630,7 @@ int TLuaInterpreter::tempAlias( lua_State *L )
     string luaRegex;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3603,7 +3642,7 @@ int TLuaInterpreter::tempAlias( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "tempAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3626,7 +3665,7 @@ int TLuaInterpreter::exists( lua_State * L )
     string _name;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "exists: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3637,7 +3676,7 @@ int TLuaInterpreter::exists( lua_State * L )
     string _type;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "exists: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3687,7 +3726,7 @@ int TLuaInterpreter::isActive( lua_State * L )
     string _name;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "isActive: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3698,7 +3737,7 @@ int TLuaInterpreter::isActive( lua_State * L )
     string _type;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "isActive: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3758,7 +3797,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3770,7 +3809,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaParent;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3782,7 +3821,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaRegex;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3795,7 +3834,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permAlias: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3820,7 +3859,7 @@ int TLuaInterpreter::permTimer( lua_State * L )
     string luaName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3831,7 +3870,7 @@ int TLuaInterpreter::permTimer( lua_State * L )
     string luaParent;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3843,7 +3882,7 @@ int TLuaInterpreter::permTimer( lua_State * L )
     double luaTimeout;
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3855,7 +3894,7 @@ int TLuaInterpreter::permTimer( lua_State * L )
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permTimer: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3879,7 +3918,7 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
     string name;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permSubstringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3891,7 +3930,7 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
     string parent;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permSubstringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3902,7 +3941,7 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
     QStringList _regList;
     if( ! lua_istable( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permSubstringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3925,7 +3964,7 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permSubstringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3952,7 +3991,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger( lua_State * L )
     string name;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permBeginOfLineStringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3964,7 +4003,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger( lua_State * L )
     string parent;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permBeginOfLineStringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3975,7 +4014,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger( lua_State * L )
     QStringList _regList;
     if( ! lua_istable( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permBeginOfLineStringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -3998,7 +4037,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger( lua_State * L )
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permBeginOfLineStringTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4025,7 +4064,7 @@ int TLuaInterpreter::permRegexTrigger( lua_State *L )
     string name;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permRegexTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4037,7 +4076,7 @@ int TLuaInterpreter::permRegexTrigger( lua_State *L )
     string parent;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permRegexTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4048,7 +4087,7 @@ int TLuaInterpreter::permRegexTrigger( lua_State *L )
     QStringList _regList;
     if( ! lua_istable( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permRegexTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4071,7 +4110,7 @@ int TLuaInterpreter::permRegexTrigger( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "permRegexTrigger: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4202,7 +4241,7 @@ int TLuaInterpreter::setBorderColor( lua_State *L )
     int luaBlue;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBorderColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4213,7 +4252,7 @@ int TLuaInterpreter::setBorderColor( lua_State *L )
 
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBorderColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4224,7 +4263,7 @@ int TLuaInterpreter::setBorderColor( lua_State *L )
 
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBorderColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4260,7 +4299,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     }
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setFgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4272,7 +4311,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
 
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setFgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4284,7 +4323,7 @@ int TLuaInterpreter::setFgColor( lua_State *L )
 
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setFgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4320,7 +4359,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     }
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4332,7 +4371,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
 
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4344,7 +4383,7 @@ int TLuaInterpreter::setBgColor( lua_State *L )
 
     if( ! lua_isnumber( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setBgColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4558,7 +4597,7 @@ int TLuaInterpreter::insertText( lua_State *L )
     int s = 1;
     if( ! lua_isstring( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "insertText: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4573,7 +4612,7 @@ int TLuaInterpreter::insertText( lua_State *L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "insertText: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -4595,7 +4634,7 @@ int TLuaInterpreter::insertHTML( lua_State *L )
     string luaSendText;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "insertHTML: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4617,7 +4656,7 @@ int TLuaInterpreter::Echo( lua_State *L )
 
     if( ! lua_isstring( L, s ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "Echo: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4630,7 +4669,7 @@ int TLuaInterpreter::Echo( lua_State *L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "Echo: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -4874,7 +4913,7 @@ int TLuaInterpreter::pasteWindow( lua_State *L )
     string luaName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "pasteWindow: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4893,7 +4932,7 @@ int TLuaInterpreter::setLabelStyleSheet( lua_State * L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setLabelStyleSheet: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4904,7 +4943,7 @@ int TLuaInterpreter::setLabelStyleSheet( lua_State * L )
     string a2;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "setLabelStyleSheet: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -4988,7 +5027,7 @@ int TLuaInterpreter::appendBuffer( lua_State *L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "appendBuffer: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -5018,7 +5057,7 @@ int TLuaInterpreter::Send( lua_State * L )
     string luaSendText;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "wrong argument type" );
+        lua_pushstring( L, "Send: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -5031,7 +5070,7 @@ int TLuaInterpreter::Send( lua_State * L )
     {
         if( ! lua_isboolean( L, 2 ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "Send: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -5088,7 +5127,7 @@ int TLuaInterpreter::sendRaw( lua_State * L )
     {
         if( ! lua_isboolean( L, 2 ) )
         {
-            lua_pushstring( L, "wrong argument type" );
+            lua_pushstring( L, "sendRaw: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -5338,6 +5377,59 @@ void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( & event );
+}
+
+void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
+{
+    lua_State *L = pGlobalLua;
+
+    lua_getglobal(L, "gmcp");   //defined in LuaGlobal.lua
+    if (!lua_istable(L, -1))
+        return;
+
+    lua_pushstring(L, key.toLatin1().data());
+
+    lua_getglobal(L, "json_to_value");
+
+    /* in case yajl is missing, don't spam error console about it -
+     * we already reported once at start. Although a variable to track this
+     * would be more efficient. */
+    if (!lua_isfunction(L, -1))
+        return;
+    lua_pushlstring(L, string_data.toLatin1().data(), string_data.size());
+
+    int error = lua_pcall(L, 1, 1, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                QString mName("Mudlet Lua API");
+                QString function("setGMCPTable");
+                logError(e, mName, function);
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white),
+                           QColor(Qt::
+                                  red)) <<
+                        "LUA: ERROR decoding JSON (setGMCPTable) ERROR:" <<
+                        e.c_str() >> 0;
+                }
+            }
+        }
+    } else {
+
+        // Top of stack should now contain the lua representation of json.
+        lua_rawset(L, -3);      /* not raw so people can add a metable */
+    }
+
+    TEvent event;
+    event.mArgumentList.append("g" + key);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    Host *pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->raiseEvent(&event);
+
+    lua_pop(L, 1);
 }
 
 void TLuaInterpreter::setChannel102Table( int & var, int & arg )
@@ -5782,7 +5874,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "paste", TLuaInterpreter::paste );
     lua_register( pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow );
     //lua_register( pGlobalLua, "userWindowLineWrap", TLuaInterpreter::userWindowLineWrap );
-    lua_register( pGlobalLua, "debug", TLuaInterpreter::debug );
+    lua_register( pGlobalLua, "debugc", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
     lua_register( pGlobalLua, "resetFormat", TLuaInterpreter::reset );
@@ -5803,7 +5895,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "resizeWindow", TLuaInterpreter::resizeUserWindow );
     lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );
     lua_register( pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer );
-    lua_register( pGlobalLua, "debug", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage );
     lua_register( pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor );
     lua_register( pGlobalLua, "createButton", TLuaInterpreter::createButton );

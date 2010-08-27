@@ -594,6 +594,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mFORCE_NO_COMPRESSION = ( attributes().value("mFORCE_NO_COMPRESSION") == "yes" );
     pT->mFORCE_GA_OFF = ( attributes().value("mFORCE_GA_OFF") == "yes" );
     pT->mFORCE_SAVE_ON_EXIT = ( attributes().value("mFORCE_SAVE_ON_EXIT") == "yes" );
+    pT->mEnableGMCP = ( attributes().value("mEnableGMCP") == "yes" );
 
     while( ! atEnd() )
     {

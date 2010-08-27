@@ -78,6 +78,7 @@ public:
     bool compile( QString & code, QString & error );
     bool compileScript( QString & );
     void setAtcpTable( QString &, QString & );
+    void setGMCPTable( QString &, QString & );
     void setChannel102Table( int & var, int & arg );
     bool compileAndExecuteScript( QString & );
     void loadGlobal();
@@ -248,6 +249,7 @@ public:
     static int insertPopup( lua_State * );
     static int setPopup( lua_State * );
     static int sendATCP( lua_State * );
+    static int sendGMCP( lua_State * );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

@@ -114,6 +114,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mFORCE_NO_COMPRESSION", pT->mFORCE_NO_COMPRESSION ? "yes" : "no" );
     writeAttribute( "mFORCE_GA_OFF", pT->mFORCE_GA_OFF ? "yes" : "no" );
     writeAttribute( "mFORCE_SAVE_ON_EXIT", pT->mFORCE_SAVE_ON_EXIT ? "yes" : "no" );
+    writeAttribute( "mEnableGMCP", pT->mEnableGMCP ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
