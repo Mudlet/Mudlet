@@ -712,6 +712,32 @@ int TLuaInterpreter::getLineNumber( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::centerview( lua_State * L )
+{
+    int roomid;
+    if( lua_isnumber( L, 1 ) || lua_isstring( L, 1 ) )
+    {
+        roomid = lua_tointeger( L, 1 );
+    }
+    else {
+		lua_pushstring( L, "centerview: need a valid room ID" );
+		lua_error( L );
+		return 1;
+	}
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+	if( pHost->mpMap && pHost->mpMap->rooms.contains( roomid ) )
+	{
+		pHost->mpMap->mRoomId = roomid;
+		if( pHost->mpMap->mpM )
+		{
+			pHost->mpMap->mpM->update();
+		}
+	}
+
+    return 0;
+}
+
 int TLuaInterpreter::copy( lua_State * L )
 {
     string luaWindowName="";
@@ -5973,7 +5999,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearCmdLine", TLuaInterpreter::clearCmdLine );
     lua_register( pGlobalLua, "getAreaTable", TLuaInterpreter::getAreaTable );
     lua_register( pGlobalLua, "getAreaRooms", TLuaInterpreter::getAreaRooms );
-        lua_register( pGlobalLua, "getPath", TLuaInterpreter::getPath );
+	lua_register( pGlobalLua, "getPath", TLuaInterpreter::getPath );
+	lua_register( pGlobalLua, "centerview", TLuaInterpreter::centerview );
     QString n;
     int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
 

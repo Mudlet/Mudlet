@@ -108,6 +108,7 @@ public:
     int startPermAlias( QString & name, QString & parent, QString & regex, QString & function );
 
     TGatekeeperThread * mpGatekeeperThread;
+    static int centerview( lua_State *L );
     static int getAreaTable( lua_State *L );
     static int getPath( lua_State * );
     static int getAreaRooms( lua_State * );
