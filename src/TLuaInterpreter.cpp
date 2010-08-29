@@ -129,6 +129,12 @@ int TLuaInterpreter::Wait( lua_State *L )
   return 0;
 }
 
+int TLuaInterpreter::denyCurrentSend( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mAllowToSendCommand = false;
+}
+
 int TLuaInterpreter::raiseEvent( lua_State * L )
 {
     TEvent * pE = new TEvent;
@@ -720,20 +726,20 @@ int TLuaInterpreter::centerview( lua_State * L )
         roomid = lua_tointeger( L, 1 );
     }
     else {
-		lua_pushstring( L, "centerview: need a valid room ID" );
-		lua_error( L );
-		return 1;
-	}
+                lua_pushstring( L, "centerview: need a valid room ID" );
+                lua_error( L );
+                return 1;
+        }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-	if( pHost->mpMap && pHost->mpMap->rooms.contains( roomid ) )
-	{
-		pHost->mpMap->mRoomId = roomid;
-		if( pHost->mpMap->mpM )
-		{
-			pHost->mpMap->mpM->update();
-		}
-	}
+        if( pHost->mpMap && pHost->mpMap->rooms.contains( roomid ) )
+        {
+                pHost->mpMap->mRoomId = roomid;
+                if( pHost->mpMap->mpM )
+                {
+                        pHost->mpMap->mpM->update();
+                }
+        }
 
     return 0;
 }
@@ -3483,6 +3489,76 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::tempExactMatchTrigger( lua_State *L )
+{
+    string luaRegex;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "tempTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaRegex = lua_tostring( L, 1 );
+    }
+
+    string luaFunction;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "tempTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 2 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _reg = luaRegex.c_str();
+    QString _fun = luaFunction.c_str();
+    int timerID = pLuaInterpreter->startTempExactMatchTrigger( _reg, _fun );
+    lua_pushnumber( L, timerID );
+    return 1;
+}
+
+int TLuaInterpreter::tempBeginOfLineTrigger( lua_State *L )
+{
+    string luaRegex;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "tempTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaRegex = lua_tostring( L, 1 );
+    }
+
+    string luaFunction;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "tempTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 2 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _reg = luaRegex.c_str();
+    QString _fun = luaFunction.c_str();
+    int timerID = pLuaInterpreter->startTempBeginOfLineTrigger( _reg, _fun );
+    lua_pushnumber( L, timerID );
+    return 1;
+}
+
 
 // tempTrigger( string regex, string function to call ) // one shot timer.
 int TLuaInterpreter::tempTrigger( lua_State *L )
@@ -5999,8 +6075,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearCmdLine", TLuaInterpreter::clearCmdLine );
     lua_register( pGlobalLua, "getAreaTable", TLuaInterpreter::getAreaTable );
     lua_register( pGlobalLua, "getAreaRooms", TLuaInterpreter::getAreaRooms );
-	lua_register( pGlobalLua, "getPath", TLuaInterpreter::getPath );
-	lua_register( pGlobalLua, "centerview", TLuaInterpreter::centerview );
+    lua_register( pGlobalLua, "getPath", TLuaInterpreter::getPath );
+    lua_register( pGlobalLua, "centerview", TLuaInterpreter::centerview );
+    lua_register( pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend );
+    lua_register( pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger );
+    lua_register( pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger );
+
     QString n;
     int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
 
@@ -6264,6 +6344,43 @@ int TLuaInterpreter::startTempAlias( QString & regex, QString & function )
     pT->setName( QString::number( id ) );
     return id;
 }
+
+int TLuaInterpreter::startTempExactMatchTrigger( QString & regex, QString & function )
+{
+    TTrigger * pT;
+    QStringList sList;
+    sList<<regex;
+    QList<int> propertyList;
+    propertyList << REGEX_EXACT_MATCH;
+    pT = new TTrigger("a", sList, propertyList, false, mpHost );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempTrigger( true );
+    pT->registerTrigger();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
+    return id;
+}
+
+int TLuaInterpreter::startTempBeginOfLineTrigger( QString & regex, QString & function )
+{
+    TTrigger * pT;
+    QStringList sList;
+    sList<<regex;
+    QList<int> propertyList;
+    propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+    pT = new TTrigger("a", sList, propertyList, false, mpHost );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempTrigger( true );
+    pT->registerTrigger();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
+    return id;
+}
+
 
 int TLuaInterpreter::startTempTrigger( QString & regex, QString & function )
 {

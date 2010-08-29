@@ -113,6 +113,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mEnableGMCP( false )
 , commandLineMinimumHeight( 30 )
 , mResetProfile( false )
+, mAllowToSendCommand( true )
 {
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
@@ -200,7 +201,7 @@ Host::Host()
 , mAlertOnNewData( true )
 , mpMap( new TMap(this) )
 , mResetProfile( false )
-
+, mAllowToSendCommand( true )
 {
     qDebug()<<"######################################################################################";
     qDebug()<<"#########     ERROR DEFAULT HOST CONSTRUCTOR USED            #########################";

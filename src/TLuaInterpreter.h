@@ -98,6 +98,8 @@ public:
     int startTempTimer( double, QString & );
     int startTempAlias( QString &, QString & );
     int startTempTrigger( QString &, QString & );
+    int startTempBeginOfLineTrigger( QString &, QString & );
+    int startTempExactMatchTrigger( QString &, QString & );
     int startTempLineTrigger( int, int, QString & );
     int startTempRegexTrigger( QString &, QString & );
     int startTempColorTrigger( int, int, QString & );
@@ -108,6 +110,9 @@ public:
     int startPermAlias( QString & name, QString & parent, QString & regex, QString & function );
 
     TGatekeeperThread * mpGatekeeperThread;
+    static int denyCurrentSend( lua_State * );
+    static int tempBeginOfLineTrigger( lua_State * );
+    static int tempExactMatchTrigger( lua_State * );
     static int centerview( lua_State *L );
     static int getAreaTable( lua_State *L );
     static int getPath( lua_State * );

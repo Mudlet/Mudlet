@@ -245,6 +245,7 @@ public:
     QTextStream        mErrorLogStream;
     QFile              mErrorLogFile;
     int                commandLineMinimumHeight;
+    bool               mAllowToSendCommand;
 };
 #endif
 

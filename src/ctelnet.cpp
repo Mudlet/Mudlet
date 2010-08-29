@@ -267,15 +267,29 @@ bool cTelnet::sendData( QString & data )
     {
         data.replace(QChar('\n'),"");
     }
-    string outdata = (outgoingDataCodec->fromUnicode(data)).data();
-    if( ! mpHost->mUSE_UNIX_EOL )
+
+    TEvent * pE = new TEvent;
+    pE->mArgumentList.append( "sysDataSendRequest" );
+    pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    pE->mArgumentList.append( data );
+    pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( pE );
+    if( mpHost->mAllowToSendCommand )
     {
-        outdata.append("\r\n");
+        string outdata = (outgoingDataCodec->fromUnicode(data)).data();
+        if( ! mpHost->mUSE_UNIX_EOL )
+        {
+            outdata.append("\r\n");
+        }
+        else
+            outdata += "\n";
+        return socketOutRaw( outdata );
     }
     else
-        outdata += "\n";
-    //cout<<"OUT:<"<<outdata<<">"<<endl;
-    return socketOutRaw( outdata );
+    {
+        mpHost->mAllowToSendCommand = true;
+        return false;
+    }
 }
 
 
@@ -410,7 +424,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   _h += TN_IAC;
                   _h += TN_SE;
                   socketOutRaw( _h );
-					cout<<_h<<endl;
+                                        cout<<_h<<endl;
 
               break;
           }
