@@ -3354,16 +3354,17 @@ int TLuaInterpreter::sendGMCP( lua_State *L )
     string what;
     if( lua_isstring( L, 2 ) )
     {
-      what = lua_tostring( L, 2 );
+        what = lua_tostring( L, 2 );
     }
     string _h;
     _h += TN_IAC;
     _h += TN_SB;
     _h += GMCP;
     _h += msg;
-    if (what != "") {
-      _h += " ";
-      _h += what;
+    if( what != "" )
+    {
+        _h += " ";
+        _h += what;
     }
     _h += TN_IAC;
     _h += TN_SE;
@@ -5483,52 +5484,62 @@ void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
 
 void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
 {
-    lua_State *L = pGlobalLua;
+    lua_State * L = pGlobalLua;
 
     lua_getglobal(L, "gmcp");   //defined in LuaGlobal.lua
-    if (!lua_istable(L, -1))
-        return;
+    if( !lua_istable(L, -1) ) return;
 
     lua_pushstring(L, key.toLatin1().data());
 
     lua_getglobal(L, "json_to_value");
 
-    /* in case yajl is missing, don't spam error console about it -
-     * we already reported once at start. Although a variable to track this
-     * would be more efficient. */
-    if (!lua_isfunction(L, -1))
-        return;
+    //    in case yajl is missing, don't spam error console about it -
+    //    we already reported once at start. Although a variable to track this
+    //    would be more efficient.
+
+    if( !lua_isfunction(L, -1) ) return;
     lua_pushlstring(L, string_data.toLatin1().data(), string_data.size());
 
     int error = lua_pcall(L, 1, 1, 0);
-    if (error != 0) {
+    if( error != 0 )
+    {
         int nbpossible_errors = lua_gettop(L);
-        for (int i = 1; i <= nbpossible_errors; i++) {
+        for( int i = 1; i <= nbpossible_errors; i++ )
+        {
             string e = "";
-            if (lua_isstring(L, i)) {
+            if (lua_isstring(L, i))
+            {
                 e += lua_tostring(L, i);
                 QString mName("Mudlet Lua API");
                 QString function("setGMCPTable");
                 logError(e, mName, function);
-                if (mudlet::debugMode) {
+                if( mudlet::debugMode )
+                {
                     TDebug(QColor(Qt::white),
-                           QColor(Qt::
-                                  red)) <<
+                           QColor(Qt::red)) <<
                         "LUA: ERROR decoding JSON (setGMCPTable) ERROR:" <<
                         e.c_str() >> 0;
                 }
             }
         }
-    } else {
-
-        // Top of stack should now contain the lua representation of json.
-        lua_rawset(L, -3);      /* not raw so people can add a metable */
     }
+    else
+    {
+        // Top of stack should now contain the lua representation of json.
+        lua_rawset(L, -3);
+    }
+
 
     TEvent event;
     event.mArgumentList.append("g" + key);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     Host *pHost = TLuaInterpreter::luaInterpreterMap[L];
+    //FIXME: remove
+    if( mudlet::debugMode )
+    {
+        QString msg = "\nraising event <g"; msg.append(key);msg.append(">\n");
+        pHost->mpConsole->printSystemMessage(msg);
+    }
     pHost->raiseEvent(&event);
 
     lua_pop(L, 1);
@@ -6080,6 +6091,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend );
     lua_register( pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger );
     lua_register( pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger );
+    lua_register( pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP );
 
     QString n;
     int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );

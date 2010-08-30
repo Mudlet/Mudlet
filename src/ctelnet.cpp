@@ -410,28 +410,27 @@ void cTelnet::processTelnetCommand( const string & command )
           option = command[2];
           if( option == static_cast<char>(200) ) // ATCP support
           {
-              if (mpHost->mEnableGMCP) break;
+              //FIXME: this is a bug, some muds offer both atcp + gmcp
+              if( mpHost->mEnableGMCP ) break;
 
               cout << "ATCP enabled" << endl;
               enableATCP = true;
               sendTelnetOption( TN_DO, 200 );
 
-                  string _h;
-                  _h += TN_IAC;
-                  _h += TN_SB;
-                  _h += 200;
-                  _h += "hello Mudlet 1.2.0\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n";
-                  _h += TN_IAC;
-                  _h += TN_SE;
-                  socketOutRaw( _h );
-                                        cout<<_h<<endl;
-
+              string _h;
+              _h += TN_IAC;
+              _h += TN_SB;
+              _h += 200;
+              _h += "hello Mudlet 1.2.0\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n";
+              _h += TN_IAC;
+              _h += TN_SE;
+              socketOutRaw( _h );
               break;
           }
 
-          if (option == GMCP)
+          if( option == GMCP )
           {
-              if (!mpHost->mEnableGMCP) break;
+              if( !mpHost->mEnableGMCP ) break;
 
               enableGMCP = true;
               sendTelnetOption( TN_DO, GMCP );
@@ -456,7 +455,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
               socketOutRaw( _h );
 
-              if ((mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0)) {
+              /*if ((mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0)) {
                 _h = TN_IAC;
                 _h += TN_SB;
                 _h += GMCP;
@@ -470,8 +469,8 @@ void cTelnet::processTelnetCommand( const string & command )
 
                 cout << "  sending: " << _h << endl;
                 socketOutRaw( _h );
-              }
-            break;
+              }*/
+              break;
           }
 
           //option = command[2];
@@ -595,6 +594,13 @@ void cTelnet::processTelnetCommand( const string & command )
             cout << "TELNET IAC DO ATCP" << endl;
             enableATCP = true;
             sendTelnetOption( TN_WILL, 200 );
+            break;
+          }
+          if( option == static_cast<char>(201) ) // GMCP support
+          {
+            cout << "TELNET IAC DO GMCP" << endl;
+            enableATCP = true;
+            sendTelnetOption( TN_WILL, 201 );
             break;
           }
           if( option == static_cast<char>(102) ) // channel 102 support
