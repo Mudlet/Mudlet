@@ -860,54 +860,9 @@ void cTelnet::setGMCPVariables( QString & msg )
         var = msg.section( " ", 0, 0 );
         arg = msg.section( " ", 1 );
     }
-
-    if( var.startsWith("Client.Compose") )
-    {
-        QString title;
-        if( ! single )
-            title = var.section( " ", 1 );
-        else
-        {
-            title = arg;
-            arg = "";
-        }
-        if( mpComposer )
-        {
-            return;
-        }
-        mpComposer = new dlgComposer( mpHost );
-        //FIXME
-        if( arg.startsWith(" ") )
-        {
-            arg.remove(0,1);
-        }
-        mpComposer->init( title, arg );
-        mpComposer->raise();
-        mpComposer->show();
-        return;
-    }
-    var.remove( '.' );
     arg.remove( '\n' );
-    int space = var.indexOf( ' ' );
-    if( space > -1 )
-    {
-        arg.prepend(" ");
-        arg = arg.prepend( var.section( " ", 1 ) );
-        var = var.section( " ", 0, 0 );
-    }
     //~ printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
     mpHost->mLuaInterpreter.setGMCPTable( var, arg );
-    /*if( var.startsWith("RoomNum") )
-    {
-        if( mpHost->mpMap )
-        {
-            mpHost->mpMap->mRoomId = arg.toInt();
-            if( mpHost->mpMap->mpM )
-            {
-                mpHost->mpMap->mpM->update();
-            }
-        }
-    }*/
 }
 
 void cTelnet::setChannel102Variables( QString & msg )

@@ -1,5 +1,4 @@
-CONFIG += release warn_off 
-#CONFIG += libircclient-qt
+CONFIG += release warn_off
 QMAKE_CXXFLAGS_RELEASE += -O3
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
@@ -19,7 +18,7 @@ win32:INCLUDEPATH += c:\Lua\include \
     c:\boost_1_44_0 \
     c:\pcre-8.0-lib\include
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
-unix: { 
+unix: {
     SHARE_DIR = /usr/local/share/mudlet
     BIN_DIR = $$INSTALL_PREFIX/bin
 }
@@ -81,12 +80,12 @@ SOURCES += TConsole.cpp \
     mudlet.cpp \
     dlgNotepad.cpp \
     THighlighter.cpp \
-    dlgComposer.cpp \ 
+    dlgComposer.cpp \
     TArea.cpp \
     glwidget.cpp \
     dlgMapper.cpp \
     TRoom.cpp \
-	TMap.cpp \
+        TMap.cpp \
     TBuffer.cpp
 HEADERS += mudlet.h \
     TTimer.h \
@@ -94,8 +93,8 @@ HEADERS += mudlet.h \
     TConsole.h \
     ctelnet.h \
     Host.h \
-	TMap.h \
-	TAStar.h \
+        TMap.h \
+        TAStar.h \
     HostManager.h \
     HostPool.h \
     dlgConnectionProfiles.h \
@@ -182,7 +181,7 @@ TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc
 DISTFILES += paragraph.css
-unix: { 
+unix: {
     luaglobal.path = $$SHARE_DIR
     luaglobal.files = LuaGlobal.lua
     documentation.path = $$SHARE_DIR
