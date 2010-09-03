@@ -110,5 +110,6 @@
         <file>icons/applications-internet.png</file>
         <file>icons/mudlet_editor.png</file>
         <file>icons/mudlet_notepad.png</file>
+        <file>icons/gw2.png</file>
     </qresource>
 </RCC>

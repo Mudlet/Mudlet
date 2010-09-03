@@ -675,6 +675,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         {
             if( profile_name == "Avalon.de" )
                 val = "avalon.mud.de";
+            if( profile_name == "God Wars II" )
+                val = "godwars2.org";
             if( profile_name == "BatMUD" )
                 val = "batmud.bat.org";
             if( profile_name == "Aardwolf" )
@@ -701,6 +703,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         {
             if( profile_name == "Avalon.de" )
                 val = "23";
+            if( profile_name == "God Wars II" )
+                val = "3000";
             if( profile_name == "BatMUD" )
                 val = "23";
             if( profile_name == "Aardwolf" )
@@ -742,6 +746,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "The Realms of Despair is the original SMAUG MUD and is FREE to play. We have an active Roleplaying community, an active player-killing (deadly) community, and a very active peaceful community. Players can choose from 13 classes (including a deadly-only class) and 13 races. Character appearances are customizable on creation and we have a vast collection of equipment that is level, gender, class, race and alignment specific. We boast well over 150 original, exclusive areas, with a total of over 20,000 rooms. Mob killing, or 'running' is one of our most popular activities, with monster difficulties varying from easy one-player kills to difficult group kills. We have four deadly-only Clans, twelve peaceful-only Guilds, eight Orders, and fourteen Role-playing Nations that players can join to interact more closely with other players. We have two mortal councils that actively work toward helping players: The Symposium hears ideas for changes, and the Newbie Council assists new players. Our team of Immortals are always willing to answer questions and to help out however necessary. Best of all, playing the Realms of Despair is totally FREE!";
         else if( profile_name == "ZombieMUD" )
             val = "Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with players logging in from all over the globe to test their skill in our medieval role-playing environment. With 15 separate guilds and 41 races to choose from, as a player the only limitation to your achievements on the game is your own imagination and will to succeed.";
+        else if( profile_name == "God Wars II" )
+            val = "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to new situations. Take on the role of a godlike supernatural being in a fight for supremacy.\n\nRoomless world. Manual combat. Endless possibilities.";
         else
             val = readProfileData( profile, item );
         mud_description_textedit->clear();
@@ -752,6 +758,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         {
             if( profile_name == "Avalon.de" )
                 val = "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>";
+            if( profile_name == "God Wars II" )
+                val = "<center><a href='http://www.godwars2.org'>http://www.godwars2.org</a></center>";
             if( profile_name == "BatMUD" )
                 val = val = "<center><a href='http://www.bat.org'>http://www.bat.org</a></center>";
             if( profile_name == "Aardwolf" )
@@ -846,6 +854,15 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
+    muds = "God Wars II";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( ":/icons/gw2.png" );
+    pM->setIcon(mi);
+    muds.clear();
+
     muds = "Achaea";
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
@@ -868,6 +885,7 @@ void dlgConnectionProfiles::fillout_form()
     QIcon mi3( pa1 );
     pM3->setIcon(mi3);
     muds.clear();
+
     muds = "Realms of Despair";
     pM = new QListWidgetItem( muds );
     pM->setFont(font);

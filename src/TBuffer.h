@@ -146,7 +146,7 @@ public:
     int               speedAppend;
     int               msLength;
     int               msPos;
-    int               mCode[3];
+
     int               mCursorY;
 
 private:
@@ -264,7 +264,7 @@ private:
     int               mBgColorB;
     QString           mMudLine;
     std::deque<TChar> mMudBuffer;
-
+    int               mCode[1024];//FIXME: potential overflow bug
 };
 
 #endif
