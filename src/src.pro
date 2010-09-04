@@ -11,12 +11,15 @@ unix:LIBS += -lpcre \
     -lyajl
 win32:LIBS += -Lc:\mudlet_package \
     -llua51 \
-    -lpcre
+    -lpcre \
+    -Lc:\mudlet_package\Lua \
+    -lyajl
 unix:INCLUDEPATH += /usr/include/lua5.1
 win32:INCLUDEPATH += c:\Lua\include \
     c:\zlib-1.2.5\
     c:\boost_1_44_0 \
-    c:\pcre-8.0-lib\include
+    c:\pcre-8.0-lib\include \
+    c:\yajl\yajl\src
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: {
     SHARE_DIR = /usr/local/share/mudlet
@@ -85,7 +88,8 @@ SOURCES += TConsole.cpp \
     glwidget.cpp \
     dlgMapper.cpp \
     TRoom.cpp \
-        TMap.cpp \
+    TMap.cpp \
+    lua_yajl.c \
     TBuffer.cpp
 HEADERS += mudlet.h \
     TTimer.h \

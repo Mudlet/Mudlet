@@ -32,11 +32,13 @@
 #include <string>
 #include "TEvent.h"
 
+
 extern "C"
 {
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
+#include "lua_yajl.c"
 }
 
 extern QStringList gSysErrors;
@@ -5829,7 +5831,6 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
 
 void TLuaInterpreter::set_lua_table( QString & tableName, QStringList & variableList )
 {
-    qDebug()<<"TLua: #1 list="<<variableList;
     lua_State * L = pGlobalLua;
     if( ! L )
     {
@@ -5839,16 +5840,12 @@ void TLuaInterpreter::set_lua_table( QString & tableName, QStringList & variable
     lua_newtable(L);
     for( int i=0; i<variableList.size(); i++ )
     {
-        qDebug()<<"setTable: i="<<i;
         lua_pushnumber( L, i+1 ); // Lua indexes start with 1
         lua_pushstring( L, variableList[i].toLatin1().data() );
         lua_settable( L, -3 );
     }
-    qDebug()<<"TLua: #2";
     lua_setglobal( L, tableName.toLatin1().data() );
-    qDebug()<<"TLua: #3";
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
-    qDebug()<<"TLua: #4";
 }
 
 void TLuaInterpreter::set_lua_string( const QString & varName, QString & varValue )
@@ -6098,8 +6095,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger );
     lua_register( pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP );
 
+    luaopen_yajl(pGlobalLua);
+
     QString n;
     int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
+    lua_setglobal( pGlobalLua, "yajl" );
+
+
 
     if( error != 0 )
     {
