@@ -2452,6 +2452,62 @@ int TLuaInterpreter::setRoomEnv( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setRoomName( lua_State *L )
+{
+    int id;
+    string name;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tonumber( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString _name = name.c_str();
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        pHost->mpMap->rooms[id]->name = _name;
+    }
+
+    return 0;
+}
+
+int TLuaInterpreter::getRoomName( lua_State *L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushstring(L, pHost->mpMap->rooms[id]->name.toLatin1().data() );
+    }
+
+    return 1;
+}
+
 int TLuaInterpreter::setRoomWeight( lua_State *L )
 {
     int w;
@@ -6490,6 +6546,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked );
     lua_register( pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor );
     lua_register( pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv );
+    lua_register( pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName );
+    lua_register( pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
