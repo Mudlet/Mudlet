@@ -253,6 +253,8 @@ static int js_to_value(lua_State *L) {
                      __FILE__,
                      __LINE__);
 
+    yajl_free(handle);
+
     return 1;
 }
 

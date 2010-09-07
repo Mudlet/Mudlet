@@ -7,7 +7,6 @@ LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 unix:LIBS += -lpcre \
     $$LIBLUA \
-    -L/usr/local/share/lua/cmod/yajl.so \
     -lyajl
 win32:LIBS += -Lc:\mudlet_package \
     -llua51 \

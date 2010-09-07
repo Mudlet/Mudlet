@@ -727,21 +727,24 @@ int TLuaInterpreter::centerview( lua_State * L )
     {
         roomid = lua_tointeger( L, 1 );
     }
-    else {
-                lua_pushstring( L, "centerview: need a valid room ID" );
-                lua_error( L );
-                return 1;
-        }
+    else
+    {
+        lua_pushstring( L, "centerview: need a valid room ID" );
+        lua_error( L );
+        return 1;
+    }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        if( pHost->mpMap && pHost->mpMap->rooms.contains( roomid ) )
+    if( pHost->mpMap && pHost->mpMap->rooms.contains( roomid ) )
+    {
+        pHost->mpMap->mRoomId = roomid;
+        if( pHost->mpMap->mpM )
         {
-                pHost->mpMap->mRoomId = roomid;
-                if( pHost->mpMap->mpM )
-                {
-                        pHost->mpMap->mpM->update();
-                }
+            qDebug()<<"trace#98843";
+            pHost->mpMap->mpM->update();
+            qDebug()<<"trace#238843";
         }
+    }
 
     return 0;
 }
@@ -2417,6 +2420,38 @@ int TLuaInterpreter::setMapperView( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setRoomEnv( lua_State *L )
+{
+    int id, env;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        env = lua_tonumber( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        pHost->mpMap->rooms[id]->environment = env;
+    }
+
+    return 0;
+}
+
 int TLuaInterpreter::setRoomWeight( lua_State *L )
 {
     int w;
@@ -2437,6 +2472,34 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     }
 
     return 0;
+}
+
+int TLuaInterpreter::roomLocked( lua_State *L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        bool r = pHost->mpMap->rooms[id]->isLocked;
+        lua_pushboolean(L, true);
+    }
+    else
+    {
+        qDebug()<<"error: room id:"<<id<<" not in db";
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 int TLuaInterpreter::lockRoom( lua_State *L )
@@ -2644,7 +2707,6 @@ int TLuaInterpreter::getAreaTable( lua_State *L )
         lua_pushstring( L, name.toLatin1().data() );
         lua_pushnumber( L, roomID );
         lua_settable(L, -3);
-        qDebug()<<"AREATable:"<<roomID<<" - "<<name;
     }
     qDebug()<<pHost->mpMap->areaNamesMap;
     return 1;
@@ -4386,6 +4448,324 @@ int TLuaInterpreter::setBorderColor( lua_State *L )
     return 0;
 }
 
+
+int TLuaInterpreter::setRoomCoordinates( lua_State *L )
+{
+    int id;
+    int x;
+    int y;
+    int z;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x = lua_tointeger( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y = lua_tointeger( L, 3 );
+    }
+
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        z = lua_tointeger( L, 4 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_pushboolean(L, pHost->mpMap->setRoomCoordinates( id, x, y, z ) );
+    return 1;
+}
+
+int TLuaInterpreter::setCustomEnvColor( lua_State *L )
+{
+    int id;
+    int x;
+    int y;
+    int z;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x = lua_tointeger( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y = lua_tointeger( L, 3 );
+    }
+
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        z = lua_tointeger( L, 4 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpMap->customEnvColors[id] = QColor( x, y, z );
+    return 0;
+}
+
+
+int TLuaInterpreter::setAreaName( lua_State *L )
+{
+    int id;
+    string name;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setAreaName: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setAreaName: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tostring( L, 2 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString _name = name.c_str();
+    pHost->mpMap->areaNamesMap[id] = _name;
+    return 0;
+}
+
+
+
+int TLuaInterpreter::setExit( lua_State *L )
+{
+    int from, to;
+    int dir;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        from = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        to = lua_tointeger( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        dir = lua_tointeger( L, 3 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_pushboolean(L, pHost->mpMap->setExit( from, to, dir ) );
+    return 1;
+}
+
+int TLuaInterpreter::getRoomCoordinates( lua_State * L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushstring( L, "getRoomCoordinates: room ID does not exist");
+        lua_error( L );
+        return 1;
+    }
+    lua_pushnumber( L, pHost->mpMap->rooms[id]->x );
+    lua_pushnumber( L, pHost->mpMap->rooms[id]->y );
+    lua_pushnumber( L, pHost->mpMap->rooms[id]->z );
+    return 3;
+}
+
+int TLuaInterpreter::getRoomArea( lua_State * L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushstring( L, "getRoomCoordinates: room ID does not exist");
+        lua_error( L );
+        return 1;
+    }
+    lua_pushnumber( L, pHost->mpMap->rooms[id]->area );
+    return 1;
+}
+
+int TLuaInterpreter::addRoom( lua_State * L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_pushboolean( L, pHost->mpMap->addRoom( id ) );
+    return 1;
+}
+
+int TLuaInterpreter::createRoomID( lua_State * L )
+{
+    int id;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_pushnumber( L, pHost->mpMap->createNewRoomID() );
+    return 1;
+}
+
+int TLuaInterpreter::setRoomArea( lua_State * L )
+{
+    int id, area;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "setRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tointeger( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushstring( L, "getRoomCoordinates: room ID does not exist");
+        lua_error( L );
+        return 1;
+    }
+    if( ! pHost->mpMap->areas.contains( area ) )
+    {
+        pHost->mpMap->areas[area] = new TArea(pHost->mpMap);
+    }
+    pHost->mpMap->rooms[id]->area = area;
+    pHost->mpMap->areas[area]->rooms.push_back(id);
+    QTime t;
+    t.start();
+    pHost->mpMap->areas[area]->ausgaengeBestimmen();
+    qDebug()<<"ausgaengeBestimmen:"<<t.elapsed()<<" num:"<<pHost->mpMap->areas[area]->exits.size();
+    t.restart();
+    pHost->mpMap->areas[area]->calcSpan();
+    qDebug()<<"calcSpan:"<<t.elapsed()<< " max:"<< pHost->mpMap->areas[area]->max_x<<"/"<<pHost->mpMap->areas[area]->max_y<<"/"<<pHost->mpMap->areas[area]->max_z<<" min:"<<pHost->mpMap->areas[area]->min_x<<"/"<<pHost->mpMap->areas[area]->min_y<<"/"<<pHost->mpMap->areas[area]->min_z;
+    qDebug()<<"rooms num:"<<pHost->mpMap->rooms.size();
+    qDebug()<<"areas num:"<<pHost->mpMap->areas.size();
+    //pHost->mpMap->init(pHost);
+    //pHost->mpMap->buildAreas();
+    return 0;
+}
+
+
 int TLuaInterpreter::setFgColor( lua_State *L )
 {
     int s = 1;
@@ -5489,7 +5869,11 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
 {
     lua_State * L = pGlobalLua;
     lua_getglobal(L, "gmcp");   //defined in Lua init
-    if( !lua_istable(L, -1) ) return;
+    if( !lua_istable(L, -1) )
+    {
+        qDebug()<<"ERROR: gmcp not defined -> error in LuaGlobal.lua";
+        return;
+    }
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appriate
 
     QStringList tokenList = key.split(".");
@@ -5514,6 +5898,7 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
     if( !lua_isfunction(L, -1) )
     {
         lua_settop(L, 0);
+        qDebug()<<"CRITICAL ERROR: json_to_value not defined";
         return;
     }
     lua_pushlstring(L, string_data.toLatin1().data(), string_data.size());
@@ -6094,12 +6479,24 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger );
     lua_register( pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger );
     lua_register( pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP );
+    lua_register( pGlobalLua, "addRoom", TLuaInterpreter::addRoom );
+    lua_register( pGlobalLua, "setExit", TLuaInterpreter::setExit );
+    lua_register( pGlobalLua, "setRoomCoordinates", TLuaInterpreter::setRoomCoordinates );
+    lua_register( pGlobalLua, "getRoomCoordinates", TLuaInterpreter::getRoomCoordinates );
+    lua_register( pGlobalLua, "createRoomID", TLuaInterpreter::createRoomID );
+    lua_register( pGlobalLua, "getRoomArea", TLuaInterpreter::getRoomArea );
+    lua_register( pGlobalLua, "setRoomArea", TLuaInterpreter::setRoomArea );
+    lua_register( pGlobalLua, "setAreaName", TLuaInterpreter::setAreaName );
+    lua_register( pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked );
+    lua_register( pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor );
+    lua_register( pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv );
 
     luaopen_yajl(pGlobalLua);
+    lua_setglobal( pGlobalLua, "yajl" );
 
     QString n;
     int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
-    lua_setglobal( pGlobalLua, "yajl" );
+
 
 
 

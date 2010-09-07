@@ -233,6 +233,7 @@ void GLWidget::initializeGL()
 
 void GLWidget::paintGL()
 {
+    QTime __t; __t.start();
     float px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
     {
@@ -243,6 +244,7 @@ void GLWidget::paintGL()
     py = static_cast<float>(mpMap->rooms[mpMap->mRoomId]->y);
     pz = static_cast<float>(mpMap->rooms[mpMap->mRoomId]->z);
     TArea * pArea = mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area];
+    if( ! pArea ) return;
     zmax = static_cast<float>(pArea->max_z);
     zmin = static_cast<float>(pArea->min_z);
     float zEbene;
@@ -259,8 +261,6 @@ void GLWidget::paintGL()
     GLfloat ambientLight2[] = {0.01, 0.01, 0.01, 1.0};
     if( !mpMap->rooms.contains(mpMap->mRoomId) ) return;
     int env = mpMap->rooms[mpMap->mRoomId]->environment;
-
-
 
     GLfloat specularLight[] = {.01, .01, .01, 1.};
     GLfloat light0Pos[] = {5000.0, 4000.0, 1000.0, 0};
@@ -384,7 +384,6 @@ void GLWidget::paintGL()
             if( rz < pz )
                 if( abs(rz-pz) > mShowBottomLevels ) continue;
             QList<int> exitList;
-
             exitList.push_back( mpMap->rooms[pArea->rooms[i]]->north );
             exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
             exitList.push_back( mpMap->rooms[pArea->rooms[i]]->east );
@@ -395,7 +394,6 @@ void GLWidget::paintGL()
             exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
             exitList.push_back( mpMap->rooms[pArea->rooms[i]]->up );
             exitList.push_back( mpMap->rooms[pArea->rooms[i]]->down );
-
             int e = mpMap->rooms[pArea->rooms[i]]->z;
             int ef;
             ef = abs(e%26);
@@ -596,8 +594,12 @@ void GLWidget::paintGL()
                         if( mpMap->envColors.contains(env) )
                             env = mpMap->envColors[env];
                         else
-                            env = 0;
-
+                        {
+                            if( ! mpMap->customEnvColors.contains(env))
+                            {
+                                env = 1;
+                            }
+                        }
                         switch( env )
                         {
                         case 1:
@@ -667,9 +669,15 @@ void GLWidget::paintGL()
                             glColor4b(50,50,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
-                        default:
-                            glColor4b(255,55,55,2);
-                            mc3[0]=128.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
+                        default: //user defined room color
+                            int __r, __g, __b;
+                            if( ! mpMap->customEnvColors.contains(env) ) break;
+                            QColor &_c = mpMap->customEnvColors[env];
+                            glColor4b(_c.red(),_c.green(),_c.blue(),25);
+                            mc3[0]=_c.redF();
+                            mc3[1]=_c.greenF();
+                            mc3[2]=_c.blueF();
+                            mc3[3]=0.2;
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 36);
@@ -934,8 +942,12 @@ void GLWidget::paintGL()
                         if( mpMap->envColors.contains(env) )
                             env = mpMap->envColors[env];
                         else
-                            env = 0;
-
+                        {
+                            if( ! mpMap->customEnvColors.contains(env))
+                            {
+                                env = 1;
+                            }
+                        }
                         switch( env )
                         {
                         case 1:
@@ -1005,9 +1017,15 @@ void GLWidget::paintGL()
                             glColor4b(50,50,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
-                        default:
-                            glColor4b(255,55,55,2);
-                            mc3[0]=128.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
+                        default: //user defined room color
+                            int __r, __g, __b;
+                            if( ! mpMap->customEnvColors.contains(env) ) break;
+                            QColor &_c = mpMap->customEnvColors[env];
+                            glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                            mc3[0]=_c.redF();
+                            mc3[1]=_c.greenF();
+                            mc3[2]=_c.blueF();
+                            mc3[3]=0.2;
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 36);
@@ -1254,7 +1272,12 @@ void GLWidget::paintGL()
                 if( mpMap->envColors.contains(env) )
                     env = mpMap->envColors[env];
                 else
-                    env = 0;
+                {
+                    if( ! mpMap->customEnvColors.contains(env))
+                    {
+                        env = 1;
+                    }
+                }
 
                 switch( env )
                 {
@@ -1325,9 +1348,15 @@ void GLWidget::paintGL()
                     glColor4b(50,50,175,2);
                     mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
-                default:
-                    glColor4b(255,55,55,2);
-                    mc3[0]=128.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
+                default: //user defined room color
+                    int __r, __g, __b;
+                    if( ! mpMap->customEnvColors.contains(env) ) break;
+                    QColor &_c = mpMap->customEnvColors[env];
+                    glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                    mc3[0]=_c.redF();
+                    mc3[1]=_c.greenF();
+                    mc3[2]=_c.blueF();
+                    mc3[3]=0.2;
                 }
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                 glMateriali(GL_FRONT, GL_SHININESS, 56);
@@ -1465,8 +1494,12 @@ void GLWidget::paintGL()
             if( mpMap->envColors.contains(env) )
                 env = mpMap->envColors[env];
             else
-                env = 0;
-
+            {
+                if( ! mpMap->customEnvColors.contains(env))
+                {
+                    env = 1;
+                }
+            }
             switch( env )
             {
             case 1:
@@ -1536,9 +1569,15 @@ void GLWidget::paintGL()
                 glColor4b(50,50,175,255);
                 mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
-            default:
-                glColor4b(255,55,55,255);
-                mc3[0]=128.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
+            default: //user defined room color
+                int __r, __g, __b;
+                if( ! mpMap->customEnvColors.contains(env) ) break;
+                QColor &_c = mpMap->customEnvColors[env];
+                glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                mc3[0]=_c.redF();
+                mc3[1]=_c.greenF();
+                mc3[2]=_c.blueF();
+                mc3[3]=1.0;
             }
             glDisable(GL_DEPTH_TEST);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
@@ -1612,6 +1651,7 @@ void GLWidget::paintGL()
 //    cout<<"dif r="<<diffuseLight[0]<<" g="<<diffuseLight[1]<<" b="<<diffuseLight[2]<<endl;
 //    cout << "xRot:"<<xRot<<" yRot:"<<yRot<<" zRot:"<<zRot<<endl;
     glFlush();
+    qDebug()<<"render:"<<__t.elapsed();
 }
 
 void GLWidget::resizeGL(int w, int h)

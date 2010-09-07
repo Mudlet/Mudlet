@@ -200,9 +200,9 @@ void cTelnet::handle_socket_signal_connected()
     QString msg = "[INFO] A connection has been established successfully.\n";
     postMessage( msg );
     mConnectionTime.start();
-    if( (mpHost->getLogin().size()>0) && !mpHost->mEnableGMCP  && (mpHost->getPass().size()>0))
+    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0))
         mTimerLogin->start(2000);
-    if( (mpHost->getPass().size()>0)  && !mpHost->mEnableGMCP  && (mpHost->getPass().size()>0))
+    if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
 
     /*

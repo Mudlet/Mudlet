@@ -110,6 +110,20 @@ public:
     int startPermAlias( QString & name, QString & parent, QString & regex, QString & function );
 
     TGatekeeperThread * mpGatekeeperThread;
+
+    static int setRoomEnv( lua_State * );
+    static int setCustomEnvColor( lua_State * );
+    static int roomLocked( lua_State * );
+    static int setAreaName( lua_State * );
+    static int setRoomColor( lua_State * );
+    static int getRoomCoordinates( lua_State * );
+    static int setRoomCoordinates( lua_State * );
+    static int addRoom( lua_State * );
+    static int setExit( lua_State * );
+    static int createRoomID( lua_State * );
+    static int setRoomArea( lua_State * );
+    static int getRoomArea( lua_State * );
+
     static int denyCurrentSend( lua_State * );
     static int tempBeginOfLineTrigger( lua_State * );
     static int tempExactMatchTrigger( lua_State * );

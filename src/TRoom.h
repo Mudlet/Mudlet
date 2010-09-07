@@ -3,6 +3,19 @@
 
 #include <QVector3D>
 
+#define DIR_NORTH 1
+#define DIR_NORTHEAST 2
+#define DIR_NORTHWEST 3
+#define DIR_EAST 4
+#define DIR_WEST 5
+#define DIR_SOUTH 6
+#define DIR_SOUTHEAST 7
+#define DIR_SOUTWEST 8
+#define DIR_UP 9
+#define DIR_DOWN 10
+#define DIR_IN 11
+#define DIR_OUT 12
+
 class TRoom
 {
 public:

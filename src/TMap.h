@@ -42,6 +42,10 @@ class TMap
 {
 public:
     TMap( Host *);
+    bool addRoom( int id=0 );
+    int  createNewRoomID();
+    bool setExit( int from, int to, int dir );
+    bool setRoomCoordinates( int id, int x, int y, int z );
     void init(Host*);
     void buildAreas();
     void setRoom( int );
@@ -61,6 +65,7 @@ public:
     int mTargetID;
     QList<int> mPathList;
     QList<QString> mDirList;
+    QMap<int,QColor> customEnvColors;
     GLWidget * mpM;
     dlgMapper * mpMapper;
 

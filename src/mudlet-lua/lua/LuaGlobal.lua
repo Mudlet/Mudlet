@@ -39,5 +39,8 @@ local packages = {
 	}
 
 for _, package in ipairs(packages) do
+	echo("\nloading package:"..package);
 	local result = pcall(dofile, LUA_DIR .. package) or echo("Error attempting to load file: " .. package .. "\n")
+	if result then echo(" ... OK") end
 end
+echo("\nLUA API loading DONE\n")

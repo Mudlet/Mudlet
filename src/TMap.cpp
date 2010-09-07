@@ -32,9 +32,73 @@ TMap::TMap( Host * pH )
 {
 }
 
+bool TMap::addRoom( int id )
+{
+    TRoom * pT = new TRoom;
+
+    if( ! rooms.contains( id ) && id != 0 )
+    {
+        rooms[id] = pT;
+        pT->id = id;
+        return true;
+    }
+    else
+    {
+        delete pT;
+        return false;
+    }
+}
+
+bool TMap::setRoomCoordinates( int id, int x, int y, int z )
+{
+    if( ! rooms.contains( id ) ) return false;
+
+    rooms[id]->x = x;
+    rooms[id]->y = y;
+    rooms[id]->z = z;
+    return true;
+}
+
+int TMap::createNewRoomID()
+{
+    int _id = 100000000;
+    for( ; _id > 0; _id++ )
+    {
+        if( ! rooms.contains( _id ) )
+        {
+            return _id;
+        }
+    }
+    return 0;
+}
+
+bool TMap::setExit( int from, int to, int dir )
+{
+    if( ! rooms.contains( from ) ) return false;
+    if( ! rooms.contains( to ) ) return false;
+
+    switch( dir )
+    {
+        case DIR_NORTH: rooms[from]->north = to; break;
+        case DIR_NORTHEAST: rooms[from]->northeast = to; break;
+        case DIR_NORTHWEST: rooms[from]->northwest = to; break;
+        case DIR_EAST: rooms[from]->east = to; break;
+        case DIR_WEST: rooms[from]->west = to; break;
+        case DIR_SOUTH: rooms[from]->south = to; break;
+        case DIR_SOUTHEAST: rooms[from]->southeast = to; break;
+        case DIR_SOUTWEST: rooms[from]->southwest = to; break;
+        case DIR_UP: rooms[from]->up = to; break;
+        case DIR_DOWN: rooms[from]->down = to; break;
+        case DIR_IN: rooms[from]->in = to; break;
+        case DIR_OUT: rooms[from]->out = to; break;
+        default: return false;
+    }
+}
+
 void TMap::init( Host * pH )
 {
     qDebug()<<"TMap::init() host="<<mpHost->getName();
+    areas.clear();
     int s_areas = 0;
     QMap<int,int> s_area_exits;
     buildAreas();
@@ -416,8 +480,10 @@ bool TMap::serialize( QDataStream & ofs )
     QMapIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
+
         it.next();
         int i = it.key();
+        qDebug()<<"SAVING: roomID="<<rooms[i]->id;
         ofs <<  rooms[i]->id;
         ofs << rooms[i]->area;
         ofs << rooms[i]->x;
@@ -452,6 +518,7 @@ bool TMap::serialize( QDataStream & ofs )
 
 bool TMap::restore()
 {
+    qDebug()<<"RESTORING MAP";
     QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/map/";
     QDir dir( folder );
     dir.setSorting(QDir::Time);
@@ -487,7 +554,7 @@ bool TMap::restore()
         {
             int i;
             ifs >> i;
-            //qDebug()<<"loading room ID:"<<i;
+            qDebug()<<"loading room ID:"<<i;
             TRoom * pT = new TRoom;
             rooms[i] = pT;
             rooms[i]->id = i;
@@ -543,8 +610,9 @@ bool TMap::restore()
         }
         else
         {
-            msgBox.setText("Sorry, this early version of the mapper can only be used on IRE games\n.This will change in the near future.");
-            msgBox.exec();
+            mpHost->mpMap->init( mpHost );
+            //msgBox.setText("Sorry, this early version of the mapper can only be used on IRE games\n.This will change in the near future.");
+            //msgBox.exec();
         }
     }
 }
