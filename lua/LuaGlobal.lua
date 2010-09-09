@@ -8,6 +8,10 @@ if package.loaded["lpeg"] then lpeg = require "lpeg" end
 -- TODO this is required by DB.lua, so we might load it all at one place
 --if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
 
+json_to_value = yajl.to_value
+
+gmcp = {}
+
 local packages = {
 	"StringUtils.lua",
 	"TableUtils.lua",
