@@ -111,6 +111,8 @@ public:
 
     TGatekeeperThread * mpGatekeeperThread;
 
+    static int setGridMode( lua_State * L );
+    static int getCustomEnvColorTable( lua_State * L );
     static int setRoomName( lua_State * );
     static int getRoomName( lua_State * );
     static int setRoomEnv( lua_State * );

@@ -473,10 +473,11 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 4;
+    int version = 5;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
+    ofs << customEnvColors;
     QMapIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
@@ -549,6 +550,10 @@ bool TMap::restore()
         else
         {
             canRestore = false;
+        }
+        if( version >= 5 )
+        {
+            ifs >> customEnvColors;
         }
         while( ! ifs.atEnd() )
         {

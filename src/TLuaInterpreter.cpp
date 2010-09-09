@@ -4821,6 +4821,45 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::setGridMode( lua_State * L )
+{
+    int area;
+    bool gridMode = false;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tointeger( L, 1 );
+    }
+    if( ! lua_isboolean( L, 2 ) )
+    {
+        lua_pushstring( L, "setRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        gridMode = lua_toboolean( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->areas.contains( area ) )
+    {
+        lua_pushstring( L, "setGridMode: area ID does not exist");
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        pHost->mpMap->areas[area]->gridMode = gridMode;
+    }
+    return 0;
+}
+
+
 
 int TLuaInterpreter::setFgColor( lua_State *L )
 {
@@ -5495,6 +5534,45 @@ int TLuaInterpreter::setLabelStyleSheet( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mpConsole->setLabelStyleSheet( luaSendText, a2 );
     return 0;
+}
+
+int TLuaInterpreter::getCustomEnvColorTable( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->customEnvColors.size() > 0 )
+    {
+        lua_newtable( L );
+        QList<int> colorList = pHost->mpMap->customEnvColors.keys();
+        for( int idx=0; idx<colorList.size(); idx++ )
+        {
+            lua_pushnumber( L, colorList[idx] );
+            lua_newtable( L );
+            // red component
+            {
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].red() );
+                lua_pushnumber( L, 1 );
+                lua_settable( L, -3 );//match in matches
+            }
+            // green component
+            {
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].green() );
+                lua_pushnumber( L, 2 );
+                lua_settable( L, -3 );//match in matches
+            }
+            // blue component
+            {
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].blue() );
+                lua_pushnumber( L, 3 );
+                lua_settable( L, -3 );//match in matches
+            }
+            lua_settable( L, -3 );//matches in regex
+        }
+    }
+    else
+    {
+        lua_newtable( L );
+    }
+    return 1;
 }
 
 //syntax: getTime( bool return_string, string time_format ) with return_string == false -> return table
@@ -6545,9 +6623,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setAreaName", TLuaInterpreter::setAreaName );
     lua_register( pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked );
     lua_register( pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor );
+    lua_register( pGlobalLua, "getCustomEnvColorTable", TLuaInterpreter::getCustomEnvColorTable );
+    //lua_register( pGlobalLua, "setLevelColor", TLuaInterpreter::setLevelColor );
+    //lua_register( pGlobalLua, "getLevelColorTable", TLuaInterpreter::getLevelColorTable );
     lua_register( pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv );
     lua_register( pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName );
     lua_register( pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName );
+    lua_register( pGlobalLua, "setGridMode", TLuaInterpreter::setGridMode );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

@@ -1203,6 +1203,10 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
             }
+            TEvent event;
+            event.mArgumentList.append( "sysExitEvent" );
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            pC->mpHost->raiseEvent( & event );
 
             // close console
             pC->close();
@@ -1643,6 +1647,11 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     pHost->mLuaInterpreter.loadGlobal();
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
+
+    TEvent event;
+    event.mArgumentList.append( "sysLoadEvent" );
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent( & event );
 
     //NOTE: this is a potential problem if users connect by hand quickly
     //      and one host has a slower response time as the other one, but

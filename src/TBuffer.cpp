@@ -1965,13 +1965,13 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
     slice.clear();
     int y = P1.y();
     int x = P1.x();
-    if( y < 0 || y >= static_cast<int>(buffer.size()) )
+    if( y < 0
+        || y >= static_cast<int>(buffer.size())
+        || ( P2.x() < 0 )
+        || ( P2.x() >= static_cast<int>(buffer[y].size()) ) )
         return slice;
 
-    if( ( x < 0 )
-        || ( x >= static_cast<int>(buffer[y].size()) )
-        || ( P2.x() < 0 )
-        || ( P2.x() > static_cast<int>(buffer[y].size()) ) )
+    if( x < 0 )
     {
         x=0;
     }

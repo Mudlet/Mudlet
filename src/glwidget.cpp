@@ -1205,8 +1205,16 @@ void GLWidget::paintGL()
 
                 glLoadIdentity();
                 gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
-                glScalef( 0.1, 0.1, 0.1);
-                glTranslatef( rx, ry, rz );
+                if( pArea->gridMode )
+                {
+                    glScalef( 0.2, 0.2, 0.1);
+                    glTranslatef( 0.5*rx, 0.5*ry, rz );
+                }
+                else
+                {
+                    glScalef( 0.1, 0.1, 0.1);
+                    glTranslatef( rx, ry, rz );
+                }
 
                 glLoadName( pArea->rooms[i] );
                 quads++;
@@ -1363,8 +1371,17 @@ void GLWidget::paintGL()
                 glDisable(GL_DEPTH_TEST);
                 glLoadIdentity();
                 gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
-                glScalef( 0.075, 0.075, 0.020);
-                glTranslatef( 1.333333333*rx,1.333333333*ry,5.0*(rz+0.25) );//+0.4
+
+                if( pArea->gridMode )
+                {
+                    glScalef( 0.2, 0.2, 0.020);
+                    glTranslatef( 0.5*rx, 0.5*ry, 5.0*(rz+0.25) );
+                }
+                else
+                {
+                    glScalef( 0.075, 0.075, 0.020);
+                    glTranslatef( 1.333333333*rx,1.333333333*ry,5.0*(rz+0.25) );//+0.4
+                }
 
                 glBegin( GL_QUADS );
                 glNormal3f(0.57735, -0.57735, 0.57735);
@@ -1428,8 +1445,16 @@ void GLWidget::paintGL()
             float mc3[] = { 0.2f, 0.2f, 0.7f, 1.0f };
             glLoadIdentity();
             gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
-            glScalef( 0.1, 0.1, 0.1);
-            glTranslatef( rx, ry, rz );
+            if( pArea->gridMode )
+            {
+                glScalef( 0.2, 0.2, 0.1);
+                glTranslatef( 0.5*rx, 0.5*ry, rz );
+            }
+            else
+            {
+                glScalef( 0.1, 0.1, 0.1);
+                glTranslatef( rx, ry, rz );
+            }
 
             glLoadName( pArea->rooms[i] );
             quads++;
@@ -1584,9 +1609,16 @@ void GLWidget::paintGL()
             glMateriali(GL_FRONT, GL_SHININESS, 56);
             glLoadIdentity();
             gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
-            glScalef( 0.075, 0.075, 0.020);
-            glTranslatef( 1.333333333*rx,1.333333333*ry,5.0*(rz+0.25) );//+0.4
-
+            if( pArea->gridMode )
+            {
+                glScalef( 0.2, 0.2, 0.020);
+                glTranslatef( 0.5*rx, 0.5*ry, 5.0*(rz+0.25) );
+            }
+            else
+            {
+                glScalef( 0.075, 0.075, 0.020);
+                glTranslatef( 1.333333333*rx,1.333333333*ry,5.0*(rz+0.25) );//+0.4
+            }
             glBegin( GL_QUADS );
             glNormal3f(0.57735, -0.57735, 0.57735);
             glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);

@@ -55,6 +55,7 @@ public:
     QMap<int, int> zmaxEbene;
     QList<int> ebenen;
     TMap * mpMap;
+    bool gridMode;
 };
 
 // - gezeichnet werden erstmal die areas

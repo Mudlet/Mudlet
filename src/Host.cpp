@@ -127,6 +127,8 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
     mErrorLogFile.setFileName( logFileName );
     mErrorLogFile.open( QIODevice::Append );
     mErrorLogStream.setDevice( &mErrorLogFile );
+    mpMap->restore();
+    mpMap->init( this );
 }
 
 Host::Host()
@@ -231,6 +233,11 @@ void Host::resetProfile()
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     mResetProfile = false;
+
+    TEvent event;
+    event.mArgumentList.append( "sysLoadEvent" );
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent( & event );
 }
 
 void Host::assemblePath()
