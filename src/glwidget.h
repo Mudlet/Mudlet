@@ -40,6 +40,7 @@ public:
 
     GLuint makeObject();
     GLuint object;
+    bool is2DView;
 
     QSize minimumSizeHint() const;
     QSize sizeHint() const;

@@ -55,6 +55,7 @@ GLWidget::GLWidget(QWidget *parent)
     mShowTopLevels = 9999999;
     mShowBottomLevels = 999999;
     setAttribute( Qt::WA_OpaquePaintEvent );
+    is2DView = false;
 }
 
 
@@ -63,6 +64,7 @@ GLWidget::GLWidget(TMap * pM, QWidget *parent)
 {
     mpHost = 0;
     mpMap = pM;
+    is2DView = false;
 }
 
 
@@ -136,6 +138,7 @@ void GLWidget::defaultView()
     yRot=5.0;
     zRot=10.0;
     mScale = 1.0;
+    is2DView = false;
     updateGL();
 }
 
@@ -145,6 +148,7 @@ void GLWidget::sideView()
     yRot=-10.0;
     zRot=0.0;
     mScale = 1.0;
+    is2DView = false;
     updateGL();
 }
 
@@ -154,6 +158,7 @@ void GLWidget::topView()
     yRot=0.0;
     zRot=15.0;
     mScale = 1.0;
+    is2DView = true;
     updateGL();
 }
 
@@ -175,6 +180,7 @@ void GLWidget::setXRotation(int angle)
 {
     qNormalizeAngle(angle);
     xRot=angle;
+    is2DView = false;
     updateGL();
     return;
 }
@@ -183,6 +189,7 @@ void GLWidget::setYRotation(int angle)
 {
     qNormalizeAngle(angle);
     yRot=angle;
+    is2DView = false;
     updateGL();
     return;
 }
@@ -191,6 +198,7 @@ void GLWidget::setZRotation(int angle)
 {
     qNormalizeAngle(angle);
     zRot=angle;
+    is2DView = false;
     updateGL();
     return;
 }
@@ -198,6 +206,7 @@ void GLWidget::setZRotation(int angle)
 void GLWidget::setXDist(int angle)
 {
     xDist=angle;
+    is2DView = false;
     updateGL();
     return;
 }
@@ -205,6 +214,7 @@ void GLWidget::setXDist(int angle)
 void GLWidget::setYDist(int angle)
 {
     yDist=angle;
+    is2DView = false;
     updateGL();
     return;
 }
@@ -212,6 +222,7 @@ void GLWidget::setYDist(int angle)
 void GLWidget::setZDist(int angle)
 {
     zDist=angle;
+    is2DView = false;
     updateGL();
     return;
 }
@@ -229,11 +240,11 @@ void GLWidget::initializeGL()
     glEnable( GL_BLEND );
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearDepth(1.0);
+    is2DView = false;
 }
 
 void GLWidget::paintGL()
 {
-    QTime __t; __t.start();
     float px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
     {
@@ -245,6 +256,12 @@ void GLWidget::paintGL()
     pz = static_cast<float>(mpMap->rooms[mpMap->mRoomId]->z);
     TArea * pArea = mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area];
     if( ! pArea ) return;
+    if( pArea->gridMode )
+    {
+        xRot=0.0;
+        yRot=0.0;
+        zRot=15.0;
+    }
     zmax = static_cast<float>(pArea->max_z);
     zmin = static_cast<float>(pArea->min_z);
     float zEbene;
@@ -356,6 +373,8 @@ void GLWidget::paintGL()
 
     //FIXME:
     int Dbg_cnt = 0;
+    bool hasUpExit = false;
+    bool hasDownExit = false;
 
     while( true )
     {
@@ -1374,8 +1393,16 @@ void GLWidget::paintGL()
 
                 if( pArea->gridMode )
                 {
-                    glScalef( 0.2, 0.2, 0.020);
-                    glTranslatef( 0.5*rx, 0.5*ry, 5.0*(rz+0.25) );
+                    if( ( rz == pz ) && ( rx == px ) && ( ry == py ) )
+                    {
+                        glScalef( 0.1, 0.1, 0.020 );
+                        glTranslatef( 0.1*rx, 0.1*ry, 5.0*(rz+0.25) );
+                    }
+                    else
+                    {
+                        glScalef( 0.2, 0.2, 0.020);
+                        glTranslatef( 0.5*rx, 0.5*ry, 5.0*(rz+0.25) );
+                    }
                 }
                 else
                 {
@@ -1447,7 +1474,7 @@ void GLWidget::paintGL()
             gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
             if( pArea->gridMode )
             {
-                glScalef( 0.2, 0.2, 0.1);
+                glScalef( 0.2, 0.2, 0.1 );
                 glTranslatef( 0.5*rx, 0.5*ry, rz );
             }
             else
@@ -1611,13 +1638,29 @@ void GLWidget::paintGL()
             gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
             if( pArea->gridMode )
             {
-                glScalef( 0.2, 0.2, 0.020);
-                glTranslatef( 0.5*rx, 0.5*ry, 5.0*(rz+0.25) );
+                if( ( rz == pz ) && ( rx == px ) && ( ry == py ) )
+                {
+                    glScalef( 0.1, 0.1, 0.020 );
+                    glTranslatef( rx, ry, 5.0*(rz+0.25) );
+                }
+                else
+                {
+                    glScalef( 0.2, 0.2, 0.020);
+                    glTranslatef( 0.5*rx, 0.5*ry, 5.0*(rz+0.25) );
+                }
             }
             else
             {
-                glScalef( 0.075, 0.075, 0.020);
-                glTranslatef( 1.333333333*rx,1.333333333*ry,5.0*(rz+0.25) );//+0.4
+                if( is2DView )
+                {
+                    glScalef( 0.090, 0.090, 0.020);
+                    glTranslatef( 1.1111111*rx,1.1111111*ry,5.0*(rz+0.25) );//+0.4
+                }
+                else
+                {
+                    glScalef( 0.075, 0.075, 0.020);
+                    glTranslatef( 1.333333333*rx,1.333333333*ry,5.0*(rz+0.25) );//+0.4
+                }
             }
             glBegin( GL_QUADS );
             glNormal3f(0.57735, -0.57735, 0.57735);
@@ -1674,7 +1717,51 @@ void GLWidget::paintGL()
             glNormal3f(0.57735, 0.57735, 0.57735);
             glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
             glEnd();
+
+            glColor4b(128,128,128,255);
+
+
+            glBegin( GL_TRIANGLES );
+
+            if( mpMap->rooms[pArea->rooms[i]]->down > -1 )
+            {
+                glVertex3f( 0.0, -0.95/dehnung, 0.0);
+                glVertex3f(0.95/dehnung, -0.25/dehnung, 0.0);
+                glVertex3f( -0.95/dehnung, -0.25/dehnung, 0.0);
+            }
+            if( mpMap->rooms[pArea->rooms[i]]->up > -1 )
+            {
+                glVertex3f( 0.0, 0.95/dehnung, 0.0);
+                glVertex3f(-0.95/dehnung, 0.25/dehnung, 0.0);
+                glVertex3f( 0.95/dehnung, 0.25/dehnung, 0.0);
+            }
+            glEnd();
+
+            if( mpMap->rooms[pArea->rooms[i]]->out > -1 )
+            {
+                glBegin( GL_LINE_LOOP );
+                for( int angle=0; angle<360; angle += 1 )
+                {
+                    glVertex3f( (0.5 + sin(angle) * 0.25)/dehnung, ( cos(angle) * 0.25)/dehnung, 0.0);
+                }
+                glEnd();
+            }
+
+
+            glTranslatef( -0.1, 0.0, 0.0 );
+            if( mpMap->rooms[pArea->rooms[i]]->in > -1 )
+            {
+                glBegin( GL_TRIANGLE_FAN );
+                glVertex3f( 0.0, 0.0, 0.0);
+                for( int angle=0; angle<=360; angle += 5 )
+                {
+                    glVertex3f( (sin(angle)*0.25)/dehnung, (cos(angle)*0.25)/dehnung, 0.0);
+                }
+                glEnd();
+            }
+
         }
+
 
         zEbene += 1.0;
     }
@@ -1683,7 +1770,7 @@ void GLWidget::paintGL()
 //    cout<<"dif r="<<diffuseLight[0]<<" g="<<diffuseLight[1]<<" b="<<diffuseLight[2]<<endl;
 //    cout << "xRot:"<<xRot<<" yRot:"<<yRot<<" zRot:"<<zRot<<endl;
     glFlush();
-    qDebug()<<"render:"<<__t.elapsed();
+    //qDebug()<<"render:"<<__t.elapsed();
 }
 
 void GLWidget::resizeGL(int w, int h)
