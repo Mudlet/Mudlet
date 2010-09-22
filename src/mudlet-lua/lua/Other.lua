@@ -198,22 +198,6 @@ end
 
 
 
---- Opens the default OS browser for the given URL.
----
---- @usage Either command will open Mudlet home page.
----   <pre>
----   openUrl("www.mudlet.org")
----   openUrl("http://www.mudlet.org/")
----   </pre>
-function openURL(url)
-	local os = getOS()
-	if os == "linux" then _G.os.execute("xdg-open " .. url)
-	elseif os == "mac" then _G.os.execute("open " .. url)
-	elseif os == "windows" then _G.os.execute("start " .. url) end
-end
-
-
-
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
 --- Variables are automatically unpacked into the global namespace when the profile is loaded.
 --- They are saved to "SavedVariables.lua" when the profile is closed or saved.
