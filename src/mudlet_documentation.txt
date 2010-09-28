@@ -37,6 +37,7 @@ Mudlet Manual
 .. <<lineTriggers, Using tempLineTrigger>>
 .. <<scripting-howtos, Scripting Howtos>>
 .. <<atcp, ATCP>>
+.. <<aardwolf102, Aardwolf 102>>
 .. <<db, Database frontend>>
 . <<exampleScripts,Advanced Learning From Selected Example Scripts>>
 .. <<inlineMapExample,inlineMapExample>>
@@ -110,25 +111,29 @@ variable = number
 
 Or to make it remember some text:
 
------
-variable = "some text"
+[source,lua]
+-----	
+variable = "variable_name"
 ----
 
-For example, here we'll set the `myhealth` variable to number `1345`, and the `myname` variable to `Anna`:
+For example, here we'll set the `myhealth` variable to number `1345`, and the `myname` variable to `Bob`:
 
+[source,lua]
 -----
 myhealth = 1345
-myname = "Anna"
+myname = "Bob"
 -----
 
 You can also do basic maths easily, for example:
 
+[source,lua]
 -----
 a = 2 + 2 --sets variable a to the value of 4
 b = a - 1 --sets variable b to the value of 3
 -----
 
 To concatenate strings together, you can use the `..` expression:
+[source,lua]
 ------
 first_name = "Joe"
 last_name = "Plumber"
@@ -140,6 +145,7 @@ To send a command to the MUD, you can use the `send()` function. Data inside the
 
 For example, the following code sends the command to `eat bread`:
 
+[source,lua]
 -----
 send("eat bread")
 -----
@@ -453,7 +459,11 @@ In Lua all undefined variables are initialized to the value [red]+nil+. The valu
 === Lists
 Having variables that hold a single value is the most important usage of variables, but very often you'll like to define variables that hold a list of values e. g. a list of your enemies, a list the items you are currently carrying etc.. To define a variable to be a list you need to declare it to be a Lua table.
 Let's declare the variable [red]+myEnemies+ as a list containing the names of your enemies:
+[source,lua]
 ------
+*Source* block
+Use: highlight code listings
+(require `source-highlight`)
 myEnemies = {}
 ------
 You can now add new enemies to this list by calling the Lua function listAdd( listName, item ) e.g.
@@ -678,6 +688,7 @@ Example: Let's go back to our pond & frog example. We have explained the differe
 2. You see a frog.
 3. The frog sits on a stone.
 ----
+
 Every single one of these 3 lines will be fed into the trigger engine one after another. If we define an OR-trigger with a condition list consisting of 3 condition patterns:
 
 condition #1 pattern = pond
@@ -770,7 +781,7 @@ Mudlet supports 4 different sort of timers:
 =======
 . *Regular GUI Timers* that fire repeatedly in a certain interval specified by the user.
 . *Offset Timers* are child timers of a parent timer and fire a single shot after a specified timeout after their parent fired its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
-. *Temporary Timers* are very useful for scripting. They behave like regular timers, but they are one shot only timers. 
+. *Temporary Timers* are very useful, and are the most common type of timer used for scripting purposes. They behave like regular timers, but they are one shot only timers. 
 . *Batch Job Timers* are a form of timer that issue a sequence of commands/scripts according to a certain timeout instead of a single command/script. This is a very important tool if the sequence of commands is important. Timers depend largely on the operating system you are using and it cannot be guaranteed under certain conditions that if you have set up 5 timers to fire after 1.3 seconds that the sequence in which they fire is the same sequence in which they were created. If the sequence of commands is important, you should always use batch job timers as this form of timers guarantees that the sequence of commands is observed. For example: If you want to make an auto-miner bot that digs its way into a gold mine digging left, down, down, right, left, down until a trigger catches a message that indicates that the mine is going to collapse and bury your poor soul unless you run for your life and head out of the mine. In this scenario the sequence of commands is vital as you'd lose your way and die. This is a classical case for a batch job timer. 
 ========
 The most common usage of temporary timers is the function tempTimer(). It lets you specify a timeout after which a script is being run e.g. 
@@ -1157,18 +1168,18 @@ You can put the following script into your targetting alias:
 
 ----
 if id then killTrigger(id) end
-id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])
+id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold") resetFormat()]])
 ----
 
 Where `target` is your target variable. Note that you have to use the full name, capitalized. If you'd like the script to auto-capitalize for you, you can use this version*:
 
 ----
-target = capitalize(target)
+target = target:title()
 if id then killTrigger(id) end
-id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold")]])
+id = tempTrigger(target, [[selectString("]] .. target .. [[", 1) fg("gold") resetFormat()]])
 ----
 
-^*requires Mudlet 1.0.6 or the http://forums.mudlet.org/viewtopic.php?f=5&t=92&p=2210#p2210[capitalize function] in a script.^
+^*requires Mudlet 1.1.0
 
 [[atcp]]
 == ATCP
@@ -1199,6 +1210,16 @@ end
 
 Feel free to experiment with this to achieve the desired results. A http://forums.mudlet.org/viewtopic.php?f=6&t=1243[ATCP demo package] is also available on the forums for using event handlers and parsing its messages into Lua datastructures.
 
+[[aardwolf102]]
+== Aardwolf's 102 subchannel
+Similar to ATCP, Aardwolf includes a hidden channel of information that you can access in Mudlet since 1.1.1. Mudlet deals with it in the same way as with ATCP, so for full usage instructions see the <<atcp,ATCP>> section. All data is stored in the `channel102` table, such you can do 
+
+-----
+display(channel102)
+-----
+
+To see all the latest information that has been received. The event to create handlers on is titled `channel102Message`, and you can use the <<sendTelnetChannel102, sendTelnetChannel102(msg)>> function to send text via the 102 channel back to Aardwolf.
+
 [[db]]
 == db: Mudlet DB Frontend
 
@@ -1227,9 +1248,9 @@ A note on column or field names: you may not create a field which begins with an
 === Adding Data
 
  
-To add data to your database, you must first obtain a reference (variable) for it. You do that with the db:fetch_database function, such as:
+To add data to your database, you must first obtain a reference (variable) for it. You do that with the db:get_database function, such as:
 -----
-        local mydb = db:fetch_database("people")
+        local mydb = db:get_database("people")
 -----
 The database object contains certain convenience functions (discussed later, but all are preceded with an underscore), but also a reference to every sheet that currently exists within the database. You then use the db:add() function to add data to the specified sheet.
 -----
@@ -1538,7 +1559,7 @@ Be careful in writing these!
  
 As was specified earlier, by default the db module commits everything immediately whenever you make a change. For power-users, if you would like to control transactions yourself, the following functions are provided on your database instance:
 -----
-        local mydb = db:fetch_database("my_database")
+        local mydb = db:get_database("my_database")
         mydb._begin()
         mydb._commit()
         mydb._rollback()
@@ -1631,10 +1652,23 @@ alias script: target = matches[2]
 The reason the first match goes into matches[2] and not matches[1] is because matches[1] contains the part of the line that matched your trigger / alias.
 
 ==== #wait in Mudlet
-In Nexus, a `#wait` will _freeze_ the script while it's executing - such that commands after it are delayed. In Mudlet, we use tempTimer which that works a bit differently - it doesn't freeze the script, but instead makes it so commands a tempTimer is asked to do will get done in the future.
+In Nexus, a `#wait` will _freeze_ the script while it's executing - such that commands after it are delayed. In Mudlet, we use <<tempTimer, tempTimer>> which that works a bit differently - it doesn't freeze the script, but instead makes it so commands a tempTimer is asked to do will get done in the future.
 
 So the difference is that a tempTimer doesn't freeze the commands following it at all, everything gets done at once as usual. Just things a tempTimer was asked to do get done in the future.
 
+---------
+Nexus script:
+#send hello
+#wait 1000
+#send hi
+#wait 500
+#send bye
+
+Mudlet:
+send("hello")
+tempTimer(1, [[send("hi")]])
+tempTimer(1.5, [[send("bye")]])
+---------
 
 
 ==== ifs in Mudlet
@@ -1824,7 +1858,8 @@ end
 ----
 
 ==== Notes to be aware of
-To finish off, a couple of points that should be remembered
+To finish off, a couple of points that should be remembered:
+
 * Mudlet does profile snapshots (nexus archives) automatically - to load a different one, select it from the list when connecting
 * Mudlet can import and export xml
 * Mudlet and Nexus xml formats aren't compatible
@@ -1867,6 +1902,7 @@ Click on the respective function to get more information:
 <<clearUserWindow,clearUserWindow>>, 
 <<copy,copy>>, 
 <<cecho,cecho>>,
+<<createConsole,createConsole>>,
 <<createBuffer,createBuffer>>, 
 <<createLabel,createLabel>>, 
 <<createMiniConsole,createMiniConsole>>, 
@@ -1893,7 +1929,7 @@ Click on the respective function to get more information:
 <<db_eq,db:eq>>,
 <<db_exp,db:exp>>,
 <<db_fetch,db:fetch>>, 
-<<db_fetch_database,db:fetch_database>>, 
+<<db_get_database,db:get_database>>, 
 <<db_gt,db:gt>>, 
 <<db_gte,db:gte>>, 
 <<db_in_,db:in_>>, 
@@ -1936,6 +1972,7 @@ Click on the respective function to get more information:
 <<getColumnNumber,getColumnNumber>>, 
 <<getCurrentLine,getCurrentLine>>, 
 <<getFgColor,getFgColor>>, 
+<<getAreaTable,getAreaTable>>,
 <<getTimestamp,getTimestamp>>,
 <<getLines,getLines>>, 
 <<getLineCount,getLineCount>>, 
@@ -1947,6 +1984,7 @@ Click on the respective function to get more information:
 <<getTime,getTime>>
 
 == H
+<<hasFocus,hasFocus>>,
 <<handleWindowResizeEvent,handleWindowResizeEvent>>,
 <<hecho,hecho>>, 
 <<hideToolBar,hideToolBar>>, 
@@ -2092,7 +2130,7 @@ Echos a piece of text as a clickable link.
 * text - text to display in the echo. Same as a normal <<echo,echo()>>.
 * command - lua code to do when the link is clicked.
 * hint - text for the tooltip to be displayed when the mouse is over the link.
-* true/false - controls whenever the current text formatting (colors, underline, bold, etc) should be used, or the default link format.
+* boolean - if true, then the link will use the current selection style (colors, underline, etc). If missing or false, it will use the default link style - blue on black underlined text.
 
 Available since 1.1.0-pre1.
 
@@ -2726,6 +2764,14 @@ Gets the absolute column number of the current user cursor.
 == getLineCount()
 Gets the absolute amount of lines in the current console buffer
 
+[[getAreaTable]]
+== getAreaTable()
+Returns a key-value table with all known areas and their IDs.
+
+[[getAreaRooms]]
+== getAreaRooms(area id)
+Returns a key-value table with all rooms for a given area ID.
+
 [[getTimestamp]]
 == timestamp = getTimestamp( optional console_name, lineNumber )
 Returns the timestamp string as it's seen when you enable the timestamps view (blue i button bottom right).
@@ -2881,10 +2927,6 @@ restores a Lua table from a data file that has been saved with table.save()
 Saves the given table into the given file.
 
 
-[[showCaptureGroups]]
-== showCaptureGroups()
-a debug function for building triggers: this function highlights all capture groups in random colors in the MUD output text online on the screen. You get more precise debug information on what captured what and when if you look at the debug console (->trigger editor->bug symbol)
-
 [[sendAll]]
 == sendAll( command1, command2, ... )
 Sends a list of commands to the MUD. You can use this to send some things at once instead of having to use multiple <<send,send()>> commands one after another.
@@ -2897,6 +2939,19 @@ sendAll("stand", "wield shield", "say ha!")
 send ("stand")
 send ("wield shield")
 send ("say ha!")
+----
+
+[[sendTelnetChannel102]]
+== sendTelnetChannel102(msg)
+Sends a message via the 102 subchannel back to the MUD (that's used in Aardwolf). The msg is in a two byte format - see `help telopts` in Aardwolf on how that works.
+
+=== Example:
+----
+-- turn prompt flags on:
+sendTelnetChannel102("\52\1")
+
+-- turn prompt flags off:
+sendTelnetChannel102("\52\2")
 ----
 
 [[replaceWildcard]]
@@ -2956,14 +3011,27 @@ cecho("This <green:red>text<light_gray:black> is sent to the map miniConsole.", 
 
 ----
 
+[[createConsole]]
+== createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+
+Make a new console window with ease. The default background is black and text color white.
+
+This will create a miniconsole window that has a font size of 8pt, will display 80 characters in width, hold a maximum of 20 lines and be place at 200x400 of your mudlet window. If you wish to change the color you can easily do this when updating your text or manually somewhere, using setFgColor() and setBackgroundColor().
+
+=== Example:
+----
+-- this will create a console with the name of "myConsoleWindow", font size 8, 80 characters per line and default height fr 20 lines at 200x, 400y coordinates.
+createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
+----
+
 [[createBuffer]]
 == createBuffer( name )
-creates a named buffer for formatted text, much like a user terminal window, but the buffer cannot be shown on the screen; intended for temporary buffer work
+Creates a named buffer for formatted text, much like a user terminal window, but the buffer cannot be shown on the screen. Intended for temporary buffer work.
 
 
 [[appendBuffer]]
 == appendBuffer( name )
-like paste() but pastes at the end of the buffer/window and wraps new text automatically.
+Like paste() but pastes at the end of the buffer/window and wraps new text automatically.
 
 
 [[showWindow]]
@@ -3599,10 +3667,10 @@ Determines if a table contains a value as a key or as a value (recursive)
 
 
 [[getButtonState]]
-== state = getButtonState() with state = 1 button is checked and state = 0, button is not checked
+== state = getButtonState() with state = 2 button is checked and state = 1, button is not checked
 this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example:
 ----
-checked = getButtonStated(); 
+checked = getButtonState(); 
 if checked == 1 then 
     hideExits() 
 else 
@@ -3613,7 +3681,7 @@ end;
 
 [[showToolBar]]
 == showToolBar( name )
-shows tool bar name on the screen
+Shows toolbar with the given name name on the screen. Toolbars are the groups that buttons are contained in.
 
 [[hecho]]
 == hecho (text[, foreground color] [, background color] [, true/false] [, name of console])
@@ -3630,7 +3698,7 @@ The colors in arg2 and arg3 replace the normal defaults for your console. So if 
 
 [[hideToolBar]]
 == hideToolBar( name )
-hides tool bar name and makes it disappear. If all tool bars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.
+Hides the toolbar with the given name name and makes it disappear. If all toolbars of a tool bar area (top, left, right) are hidden, the entire tool bar area disappears automatically.
 
 
 [[disconnect]]
@@ -4177,8 +4245,11 @@ Opens a file chooser dialog, allowing the user to select a file or a folder visu
 Example:
 -------------------
 local path = invokeFileDialog(false, "Find me the gfx folder, please")
-if path then echo(path) end
+echo(path)
 -------------------
+
+[NOTE]
+If the user clicks Cancel in the dialog, the `path` returned will then be "" (blank string).
 
 [[setBorderTop]]
 == setBorderTop( size )
@@ -4199,6 +4270,10 @@ Sets the width of the right border. <<setBorderTop,-> setBorderTop>>
 [[setBordercolor]]
 == setBorderColor( r, g, b )
 Sets the color of the border in RGB color e.g. setBorderColor( 255, 0, 0 ) sets the border to red.
+
+[[hasFocus]]
+== bool = hasFocus()
+Returns true or false depending on if the main Mudlet window is in focus. By focus, it means that the window is selected and you can type in the input line and etc. Not in focus means that the window isn't selected, some other window is currently in focus.
 
 [[handleWindowResizeEvent]]
 == handleWindowResizeEvent()
@@ -4221,8 +4296,26 @@ end
 Set the scrollback buffer size to linesLimit and determine how many lines are deleted at once in case the lines limit is reached. The lower the limit the less memory being used. On machines with low RAM you should consider limiting the size of buffers that don't need a lot of scrollback e.g. system notification windows, chat windows etc..
 Default values are linesLimit = 100000 lines with 10000 lines of batch deletion. Minimum buffer size is 100 lines with 10 lines batch deletion.
 
+[[searchRoom]]
+== searchRoom (room name)
+Searches for rooms that match (by case-insensitive, substring match) the given room name. It returns a key-value table in form of `roomname = roomid`, ie:
 
+--------
+table {
+  'office of the guildmaster': 2004
+  'Hall of Cultural Masterpieces': 10361
+  'the Grand Master's Chambers': 21546
+  'the chambers of Master Blasterson': 10210
+  'Exhibit of the Techniques of the Master Artisans': 6324
+  'the master's gallery': 19067
+  'office of the Guildmaster': 5340
+  'the master's salon': 18978
+  'The Enlightened Master': 11313
+  'hall before the Master Chambers': 6592
+  'central hall in the beastmaster apartments': 7712
+  'before the Master Ravenwood Tree': 1337
+}
+--------
 
-
-
+If no rooms are found, then an empty table is returned.
 
