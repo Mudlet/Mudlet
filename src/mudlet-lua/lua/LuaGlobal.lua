@@ -32,7 +32,8 @@ local packages = {
 	-- TODO probably don't need to load this file
 	"geyser/GeyserTests.lua",
 	"GUIUtils.lua",
-	"Other.lua"
+	"Other.lua",
+	"GMCP.lua",
 	}
 
 for _, package in ipairs(packages) do
