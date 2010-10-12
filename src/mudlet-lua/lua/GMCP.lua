@@ -12,34 +12,27 @@ end
 
 -- Register a user to the system.
 function registerUser(user)
-		if registeredUsers[user] then 
-				print(string.format("<cyan>%s <white>is already registered in the system.",user))
-				return false
-		else
-				registeredUsers[user] = true
+		if registeredUsers[user] then return "user exists" 
+		else registeredUsers[user] = true
 		end
-end
-
--- Check to see if the user is indeed registered.
-function isRegisteredUser(user)
-		if not registeredUsers[user] then
-				print(string.format("<cyan>%s <white>isn't registered to the system. Please register before enabling modules.",user))
-				return false
-		end
-		return true
+		
+		return "user registered"
 end
 
 -- Add a user to a module
 local function addUser(user,module)
-		if not registeredModules[module][user] then
-				registeredModules[module][user] = true
-		end
+		registeredModules[module][user] = true
+		
+		return "user added"
 end
 
 -- Drop a user from a module
 local function dropUser(user,module)
-		if not registeredModules[module] then return end
-		if registeredModules[module][user] then registeredModules[module][user] = nil end
+		if not registeredModules[module] then return "no registered module" end
+		if not registeredModules[module][user] then return "user not linked" end
+		registeredModules[module][user] = nil
+
+		return "user dropped"
 end
 
 -- Get the user count of a module.
@@ -58,8 +51,7 @@ end
 
 -- Enable a module that isn't already enabled, and register it's use to a user.
 function enableModule(user,module)
-		-- Check to see if the user is registered in the system.
-		if not isRegisteredUser(user) then return false end
+		registerUser(user)
 
 		-- Check to see if the module is already enabled.
 		if not isRegisteredModule(module) then
@@ -73,11 +65,10 @@ end
 
 -- Remove a user from a module's user list. Disable the module if nobody is using it.
 function disableModule(user,module)
-		-- Check to see if the user is registered.
-		if not isRegisteredUser(user) then return false end
+		registerUser(user)
 
 		-- Make sure the module is enabled in the first place
-		if not isRegisteredModule(module) then return end
+		if not isRegisteredModule(module) then return "no registered module" end
 		
 		dropUser(user,module)
 
