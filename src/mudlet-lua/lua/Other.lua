@@ -495,3 +495,26 @@ function phpTable(...)
 	return newTable
 end
 
+
+
+--- <b><u>TODO</u></b> getColorWildcard(color)
+function getColorWildcard(color)
+	local color = tonumber(color)
+	local startc
+	local endc
+	local results = {}
+	
+	for i = 1, string.len(line) do
+		selectSection(i, 1)
+		if isAnsiFgColor(color) then
+			if not startc then if i == 1 then startc = 1 else startc = i + 1 end
+			else endc = i + 1 
+				if i == line:len() then results[#results + 1] = line:sub(startc, endc) end
+			end
+		elseif startc then
+			results[#results + 1] = line:sub(startc, endc)
+			startc = nil
+		end	
+	end
+	return results[1] and results or false
+end
