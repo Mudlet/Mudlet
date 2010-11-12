@@ -448,23 +448,6 @@ end
 
 
 
---- <b><u>TODO</u></b> SavedVariables:Add(tbl)
-function SavedVariables:Add(tbl)
-	if type(tbl) == 'string' then
-		self[tbl] = _G[tbl]
-	elseif type(tbl) == 'table' then
-		for k,v in pairs(_G) do
-			if _comp(v, tbl) then
-				self[k] = tbl
-			end
-		end
-	else
-		hecho"|cff0000Error registering table for persistence: invalid argument to SavedVariables:Add()"
-	end
-end
-
-
-
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
 function phpTable(...)
 	local newTable, keys, values = {}, {}, {}

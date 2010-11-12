@@ -309,12 +309,12 @@ function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
 		l_labelText = ""
 	end
 
-	local l_EchoString = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
+	local l__Echostring = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
 
-	echo(gaugeName, l_EchoString)
-	echo(gaugeName .. "_back", l_EchoString)
+	echo(gaugeName, l__Echostring)
+	echo(gaugeName .. "_back", l__Echostring)
 
-	gaugesTable[gaugeName].text = l_EchoString
+	gaugesTable[gaugeName].text = l__Echostring
 	gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
 end
 
@@ -706,7 +706,7 @@ end
 
 -- TODO is rex mandatory requirement now?
 if rex then
-	Echos = {
+	_Echos = {
 		Patterns = {
 			Hex = {
 				[[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
@@ -727,7 +727,7 @@ if rex then
 			},
 		Process = function(str, style)
 			local t = {}
-			for s, c, r in rex.split(str, Echos.Patterns[style][1]) do
+			for s, c, r in rex.split(str, _Echos.Patterns[style][1]) do
 				if c and (c:byte(1) == 92) then
 					c = c:sub(2)
 					if s then s = s .. c else s = c end
@@ -737,7 +737,7 @@ if rex then
 				if r then table.insert(t, "\27reset") end
 				if c then
 					if style == 'Hex' or style == 'Decimal' then
-						local fr, fg, fb, br, bg, bb = Echos.Patterns[style][2]:match(c)
+						local fr, fg, fb, br, bg, bb = _Echos.Patterns[style][2]:match(c)
 						local color = {}
 						if style == 'Hex' then
 							if fr and fg and fb then fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16) end
@@ -749,7 +749,7 @@ if rex then
 					elseif style == 'Color' then
 						if c == "<reset>" then table.insert(t, "\27reset")
 						else
-							local fcolor, bcolor = Echos.Patterns[style][2]:match(c)
+							local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
 							local color = {}
 							if fcolor and color_table[fcolor] then color.fg = color_table[fcolor] end
 							if bcolor and color_table[bcolor] then color.bg = color_table[bcolor] end
@@ -810,7 +810,7 @@ if rex then
 			end
 		end
 
-		local t = Echos.Process(str, style)
+		local t = _Echos.Process(str, style)
 
 		deselect()
 		reset()
