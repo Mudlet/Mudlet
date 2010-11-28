@@ -704,7 +704,6 @@ end
 
 
 
--- TODO is rex mandatory requirement now?
 if rex then
 	_Echos = {
 		Patterns = {
@@ -753,7 +752,11 @@ if rex then
 							local color = {}
 							if fcolor and color_table[fcolor] then color.fg = color_table[fcolor] end
 							if bcolor and color_table[bcolor] then color.bg = color_table[bcolor] end
-							table.insert(t, color)
+							if color.fg or color.bg then
+								table.insert(t, color)
+							else
+								table.insert(t, c)
+							end
 						end
 					end
 				end
