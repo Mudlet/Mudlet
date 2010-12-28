@@ -28,6 +28,7 @@ local packages = {
 	"geyser/GeyserLabel.lua",
 	"geyser/GeyserGauge.lua",
 	"geyser/GeyserMiniConsole.lua",
+	"geyser/GeyserMapper.lua",
 	"geyser/GeyserReposition.lua",
 	-- TODO probably don't need to load this file
 	"geyser/GeyserTests.lua",
