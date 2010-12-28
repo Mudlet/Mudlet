@@ -1,0 +1,9 @@
+syntax: glob
+Makefile
+debug
+release
+lib
+*~
+*.bak
+*.rej
+*.orig

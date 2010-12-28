@@ -1,0 +1,76 @@
+0.5.0
+-----
+- Irc::Session API additions:
+  - addBuffer() and buffers() for buffer management
+  - welcomed() signal, emitted when 001 is received
+- Added IRC capability support
+- Implemented IDENTIFY-MSG capability
+- Fixed "icu.pri: Unescaped backslashes are deprecated"
+- Remove buffer upon parting a channel
+- Fixed Session::raw()'s check of written bytes
+- Fixed #3 An incorrect buffer is created when StripNicks is off and
+  EchoMessages
+- Improved building on Mac
+  - Make a difference between frameworks and standard dylibs (depending
+    on Qt's installation style)
+  - Set INSTALL_NAME correctly
+
+0.4.1
+-----
+- Added support for static builds (qmake -config static)
+- Fixed qmake project messages output only once
+- Fixed MOC_DIR in release mode
+- Added default MacPorts paths for ICU
+- Fixed notices and messages from "real host" vs. "connected host" to get
+  directed to the same buffer
+- Fixed CTCP requests not to create a new buffer
+
+0.4.0
+-----
+- Introduced Irc::Buffer - the concept of server/channel/query specific buffers
+- Deprecated buffer-specific functionality in Irc::Session
+- Fixed tabs not to cause underlined text
+- Added a version number to the library
+- Added Irc::Rfc::toString()
+- Fixed euIRC connection problems
+
+0.3.2
+-----
+- Fixed problems with "unknown" messages
+- Fixed Irc::Session::connectSlotsByName() not to try to establish
+  a connection when the parameter types don't match
+- Code improvements
+
+0.3.1
+-----
+- Fixed compilation on Mac
+- Fixed Irc::Session::connected() and disconnected() to be emitted correctly
+- Fixed Irc::Session::connectSlotsByName() not to establish multiple 
+  connections when a slot exists multiple times (reimplemented)
+- Made Irc::Session::cmdMessage(), cmdNotice() and cmdCtcpAction() to
+  emit own messages, notices and actions. This simplifies client
+  implementation
+- Started working on auto tests and added code coverage support
+- Added a workaround for older Qt versions that don't have the 
+  QT_FORWARD_DECLARE_CLASS() macro defined
+
+0.3.0
+-----
+- Added SSL support
+- Quality & compatibility
+  - no_keywords
+  - QT_NO_CAST_FROM_ASCII
+  - QT_NO_CAST_TO_ASCII
+- Bug fixes & code improvements
+
+0.2.0
+-----
+- The first fully Qt-based version
+
+0.1.1
+-----
+- Added support for optional encoding detection with ICU
+
+0.1.0
+-----
+- The first internal release
