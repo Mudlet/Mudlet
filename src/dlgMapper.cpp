@@ -27,12 +27,13 @@
 
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 : QWidget( parent )
-, mpHost( pH )
 , mpMap( pM )
+, mpHost( pH )
 {
     setupUi(this);
 
     glWidget->mpMap = pM;
+    searchList->setSelectionMode( QAbstractItemView::SingleSelection );
     connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
     connect(ortho, SIGNAL(pressed()), glWidget, SLOT(fullView()));
     connect(singleLevel, SIGNAL(pressed()), glWidget, SLOT(singleView()));
@@ -131,6 +132,7 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
             }
             else
                 mpMap->mpHost->startSpeedWalk();
+            break;
         }
     }
 }

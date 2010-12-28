@@ -29,46 +29,45 @@
 class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
 {
     Q_OBJECT
-        
+
         public:
-        
+
         dlgConnectionProfiles(QWidget * parent = 0);
     void fillout_form();
     void copy_profile( QString );
     void writeProfileData( QString, QString, QString );
     QString readProfileData( QString, QString );
     QStringList readProfileHistory( QString, QString );
-    
+
 signals:
-    
+
     void signal_establish_connection( QString profile_name, int historyVersion );
     void accept();
     void update();
-    
+
 public slots:
-    
+
     void slot_chose_history();
-    void slot_update_name( const QString ) ;  
+    void slot_update_name( const QString ) ;
     void slot_update_url( const QString ) ;
     void slot_update_port( const QString ) ;
     void slot_update_login( const QString );
     void slot_update_pass( const QString );
     void slot_update_website( const QString );
     void slot_update_description();
-    
+
     void slot_item_clicked( QListWidgetItem * );
     void slot_update();
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_connection_dlg_finnished();
-    void slot_showmudlist_clicked ( bool checked );
-    void slot_finished ( int f );
-    void slot_update_autologin( int state );    
+
+    void slot_update_autologin( int state );
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();
-    
-    
+
+
 private:
     void deleteDirectory( QString );
     void deleteAllFiles( QString );
@@ -83,7 +82,7 @@ private:
     QPalette           mErrorPalette;
     QPalette           mReadOnlyPalette;
     QString            mCurrentProfileEditName;
-    
+
 };
 
 #endif

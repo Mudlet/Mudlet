@@ -33,26 +33,27 @@
 
 TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen )
 : QWidget( pW )
-, mpBuffer( pB )
-, mpHost( pH )
-, mpConsole( pC )
 , mCursorY( 0 )
+, mIsCommandPopup( false )
 , mIsTailMode( true )
+, mShowTimeStamps( isDebugConsole )
+//private
+, mForceUpdate( false )
 , mHighlight_on( false )
 , mHighlightingBegin( false )
 , mHighlightingEnd( false )
-, mMouseTracking( false )
-, mIsSplitScreen( isSplitScreen )
-, mIsDebugConsole( isDebugConsole )
-, mInversOn( false )
-, mPainterInit( false )
-, mpScrollBar( 0 )
 , mInit_OK( false )
-, mShowTimeStamps( isDebugConsole )
-, mForceUpdate( false )
+, mInversOn( false )
+, mIsDebugConsole( isDebugConsole )
 , mIsMiniConsole( false )
+, mIsSplitScreen( isSplitScreen )
 , mLastRenderBottom( 0 )
-, mIsCommandPopup( false )
+, mMouseTracking( false )
+, mPainterInit( false )
+, mpBuffer( pB )
+, mpConsole( pC )
+, mpHost( pH )
+, mpScrollBar( 0 )
 {
     if( ! mIsDebugConsole )
     {
@@ -391,16 +392,12 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
     QPoint P_topLeft  = rect.topLeft();
     QPoint P_bottomRight = rect.bottomRight();
     int x_topLeft = P_topLeft.x();
-    int y_topLeft = P_topLeft.y();
     int x_bottomRight = P_bottomRight.x();
-    int y_bottomRight = P_bottomRight.y();
 
     if( x_bottomRight > mScreenWidth * mFontWidth ) x_bottomRight = mScreenWidth * mFontWidth;
 
     int x1 = x_topLeft / mFontWidth;
-    int y1 = y_topLeft / mFontHeight;
     int x2 = x_bottomRight / mFontWidth;
-    int y2 = y_bottomRight / mFontHeight;
 
     int lineOffset = imageTopLine();
     bool invers = false;
@@ -413,7 +410,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
     int from = 0;
     for( int i=from; i<mScreenHeight; i++ )
     {
-        if( mpBuffer->buffer.size() <= i+lineOffset )
+        if( static_cast<int>(mpBuffer->buffer.size()) <= i+lineOffset )
         {
             break;
         }
@@ -551,8 +548,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
     int y2 = y_bottomRight / mFontHeight;
 
     int lineOffset = imageTopLine();
-    bool invers = false;
-    int _c = 0;
+    //bool invers = false;
+    //int _c = 0;
     int from = 0;
     if( lineOffset == 0 )
     {
@@ -623,7 +620,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
     drawBackground( p, deleteRect, mBgColor );//QColor(rand()%255,rand()%255,rand()%255));//mBgColor );
     for( int i=from; i<=y2; i++ )
     {
-        if( mpBuffer->buffer.size() <= i+lineOffset )
+        if( static_cast<int>(mpBuffer->buffer.size()) <= i+lineOffset )
         {
             break;
         }
@@ -634,11 +631,11 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
             timeOffset = 13;
         }
         int lineLength = mpBuffer->buffer[i+lineOffset].size() + timeOffset;
-        int doubleByteOffset = 0;
+        //int doubleByteOffset = 0;
         for( int i2=x1; i2<lineLength; )
         {
             QString text;
-            bool doubleByte = false;
+            //bool doubleByte = false;
             if( i2 < timeOffset )
             {
                 text = mpBuffer->timeBuffer[i+lineOffset];
@@ -826,7 +823,7 @@ void TTextEdit::highlight()
                 break;
             }
             mpBuffer->dirty[y] = true;
-            if( x < mpBuffer->buffer[y].size() )
+            if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
                 mpBuffer->buffer[y][x].invers = true;
             }
@@ -861,12 +858,12 @@ void TTextEdit::unHighlight( QRegion & region )
             {
                 break;
             }
-            if( y >= mpBuffer->buffer.size() )
+            if( y >= static_cast<int>(mpBuffer->buffer.size()) )
             {
                 break;
             }
             mpBuffer->dirty[y] = true;
-            if( x < mpBuffer->buffer[y].size() )
+            if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
                 mpBuffer->buffer[y][x].invers = false;
                 mpBuffer->dirty[y] = true;
@@ -892,13 +889,13 @@ void TTextEdit::swap( QPoint & p1, QPoint & p2 )
 
 void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 {
-    if( mFontWidth == 0 | mFontHeight == 0 ) return;
+    if( (mFontWidth == 0) | (mFontHeight == 0) ) return;
     int x = event->x() / mFontWidth;
     int y = ( event->y() / mFontHeight ) + imageTopLine();
     if( x < 0 || y < 0 ) return;
-    if( y < mpBuffer->buffer.size() )
+    if( y < static_cast<int>(mpBuffer->buffer.size()) )
     {
-        if( x < mpBuffer->buffer[y].size() )
+        if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
         {
             if( mpBuffer->buffer[y][x].link > 0 )
             {
@@ -948,6 +945,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
             int y1 = PC.y();
             for( int y=y1; y>=mPA.y(); y-- )
             {
+                if( y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0 ) break;
                 int x = mpBuffer->buffer[y].size()-1;
                 if( y == y1 )
                 {
@@ -960,7 +958,8 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
                     {
                         break;
                     }
-                    if( x < mpBuffer->buffer[y].size() )
+
+                    if( x < static_cast<int>(mpBuffer->buffer[y].size()) && x > 0 )
                     {
                         mpBuffer->buffer[y][x].invers = false;
                     }
@@ -988,6 +987,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
                 {
                     x = PC.x();
                 }
+                if( y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0 ) break;
                 mpBuffer->dirty[y] = true;
                 for( ; ; x++ )
                 {
@@ -995,7 +995,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
                     {
                         break;
                     }
-                    if( x < mpBuffer->buffer[y].size() )
+                    if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
                     {
                         mpBuffer->buffer[y][x].invers = false;
                     }
@@ -1028,9 +1028,9 @@ void TTextEdit::contextMenuEvent ( QContextMenuEvent * event )
 {
     int x = event->x() / mFontWidth;
     int y = ( event->y() / mFontHeight ) + imageTopLine();
-    if( y < mpBuffer->buffer.size() )
+    if( y < static_cast<int>(mpBuffer->buffer.size()) )
     {
-        if( x < mpBuffer->buffer[y].size() )
+        if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
         {
             if( mpBuffer->buffer[y][x].link > 0 )
             {
@@ -1121,9 +1121,9 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     {
         int x = event->x() / mFontWidth;
         int y = ( event->y() / mFontHeight ) + imageTopLine();
-        if( y < mpBuffer->buffer.size() )
+        if( y < static_cast<int>(mpBuffer->buffer.size()) )
         {
-            if( x < mpBuffer->buffer[y].size() )
+            if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
                 if( mpBuffer->buffer[y][x].link > 0 )
                 {
@@ -1155,9 +1155,9 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     {
         int x = event->x() / mFontWidth;
         int y = ( event->y() / mFontHeight ) + imageTopLine();
-        if( y < mpBuffer->buffer.size() )
+        if( y < static_cast<int>(mpBuffer->buffer.size()) )
         {
-            if( x < mpBuffer->buffer[y].size() )
+            if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
                 if( mpBuffer->buffer[y][x].link > 0 )
                 {
@@ -1235,7 +1235,7 @@ void TTextEdit::copySelectionToClipboard()
 
     for( int y=mPA.y(); y<=mPB.y()+1; y++ )
     {
-        if( y >= mpBuffer->buffer.size() ) return;
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
         while( x < static_cast<int>( mpBuffer->buffer[y].size() ) )
@@ -1314,7 +1314,7 @@ void TTextEdit::resizeEvent( QResizeEvent * event )
 
 void TTextEdit::wheelEvent ( QWheelEvent * e )
 {
-    int delta = e->delta() / 8 / 15;
+    //int delta = e->delta() / 8 / 15;
 
     int k = 3;//10 + (abs(delta) * 50) - 50;
     if( e->delta() < 0 )

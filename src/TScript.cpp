@@ -41,7 +41,6 @@ TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -50,7 +49,6 @@ TScript::TScript( QString name, Host * pHost )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -108,7 +106,10 @@ void TScript::compileAll()
 
 void TScript::callEventHandler( TEvent * pE )
 {
-    mpLua->callEventHandler( mName, pE );
+    if( isActive() )
+    {
+        mpHost->mLuaInterpreter.callEventHandler( mName, pE );
+    }
 }
 
 void TScript::compile()
@@ -140,7 +141,7 @@ bool TScript::setScript( QString & script )
 bool TScript::compileScript()
 {
     QString error;
-    if( mpLua->compile( mScript, error ) )
+    if( mpHost->mLuaInterpreter.compile( mScript, error ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
@@ -163,7 +164,7 @@ void TScript::execute()
             return;
         }
     }
-    mpLua->call( mFuncName, mName );
+    mpHost->mLuaInterpreter.call( mFuncName, mName );
 }
 
 

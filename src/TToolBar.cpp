@@ -25,12 +25,12 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
-TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW ) 
-: mpTAction( pA )
-, QDockWidget( pW )
+TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
+: QDockWidget( pW )
+, mpTAction( pA )
+, mVerticalOrientation( false )
 , mpWidget( new QWidget( this ) )
 , mName( name )
-, mVerticalOrientation( false )
 , mRecordMove( false )
 , mpLayout( 0 )
 , mItemCount( 0 )
@@ -94,8 +94,8 @@ void TToolBar::addButton( TFlipButton * pB )
         case 0: pB->setOrientation( Qt::Horizontal ); break;
         case 1: pB->setOrientation( Qt::Vertical ); break;
         case 2: pB->setOrientation( Qt::Vertical ); pB->setMirrored( true ); break;
-    }  
-    
+    }
+
     if( ! mpTAction->mUseCustomLayout )
     {
         // tool bar mButtonColumns > 0 -> autolayout
@@ -145,17 +145,17 @@ void TToolBar::slot_pressed()
     {
         return;
     }
-        
+
     TAction * pA = pB->mpTAction;
     pB->showMenu();
-       
+
     if( pB->isChecked() )
     {
         pA->mButtonState = 2;
     }
     else
     {
-        pA->mButtonState = 1;    
+        pA->mButtonState = 1;
     }
     if( pB->isChecked() )
         pA->mpHost->mpConsole->mButtonState = 1;
@@ -171,7 +171,7 @@ void TToolBar::clear()
     setWidget( pW );
     mpWidget->deleteLater();
     mpWidget = pW;
-   
+
     if( ! mpTAction->mUseCustomLayout )
     {
         mpLayout = new QGridLayout( mpWidget );
@@ -186,7 +186,7 @@ void TToolBar::clear()
     setStyleSheet( mpTAction->css );
     mpWidget->setStyleSheet( mpTAction->css );
     setTitleBarWidget( test );
-    
+
     mudlet::self()->removeDockWidget( this );
 }
 

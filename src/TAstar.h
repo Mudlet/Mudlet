@@ -72,9 +72,9 @@ public:
     : m_location(l), m_goal(goal) {}
   CostType operator()(Vertex u)
   {
-    CostType dx = m_location[m_goal].x - m_location[u].x;
-    CostType dy = m_location[m_goal].y - m_location[u].y;
-    CostType dz = m_location[m_goal].z - m_location[u].z;
+    //    CostType dx = m_location[m_goal].x - m_location[u].x;
+    //    CostType dy = m_location[m_goal].y - m_location[u].y;
+    //    CostType dz = m_location[m_goal].z - m_location[u].z;
     return 1;
     //return ::sqrt(dx * dx + dy * dy + dz * dz);
   }

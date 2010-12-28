@@ -104,7 +104,7 @@ void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
         pT->setID( getNewID() );
     }
 
-    if( ( parentPosition == -1 ) || ( childPosition >= mKeyRootNodeList.size() ) )
+    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mKeyRootNodeList.size()) ) )
     {
         mKeyRootNodeList.push_back( pT );
     }

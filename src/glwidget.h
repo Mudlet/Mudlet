@@ -38,8 +38,6 @@ public:
     ~GLWidget();
     void wheelEvent ( QWheelEvent * e );
 
-    GLuint makeObject();
-    GLuint object;
     bool is2DView;
 
     QSize minimumSizeHint() const;

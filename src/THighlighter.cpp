@@ -112,7 +112,7 @@ void THighlighter::highlightBlock( const QString & text )
     }
     while( startIndex >= 0 )
     {
-        int endIndex = endIndex = text.indexOf( commentEndExpression, startIndex );
+        int endIndex = text.indexOf( commentEndExpression, startIndex );
         int commentLength;
         if( endIndex == -1 )
         {

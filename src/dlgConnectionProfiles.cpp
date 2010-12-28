@@ -234,6 +234,7 @@ void dlgConnectionProfiles::slot_update_port( const QString port )
 
 void dlgConnectionProfiles::slot_update_name( const QString _n )
 {
+    QString _ignore = _n;
     QListWidgetItem * pItem = profiles_tree_widget->currentItem();
 
     QString name = profile_name_entry->text();
@@ -358,9 +359,6 @@ void dlgConnectionProfiles::slot_update_name( const QString _n )
     }
 }
 
-void dlgConnectionProfiles::slot_showmudlist_clicked ( bool checked )
-{
-}
 
 void dlgConnectionProfiles::slot_addProfile()
 {
@@ -1057,9 +1055,7 @@ void dlgConnectionProfiles::slot_connection_dlg_finnished()
 }
 
 
-void dlgConnectionProfiles::slot_finished(int f)
-{
-}
+
 
 void dlgConnectionProfiles::slot_cancel()
 {

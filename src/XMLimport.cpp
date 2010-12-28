@@ -69,38 +69,23 @@ void XMLimport::readMap()
     while( ! atEnd() )
     {
         readNext();
-        qDebug()<<"ELEMENT:"<<name();
-       /* if( isEndElement() )
-        {
-            break;
-        }*/
 
         if( isStartElement() )
         {
 
             if( name() == "areas" )
             {
-                qDebug()<<"##  reading area table:";
                 mpHost->mpMap->areaNamesMap.clear();
                 readAreas();
-                //readNext(); //end element
-                //continue;
             }
             else if( name() == "rooms" )
             {
-                qDebug()<<"#################rooms starting:";
                 readRooms();
             }
             else if( name() == "environments" )
             {
-                qDebug()<<"################# ENV starting:";
                 readEnvColors();
             }
-           /* else
-            {
-                qDebug()<<"READING UNKONWN MAP ELEMENT!!!!!";
-                readUnknownMapElement();
-            }*/
         }
     }
 }
@@ -203,7 +188,6 @@ void XMLimport::readRoom()
             pT->x = attributes().value("x").toString().toInt();
             pT->y = attributes().value("y").toString().toInt();
             pT->z = attributes().value("z").toString().toInt();
-            qDebug()<<"------>coordinates:"<<pT->x<<"/"<<pT->y<<"/"<<pT->z;
             continue;
         }
         else if( name() == "exit")
@@ -211,7 +195,6 @@ void XMLimport::readRoom()
             QString dir = attributes().value("direction").toString();
             int e = attributes().value("target").toString().toInt();
             if( dir == "" ) continue;
-            qDebug()<<"------->exit: dir="<<dir<<" e="<<e;
             if( dir == "north" )
             {
                 pT->north = e;

@@ -41,7 +41,6 @@ TKey::TKey( TKey * parent, Host * pHost )
 : Tree<TKey>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -50,7 +49,6 @@ TKey::TKey( QString name, Host * pHost )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mpLua( pHost->getLuaInterpreter() )
 {
 }
 
@@ -174,7 +172,7 @@ bool TKey::compileScript()
     mFuncName = QString("Key")+QString::number( mID );
     QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpLua->compile( code, error ) )
+    if( mpHost->mLuaInterpreter.compile( code, error ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
@@ -201,7 +199,7 @@ void TKey::execute()
             return;
         }
     }
-    mpLua->call( mFuncName, mName );
+    mpHost->mLuaInterpreter.call( mFuncName, mName );
 }
 
 TKey& TKey::clone(const TKey& b)

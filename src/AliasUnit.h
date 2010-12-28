@@ -47,8 +47,8 @@ public:
     bool                            killAlias( QString & name );
     bool                            registerAlias( TAlias * pT );
     void                            unregisterAlias( TAlias * pT );
-    bool                            serialize( QDataStream & );
-    bool                            restore( QDataStream &, bool );
+//    bool                            serialize( QDataStream & );
+//    bool                            restore( QDataStream &, bool );
     void                            reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     bool                            processDataStream( QString & );
     void                            dump();

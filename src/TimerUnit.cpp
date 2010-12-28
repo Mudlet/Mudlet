@@ -78,7 +78,7 @@ void TimerUnit::addTimerRootNode( TTimer * pT, int parentPosition, int childPosi
         pT->setID( getNewID() );
     }
 
-    if( ( parentPosition == -1 ) || ( childPosition >= mTimerRootNodeList.size() ) )
+    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mTimerRootNodeList.size()) ) )
     {
         mTimerRootNodeList.push_back( pT );
     }
@@ -141,7 +141,8 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
 
 void TimerUnit::removeAllTempTimers()
 {
-    qDebug()<<"vorher: TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
+    //qDebug()<<"vorher: TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
+    mCleanupList.clear();
     typedef list<TTimer *>::const_iterator I;
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
@@ -149,10 +150,11 @@ void TimerUnit::removeAllTempTimers()
         if( pChild->isTempTimer() )
         {
             pChild->killTimer();
+            pChild->mOK_code = false; //important to not crash on stale Lua function args
             markCleanup( pChild );
         }
     }
-    qDebug()<<"TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
+    //qDebug()<<"TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
 }
 
 void TimerUnit::_removeTimerRootNode( TTimer * pT )
@@ -342,7 +344,7 @@ bool TimerUnit::disableTimer( QString & name )
 
 TTimer * TimerUnit::findTimer( QString & name )
 {
-    TTimer * pT = 0;
+    //TTimer * pT = 0;
     QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {
@@ -355,6 +357,7 @@ TTimer * TimerUnit::findTimer( QString & name )
 
 bool TimerUnit::killTimer( QString & name )
 {
+    //qDebug()<<"TimerUnit::killTimer() name="<<name;
     typedef list<TTimer *>::const_iterator I;
     for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
@@ -378,10 +381,12 @@ qint64 TimerUnit::getNewID()
 
 void TimerUnit::doCleanup()
 {
+    //qDebug()<<"TimerUnit::doCleanup() enter";
     typedef list<TTimer *>::iterator I;
     for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
-        delete *it;
+        //qDebug()<<"--> DELETING:"<<(*it)->mName;
+        delete (*it);
     }
     mCleanupList.clear();
 }
@@ -396,7 +401,9 @@ void TimerUnit::markCleanup( TTimer * pT )
             return;
         }
     }
+
     mCleanupList.push_back( pT );
+    //qDebug()<<"==> ADDED to cleanup list";
 }
 
 

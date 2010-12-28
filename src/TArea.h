@@ -36,6 +36,9 @@ public:
 
     TArea( TMap * );
     void calcSpan();
+    QList<int> getCollisionNodes();
+    QList<int> getRoomsByPosition( int x, int y, int z );
+    QMap<int,QMap<int,QMultiMap<int,int> > > koordinatenSystem();
     void ausgaengeBestimmen();
     QMultiMap<int, QPair<int, int> > exits; // rooms that border on this area: key=in_area room id, pair.first=out_of_area room id pair.second=direction
     QList<int> rooms; // rooms of this area

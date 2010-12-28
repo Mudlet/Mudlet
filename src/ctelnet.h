@@ -30,6 +30,7 @@ copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
 #include <QTimer>
 #include <QTime>
 #include <QColor>
+#include "dlgComposer.h"
 
 const char TN_SE = 240;
 const char TN_NOP = 241;
@@ -68,7 +69,7 @@ const char TNSB_SEND = 1;
 
 class mudlet;
 class Host;
-class dlgComposer;
+//class dlgComposer;
 
 class cTelnet : public QObject
 {
@@ -94,14 +95,22 @@ public:
   void                recordReplay();
   void                loadReplay( QString & );
   void                _loadReplay();
-  bool                mResponseProcessed;
-  QTime               networkLatencyTime;
+
   void                setChannel102Variables( QString & );
+
+
+
+
+  bool                socketOutRaw(std::string & data);
+
+  bool                mResponseProcessed;
   double              networkLatency;
+  QTime               networkLatencyTime;
+  bool                mAlertOnNewData;
   bool                mGA_Driver;
   bool                mFORCE_GA_OFF;
-  bool                mAlertOnNewData;
-  bool                socketOutRaw(std::string & data);
+  dlgComposer *       mpComposer;
+
 
 protected slots:
 
@@ -131,8 +140,8 @@ private:
   void                gotPrompt( std::string & );
   void                postData();
 
-  bool                mUSE_IRE_DRIVER_BUGFIX;
-  bool                mLF_ON_GA;
+
+
   Host *              mpHost;
   QTcpSocket          socket;
   QHostAddress        mHostAddress;
@@ -147,10 +156,9 @@ private:
   double              networkLatencyMax;
   bool                mWaitingForResponse;
   std::queue<int>     mCommandQueue;
-  int                 mCommands;
+
   z_stream            mZstream;
-  bool                mMCCP_version_1;
-  bool                mMCCP_version_2;
+
   bool                mNeedDecompression;
   bool                mWaitingForCompressedStreamToStart;
   std::string         command;
@@ -165,6 +173,14 @@ private:
   QString             termType;
   QString             encoding;
   QTimer *            mpPostingTimer;
+  bool                mUSE_IRE_DRIVER_BUGFIX;
+  bool                mLF_ON_GA;
+
+  int                 mCommands;
+  bool                mMCCP_version_1;
+  bool                mMCCP_version_2;
+
+
   std::string         mMudData;
   bool                mIsTimerPosting;
   QTimer *            mTimerLogin;
@@ -175,7 +191,8 @@ private:
   bool                enableATCP;
   bool                enableGMCP;
   bool                enableChannel102;
-  dlgComposer *       mpComposer;
+
+
 };
 
 #endif

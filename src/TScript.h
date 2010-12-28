@@ -45,15 +45,15 @@ class TScript : public Tree<TScript>
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
-    
-    
+
+
     virtual          ~TScript();
                      TScript( TScript * parent, Host * pHost );
                      TScript( QString name, Host * pHost );
                      TScript& clone(const TScript& );
-    
+
     QString          getName()                                         { return mName; }
     void             setName( QString name )                           { mName = name; }
     void             compile();
@@ -71,10 +71,10 @@ public:
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()                             { return mEventHandlerList; }
     bool             isClone(TScript &b) const;
-    
-    
+
+
 private:
-    
+
                      TScript(){};
     QString          mName;
     QString          mScript;
@@ -83,7 +83,6 @@ private:
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
     QStringList      mEventHandlerList;
-    TLuaInterpreter* mpLua;
 };
 
 #endif

@@ -66,8 +66,6 @@
         <file>icons/tools-report-bug.png</file>
         <file>icons/tools-wizard.png</file>
         <file>icons/window-close.png</file>
-        <file>LuaGlobal.lua</file>
-        <file>mudlet_documentation.html</file>
         <file>fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf</file>
         <file>fonts/ttf-bitstream-vera-1.10/VeraSe.ttf</file>
         <file>fonts/ttf-bitstream-vera-1.10/VeraMono.ttf</file>
@@ -103,7 +101,6 @@
         <file>icons/midkemia_120_30.png</file>
         <file>icons/120x30RoDLogo.png</file>
         <file>icons/zombiemud.png</file>
-        <file>db.lua</file>
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/errors.png</file>
@@ -111,5 +108,6 @@
         <file>icons/mudlet_editor.png</file>
         <file>icons/mudlet_notepad.png</file>
         <file>icons/gw2.png</file>
+        <file>icons/internet-telephony.png</file>
     </qresource>
 </RCC>

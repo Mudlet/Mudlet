@@ -55,7 +55,7 @@ void ActionUnit::addActionRootNode( TAction * pT, int parentPosition, int childP
     {
         pT->setID( getNewID() );
     }
-    if( ( parentPosition == -1 ) || ( childPosition >= mActionRootNodeList.size() ) )
+    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mActionRootNodeList.size()) ) )
     {
         mActionRootNodeList.push_back( pT );
     }
@@ -241,7 +241,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
         bool found = false;
-        TToolBar * pTB;
+        TToolBar * pTB = 0;
         typedef list<TToolBar *>::iterator I2;
         for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
         {
@@ -278,7 +278,7 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
         bool found = false;
-        TEasyButtonBar * pTB;
+        TEasyButtonBar * pTB = 0;
         typedef list<TEasyButtonBar *>::iterator I2;
         for( I2 it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
         {

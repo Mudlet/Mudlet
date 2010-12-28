@@ -40,21 +40,24 @@ using namespace std;
 
 
 cTelnet::cTelnet( Host * pH )
-: mpHost(pH)
+: mResponseProcessed( true )
+, mAlertOnNewData( true )
+, mGA_Driver( false )
+, mFORCE_GA_OFF( false )
+, mpHost(pH)
 , mpPostingTimer( new QTimer( this ) )
 , mUSE_IRE_DRIVER_BUGFIX( false )
 , mLF_ON_GA( false )
-, mResponseProcessed( true )
-, mGA_Driver( false )
+
 , mCommands( 0 )
-, mAlertOnNewData( true )
-, enableATCP( false )
-, enableGMCP( false )
-, enableChannel102( false )
 , mMCCP_version_1( false )
 , mMCCP_version_2( false )
+, enableATCP( false )
+, enableGMCP( false )
+
+, enableChannel102( false )
 , mpComposer( 0 )
-, mFORCE_GA_OFF( false )
+
 {
 
     mIsTimerPosting = false;
@@ -267,7 +270,6 @@ bool cTelnet::sendData( QString & data )
     {
         data.replace(QChar('\n'),"");
     }
-
     TEvent * pE = new TEvent;
     pE->mArgumentList.append( "sysDataSendRequest" );
     pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -408,6 +410,7 @@ void cTelnet::processTelnetCommand( const string & command )
       {
           //server wants to enable some option (or he sends a timing-mark)...
           option = command[2];
+          int idxOption = static_cast<int>(option);
           if( option == static_cast<char>(200) ) // ATCP support
           {
               //FIXME: this is a bug, some muds offer both atcp + gmcp
@@ -449,7 +452,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h = TN_IAC;
               _h += TN_SB;
               _h += GMCP;
-              _h += "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\", \"Char.Items 1\", \"Comm.Channel 1\", \"Room 1\", \"Redirect 1\"]";
+              _h += "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\", \"Room 1\", \"IRE.Composer 1\"]";
               _h += TN_IAC;
               _h += TN_SE;
 
@@ -482,15 +485,15 @@ void cTelnet::processTelnetCommand( const string & command )
               break;
           }
 
-          heAnnouncedState[option] = true;
-          if( triedToEnable[option] )
+          heAnnouncedState[idxOption] = true;
+          if( triedToEnable[idxOption] )
           {
-              hisOptionState[option] = true;
-              triedToEnable[option] = false;
+              hisOptionState[idxOption] = true;
+              triedToEnable[idxOption] = false;
           }
           else
           {
-              if( !hisOptionState[option] )
+              if( !hisOptionState[idxOption] )
               {
                    //only if this is not set; if it's set, something's wrong wth the server
                    //(according to telnet specification, option announcement may not be
@@ -503,7 +506,7 @@ void cTelnet::processTelnetCommand( const string & command )
                        ( option == OPT_NAWS ) )
                    {
                        sendTelnetOption( TN_DO, option );
-                       hisOptionState[option] = true;
+                       hisOptionState[idxOption] = true;
                    }
                    else if( ( option == OPT_COMPRESS ) || ( option == OPT_COMPRESS2 ) )
                    {
@@ -513,13 +516,13 @@ void cTelnet::processTelnetCommand( const string & command )
                            //protocol says: reject MCCP v1 if you have previously accepted
                            //MCCP v2...
                            sendTelnetOption( TN_DONT, option );
-                           hisOptionState[option] = false;
+                           hisOptionState[idxOption] = false;
                            cout << "Rejecting MCCP v1, because v2 has already been negotiated." << endl;
                        }
                        else
                        {
                            sendTelnetOption( TN_DO, option );
-                           hisOptionState[option] = true;
+                           hisOptionState[idxOption] = true;
                            //inform MCCP object about the change
                            if( ( option == OPT_COMPRESS ) )
                            {
@@ -538,7 +541,7 @@ void cTelnet::processTelnetCommand( const string & command )
                    else
                    {
                        sendTelnetOption( TN_DONT, option );
-                       hisOptionState[option] = false;
+                       hisOptionState[idxOption] = false;
                    }
                }
           }
@@ -553,19 +556,20 @@ void cTelnet::processTelnetCommand( const string & command )
               cout << "cTelnet::processTelnetCommand() command = TN_WONT"<<endl;
           #endif
           option = command[2];
-          if( triedToEnable[option] )
+          int idxOption = static_cast<int>(option);
+          if( triedToEnable[idxOption] )
           {
-              hisOptionState[option] = false;
-              triedToEnable[option] = false;
-              heAnnouncedState[option] = true;
+              hisOptionState[idxOption] = false;
+              triedToEnable[idxOption] = false;
+              heAnnouncedState[idxOption] = true;
           }
           else
           {
               //send DONT if needed (see RFC 854 for details)
-              if( hisOptionState[option] || ( heAnnouncedState[option] ) )
+              if( hisOptionState[idxOption] || ( heAnnouncedState[idxOption] ) )
               {
                   sendTelnetOption( TN_DONT, option );
-                  hisOptionState[option] = false;
+                  hisOptionState[idxOption] = false;
 
                   if( ( option == OPT_COMPRESS ) )
                   {
@@ -580,7 +584,7 @@ void cTelnet::processTelnetCommand( const string & command )
                       //      cout << "MCCP v1 disabled !" << endl;
                   }
               }
-              heAnnouncedState[option] = true;
+              heAnnouncedState[idxOption] = true;
           }
           break;
       }
@@ -589,6 +593,7 @@ void cTelnet::processTelnetCommand( const string & command )
       {
           //server wants us to enable some option
           option = command[2];
+          int idxOption = static_cast<int>(option);
           if( option == static_cast<char>(200) ) // ATCP support
           {
             cout << "TELNET IAC DO ATCP" << endl;
@@ -630,15 +635,15 @@ void cTelnet::processTelnetCommand( const string & command )
                   if( option == OPT_TERMINAL_TYPE ) cout << "OK we are willing to enable telnet option TERMINAL_TYPE"<<endl;
                   if( option == OPT_NAWS ) cout << "OK we are willing to enable telnet option NAWS"<<endl;
                   sendTelnetOption( TN_WILL, option );
-                  myOptionState[option] = true;
-                  announcedState[option] = true;
+                  myOptionState[idxOption] = true;
+                  announcedState[idxOption] = true;
               }
               else
               {
                   cout << "SORRY, we are NOT WILLING to enable this telnet option." << endl;
                   sendTelnetOption (TN_WONT, option);
-                  myOptionState[option] = false;
-                  announcedState[option] = true;
+                  myOptionState[idxOption] = false;
+                  announcedState[idxOption] = true;
               }
           }
           if( option == OPT_NAWS )
@@ -653,12 +658,13 @@ void cTelnet::processTelnetCommand( const string & command )
           //only respond if value changed or if this option has not been announced yet
               //cout << "cTelnet::processTelnetCommand() command = TN_DONT"<<endl;
           option = command[2];
-          if( myOptionState[option] || ( !announcedState[option] ) )
+          int idxOption = static_cast<int>(option);
+          if( myOptionState[idxOption] || ( !announcedState[idxOption] ) )
           {
               sendTelnetOption (TN_WONT, option);
-              announcedState[option] = true;
+              announcedState[idxOption] = true;
           }
-          myOptionState[option] = false;
+          myOptionState[idxOption] = false;
           break;
       }
       case TN_SB:
@@ -861,7 +867,7 @@ void cTelnet::setGMCPVariables( QString & msg )
         arg = msg.section( " ", 1 );
     }
     arg.remove( '\n' );
-    //~ printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
+    printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
     mpHost->mLuaInterpreter.setGMCPTable( var, arg );
 }
 
@@ -892,20 +898,43 @@ void cTelnet::atcpComposerCancel()
 
 void cTelnet::atcpComposerSave( QString txt )
 {
-    //olesetbuf \n <text>
-    string _h;
-    _h += TN_IAC;
-    _h += TN_SB;
-    _h += 200;
-    _h += "olesetbuf \n ";
-    _h += txt.toLatin1().data();
-    _h += '\n';
-    _h += TN_IAC;
-    _h += TN_SE;
-    socketOutRaw( _h );
-    _h.clear();
-    _h += "*s\n";
-    socketOutRaw( _h );
+    if( ! mpHost->mEnableGMCP )
+    {
+        //olesetbuf \n <text>
+        string _h;
+        _h += TN_IAC;
+        _h += TN_SB;
+        _h += 200;
+        _h += "olesetbuf \n ";
+        _h += txt.toLatin1().data();
+            _h += '\n';
+        _h += TN_IAC;
+        _h += TN_SE;
+        socketOutRaw( _h );
+        _h.clear();
+        _h += "*s\n";
+        socketOutRaw( _h );
+    }
+    else
+    {
+        string _h;
+        _h += TN_IAC;
+        _h += TN_SB;
+        _h += GMCP;
+        _h += "IRE.Composer.SetBuffer";
+        if( txt != "" )
+        {
+            _h += "  ";
+            _h += txt.toLatin1().data();
+            _h += " ";
+        }
+        _h += TN_IAC;
+        _h += TN_SE;
+        socketOutRaw( _h );
+        _h.clear();
+        _h += "*s\n";
+        socketOutRaw( _h );
+    }
     if( ! mpComposer ) return;
     mpComposer->close();
     mpComposer = 0;
@@ -1005,7 +1034,7 @@ void cTelnet::gotRest( string & mud_data )
     //if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
     if( ! mGA_Driver )
     {
-        int i = mud_data.rfind('\n');
+        size_t i = mud_data.rfind('\n');
         if( i != string::npos )
         {
             mMudData += mud_data.substr( 0, i+1 );
@@ -1247,7 +1276,7 @@ void cTelnet::readPipe()
         {
             if( ch != '\r' ) cleandata += ch;
         }
-MAIN_LOOP_END: ;
+
         if( recvdGA )
         {
             mGA_Driver = true;
@@ -1291,7 +1320,6 @@ void cTelnet::handle_socket_signal_readyRead()
     }
 
     char buffer[100010];
-    bool gotData = false;
 
     int amount = socket.read( buffer, 100000 );
     buffer[amount+1] = '\0';
@@ -1317,14 +1345,12 @@ void cTelnet::handle_socket_signal_readyRead()
 
     string cleandata = "";
     recvdGA = false;
-    bool atcp_msg = false;
     for( int i = 0; i < datalen; i++ )
     {
         char ch = buffer[i];
 
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
-            char _ch = ch;
             #ifdef DEBUG
                 cout <<" SERVER SENDS telnet command "<<(unsigned int)_ch<<endl;
             #endif

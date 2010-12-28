@@ -143,6 +143,8 @@ static int got_array_value(lua_State* L) {
     lua_rawseti(L, -4, lua_tointeger(L, -3));
     lua_pushinteger(L, lua_tointeger(L, -2)+1);
     lua_replace(L, -3);
+    //HEIKO:
+    return 0;
 }
 
 static int to_value_start_map(void* ctx) {
@@ -783,8 +785,8 @@ static int js_generator_value(lua_State *L) {
 
             lua_pushnil(L);
             while ( lua_next(L, 2) != 0 ) {
-                size_t      len;
-                const char* str;
+                //size_t      len;
+                //const char* str;
 
                 // gen, obj, ?, key, val, func, gen, key
                 lua_pushcfunction(L, js_generator_string);

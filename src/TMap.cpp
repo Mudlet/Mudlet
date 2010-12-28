@@ -26,9 +26,9 @@
 #include "dlgMapper.h"
 
 TMap::TMap( Host * pH )
-: mpM( 0 )
+: mpHost( pH )
+, mpM( 0 )
 , mpMapper( 0 )
-, mpHost( pH )
 {
 }
 
@@ -56,6 +56,7 @@ bool TMap::setRoomCoordinates( int id, int x, int y, int z )
     rooms[id]->x = x;
     rooms[id]->y = y;
     rooms[id]->z = z;
+
     return true;
 }
 
@@ -75,7 +76,16 @@ int TMap::createNewRoomID()
 bool TMap::setExit( int from, int to, int dir )
 {
     if( ! rooms.contains( from ) ) return false;
-    if( ! rooms.contains( to ) ) return false;
+    if( to > 0 )
+    {
+        if( ! rooms.contains( to ) ) return false;
+    }
+    else
+    {
+        to = -1;
+    }
+
+    mPlausaOptOut = 0;
 
     switch( dir )
     {
@@ -86,18 +96,18 @@ bool TMap::setExit( int from, int to, int dir )
         case DIR_WEST: rooms[from]->west = to; break;
         case DIR_SOUTH: rooms[from]->south = to; break;
         case DIR_SOUTHEAST: rooms[from]->southeast = to; break;
-        case DIR_SOUTWEST: rooms[from]->southwest = to; break;
+        case DIR_SOUTHWEST: rooms[from]->southwest = to; break;
         case DIR_UP: rooms[from]->up = to; break;
         case DIR_DOWN: rooms[from]->down = to; break;
         case DIR_IN: rooms[from]->in = to; break;
         case DIR_OUT: rooms[from]->out = to; break;
         default: return false;
     }
+    return true;
 }
 
 void TMap::init( Host * pH )
 {
-    qDebug()<<"TMap::init() host="<<mpHost->getName();
     areas.clear();
     int s_areas = 0;
     QMap<int,int> s_area_exits;
@@ -125,8 +135,6 @@ void TMap::init( Host * pH )
     }
     qDebug()<<"statistics: areas:"<<s_areas;
     qDebug()<<"area exit stats:" <<s_area_exits;
-
-    //pM->raise();
 }
 
 void TMap::buildAreas()
@@ -154,6 +162,323 @@ void TMap::setView(float x, float y, float z, float zoom )
     }
 }
 
+void TMap::tidyMap( int areaID )
+{
+}
+
+void TMap::solveRoomCollision( int id, int creationDirection, bool PCheck )
+{
+}
+
+QList<int> TMap::detectRoomCollisions( int id )
+{
+    if( ! rooms.contains(( id ) ) )
+    {
+        QList<int> l;
+        return l;
+    }
+    int area = rooms[id]->area;
+    int x = rooms[id]->x;
+    int y = rooms[id]->y;
+    int z = rooms[id]->z;
+    QList<int> collList;
+    if( ! areas.contains( area ) )
+    {
+        QList<int> l;
+        return l;
+    }
+    TArea * pA = areas[area];
+    //pA->rooms;
+    for( int i=0; i< pA->rooms.size(); i++ )
+    {
+        if( rooms[pA->rooms[i]]->x == x && rooms[pA->rooms[i]]->y == y && rooms[pA->rooms[i]]->z == z )
+        {
+            collList.push_back( pA->rooms[i] );
+        }
+    }
+
+    return collList;
+}
+
+void TMap::astBreitenAnpassung( int id, int id2 )
+{
+}
+
+void TMap::astHoehenAnpassung( int id, int id2 )
+{
+}
+
+bool TMap::plausabilitaetsCheck( int area )
+{
+}
+
+bool TMap::fixExits( int id, int dir )
+{
+}
+
+bool TMap::fixExits2( int id )
+{
+}
+
+
+void TMap::getConnectedNodesGreaterThanX( int id, int min )
+{
+    if( ! rooms.contains(( id ) ) || id < 1 || mTestedNodes.contains(id) || conList.contains(id) )
+    {
+        return;
+    }
+    if( rooms[id]->x < min )
+    {
+        return;
+    }
+
+    conList.append( id );
+    if( rooms[id]->north > 0 )
+    {
+        if( rooms.contains( rooms[id]->north ) && rooms[id]->north > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->north, min );
+    }
+    if( rooms[id]->south > 0 )
+    {
+        if( rooms.contains( rooms[id]->south ) && rooms[id]->south > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->south, min );
+    }
+    if( rooms[id]->northwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->northwest ) && rooms[id]->northwest > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->northwest, min );
+    }
+    if( rooms[id]->northeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->northeast ) && rooms[id]->northeast > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->northeast, min );
+    }
+    if( rooms[id]->southwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->southwest ) && rooms[id]->southwest > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->southwest, min );
+    }
+    if( rooms[id]->southeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->southeast ) && rooms[id]->southeast > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->southeast, min );
+    }
+    if( rooms[id]->west > 0 )
+    {
+        if( rooms.contains( rooms[id]->west ) && rooms[id]->west > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->west, min );
+    }
+    if( rooms[id]->east > 0 )
+    {
+        if( rooms.contains( rooms[id]->east ) && rooms[id]->east > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->east, min );
+    }
+    if( rooms[id]->up > 0 )
+    {
+        if( rooms.contains( rooms[id]->up ) && rooms[id]->up > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->up, min );
+    }
+    if( rooms[id]->down > 0 )
+    {
+        if( rooms.contains( rooms[id]->down ) && rooms[id]->down > 0 )
+            getConnectedNodesGreaterThanX( rooms[id]->down, min );
+    }
+}
+
+void TMap::getConnectedNodesSmallerThanX( int id, int min )
+{
+    if( ! rooms.contains(( id ) ) || id < 1 || mTestedNodes.contains(id) || conList.contains(id) )
+    {
+        return;
+    }
+    if( rooms[id]->x > min )
+    {
+        return;
+    }
+
+    conList.append( id );
+    if( rooms[id]->north > 0 )
+    {
+        if( rooms.contains( rooms[id]->north ) && rooms[id]->north > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->north, min );
+    }
+    if( rooms[id]->south > 0 )
+    {
+        if( rooms.contains( rooms[id]->south ) && rooms[id]->south > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->south, min );
+    }
+    if( rooms[id]->northwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->northwest ) && rooms[id]->northwest > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->northwest, min );
+    }
+    if( rooms[id]->northeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->northeast ) && rooms[id]->northeast > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->northeast, min );
+    }
+    if( rooms[id]->southwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->southwest ) && rooms[id]->southwest > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->southwest, min );
+    }
+    if( rooms[id]->southeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->southeast ) && rooms[id]->southeast > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->southeast, min );
+    }
+    if( rooms[id]->west > 0 )
+    {
+        if( rooms.contains( rooms[id]->west ) && rooms[id]->west > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->west, min );
+    }
+    if( rooms[id]->east > 0 )
+    {
+        if( rooms.contains( rooms[id]->east ) && rooms[id]->east > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->east, min );
+    }
+    if( rooms[id]->up > 0 )
+    {
+        if( rooms.contains( rooms[id]->up ) && rooms[id]->up > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->up, min );
+    }
+    if( rooms[id]->down > 0 )
+    {
+        if( rooms.contains( rooms[id]->down ) && rooms[id]->down > 0 )
+            getConnectedNodesSmallerThanX( rooms[id]->down, min );
+    }
+}
+
+void TMap::getConnectedNodesGreaterThanY( int id, int min )
+{
+
+    if( ! rooms.contains(( id ) ) || id < 1 || mTestedNodes.contains(id) || conList.contains(id) )
+    {
+        return;
+    }
+    if( rooms[id]->y < min )
+    {
+        return;
+    }
+
+    conList.append( id );
+    if( rooms[id]->north > 0 )
+    {
+        if( rooms.contains( rooms[id]->north ) && rooms[id]->north > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->north, min );
+    }
+    if( rooms[id]->south > 0 )
+    {
+        if( rooms.contains( rooms[id]->south ) && rooms[id]->south > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->south, min );
+    }
+    if( rooms[id]->northwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->northwest ) && rooms[id]->northwest > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->northwest, min );
+    }
+    if( rooms[id]->northeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->northeast ) && rooms[id]->northeast > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->northeast, min );
+    }
+    if( rooms[id]->southwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->southwest ) && rooms[id]->southwest > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->southwest, min );
+    }
+    if( rooms[id]->southeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->southeast ) && rooms[id]->southeast > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->southeast, min );
+    }
+    if( rooms[id]->west > 0 )
+    {
+        if( rooms.contains( rooms[id]->west ) && rooms[id]->west > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->west, min );
+    }
+    if( rooms[id]->east > 0 )
+    {
+        if( rooms.contains( rooms[id]->east ) && rooms[id]->east > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->east, min );
+    }
+    if( rooms[id]->up > 0 )
+    {
+        if( rooms.contains( rooms[id]->up ) && rooms[id]->up > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->up, min );
+    }
+    if( rooms[id]->down > 0 )
+    {
+        if( rooms.contains( rooms[id]->down ) && rooms[id]->down > 0 )
+            getConnectedNodesGreaterThanY( rooms[id]->down, min );
+    }
+}
+
+void TMap::getConnectedNodesSmallerThanY( int id, int min )
+{
+
+    if( ! rooms.contains(( id ) ) || id < 1 || mTestedNodes.contains(id) || conList.contains(id) )
+    {
+        return;
+    }
+    if( rooms[id]->y > min )
+    {
+        return;
+    }
+
+    conList.append( id );
+    if( rooms[id]->north > 0 )
+    {
+        if( rooms.contains( rooms[id]->north ) && rooms[id]->north > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->north, min );
+    }
+    if( rooms[id]->south > 0 )
+    {
+        if( rooms.contains( rooms[id]->south ) && rooms[id]->south > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->south, min );
+    }
+    if( rooms[id]->northwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->northwest ) && rooms[id]->northwest > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->northwest, min );
+    }
+    if( rooms[id]->northeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->northeast ) && rooms[id]->northeast > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->northeast, min );
+    }
+    if( rooms[id]->southwest > 0 )
+    {
+        if( rooms.contains( rooms[id]->southwest ) && rooms[id]->southwest > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->southwest, min );
+    }
+    if( rooms[id]->southeast > 0 )
+    {
+        if( rooms.contains( rooms[id]->southeast ) && rooms[id]->southeast > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->southeast, min );
+    }
+    if( rooms[id]->west > 0 )
+    {
+        if( rooms.contains( rooms[id]->west ) && rooms[id]->west > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->west, min );
+    }
+    if( rooms[id]->east > 0 )
+    {
+        if( rooms.contains( rooms[id]->east ) && rooms[id]->east > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->east, min );
+    }
+    if( rooms[id]->up > 0 )
+    {
+        if( rooms.contains( rooms[id]->up ) && rooms[id]->up > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->up, min );
+    }
+    if( rooms[id]->down > 0 )
+    {
+        if( rooms.contains( rooms[id]->down ) && rooms[id]->down > 0 )
+            getConnectedNodesSmallerThanY( rooms[id]->down, min );
+    }
+}
+
 bool TMap::gotoRoom( int r )
 {
     mTargetID = r;
@@ -168,7 +493,7 @@ bool TMap::gotoRoom( int r1, int r2 )
 
 bool TMap::findPath( int from, int to )
 {
-     typedef adjacency_list<listS, vecS, undirectedS, no_property, property<edge_weight_t, cost> > mygraph_t;
+     typedef adjacency_list<listS, vecS, directedS, no_property, property<edge_weight_t, cost> > mygraph_t;
      typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
      typedef mygraph_t::vertex_descriptor vertex;
      typedef mygraph_t::edge_descriptor edge_descriptor;
@@ -198,159 +523,139 @@ bool TMap::findPath( int from, int to )
          locations.push_back( l );
          if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
          {
-             if( rooms[rooms[i]->north]->hasExit(i) )
-             {
-                 edgeCount++;
-                 edge_descriptor e;
-                 bool inserted;
-                 tie(e, inserted) = add_edge( i,
-                                              rooms[i]->north,
-                                              g );
-                 weightmap[e] = rooms[rooms[i]->north]->weight;
-             }
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->north,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->north]->weight;
          }
          if( rooms[i]->south != -1 && rooms.contains( rooms[i]->south ) && !rooms[rooms[i]->south]->isLocked )
          {
-             if( rooms[rooms[i]->south]->hasExit(i) )
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->south,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->south]->weight;
+         }
+         if( rooms[i]->northeast != -1 && rooms.contains( rooms[i]->northeast ) && !rooms[rooms[i]->northeast]->isLocked )
+         {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->northeast,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->northeast]->weight;
+         }
+         if( rooms[i]->east != -1 && rooms.contains( rooms[i]->east ) && !rooms[rooms[i]->east]->isLocked )
+         {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->east,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->east]->weight;
+         }
+         if( rooms[i]->west != -1 && rooms.contains( rooms[i]->west ) && !rooms[rooms[i]->west]->isLocked )
+         {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->west,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->west]->weight;
+         }
+         if( rooms[i]->southwest != -1 && rooms.contains( rooms[i]->southwest ) && !rooms[rooms[i]->southwest]->isLocked )
+         {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->southwest,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->southwest]->weight;
+         }
+         if( rooms[i]->southeast != -1 && rooms.contains( rooms[i]->southeast ) && !rooms[rooms[i]->southeast]->isLocked )
+         {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->southeast,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->southeast]->weight;
+         }
+         if( rooms[i]->northwest != -1 && rooms.contains( rooms[i]->northwest ) && !rooms[rooms[i]->northwest]->isLocked )
+         {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->northwest,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->northwest]->weight;
+         }
+         if( rooms[i]->up != -1 && rooms.contains( rooms[i]->up ) && !rooms[rooms[i]->up]->isLocked )
+         {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->up,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->up]->weight;
+         }
+         if( rooms[i]->down != -1 && rooms.contains( rooms[i]->down ) && !rooms[rooms[i]->down]->isLocked )
+         {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->down,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->down]->weight;
+         }
+         if( rooms[i]->in != -1 && rooms.contains( rooms[i]->in ) && !rooms[rooms[i]->in]->isLocked )
+         {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->in,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->in]->weight;
+         }
+         if( rooms[i]->out != -1 && rooms.contains( rooms[i]->out ) && !rooms[rooms[i]->out]->isLocked )
+         {
+              edgeCount++;
+              edge_descriptor e;
+              bool inserted;
+              tie(e, inserted) = add_edge( i,
+                                           rooms[i]->out,
+                                           g );
+              weightmap[e] = rooms[rooms[i]->out]->weight;
+         }
+         if( rooms[i]->other.size() > 0 )
+         {
+             QMapIterator<int, QString> it( rooms[i]->other );
+             while( it.hasNext() )
              {
+                 it.next();
+                 int _id = it.key();
                  edgeCount++;
                  edge_descriptor e;
                  bool inserted;
                  tie(e, inserted) = add_edge( i,
-                                              rooms[i]->south,
+                                              _id,
                                               g );
-                 weightmap[e] = rooms[rooms[i]->south]->weight;
+                 weightmap[e] = rooms[_id]->weight;
              }
-         }
-         if( rooms[i]->northeast != -1 && rooms.contains( rooms[i]->northeast ) && !rooms[rooms[i]->northeast]->isLocked )
-         {
-             if( rooms[rooms[i]->northeast]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->northeast,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->northeast]->weight;
-            }
-         }
-         if( rooms[i]->east != -1 && rooms.contains( rooms[i]->east ) && !rooms[rooms[i]->east]->isLocked )
-         {
-             if( rooms[rooms[i]->east]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->east,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->east]->weight;
-            }
-         }
-         if( rooms[i]->west != -1 && rooms.contains( rooms[i]->west ) && !rooms[rooms[i]->west]->isLocked )
-         {
-             if( rooms[rooms[i]->west]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->west,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->west]->weight;
-            }
-         }
-         if( rooms[i]->southwest != -1 && rooms.contains( rooms[i]->southwest ) && !rooms[rooms[i]->southwest]->isLocked )
-         {
-             if( rooms[rooms[i]->southwest]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->southwest,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->southwest]->weight;
-            }
-         }
-         if( rooms[i]->southeast != -1 && rooms.contains( rooms[i]->southeast ) && !rooms[rooms[i]->southeast]->isLocked )
-         {
-             if( rooms[rooms[i]->southeast]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->southeast,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->southeast]->weight;
-            }
-         }
-         if( rooms[i]->northwest != -1 && rooms.contains( rooms[i]->northwest ) && !rooms[rooms[i]->northwest]->isLocked )
-         {
-             if( rooms[rooms[i]->northwest]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->northwest,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->northwest]->weight;
-            }
-         }
-         if( rooms[i]->up != -1 && rooms.contains( rooms[i]->up ) && !rooms[rooms[i]->up]->isLocked )
-         {
-             if( rooms[rooms[i]->up]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->up,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->up]->weight;
-            }
-         }
-         if( rooms[i]->down != -1 && rooms.contains( rooms[i]->down ) && !rooms[rooms[i]->down]->isLocked )
-         {
-             if( rooms[rooms[i]->down]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->down,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->down]->weight;
-            }
-         }
-         if( rooms[i]->in != -1 && rooms.contains( rooms[i]->in ) && !rooms[rooms[i]->in]->isLocked )
-         {
-             if( rooms[rooms[i]->in]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->in,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->in]->weight;
-            }
-         }
-         if( rooms[i]->out != -1 && rooms.contains( rooms[i]->out ) && !rooms[rooms[i]->out]->isLocked )
-         {
-             if( rooms[rooms[i]->out]->hasExit(i) )
-             {
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             rooms[i]->out,
-                                             g );
-                weightmap[e] = rooms[rooms[i]->out]->weight;
-            }
          }
      }
      cout << "TOTAL: initialized rooms:"<<roomCount<<" edges:"<<edgeCount<<endl;
@@ -448,20 +753,32 @@ bool TMap::findPath( int from, int to )
              else if( rooms[curRoom]->in == rooms[*spi]->id )
              {
                  mDirList.push_back("in");
-             }else if( rooms[curRoom]->out == rooms[*spi]->id )
+             }
+             else if( rooms[curRoom]->out == rooms[*spi]->id )
              {
                  mDirList.push_back("out");
              }
+             else if( rooms[curRoom]->other.size() > 0 )
+             {
+                 QMapIterator<int, QString> it( rooms[curRoom]->other );
+                 while( it.hasNext() )
+                 {
+                     it.next();
+                     if( it.key() == rooms[*spi]->id )
+                     {
+                         mDirList.push_back( it.value() );
+                     }
+                 }
+             }
 
              curRoom = *spi;
-
          }
          cout << endl << "PATH FOUND: Total travel time: " << d[goal] << endl;
          return true;
      }
      if( rooms.contains(start) && rooms.contains(goal))
      {
-        cout << "Didn't find a path from " << rooms[start]->id << "to"
+        cout << "Didn't find a path from " << rooms[start]->id << " -to- "
              << rooms[goal]->id << " ROOM NOT IN MAP!" << endl;
      }
      else
@@ -473,7 +790,7 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 5;
+    int version = 6;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
@@ -510,6 +827,7 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << rooms[i]->zoom;
         ofs << rooms[i]->name;
         ofs << rooms[i]->isLocked;
+        ofs << rooms[i]->other;
     }
 
     return true;
@@ -587,6 +905,10 @@ bool TMap::restore()
             ifs >> rooms[i]->zoom;
             ifs >> rooms[i]->name;
             ifs >> rooms[i]->isLocked;
+            if( version >= 6 )
+            {
+                ifs >> rooms[i]->other;
+            }
         }
 
 
@@ -620,6 +942,7 @@ bool TMap::restore()
             //msgBox.exec();
         }
     }
+    return canRestore;//FIXME
 }
 
 

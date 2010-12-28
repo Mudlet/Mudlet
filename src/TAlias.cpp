@@ -40,7 +40,6 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 : Tree<TAlias>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mpLua( pHost->getLuaInterpreter() )
 , mIsTempAlias( false )
 {
 }
@@ -50,7 +49,6 @@ TAlias::TAlias( QString name, Host * pHost )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mpLua( pHost->getLuaInterpreter() )
 , mIsTempAlias( false )
 {
 }
@@ -79,17 +77,17 @@ bool TAlias::match( QString & toMatch )
     if( ! isActive() ) return false;
 
     bool matchCondition = false;
-    bool ret = false;
-    bool conditionMet = false;
+    //bool ret = false;
+    //bool conditionMet = false;
     pcre * re = mpRegex;
     if( re == NULL ) return false; //regex compile error
 
-    const char *error;
+    //const char *error;
     char * subject = (char *) malloc(strlen(toMatch.toLocal8Bit().data())+1);
     strcpy( subject, toMatch.toLocal8Bit().data() );
     unsigned char *name_table;
-    int erroffset;
-    int find_all;
+    //int erroffset;
+    //int find_all;
     int namecount;
     int name_entry_size;
 
@@ -184,7 +182,7 @@ bool TAlias::match( QString & toMatch )
         tabptr = name_table;
         for( i = 0; i < namecount; i++ )
         {
-            int n = (tabptr[0] << 8) | tabptr[1];
+            //int n = (tabptr[0] << 8) | tabptr[1];
             tabptr += name_entry_size;
         }
     }
@@ -375,7 +373,7 @@ bool TAlias::compileScript()
     mFuncName = QString("Alias")+QString::number( mID );
     QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpLua->compile( code, error ) )
+    if( mpHost->mLuaInterpreter.compile( code, error ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
@@ -402,7 +400,7 @@ void TAlias::execute()
             return;
         }
     }
-    mpLua->call( mFuncName, mName );
+    mpHost->mLuaInterpreter.call( mFuncName, mName );
 }
 
 

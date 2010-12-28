@@ -54,12 +54,12 @@ Mudlet Manual
 
 [[introduction]]
 == Introduction
-Welcome to *Mudlet*, a modern MUD client for GNU/Linux, Windows and Mac OSX that offers all the tools to get the most out of your gaming experience. 
+Welcome to *Mudlet*, a modern MUD client for GNU/Linux, Windows and Mac OSX that offers all the tools to get the most out of your gaming experience.
 
-Throughout this document we hope to familiarize you with the basic aspects of Mudlet, from the interface to its _very_ powerful and feature rich scripting backend 
-The main focus in the development of Mudlet has been efficiency and performance, but we also try to make it as easily accessible as possible. However, keep in mind that this is a complex piece of software with a large set of tools that does require some deeper understanding of the underlying principles. To use Mudlet in any meaningful way, you have to take a closer look at the technical section in this manual. 
+Throughout this document we hope to familiarize you with the basic aspects of Mudlet, from the interface to its _very_ powerful and feature rich scripting backend
+The main focus in the development of Mudlet has been efficiency and performance, but we also try to make it as easily accessible as possible. However, keep in mind that this is a complex piece of software with a large set of tools that does require some deeper understanding of the underlying principles. To use Mudlet in any meaningful way, you have to take a closer look at the technical section in this manual.
 
-If you are not familiar with using modern MUD clients in general you should also take a look at the general introduction to MUD clients section at the beginning of this manual. 
+If you are not familiar with using modern MUD clients in general you should also take a look at the general introduction to MUD clients section at the beginning of this manual.
 You are welcome to ask questions on the forum of our website. If you find a bug, please let us know.
 
 
@@ -98,7 +98,7 @@ For these, and various other, reasons the administrators and owners of the corre
 By including scripting support in Mudlet, we effectively give you the ability to create and utilize AI tool-kits, however, we do not endorse or promote the usage of these systems if it's prohibited in your MUD. Keep in mind that by cheating you can lessen the quality of gameplay for both, your fellow players and yourself.
 
 === 1.3 Basic scripting
-The following part of the guide is written for new beginners in scripting. If you're coming over from zMud or cMud, you may move on to section two. 
+The following part of the guide is written for new beginners in scripting. If you're coming over from zMud or cMud, you may move on to section two.
 
 ==== 1.4 Variables - basics
 Variables are containers for data. In Lua, they can store numbers or words. You can use variables to store important information like how much gold do you have, or have them remember things for you.
@@ -112,7 +112,7 @@ variable = number
 Or to make it remember some text:
 
 [source,lua]
------	
+-----
 variable = "variable_name"
 ----
 
@@ -193,18 +193,18 @@ close the magical of storing
 and once you're done, do the exact same thing nine more times... trice a day.
 __________________________
 
-Alternatively, you just create an alias that would do this all with a single command - for example, `quest`. 
+Alternatively, you just create an alias that would do this all with a single command - for example, `quest`.
 
 ===== 1.8 Making a simple alias
 To get started, go click on the `Aliases` button in Mudlet, and then on the `Add` one. This will make a blank alias for you, which we'll now fill in.
 
-The `Alias name` field is optional - it's mainly used for the alias listing that you see on the left as an easy way to distinguish all of the aliases. 
-You can just name our alias `test` for now. 
+The `Alias name` field is optional - it's mainly used for the alias listing that you see on the left as an easy way to distinguish all of the aliases.
+You can just name our alias `test` for now.
 The `Pattern` field is where you put your regex pattern to describe on what command that you are typing in the command line, your new alias will spring into action. Let's say, we want our new alias to send the command "say hello" whenever we type "sh". The regex pattern would be "^sh$". Then we put "say hello" into the substitution field. After you have saved and activated your new alias "test", whenever you type "sh" Mudlet will not send "sh", but "say hello" instead. We call this substitution process alias expansion.
 
-Mudlet uses Perl regular expression aliases. Regexes are a special way of matching patterns of words. For the beginners it is enough to think of them as a general way to specify the words itself and their placement within the line. 
+Mudlet uses Perl regular expression aliases. Regexes are a special way of matching patterns of words. For the beginners it is enough to think of them as a general way to specify the words itself and their placement within the line.
 For basic alias it is enough to know that the character ^ symbolizes the beginning of the line and the character $ symbolizes the end of the line.
-If you want to make an alias "tw" that sends the command "take weapon", you don't have to care about placement or pattern matching in general. 
+If you want to make an alias "tw" that sends the command "take weapon", you don't have to care about placement or pattern matching in general.
 All you need to do is fill "tw" in the field called "Regex" and type "take weapon" in the field called "substitution". Then you need to save the new alias by clicking on the "Save" icon in the top middle.
 The symbol for unsaved items disappears and makes way for a little blue checkbox. If this box is checked the alias is active. If the blue box is empty, the alias is deactivated and will not work unless you press the "activate" toggle padlock icon.
 Now you are ready to go. Type "tw" in the command line and press the enter key. Mudlet will send "take weapon" to the MUD.
@@ -212,10 +212,10 @@ Alias as basically, a feature to save you a bit of typing - much like buttons wh
 To learn more about more complex aliases have a look at section 2 of the manual.
 
 ==== 1.9 Simple Triggers
-Triggers are an automation feature offered in all MUD clients. They help you respond quicker a particular situation and generally make things more convenient for you since you need to do less manual work as your triggers will do the hard work for you often times. This helps you concentrate more on the important aspects of the game and lessen stress. 
+Triggers are an automation feature offered in all MUD clients. They help you respond quicker a particular situation and generally make things more convenient for you since you need to do less manual work as your triggers will do the hard work for you often times. This helps you concentrate more on the important aspects of the game and lessen stress.
 The way a trigger works is simple: You define some text that you want to trigger some action. This is called the trigger pattern. When the trigger "sees" this text in the MUD output, it'll run the commands you've told it to.
 Example: Whenever you see a bunny, you want to attack it. You type "bunny" in the data field titled "add to list" and then either press the enter key or click on the little + icon next to the input line to add this word to the list of texts this trigger fires on.
-Now you type "kill bunny" in the field called "send plain text". Then click on the save icon to save the trigger and activate your new trigger (= blue checkbox icon in front of the trigger name in the trigger tree on the right side is checked). When the trigger is active each time the word "bunny" will appear in the MUD output, your trigger will issue the command "kill bunny" automatically as long as it is active. 
+Now you type "kill bunny" in the field called "send plain text". Then click on the save icon to save the trigger and activate your new trigger (= blue checkbox icon in front of the trigger name in the trigger tree on the right side is checked). When the trigger is active each time the word "bunny" will appear in the MUD output, your trigger will issue the command "kill bunny" automatically as long as it is active.
 When you want to stop hunting bunnies, you can simply select the bunny trigger and then click on the padlock icon to deactivate the trigger.
 The trigger will stop firing until you re-enable it again via the padlock icon.
 If you lock a group of triggers or an entire trigger branch, all triggers in this branch will be locked until you remove the lock again. The locking starts from the root of the tree down to the end. As soon as a lock is met the trigger engine will skip the locked branch. Locking and unlocking branches is one of the most common actions you have to take care of when playing. You turn on your defensive triggers when engaging into a battle and you turn them off afterwards, or you turn on your harvesting triggers only when you are going to harvest.
@@ -235,7 +235,7 @@ The skeleton drops scimitar.
 Perl Style Regular Expression: The skeleton drops (.*)\.
 Script: send("take " .. matches[2])
 ----
-The expression +(.*)+ matches any characters that the client receives between +The skeleton drops_+ (NB: notice the blank at the end) and the full-stop. 
+The expression +(.*)+ matches any characters that the client receives between +The skeleton drops_+ (NB: notice the blank at the end) and the full-stop.
 +matches[2]+ simply transfers _the first matched text fitting the search criteria_ into the output (matches[1] contains the entire matched text, matches[2] contains the first capture group. More on this in section two of the manual).
 
 ===== 1.11 Matching multiple unknowns
@@ -261,7 +261,7 @@ OUTPUT: take an apple
 Most MUDs can't handle determiners, such as articles (i.e. +a+, +an+, +the+) or quantifiers (e.g. +five+, +some+, +each+), in user-input. To match this line we could either create multiple triggers matching every possible article or a regular expression filtering out these words:
 ----
 Perl Style Regular Expression: (.*) drops (a|an|the|some|a couple of|a few|) (.*).
-Script: 
+Script:
 send("take " .. matches[4])
 ----
 Once again, note that we're using the third match (+matches[4]+) this time.
@@ -365,11 +365,11 @@ Log files have a similar naming convention to the autosaved profiles: date#time.
 
 [[export]]
 == Exporting and Importing Profiles or Packages
-Mudlet supports XML packages that can be imported and exported while playing. You can find a package section on the forum at http://mudlet.sourceforge.net where you can download demo packages or ready made packages for your MUD or upload your own packages to share your work with other players. A package can contain anything ranging from a single trigger to hundreds of button groups, trigger groups aliases - in other words, entire "systems". 
+Mudlet supports XML packages that can be imported and exported while playing. You can find a package section on the forum at http://mudlet.sourceforge.net where you can download demo packages or ready made packages for your MUD or upload your own packages to share your work with other players. A package can contain anything ranging from a single trigger to hundreds of button groups, trigger groups aliases - in other words, entire "systems".
 
 === Importing Packages
 To import a package, open the script editor and click the import icon, select your xml package file and import it. Package files might be compressed to save space. If the file is compressed, you'll need to uncompress it before importing it.
-The imported package will be stored permanently in your profile when you safe the profile. If you don't like the imported package, delete its components manually or simply don't save the profile. Then the new content will be lost on restart. Good packages will be organized in such a way that they will be easy to update or remove.  
+The imported package will be stored permanently in your profile when you safe the profile. If you don't like the imported package, delete its components manually or simply don't save the profile. Then the new content will be lost on restart. Good packages will be organized in such a way that they will be easy to update or remove.
 
 Packages are nothing else, but profiles - or parts of profiles that can be exchanged, imported and exported between your own profiles and between different players. From a technical perspective a package and a profile xml file are the same thing.
 
@@ -381,7 +381,7 @@ Mudlet stores your saved profiles as XML files in your home directory under "<mu
 echo( getMudletHomeDir() .. "\n" )
 -------
 To export your entire profile e. g. to make a backup on a flash drive, use the "save profile as" button.
-You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You'll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder that e.g. is named after the package you'd like to make. 
+You can export packages of a trigger branch, alias branch, function key, scripts etc. by clicking on a folder in the tree of the particular item in question and then click on the export icon. You'll be asked to give a filename for your package. You can export arbitrarily complex structures by moving them into a folder that e.g. is named after the package you'd like to make.
 
 === Sharing your System with others - Making complex Packages
 If you have written a nice set of triggers, buttons, scripts etc. or maybe even a fully fledged "system" of some sort and you want to share it with others, you can make a nice packages that other people can import with a single mouse click.
@@ -395,7 +395,7 @@ One of the major design goals in Mudlet was to integrate scripts and variables i
 ----
 totalKills = getVariable("killedMonsters") + getVariable("killedVillains")
 echo( "kills=" .. totalKills )
----- 
+----
 In Mudlet, the above code translates into:
 ----
 totalKills = killedMonsters + killedVillains
@@ -419,14 +419,14 @@ echo( "I have killed " .. myKills .. " monsters today." )
 ----------
 ***********************
 .Lua Primer: Variables, Strings & numbers
-Lua variables can be either a string or a number. They are whatever there were initially initialized with or what data type they can be converted to. 
+Lua variables can be either a string or a number. They are whatever there were initially initialized with or what data type they can be converted to.
 ----
 a = "Jim"
 b = "Tom"
 c = 350
 d = 1
 -----
-Then you can write: 
+Then you can write:
 -----
 e = c + d and e will equal 351
 e = a .. b and e will equal "JimTom" note that you cant use a+b to concatenate string values. For this you must use ..
@@ -447,7 +447,7 @@ Now, whenever you add new variables to your variable definition script, the scri
 *First option*: Add a script group (a folder) and add a new script item for each variable you define. This way, editing a variable definition will only reset the edited variable and none of the others that are defined in different scripts. This has the added advantage that you have a nice graphical overview of your defined variables.
 [[diag_variable_orga_screen_small]]
 [icon="./images/icons/variable_orga_screen_small.png"]
-NOTE: Organize your variables 
+NOTE: Organize your variables
 
 *Second option (more advanced)*: Change the variable initialization to only initialize the variable if it hasn't been initialized before, thus keeping the values of previously defined variables. This would look like this:
 --------
@@ -491,7 +491,7 @@ myEnemies = { "Peter", "Jim", "Carl", "John" }
 ------
 To remove an item from the list you can use the function listRemove( listName, item ).
 === Saving Variable Values to Disc
-Having statistics scripts that last as long as the session lasts is a nice thing, but it makes more sense to write the variables to disc and reload them when you play the next time. To do this you have to save your variables. Mudlet has 2 ways to implement variable persistence. First, you can tell Mudlet to save all of your variables on exit automatically and ask Mudlet to automatically restore them when the session gets reloaded the next time you play on this profile. 
+Having statistics scripts that last as long as the session lasts is a nice thing, but it makes more sense to write the variables to disc and reload them when you play the next time. To do this you have to save your variables. Mudlet has 2 ways to implement variable persistence. First, you can tell Mudlet to save all of your variables on exit automatically and ask Mudlet to automatically restore them when the session gets reloaded the next time you play on this profile.
 Second, you can take care of saving your variables yourself and reloading them yourself. This gives you more control and will be the preferred solution in bigger systems.
 
 To be continued ...
@@ -502,7 +502,7 @@ To be continued ...
 IMPORTANT: QUICKSTART: Here is a video tutorial on how to do basic aliases in Mudlet: http://blip.tv/file/2288749
 
 Alias are triggers that operate on user input. Mudlet uses hierarchically ordered powerful Perl regex expression alias.
-We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlets alias engine. 
+We have explicitly chosen not to offer multi condition alias, alias chains or the same trigger types the trigger engine offers because this would be way over the top and is simply not needed for alias expansion - although it should be noted that the processes are closely related, except that aliases, i.e. input triggers, operate on a different data stream, namely the user input stream, whereas triggers operate on the MUD output data stream. The only real difference between output triggers and input triggers is that input triggers can change the input stream they work on, whereas output triggers cannot change the stream itself - output triggers can change what is printed on the screen as a result of the stream, but they cannot change the stream itself. This is a fundamental difference and a deeper understanding is key to getting to grips with Mudlets alias engine.
 When you enter a command on the keyboard and press enter or return, the text that you have typed in the command line will be forwarded to the alias unit, i. e. the input trigger unit, in form of the Lua variable [red]+command+. This variable will be matched against all active alias in the hierarchy unless access to an alias branch is locked by the user or by a script. *If an input trigger matches, it will intercept the user command and the original command will be ignored*. Upon a match the clear text command is being send as a command to the MUD in replacement of the original command, if a clear text command has been specified by the user _and_ the attached alias script is being executed. However, the initial command that the user has typed in the command line will *not* be sent unless you do this as part of your script. Consequently, if you want your input trigger to send a command to the MUD, you'll either have to specify a clear text command for simple cases or send commands via the attached alias script e.g. send("kill monster"). You may argue that you feel that it is unnecessary work to be forced to send a command replacement yourself, but this very fact makes our alias system way more powerful because it gives you complete control about what is happening. Why is this so? The initial user command is being held in the Lua variable [red]+command+. When this value changes within the alias unit processing chain, the initial user input that the input triggers work on can be rewritten and changed in the process. Consequently, you can substitute the user input step by step - or alias by alias - without that anything happens as far as sending commands is being concerned unless you explicitly decide to do so.
 
 [[aliasProcessing]]
@@ -517,16 +517,16 @@ For an input trigger to match the command text the same rules as explained above
 What does it mean that a regex is true or "matched"? A trigger or an alias fires - or executes its commands/script - when the text matches the pattern of the trigger or alias. In most cases this means that the text contains the trigger/alias pattern. If the regex pattern is [blue,#b0e0e6]+reen+ then a text "The green house" will match because "reen" is contained in the text. More complex regex patterns can also hold information on where in the text a certain pattern must occur in order to match. [blue,#b0e0e6]+^tj+ only matches when the letters "tj" occur at the beginning of the text. Consequently, a text like "go tj" would not match.
 Regex patterns can also capture data like numbers, sequences of letters, words etc. at certain positions in the text. This is very useful for MUD related scripting and this is why it is explained below.
 
-Let's get back to alias. We start with a simple example. 
+Let's get back to alias. We start with a simple example.
 
 We want Mudlet to send "put weapon in bag" whenever we type "pwb". Consequently, the pattern is [,#b0e0e6]+pwb+ and as the task is so simple it's enough to enter "put weapon in bag" in the send field. Then we click on save to save the changes and activate the alias by clicking on the padlock icon.
 Then we leave the trigger editor and test our new alias. After typing "pwb" and pressing return Mudlet will send the command "put weapon in bag" to the MUD.
 
-Let's move on to a more complicated example that is needed very often. 
+Let's move on to a more complicated example that is needed very often.
 
 We want our script to automatically put the weapon in the correct bag as we have many bags and many weapons. The pattern stays the same. [,#b0e0e6]+\^pwb+ The \^ at the beginning of the line means that the command starts with pwd and no other letter in front of this. If we define our pattern more clearly, the pattern will match less often. Without the [,#b0e0e6]+^+ the alias will match and the alias script will always be run whenever there is the sequence of letters "pwd" in your commands. This may not always be what you want. This is why it's usually a good idea to make the pattern definition as exact as needed by being _less_ general. The more general the pattern, the more often it will match.
 
-Back to our task: The pattern is [,#b0e0e6]+\^pwb+. Let's assume that we have defined 2 variables in some other script. The variable "weapon" is the weapon we use and the variable "bag" is the name of the bag. NOTE: In Mudlet global variables can be accessed anywhere from within Mudlet scripts - no matter if they have been defined in a trigger script, in an alias script or in a key or button script. As soon as it's been defined it somewhere it is usable. To make sure that a variable is local only, i. e. cannot be referenced from other scripts, you have to use the keyword local in front of your variable definition. 
+Back to our task: The pattern is [,#b0e0e6]+\^pwb+. Let's assume that we have defined 2 variables in some other script. The variable "weapon" is the weapon we use and the variable "bag" is the name of the bag. NOTE: In Mudlet global variables can be accessed anywhere from within Mudlet scripts - no matter if they have been defined in a trigger script, in an alias script or in a key or button script. As soon as it's been defined it somewhere it is usable. To make sure that a variable is local only, i. e. cannot be referenced from other scripts, you have to use the keyword local in front of your variable definition.
 Back to our alias: Pattern is:[,#b0e0e6]+^pwb+ Script is:
 --------
 send( "put " .. weapon .. " in " .. bag )
@@ -545,7 +545,7 @@ Pattern:[,#b0e0e6]+^set bag (.*)+
 bag = matches[2]
 -------------
 
-Now let's go back to our initial problem. We want an alias to put our current weapon into our current bag. But what happens if we are in the middle of a fight and absolutely need to sip a healing potions because we are close to death and cannot take the risk that the bag may be too full to take the weapon? We want to upgrade out little alias to take into account that the bag may be full and chose an empty bag instead. To do this we set up a trigger that detects messages that indicate that the attempt to put the weapon in the bag failed. In this trigger we execute this little bag-is-full-detection-trigger 
+Now let's go back to our initial problem. We want an alias to put our current weapon into our current bag. But what happens if we are in the middle of a fight and absolutely need to sip a healing potions because we are close to death and cannot take the risk that the bag may be too full to take the weapon? We want to upgrade out little alias to take into account that the bag may be full and chose an empty bag instead. To do this we set up a trigger that detects messages that indicate that the attempt to put the weapon in the bag failed. In this trigger we execute this little bag-is-full-detection-trigger
 Trigger Pattern: (type substring) "Your bag is full."
 script:
 -------------
@@ -571,7 +571,7 @@ send( "tell Jane " .. matches[2]
 Sadly, Jane is your fiancée and the one thing she is a vegetarian and absolutely hates all words that relate to meat.
 Luckily, you know enough about aliases by now to make her believe that you'd never ever even think about meat. So you head to your global function script (any script item will do as long as you define your variables *outside of* your function definitions. See the scripts chapter below for more information.
 In your script "my global functions" you add a Lua table containing a list of all of all words that a vegetarian might hate.
-For example: 
+For example:
 -------------
 happyJaneTable = { "meat", "burger", "steak", "hamburger", "chickenburger" }
 ------------------
@@ -609,7 +609,7 @@ Example: You want to trigger on the word "pond" in a line such as: "The frog swi
 [[highlighters]]
 === Simple Highlighter Triggers
 
-TIP: *Beginners should use Mudlets automated highlight triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "highlight trigger" option and pick a foreground and a background color. When the trigger matches it automatically highlights its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text. 
+TIP: *Beginners should use Mudlets automated highlight triggers in the beginning to get the hang of the different trigger and pattern types quicker. Click on the "highlight trigger" option and pick a foreground and a background color. When the trigger matches it automatically highlights its pattern. This is the most used form of triggers in mudding as it is a quick way of highlighting words that are important to you at the moment. This helps you spot things at a single glance instead of reading the entire text.
 You don't have to know anything about scripting, regular expressions etc. to use highlight triggers. Just type in the word you like to be highlighted, select appropriate colors, save the new trigger and activate it.*
 
 More advanced users will often want to do custom highlighting from within scripts. This is how it works: If you want to highlight the word "pond" in the above example you have to add the following little Lua script to the script editor on the lower right side of the Script Editor window:
@@ -629,10 +629,10 @@ The simplest form of AND-Triggers in Mudlet are Trigger Chains or Filter Chains,
 
 [[triggerChains]]
 === Trigger Chains & Filter Chains
-"Chains" and "filters" are different trigger group entities in Mudlet and serve completely different ends. 
+"Chains" and "filters" are different trigger group entities in Mudlet and serve completely different ends.
 
 == Chains
-A chain is defined in Mudlet by making a trigger group and adding a trigger pattern to the group. A group without a pattern is a simple trigger group that serves no other purposes than adding structure to your trigger system in order to organize your triggers better. Such a normal trigger group will always grant access to its children unless it has been explicitly disabled (= all access to itself or any of its children is locked) either manually or by a script. 
+A chain is defined in Mudlet by making a trigger group and adding a trigger pattern to the group. A group without a pattern is a simple trigger group that serves no other purposes than adding structure to your trigger system in order to organize your triggers better. Such a normal trigger group will always grant access to its children unless it has been explicitly disabled (= all access to itself or any of its children is locked) either manually or by a script.
 
 A trigger group with a defined trigger pattern, however, will behave like a normal trigger and match if the pattern matches. Such a trigger group is called "chain head". A chain head will only grant access to its children if the trigger pattern has matched and the chain has been enabled. Thus, chains can be looked at as a mechanism to automatically enable and disable triggers or groups of triggers when a certain condition has been met i. e. the trigger pattern of the chain head has been matched. (However, technically this is not correct as disabled child triggers will not be invoked if the chain head matches. In other words, in chains you can still enabled/disabled elements. The idea of a chain can better be described by necessary and sufficient condition - both of which need to be met before a child trigger is being run.)
 
@@ -647,7 +647,7 @@ Imagine the following scenario: You want to collect some berries. You know that 
 In our case this is exactly what we want, because we don't want to collect all sorts of berries, but we only want 2 particular kinds, namely, strawberries and blackberries, and we know that these berries can only be trusted if they are picked inside a forest as other areas may contain contaminated berries. Now you add two regular triggers to our berry-in-the-forrest filter - one containing the condition: "strawberries" and the other one "blackberries". Then we add the commands to pick the particular kind of berry to both triggers (send field).
 Now what happens is that as soon as a room description reads "You are inside a forrest." the filter will let the line containing the room description pass through to our two berry triggers and they will issue commands to pick berries, if there are such berries. However, in any other situation the words "strawberries" and "blackberries" will *NOT* trigger a pick - only in the above scenario when the filter parent's condition is met. This is a very nice way to solve complicated problems with a few easy filter chains. This example is trivial, but using filter chains will rapidly show you how formerly complicated things that could only be solved with very complicated regular expressions can be solved easily now with a couple of filter chains.
 It should be noted that filter chains only work on single lines. This means that if the filter chain head "You are inside a forrest" is in a different line than the other child chain element triggers (stawberr- and black berry triggers) the triggers will not fire as the line that is being let through the filter does not contain the words strawberries or blackberries. Most MUDs, however, offer a feature that lets your client do the word wrapping. This is a very powerful tool for scripting and should be enabled by you in your MUD as then the entire room description or the entire tell will be sent out to Mudlet in one line and Mudlet will do the word wrapping for you. Now you can use filter chains much more effectively as the line content comprises many lines. Triggering will become much easier. Ask your MUD operators how to enable this feature. Most big MUDs can do this these days.
-Let's look at a practical example for a trigger chain: 
+Let's look at a practical example for a trigger chain:
 *************
 .Practical example: Prompt Detection Trigger Chain that raises a prompt event and checks balance
 My newbie prompt on Achaea looks like this [blue]+500h, 500m ex-+ when I have balance and [blue]+500h, 500m ex-+ when I have lost balance.
@@ -706,8 +706,8 @@ The condition type can be among others:
 In our example we chose condition type "substring" for all three conditions.
 Consequently, the trigger will fire the command or script 3 times i. e. the trigger will do on each line it is matched against because in every line at least one condition evaluates to true because the pattern is a substring of the line.
 ....
-in line #1 we get: pond = true. 
-in line #2 we get frog = true and 
+in line #1 we get: pond = true.
+in line #2 we get frog = true and
 in line #3 two conditions are true i.e. frog=true and stone = true
 ....
 Because an OR-trigger fires on the first condition that is true and ignores the rest the trigger will only execute 3 times on these 3 lines although 4 conditions are true.
@@ -721,7 +721,7 @@ Sadly, there are many unfriendly people in this world and somebody goes around a
 You can combine all forms of conditions with trigger chains, filters and Lua functions. Mudlet gives you relatively easy to use tools that require no programming background. However, these tools can evolve into complex powerful problem solving mechanisms if they are combined with each other thus enabling non-programmer users to solve problems that would need a profound programming background in other MUD clients.
 However, unlocking the full potential of Mudlet requires you do learn some Lua basics. In this manual we'll try to be as easy on you as we can in this respect, but it's highly recommended that you dig deeper into Lua after a while. It's one of the easiest fully fledged scripting languages available, easy to learn and the fastest of them all, and this is why it has been chosen by us. You don't need to become a programmer to be able to use Mudlet effectively. All you have to know is how to work with variables and how to do if conditions and maybe a few loops. But knowing more won't harm you and it will make your systems more effective.
 
-=== Lua Code Conditions & Variable Triggers - Expression Triggers 
+=== Lua Code Conditions & Variable Triggers - Expression Triggers
 In a Lua Code/Function Condition (LFC) you can run Lua code inside the trigger engine directly. The easiest example would be a simple variable trigger:
 Add a new trigger and chose pattern type Lua Function Condition.
 Then define this pattern:
@@ -745,12 +745,12 @@ end
 if A == B then (...)   ----> if A equals B
 if A ~= B then (...)   ----> if A *NOT* equals B
 if A <= B then (...)   ----> if A is smaller or equal to B
-if A >= B then (...)   ----> if A is greater or equal to B 
+if A >= B then (...)   ----> if A is greater or equal to B
 if A < B then (...)    ----> if A is smaller than B
 if A > B then (...)    ----> if A is greater than B
 -------------------
 The operators 'and' and 'or' behave differently in Lua than in most other programming languages as they are not guaranteed to return a boolean value.
-For more information look here: 
+For more information look here:
 ***************
 
 Lua function conditions effectively means that you run the Lua code they represent on every single line that is received from the MUD, unless the LFCs are part of a multi-condition trigger, in which case the LFCs would only be run when they would be the current test-condition of their respective trigger state. LFCs are implemented in such a way that the trigger engine only calls the compiled byte code, but running as few scripts as possible is always the best idea. LFCs are nice and handy, and for most people the performance aspect will not be relevant at all.
@@ -781,10 +781,10 @@ Mudlet supports 4 different sort of timers:
 =======
 . *Regular GUI Timers* that fire repeatedly in a certain interval specified by the user.
 . *Offset Timers* are child timers of a parent timer and fire a single shot after a specified timeout after their parent fired its respective timeout. This interval is an offset to the interval of its parent timer. Example: parent timer fires every 30 seconds and by doing so kicks off 3 offset timers with an offset of 5 seconds each. Consequently, the 3 children fire 5 seconds after each time the parent timer fired. Offset timers differ visually from regular timers and are represented with a + icon for offset. Offset timers can be turned on and off by the user just like any other timer.
-. *Temporary Timers* are very useful, and are the most common type of timer used for scripting purposes. They behave like regular timers, but they are one shot only timers. 
-. *Batch Job Timers* are a form of timer that issue a sequence of commands/scripts according to a certain timeout instead of a single command/script. This is a very important tool if the sequence of commands is important. Timers depend largely on the operating system you are using and it cannot be guaranteed under certain conditions that if you have set up 5 timers to fire after 1.3 seconds that the sequence in which they fire is the same sequence in which they were created. If the sequence of commands is important, you should always use batch job timers as this form of timers guarantees that the sequence of commands is observed. For example: If you want to make an auto-miner bot that digs its way into a gold mine digging left, down, down, right, left, down until a trigger catches a message that indicates that the mine is going to collapse and bury your poor soul unless you run for your life and head out of the mine. In this scenario the sequence of commands is vital as you'd lose your way and die. This is a classical case for a batch job timer. 
+. *Temporary Timers* are very useful, and are the most common type of timer used for scripting purposes. They behave like regular timers, but they are one shot only timers.
+. *Batch Job Timers* are a form of timer that issue a sequence of commands/scripts according to a certain timeout instead of a single command/script. This is a very important tool if the sequence of commands is important. Timers depend largely on the operating system you are using and it cannot be guaranteed under certain conditions that if you have set up 5 timers to fire after 1.3 seconds that the sequence in which they fire is the same sequence in which they were created. If the sequence of commands is important, you should always use batch job timers as this form of timers guarantees that the sequence of commands is observed. For example: If you want to make an auto-miner bot that digs its way into a gold mine digging left, down, down, right, left, down until a trigger catches a message that indicates that the mine is going to collapse and bury your poor soul unless you run for your life and head out of the mine. In this scenario the sequence of commands is vital as you'd lose your way and die. This is a classical case for a batch job timer.
 ========
-The most common usage of temporary timers is the function tempTimer(). It lets you specify a timeout after which a script is being run e.g. 
+The most common usage of temporary timers is the function tempTimer(). It lets you specify a timeout after which a script is being run e.g.
 ------
 tempTimer( 0.3, [[send("kill rat")]] )
 ------
@@ -1045,7 +1045,7 @@ Raised when the main window is resized, with the new height and width coordinate
 This sample code will echo whenever a resize happened with the new dimensions:
 --------
 function resizeEvent( event, x, y )
-	echo("RESIZE EVENT: event="..event.." x="..x.." y="..y.."\n")
+        echo("RESIZE EVENT: event="..event.." x="..x.." y="..y.."\n")
 end
 --------
 
@@ -1058,7 +1058,7 @@ Raised when a mouse button is _pressed down_ anywhere on the main window (note t
 
 --------
 function onClickHandler( event, button, x, y )
-	echo("CLICK event:"..event.." button="..button.." x="..x.." y="..y.."\n")
+        echo("CLICK event:"..event.." button="..button.." x="..x.." y="..y.."\n")
 end
 --------
 
@@ -1119,23 +1119,23 @@ The script, i.e. the call to the function showMultimatches() generates this outp
 The function showMultimatches() prints out the content of the table multimatches[n][m].
 You can now see what the table multimatches[][] contains in this case. The first trigger condition (=regex 1) got as the first full match "You have not completed any quests". This is stored in multimatches[1][1] as the value of key=1 in the sub-table matches[1] which, in turn, is the value of key=1 of the table multimatches[n][m].
 
-The structure of the table multimatches: 
+The structure of the table multimatches:
 
 ----
-multimatches { 
-                1 = {  
-                       matches[1] of regex 1 
-                       matches[2] of regex 1 
-                       matches[3] of regex 1 
+multimatches {
+                1 = {
+                       matches[1] of regex 1
+                       matches[2] of regex 1
+                       matches[3] of regex 1
                               ...
-                       matches[n] of regex 1 }, 
-                2 = {  
-                       matches[1] of regex 2 
+                       matches[n] of regex 1 },
+                2 = {
+                       matches[1] of regex 2
                        matches[2] of regex 2
                              ...
                        matches[n] of regex 2 },
                  ...         ...
-                n = { 
+                n = {
                        matches[1] of regex n
                        matches[2] of regex n
                              ...
@@ -1144,7 +1144,7 @@ multimatches {
 -----
 The sub-table matches[n] is the same table matches[n] you get when you have a standard non-multiline trigger.
 The value of the first key, i. e. matches[1], holds the first complete match of the regex. Subsequent keys hold the respective capture groups.
-For example: 
+For example:
 Let regex = "You have (\d+) gold and (\d+) silver" and the text from the MUD = "You have 5 gold and 7 silver coins in your bag."
 Then matches[1] contains "You have 5 gold and 7 silver", matches[2] = "5" and matches[3] = "7".
 In your script you could do:
@@ -1152,13 +1152,13 @@ In your script you could do:
 myGold = myGold + tonumber( matches[2] )
 mySilver = mySilver + tonumber( matches[3] )
 ----
-However, if you'd like to use this script in the context of a multiline trigger, matches[] would not be defined as there are more than one regex. 
+However, if you'd like to use this script in the context of a multiline trigger, matches[] would not be defined as there are more than one regex.
 You need to use multimatches[n][m] in multiline triggers. Above script would look like this if above regex would be the first regex in the multiline trigger:
 ----
 myGold = myGold + tonumber( multimatches[1][2] )
 mySilver = mySilver + tonumber( multimatches[1][3] )
 ----
-What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines. 
+What makes multiline triggers really shine is the ability to react to MUD output that is spread over multiple lines and only fire the action (=run the script) if all conditions have been fulfilled in the specified amount of lines.
 
 [[scripting-howtos]]
 == Scripting howtos
@@ -1198,7 +1198,7 @@ echo(room_number)
 === Triggering on ATCP events
 If you'd like to trigger on ATCP messages, then you need to create scripts to attach handlers to the ATCP messages. The ATCP handler names follow the same format as the `atcp` table - RoomNum, RoomExits, CharVitals and so on.
 
-While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place the event name you'd like your script to listen to into the `Add User Defined Event Handler:` field and press the + button to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function should it call for you when your handler receives a message. You do that by setting the `Script name:` to the function name in the script you'd like to be called. 
+While the concept of handlers for events is to be explained elsewhere in the manual, the quick rundown is this - place the event name you'd like your script to listen to into the `Add User Defined Event Handler:` field and press the + button to register it. Next, because scripts in Mudlet can have multiple functions, you need to tell Mudlet which function should it call for you when your handler receives a message. You do that by setting the `Script name:` to the function name in the script you'd like to be called.
 
 For example, if you'd like to listen to the RoomExits event and have it call the `process_exits()` function - register RoomExits as the event handler, make the script name be `process_exits`, and use this in the script:
 
@@ -1212,7 +1212,7 @@ Feel free to experiment with this to achieve the desired results. A http://forum
 
 [[aardwolf102]]
 == Aardwolf's 102 subchannel
-Similar to ATCP, Aardwolf includes a hidden channel of information that you can access in Mudlet since 1.1.1. Mudlet deals with it in the same way as with ATCP, so for full usage instructions see the <<atcp,ATCP>> section. All data is stored in the `channel102` table, such you can do 
+Similar to ATCP, Aardwolf includes a hidden channel of information that you can access in Mudlet since 1.1.1. Mudlet deals with it in the same way as with ATCP, so for full usage instructions see the <<atcp,ATCP>> section. All data is stored in the `channel102` table, such you can do
 
 -----
 display(channel102)
@@ -1223,31 +1223,31 @@ To see all the latest information that has been received. The event to create ha
 [[db]]
 == db: Mudlet DB Frontend
 
- 
+
 The DB package is meant to provide easier access to a database, so you don't have to know SQL or use the luasql module to set and get at your data. However, it does require that the luasql module be compiled and included in Mudlet to function - and this all is available since Mudlet 1.0.6.
- 
+
 === Creating a Database
 
- 
+
 Before you can store anything in a database, you need to create one. You may have as many independent databases as you wish, with each having as many unique tables-- what we will call sheets in this package, so as to avoid confusion with Lua tables - think spreadsheets.
- 
+
 To create a database, you use the db:create() function, passing it the name of your database and a Lua table containing its schema configuration. A schema is a mold for your database - it defines what goes where. Using the spreadsheet example, ths would mean that you'd define what goes into each column. A simple example:
 -----
         db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes"}})
 -----
 This will create a database which contains two sheets: one named friends, the other named enemies. Each has three columns, name, city and notes-- and the datatype of each are strings, though the types are very flexible and can be changed basically whenever you would like. It'll be stored in a file named Database_people.db in your Mudlet config directory on the hard drive should you want to share it.
- 
+
 It's okay to run this function repeatedly, or to place it at the top-level of a script so that it gets run each time the script is saved: the DB package will not wipe out or clear the existing data in this case. More importantly, this allows you to add columns to an existing sheet. If you change that line to:
 -----
         db:create("people", {friends={"name", "city", "notes"}, enemies={"name", "city", "notes", "enemied"}})
 -----
 It will notice that there is a new column on enemies, and add it to the existing sheet-- though the value will end up as nil for any rows which are already present. Similarly, you can add whole new sheets this way. It is not presently possible to -remove- columns or sheets without deleting the database and starting over.
- 
+
 A note on column or field names: you may not create a field which begins with an underscore. This is strictly reserved to the db package for special use.
 
 === Adding Data
 
- 
+
 To add data to your database, you must first obtain a reference (variable) for it. You do that with the db:get_database function, such as:
 -----
         local mydb = db:get_database("people")
@@ -1258,21 +1258,21 @@ The database object contains certain convenience functions (discussed later, but
 -----
 If you would like to add multiple rows at once to the same table, you can do that by just passing in multiple tables:
 -----
-        db:add(mydb.friends, 
+        db:add(mydb.friends,
                 {name="Ixokai", city="Magnagora"},
                 {name="Vadi", city="New Celest"},
                 {name="Heiko", city="Hallifax", notes="The Boss"}
         )
 -----
 Notice that by default, all columns of every table are considered optional-- if you don't include it in the add, then it will be set to its default value (which is nil by default)
- 
+
 For those familiar with databases: with the DB package, you don't have to worry about 'committing' or 'rolling back' any changes, it will commit after each action automatically. If you would like more control then this, see Transactions below.
- 
+
 You also cannot control what is the primary key of any sheets managed with DB, nor do you have to create one. Each row will get a unique integer ID that automatically increments, and this field can be accessed as "_row_id".
- 
+
 === Querying
 
- 
+
 Putting data in isn't any fun if you can't get it out. If you want every row from the sheet, you can do:
 -----
         db:fetch(mydb.friends)
@@ -1282,11 +1282,11 @@ But rarely is that actually useful; usually you want to get only select data. Fo
         db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"))
 -----
 So the basic command is - `db:fetch(_sheet_, _what to filter by_)`
-    
+
 The following filter operations are defined:
 -----
-        db:eq(field, value[, case_insensitive]) -- Defaults to case insensitive, pass true as the last arg to 
-        						reverse this behavior.
+        db:eq(field, value[, case_insensitive]) -- Defaults to case insensitive, pass true as the last arg to
+                                                        reverse this behavior.
         db:not_eq(field, value[, case_insensitive) -- Not Equal To
         db:lt(field, value) -- Less Than
         db:lte(field, value) -- Less Than or  Equal to.
@@ -1294,8 +1294,8 @@ The following filter operations are defined:
         db:gte(field, value) -- Greater Than or Equal To
         db:is_nil(field) -- If the column is nil
         db:is_not_nil(field) -- If the column is not nil
-        db:like(field, pattern) -- A simple matching pattern. An underscore matches any single character, 
-        				and a percent(%) matches zero or more characters. Case insensitive.
+        db:like(field, pattern) -- A simple matching pattern. An underscore matches any single character,
+                                        and a percent(%) matches zero or more characters. Case insensitive.
         db:not_like(field, pattern) -- As above, except it'll give you everything but what you ask for.
         db:between(field, lower_bound, upper_bound) -- Tests if the field is between the given bounds (numbers only).
         db:not_between(field, lower_bound, upper_bound) -- As above, only... not.
@@ -1307,7 +1307,7 @@ The db:in_ operator takes a little more explanation. Given a table, it tests if 
         db:in_(mydb.friends.city, {"Magnagora", "New Celest"})
 -----
 It tests if `city == "Magnagora" OR city == "New Celest"`, but with a more concise syntax for longer lists of items.
-        
+
 There are also two logical operators:
 -----
         db:AND(operation1, ..., operationN)
@@ -1315,18 +1315,18 @@ There are also two logical operators:
 -----
 You may pass multiple operations to db:fetch in a table array, and they will be joined together with an AND by default. For example:
 -----
-        db:fetch(mydb.friends, 
-        	{db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "X%")}
+        db:fetch(mydb.friends,
+                {db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "X%")}
         )
 -----
-This will return every record in the sheet which is in the city of Magnagora, and has a name that starts with an X. Again note that in LIKE patterns, a percent is 'zero or more characters' -- this is the same effect as "X.*" in pcre patterns. Similarly, an underscore matches any single characters and so is the same as a dot in pcre. 
- 
+This will return every record in the sheet which is in the city of Magnagora, and has a name that starts with an X. Again note that in LIKE patterns, a percent is 'zero or more characters' -- this is the same effect as "X.*" in pcre patterns. Similarly, an underscore matches any single characters and so is the same as a dot in pcre.
+
 Passing multiple expressions in an array to db:fetch is just a convenience, as its exactly the same as:
 -----
         db:fetch(mydb.friends, db:AND(db:eq(mydb.friends.city, "Magnagora"), db:like(mydb.friends.name, "I%")))
 -----
 The db:OR operation only takes two arguments, and will check to see if either of the two is true. You can nest these logical operators as deeply as you need to.
- 
+
 You can also just pass in a string directly to db:fetch, but you have to be very careful as this will be passed straight to the SQL layer. If you don't know any SQL then you want to avoid this... for example, in SQL there's a very big difference between double and single quotes. If you don't know that, then stick to the db functions. But an example is:
 -----
         db:fetch(mydb.friends, "city == 'Magnagora'")
@@ -1348,51 +1348,51 @@ The order of the returned rows from db:fetch is generally the same as the order 
 
 The first table array of fields that indicate the column names to sort by; the second is a flag to switch from the default ascending(smallest to largest) sort, to a descending(largest to smallest) sort. For example:
 -----
-	db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city})
+        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city})
 -----
 This will return all your friends in Magnagora, sorted by their name, from smallest to largest. To reverse this, you would simply do:
 -----
-	db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city}, true)
+        db:fetch(mydb.friends, db:eq(mydb.friends.city, "Magnagora"), {mydb.friends.city}, true)
 -----
 Including more then one field in the array will indicate that in the case that two rows have the same value, the second field should be used to sort them.
 
 If you would like to return ALL rows from a sheet, but still sort them, you can do that by passing nil into the query portion. For example:
 -----
-	db:fetch(mydb.friends, nil, {mydb.friends.city, mydb.friends.name})
+        db:fetch(mydb.friends, nil, {mydb.friends.city, mydb.friends.name})
 -----
 This will return every friend you have, sorted first by city and then their name.
 
 
 === Indexes and Types
 
- 
+
 The sheets we've defined thus far are very simple, but you can take more control over the process if you need to. For example, you may assign default values and types to columns, and the DB package will attempt to coerce them as appropriate. To do that, you change your db:create() call as:
 -----
         db:create("people", {
-                friends={"name", "city", "notes"}, 
+                friends={"name", "city", "notes"},
                 enemies={
-                        name="", 
-                        city="", 
-                        notes="", 
+                        name="",
+                        city="",
+                        notes="",
                         enemied="",
                         kills=0
                 }
         })
 -----
 This is almost the same as the original definition, but we've defined that our first four fields are strings with a default value of blank, and the new kills field which is an integer that starts off at 0. The only way to set a datatype is to set a default value at this time.
- 
+
 Please note, beneath the DB package is http://www.sqlite.org/[SQLite], and SQLite is very data-type neutral. It doesn't really care very much if you break those rules and put an integer in a string field or vice-versa, but the DB package will -- to a limited degree -- attempt to convert as appropriate, especially for the operations that work on numbers.
- 
+
 You may also create both standard and unique indexes. A unique index enforces that a certain criteria can only happen once in the sheet. Now, before you go and make indexes, pause and consider. There is no right or wrong answer when it comes to what to index: it depends on what kind of queries you do regularly. If in doubt, don't make an index. Indexes will speed up reading data from the sheet, but they will slow down writing data.
- 
+
 To add an index, pass either the _index or _unique keys in the table definition. An example:
 -----
         db:create("people", {
-                friends={"name", "city", "notes"}, 
+                friends={"name", "city", "notes"},
                 enemies={
-                        name="", 
-                        city="", 
-                        notes="", 
+                        name="",
+                        city="",
+                        notes="",
                         enemied="",
                         kills=0,
                         _index = { "city" },
@@ -1401,13 +1401,13 @@ To add an index, pass either the _index or _unique keys in the table definition.
         })
 -----
 You can also create compound indexes, which is a very advanced thing to do. One could be: `_unique = { {"name", "city"} }`
- 
+
 This would produce an effect that there could be only one "Bob" in Magnagora, but he and "Bob" in Celest could coexist happily.
- 
+
 Now, bear in mind: `_index = { "name", "city"}` creates two indexes in this sheet. One on the city field, one on the name field. But, `_index = { {"name", "city"} }` creates one index: on the combination of the two. Compound indexes help speed up queries which frequently scan two fields together, but don't help if you scan one or the other.
- 
+
 The admonition against making indexes willy-nilly holds double for compound indexes: do it only if you really need to!
- 
+
 ==== Uniqueness
 
 As was specified, the _unique key can be used to create a unique index. This will make it so a table can only have one record which fulfills that index. If you use an index such as _unique = { "name" } then names must be unique in the sheet. However, if you use an index such as _unique = { {"name", "city"} } then you will allow more then one person to have the same name -- but only one per city.
@@ -1420,8 +1420,8 @@ You can also specify that the db layer should IGNORE any commands that would cau
 
 For example:
 -----
-	db:add(mydb.enemies, {name="Bob", city="Sacramento"})
-	db:add(mydb.enemies, {name="Bob", city="San Francisco"})
+        db:add(mydb.enemies, {name="Bob", city="Sacramento"})
+        db:add(mydb.enemies, {name="Bob", city="San Francisco"})
 -----
 
 With the name field being declared to be unique, these two commands can't succeed normally. The first db:add() will create a record with the name of Bob, and the second would cause the uniqueness of the name field to be violated. With the default behavior (FAIL), the second db:add() call will raise an error and halt the script.
@@ -1432,9 +1432,9 @@ With the REPLACE behavior, the second command will cause its data to completely 
 
 A word of caution with REPLACE, given:
 
------	
-	db:add(mydb.enemies, {name="Bob", city="Sacramento", notes="This is something."})
-	db:add(mydb.enemies, {name="Bob", city="San Francisco"})
+-----
+        db:add(mydb.enemies, {name="Bob", city="Sacramento", notes="This is something."})
+        db:add(mydb.enemies, {name="Bob", city="San Francisco"})
 -----
 
 With the REPLACE behavior, the second record will overwrite the first-- but the second record does not have the notes field set. So Bob will now not have any notes. It doesn't -just- replace existing fields with new ones, it replaces the entire record.
@@ -1443,11 +1443,11 @@ To specify which behavior the db layer should use, add a _violations key to the 
 
 -----
         db:create("people", {
-                friends={"name", "city", "notes"}, 
+                friends={"name", "city", "notes"},
                 enemies={
-                        name="", 
-                        city="", 
-                        notes="", 
+                        name="",
+                        city="",
+                        notes="",
                         enemied="",
                         kills=0,
                         _index = { "city" },
@@ -1464,7 +1464,7 @@ Note that the _violations behavior is sheet-specific.
 In addition to strings and floats, the db module also has basic support for timestamps. In the database itself this is recorded as an integer (seconds since 1970) called an epoch, but you can easily convert them to strings for display, or even time tables to use with Lua's built-in time support.
 
 The most common use for the Timestamp type is where you want the database to automatically record the current time whenever you insert a new row into a sheet. The following example illustrates that:
- 
+
 -----
         local mydb = db:create("combat_log",
            {
@@ -1476,10 +1476,10 @@ The most common use for the Timestamp type is where you want the database to aut
               }
            }
         )
-        
-        
+
+
         db:add(mydb.kills, {name="Drow", area="Undervault"})
-        
+
         results = db:fetch(mydb.kills)
         display(results)
 -----
@@ -1504,23 +1504,23 @@ The as_number function returns the epoch number, and the as_table function retur
 
 A quick example of the usage of these functions is:
 -----
-	results = db:fetch(mydb.kills)
-	for _, row in ipairs(results) do
-		echo("You killed " .. row.name .. " at: " .. row.killed:as_string() .."\n")
-	end
+        results = db:fetch(mydb.kills)
+        for _, row in ipairs(results) do
+                echo("You killed " .. row.name .. " at: " .. row.killed:as_string() .."\n")
+        end
 -----
- 
+
 === Deleting
 
- 
+
 The db:delete function is used to delete rows from the sheet. It takes two arguments, the first being the sheet you are deleting and the second a query string built using the same functions used to build db:fetch() queries.
- 
+
 For example, to delete all your enemies in the city of Magnagora, you would do:
 -----
         db:delete(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))
 -----
 Be careful in writing these! You may inadvertantly wipe out huge chunks of your sheets if you don't have the query parameters set just to what you need them to be. Its advised that you first run a db:fetch() with those parameters to test out the results they return.
-        
+
 As a convienence, you may also pass in a result table that was previously retrieved via db:fetch and it will delete only that record from the table. For example, the following will get all of the enemies in Magnagora, and then delete the first one:
 -----
         results = db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "Magnagora"))
@@ -1534,29 +1534,29 @@ You can even pass a number directly to db:delete if you know what _row_id you wa
 
 A final note of caution: if you want to delete all the records in a sheet, you can do so by only passing in the table reference. To try to protect you from doing this inadvertantly, you must also pass 'true' as the query after:
 -----
-	db:delete(mydb.enemies, true)
+        db:delete(mydb.enemies, true)
 -----
- 
+
 === Updating
 
- 
+
 If you make a change to a table that you have received via db:fetch(), you can save those changes back to the database by doing:
 -----
         db:update(mydb.enemies, results[1])
 -----
 A more powerful (and somewhat dangerous, be careful!) function to make changes to the database is db:set, which is capable of making sweeping changes to a column in every row of a sheet. Beware, if you have previously obtained a table from db:fetch, that table will NOT represent this change.
- 
+
 The db:set() function takes two arguments: the field to change, the value to set it to, and the db:fetch() like query to indicate which rows should be affected. If you pass true as the last argument, ALL rows will be changed.
- 
+
 To clear out the notes of all of our friends in Magnagora, we could do:
 -----
         db:set(mydb.friends.notes, "", db:eq(mydb.friends.notes, "Magnagora"))
 -----
 Be careful in writing these!
- 
+
 === Transactions
 
- 
+
 As was specified earlier, by default the db module commits everything immediately whenever you make a change. For power-users, if you would like to control transactions yourself, the following functions are provided on your database instance:
 -----
         local mydb = db:get_database("my_database")
@@ -1876,7 +1876,7 @@ Mudlet defines several global Lua variables that are accessible from anywhere.
 |Variable Name|Description
 |command|This variable holds the current user command. This is typically used in alias scripts.
 |line|This variable holds the content of the current line as being processed by the trigger engine. The engine runs all triggers on each line as it arrives from the MUD.
-|matches[n]|This Lua table is being used by Mudlet in the context of triggers that use Perl regular expressions. matches[1] holds the entire match, matches[2] holds the first capture group, matches[n] holds the n-th capture group. 
+|matches[n]|This Lua table is being used by Mudlet in the context of triggers that use Perl regular expressions. matches[1] holds the entire match, matches[2] holds the first capture group, matches[n] holds the n-th capture group.
 
 If the trigger uses the Perl style /g switch to evaluate *all* possible matches of the given regex within the current line, matches[n+1] will hold the second entire match, matches[n+2] the first capture group of the second match and matches[n+m] the m-th capture group of the second match.
 |multimatches[n][m]|This table is being used by Mudlet in the context of multiline triggers that use Perl regular expression. It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger. multimatches[5][4] may hold the 3rd capture group of the 5th regex in the multiline trigger. This way you can examine and process all relevant data within a single script. Have a look at this <<example1,example>>.
@@ -1892,206 +1892,206 @@ If the trigger uses the Perl style /g switch to evaluate *all* possible matches 
 Click on the respective function to get more information:
 
 == A
-<<appendBuffer,appendBuffer>>, 
+<<appendBuffer,appendBuffer>>,
 
 == B
-<<bg,bg>>, 
+<<bg,bg>>,
 
 == C
 <<calcFontSize,calcFontSize>>,
-<<clearUserWindow,clearUserWindow>>, 
-<<copy,copy>>, 
+<<clearUserWindow,clearUserWindow>>,
+<<copy,copy>>,
 <<cecho,cecho>>,
 <<createConsole,createConsole>>,
-<<createBuffer,createBuffer>>, 
-<<createLabel,createLabel>>, 
-<<createMiniConsole,createMiniConsole>>, 
+<<createBuffer,createBuffer>>,
+<<createLabel,createLabel>>,
+<<createMiniConsole,createMiniConsole>>,
 <<createGauge,createGauge>>,
-<<createStopWatch,createStopWatch>>, 
+<<createStopWatch,createStopWatch>>,
 
 == D
 <<datetime_parse,datetime:parse>>,
 <<decho,decho>>,
 <<deselect, deselect>>,
-<<deleteLine,deleteLine>>, 
+<<deleteLine,deleteLine>>,
 <<disableAlias,disableAlias>>,
-<<disableKey,disableKey>>, 
-<<disableTimer,disableTimer>>, 
-<<disableTrigger,disableTrigger>>, 
-<<disconnect,disconnect>>, 
-<<display,display>>, 
+<<disableKey,disableKey>>,
+<<disableTimer,disableTimer>>,
+<<disableTrigger,disableTrigger>>,
+<<disconnect,disconnect>>,
+<<display,display>>,
 <<db_add,db:add>>,
-<<db_aggregate,db:aggregate>>, 
-<<db_AND,db:AND>>, 
-<<db_between,db:between>>, 
-<<db_create,db:create>>, 
-<<db_delete,db:delete>>, 
+<<db_aggregate,db:aggregate>>,
+<<db_AND,db:AND>>,
+<<db_between,db:between>>,
+<<db_create,db:create>>,
+<<db_delete,db:delete>>,
 <<db_eq,db:eq>>,
 <<db_exp,db:exp>>,
-<<db_fetch,db:fetch>>, 
-<<db_get_database,db:get_database>>, 
-<<db_gt,db:gt>>, 
-<<db_gte,db:gte>>, 
-<<db_in_,db:in_>>, 
-<<db_is_nil,db:is_nil>>, 
-<<db_is_not_nil,db:is_not_nil>>, 
-<<db_like,db:like>>, 
-<<db_lt,db:lt>>, 
+<<db_fetch,db:fetch>>,
+<<db_get_database,db:get_database>>,
+<<db_gt,db:gt>>,
+<<db_gte,db:gte>>,
+<<db_in_,db:in_>>,
+<<db_is_nil,db:is_nil>>,
+<<db_is_not_nil,db:is_not_nil>>,
+<<db_like,db:like>>,
+<<db_lt,db:lt>>,
 <<db_lte,db:lte>>,
-<<db_merge_unique,db:merge_unique>>, 
-<<db_not_between,db:not_between>>, 
-<<db_not_eq,db:not_eq>>, 
-<<db_not_in,db:not_in>>, 
-<<db_not_like,db:not_like>>, 
-<<db_OR,db:OR>>, 
-<<db_set,db:set>>, 
-<<db_update,db:update>>, 
+<<db_merge_unique,db:merge_unique>>,
+<<db_not_between,db:not_between>>,
+<<db_not_eq,db:not_eq>>,
+<<db_not_in,db:not_in>>,
+<<db_not_like,db:not_like>>,
+<<db_OR,db:OR>>,
+<<db_set,db:set>>,
+<<db_update,db:update>>,
 
 
 
 
 == E
-<<echo,echo>>, 
+<<echo,echo>>,
 <<echoLink, echoLink>>,
-<<echoUserWindow,echoUserWindow>>, 
+<<echoUserWindow,echoUserWindow>>,
 <<echoPopup, echoPopup>>,
 <<enableAlias,enableAlias>>,
-<<enableKey,enableKey>>, 
-<<enableTimer,enableTimer>>, 
-<<enableTrigger,enableTrigger>>, 
-<<expandAlias,expandAlias>>, 
+<<enableKey,enableKey>>,
+<<enableTimer,enableTimer>>,
+<<enableTrigger,enableTrigger>>,
+<<expandAlias,expandAlias>>,
 <<exists,exists>>,
 
 == F
-<<fg,fg>>, 
+<<fg,fg>>,
 <<feedTriggers,feedTriggers>>
 
 == G
-<<getBgColor,getBgColor>>, 
-<<getButtonState,getButtonState>>, 
-<<getColumnNumber,getColumnNumber>>, 
-<<getCurrentLine,getCurrentLine>>, 
-<<getFgColor,getFgColor>>, 
+<<getBgColor,getBgColor>>,
+<<getButtonState,getButtonState>>,
+<<getColumnNumber,getColumnNumber>>,
+<<getCurrentLine,getCurrentLine>>,
+<<getFgColor,getFgColor>>,
 <<getAreaTable,getAreaTable>>,
 <<getTimestamp,getTimestamp>>,
-<<getLines,getLines>>, 
-<<getLineCount,getLineCount>>, 
-<<getLineNumber,getLineNumber>>, 
-<<getMainWindowSize,getMainWindowSize>>, 
-<<getMudletHomeDir,getMudletHomeDir>>, 
-<<getNetworkLatency,getNetworkLatency>>, 
-<<getStopWatchTime,getStopWatchTime>>, 
+<<getLines,getLines>>,
+<<getLineCount,getLineCount>>,
+<<getLineNumber,getLineNumber>>,
+<<getMainWindowSize,getMainWindowSize>>,
+<<getMudletHomeDir,getMudletHomeDir>>,
+<<getNetworkLatency,getNetworkLatency>>,
+<<getStopWatchTime,getStopWatchTime>>,
 <<getTime,getTime>>
 
 == H
 <<hasFocus,hasFocus>>,
 <<handleWindowResizeEvent,handleWindowResizeEvent>>,
-<<hecho,hecho>>, 
-<<hideToolBar,hideToolBar>>, 
+<<hecho,hecho>>,
+<<hideToolBar,hideToolBar>>,
 <<hideWindow,hideWindow>>
 
 == I
-<<insertText,insertText>>, 
+<<insertText,insertText>>,
 <<insertLink, insertLink>>,
 <<insertPopup, insertPopup>>,
-<<ioexists,io.exists>>, 
+<<ioexists,io.exists>>,
 <<isActive,isActive>>,
-<<isAnsiBgColor,isAnsiBgColor>>, 
-<<isAnsiFgColor,isAnsiFgColor>>, 
+<<isAnsiBgColor,isAnsiBgColor>>,
+<<isAnsiFgColor,isAnsiFgColor>>,
 <<isPrompt, isPrompt>>,
 <<invokeFileDialog, invokeFileDialog>>
 
 == K
 <<killAlias,killAlias>>,
-<<killTimer,killTimer>>, 
-<<killTrigger,killTrigger>>, 
+<<killTimer,killTimer>>,
+<<killTrigger,killTrigger>>,
 
 == M
-<<moveCursor,moveCursor>>, 
-<<moveCursorEnd,moveCursorEnd>>, 
-<<moveWindow,moveWindow>>, 
+<<moveCursor,moveCursor>>,
+<<moveCursorEnd,moveCursorEnd>>,
+<<moveWindow,moveWindow>>,
 <<moveGauge,moveGauge>>
 
 == O
-<<openUserWindow,openUserWindow>>, 
+<<openUserWindow,openUserWindow>>,
 <<openUrl,openUrl>>,
 
 == P
-<<paste,paste>>, 
-<<pasteUserWindow,pasteUserWindow>>, 
-<<playSoundFile,playSoundFile>>, 
-<<prefix,prefix>>, 
+<<paste,paste>>,
+<<pasteUserWindow,pasteUserWindow>>,
+<<playSoundFile,playSoundFile>>,
+<<prefix,prefix>>,
 <<permAlias,permAlias>>,
 <<permTimer,permTimer>>,
 <<permSubstringTrigger,permSubstringTrigger>>,
 <<permRegexTrigger,permRegexTrigger>>,
 
 == R
-<<raiseEvent,raiseEvent>>, 
-<<reconnect,reconnect>>, 
-<<replace,replace>>, 
-<<replaceAll,replaceAll>>, 
-<<replaceWildcards,replaceWildcards>>, 
-<<resetFormat,resetFormat>>, 
-<<resetStopWatch,resetStopWatch>>, 
-<<resizeWindow,resizeWindow>>, 
+<<raiseEvent,raiseEvent>>,
+<<reconnect,reconnect>>,
+<<replace,replace>>,
+<<replaceAll,replaceAll>>,
+<<replaceWildcards,replaceWildcards>>,
+<<resetFormat,resetFormat>>,
+<<resetStopWatch,resetStopWatch>>,
+<<resizeWindow,resizeWindow>>,
 
 == S
-<<selectCaptureGroup,selectCaptureGroup>>, 
-<<selectCurrentLine,selectCurrentLine>>, 
-<<selectSection,selectSection>>, 
-<<selectString,selectString>>, 
-<<send,send>>, 
-<<sendAll,sendAll>>, 
-<<setBackgroundColor,setBackgroundColor>>, 
-<<setBackgroundImage,setBackgroundImage>>, 
-<<setBgColor,setBgColor>>, 
+<<selectCaptureGroup,selectCaptureGroup>>,
+<<selectCurrentLine,selectCurrentLine>>,
+<<selectSection,selectSection>>,
+<<selectString,selectString>>,
+<<send,send>>,
+<<sendAll,sendAll>>,
+<<setBackgroundColor,setBackgroundColor>>,
+<<setBackgroundImage,setBackgroundImage>>,
+<<setBgColor,setBgColor>>,
 <<setBold,setBold>>,
-<<setBorderBottom,setBorderBottom>>, 
-<<setBorderLeft,setBorderLeft>>, 
-<<setBorderRight,setBorderRight>>, 
-<<setBorderTop,setBorderTop>>, 
-<<setConsoleBufferSize,setConsoleBufferSize>>,  
-<<setFgColor,setFgColor>>, 
-<<setBorderColor,setBorderColor>>, 
-<<setItalics,setItalics>>, 
-<<setLabelClickCallback,setLabelClickCallback>>, 
+<<setBorderBottom,setBorderBottom>>,
+<<setBorderLeft,setBorderLeft>>,
+<<setBorderRight,setBorderRight>>,
+<<setBorderTop,setBorderTop>>,
+<<setConsoleBufferSize,setConsoleBufferSize>>,
+<<setFgColor,setFgColor>>,
+<<setBorderColor,setBorderColor>>,
+<<setItalics,setItalics>>,
+<<setLabelClickCallback,setLabelClickCallback>>,
 <<setLink, setLink>>,
 <<setPopup, setPopup>>,
-<<setMiniConsoleFontSize,setMiniConsoleFontSize>>, 
+<<setMiniConsoleFontSize,setMiniConsoleFontSize>>,
 <<setGauge,setGauge>>,
-<<setTextFormat,setTextFormat>>, 
-<<setTriggerStayOpen,setTriggerStayOpen>>, 
-<<setUnderline,setUnderline>>, 
-<<setWindowWrap,setWindowWrap>>, 
-<<showCaptureGroups,showCaptureGroups>>, 
+<<setTextFormat,setTextFormat>>,
+<<setTriggerStayOpen,setTriggerStayOpen>>,
+<<setUnderline,setUnderline>>,
+<<setWindowWrap,setWindowWrap>>,
+<<showCaptureGroups,showCaptureGroups>>,
 <<showColors,showColors>>,
-<<showMultimatches,showMultimatches>>, 
-<<showToolBar,showToolBar>>, 
-<<showWindow,showWindow>>, 
-<<startStopWatch,startStopWatch>>, 
-<<stopStopWatch,stopStopWatch>>, 
-<<stringsplit,string:split>>, 
-<<suffix,suffix>>, 
+<<showMultimatches,showMultimatches>>,
+<<showToolBar,showToolBar>>,
+<<showWindow,showWindow>>,
+<<startStopWatch,startStopWatch>>,
+<<stopStopWatch,stopStopWatch>>,
+<<stringsplit,string:split>>,
+<<suffix,suffix>>,
 <<string_title,string:title>>,
 
 == T
-<<tablecontains,table.contains>>, 
+<<tablecontains,table.contains>>,
 <<table_complement,table.complement>>,
 <<table_n_complement,table.n_complement>>,
-<<tableload,table.load>>, 
-<<tablesave,table.save>>, 
-<<tableSize,table.size>>, 
+<<tableload,table.load>>,
+<<tablesave,table.save>>,
+<<tableSize,table.size>>,
 <<table_union,table.union>>,
 <<table_n_union,table.n_union>>,
 <<table_intersection,table.intersection>>,
 <<table_n_intersection,table.n_intersection>>,
 <<tempAlias,tempAlias>>,
-<<tempColorTrigger,tempColorTrigger>>, 
-<<tempLineTrigger, tempLineTrigger>>, 
-<<tempRegexTrigger,tempRegexTrigger>>, 
-<<tempTimer,tempTimer>>, 
-<<tempTrigger,tempTrigger>>, 
+<<tempColorTrigger,tempColorTrigger>>,
+<<tempLineTrigger, tempLineTrigger>>,
+<<tempRegexTrigger,tempRegexTrigger>>,
+<<tempTimer,tempTimer>>,
+<<tempTrigger,tempTrigger>>,
 
 == W
 <<wrapLine,wrapLine>>
@@ -2103,7 +2103,7 @@ Click on the respective function to get more information:
 == send( command, echo the value = true/false )
 This sends "command" directly to the network layer, skipping the alias matching. The optional second argument of type boolean (print) determines if the outgoing command is to be echoed on the screen.
 
-If you want your command to be checked if it's an alias, use expandAlias() instead. 
+If you want your command to be checked if it's an alias, use expandAlias() instead.
 example:
 -------
 send( "Hello Jane" ) --echos the command on the screen
@@ -2116,7 +2116,7 @@ send( "Hello Jane", false ) --does not echo the command on the screen
 This function appends text at the end of the current line. The current cursor position is ignored. Use moveCursor() and insertText() if you want to print at a different cursor position.
 
 If the first argument is omitted the main console is used, otherwise the mini console windowName.
-=== Example 1: 
+=== Example 1:
 -------------------
 echo( "Hello world\n" ) -- writes "Hello world" to the main screen.
 echo( "info", "Hello this is the info window" ) -- writes text to the mini console named "info" if such a window exists
@@ -2143,7 +2143,7 @@ echoLink("hi", [[echo("hey bub!")]], "click me now")
 == selectString( text, number_of_match ) returns position in line or -1 on error (text not found in line)
 Selects a substring from the line where the user cursor is currently positioned. You can move the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is positioned at the beginning of the line. However, if one of your trigger scripts moves the cursor around you need to take care of the cursor position yourself and make sure that the cursor is in the correct line if you want to call one of the select functions. To deselect text, see <<deselect, deselect()>>.
 
-[NOTE] 
+[NOTE]
 To prevent selection of random data use the error return if not found like this: `if selectString( "big monster", 1 ) > -1 then setFgColor( 255,0,0) end`
 
 
@@ -2154,7 +2154,7 @@ To prevent selection of random data use the error return if not found like this:
 * background color optional string containing value for background color as a named color.
 * true/false - optional boolean that tells the function to use insertText() rather than echo(). Note that if sending to miniConsole, this has to be false.
 * name of console - optional name of the console to echo to. Defaults to main.
- 
+
 === How text works
 Color changes can be made using the format <FR,FG,FB:BR,BG,BB> where each field is a number from 0 to 255. The background portion can be omitted using <FR,FG,FB> or the foreground portion can be omitted using <:BR,BG,BB>. Arguments 2 and 3 set the default fore and background colors for the string using the same format as is used within the string, sans angle brackets,
 e.g.  decho("test", "255,0,0", "0,255,0")
@@ -2236,7 +2236,7 @@ testname = string.title("anna")
 ----
 [[permAlias]]
 == permAlias(name, parent, regex, lua code)
-Creates a persistent alias that stays after Mudlet is restarted and shows up in the Script Editor. 
+Creates a persistent alias that stays after Mudlet is restarted and shows up in the Script Editor.
 
 * `name` is the name you'd like the alias to have.
 * `parent` is the name of the group, or another alias you want the trigger to go in - however if such a group/alias doesn't exist, it won't do anything. Use "" to make it not go into any groups.
@@ -2256,7 +2256,7 @@ Note that Mudlet by design allows duplicate names - so calling permAlias with th
 
 [[permSubstringTrigger]]
 == permSubstringTrigger( name, parent, pattern, lua code )
-Creates a persistent trigger with a `substring` pattern that stays after Mudlet is restarted and shows up in the Script Editor. 
+Creates a persistent trigger with a `substring` pattern that stays after Mudlet is restarted and shows up in the Script Editor.
 
 * `name` is the name you'd like the trigger to have.
 * `parent` is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
@@ -2266,11 +2266,11 @@ Creates a persistent trigger with a `substring` pattern that stays after Mudlet 
 === Example:
 ----
 -- Create a trigger to highlight the word "pixie" for us
-permSubstringTrigger("Highlight stuff", "General", {"pixie"}, 
+permSubstringTrigger("Highlight stuff", "General", {"pixie"},
 [[selectString(line, 1) bg("yellow") resetFormat()]])
 
 -- Or another trigger to highlight several different things
-permSubstringTrigger("Highlight stuff", "General", {"pixie", "cat", "dog", "rabbit"}, 
+permSubstringTrigger("Highlight stuff", "General", {"pixie", "cat", "dog", "rabbit"},
 [[selectString(line, 1) fg ("blue") bg("yellow") resetFormat()]])
 ----
 
@@ -2281,7 +2281,7 @@ Note that Mudlet by design allows duplicate names - so calling permSubstringTrig
 
 [[permRegexTrigger]]
 == permRegexTrigger( name, parent, pattern, lua code )
-Creates a persistent trigger with a `regex` pattern that stays after Mudlet is restarted and shows up in the Script Editor. 
+Creates a persistent trigger with a `regex` pattern that stays after Mudlet is restarted and shows up in the Script Editor.
 
 * `name` is the name you'd like the trigger to have.
 * `parent` is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
@@ -2302,7 +2302,7 @@ Note that Mudlet by design allows duplicate names - so calling permRegexTrigger 
 [[permBeginOfLineStringTrigger]]
 == permBeginOfLineStringTrigger( name, parent, pattern table, lua code )
 
-Creates a persistent trigger with a `begin of line substring` pattern that shows up in the Script Editor andstays after Mudlet is restarted. 
+Creates a persistent trigger with a `begin of line substring` pattern that shows up in the Script Editor andstays after Mudlet is restarted.
 
 * `name` is the name you'd like the trigger to have.
 * `parent` is the name of the group, or another trigger you want the trigger to go in - however if such a group/trigger doesn't exist, it won't do anything. Use "" to make it not go into any groups.
@@ -2326,7 +2326,7 @@ Note that Mudlet by design allows duplicate names - so calling permBeginOfLineSt
 
 [[permTimer]]
 == permTimer(name, parent, seconds, lua code)
-Creates a persistent timer that stays after Mudlet is restarted and shows up in the Script Editor. 
+Creates a persistent timer that stays after Mudlet is restarted and shows up in the Script Editor.
 
 Name is the timer name, parent is the name of the timer group you want the timer to go in. Seconds is a number specifying a delay after which the timer will do the lua code you give it as a string.
 
@@ -2375,7 +2375,7 @@ replace("Out with the old, in with the new!")
 ----
 
 == replace( windowName, with )
-Same as above, but replaces text in a window (miniConsole, label). 
+Same as above, but replaces text in a window (miniConsole, label).
 
 Example:
 ----
@@ -2398,7 +2398,7 @@ The function also accept ANSI color codes that are used in MUDs. A sample table 
 
 Example:
 ----
-feedTriggers("\nThis is \27[1;32mgreen\27[0;37m, \27[1;31mred\27[0;37m, \27[46mcyan background\27[0;37m," .. 
+feedTriggers("\nThis is \27[1;32mgreen\27[0;37m, \27[1;31mred\27[0;37m, \27[46mcyan background\27[0;37m," ..
 "\27[32;47mwhite background and green foreground\27[0;37m.\n")
 ----
 
@@ -2415,22 +2415,22 @@ See also: <<resetFormat,resetFormat()>> <<setFgColor,setFgColor()>>
 | old_lace| linen| antique_white| papaya_whip| blanched_almond
 | bisque| peach_puff| navajo_white| moccasin | cornsilk| ivory
 | lemon_chiffon| seashell| honeydew| mint_cream| azure| alice_blue
-| lavender| lavender_blush| misty_rose| white | black| dark_slate_gray 
-| dark_slate_grey| dim_gray   | dim_grey| slate_gray | slate_grey | light_slate_gray  
+| lavender| lavender_blush| misty_rose| white | black| dark_slate_gray
+| dark_slate_grey| dim_gray   | dim_grey| slate_gray | slate_grey | light_slate_gray
 | light_slate_grey| gray| grey| light_grey | light_gray | midnight_blue
-| navy| navy_blue | cornflower_blue| dark_slate_blue| slate_blue | medium_slate_blue 
-| light_slate_blue| medium_blue| royal_blue | blue  | dodger_blue| deep_sky_blue 
-| sky_blue| light_sky_blue| steel_blue| light_steel_blue| light_blue| powder_blue 
-| pale_turquoise| dark_turquoise | medium_turquoise| turquoise| cyan| light_cyan 
+| navy| navy_blue | cornflower_blue| dark_slate_blue| slate_blue | medium_slate_blue
+| light_slate_blue| medium_blue| royal_blue | blue  | dodger_blue| deep_sky_blue
+| sky_blue| light_sky_blue| steel_blue| light_steel_blue| light_blue| powder_blue
+| pale_turquoise| dark_turquoise | medium_turquoise| turquoise| cyan| light_cyan
 | cadet_blue| medium_aquamarine| aquamarine| dark_green | dark_olive_green| dark_sea_green
-| sea_green | medium_sea_green| light_sea_green| pale_green | spring_green| lawn_green  
-| green| chartreuse | medium_spring_green| green_yellow| lime_green | yellow_green 
+| sea_green | medium_sea_green| light_sea_green| pale_green | spring_green| lawn_green
+| green| chartreuse | medium_spring_green| green_yellow| lime_green | yellow_green
 | forest_green | olive_drab| dark_khaki| khaki | pale_goldenrod| light_goldenrod_yellow
 | light_yellow| yellow| gold   | light_goldenrod| goldenrod| dark_goldenrod
 | rosy_brown| indian_red| saddle_brown | sienna| peru | burlywood
 | beige| wheat| sandy_brown| tan| chocolate | firebrick
 | brown| dark_salmon| salmon | light_salmon| orange| dark_orange
-| coral| light_coral | tomato| orange_red | red | hot_pink 
+| coral| light_coral | tomato| orange_red | red | hot_pink
 | deep_pink| pink| light_pink| pale_violet_red| maroon| medium_violet_red
 | violet_red| magenta| violet| plum | orchid | medium_orchid
 | dark_orchid| blue_violet| purple| medium_purple| thistle
@@ -2547,7 +2547,7 @@ Use timer name or the id returned by tempTimer() to identify the timer that you 
 
 [[disableTrigger]]
 == disableTrigger( name )
-Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable. 
+Use trigger name or the id returned by tempTrigger() to identify the timer that you want to disable.
 
 
 
@@ -2572,7 +2572,7 @@ enables a Trigger. see enableTimer() for more details.
 
 [[enableKey]]
 == enableKey( name )
-enable key or key group "name" (hot keys or action keys). 
+enable key or key group "name" (hot keys or action keys).
 
 
 
@@ -2606,21 +2606,21 @@ end
 
 [[raiseEvent]]
 == raiseEvent( event_name, arg-1, ... arg-n )
-Raises the event event_name. The event system will call the main function (the one that is called exactly like 
-the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with 
-the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without 
-having to care if the actual event handling has been implemented yet - or more specifically how it is implemented. Your triggers raise an event to 
-tell the system that they have detected a certain condition to be true or that a certain event has happened. How - and if - the system is going 
-to respond to this event is up to the system and your trigger scripts don't have to care about such details. 
-For small systems it will be more convenient to use regular function calls instead of events, however, the more complicated your system will get, 
+Raises the event event_name. The event system will call the main function (the one that is called exactly like
+the script name) of all such scripts that have registered event handlers. If an event is raised, but no event handler scripts have been registered with
+the event system, the event is ignored and nothing happens. This is convenient as you can raise events in your triggers, timers, scripts etc. without
+having to care if the actual event handling has been implemented yet - or more specifically how it is implemented. Your triggers raise an event to
+tell the system that they have detected a certain condition to be true or that a certain event has happened. How - and if - the system is going
+to respond to this event is up to the system and your trigger scripts don't have to care about such details.
+For small systems it will be more convenient to use regular function calls instead of events, however, the more complicated your system will get,
 the more important events will become because they help reduce complexity very much.
 
-The corresponding event handlers that listen to the events raised with raiseEvent() need to use the script name as function name and take the correct 
-number of arguments. NOTE: If you raise an event with 5 arguments but your event handlers functions only take 2,10 or 0 arguments, the functions 
-will not be called. For example: raiseEvent("fight") a correct event handler function would be: myScript( event_name ). In this example raiseEvent 
-uses minimal arguments, name the event name. There can only be one event handler function per script, but a script can still handle multiple events 
-as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you 
-should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees 
+The corresponding event handlers that listen to the events raised with raiseEvent() need to use the script name as function name and take the correct
+number of arguments. NOTE: If you raise an event with 5 arguments but your event handlers functions only take 2,10 or 0 arguments, the functions
+will not be called. For example: raiseEvent("fight") a correct event handler function would be: myScript( event_name ). In this example raiseEvent
+uses minimal arguments, name the event name. There can only be one event handler function per script, but a script can still handle multiple events
+as the first argument is always the event name. So you can call your own special handlers for individual events. The reason behind this is that you
+should rather use many individual scripts instead of one huge script that has all your function code etc. Scripts can be organized very well in trees
 and thus help reduce complexity on large systems.
 
 
@@ -2682,7 +2682,7 @@ This function creates a temporary trigger using substring matching. Contrary to 
 
 [[tempLineTrigger]]
 == tempLineTrigger( from, howMany, LuaCode ) returns trigger ID, ID is a string and not a number.
-Temporary trigger that will fire on n consecutive lines following the current line. This is useful 
+Temporary trigger that will fire on n consecutive lines following the current line. This is useful
 to parse output that is known to arrive in a certain line margin or to delete unwanted output from the MUD. Example: tempLineTrigger( 1, 3, [[send("shout Help")]] ) will fire 3 times starting with the line from the MUD.
 tempLineTrigger( 20, 2, [[send("shout Help")]] )
 will fire 20 lines after the current line and fire twice on 2 consecutive lines.
@@ -2740,10 +2740,10 @@ Copies the current selection to the clipboard. This function operates on rich te
  in the clipboard until it gets overwritten by another copy operation. example:
 This script copies the current line on the main screen to a user window (mini console) named chat and gags the output on the main screen.
 -----
-selectString( line ); 
-copy(); 
-appendBuffer("chat"); 
-replace("This line has been moved to the chat window!") 
+selectString( line );
+copy();
+appendBuffer("chat");
+replace("This line has been moved to the chat window!")
 -----
 
 
@@ -2779,7 +2779,7 @@ Returns the timestamp string as it's seen when you enable the timestamps view (b
 Available since 1.1.0-pre1
 
 === Example:
-Echo the timestamp of the current line in a trigger: 
+Echo the timestamp of the current line in a trigger:
 ----
 echo(getTimestamp(getLineCount()))
 ----
@@ -2800,9 +2800,9 @@ Returns the number of the last line in the buffer.
 == moveCursor( windowName, x, y ) returns true or false
 Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false if such a move is impossible e.g. the coordinates don't exist. To determine the correct coordinates use getLineNumber(), getColumnNumber() and getLastLineNumber(). The trigger engine will always place the user cursor at the beginning of the current line before the script is run. If you omit the windowName argument, the main screen will be used.
 
-=== Example: 
+=== Example:
 ----
--- set up the small system message window in the top right corner 
+-- set up the small system message window in the top right corner
 
 -- determine the size of your screen
 WindowWidth=0;
@@ -2835,7 +2835,7 @@ echo("sys", "test1---line5\n")
 moveCursor("sys", 1,1)
 
 -- deleting lines 2+3
-deleteLine("sys"); 
+deleteLine("sys");
 deleteLine("sys");
 
 -- inserting a line at pos 5,2
@@ -2892,7 +2892,7 @@ See also: <<selectString, selectString()>>, <<copy, copy()>>, <<echo, echo()>>
 == printTable( table_name )
 Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the Lua table "matches".
 
-This function is defined in LuaGlobal.lua. 
+This function is defined in LuaGlobal.lua.
 
 [NOTE]
 ===============================
@@ -2963,7 +2963,7 @@ selectString(matches[2], 1)
 replace("text")
 ----
 
-=== Example: 
+=== Example:
 ----
 replaceWildcard(2, "hello") -- on a perl regex trigger of ^You wave (goodbye)\.$, it will make
 ----
@@ -2993,7 +2993,7 @@ Mac OS X:	     NSSound is used. All formats that NSSound supports, including Qui
 * background color optional string containing value for background color as a named color.
 * true/false - optional boolean that tells the function to use insertText() rather than echo(). Note that if sending to miniConsole, this has to be false.
 * name of console - optional name of the console to echo to. Defaults to main.
- 
+
 === How text works
 Color changes can be made using the format <foreground:background> where each field is one of the colors listed by <<showColors,showColors()>>. The background portion can be omitted using <foreground> or the foreground portion can be omitted using <:background>. Arguments 2 and 3 to set the default colors take named colors as well.
 
@@ -3055,7 +3055,7 @@ returns the last measured response time between the sent command and the server 
 This function creates a stop watch. It is high resolution time measurement tool. Stop watches can be started, stopped, reset and asked how much time has passed since the stop watch has been started.
 Returns the ID of a high resolution clock with milliseconds to measure time more accurately than what is possible with std. Lua routines
 -> <<startStopWatch,startStopWatch>>, <<stopStopWatch,stopStopWatch>>, <<resetStopWatch,resetStopWatch>>, <<getStopWatchTime,getStopWatchTime>>
-example: 
+example:
 In a global script you create all stop watches that you need in your system and store the respective stopWatch-IDs in global variables:
 ----
 fightStopWatch = createStopWatch(); -- you store the watchID in a global variable to access it from anywhere
@@ -3156,29 +3156,29 @@ Creates a gauge that you can use to express completion with. For example, you ca
 See also: <<moveGauge,moveGauge>>, <<setGauge,setGauge>>, <<setGaugeText,setGaugeText>>.
 Examples:
 ----
-createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0) 
+createGauge("healthBar", 300, 20, 30, 300, nil, 0, 255, 0)
 createGauge("healthBar", 300, 20, 30, 300, nil, "green")
 -- This would make a gauge at that's 300px width, 20px in height, located at Xpos and Ypos and is green.
 -- The second example is using the same names you'd use for something like fg() or bg().
 
 -- If you wish to have some text on your label, you'll change the nil part and make it look like this:
-createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0) 
--- or 
+createGauge("healthBar", 300, 20, 30, 300, "Now with some text", 0, 255, 0)
+-- or
 createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
 ----
 
 [[createMiniConsole]]
 == createMiniConsole( name, posX, posY, width, height ) returns true or false
-opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy & paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing. 
-To set word wrap see <<setWindowWrap,setWindowWrap>>. 
+opens a console window inside the main window of Mudlet at position posX/posY with size according to width/height (values depend on your own screen resolution usually between 0-1600 for x and 0-1024 for y). This console is the ideal fast colored text display for everything that requires a bit more text e.g. status screens, log windows, chat windows etc.. You can use clearWindow/moveCursor etc. functions for this window for custom printing as well as copy & paste functions for colored text copies from the main window or normal echoUserWindow( name, text) for normal printing.
+To set word wrap see <<setWindowWrap,setWindowWrap>>.
 To move the main window to make room for miniconsole windows on your screen (if you want to do this as you can also layer mini console and label windows) see <<setBorderTop,setBorderTop>>, <<setBordercolor,setBorderColor>>
 To have your screen layout adjusted after the window size of the main screen gets resized see <<handleWindowResizeEvent,handleWindowResizeEvent>>
 
 see also: <<createLabel,createLabel>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>, <<handleWindowResizeEvent,handleWindowResizeEvent>>, <<setBorderTop,setBorderTop>>, <<setBorderColor,setBorderColor>>, <<setWindowWrap,setWindowWrap>>
 
-=== Example 1: 
+=== Example 1:
 ----
--- set up the small system message window in the top right corner 
+-- set up the small system message window in the top right corner
 
 -- determine the size of your screen
 WindowWidth = 0;
@@ -3214,7 +3214,7 @@ Labels accept some HTML and CSS code for text formating.
 
 see also: <<createMiniConsole,createMiniConsole>>, <<hideWindow,hideWindow>>, <<showWindow,showWindow>>, <<resizeWindow,resizeWindow>>, <<setLabelClickCallback,setLabelClickCallback>>, <<setTextFormat,setTextFormat>>, <<moveWindow,moveWindow>>, <<setMiniConsoleFontSize,setMiniConsoleFontSize>>, <<handleWindowResizeEvent,handleWindowResizeEvent>>, <<setBorderTop,setBorderTop>>, <<setBorderColor,setBorderColor>>
 
-=== Example 1: 
+=== Example 1:
 [[diag_labelOverlayDemo]]
 [icon="./images/icons/labelOverlayDemo.png"]
 NOTE: . screenshot example 1
@@ -3232,7 +3232,7 @@ tempTimer(2.3, [[hideWindow("messageBox")]] ) -- close the warning message box a
 ----
 
 
-=== Example 2: 
+=== Example 2:
 [[diag_a_GUI_pack]]
 [icon="./images/icons/achaea_gui_pack_screen.png"]
 NOTE: . screenshot example 2
@@ -3241,7 +3241,7 @@ This example creates a mouse clickable compass (taken from the GUI demo package.
 -----
 -- define the path to the location of the images
 -- this needs to be adapted to your own system e.g. "c:\images\mudimages"
--- on my linux system the folder are in my home directory in the folder gfx 
+-- on my linux system the folder are in my home directory in the folder gfx
 gfx_path = "/home/heiko/gfx";
 
 -- determine the size of your screen
@@ -3297,52 +3297,52 @@ setLabelClickCallback("compass", "callbackTest", 1, "score", 94, 104, 99, "lastP
 --setLabelClickCallback("compass", "callbackTest", 948, "qw", 49, 52 )
 
 function callbackTest( p1, p2, p3, p4, p5, p6  )
-	echo("p1="..p1.." p2<"..p2.."> p3<"..p3.."> p4<"..p4..">p5="..p5.." p6<"..p6..">");
-	if p1 == 1 then
-		send( p2 );
-	else
-		send( p2 );
-	end
+        echo("p1="..p1.." p2<"..p2.."> p3<"..p3.."> p4<"..p4..">p5="..p5.." p6<"..p6..">");
+        if p1 == 1 then
+                send( p2 );
+        else
+                send( p2 );
+        end
 end
 
 function walk_north()
-	expandAlias("n;map")
-	compileRoomDescription()
+        expandAlias("n;map")
+        compileRoomDescription()
 end
 
 function walk_south()
-	expandAlias("s;map")
-	compileRoomDescription()
+        expandAlias("s;map")
+        compileRoomDescription()
 end
 
 function walk_west()
-	expandAlias("w;map");
-	compileRoomDescription()
+        expandAlias("w;map");
+        compileRoomDescription()
 end
 
 function walk_east()
-	expandAlias("e;map");
-	compileRoomDescription()
+        expandAlias("e;map");
+        compileRoomDescription()
 end
 
 function walk_northeast()
-	expandAlias("ne;map");
-	compileRoomDescription()
+        expandAlias("ne;map");
+        compileRoomDescription()
 end
 
 function walk_northwest()
-	expandAlias("nw;map");
-	compileRoomDescription()
+        expandAlias("nw;map");
+        compileRoomDescription()
 end
 
 function walk_southwest()
-	expandAlias("sw;map");
-	compileRoomDescription()
+        expandAlias("sw;map");
+        compileRoomDescription()
 end
 
 function walk_southeast()
-	expandAlias("se;map");
-	compileRoomDescription()
+        expandAlias("se;map");
+        compileRoomDescription()
 end
 
 -----
@@ -3426,10 +3426,10 @@ sets current text format of window windowName: foreground color(r1,g1,b1), backg
 *A more convenient way to control the text format in a mini console is to use setFgColor( windowName, r,g,b ), setBold( windowName, true ), setItalics( windowName, true ), setUnderline( windowName, true ) etc.*
 -> <<createMiniConsole,createMiniConsole>>, <<setBold,setBold>>, <<setBgColor,setBgColor>>, <<setFgColor,setFgColor>>, <<setItalics,setItalics>>, <<setUnderline,setUnderline>>
 
-=== Example: 
+=== Example:
 ----
 createMiniConsole( "con1", 0,0,300,100);
-setTextFormat("con1",0,0,255,255,255,0,1,1,1); 
+setTextFormat("con1",0,0,255,255,255,0,1,1,1);
 echo("con1","This is a test")
 ----
 This script would create a mini text console and write with yellow foreground color and blue background color "This is a test".
@@ -3500,7 +3500,7 @@ setPopup("main", {[[send("bye")]], [[echo("hi!")]]}, {"left-click or right-click
 
 [[echoUserWindow]]
 == echoUserWindow( windowName )
-This function will print text to both mini console windows, dock windows and labels. 
+This function will print text to both mini console windows, dock windows and labels.
 This function is outdated. Use echo( windowName, text ) instead -> <<echo,echo>>
 
 [[echoPopup]]
@@ -3513,7 +3513,7 @@ Available since 1.1.0-pre1.
 Create some text as a clickable with a popup menu:
 ----
 echoPopup("activities to do", {[[send "sleep"]], [[send "sit"]], [[send "stand"]]}, {"sleep", "sit", "stand"})
----- 
+----
 
 [[getMainWindowSize]]
 == getMainWindowSize() returns 2 numbers, width and height in pixels
@@ -3528,7 +3528,7 @@ mainWindowWidth, mainWindowHeight = getMainWindowSize();
 Gets the actual size of non-index based tables.
 
 For index based tables you can get the size with the # operator:
-myTableSize = # myTable 
+myTableSize = # myTable
 This is the standard Lua way of getting the size of index tables i.e. ipairs() type of tables with numerical indices. To get the size of tables that use user defined keys instead of automatic indices (pairs() type) you need to use the function table.size() referenced above.
 
 [[table_union]]
@@ -3539,32 +3539,32 @@ Example:
 -------------------
 Given:
 tableA = {
-	[1] = 123,
-	[2] = 456,
-	["test"] = "test",
-	}
- 
+        [1] = 123,
+        [2] = 456,
+        ["test"] = "test",
+        }
+
 tableB = {
-	[1] = 23,
-	[3] = 7,
-	["test2"] = function() return true end,
-	}
-	
+        [1] = 23,
+        [3] = 7,
+        ["test2"] = function() return true end,
+        }
+
 tableC = {
-	[5] = "c",
-	}
-	
+        [5] = "c",
+        }
+
 table.union(tableA, tableB, tableC) will return:
 {
-	[1] = {
-		123,
-		23,
-		},
-	[2] = 456,
-	[3] = 7,
-	[5] = "c",
-	["test"] = "test",
-	["test2"] = function() return true end,
+        [1] = {
+                123,
+                23,
+                },
+        [2] = 456,
+        [3] = 7,
+        [5] = "c",
+        ["test"] = "test",
+        ["test2"] = function() return true end,
 }
 -------------------
 
@@ -3579,38 +3579,38 @@ Returns a table that is the intersection (or difference, ie elements only common
 Example:
 -------------------
 tableA = {
-	[1] = 123,
-	[2] = 456,
-	[4] = { 1, 2 },
-	[5] = "c",
-	["test"] = "test",
-	}
- 
+        [1] = 123,
+        [2] = 456,
+        [4] = { 1, 2 },
+        [5] = "c",
+        ["test"] = "test",
+        }
+
 tableB = {
-	[1] = 123,
-	[2] = 4,
-	[3] = 7,
-	[4] = { 1, 2 },
-	["test"] = function() return true end,
-	}
-	
+        [1] = 123,
+        [2] = 4,
+        [3] = 7,
+        [4] = { 1, 2 },
+        ["test"] = function() return true end,
+        }
+
 tableC = {
-	[1] = 123,
-	[4] = { 1, 2 },
-	[5] = "c",
-	}
-	
+        [1] = 123,
+        [4] = { 1, 2 },
+        [5] = "c",
+        }
+
 table.intersection(tableA, tableB, tableC) will return:
 {
-	[1] = 123,
-	[4] = { 1, 2 },
+        [1] = 123,
+        [4] = { 1, 2 },
 }
 -------------------
 
 [[table_n_intersection]]
 == result = table.n_intersection(tableA, tableB, tableC)
-Returns a numerically indexed table that is the intersection of the provided tables. 
-This is an intersection of unique values. The order and keys of the input tables are 
+Returns a numerically indexed table that is the intersection of the provided tables.
+This is an intersection of unique values. The order and keys of the input tables are
 not preserved.
 
 [[ioexists]]
@@ -3620,15 +3620,15 @@ Checks to see if a given file or folder exists. If it exists, it'll return the L
 Examples:
 -------------------
 if io.exists("/home/vadi/Desktop") then
-	echo("This folder exists!")
+        echo("This folder exists!")
 else
-	echo("This folder doesn't exist.")
+        echo("This folder doesn't exist.")
 end
 
 if io.exists("/home/vadi/Desktop/file.tx") then
-	echo("This file exists!")
+        echo("This file exists!")
 else
-	echo("This file doesn't exist.")
+        echo("This file doesn't exist.")
 end
 
 -------------------
@@ -3670,11 +3670,11 @@ Determines if a table contains a value as a key or as a value (recursive)
 == state = getButtonState() with state = 2 button is checked and state = 1, button is not checked
 this function can be used in checkbox button scripts (2-state buttons) to determine the current state of the checkbox. Example:
 ----
-checked = getButtonState(); 
-if checked == 1 then 
-    hideExits() 
-else 
-    showExits() 
+checked = getButtonState();
+if checked == 1 then
+    hideExits()
+else
+    showExits()
 end;
 ----
 
@@ -3690,10 +3690,10 @@ Shows toolbar with the given name name on the screen. Toolbars are the groups th
 * background color optional string containing value for background color as a named color.
 * true/false - optional boolean that tells the function to use insertText() rather than echo(). Note that if sending to miniConsole, this has to be false.
 * name of console - optional name of the console to echo to. Defaults to main.
- 
+
 === How text works
 Color changes can be made within the string using the format |cFRFGFB,BRBGBB where FR is the foreground red value, FG is the foreground green value, FB is the foreground blue value, BR is the background red value, etc., BRBGBB is optional. |r can be used within the string to reset the colors to default.
- 
+
 The colors in arg2 and arg3 replace the normal defaults for your console. So if you use cecho("|cff0000Testing |rTesting", "00ff00", "0000ff"), the first Testing would be red on black and the second would be green on blue.
 
 [[hideToolBar]]
@@ -3715,7 +3715,7 @@ reconnects to the current server after a call to disconnect()
 == setTriggerStayOpen( name, number )
 set for how many more lines a trigger script should fire or a chain should stay open *after* the trigger has matched. The main use of this function is to close a chain when a certain condition has been met.
 
-'number' should be 0 to close the chain, or a positive number to keep the chain open that much longer. 
+'number' should be 0 to close the chain, or a positive number to keep the chain open that much longer.
 
 
 [[getMudletHomeDir]]
@@ -3760,25 +3760,25 @@ The schema table must be a Lua table array containing table dictionaries that de
 
 Examples:
 -------------------
-	local mydb = db:create("combat_log",
-		{
-			kills = {
-				name = "",
-				area = "",
-				killed = db:Timestamp("CURRENT_TIMESTAMP"),
-				_index = { {"name", "area"} }
-			},
-			enemies = {
-				name = "",
-				city = "",
-				reason = "",
-				enemied = db:Timestamp("CURRENT_TIMESTAMP"),
-				_index = { "city" },
-				_unique = { "name" },
-				_violations = "IGNORE"
-			}
-		}
-	)
+        local mydb = db:create("combat_log",
+                {
+                        kills = {
+                                name = "",
+                                area = "",
+                                killed = db:Timestamp("CURRENT_TIMESTAMP"),
+                                _index = { {"name", "area"} }
+                        },
+                        enemies = {
+                                name = "",
+                                city = "",
+                                reason = "",
+                                enemied = db:Timestamp("CURRENT_TIMESTAMP"),
+                                _index = { "city" },
+                                _unique = { "name" },
+                                _violations = "IGNORE"
+                        }
+                }
+        )
 -------------------
 
 The above will create a database with two sheets; the first is kills and is used to track every successful kill, with both where and when the kill happened. It has one index, a compound inde tracking the combination of name and area. The second sheet has two indexes, but one is unique: it isn't possible to add two items to the enemies sheet with the same name.
@@ -3810,11 +3810,11 @@ Each table is a series of key-value pairs to set the values of the sheet, but if
 
 An example:
 -----
-	db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
-	db:add(mydb.enemies,
-		{name="John Smith", city="San Francisco"},
-		{name="Jane Smith", city="San Francisco"},
-		{name="Richard Clark"})
+        db:add(mydb.enemies, {name="Bob Smith", city="San Francisco"})
+        db:add(mydb.enemies,
+                {name="John Smith", city="San Francisco"},
+                {name="Jane Smith", city="San Francisco"},
+                {name="Richard Clark"})
 -----
 
 As you can see, all fields are optional.
@@ -3833,12 +3833,12 @@ The results are returned in ascending (smallest to largest) order; to reverse th
 
 Examples:
 -----
-	db:fetch(mydb.enemies, nil, {"city", "name"})
-	db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
-	db:fetch(mydb.kills, 
-			{db:eq(mydb.kills.area, "Undervault"),
-			db:like(mydb.kills.name, "%Drow%")}
-	)
+        db:fetch(mydb.enemies, nil, {"city", "name"})
+        db:fetch(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+        db:fetch(mydb.kills,
+                        {db:eq(mydb.kills.area, "Undervault"),
+                        db:like(mydb.kills.name, "%Drow%")}
+        )
 -----
 
 The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.
@@ -3858,7 +3858,7 @@ returns the string as-is to the database.
 Use this function with caution, but it is very useful in some circumstances. One of the most common of such is incrementing an existing field in a db:set() operation, as so:
 
 -----
-	db:set(mydb.enemies, db:exp("kills + 1"), db:eq(mydb.enemies.name, "Ixokai"))
+        db:set(mydb.enemies, db:exp("kills + 1"), db:eq(mydb.enemies.name, "Ixokai"))
 -----
 
 This will increment the value of the kills field for the row identified by the name Ixokai.
@@ -3866,7 +3866,7 @@ This will increment the value of the kills field for the row identified by the n
 But there are other uses, as the underlining database layer provides many functions you can call to do certain things. If you want to get a list of all your enemies who have a name longer then 10 characters, you may do:
 
 -----
-	db:fetch(mydb.enemies, db:exp("length(name) > 10"))
+        db:fetch(mydb.enemies, db:exp("length(name) > 10"))
 -----
 
 Again, take special care with this, as you are doing SQL syntax directly and the library can't help you get things right.
@@ -3893,40 +3893,40 @@ The table array may contain tables that were either returned previously by db:fe
 
 For example, consider this database:
 -----
-	local mydb = db:create("peopledb",
-		{
-			friends = {
-				name = "",
-				race = "",
-				level = 0,
-				city = "",
-				_index = { "city" },
-				_unique = { "name" }
-			}
-		}
-	);
+        local mydb = db:create("peopledb",
+                {
+                        friends = {
+                                name = "",
+                                race = "",
+                                level = 0,
+                                city = "",
+                                _index = { "city" },
+                                _unique = { "name" }
+                        }
+                }
+        );
 -----
 
 Here you have a database with one sheet, which contains your friends, their race, level, and what city they live in. Let's say you want to fetch everyone who lives in San Francisco, you could do:
 -----
-	local results = db:fetch(mydb.friends, db:eq(mydb.friends.city, "San Francisco"))
+        local results = db:fetch(mydb.friends, db:eq(mydb.friends.city, "San Francisco"))
 -----
 
 The tables in results are static, any changes to them are not saved back to the database. But after a major radioactive cataclysm rendered everyone in San Francisco a mutant, you could make changes to the tables as so:
 -----
-	for _, friend in ipairs(results) do
-		friend.race = "Mutant"
-	end
+        for _, friend in ipairs(results) do
+                friend.race = "Mutant"
+        end
 -----
 
 If you are also now aware of a new arrival in San Francisco, you could add them to that existing table array:
 -----
-	results[#results+1] = {name="Bobette", race="Mutant", city="San Francisco"}
+        results[#results+1] = {name="Bobette", race="Mutant", city="San Francisco"}
 -----
 
 And commit all of these changes back to the database at once with:
 -----
-	db:merge_unique(mydb.friends, results)
+        db:merge_unique(mydb.friends, results)
 -----
 
 The db:merge_unique function will change the 'city' values for all the people who we previously fetched, but then add a new record as well.
@@ -3984,10 +3984,10 @@ First, note the trailing underscore carefully! It is required.
 The following example illustrates the use of in_:
 
 -----
-	local mydb = db:get_database("my database")
-	local areas = {"Undervault", "Hell", "Purgatory"}
+        local mydb = db:get_database("my database")
+        local areas = {"Undervault", "Hell", "Purgatory"}
 
-	db:fetch(mydb.kills, db:in_(mydb.kills.area, areas))
+        db:fetch(mydb.kills, db:in_(mydb.kills.area, areas))
 -----
 
 This will obtain all of your kills which happened in the Undervault, Hell or Purgatory. Every db:in_ expression can be written as a db:OR, but that quite often gets very complex.
@@ -4009,13 +4009,13 @@ The supported aggregate functions are:
 * MAX - Returns the highest number in the specified field.
 * MIN - Returns the lowest number in the specified field.
 * TOTAL - Returns the value of adding all the contents of the specified field.
- 
+
  Examples:
  -----
- 	local mydb = db:get_database("my database")
- 	echo(db:aggregate(mydb.enemies.name, "count"))
+        local mydb = db:get_database("my database")
+        echo(db:aggregate(mydb.enemies.name, "count"))
  -----
- 
+
 
 [[db_AND]]
 == db:AND(sub-expression1, ..., sub-expressionN)
@@ -4031,7 +4031,7 @@ This compound expression will find any item that matches either the first or the
 
 [[db_delete]]
 == db:delete(sheet reference, query)
-Deletes rows from the specified sheet. The argument for query tries to be intelligent: 
+Deletes rows from the specified sheet. The argument for query tries to be intelligent:
 
 * if it is a simple number, it deletes a specific row by _row_id
 * if it is a table that contains a _row_id (e.g., a table returned by db:get) it deletes just that record.
@@ -4040,13 +4040,13 @@ Deletes rows from the specified sheet. The argument for query tries to be intell
 
 Some examples:
 -----
-	enemies = db:fetch(mydb.enemies)
-	
-	db:delete(mydb.enemies, enemies[1])
-	db:delete(mydb.enemies, enemies[1]._row_id)
-	db:delete(mydb.enemies, 5)
-	db:delete(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
-	db:delete(mydb.enemies, true)
+        enemies = db:fetch(mydb.enemies)
+
+        db:delete(mydb.enemies, enemies[1])
+        db:delete(mydb.enemies, enemies[1]._row_id)
+        db:delete(mydb.enemies, 5)
+        db:delete(mydb.enemies, db:eq(mydb.enemies.city, "San Francisco"))
+        db:delete(mydb.enemies, true)
 -----
 
 Those deletion commands will do in order:
@@ -4055,7 +4055,7 @@ Those deletion commands will do in order:
 . When passed a number, will delete the record for that _row_id. This example shows getting the row id from a table.
 . As above, but this example just passes in the row id directly.
 . Here, we will delete anything which matches the same kind of query as db:fetch uses-- namely, anyone who is in the city of San Francisco.
-. And finally, we will delete the entire contents of the enemies table.	
+. And finally, we will delete the entire contents of the enemies table.
 
 [[db_update]]
 == db:update(sheet reference, table)
@@ -4063,10 +4063,10 @@ This function updates a row in the specified sheet, but only accepts a row which
 
 For example:
 -----
-	local mydb = db:get_database("my database")
-	local bob = db:fetch(mydb.friends, db:eq(mydb.friends.name, "Bob"))[1]
-	bob.notes = "He's a really awesome guy."
-	db:update(mydb.friends, bob)
+        local mydb = db:get_database("my database")
+        local bob = db:fetch(mydb.friends, db:eq(mydb.friends.name, "Bob"))[1]
+        bob.notes = "He's a really awesome guy."
+        db:update(mydb.friends, bob)
 -----
 
 This obtains a database reference, and queries the friends sheet for someone named Bob. As this returns a table array containing only one item, it assigns that one item to the local variable named bob. We then change the notes on Bob, and pass it into db:update() to save the changes back.
@@ -4078,14 +4078,14 @@ The db:set function allows you to set a certain field to a certain value across 
 For example, consider a situation in which you are tracking how many times you find a certain type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and then adding a record for each type of egg.
 
 -----
-	local mydb = db:create("egg database", {eggs = {color = "", last_found = db.Timestamp(false), found = 0}})
-	db:add(mydb.eggs,
-		{color = "Red"},
-		{color = "Blue"},
-		{color = "Green"},
-		{color = "Yellow"},
-		{color = "Black"}
-	)
+        local mydb = db:create("egg database", {eggs = {color = "", last_found = db.Timestamp(false), found = 0}})
+        db:add(mydb.eggs,
+                {color = "Red"},
+                {color = "Blue"},
+                {color = "Green"},
+                {color = "Yellow"},
+                {color = "Black"}
+        )
 -----
 
 Now, you have three columns. One is a string, one a timestamp (that ends up as nil in the database), and one is a number.
@@ -4095,9 +4095,9 @@ You can then set up a trigger to capture from the mud the string, "You pick up a
 To increment how many we found, we will do this:
 
 -----
-	myegg = "Red" -- We will pretend a trigger set this.
-	db:set(mydb.eggs.found, db:exp("found + 1"), db:eq(mydb.eggs.color, myegg))
-	db:set(mydb.eggs.last_found, db.Timestamp("CURRENT_TIMESTAMP"), db:eq(mydb.eggs.color, myegg))
+        myegg = "Red" -- We will pretend a trigger set this.
+        db:set(mydb.eggs.found, db:exp("found + 1"), db:eq(mydb.eggs.color, myegg))
+        db:set(mydb.eggs.last_found, db.Timestamp("CURRENT_TIMESTAMP"), db:eq(mydb.eggs.color, myegg))
 -----
 
 This will go out and set two fields in the Red egg sheet; the first is the found field, which will increment the value of that field (using the special db:exp function). The second will update the last_found field with the current time.
@@ -4105,8 +4105,8 @@ This will go out and set two fields in the Red egg sheet; the first is the found
 Once this contest is over, you may wish to reset this data but keep the database around. To do that, you may use a more broad use of db:set as such:
 
 -----
-	db:set(mydb.eggs.found, 0)
-	db:set(mydb.eggs.last_found, nil)
+        db:set(mydb.eggs.found, 0)
+        db:set(mydb.eggs.last_found, nil)
 -----
 
 
@@ -4145,9 +4145,9 @@ Makes a color trigger that triggers on the specified foreground and background c
 16 = dark white
 ----
 
-example: 
+example:
 ----
-tempColorTrigger(9,2,[[selectString(matches[1],1); fg("red"); bg("blue");]] ); 
+tempColorTrigger(9,2,[[selectString(matches[1],1); fg("red"); bg("blue");]] );
 ----
 This script will re-highlight all text in blue foreground colors on a black background with a red foreground color on a blue background color until another color in the current line is being met. temporary color triggers do not offer match_all or filter options like the GUI color triggers because this is rarely necessary for scripting. A common usage for temporary color triggers is to schedule actions on the basis of forthcoming text colors in a particular context.
 
@@ -4155,7 +4155,7 @@ This script will re-highlight all text in blue foreground colors on a black back
 
 [[getFgColor]]
 == r,g,b = getFgColor( windowName )
-This function returns the rgb values of the color of the first character of the current selection on mini console (window) windowName. If windowName is omitted Mudlet will use the main screen. example: 
+This function returns the rgb values of the color of the first character of the current selection on mini console (window) windowName. If windowName is omitted Mudlet will use the main screen. example:
 ----
 local r,g,b;
 selectString("troll",1)
@@ -4172,12 +4172,12 @@ get the rgb values of the first character of the current selection -> getFgColor
 
 [[wrapLine]]
 == wrapLine( windowName, lineNumber )
-wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters, apply word wrap and display the new lines on the screen. This function may be necessary if you use deleteLine() and thus erase the entire current line in the buffer, but you want to do some further echo() calls after calling deleteLine(). You will then need to re-wrap the last line of the buffer to actually see what you have echoed and get you \n interpreted as newline characters properly. Using this function is no good programming practice and should be avoided. There are better ways of handling situations where you would call deleteLine() and echo afterwards e.g.: 
+wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters, apply word wrap and display the new lines on the screen. This function may be necessary if you use deleteLine() and thus erase the entire current line in the buffer, but you want to do some further echo() calls after calling deleteLine(). You will then need to re-wrap the last line of the buffer to actually see what you have echoed and get you \n interpreted as newline characters properly. Using this function is no good programming practice and should be avoided. There are better ways of handling situations where you would call deleteLine() and echo afterwards e.g.:
 ----
 selectString(line,1);
-replace(""); 
+replace("");
 ----
-This will effectively have the same result as a call to deleteLine() but the buffer line will not be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible without using wrapLine() unnecessarily. 
+This will effectively have the same result as a call to deleteLine() but the buffer line will not be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible without using wrapLine() unnecessarily.
 
 [[isAnsiFgColor]]
 == isAnsiFgColor( ansiFgColorCode )
@@ -4318,4 +4318,17 @@ table {
 --------
 
 If no rooms are found, then an empty table is returned.
+
+[[addSpecialExit]]
+== addSpecialExit( roomID_from, roomID_to, command )
+This function can be used to add special exits such as "use portal" to set non standard exits to a room. These exits will be used by the path finding algorithm, but they will not be shown on the map as these are usually magical portals of some sort. Mudlet will use these exits for regular routing.
+
+[[getSpecialExits]]
+== getSpecialExits( roomID ) : table that contains the special exits of the room i.e. roomID as key and command as value
+
+[[clearSpecialExits]]
+== clearSpecialExits( roomID )
+Deletes all special exits of a room.
+
+
 

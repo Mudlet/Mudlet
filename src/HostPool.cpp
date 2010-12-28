@@ -49,7 +49,7 @@ bool HostPool::deleteHost(QString hostname)
         std::cout << "[OK] Host deleted removing pool entry ..."<<std::endl;
         int ret = mHostPool.remove( hostname );
         std::cout << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret<<std::endl;
-        
+
     }
     return true;
 }
@@ -57,7 +57,7 @@ bool HostPool::deleteHost(QString hostname)
 bool HostPool::renameHost(QString hostname)
 {
     QMutexLocker locker(& mPoolLock);
-	
+
     // make sure this is really a new host
     if( mHostPool.find( hostname ) == mHostPool.end() )
     {
@@ -77,8 +77,8 @@ bool HostPool::renameHost(QString hostname)
 
 bool HostPool::addNewHost( QString hostname, QString port, QString login, QString pass )
 {
-    QMutexLocker locker(&mPoolLock);	
-    
+    QMutexLocker locker(&mPoolLock);
+
     // make sure this is really a new host
     if( mHostPool.find( hostname ) != mHostPool.end() )
     {
@@ -86,37 +86,37 @@ bool HostPool::addNewHost( QString hostname, QString port, QString login, QStrin
     }
     if( hostname.size() < 1 )
         return false;
-    
+
     int portnumber = 23;
     if( port.size() >= 1 )
     {
         portnumber = port.toInt();
     }
-    
+
     int id = createNewHostID();
     Host * pNewHost = new Host( portnumber, hostname, login, pass, id );
-    
+
     if( pNewHost == 0 ) //enough memory?
     {
         return false;
     }
-    
+
     mHostPool[hostname] = pNewHost;
     return true;
 }
 
 int HostPool::createNewHostID()
 {
-    return (mHostPool.size() + 1);    
+    return (mHostPool.size() + 1);
 }
 
 QStringList HostPool::getHostList()
 {
     QMutexLocker locker(& mPoolLock);
-   
+
     QStringList strlist;
     QList<QString> hostList = mHostPool.keys();
-    if( hostList.size() > 0 ) 
+    if( hostList.size() > 0 )
         strlist << hostList;
     return strlist;
 }
@@ -126,11 +126,11 @@ QStringList HostPool::getHostList()
 QList<QString> HostPool::getHostNameList()
 {
     QMutexLocker locker(& mPoolLock);
-    
+
     return mHostPool.keys();
     /*
     QList<QString> strlist;
-    
+
     typedef QMap<QString, Host*>::iterator IT;
     for( IT it=mHostPool.begin(); it!=mHostPool.end(); it++ )
     {
@@ -143,7 +143,7 @@ QList<QString> HostPool::getHostNameList()
 void HostPool::orderShutDown()
 {
     QMutexLocker locker(& mPoolLock);
-    
+
     QList<Host*> hostList = mHostPool.values();
     for( int i=0; i<hostList.size(); i++ )
     {
@@ -165,7 +165,7 @@ Host * HostPool::getHost( QString hostname )
         // host exists
         return mHostPool[hostname];
     }
-    else 
+    else
     {
         return 0;
     }
@@ -175,7 +175,7 @@ Host * HostPool::getHostFromHostID( int id )
 {
     QMutexLocker locker( & mPoolLock );
     QMapIterator<QString, Host *> it(mHostPool);
-    while( it.hasNext() ) 
+    while( it.hasNext() )
     {
         it.next();
         Host * pHost = it.value();
@@ -190,7 +190,7 @@ Host * HostPool::getHostFromHostID( int id )
 
 Host * HostPool::getFirstHost()
 {
-    QMutexLocker locker(& mPoolLock);     
+    QMutexLocker locker(& mPoolLock);
     Host * pHost = mHostPool.begin().value();
     return pHost;
 }
@@ -203,15 +203,15 @@ Host * HostPool::getNextHost( QString LastHost )
         //ok host exists get next one
         QMap<QString, Host*>::iterator it;
         if( ++it != mHostPool.end() )
-        {  
+        {
             Host * pHost = mHostPool[it.key()];
             return pHost;
         }
     }
-    else 
-    { 
+    else
+    {
         return 0;
-    }		 
+    }
     Host * pHost = mHostPool[mHostPool.begin().key()];
     return pHost;
 }
@@ -223,68 +223,31 @@ bool HostPool::serialize( QString directory )
     QDir dir;
     if( ! dir.exists( directory ) )
     {
-        dir.mkpath( directory );    
+        dir.mkpath( directory );
     }
     QFile file( filename );
     file.open(QIODevice::WriteOnly);
-    QDataStream ofs(&file); 
-    
+    QDataStream ofs(&file);
+
     ofs << mHostPool.size();
     typedef QMap<QString, Host*>::iterator IT;
     for( IT it=mHostPool.begin(); it!=mHostPool.end(); it++ )
     {
         ofs << it.key(); //host pool selbst serialisen
         QString host_directory = directory + it.key();
-        if( ! it.value()->serialize() ) 
+        if( ! it.value()->serialize() )
         {
             file.close();
             qDebug() << "ERROR: can't serialize " << it.key() << endl;
             return false;
         }
     }
-    file.close();   
+    file.close();
     return true;
 }
 
-bool HostPool::restore( QString directory )
-{
-    /*QString filename = directory + "/HostPool.dat";
-    QFile file( filename );
-    file.open(QIODevice::ReadOnly);
-    QDataStream ifs(&file); 
-    int hostCount;
-    ifs >> hostCount;
-    for( int i=0; i<hostCount; i++ )
-    {
-        QString hostname;
-        ifs >> hostname;
-        qDebug() << "restoring " << hostname;
-        QString nothing = "";
-        Host * pH = new Host( 0, hostname, nothing, nothing, createNewHostID() );				
-        mHostPool[hostname] = pH;
-        if( ! pH->restore( directory + hostname, -1 ) )
-        {
-            return false;
-        }
-        if( hostname.size() < 1 )
-        {
-            mHostPool.remove( QString("") );    
-        }
-    }
-    
-    file.close();*/
-    return true;
-}
 
-Host * HostPool::importHost( QString path )
-{
-    return 0;
-}
 
-Host * HostPool::loadHostProfile( QString path, int profileHistory )
-{
-    return 0;
-}
 
 
 

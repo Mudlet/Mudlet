@@ -43,6 +43,9 @@ class QTextEdit;
 class EAction;
 class TConsole;
 class TLabel;
+class dlgIRC;
+
+
 
 
 
@@ -69,7 +72,7 @@ public:
    bool                          createLabel( Host *, QString &, int, int, int, int, bool );
    bool                          echoWindow( Host *, QString &, QString & );
    bool                          echoLink( Host * pHost, QString & name, QString & text, QStringList &, QStringList &, bool customFormat=false );
-   bool                          insertLink( Host *, QString &, QString, QStringList &, QStringList &, bool customFormat=false );
+   void                          insertLink( Host *, QString &, QString, QStringList &, QStringList &, bool customFormat=false );
    bool                          appendBuffer( Host *, QString & );
    bool                          createBuffer( Host *, QString & );
    bool                          showWindow( Host *, QString & );
@@ -132,6 +135,9 @@ public:
    QTime                         mReplayTime;
    int                           mReplaySpeed;
    QToolBar *                    mpMainToolBar;
+   QMap<QTimer *, TTimer *>      mTimerMap;
+   dlgIRC *                      mpIRC;
+   QString                       version;
 
 
 public slots:
@@ -150,7 +156,6 @@ public slots:
 
    void                          slot_multi_view();
    void                          slot_stopAllTriggers();
-   void                          slot_userToolBar_triggered(QAction*);
    void                          slot_userToolBar_hovered( QAction* pA );
    void                          slot_connection_dlg_finnished( QString profile, int historyVersion );
    void                          slot_timer_fires();
@@ -162,6 +167,7 @@ public slots:
    void                          slot_reconnect();
    void                          slot_close_profile_requested(int);
    void                          startAutoLogin();
+   void                          slot_irc();
 
 protected:
 
@@ -197,7 +203,7 @@ private:
    //QMap<QString, TConsole *>     dockWindowConsoleMap;
    //QMap<QString, TLabel *>>       mLabelMap;
    QMap<Host *, QToolBar *>      mUserToolbarMap;
-   QMap<QTimer *, TTimer *>      mTimerMap;
+
 
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
@@ -206,6 +212,16 @@ private:
    QAction *                     actionReplaySpeedUp;
 
 };
+
+class TConsoleMonitor : public QObject
+ {
+     Q_OBJECT
+
+ protected:
+     bool eventFilter(QObject *obj, QEvent *event);
+ };
+
+
 
 #endif
 

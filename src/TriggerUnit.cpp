@@ -73,7 +73,7 @@ void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int chi
     {
         pT->setID( getNewID() );
     }
-    if( ( parentPosition == -1 ) || ( childPosition >= mTriggerRootNodeList.size() ) )
+    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mTriggerRootNodeList.size()) ) )
     {
         mTriggerRootNodeList.push_back( pT );
     }
@@ -257,10 +257,7 @@ void TriggerUnit::processDataStream( QString & data, int line )
         }
         mCleanupList.clear();
     }
-    if( mpHost->mResetProfile )
-    {
-        mpHost->resetProfile();
-    }
+
 }
 
 void TriggerUnit::compileAll()
@@ -345,7 +342,6 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
 
 TTrigger * TriggerUnit::findTrigger( QString & name )
 {
-    TTrigger * pT = 0;
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {
@@ -421,8 +417,6 @@ bool TriggerUnit::killTrigger( QString & name )
 
 void TriggerUnit::dump()
 {
-    bool ret = true;
-
     typedef list<TTrigger *>::const_iterator I;
     cout << "TriggerUnit::dump() entries="<<mTriggerRootNodeList.size()<<endl;
 

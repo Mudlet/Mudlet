@@ -42,36 +42,34 @@ using namespace std;
 
 TAction::TAction( TAction * parent, Host * pHost )
 : Tree<TAction>( parent )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
 , mpEasyButtonBar( 0 )
+, mButtonState( 1 )
+, mPosX( 0 )
+, mPosY( 0 )
+, mNeedsToBeCompiled( true )
 , mButtonColumns( 1 )
 , mIsLabel( false )
 , mUseCustomLayout( false )
-, mPosX( 0 )
-, mPosY( 0 )
 , mButtonColor( QColor( 255,255,255) )
-, mpLua( pHost->getLuaInterpreter() )
-, mButtonState( 1 )
+, mpHost( pHost )
 {
 }
 
 TAction::TAction( QString name, Host * pHost )
 : Tree<TAction>(0)
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
 , mpToolBar( 0 )
 , mpEasyButtonBar( 0 )
+, mButtonState( 1 )
+, mPosX( 0 )
+, mPosY( 0 )
+, mName( name )
+, mNeedsToBeCompiled( true )
 , mButtonColumns( 1 )
 , mIsLabel( false )
 , mUseCustomLayout( false )
-, mPosX( 0 )
-, mPosY( 0 )
 , mButtonColor( QColor( 255,255,255) )
-, mpLua( pHost->getLuaInterpreter() )
-, mButtonState( 1 )
+, mpHost( pHost )
 {
 }
 
@@ -142,7 +140,7 @@ bool TAction::compileScript()
     mFuncName = QString("Action")+QString::number( mID );
     QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpLua->compile( code, error ) )
+    if( mpHost->mLuaInterpreter.compile( code, error ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
@@ -181,7 +179,7 @@ void TAction::_execute(QStringList & list)
         }
     }
     mpHost->mpConsole->mButtonState = mButtonState;
-    mpLua->call( mFuncName, mName );
+    mpHost->mLuaInterpreter.call( mFuncName, mName );
     // move focus back to the active console / command line
     mpHost->mpConsole->activateWindow();
     mpHost->mpConsole->setFocus();

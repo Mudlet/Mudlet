@@ -97,18 +97,9 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuGames">
-    <property name="title">
-     <string>Games</string>
-    </property>
-    <addaction name="dactionConnect"/>
-    <addaction name="separator"/>
-    <addaction name="dactionDisconnect"/>
-    <addaction name="dactionReconnect"/>
-   </widget>
    <widget class="QMenu" name="menuEditor">
     <property name="title">
      <string>Toolbox</string>
@@ -116,6 +107,8 @@
     <addaction name="dactionScriptEditor"/>
     <addaction name="dactionNotepad"/>
     <addaction name="dactionReplay"/>
+    <addaction name="actionLive_Help_Chat"/>
+    <addaction name="actionShow_Map"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -138,6 +131,15 @@
     </property>
     <addaction name="dactionAbout"/>
     <addaction name="dactionDownload"/>
+   </widget>
+   <widget class="QMenu" name="menuGames">
+    <property name="title">
+     <string>Games</string>
+    </property>
+    <addaction name="dactionConnect"/>
+    <addaction name="separator"/>
+    <addaction name="dactionDisconnect"/>
+    <addaction name="dactionReconnect"/>
    </widget>
    <addaction name="menuGames"/>
    <addaction name="menuEditor"/>
@@ -231,6 +233,24 @@
   <action name="dactionDownload">
    <property name="text">
     <string>Download Latest Version</string>
+   </property>
+  </action>
+  <action name="dactionIRC_2">
+   <property name="text">
+    <string>Help Chat</string>
+   </property>
+   <property name="toolTip">
+    <string>get live help on IRC</string>
+   </property>
+  </action>
+  <action name="actionLive_Help_Chat">
+   <property name="text">
+    <string>live Help Chat</string>
+   </property>
+  </action>
+  <action name="actionShow_Map">
+   <property name="text">
+    <string>Show Map</string>
    </property>
   </action>
  </widget>

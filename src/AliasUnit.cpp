@@ -72,7 +72,7 @@ void AliasUnit::addAliasRootNode( TAlias * pT, int parentPosition, int childPosi
     {
         pT->setID( getNewID() );
     }
-    if( ( parentPosition == -1 ) || ( childPosition >= mAliasRootNodeList.size() ) )
+    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mAliasRootNodeList.size()) ) )
     {
         mAliasRootNodeList.push_back( pT );
     }
@@ -279,20 +279,20 @@ void AliasUnit::reenableAllTriggers()
     }
 }
 
-bool AliasUnit::serialize( QDataStream & ofs )
-{
-    return true;
-}
+//bool AliasUnit::serialize( QDataStream & ofs )
+//{
+//    return true;
+//}
 
 
-bool AliasUnit::restore( QDataStream & ifs, bool initMode )
-{
-    return true;
-}
+//bool AliasUnit::restore( QDataStream & ifs, bool initMode )
+//{
+//    return true;
+//}
 
 TAlias * AliasUnit::findAlias( QString & name )
 {
-    TAlias * pT = 0;
+    //TAlias * pT = 0;
     QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {
@@ -358,7 +358,7 @@ bool AliasUnit::killAlias( QString & name )
 
 void AliasUnit::dump()
 {
-    bool ret = true;
+    //bool ret = true;
 
     typedef list<TAlias *>::const_iterator I;
     cout << "AliasUnit::dump() entries="<<mAliasRootNodeList.size()<<endl;

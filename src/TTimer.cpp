@@ -38,33 +38,37 @@ using namespace std;
 
 TTimer::TTimer( TTimer * parent, Host * pHost )
 : Tree<TTimer>( parent )
+, mRegisteredAnonymousLuaFunction( false )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mIsTempTimer( false )
-, mpLua( mpHost->getLuaInterpreter() )
+, mpTimer( new QTimer )
 {
 }
 
 TTimer::TTimer( QString name, QTime time, Host * pHost )
 : Tree<TTimer>(0)
+, mRegisteredAnonymousLuaFunction( false )
 , mName( name )
 , mTime( time )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mIsTempTimer( false )
-, mpLua( mpHost->getLuaInterpreter() )
+, mpTimer( new QTimer )
 {
 }
 
 TTimer::~TTimer()
 {
-    mTimer.stop();
+    mpTimer->stop();
     if( ! mpHost )
     {
         return;
     }
     mpHost->getTimerUnit()->unregisterTimer( this );
-    mudlet::self()->unregisterTimer( &mTimer );
+    mudlet::self()->unregisterTimer( mpTimer );
+    mpTimer->deleteLater();
+    //qDebug()<<"DELETING TIMER:"<<this;
 }
 
 bool TTimer::registerTimer()
@@ -74,8 +78,8 @@ bool TTimer::registerTimer()
         return false;
     }
     setTime( mTime );
-    mudlet::self()->registerTimer( this, &mTimer );
-    mTimer.connect(&mTimer, SIGNAL(timeout()), mudlet::self(),SLOT(slot_timer_fires()));
+    mudlet::self()->registerTimer( this, mpTimer );
+    mpTimer->connect(mpTimer, SIGNAL(timeout()), mudlet::self(),SLOT(slot_timer_fires()));
     return mpHost->getTimerUnit()->registerTimer( this );
 }
 
@@ -96,7 +100,7 @@ void TTimer::setTime( QTime time )
 {
     QMutexLocker locker(& mLock);
     mTime = time;
-    mTimer.setInterval( mTime.msec()+(1000*mTime.second())+(1000*60*mTime.minute())+(1000*60*60*mTime.hour()));
+    mpTimer->setInterval( mTime.msec()+(1000*mTime.second())+(1000*60*mTime.minute())+(1000*60*60*mTime.hour()));
 }
 
 // children of folder = regular timers
@@ -138,15 +142,15 @@ bool TTimer::setIsActive( bool b )
 void TTimer::start()
 {
     if( mIsTempTimer )
-        mTimer.setSingleShot( true );
+        mpTimer->setSingleShot( true );
     else
-        mTimer.setSingleShot( false );
-    mTimer.start();
+        mpTimer->setSingleShot( false );
+    mpTimer->start();
 }
 
 void TTimer::stop()
 {
-    mTimer.stop();
+    mpTimer->stop();
 }
 
 void TTimer::compile()
@@ -186,7 +190,7 @@ void TTimer::compileAll()
 bool TTimer::setScript( QString & script )
 {
     mScript = script;
-    if( script == "" )
+    if( script == "" && mRegisteredAnonymousLuaFunction )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
@@ -204,7 +208,7 @@ bool TTimer::compileScript()
     mFuncName = QString("Timer")+QString::number( mID );
     QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpLua->compile( code, error ) )
+    if( mpHost->mLuaInterpreter.compile( code, error ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
@@ -231,21 +235,21 @@ void TTimer::execute()
     if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
     if( ! isActive() || mIsFolder )
     {
-        mTimer.stop();
+        mpTimer->stop();
         return;
     }
 
     if( mIsTempTimer )
     {
-        if( mScript == "" )
+        if( mScript == "" && mRegisteredAnonymousLuaFunction )
         {
-            mpLua->call_luafunction( this );
+            mpHost->mLuaInterpreter.call_luafunction( this );
         }
         else
         {
-            mpLua->compileAndExecuteScript( mScript );
+            mpHost->mLuaInterpreter.compileAndExecuteScript( mScript );
         }
-        mTimer.stop();
+        mpTimer->stop();
         mpHost->mTimerUnit.markCleanup( this );
         return;
     }
@@ -281,9 +285,9 @@ void TTimer::execute()
             return;
         }
     }
-    if( ! mpLua->call( mFuncName, mName ) )
+    if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) )
     {
-        mTimer.stop();
+        mpTimer->stop();
     }
 }
 
@@ -317,13 +321,13 @@ void TTimer::enableTimer( qint64 id )
             {
                 if( mScript.size() > 0 )
                 {
-                    mTimer.start();
+                    mpTimer->start();
                 }
             }
             else
             {
                 deactivate();
-                mTimer.stop();
+                mpTimer->stop();
             }
         }
     }
@@ -344,7 +348,7 @@ void TTimer::disableTimer( qint64 id )
     if( mID == id )
     {
         deactivate();
-        mTimer.stop();
+        mpTimer->stop();
     }
 
     typedef list<TTimer *>::const_iterator I;
@@ -366,13 +370,13 @@ void TTimer::enableTimer()
         {
             if( mScript.size() > 0 )
             {
-                mTimer.start();
+                mpTimer->start();
             }
         }
         else
         {
             deactivate();
-            mTimer.stop();
+            mpTimer->stop();
         }
     }
     if( ! isOffsetTimer() )
@@ -389,8 +393,8 @@ void TTimer::enableTimer()
 void TTimer::disableTimer()
 {
     deactivate();
-    mTimer.stop();
-    qDebug()<<"timer "<<mName<<" has been stopped stopping children...\n";
+    mpTimer->stop();
+    //qDebug()<<"timer "<<mName<<" has been stopped stopping children...\n";
     typedef list<TTimer *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
@@ -409,12 +413,12 @@ void TTimer::enableTimer( QString & name )
         {
             if( activate() )
             {
-                mTimer.start();
+                mpTimer->start();
             }
             else
             {
                 deactivate();
-                mTimer.stop();
+                mpTimer->stop();
             }
         }
     }
@@ -435,7 +439,7 @@ void TTimer::disableTimer( QString & name )
     if( mName == name )
     {
         deactivate();
-        mTimer.stop();
+        mpTimer->stop();
     }
 
     typedef list<TTimer *>::const_iterator I;
@@ -450,7 +454,7 @@ void TTimer::disableTimer( QString & name )
 void TTimer::killTimer()
 {
     deactivate();
-    mTimer.stop();
+    mpTimer->stop();
 }
 
 

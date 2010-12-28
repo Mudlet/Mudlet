@@ -277,8 +277,6 @@ void TTreeWidget::dragMoveEvent( QDragMoveEvent * e )
 
 void TTreeWidget::startDrag( Qt::DropActions supportedActions )
 {
-    QTreeWidgetItem * item = currentItem();
-
     QTreeWidget::startDrag( supportedActions );
 }
 

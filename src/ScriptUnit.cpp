@@ -54,7 +54,7 @@ void ScriptUnit::addScriptRootNode( TScript * pT, int parentPosition, int childP
         pT->setID( getNewID() );
     }
 
-    if( ( parentPosition == -1 ) || ( childPosition >= mScriptRootNodeList.size() ) )
+    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mScriptRootNodeList.size()) ) )
     {
         mScriptRootNodeList.push_back( pT );
     }

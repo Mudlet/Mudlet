@@ -40,12 +40,26 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 #include "dlgNotepad.h"
+#include "dlgIRC.h"
 
 //#define NDEBUG
 #include <assert.h>
 
 
 using namespace std;
+
+bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
+{
+    if( event->type() == QEvent::Close )
+    {
+        mudlet::debugMode = false;
+        return QObject::eventFilter(obj,event);
+    }
+    else
+    {
+        return QObject::eventFilter(obj, event);
+    }
+}
 
 TConsole *  mudlet::mpDebugConsole = 0;
 QMainWindow * mudlet::mpDebugArea = 0;
@@ -73,6 +87,8 @@ mudlet::mudlet()
 , mpCurrentActiveHost( 0 )
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
+, mpIRC( 0 )
+, version( "Mudlet 1.2.0-pre8 December 2010" )
 {
     setupUi(this);
 
@@ -81,7 +97,7 @@ mudlet::mudlet()
     mudlet::debugMode = false;
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle("Mudlet 1.2.0-pre6 September 2010");
+    setWindowTitle(version);
     setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
@@ -163,10 +179,13 @@ mudlet::mudlet()
     actionKeys->setEnabled( true );
     mpMainToolBar->addAction( actionKeys );
 
+    QAction * actionIRC = new QAction(QIcon(":/icons/internet-telephony.png"), tr("Help Chat"), this);
+    actionIRC->setStatusTip(tr("help chat on IRC"));
+    mpMainToolBar->addAction( actionIRC );
+
     QAction * actionMapper = new QAction(QIcon(":/icons/applications-internet.png"), tr("Map"), this);
     actionMapper->setStatusTip(tr("show map"));
     mpMainToolBar->addAction( actionMapper );
-
 
     QAction * actionHelp = new QAction(QIcon(":/icons/help-hint.png"), tr("Manual"), this);
     actionHelp->setStatusTip(tr("Browse Reference Material and Documentation"));
@@ -225,6 +244,8 @@ mudlet::mudlet()
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget( mpDebugConsole );
+    TConsoleMonitor * consoleCloser = new TConsoleMonitor;
+    mpDebugArea->installEventFilter(consoleCloser);
 
     QSize generalRule( qApp->desktop()->size() );
     generalRule -= QSize( 30, 30 );
@@ -266,6 +287,7 @@ mudlet::mudlet()
     connect(actionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
     connect(actionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
     connect(actionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
+    connect(actionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
 
     QAction * mactionConnect = new QAction(tr("Connect"), this);
     QAction * mactionTriggers = new QAction(tr("Triggers"), this);
@@ -294,6 +316,8 @@ mudlet::mudlet()
     connect(dactionVideo, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_video()));
     connect(dactionForum, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_forum()));
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_irc()));
+    connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
+    connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -482,6 +506,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
 void mudlet::slot_timer_fires()
 {
     QTimer * pQT = (QTimer*)sender();
+    if( ! pQT ) return;
     if( mTimerMap.contains( pQT ) )
     {
         TTimer * pTT = mTimerMap[pQT];
@@ -499,6 +524,7 @@ void mudlet::slot_timer_fires()
 
 void mudlet::unregisterTimer( QTimer * pQT )
 {
+    //qDebug()<<"removing QTIMER"<<pQT<<" size="<<mTimerMap.size();
     if( mTimerMap.contains( pQT ) )
     {
         mTimerMap.remove( pQT );
@@ -507,6 +533,7 @@ void mudlet::unregisterTimer( QTimer * pQT )
     {
         qDebug()<<"MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
     }
+    //qDebug()<<"---> AFTER size="<<mTimerMap.size();
 }
 
 void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
@@ -587,8 +614,7 @@ bool mudlet::createMiniConsole( Host * pHost, QString & name, int x, int y, int 
             return true;
         }
     }
-    else
-        return false;
+    return false;
 }
 
 bool mudlet::createLabel( Host * pHost, QString & name, int x, int y, int width, int height, bool fillBg )
@@ -605,8 +631,7 @@ bool mudlet::createLabel( Host * pHost, QString & name, int x, int y, int width,
             return true;
         }
     }
-    else
-        return false;
+    return false;
 }
 
 bool mudlet::createBuffer( Host * pHost, QString & name )
@@ -625,21 +650,7 @@ bool mudlet::createBuffer( Host * pHost, QString & name )
             return true;
         }
     }
-    else
-        return false;
-    /*QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( ! dockWindowConsoleMap.contains( name ) )
-    {
-        TConsole * pC = new TConsole( pHost, false );
-        pC->setContentsMargins(0,0,0,0);
-        pC->hide();
-        pC->layerCommandLine->hide();
-        pC->mpScrollBar->hide();
-        pC->setUserWindow();
-        dockWindowConsoleMap[name] = pC;
-        return true;
-    }
-    else return false;*/
+    return false;
 }
 
 bool mudlet::setBackgroundColor( Host * pHost, QString & name, int r, int g, int b, int alpha )
@@ -927,7 +938,7 @@ void mudlet::insertText( Host * pHost, QString & name, QString text )
     }
 }
 
-bool mudlet::insertLink( Host * pHost, QString & name, QString text, QStringList & func, QStringList & hint, bool customFormat )
+void mudlet::insertLink( Host * pHost, QString & name, QString text, QStringList & func, QStringList & hint, bool customFormat )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1141,21 +1152,7 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 }
 
-void mudlet::slot_userToolBar_triggered( QAction* pA )
-{
-    /*
-    if( pA->isChecked() )
-    {
-        ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 2;
-    }
-    else
-    {
-        ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->mButtonState = 1;
-    }
-    QStringList sL;
-    ((EAction*)pA)->mpHost->getActionUnit()->getAction(((EAction*)pA)->mID )->execute(sL);
-    */
-}
+
 
 void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
 {
@@ -1444,6 +1441,17 @@ void mudlet::slot_notes()
     }
     pNotes->raise();
     pNotes->show();
+}
+
+void mudlet::slot_irc()
+{
+    if( ! mpIRC )
+    {
+        mpIRC = new dlgIRC();
+        mpIRC->setWindowTitle( "Mudlet live IRC Help Channel #mudlet-help on irc.freenode.net" );
+    }
+    mpIRC->raise();
+    mpIRC->show();
 }
 
 void mudlet::slot_reconnect()

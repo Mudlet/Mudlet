@@ -48,7 +48,7 @@ class TTimer : public Tree<TTimer>
 
 public:
 
-    virtual         ~TTimer();
+                    ~TTimer();
                      TTimer( TTimer * parent, Host * pHost );
                      TTimer( QString name, QTime time, Host * pHost );
                      TTimer& clone(const TTimer& );
@@ -84,6 +84,7 @@ public:
 
     bool             isClone(TTimer &b) const;
     bool             isOffsetTimer();
+    bool             mRegisteredAnonymousLuaFunction;
 
 private:
 
@@ -98,8 +99,8 @@ private:
     bool               mNeedsToBeCompiled;
     bool               mIsTempTimer;
     QMutex             mLock;
-    QTimer             mTimer;
-    TLuaInterpreter *  mpLua;
+    QTimer *           mpTimer;
+    //TLuaInterpreter *  mpLua;
 
 };
 

@@ -70,7 +70,7 @@ public:
     bool             isClone(TAlias &b) const;
     bool             isTempAlias()                   { return mIsTempAlias; }
     void             setIsTempAlias( bool b )        { mIsTempAlias = b; }
-    bool             mIsTempAlias;
+
 
 
                      TAlias(){};
@@ -82,8 +82,8 @@ public:
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
+    bool             mIsTempAlias;
     QString          mFuncName;
-    TLuaInterpreter * mpLua;
 };
 
 #endif

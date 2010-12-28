@@ -75,19 +75,19 @@ public:
     void expandLine( int y, int count, TChar & );
     int wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
-    void addLink( QString & text, QStringList & command, QStringList & hint, TChar format );
-    void appendLink( QString & text,
-                     int sub_start,
-                     int sub_end,
-                     int fgColorR,
-                     int fgColorG,
-                     int fgColorB,
-                     int bgColorR,
-                     int bgColorG,
-                     int bgColorB,
-                     bool bold,
-                     bool italics,
-                     bool underline );
+    void addLink( bool, QString & text, QStringList & command, QStringList & hint, TChar format );
+//    void appendLink( QString & text,
+//                     int sub_start,
+//                     int sub_end,
+//                     int fgColorR,
+//                     int fgColorG,
+//                     int fgColorB,
+//                     int bgColorR,
+//                     int bgColorG,
+//                     int bgColorB,
+//                     bool bold,
+//                     bool italics,
+//                     bool underline );
     int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
     int find( int line, QString what, int pos );
@@ -114,8 +114,8 @@ public:
     void resetFontSpecs();
     QPoint getEndPos();
     void translateToPlainText( std::string & s );
-    void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
-    void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline );
+    void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
+    void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
     int lookupColor( QString & s, int pos );
     void set_text_properties(int tag);
     void setWrapAt( int i ){ mWrapAt = i; }

@@ -33,8 +33,8 @@
 
 dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 : QDialog( pF )
-, mpHost( pH )
 , mFontSize( 10 )
+, mpHost( pH )
 {
     // init generated dialog
     setupUi(this);

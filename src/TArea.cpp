@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <QDebug>
 #include <QPair>
+#include <QList>
 
 #define NORTH 12
 #define NORTHEAST 1
@@ -49,6 +50,87 @@ TArea::TArea( TMap * map )
 , gridMode( false )
 {
     mpMap = map;
+}
+
+QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
+{
+    QMap<int,QMap<int,QMultiMap<int,int> > > kS;
+    for( int i=0; i<rooms.size(); i++ )
+    {
+        int id = rooms[i];
+        int x = mpMap->rooms[rooms[i]]->x;
+        int y = mpMap->rooms[rooms[i]]->y;
+        int z = mpMap->rooms[rooms[i]]->z;
+        QMap<int,QMultiMap<int,int> > _y;
+        QMultiMap<int,int> _z;
+        if( ! kS.contains( x ) )
+        {
+            kS[x] = _y;
+        }
+        if( ! kS[x].contains( y ) )
+        {
+            kS[x][y] = _z;
+        }
+        kS[x][y].insertMulti( z, id );
+    }
+    //qDebug()<< "kS="<<kS;
+    return kS;
+}
+
+QList<int> TArea::getRoomsByPosition( int x, int y, int z )
+{
+    QList<int> dL;
+    for( int i=0; i<rooms.size(); i++ )
+    {
+        int id = rooms[i];
+        int _x = mpMap->rooms[rooms[i]]->x;
+        int _y = mpMap->rooms[rooms[i]]->y;
+        int _z = mpMap->rooms[rooms[i]]->z;
+        if( _x == x && _y == y && _z == z )
+        {
+            dL.push_back( id );
+        }
+    }
+    return dL;
+}
+
+QList<int> TArea::getCollisionNodes()
+{
+    QList<int> problems;
+    QMap<int,QMap<int,QMultiMap<int,int> > > kS = koordinatenSystem();
+    QMapIterator<int,QMap<int,QMultiMap<int,int> > > it(kS);
+    while (it.hasNext())
+    {
+        it.next();
+        QMap<int,QMultiMap<int,int> > x_val = it.value();
+        QMapIterator<int,QMultiMap<int,int> > it2(x_val);
+        while (it2.hasNext())
+        {
+            it2.next();
+            QMultiMap<int,int> y_val = it2.value();
+            QMapIterator<int,int> it3(y_val);
+            QList<int> z_coordinates;
+            while (it3.hasNext())
+            {
+                it3.next();
+                int z = it3.key();
+                int node = it3.value();
+
+                if( ! z_coordinates.contains( node ) )
+                    z_coordinates.append( node );
+                else
+                {
+                    if( ! problems.contains( node ) )
+                    {
+                        QMultiMap<int, int>::iterator it4 = y_val.find(z);
+                        problems.append( it4.value() );
+                        //qDebug()<<"problem node="<<node;
+                    }
+                }
+            }
+        }
+    }
+    return problems;
 }
 
 void TArea::ausgaengeBestimmen()

@@ -32,7 +32,7 @@
 class HostManager
 {
 public:
-    
+
     static             HostManager * self();
     Host *             getHost( QString hostname );
     Host *             getHost( std::string hostname );
@@ -45,21 +45,18 @@ public:
     bool               renameHost( QString );
     Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
     bool               serialize();
-    bool               restore();
-    Host *             loadHostProfile( QString path, int profileHistory );
-    Host *             importHost( QString path );
-    
+
 private:
 
                         HostManager(){;}
     void                init();
-    
-    
+
+
     static HostManager * _self;
     HostPool            mHostPool;
     QMutex              mLock;
     Host *              mpActiveHost;
-     
+
 };
 
 #endif

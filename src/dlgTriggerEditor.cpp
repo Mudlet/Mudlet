@@ -85,19 +85,19 @@ const QString msgInfoAddKey = "To add a new key binding <b>1.</b> add a new key 
                               "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>";
 
 dlgTriggerEditor::dlgTriggerEditor( Host * pH )
-: mpHost( pH )
+: mCurrentAlias( 0 )
+, mCurrentTrigger( 0 )
+, mCurrentTimer( 0 )
+, mCurrentAction( 0 )
+, mCurrentScript( 0 )
+, mCurrentKey( 0 )
 , mpCurrentActionItem( 0 )
 , mpCurrentKeyItem( 0 )
 , mpCurrentTimerItem( 0 )
 , mpCurrentScriptItem( 0 )
 , mpCurrentTriggerItem( 0 )
 , mpCurrentAliasItem( 0 )
-, mCurrentAlias( 0 )
-, mCurrentTrigger( 0 )
-, mCurrentTimer( 0 )
-, mCurrentAction( 0 )
-, mCurrentScript( 0 )
-, mCurrentKey( 0 )
+, mpHost( pH )
 {
     // init generated dialog
     setupUi(this);
@@ -2894,7 +2894,7 @@ void dlgTriggerEditor::saveTrigger()
             QString old_name = pT->getName();
             pT->setName( name );
             pT->setCommand( command );
-            bool check = pT->setRegexCodeList( regexList, regexPropertyList );
+            pT->setRegexCodeList( regexList, regexPropertyList );
 
             pT->setScript( script );
             pT->setIsMultiline( isMultiline );
@@ -3412,7 +3412,6 @@ void dlgTriggerEditor::saveAction()
     QTreeWidgetItem * pItem = mCurrentAction;
     if( ! pItem ) return;
 
-    bool state = true;
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
     QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
@@ -3595,7 +3594,6 @@ void dlgTriggerEditor::saveScript()
     QTreeWidgetItem * pItem = mCurrentScript;
     if( ! pItem ) return;
 
-    bool state = true;
     QString old_name;
     QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
     QString script = mpSourceEditorArea->editor->toPlainText();
@@ -3756,7 +3754,6 @@ void dlgTriggerEditor::saveKey()
     QTreeWidgetItem * pItem = mCurrentKey;
     if( ! pItem ) return;
 
-    bool state = true;
     QString name = mpKeysMainArea->lineEdit_name->text();
     if( name.size() < 1 )
     {

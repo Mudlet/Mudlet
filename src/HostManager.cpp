@@ -30,7 +30,7 @@
 
 HostManager * HostManager::_self = 0;
 
-HostManager * HostManager::self() 
+HostManager * HostManager::self()
 {
     if( ! _self )
     {
@@ -42,7 +42,7 @@ HostManager * HostManager::self()
 
 void HostManager::init()
 {
-    mpActiveHost = 0;    
+    mpActiveHost = 0;
 }
 
 Host * HostManager::getHost( QString hostname )
@@ -58,15 +58,6 @@ bool HostManager::addHost( QString url, QString port, QString login, QString pas
     return ret;
 }
 
-Host * HostManager::importHost( QString path )
-{
-    return mHostPool.importHost( path );
-}
-
-Host * HostManager::loadHostProfile( QString path, int profileHistory )
-{
-    return mHostPool.loadHostProfile( path, profileHistory );
-}
 
 bool HostManager::deleteHost( QString url )
 {
@@ -84,24 +75,18 @@ bool HostManager::serialize()
     QDir dir;
     if( ! dir.exists( directory ) )
     {
-        dir.mkpath( directory );    
+        dir.mkpath( directory );
     }
-    
+
     std::cout << "Mudlet is exiting now." << std::endl << "ordering all Hosts to shut down" << std::endl;
-    
+
     mHostPool.orderShutDown();
     mHostPool.serialize( directory );
-    
+
     std::cout << "mudlet: DONE" << std::endl << "Have a nice day :-)" << std::endl;
     return true;
 }
 
-bool HostManager::restore()
-{
-    QString directory = QDir::homePath()+"/.config/mudlet/profiles/";
-    return mHostPool.restore( directory );
-
-}
 
 #endif
 

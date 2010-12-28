@@ -97,7 +97,6 @@ private:
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
-    TLuaInterpreter * mpLua;
 };
 
 #endif

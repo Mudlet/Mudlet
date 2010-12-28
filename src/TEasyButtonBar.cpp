@@ -26,11 +26,12 @@
 #include "mudlet.h"
 
 TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
-: mpTAction( pA )
-, QWidget( pW )
+: QWidget( pW )
+, mpTAction( pA )
+
+, mVerticalOrientation( false )
 , mpWidget( new QWidget )
 , mName( name )
-, mVerticalOrientation( false )
 , mRecordMove( false )
 , mpLayout( 0 )
 , mItemCount( 0 )

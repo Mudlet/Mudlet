@@ -125,15 +125,16 @@ TChar::TChar( const TChar & copy )
 
 
 TBuffer::TBuffer( Host * pH )
-: mLinesLimit( 10000 )
-, mBatchDeleteSize( 1000 )
-, mUntriggered( 0 )
-, mWrapAt( 99999999 )
-, mWrapIndent( 0 )
-
-, gotESC( false )
-, gotHeader( false )
-, codeRet( 0 )
+: mLinkID            ( 0 )
+, mLinesLimit        ( 10000 )
+, mBatchDeleteSize   ( 1000 )
+, mUntriggered       ( 0 )
+, mWrapAt            ( 99999999 )
+, mWrapIndent        ( 0 )
+, mCursorY           ( 0 )
+, gotESC             ( false )
+, gotHeader          ( false )
+, codeRet            ( 0 )
 , mFormatSequenceRest( QString("") )
 , mBlack             ( pH->mBlack )
 , mLightBlack        ( pH->mLightBlack )
@@ -153,15 +154,13 @@ TBuffer::TBuffer( Host * pH )
 , mWhite             ( pH->mWhite )
 , mFgColor           ( pH->mFgColor )
 , mBgColor           ( pH->mBgColor )
-, mpHost( pH )
-, mCursorMoved( false )
-, mBold( false )
-, mItalics( false )
-, mUnderline( false )
-, mFgColorCode( 0 )
-, mBgColorCode( 0 )
-, mLinkID( 0 )
-, mCursorY( 0 )
+, mpHost             ( pH )
+, mCursorMoved       ( false )
+, mBold              ( false )
+, mItalics           ( false )
+, mUnderline         ( false )
+, mFgColorCode       ( 0 )
+, mBgColorCode       ( 0 )
 {
     clear();
     newLines = 0;
@@ -301,7 +300,7 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink( QString & text, QStringList & command, QStringList & hint, TChar format )
+void TBuffer::addLink( bool trigMode, QString & text, QStringList & command, QStringList & hint, TChar format )
 {
     mLinkID++;
     if( mLinkID > 1000 )
@@ -310,7 +309,9 @@ void TBuffer::addLink( QString & text, QStringList & command, QStringList & hint
     }
     mLinkStore[mLinkID] = command;
     mHintStore[mLinkID] = hint;
-    appendLink( text,
+    if( ! trigMode )
+    {
+        append( text,
                 0,
                 text.length(),
                 format.fgR,
@@ -321,107 +322,128 @@ void TBuffer::addLink( QString & text, QStringList & command, QStringList & hint
                 format.bgB,
                 format.bold,
                 format.italics,
-                format.underline );
-}
-
-void TBuffer::appendLink( QString & text,
-                          int sub_start,
-                          int sub_end,
-                          int fgColorR,
-                          int fgColorG,
-                          int fgColorB,
-                          int bgColorR,
-                          int bgColorG,
-                          int bgColorB,
-                          bool bold,
-                          bool italics,
-                          bool underline )
-{
-    if( static_cast<int>(buffer.size()) > mLinesLimit )
-    {
-        shrinkBuffer();
+                format.underline,
+                mLinkID );
     }
-    int last = buffer.size()-1;
-    if( last < 0 )
+    else
     {
-        std::deque<TChar> newLine;
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
-        newLine.push_back( c );
-        buffer.push_back( newLine );
-        lineBuffer.push_back(QString());
-        promptBuffer.push_back(false);
-        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-        last = 0;
-    }
-    bool firstChar = (lineBuffer.back().size() == 0);
-    int length = text.size();
-    if( length < 1 ) return;
-    if( sub_end >= length ) sub_end = text.size()-1;
-
-    for( int i=sub_start; i<=(sub_start+sub_end); i++ )
-    {
-        if( text.at(i) == '\n' )
-        {
-            std::deque<TChar> newLine;
-            buffer.push_back( newLine );
-            lineBuffer.push_back( QString() );
-            QString time = "-----";
-            timeBuffer << time;
-            promptBuffer << false;
-            mLastLine++;
-            newLines++;
-            firstChar = true;
-            continue;
-        }
-        if( lineBuffer.back().size() >= mWrapAt )
-        {
-            //assert(lineBuffer.back().size()==buffer.back().size());
-            const QString lineBreaks = ",.- ";
-            const QString nothing = "";
-            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
-            {
-                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
-                {
-                    QString tmp = lineBuffer.back().mid(0,i+1);
-                    QString lineRest = lineBuffer.back().mid(i+1);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int k = lineRest.size();
-                    if( k > 0 )
-                    {
-                        while( k > 0 )
-                        {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            k--;
-                        }
-                    }
-
-                    buffer.push_back( newLine );
-                    if( lineRest.size() > 0 )
-                        lineBuffer.append( lineRest );
-                    else
-                        lineBuffer.append( nothing );
-                    QString time = "-----";
-                    timeBuffer << time;
-                    promptBuffer << false;
-                    mLastLine++;
-                    newLines++;
-                    break;
-                }
-            }
-        }
-        lineBuffer.back().append( text.at( i ) );
-
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, mLinkID );
-        buffer.back().push_back( c );
-        if( firstChar )
-        {
-            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-        }
+        appendLine( text,
+                    0,
+                    text.length(),
+                    format.fgR,
+                    format.fgG,
+                    format.fgB,
+                    format.bgR,
+                    format.bgG,
+                    format.bgB,
+                    format.bold,
+                    format.italics,
+                    format.underline,
+                    mLinkID );
     }
 }
+
+//void TBuffer::appendLink( QString & text,
+//                          int sub_start,
+//                          int sub_end,
+//                          int fgColorR,
+//                          int fgColorG,
+//                          int fgColorB,
+//                          int bgColorR,
+//                          int bgColorG,
+//                          int bgColorB,
+//                          bool bold,
+//                          bool italics,
+//                          bool underline )
+//{
+//    if( static_cast<int>(buffer.size()) > mLinesLimit )
+//    {
+//        shrinkBuffer();
+//    }
+//    int last = buffer.size()-1;
+//    if( last < 0 )
+//    {
+//        std::deque<TChar> newLine;
+//        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+//        newLine.push_back( c );
+//        buffer.push_back( newLine );
+//        lineBuffer.push_back(QString());
+//        promptBuffer.push_back(false);
+//        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+//        dirty.push_back(true);
+//        last = 0;
+//    }
+//    bool firstChar = (lineBuffer.back().size() == 0);
+//    int length = text.size();
+//    if( length < 1 ) return;
+//    if( sub_end >= length ) sub_end = text.size()-1;
+
+//    for( int i=sub_start; i<=(sub_start+sub_end); i++ )
+//    {
+//        if( text.at(i) == '\n' )
+//        {
+//            std::deque<TChar> newLine;
+//            buffer.push_back( newLine );
+//            lineBuffer.push_back( QString() );
+//            QString time = "-----";
+//            timeBuffer << time;
+//            promptBuffer << false;
+//            dirty << true;
+//            mLastLine++;
+//            newLines++;
+//            firstChar = true;
+//            continue;
+//        }
+//        if( lineBuffer.back().size() >= mWrapAt )
+//        {
+//            //assert(lineBuffer.back().size()==buffer.back().size());
+//            const QString lineBreaks = ",.- ";
+//            const QString nothing = "";
+//            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
+//            {
+//                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
+//                {
+//                    QString tmp = lineBuffer.back().mid(0,i+1);
+//                    QString lineRest = lineBuffer.back().mid(i+1);
+//                    lineBuffer.back() = tmp;
+//                    std::deque<TChar> newLine;
+
+//                    int k = lineRest.size();
+//                    if( k > 0 )
+//                    {
+//                        while( k > 0 )
+//                        {
+//                            newLine.push_front(buffer.back().back());
+//                            buffer.back().pop_back();
+//                            k--;
+//                        }
+//                    }
+
+//                    buffer.push_back( newLine );
+//                    if( lineRest.size() > 0 )
+//                        lineBuffer.append( lineRest );
+//                    else
+//                        lineBuffer.append( nothing );
+//                    QString time = "-----";
+//                    timeBuffer << time;
+//                    promptBuffer << false;
+//                    dirty << true;
+//                    mLastLine++;
+//                    newLines++;
+//                    break;
+//                }
+//            }
+//        }
+//        lineBuffer.back().append( text.at( i ) );
+
+//        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, mLinkID );
+//        buffer.back().push_back( c );
+//        if( firstChar )
+//        {
+//            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+//        }
+//    }
+//}
 
 
 //int speedTP;
@@ -981,10 +1003,10 @@ void TBuffer::translateToPlainText( std::string & s )
                                     }
                                     else
                                         _bold = false;
-                                    int bgColorLightR;
-                                    int bgColorLightG;
-                                    int bgColorLightB;
-                                    switch(tag)
+                                    int bgColorLightR = 0;
+                                    int bgColorLightG = 0;
+                                    int bgColorLightB = 0;
+                                    switch( tag )
                                     {
                                     case 0:
                                         bgColorR = mBlackR;
@@ -1111,7 +1133,6 @@ void TBuffer::translateToPlainText( std::string & s )
                         }
 
                         // we are dealing with standard ANSI colors
-                    NORMAL_ANSI_COLOR_TAG:
 
                         switch( tag )
                         {
@@ -1403,7 +1424,8 @@ void TBuffer::append( QString & text,
                       int bgColorB,
                       bool bold,
                       bool italics,
-                      bool underline )
+                      bool underline,
+                      int linkID )
 {
     if( static_cast<int>(buffer.size()) > mLinesLimit )
     {
@@ -1484,7 +1506,7 @@ void TBuffer::append( QString & text,
             }
         }
         lineBuffer.back().append( text.at( i ) );
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, linkID);
         buffer.back().push_back( c );
         if( firstChar )
         {
@@ -1504,7 +1526,8 @@ void TBuffer::appendLine( QString & text,
                         int bgColorB,
                         bool bold,
                         bool italics,
-                        bool underline )
+                        bool underline,
+                        int linkID )
 {
     if( sub_end < 0 ) return;
     if( static_cast<int>(buffer.size()) > mLinesLimit )
@@ -1532,7 +1555,7 @@ void TBuffer::appendLine( QString & text,
     for( int i=sub_start; i<=(sub_start+sub_end); i++ )
     {
         lineBuffer.back().append( text.at( i ) );
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, linkID);
         buffer.back().push_back( c );
         if( firstChar )
         {
@@ -2158,6 +2181,7 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
 
 inline int TBuffer::wrap( int startLine )
 {
+    qDebug()<<"--0--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
     std::queue<std::deque<TChar> > queue;
     QStringList tempList;
@@ -2238,23 +2262,26 @@ inline int TBuffer::wrap( int startLine )
                 tempList.append(QString());
                 std::deque<TChar> emptyLine;
                 queue.push( emptyLine );
-                timeList.append( time );
+                timeList.append( QString() );
+                promptList.append( false );
             }
             else
             {
                 queue.push( newLine );
                 tempList.append( lineText );
+                timeList.append( time );
+                promptList.append( isPrompt );
             }
-            timeList.append( time );
-            promptList.append( isPrompt );
             newLine.clear();
             lineText = "";
             indent = 0;
         }
         lineCount++;
     }
+    qDebug()<<"--1--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     for( int i=0; i<lineCount; i++ )
     {
+        qDebug()<<"--2-- deleting buffer line";
         buffer.pop_back();
         lineBuffer.pop_back();
         timeBuffer.pop_back();
@@ -2270,21 +2297,26 @@ inline int TBuffer::wrap( int startLine )
         buffer.push_back( queue.front() );
         queue.pop();
     }
-
+qDebug()<<"--3--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     for( int i=0; i<tempList.size(); i++ )
     {
+        qDebug()<<"--4--adding--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
         if( tempList[i].size() < 1 )
         {
             lineBuffer.append( QString() );
+            timeBuffer.append( QString() );
+            promptBuffer.push_back( false );
         }
         else
         {
             lineBuffer.append( tempList[i] );
+            timeBuffer.append( timeList[i] );
+            promptBuffer.push_back( promptList[i] );
         }
-        timeBuffer.append( timeList[i] );
         dirty.push_back( true );
-        promptBuffer.push_back( promptList[i] );
     }
+    //Q_ASSERT(!((lineBuffer.size()==promptBuffer.size()) && (lineBuffer.size()==timeBuffer.size()) && (lineBuffer.size() == dirty.size()) ));
+    qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     return insertedLines > 0 ? insertedLines : 0;
 }
 
@@ -2403,7 +2435,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
         promptBuffer.push_back( false );
         dirty.push_back( true );
     }
-    WRAP_END: return insertedLines > 0 ? insertedLines : 0;
+    return insertedLines > 0 ? insertedLines : 0;
 }
 
 // returns how many new lines have been inserted by the wrapping action
@@ -2531,6 +2563,8 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         promptBuffer.insert( startLine+i, isPrompt );
         dirty.insert( startLine+i, true );
     }
+    //Q_ASSERT(!((lineBuffer.size()==promptBuffer.size()) && (lineBuffer.size()==timeBuffer.size()) && (lineBuffer.size() == dirty.size()) ));
+    qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     return insertedLines > 0 ? insertedLines : 0;
 }
 

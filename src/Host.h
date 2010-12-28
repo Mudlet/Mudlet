@@ -69,7 +69,7 @@ class Host  : public QObject
 public:
 
                        Host( int port, QString mHostName, QString login, QString pass, int host_id );
-                       Host();
+
                        ~Host();
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     void               setName( QString s )             { QMutexLocker locker(& mLock); mHostName = s; }
@@ -102,10 +102,8 @@ public:
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
     TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
-    void               incomingStreamProcessor( QString & paragraph, QString & prompt, int line );
-    void               gotRest( QString & );
-    void               gotLine( QString & );
-    void               gotPrompt( QString & );
+    void               incomingStreamProcessor( QString & paragraph, int line );
+
     void               enableTimer( QString & );
     void               disableTimer( QString & );
     void               enableTrigger( QString & );
@@ -140,10 +138,91 @@ public:
     void               adjustNAWS();
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
+
+    cTelnet            mTelnet;
     TConsole *         mpConsole;
-    dlgTriggerEditor * mpEditorDialog;
-    bool               mResetProfile;
+    TLuaInterpreter    mLuaInterpreter;
+    TriggerUnit        mTriggerUnit;
+    TimerUnit          mTimerUnit;
+    ScriptUnit         mScriptUnit;
+    AliasUnit          mAliasUnit;
+    ActionUnit         mActionUnit;
+    KeyUnit            mKeyUnit;
+
+    int                commandLineMinimumHeight;
+    bool               mAlertOnNewData;
+    bool               mAllowToSendCommand;
+    bool               mAutoClearCommandLineAfterSend;
+    bool               mBlockScriptCompile;
+    int                mBorderBottomHeight;
+    int                mBorderLeftWidth;
+    int                mBorderRightWidth;
+    int                mBorderTopHeight;
+    QString            mBufferIncomingData;
+    bool               mCodeCompletion;
+    QFont              mCommandLineFont;
+    QString            mCommandSeparator;
+    QString            mCommandSeperator;
+    bool               mDisableAutoCompletion;
+    QFont              mDisplayFont;
+    bool               mEnableGMCP;
+    int                mEncoding;
+    QTextStream        mErrorLogStream;
+    QFile              mErrorLogFile;
+    QMap<QString, QList<TScript *> > mEventHandlerMap;
+    QMap<QString, TEvent *> mEventMap;
+    bool               mFORCE_GA_OFF;
+    bool               mFORCE_NO_COMPRESSION;
+    bool               mFORCE_SAVE_ON_EXIT;
+    int                mHostID;
+    QString            mHostName;
     bool               mInsertedMissingLF;
+    bool               mIsAutologin;
+    bool               mIsGoingDown;
+    bool               mIsProfileLoadingSequence;
+
+    bool               mIsClosingDown;
+    bool               mLF_ON_GA;
+    QString            mLine;
+    QMutex             mLock;
+    QString            mLogin;
+    int                mMainIconSize;
+    QString            mMudOutputBuffer;
+    int                mMXPMode;
+    bool               mNoAntiAlias;
+
+    QString            mPass;
+    dlgTriggerEditor * mpEditorDialog;
+    TMap *             mpMap;
+    dlgNotepad *       mpNotePad;
+    QStringList        mParagraphList;
+
+    int                mPort;
+    bool               mPrintCommand;
+    QString            mPrompt;
+    bool               mRawStreamDump;
+    QString            mReplacementCommand;
+    QString            mRest;
+    bool               mResetProfile;
+    int                mRetries;
+    bool               mSaveProfileOnExit;
+    int                mScreenHeight;
+    int                mScreenWidth;
+    bool               mShowToolbar;
+    int                mTEFolderIconSize;
+    QStringList        mTextBufferList;
+
+    int                mTimeout;
+
+    QString            mUrl;
+
+    bool               mUSE_FORCE_LF_AFTER_PROMPT;
+    bool               mUSE_IRE_DRIVER_BUGFIX;
+    bool               mUSE_UNIX_EOL;
+    QString            mUserDefinedName;
+    int                mWrapAt;
+    int                mWrapIndentCount;
+
     QColor             mBlack;
     QColor             mLightBlack;
     QColor             mRed;
@@ -160,92 +239,19 @@ public:
     QColor             mMagenta;
     QColor             mLightWhite;
     QColor             mWhite;
-
     QColor             mFgColor;
     QColor             mBgColor;
     QColor             mCommandBgColor;
     QColor             mCommandFgColor;
-    int                mMXPMode;
-    int                mEncoding;
-    bool               mShowToolbar;
-    QFont              mDisplayFont;
-    int                mScreenHeight;
-    int                mScreenWidth;
-    QFont              mCommandLineFont;
-    QString            mCommandSeperator;
-    bool               mSaveProfileOnExit;
-    //////////////////////////////////////////
-    // this is serialized into hostOptions_2
-    int mWrapAt;
-    int mWrapIndentCount;
-    bool mPrintCommand;
-    bool mAutoClearCommandLineAfterSend;
-    QString mCommandSeparator;
-    bool mDisableAutoCompletion;
-    //////////////////////////////////////////
-    bool               mUSE_IRE_DRIVER_BUGFIX;
-    bool               mUSE_FORCE_LF_AFTER_PROMPT;
-    bool               mNoAntiAlias;
-    bool               mRawStreamDump;
-    bool               mCodeCompletion;
-    dlgNotepad *       mpNotePad;
 
-    //private:
-
-    QStringList        mTextBufferList;
-    QString            mRest;
-    QString            mPrompt;
-    QString            mLine;
-    QStringList        mParagraphList;
-    QString            mHostName;
-    QString            mUrl;
-    QString            mLogin;
-    QString            mPass;
-    QMutex             mLock;
-    TLuaInterpreter    mLuaInterpreter;
-    int                mTimeout;
-    int                mRetries;
-    bool               mIsClosingDown;
-    int                mPort;
-    QString            mUserDefinedName;
-
-    TriggerUnit        mTriggerUnit;
-    TimerUnit          mTimerUnit;
-    ScriptUnit         mScriptUnit;
-    AliasUnit          mAliasUnit;
-    ActionUnit         mActionUnit;
-    KeyUnit            mKeyUnit;
-
-    cTelnet            mTelnet;
-    int                mHostID;
-    QString            mMudOutputBuffer;
-    QString            mBufferIncomingData;
-    QString            mReplacementCommand;
-    QMap<QString, QList<TScript *> > mEventHandlerMap;
-    QMap<QString, TEvent *> mEventMap;
-    bool               mIsAutologin;
     QMap<int,QTime>    mStopWatchMap;
-    int                mBorderTopHeight;
-    int                mBorderBottomHeight;
-    int                mBorderLeftWidth;
-    int                mBorderRightWidth;
-    bool               mUSE_UNIX_EOL;
-    bool               mBlockScriptCompile;
-    int                mMainIconSize;
-    int                mTEFolderIconSize;
-    bool               mIsGoingDown;
-    bool               mLF_ON_GA;
-    bool               mAlertOnNewData;
-    TMap *             mpMap;
-    bool               mFORCE_NO_COMPRESSION;
-    bool               mFORCE_GA_OFF;
-    bool               mFORCE_SAVE_ON_EXIT;
-    bool               mEnableGMCP;
-    bool               mIsProfileLoadingSequence;
-    QTextStream        mErrorLogStream;
-    QFile              mErrorLogFile;
-    int                commandLineMinimumHeight;
-    bool               mAllowToSendCommand;
+
+private:
+    Host();
+
+
+
+
 };
 #endif
 

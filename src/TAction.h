@@ -116,11 +116,11 @@ public:
     QString          mScript;
     bool             mIsPushDownButton;
     bool             mIsFolder;
-    Host *           mpHost;
+
     bool             mNeedsToBeCompiled;
     QString          mIcon;
     QIcon            mIconPix;
-    QColor           mButtonColor;
+
     int              mButtonRotation;
     int              mButtonColumns;
     bool             mButtonFlat;
@@ -129,12 +129,13 @@ public:
     bool             mIsLabel;
     bool             mUseCustomLayout;
     QString          css;
+    QColor           mButtonColor;
+    Host *           mpHost;
 
 private:
 
     TAction(){};
     QString          mFuncName;
-    TLuaInterpreter * mpLua;
 };
 
 #endif

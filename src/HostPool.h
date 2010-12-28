@@ -34,9 +34,9 @@ class HostPool
 {
     QMutex                mPoolLock;
     QMap<QString, Host *> mHostPool;
-    
+
  public:
-    
+
     Host *                getHost( QString hostname );
     Host *                getFirstHost();
     Host *                getNextHost( QString LastHost ); //get next host key by providing a LastHost
@@ -46,14 +46,11 @@ class HostPool
     bool                  deleteHost( QString url );
     bool                  renameHost( QString url );
     bool                  serialize( QString path );
-    bool                  restore( QString path );
     void                  orderShutDown();
     Host *                getHostFromHostID( int id );
-    Host *                importHost( QString path );
-    Host *                loadHostProfile( QString path, int profileHistory );
-    
+
 private:
-    
+
     int createNewHostID();
 };
 #endif
