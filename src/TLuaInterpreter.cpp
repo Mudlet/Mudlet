@@ -6245,6 +6245,24 @@ int TLuaInterpreter::sendRaw( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::sendSocket( lua_State * L )
+{
+    string luaSendText;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.socketOutRaw( luaSendText );
+    return 0;
+}
+
 
 bool TLuaInterpreter::compileAndExecuteScript( QString & code )
 {
@@ -7147,6 +7165,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile );
     lua_register( pGlobalLua, "appendCmdLine", TLuaInterpreter::appendCmdLine );
     lua_register( pGlobalLua, "openUrl", TLuaInterpreter::openUrl );
+    lua_register( pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

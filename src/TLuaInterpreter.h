@@ -114,6 +114,7 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int sendSocket( lua_State * L );
     static int openUrl( lua_State * );
     static int getRoomsByPosition( lua_State * );
     static int getRoomEnv( lua_State * );

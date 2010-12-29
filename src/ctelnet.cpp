@@ -202,6 +202,9 @@ void cTelnet::handle_socket_signal_connected()
     reset();
     QString msg = "[INFO] A connection has been established successfully.\n";
     postMessage( msg );
+    QString func = "onConnect";
+    QString nothing = "";
+    mpHost->mLuaInterpreter.call(func, nothing );
     mConnectionTime.start();
     if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0))
         mTimerLogin->start(2000);
