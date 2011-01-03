@@ -252,6 +252,7 @@ public:
 
 
 
+
       QTime             mProcessingTime;
       bool              mRecordReplay;
       QFile             mReplayFile;
@@ -273,6 +274,7 @@ public:
       QPoint            P_end;
       QString           profile_name;
       TSplitter *       splitter;
+      int               mLastBufferLogLine;
 
 signals:
 

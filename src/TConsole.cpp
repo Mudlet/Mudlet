@@ -98,6 +98,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mWindowIsHidden( false )
 , mWrapAt( 100 )
 , networkLatency( new QLineEdit )
+, mLastBufferLogLine( 0 )
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -755,6 +756,7 @@ void TConsole::slot_toggleLogging()
     mLogToLogFile = ! mLogToLogFile;
     if( mLogToLogFile )
     {
+        mLastBufferLogLine = buffer.size();
         QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
         QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         if( mpHost->mRawStreamDump )
@@ -927,24 +929,32 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
 {
     //buffer.messen();
     QString prompt ="";//FIXME
-    if( mLogToLogFile )
-    {
-        QString log = incomingSocketData.c_str();
-        if( ! mIsDebugConsole )
-        {
-            if( mpHost->mRawStreamDump )
-            {
-                QString toLog = logger_translate( log );
-                toLog.replace(QChar(255), "\n");
-                toLog.replace('\n', "<\\ br>");
-                mLogStream << toLog;
-            }
-        }
-    }
+
     mProcessingTime.restart();
     mTriggerEngineMode = true;
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = false;
+    if( mLogToLogFile )
+    {
+        if( ! mIsDebugConsole )
+        {
+            if( mpHost->mRawStreamDump )
+            {
+                if( buffer.size()-10 > mLastBufferLogLine && buffer.size()-10 > 0 )
+                {
+                    for( int i=mLastBufferLogLine+1; i<buffer.size()-10; i++ )
+                    {
+                        QPoint P1 = QPoint(0,i);
+                        QPoint P2 = QPoint( buffer.buffer[i].size(), i);
+                        QString toLog = buffer.bufferToHtml(P1, P2);
+                        mLastBufferLogLine++;
+                        mLogStream << toLog;
+                    }
+                    mLastBufferLogLine--;
+                }
+            }
+        }
+    }
     double processT = mProcessingTime.elapsed();
     if( mpHost->mTelnet.mGA_Driver )
     {
@@ -2444,6 +2454,7 @@ void TConsole::showStatistics()
     printSystemMessage( footer );
 
 }
+
 
 
 

@@ -210,20 +210,6 @@ void cTelnet::handle_socket_signal_connected()
         mTimerLogin->start(2000);
     if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
-
-    /*
-    //negotiate some telnet options, if allowed
-    string cmd;
-    //NAWS (used to send info about window size)
-    cmd += TN_IAC;
-    cmd += TN_WILL;
-    cmd += OPT_NAWS;
-    //do not allow server to echo our text!
-    cmd += TN_IAC;
-    cmd += TN_DONT;
-    cmd += OPT_ECHO;
-    socketOutRaw(cmd);
-    setDisplayDimensions();*/
 }
 
 void cTelnet::handle_socket_signal_disconnected()

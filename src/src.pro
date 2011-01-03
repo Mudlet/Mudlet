@@ -108,7 +108,8 @@ SOURCES += TConsole.cpp \
     irc/src/irc.cpp \
     irc/src/ircsession.cpp \
     irc/src/ircutil.cpp \
-    dlgIRC.cpp
+    dlgIRC.cpp \
+    T2DMap.cpp
 
 
 HEADERS += mudlet.h \
@@ -181,7 +182,8 @@ HEADERS += mudlet.h \
     irc/include/irc.h \
     irc/include/ircsession.h \
     irc/include/ircutil.h \
-    dlgIRC.h
+    dlgIRC.h \
+    T2DMap.h
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \

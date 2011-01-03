@@ -88,6 +88,7 @@ public:
 //                     bool bold,
 //                     bool italics,
 //                     bool underline );
+    QString bufferToHtml( QPoint P1, QPoint P2 );
     int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
     int find( int line, QString what, int pos );

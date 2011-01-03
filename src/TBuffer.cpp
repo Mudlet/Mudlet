@@ -3128,5 +3128,89 @@ QStringList TBuffer::getEndLines( int n )
 }
 
 
+QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
+{
+    int y = P1.y();
+    int x = P1.x();
+    QString s;
+    if( y < 0 || y >= static_cast<int>(buffer.size()) )
+        return s;
+
+    if( ( x < 0 )
+        || ( x >= static_cast<int>(buffer[y].size()) )
+        || ( P2.x() > static_cast<int>(buffer[y].size()) ) )
+    {
+        x=0;
+    }
+    if( P2.x() < 0 )
+    {
+        P2.setX(buffer[y].size());
+    }
+
+    bool bold = false;
+    bool italics = false;
+    bool underline = false;
+    int fgR;
+    int fgG;
+    int fgB;
+    int bgR;
+    int bgG;
+    int bgB;
+    QString fontWeight;
+    QString fontStyle;
+    QString fontDecoration;
+    bool needChange = true;
+    for( ; x<P2.x(); x++ )
+    {
+        if( needChange
+            || buffer[y][x].fgR != fgR
+            || buffer[y][x].fgG != fgG
+            || buffer[y][x].fgB != fgB
+            || buffer[y][x].bgR != bgR
+            || buffer[y][x].bgG != bgG
+            || buffer[y][x].bgB != bgB
+            || buffer[y][x].bold != bold
+            || buffer[y][x].underline != underline
+            || buffer[y][x].italics != italics )
+        {
+            needChange = false;
+            fgR = buffer[y][x].fgR;
+            fgG = buffer[y][x].fgG;
+            fgB = buffer[y][x].fgB;
+            bgR = buffer[y][x].bgR;
+            bgG = buffer[y][x].bgG;
+            bgB = buffer[y][x].bgB;
+            bold = buffer[y][x].bold;
+            italics = buffer[y][x].italics;
+            underline = buffer[y][x].underline;
+            if( bold )
+                fontWeight = "bold";
+            else
+                fontWeight = "normal";
+            if( italics )
+                fontStyle = "italics";
+            else
+                fontStyle = "normal";
+            if( underline )
+                fontDecoration = "underline";
+            else
+                fontDecoration = "normal";
+            s += "</span><span style=\"";
+            s+="color: rgb(" + QString::number(fgR)+"," + QString::number(fgG)+"," + QString::number(fgB) + ");";
+            s += " background: rgb(" + QString::number(bgR)+"," + QString::number(bgG)+"," + QString::number(bgB) +");";
+            s += " font-weight: " + fontWeight +
+                "; font-style: " + fontStyle +
+                "; font-decoration: " + fontDecoration +
+                "\">";
+        }
+        s.append(lineBuffer[y][x]);
+    }
+//    s.replace(QChar('\\'), "\\\\");
+//    s.replace(QChar('\n'), "<br />");
+//    s.replace(QChar('\t'), "     ");
+    s.append("<br />");
+    return s;
+}
+
 
 
