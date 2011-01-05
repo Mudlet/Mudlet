@@ -190,7 +190,7 @@ void TTimer::compileAll()
 bool TTimer::setScript( QString & script )
 {
     mScript = script;
-    if( script == "" && mRegisteredAnonymousLuaFunction )
+    if( script == "" )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
@@ -241,7 +241,7 @@ void TTimer::execute()
 
     if( mIsTempTimer )
     {
-        if( mScript == "" && mRegisteredAnonymousLuaFunction )
+        if( mScript == "" )
         {
             mpHost->mLuaInterpreter.call_luafunction( this );
         }

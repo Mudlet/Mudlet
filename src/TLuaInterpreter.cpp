@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -34,7 +34,7 @@
 #include <list>
 #include <string>
 #include "TEvent.h"
-
+#include "dlgMapper.h"
 
 extern "C"
 {
@@ -780,6 +780,10 @@ int TLuaInterpreter::centerview( lua_State * L )
         if( pHost->mpMap->mpM )
         {
             pHost->mpMap->mpM->update();
+        }
+        if( pHost->mpMap->mpM )
+        {
+            pHost->mpMap->mpMapper->mp2dMap->update();
         }
     }
 
@@ -6573,10 +6577,8 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
         pHost->raiseEvent( &event );
     }
     // auto-detect IRE composer
-    qDebug()<<"tokenList="<<tokenList;
     if( tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit")
     {
-        qDebug()<<"COMPOSER string_data="<<string_data;
         QRegExp rx("\\{ \"title\": \"(.*)\", \"text\": \"(.*)\" \\}");
         if( rx.indexIn(string_data) != -1 )
         {
@@ -6590,6 +6592,7 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
             pHost->mTelnet.mpComposer->show();
         }
     }
+    lua_pop( L, lua_gettop( L ) );
 }
 
 void TLuaInterpreter::setChannel102Table( int & var, int & arg )
@@ -6642,13 +6645,21 @@ bool TLuaInterpreter::call_luafunction( void * pT )
         {
             if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA OK anonymous Lua function ran without errors\n">>0;}
         }
-        //lua_pop( L, lua_gettop( L ) );
-        lua_settop(L, 0);
+        lua_pop( L, lua_gettop( L ) );
+        //lua_settop(L, 0);
         if( error == 0 )
             return true;
         else
             return false;
     }
+    else
+    {
+        QString _n = "error in anonymous Lua function";
+        QString _n2 = "func reference not found by Lua, func can not be called";
+        string e = "Lua error:";
+        logError( e, _n, _n2 );
+    }
+
     return false;
 }
 

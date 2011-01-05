@@ -1,45 +1,101 @@
+
+/***************************************************************************
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
 #include "T2DMap.h"
 #include "TMap.h"
 #include "TArea.h"
 #include "TRoom.h"
 #include "Host.h"
+#include "TConsole.h"
 
-T2DMap::T2DMap(TMap * pM, QWidget * parent)
-: QWidget(parent)
-, mpMap( pM )
+T2DMap::T2DMap()
 {
+    xspan = 20;
+    yspan = 20;
+    mPick = false;
+    mTarget = 0;
+}
+
+T2DMap::T2DMap(QWidget * parent)
+: QWidget(parent)
+{
+    xspan = 20;
+    yspan = 20;
+    mPick = false;
+    mTarget = 0;
 }
 
 void T2DMap::paintEvent( QPaintEvent * e )
 {
-}
-    /*
+    const QRect & rect = e->rect();
+
+    QPainter p( this );
+    if( ! p.isActive() ) return;
+
+    int _w = rect.width();
+    int _h = rect.height();
+    if( _w < 10 || _h < 10 ) return;
+    int tx = _w/xspan;
+    int ty = _h/yspan;
+    if( tx > ty )
+        tx = ty;
+    if( ty > tx )
+        ty = tx;
+
+    p.setRenderHint(QPainter::Antialiasing);
+
     int px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
     {
         qDebug()<<"ERROR: roomID not in rooms map";
         return;
     }
-    px = mpMap->rooms[mpMap->mRoomId]->x;
-    py = mpMap->rooms[mpMap->mRoomId]->y;
-    pz = mpMap->rooms[mpMap->mRoomId]->z;
+
+    int ox = mpMap->rooms[mpMap->mRoomId]->x;
+    int oy = mpMap->rooms[mpMap->mRoomId]->y*-1;
+
+    if( ox*tx > xspan/2*tx )
+        _rx = -(tx*ox-xspan/2*tx);
+    else
+        _rx = xspan/2*tx-tx*ox;
+    if( oy*ty > yspan/2*ty )
+        _ry = -(ty*oy-yspan/2*ty);
+    else
+        _ry = yspan/2*ty-ty*oy;
+
+    px = ox*tx+_rx;
+    py = oy*ty+_ry;
 
     TArea * pArea = mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area];
     if( ! pArea ) return;
 
-    if( pArea->gridMode )
-    {
-        ;//TODO
-    }
     int zEbene;
+    zEbene = mpMap->rooms[mpMap->mRoomId]->z;
     if( ! mpMap->rooms.contains(mpMap->mRoomId) ) return;
     if( ! mpMap ) return;
 
     for( int i=0; i<pArea->rooms.size(); i++ )
     {
-        int rx = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->x);
-        int ry = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->y);
-        int rz = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->z);
+        int rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
+        int ry = mpMap->rooms[pArea->rooms[i]]->y*-1*ty+_ry;
+        int rz = mpMap->rooms[pArea->rooms[i]]->z;
 
         if( rz != zEbene ) continue;
 
@@ -52,19 +108,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
         exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southwest );
         exitList.push_back( mpMap->rooms[pArea->rooms[i]]->west );
         exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
-        exitList.push_back( mpMap->rooms[pArea->rooms[i]]->up );
-        exitList.push_back( mpMap->rooms[pArea->rooms[i]]->down );
+
         int e = mpMap->rooms[pArea->rooms[i]]->z;
-
-
-        if( ( rz == pz ) && ( rx == px ) && ( ry == py ) )
-        {
-            ;//TODO: highlight current room
-        }
-        else
-        {
-            ;//TODO: set room color
-        }
         for( int k=0; k<exitList.size(); k++ )
         {
             bool areaExit = false;
@@ -77,80 +122,66 @@ void T2DMap::paintEvent( QPaintEvent * e )
             {
                 areaExit = true;
             }
-            int ex = static_cast<float>(mpMap->rooms[exitList[k]]->x);
-            int ey = static_cast<float>(mpMap->rooms[exitList[k]]->y);
-            int ez = static_cast<float>(mpMap->rooms[exitList[k]]->z);
+            int ex = mpMap->rooms[exitList[k]]->x*tx+_rx;
+            int ey = mpMap->rooms[exitList[k]]->y*ty*-1+_ry;
+            int ez = mpMap->rooms[exitList[k]]->z;
+            if( ez != zEbene ) continue;
             QVector3D p1( ex, ey, ez );
             QVector3D p2( rx, ry, rz );
-
-            if( areaExit )
-                glLineWidth(1);//1/mScale+2);
-            else
-                glLineWidth(1);//1/mScale);
-
-            if( exitList[k] == mpMap->mRoomId || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
-            {
-                ;
-            }
-            else
-            {
-                ;//TODO: set exit color
-            }
-
             if( ! areaExit )
             {
-                glVertex3f( p1.x(), p1.y(), p1.z() );
+                p.drawLine( p1.x(), p1.y(), p2.x(), p2.y() );
             }
             else
             {
-                if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
-                    glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
-                    glVertex3f( p2.x(), p2.y()-1, p2.z() );
+                if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                    p.drawLine( p2.x(), p2.y()+ty,p2.x(), p2.y() );
+                else if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                    p.drawLine( p2.x(), p2.y()-ty, p2.x(), p2.y() );
                 else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
-                    glVertex3f( p2.x()-1, p2.y(), p2.z() );
+                    p.drawLine( p2.x()-tx, p2.y(),p2.x(), p2.y() );
                 else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
-                    glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
-                    glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
-                    glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
-                    glVertex3f( p2.x()+1, p2.y()+1, p2.z() );
+                    p.drawLine( p2.x()+tx, p2.y(),p2.x(), p2.y() );
                 else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
-                    glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
-                    glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
-                    glVertex3f( p2.x(), p2.y(), p2.z()-1 );
+                    p.drawLine( p2.x()-tx, p2.y()-ty,p2.x(), p2.y() );
+                else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                    p.drawLine( p2.x()+tx, p2.y()-ty,p2.x(), p2.y() );
+                else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                    p.drawLine( p2.x()+tx, p2.y()+ty, p2.x(), p2.y() );
+                else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                    p.drawLine( p2.x()-tx, p2.y()+ty, p2.x(), p2.y() );
             }
+        }
+    }
 
-            glVertex3f( p2.x(), p2.y(), p2.z() );
+    for( int i=0; i<pArea->rooms.size(); i++ )
+    {
+        int rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
+        int ry = mpMap->rooms[pArea->rooms[i]]->y*-1*ty+_ry;
+        int rz = mpMap->rooms[pArea->rooms[i]]->z;
 
-            // TODO: draw area exits
-            if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
-                glTranslatef( p2.x(), p2.y()+1, p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
-                glTranslatef( p2.x(), p2.y()-1, p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
-                glTranslatef( p2.x()-1, p2.y(), p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
-                glTranslatef( p2.x()+1, p2.y(), p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
-                glTranslatef( p2.x()-1, p2.y()-1, p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
-                glTranslatef( p2.x()+1, p2.y()-1, p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
-                glTranslatef( p2.x()+1, p2.y()+1, p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
-                glTranslatef( p2.x()-1, p2.y()+1, p2.z() );
-            else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
-                glTranslatef( p2.x(), p2.y(), p2.z()+1 );
-            else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
-                glTranslatef( p2.x(), p2.y(), p2.z()-1 );
+        if( rz != zEbene ) continue;
 
-            //drauf
-            int env = mpMap->rooms[exitList[k]]->environment;
+        QRectF dr;
+        if( pArea->gridMode )
+        {
+            dr = QRectF(rx-tx/2, ry-ty/2,tx,ty);
+        }
+        else
+        {
+            dr = QRectF(rx-(tx*0.75)/2,ry-(ty*0.75)/2,tx*0.75,ty*0.75);
+        }
+
+        QColor c;
+
+        if( rx == px && ry == py )
+        {
+            p.fillRect(dr,QColor(255,0,0));
+        }
+        else
+        {
+
+            int env = mpMap->rooms[pArea->rooms[i]]->environment;
             if( mpMap->envColors.contains(env) )
                 env = mpMap->envColors[env];
             else
@@ -163,168 +194,162 @@ void T2DMap::paintEvent( QPaintEvent * e )
             switch( env )
             {
             case 1:
-                glColor4b(128,50,50,2);
-                mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
+                c = QColor(128, 0, 0);
                 break;
 
             case 2:
-                glColor4b(128,128,50, 2);
-                mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
+                c = QColor(0, 128, 0);
                 break;
             case 3:
-                glColor4b(50,128,50,2);
-                mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
+                c = QColor(128,128,0);
                 break;
 
             case 4:
-                glColor4b(50,50,128,2);
-                mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
+                c = QColor( 0,0,128);
                 break;
 
             case 5:
-                glColor4b(128,50,128,2);
-                mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
+                c = QColor( 128,128,0);
                 break;
             case 6:
-                glColor4b(50,128,128,2);
-                mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
+                c = QColor( 0,128,128 );
                 break;
             case 7:
-                glColor4b(52,38,78,2);
-                mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
+                c = QColor( 128, 128, 128 );
                 break;
             case 8:
-                glColor4b(65, 55, 35, 2);
-                mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
+                c = QColor( 55,55,55 );
                 break;
 
             case 9:
-                glColor4b(175,50,50,2);
-                mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
+                c = QColor( 255,0,0 );
                 break;
 
             case 10:
-                glColor4b(255,255,50,2);
-                mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
+                c = QColor( 0,255,0);
                 break;
             case 11:
-                glColor4b(50,175,175,2);
-                mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
+                c = QColor( 255,255,0);
                 break;
 
             case 12:
-                glColor4b(175,175,50,2);
-                mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
+                c = QColor( 0,0,255);
                 break;
 
             case 13:
-                glColor4b(175,50,175,2);
-                mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
+                c = QColor( 255,0,255);
                 break;
             case 14:
-                glColor4b(50,175,50,2);
-                mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
+                c = QColor( 0,255,255 );
                 break;
             case 15:
-                glColor4b(50,50,175,2);
-                mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
+                c = QColor( 255,255,255);
                 break;
             default: //user defined room color
                 if( ! mpMap->customEnvColors.contains(env) ) break;
-                QColor &_c = mpMap->customEnvColors[env];
-                glColor4b(_c.red(),_c.green(),_c.blue(),25);
-                mc3[0]=_c.redF();
-                mc3[1]=_c.greenF();
-                mc3[2]=_c.blueF();
-                mc3[3]=0.2;
+                c = mpMap->customEnvColors[env];
             }
-
-            if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
-                glTranslatef( 2*p2.x(), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
-                glTranslatef( 2*p2.x(), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
-                glTranslatef( 2*(p2.x()-1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
-                glTranslatef( 2*(p2.x()+1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
-                glTranslatef( 2*(p2.x()-1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
-                glTranslatef( 2*(p2.x()+1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
-                glTranslatef( 2*(p2.x()+1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
-                glTranslatef( 2*(p2.x()-1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
-                glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()+1+0.25) );
-            else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
-                glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()-1+0.25) );
+            if( mPick && mPHighlight.x() >= dr.x()-tx/2 && mPHighlight.x() <= dr.x()+tx/2 && mPHighlight.y() >= dr.y()-ty/2 && mPHighlight.y() <= dr.y()+ty/2 )
+            {
+                p.fillRect(dr,QColor(255,155,0));
+                mPick = false;
+                mTarget = pArea->rooms[i];
+                if( mpMap->rooms.contains(mTarget) )
+                {
+                    mpMap->mTargetID = mTarget;
+                    if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+                    {
+                       qDebug()<<"T2DMap: starting speedwalk path length="<<mpMap->mPathList.size();
+                       mpMap->mpHost->startSpeedWalk();
+                    }
+                    else
+                    {
+                        QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                        mpHost->mpConsole->printSystemMessage(msg);
+                    }
+                }
+            }
+            else
+                p.fillRect(dr,c);
         }
 
+        QColor lc;
+        if( c.red()+c.green()+c.blue() > 300 )
+            lc=QColor(0,0,0);
+        else
+            lc=QColor(255,255,255);
+        p.setPen(QPen(lc));
+        if( mpMap->rooms[pArea->rooms[i]]->up > 0 )
+        {
+            p.drawLine(rx-(tx*0.75)/5, ry+(ty*0.75)/4, rx, ry+(ty*0.75)/7);
+            p.drawLine(rx,ry+(ty*0.75)/7,rx+(tx*0.75)/5, ry+(ty*0.75)/4);
+        }
+        if( mpMap->rooms[pArea->rooms[i]]->down > 0 )
+        {
+            p.drawLine(rx-(tx*0.75)/5, ry-(ty*0.75)/4, rx, ry-(ty*0.75)/7);
+            p.drawLine(rx,ry-(ty*0.75)/7,rx+(tx*0.75)/5, ry-(ty*0.75)/4);
+        }
+        if( mpMap->rooms[pArea->rooms[i]]->in > 0 )
+        {
+            p.drawLine(rx-(tx*0.75)/5, ry-(ty*0.75)/4, rx-(tx*0.75)/7, ry);
+            p.drawLine(rx-(tx*0.75)/7,ry,rx-(tx*0.75)/5, ry+(ty*0.75)/4);
+        }
+        if( mpMap->rooms[pArea->rooms[i]]->out > 0 )
+        {
+            p.drawLine(rx+(tx*0.75)/5, ry-(ty*0.75)/4, rx+(tx*0.75)/7, ry);
+            p.drawLine(rx+(tx*0.75)/7,ry,rx+(tx*0.75)/5, ry+(ty*0.75)/4);
+        }
+        p.setPen(QColor(0,0,0));
     }
 }
-
 
 void T2DMap::mousePressEvent(QMouseEvent *event)
 {
     if (event->buttons() & Qt::LeftButton)
     {
         int x = event->x();
-        int y = height()-event->y();//opengl ursprungspunkt liegt unten links
-        if( mpMap->rooms.contains(mTarget) )
-        {
-            mpMap->mTargetID = mTarget;
-            if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
-            {
-               qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
-               mpMap->mpHost->startSpeedWalk();
-            }
-            else
-            {
-                QMessageBox msgBox;
-                msgBox.setText("Cannot find a path to this room using regular exits.#glWidget\n");
-                msgBox.exec();
-            }
-        }
-        else
-        {
-            QMessageBox msgBox;
-            msgBox.setText("ERROR: Target room cannot be found in map db.\n");
-            msgBox.exec();
-        }
+        int y = event->y();
+        mPHighlight = QPoint(x,y);
+        mPick = true;
+        qDebug()<<"PICK: click auf:"<<mPHighlight;
+        update();
+
     }
 }
 
-void T2DMap::mouseMoveEvent( QMouseEvent * event )
-{
-}
+//void T2DMap::mouseMoveEvent( QMouseEvent * event )
+//{
+//}
 
 void T2DMap::wheelEvent ( QWheelEvent * e )
 {
     //int delta = e->delta() / 8 / 15;
     if( e->delta() < 0 )
     {
-        if( abs(mScale) < 0.3 )
-            mScale -= 0.01;
-        else
-            mScale -= 0.03;
+        mPick = false;
+        xspan--;
+        yspan--;
+        if( yspan < 3 | xspan < 3 )
+        {
+            xspan = 3;
+            yspan = 3;
+        }
         update();
         e->accept();
+        update();
         return;
     }
     if( e->delta() > 0 )
     {
-        if( abs(mScale) < 0.3 )
-            mScale += 0.01;
-        else
-            mScale += 0.03;
-        //resizeGL(width(),height());
-        update();
+        mPick = false;
+        xspan++;
+        yspan++;
+
         e->accept();
+        update();
         return;
     }
     e->ignore();
     return;
 }
 
-*/

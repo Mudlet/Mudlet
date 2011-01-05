@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2010 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
+ *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
  *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -940,9 +940,9 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
         {
             if( mpHost->mRawStreamDump )
             {
-                if( buffer.size()-10 > mLastBufferLogLine && buffer.size()-10 > 0 )
+                if( buffer.size() > mLastBufferLogLine + 1 )
                 {
-                    for( int i=mLastBufferLogLine+1; i<buffer.size()-10; i++ )
+                    for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
                     {
                         QPoint P1 = QPoint(0,i);
                         QPoint P2 = QPoint( buffer.buffer[i].size(), i);

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -2181,7 +2181,6 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
 
 inline int TBuffer::wrap( int startLine )
 {
-    qDebug()<<"--0--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
     std::queue<std::deque<TChar> > queue;
     QStringList tempList;
@@ -2278,10 +2277,8 @@ inline int TBuffer::wrap( int startLine )
         }
         lineCount++;
     }
-    qDebug()<<"--1--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     for( int i=0; i<lineCount; i++ )
     {
-        qDebug()<<"--2-- deleting buffer line";
         buffer.pop_back();
         lineBuffer.pop_back();
         timeBuffer.pop_back();
@@ -2297,10 +2294,8 @@ inline int TBuffer::wrap( int startLine )
         buffer.push_back( queue.front() );
         queue.pop();
     }
-qDebug()<<"--3--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     for( int i=0; i<tempList.size(); i++ )
     {
-        qDebug()<<"--4--adding--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
         if( tempList[i].size() < 1 )
         {
             lineBuffer.append( QString() );
@@ -2315,8 +2310,9 @@ qDebug()<<"--3--lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<ti
         }
         dirty.push_back( true );
     }
-    //Q_ASSERT(!((lineBuffer.size()==promptBuffer.size()) && (lineBuffer.size()==timeBuffer.size()) && (lineBuffer.size() == dirty.size()) ));
-    qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
+
+    //qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
+    //Q_ASSERT(!(lineBuffer.size() == promptBuffer.size() == timeBuffer.size() == dirty.size() ));
     return insertedLines > 0 ? insertedLines : 0;
 }
 
@@ -2335,7 +2331,7 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
 
     for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
     {
-        assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
+        //assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
         std::deque<TChar> newLine;
         QString lineText;
         QString time = timeBuffer[i];
@@ -2564,7 +2560,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         dirty.insert( startLine+i, true );
     }
     //Q_ASSERT(!((lineBuffer.size()==promptBuffer.size()) && (lineBuffer.size()==timeBuffer.size()) && (lineBuffer.size() == dirty.size()) ));
-    qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
+    //qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     return insertedLines > 0 ? insertedLines : 0;
 }
 

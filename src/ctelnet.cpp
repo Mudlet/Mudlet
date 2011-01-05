@@ -1,7 +1,7 @@
 /***************************************************************************
- *   copyright (C) 2002-2005 by Tomas Mecir (kmuddy@kmuddy.com)
- *   copyright (C) 2008-2009 by Heiko Koehn (KoehnHeiko@googlemail.com
- *
+ *   copyright (C) 2002-2005 by Tomas Mecir (kmuddy@kmuddy.com)            *
+ *   copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com     *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +26,8 @@
 #include "mudlet.h"
 #include "TDebug.h"
 #include "dlgComposer.h"
+#include "TMap.h"
+#include "dlgMapper.h"
 
 #ifdef DEBUG
 #undef DEBUG
@@ -831,9 +833,10 @@ void cTelnet::setATCPVariables( QString & msg )
         if( mpHost->mpMap )
         {
             mpHost->mpMap->mRoomId = arg.toInt();
-            if( mpHost->mpMap->mpM )
+            if( mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap )
             {
                 mpHost->mpMap->mpM->update();
+                mpHost->mpMap->mpMapper->mp2dMap->update();
             }
         }
     }
@@ -856,7 +859,7 @@ void cTelnet::setGMCPVariables( QString & msg )
         arg = msg.section( " ", 1 );
     }
     arg.remove( '\n' );
-    printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
+    //printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
     mpHost->mLuaInterpreter.setGMCPTable( var, arg );
 }
 

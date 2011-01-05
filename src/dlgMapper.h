@@ -1,7 +1,7 @@
 #ifndef DLGMAPPER_H
 #define DLGMAPPER_H
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -48,8 +48,10 @@ public:
         QNetworkAccessManager * mpDownloader;
         QProgressDialog * mpProgressDialog;
 
+
 public slots:
 
+        void show2dView();
         void slot_togglePanel();
         void setDownloadProgress( qint64, qint64 );
         void replyFinished( QNetworkReply * );

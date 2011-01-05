@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -188,6 +188,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     //    pHB2->setMaximumSize(170);
     pHB2->setSizeConstraint( QLayout::SetMaximumSize );
     mpErrorConsole = new TConsole(mpHost,false, popupArea);
+    mpErrorConsole->setWrapAt(100);
     mpErrorConsole->console->slot_toggleTimeStamps();
     mpErrorConsole->print("*** starting new session ***\n");
     pHB2->setContentsMargins(0,0,0,0);

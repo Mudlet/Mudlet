@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,6 +33,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     setupUi(this);
 
     glWidget->mpMap = pM;
+    mp2dMap->mpMap = pM;
+    mp2dMap->mpHost = pH;
     searchList->setSelectionMode( QAbstractItemView::SingleSelection );
     connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
     connect(ortho, SIGNAL(pressed()), glWidget, SLOT(fullView()));
@@ -44,6 +46,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(searchList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(choseRoom(QListWidgetItem*)));
 
     connect(defaultView, SIGNAL(pressed()), glWidget, SLOT(defaultView()));
+    connect(dim2,SIGNAL(pressed()), this, SLOT(show2dView()));
     connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));
     connect(topView, SIGNAL(pressed()), glWidget, SLOT(topView()));
     connect(togglePanel, SIGNAL(pressed()), this, SLOT(slot_togglePanel()));
@@ -55,12 +58,20 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     mpDownloader = new QNetworkAccessManager( this );
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
+
+    glWidget->hide();
 }
 
 void dlgMapper::slot_togglePanel()
 {
     qDebug()<<"TOGGLE";
     panel->setVisible(!panel->isVisible());
+}
+
+void dlgMapper::show2dView()
+{
+    glWidget->setVisible(!glWidget->isVisible());
+    mp2dMap->setVisible(!mp2dMap->isVisible());
 }
 
 void dlgMapper::downloadMap()
@@ -135,6 +146,7 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
             break;
         }
     }
+    mpHost->mpConsole->setFocus();
 }
 
 void dlgMapper::goRoom()
@@ -172,4 +184,5 @@ void dlgMapper::goRoom()
             }
         }
     }
+    mpHost->mpConsole->setFocus();
 }

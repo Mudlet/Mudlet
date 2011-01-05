@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010 by Heiko Koehn ( KoehnHeiko@googlemail.com )       *
+ *   Copyright (C) 2010-2011 by Heiko Koehn ( KoehnHeiko@googlemail.com )  *
  *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,6 +25,8 @@
 #include <QDebug>
 #include "glwidget.h"
 #include "Host.h"
+#include "dlgMapper.h"
+
 #ifndef GL_MULTISAMPLE
 #define GL_MULTISAMPLE  0x809D
 #endif
@@ -139,6 +141,8 @@ void GLWidget::defaultView()
     zRot=10.0;
     mScale = 1.0;
     is2DView = false;
+    setVisible(!isVisible());
+    mpMap->mpMapper->mp2dMap->setVisible(!mpMap->mpMapper->mp2dMap->isVisible());
     updateGL();
 }
 

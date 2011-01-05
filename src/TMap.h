@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
+ *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
  *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -27,6 +27,7 @@ class TRoom;
 class TArea;
 class Host;
 class GLWidget;
+class T2DMap;
 
 #include <QMap>
 #include "TRoom.h"
