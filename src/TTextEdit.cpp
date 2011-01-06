@@ -964,6 +964,9 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
                 if( y == y1 )
                 {
                     x = PC.x();
+                    if( x >= mpBuffer->buffer[y].size() )
+                        x = mpBuffer->buffer[y].size()-1;
+                    if( x < 0 ) x = 0;
                 }
                 mpBuffer->dirty[y] = true;
                 for( ; ; x-- )
@@ -1304,7 +1307,7 @@ void TTextEdit::copySelectionToClipboardHTML()
     text.append(QString::number(mpHost->mBgColor.blue()));
     text.append(");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>");
 
-    for( int y=mPA.y(); y<=mPB.y()+1; y++ )
+    for( int y=mPA.y(); y<=mPB.y(); y++ )
     {
         if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
         int x = 0;

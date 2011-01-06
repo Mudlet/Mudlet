@@ -44,10 +44,13 @@ T2DMap::T2DMap(QWidget * parent)
 
 void T2DMap::paintEvent( QPaintEvent * e )
 {
+
     const QRect & rect = e->rect();
 
     QPainter p( this );
     if( ! p.isActive() ) return;
+
+    mAreaExitList.clear();
 
     int _w = rect.width();
     int _h = rect.height();
@@ -135,21 +138,53 @@ void T2DMap::paintEvent( QPaintEvent * e )
             else
             {
                 if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                {
                     p.drawLine( p2.x(), p2.y()+ty,p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x(), p2.y()+ty);
+                    mAreaExitList[exitList[k]] = _p;
+                }
                 else if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                {
                     p.drawLine( p2.x(), p2.y()-ty, p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x(), p2.y()-ty);
+                    mAreaExitList[exitList[k]] = _p;
+                }
                 else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                {
                     p.drawLine( p2.x()-tx, p2.y(),p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x()-tx, p2.y());
+                    mAreaExitList[exitList[k]] = _p;
+                }
                 else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                {
                     p.drawLine( p2.x()+tx, p2.y(),p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x()+tx, p2.y());
+                    mAreaExitList[exitList[k]] = _p;
+                }
                 else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                {
                     p.drawLine( p2.x()-tx, p2.y()-ty,p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x()-tx, p2.y()-ty);
+                    mAreaExitList[exitList[k]] = _p;
+                }
                 else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                {
                     p.drawLine( p2.x()+tx, p2.y()-ty,p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x()+tx, p2.y()-ty);
+                    mAreaExitList[exitList[k]] = _p;
+                }
                 else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                {
                     p.drawLine( p2.x()+tx, p2.y()+ty, p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x()+tx, p2.y()+ty);
+                    mAreaExitList[exitList[k]] = _p;
+                }
                 else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                {
                     p.drawLine( p2.x()-tx, p2.y()+ty, p2.x(), p2.y() );
+                    QPoint _p = QPoint(p2.x()-tx, p2.y()+ty);
+                    mAreaExitList[exitList[k]] = _p;
+                }
             }
         }
     }
@@ -300,6 +335,47 @@ void T2DMap::paintEvent( QPaintEvent * e )
             p.drawLine(rx+(tx*0.75)/7,ry,rx+(tx*0.75)/5, ry+(ty*0.75)/4);
         }
         p.setPen(QColor(0,0,0));
+
+        qDebug()<<"areaExits:"<<mAreaExitList;
+        QMapIterator<int, QPoint> it( mAreaExitList );
+        while( it.hasNext() )
+        {
+            it.next();
+            QPoint P = it.value();
+            int rx = P.x();
+            int ry = P.y();
+
+
+            QRectF dr;
+            if( pArea->gridMode )
+            {
+                dr = QRectF(rx-tx/2, ry-ty/2,tx,ty);
+            }
+            else
+            {
+                dr = QRectF(rx-(tx*0.75)/2,ry-(ty*0.75)/2,tx*0.75,ty*0.75);
+            }
+            if( mPick && mPHighlight.x() >= dr.x()-tx/2 && mPHighlight.x() <= dr.x()+tx/2 && mPHighlight.y() >= dr.y()-ty/2 && mPHighlight.y() <= dr.y()+ty/2 )
+            {
+                p.fillRect(dr,QColor(255,155,0));
+                mPick = false;
+                mTarget = it.key();
+                if( mpMap->rooms.contains(mTarget) )
+                {
+                    mpMap->mTargetID = mTarget;
+                    if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+                    {
+                       qDebug()<<"T2DMap: starting speedwalk path length="<<mpMap->mPathList.size();
+                       mpMap->mpHost->startSpeedWalk();
+                    }
+                    else
+                    {
+                        QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                        mpHost->mpConsole->printSystemMessage(msg);
+                    }
+                }
+            }
+        }
     }
 }
 

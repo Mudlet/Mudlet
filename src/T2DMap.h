@@ -44,6 +44,7 @@ public:
     QPoint   mPHighlight;
     bool     mPick;
     int      mTarget;
+    QMap<int, QPoint> mAreaExitList;
 
 signals:
 
