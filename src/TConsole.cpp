@@ -971,6 +971,7 @@ void TConsole::runTriggers( int line )
 {
     mDeletedLines = 0;
     mUserCursor.setY( line );
+    mIsPromptLine = buffer.promptBuffer.at( line );
     mEngineCursor = line;
     mUserCursor.setX( 0 );
     mCurrentLine = buffer.line( line );
@@ -992,14 +993,10 @@ void TConsole::runTriggers( int line )
         TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;
     }
     mpHost->incomingStreamProcessor( mCurrentLine, line );
+    mIsPromptLine = false;
 
     //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
     //       ansonsten einfach löschen
-    /*if( mDeletedLines > 0 )
-    {
-        mDeletedLines = 0;
-        buffer.newLines--;
-    }*/
 }
 
 void TConsole::finalize()

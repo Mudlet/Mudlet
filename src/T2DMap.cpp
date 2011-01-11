@@ -31,15 +31,19 @@ T2DMap::T2DMap()
     yspan = 20;
     mPick = false;
     mTarget = 0;
+    mRoomSelection = 0;
+    mStartSpeedWalk = false;
 }
 
 T2DMap::T2DMap(QWidget * parent)
 : QWidget(parent)
 {
     xspan = 20;
-    yspan = 20;
+    yspan = 40;
     mPick = false;
     mTarget = 0;
+    mRoomSelection = 0;
+    mStartSpeedWalk = false;
 }
 
 void T2DMap::paintEvent( QPaintEvent * e )
@@ -57,10 +61,12 @@ void T2DMap::paintEvent( QPaintEvent * e )
     if( _w < 10 || _h < 10 ) return;
     int tx = _w/xspan;
     int ty = _h/yspan;
-    if( tx > ty )
-        tx = ty;
-    if( ty > tx )
-        ty = tx;
+    mTX = tx;
+    mTY = ty;
+//    if( tx > ty )
+//        tx = ty;
+//    if( ty > tx )
+//        ty = tx;
 
     p.setRenderHint(QPainter::Antialiasing);
 
@@ -86,6 +92,19 @@ void T2DMap::paintEvent( QPaintEvent * e )
     px = ox*tx+_rx;
     py = oy*ty+_ry;
 
+    if( tx != 0 && ty != 0 && mPHighlightMove.x() != 0 && mPHighlightMove.y() != 0 )
+    {
+        int mx = mPHighlightMove.x()/tx;
+        int my = mPHighlightMove.y()/ty;
+        mx = mx - xspan/2+mpMap->rooms[mpMap->mRoomId]->x;
+        my = (my - yspan/2+mpMap->rooms[mpMap->mRoomId]->y)*-1;
+        mMoveTarget = QPoint( mx, my );
+        if( mRoomBeingMoved )
+        {
+            QRectF dr = QRectF(mx*tx+_rx-tx/2, my*-1*ty+_ry-ty/2,tx,ty);
+            p.fillRect(dr,QColor(255,155,80));
+        }
+    }
     TArea * pArea = mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area];
     if( ! pArea ) return;
 
@@ -110,7 +129,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         exitList.push_back( mpMap->rooms[pArea->rooms[i]]->south );
         exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southwest );
         exitList.push_back( mpMap->rooms[pArea->rooms[i]]->west );
-        exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
+        exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northeast );
 
         int e = mpMap->rooms[pArea->rooms[i]]->z;
         for( int k=0; k<exitList.size(); k++ )
@@ -288,20 +307,30 @@ void T2DMap::paintEvent( QPaintEvent * e )
             {
                 p.fillRect(dr,QColor(255,155,0));
                 mPick = false;
-                mTarget = pArea->rooms[i];
-                if( mpMap->rooms.contains(mTarget) )
+                if( mStartSpeedWalk )
                 {
-                    mpMap->mTargetID = mTarget;
-                    if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+                    mStartSpeedWalk = false;
+                    mTarget = pArea->rooms[i];
+                    if( mpMap->rooms.contains(mTarget) )
                     {
-                       qDebug()<<"T2DMap: starting speedwalk path length="<<mpMap->mPathList.size();
-                       mpMap->mpHost->startSpeedWalk();
+                        mpMap->mTargetID = mTarget;
+                        if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+                        {
+                           qDebug()<<"T2DMap: starting speedwalk path length="<<mpMap->mPathList.size();
+                           mpMap->mpHost->startSpeedWalk();
+                        }
+                        else
+                        {
+                            QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
+                            mpHost->mpConsole->printSystemMessage(msg);
+                        }
                     }
-                    else
-                    {
-                        QString msg = "Mapper: Cannot find a path to this room using known exits.\n";
-                        mpHost->mpConsole->printSystemMessage(msg);
-                    }
+                }
+                else
+                {
+                    mRoomSelection = pArea->rooms[i];
+
+
                 }
             }
             else
@@ -336,7 +365,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         }
         p.setPen(QColor(0,0,0));
 
-        qDebug()<<"areaExits:"<<mAreaExitList;
         QMapIterator<int, QPoint> it( mAreaExitList );
         while( it.hasNext() )
         {
@@ -381,21 +409,132 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
 void T2DMap::mousePressEvent(QMouseEvent *event)
 {
-    if (event->buttons() & Qt::LeftButton)
+    if( event->buttons() & Qt::LeftButton )
+    {
+        if( mRoomBeingMoved )
+        {
+            setMouseTracking(false);
+            mRoomBeingMoved = false;
+        }
+        else
+        {
+            int x = event->x();
+            int y = event->y();
+            mPHighlight = QPoint(x,y);
+            mPick = true;
+            mStartSpeedWalk = true;
+            update();
+        }
+
+    }
+    if( event->buttons() & Qt::RightButton )
     {
         int x = event->x();
         int y = event->y();
         mPHighlight = QPoint(x,y);
-        mPick = true;
-        qDebug()<<"PICK: click auf:"<<mPHighlight;
-        update();
 
+        mPick = true;
+        repaint();
+
+        QAction * action = new QAction("move room", this );
+        action->setStatusTip(tr("move room"));
+        connect( action, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
+        QAction * action2 = new QAction("delete room", this );
+        action2->setStatusTip(tr("delete room"));
+        connect( action2, SIGNAL(triggered()), this, SLOT(slot_deleteRoom()));
+        QAction * action3 = new QAction("change room color", this );
+        action3->setStatusTip(tr("change room color"));
+        connect( action3, SIGNAL(triggered()), this, SLOT(slot_changeColor()));
+        QAction * action4 = new QAction("add special exit", this );
+        action4->setStatusTip(tr("add special exit"));
+        connect( action4, SIGNAL(triggered()), this, SLOT(slot_addSpecialExit()));
+        QAction * action5 = new QAction("set user data", this );
+        action5->setStatusTip(tr("set user data"));
+        connect( action5, SIGNAL(triggered()), this, SLOT(slot_setUserData()));
+        QAction * action6 = new QAction("lock room", this );
+        action6->setStatusTip(tr("lock room for speed walks"));
+        connect( action6, SIGNAL(triggered()), this, SLOT(slot_lockRoom()));
+        QAction * action7 = new QAction("set room weight", this );
+        action7->setStatusTip(tr("set room weight"));
+        connect( action7, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
+        QAction * action8 = new QAction("set regular exits", this );
+        action8->setStatusTip(tr("set regular exits"));
+        connect( action8, SIGNAL(triggered()), this, SLOT(slot_setExits()));
+
+        QMenu * popup = new QMenu( this );
+
+        popup->addAction( action );
+        popup->addAction( action3 );
+        popup->addAction( action8 );
+        popup->addAction( action4 );
+        popup->addAction( action5 );
+        popup->addAction( action6 );
+        popup->addAction( action7 );
+        popup->addAction( action2 );
+        popup->popup( mapToGlobal( event->pos() ) );
     }
 }
 
-//void T2DMap::mouseMoveEvent( QMouseEvent * event )
-//{
-//}
+void T2DMap::slot_moveRoom()
+{
+    qDebug()<<"slot_moveRoom(): mRoomBeingMoved=true";
+    mRoomBeingMoved = true;
+    setMouseTracking(true);
+}
+
+void T2DMap::slot_deleteRoom()
+{
+
+}
+
+void T2DMap::slot_changeColor()
+{
+
+}
+
+void T2DMap::slot_addSpecialExit()
+{
+
+}
+
+void T2DMap::slot_setExits()
+{
+
+}
+
+
+void T2DMap::slot_setUserData()
+{
+
+}
+
+void T2DMap::slot_lockRoom()
+{
+
+}
+
+void T2DMap::slot_setRoomWeight()
+{
+
+}
+
+
+
+void T2DMap::mouseMoveEvent( QMouseEvent * event )
+{
+    if( mRoomBeingMoved )
+    {
+        QPoint P = event->pos() - mPHighlightMove;
+        mPHighlightMove = event->pos();
+        if( mpMap->rooms.contains( mRoomSelection ) )
+        {
+            mpMap->rooms[mRoomSelection]->x = mMoveTarget.x();
+            mpMap->rooms[mRoomSelection]->y = mMoveTarget.y();
+            qDebug()<<"-->setting new room coords"<<mMoveTarget;
+        }
+        update();
+    }
+}
 
 void T2DMap::wheelEvent ( QWheelEvent * e )
 {

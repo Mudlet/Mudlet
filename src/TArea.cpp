@@ -135,6 +135,7 @@ QList<int> TArea::getCollisionNodes()
 
 void TArea::ausgaengeBestimmen()
 {
+    exits.clear();
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];

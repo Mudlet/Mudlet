@@ -25,11 +25,60 @@
 #include <QMessageBox>
 #include "dlgMapper.h"
 
+
 TMap::TMap( Host * pH )
 : mpHost( pH )
 , mpM( 0 )
 , mpMapper( 0 )
 {
+}
+
+void TMap::deleteRoom( int id )
+{
+    if( rooms.contains(id ) && id != 0 )
+    {
+        QMapIterator<int, TRoom *> it( rooms );
+        while( it.hasNext() )
+        {
+            it.next();
+            TRoom * r = it.value();
+            if( r->north == id ) r->north = -1;
+            if( r->northeast == id ) r->northeast = -1;
+            if( r->northwest == id ) r->northwest = -1;
+            if( r->east == id ) r->east = -1;
+            if( r->west == id ) r->west = -1;
+            if( r->south == id ) r->south = -1;
+            if( r->southeast == id ) r->southeast = -1;
+            if( r->southwest == id ) r->southwest = -1;
+            if( r->up == id ) r->up = -1;
+            if( r->down == id ) r->down = -1;
+            if( r->in == id ) r->in = -1;
+            if( r->out == id ) r->out = -1;
+            r->other.remove( id );
+        }
+        TRoom * pR = rooms[id];
+        int areaID = pR->area;
+        if( areas.contains((areaID)) )
+        {
+            TArea * pA = areas[areaID];
+            pA->rooms.removeAll( id );
+        }
+        rooms.remove( id );
+        delete pR;
+    }
+}
+
+void TMap::deleteArea( int id )
+{
+    if( areas.contains( id ) )
+    {
+        TArea * pA = areas[id];
+        for( int i=0; i< pA->rooms.size(); i++ )
+        {
+            deleteRoom( pA->rooms[i] );
+        }
+        areas.remove( id );
+    }
 }
 
 bool TMap::addRoom( int id )
@@ -790,18 +839,18 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 6;
+    int version = 7;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
     ofs << customEnvColors;
+    ofs << hashTable;
     QMapIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
 
         it.next();
         int i = it.key();
-        qDebug()<<"SAVING: roomID="<<rooms[i]->id;
         ofs <<  rooms[i]->id;
         ofs << rooms[i]->area;
         ofs << rooms[i]->x;
@@ -873,11 +922,14 @@ bool TMap::restore()
         {
             ifs >> customEnvColors;
         }
+        if( version > 6 )
+        {
+            ifs >> hashTable;
+        }
         while( ! ifs.atEnd() )
         {
             int i;
             ifs >> i;
-            qDebug()<<"loading room ID:"<<i;
             TRoom * pT = new TRoom;
             rooms[i] = pT;
             rooms[i]->id = i;

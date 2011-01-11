@@ -35,6 +35,7 @@ public:
     void     paintEvent( QPaintEvent * );
     void     mousePressEvent(QMouseEvent * );
     void     wheelEvent ( QWheelEvent * );
+    void     mouseMoveEvent( QMouseEvent * event );
     TMap *   mpMap;
     Host *   mpHost;
     int      xspan;
@@ -44,12 +45,27 @@ public:
     QPoint   mPHighlight;
     bool     mPick;
     int      mTarget;
+    int      mRoomSelection;
+    bool     mStartSpeedWalk;
     QMap<int, QPoint> mAreaExitList;
+    QPoint   mMoveTarget;
+    bool     mRoomBeingMoved;
+    QPoint   mPHighlightMove;
+    int      mTX;
+    int      mTY;
 
 signals:
 
 public slots:
 
+    void slot_moveRoom();
+    void slot_deleteRoom();
+    void slot_changeColor();
+    void slot_addSpecialExit();
+    void slot_setExits();
+    void slot_setUserData();
+    void slot_lockRoom();
+    void slot_setRoomWeight();
 };
 
 #endif // T2DMAP_H

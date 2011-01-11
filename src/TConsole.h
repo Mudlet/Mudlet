@@ -275,6 +275,7 @@ public:
       QString           profile_name;
       TSplitter *       splitter;
       int               mLastBufferLogLine;
+      bool              mIsPromptLine;
 
 signals:
 

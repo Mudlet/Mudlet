@@ -44,6 +44,8 @@ class TMap
 public:
     TMap( Host *);
     bool addRoom( int id=0 );
+    void deleteRoom( int id );
+    void deleteArea( int id );
     int  createNewRoomID();
     bool fixExits2(int);
     void tidyMap( int area );
@@ -84,6 +86,7 @@ public:
     QList<int> mTestedNodes;
     QList<int> conList;
     int mPlausaOptOut;
+    QMap<QString,int> hashTable;
 
 
 
