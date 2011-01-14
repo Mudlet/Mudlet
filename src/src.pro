@@ -209,7 +209,8 @@ FORMS += ui/connection_profiles.ui \
     ui/composer.ui \
     ui/mapper.ui \
     ui/profile_preferences.ui \
-    ui/irc.ui
+    ui/irc.ui \
+    ui/mapper_room_color.ui
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc

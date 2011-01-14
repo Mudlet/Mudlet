@@ -27,8 +27,8 @@
 
 T2DMap::T2DMap()
 {
-    xspan = 20;
-    yspan = 20;
+    xzoom = 30;
+    yzoom = 30;
     mPick = false;
     mTarget = 0;
     mRoomSelection = 0;
@@ -38,8 +38,8 @@ T2DMap::T2DMap()
 T2DMap::T2DMap(QWidget * parent)
 : QWidget(parent)
 {
-    xspan = 20;
-    yspan = 40;
+    xzoom = 30;
+    yzoom = 30;
     mPick = false;
     mTarget = 0;
     mRoomSelection = 0;
@@ -48,7 +48,6 @@ T2DMap::T2DMap(QWidget * parent)
 
 void T2DMap::paintEvent( QPaintEvent * e )
 {
-
     const QRect & rect = e->rect();
 
     QPainter p( this );
@@ -56,17 +55,29 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     mAreaExitList.clear();
 
-    int _w = rect.width();
-    int _h = rect.height();
+    float _w = rect.width();
+    float _h = rect.height();
+    int xspan;
+    int yspan;
     if( _w < 10 || _h < 10 ) return;
-    int tx = _w/xspan;
-    int ty = _h/yspan;
+
+    if( _w > _h )
+    {
+        xspan = xzoom*(_w/_h);
+        yspan = xzoom;
+    }
+    else
+    {
+        xspan = yzoom;
+        yspan = yzoom*(_h/_w);
+    }
+
+
+    float tx = _w/xspan;
+    float ty = _h/yspan;
+
     mTX = tx;
     mTY = ty;
-//    if( tx > ty )
-//        tx = ty;
-//    if( ty > tx )
-//        ty = tx;
 
     p.setRenderHint(QPainter::Antialiasing);
 
@@ -76,6 +87,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
         qDebug()<<"ERROR: roomID not in rooms map";
         return;
     }
+
+    if( ! mpMap->areas.contains( mpMap->rooms[mpMap->mRoomId]->area) ) return;
 
     int ox = mpMap->rooms[mpMap->mRoomId]->x;
     int oy = mpMap->rooms[mpMap->mRoomId]->y*-1;
@@ -105,6 +118,10 @@ void T2DMap::paintEvent( QPaintEvent * e )
             p.fillRect(dr,QColor(255,155,80));
         }
     }
+
+    p.setBackground( mpHost->mBgColor_2 );
+
+
     TArea * pArea = mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area];
     if( ! pArea ) return;
 
@@ -113,6 +130,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
     if( ! mpMap->rooms.contains(mpMap->mRoomId) ) return;
     if( ! mpMap ) return;
 
+    p.setPen(QPen( mpHost->mFgColor_2) );
+    p.fillRect(0,0,_w,_h,mpHost->mBgColor_2);
     for( int i=0; i<pArea->rooms.size(); i++ )
     {
         int rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
@@ -156,49 +175,49 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
             else
             {
-                if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->south ) && mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
                 {
                     p.drawLine( p2.x(), p2.y()+ty,p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x(), p2.y()+ty);
                     mAreaExitList[exitList[k]] = _p;
                 }
-                else if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->north ) && mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
                 {
                     p.drawLine( p2.x(), p2.y()-ty, p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x(), p2.y()-ty);
                     mAreaExitList[exitList[k]] = _p;
                 }
-                else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->west ) && mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
                 {
                     p.drawLine( p2.x()-tx, p2.y(),p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x()-tx, p2.y());
                     mAreaExitList[exitList[k]] = _p;
                 }
-                else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->east ) && mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
                 {
                     p.drawLine( p2.x()+tx, p2.y(),p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x()+tx, p2.y());
                     mAreaExitList[exitList[k]] = _p;
                 }
-                else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->northwest ) && mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
                 {
                     p.drawLine( p2.x()-tx, p2.y()-ty,p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x()-tx, p2.y()-ty);
                     mAreaExitList[exitList[k]] = _p;
                 }
-                else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->northeast ) && mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
                 {
                     p.drawLine( p2.x()+tx, p2.y()-ty,p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x()+tx, p2.y()-ty);
                     mAreaExitList[exitList[k]] = _p;
                 }
-                else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->southeast ) && mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
                 {
                     p.drawLine( p2.x()+tx, p2.y()+ty, p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x()+tx, p2.y()+ty);
                     mAreaExitList[exitList[k]] = _p;
                 }
-                else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->southwest ) && mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
                 {
                     p.drawLine( p2.x()-tx, p2.y()+ty, p2.x(), p2.y() );
                     QPoint _p = QPoint(p2.x()-tx, p2.y()+ty);
@@ -210,6 +229,11 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     for( int i=0; i<pArea->rooms.size(); i++ )
     {
+        if( ! mpMap->rooms.contains( pArea->rooms[i] ) )
+        {
+            qDebug()<<"ERROR: mapper 2d-draw: area room not in map roomID="<<pArea->rooms[i]    ;
+            continue;
+        }
         int rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
         int ry = mpMap->rooms[pArea->rooms[i]]->y*-1*ty+_ry;
         int rz = mpMap->rooms[pArea->rooms[i]]->z;
@@ -248,56 +272,56 @@ void T2DMap::paintEvent( QPaintEvent * e )
             switch( env )
             {
             case 1:
-                c = QColor(128, 0, 0);
+                c = mpHost->mRed_2;
                 break;
 
             case 2:
-                c = QColor(0, 128, 0);
+                c = mpHost->mGreen_2;
                 break;
             case 3:
-                c = QColor(128,128,0);
+                c = mpHost->mYellow_2;
                 break;
 
             case 4:
-                c = QColor( 0,0,128);
+                c = mpHost->mBlue_2;
                 break;
 
             case 5:
-                c = QColor( 128,128,0);
+                c = mpHost->mMagenta_2;
                 break;
             case 6:
-                c = QColor( 0,128,128 );
+                c = mpHost->mCyan_2;
                 break;
             case 7:
-                c = QColor( 128, 128, 128 );
+                c = mpHost->mWhite_2;
                 break;
             case 8:
-                c = QColor( 55,55,55 );
+                c = mpHost->mBlack_2;
                 break;
 
             case 9:
-                c = QColor( 255,0,0 );
+                c = mpHost->mLightRed_2;
                 break;
 
             case 10:
-                c = QColor( 0,255,0);
+                c = mpHost->mLightGreen_2;
                 break;
             case 11:
-                c = QColor( 255,255,0);
+                c = mpHost->mLightYellow_2;
                 break;
 
             case 12:
-                c = QColor( 0,0,255);
+                c = mpHost->mLightBlue_2;
                 break;
 
             case 13:
-                c = QColor( 255,0,255);
+                c = mpHost->mLightMagenta_2;
                 break;
             case 14:
-                c = QColor( 0,255,255 );
+                c = mpHost->mLightCyan_2;
                 break;
             case 15:
-                c = QColor( 255,255,255);
+                c = mpHost->mLightWhite_2;
                 break;
             default: //user defined room color
                 if( ! mpMap->customEnvColors.contains(env) ) break;
@@ -338,27 +362,27 @@ void T2DMap::paintEvent( QPaintEvent * e )
         }
 
         QColor lc;
-        if( c.red()+c.green()+c.blue() > 300 )
+        if( c.red()+c.green()+c.blue() > 200 )
             lc=QColor(0,0,0);
         else
             lc=QColor(255,255,255);
         p.setPen(QPen(lc));
-        if( mpMap->rooms[pArea->rooms[i]]->up > 0 )
+        if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->up ) && mpMap->rooms[pArea->rooms[i]]->up > 0 )
         {
             p.drawLine(rx-(tx*0.75)/5, ry+(ty*0.75)/4, rx, ry+(ty*0.75)/7);
             p.drawLine(rx,ry+(ty*0.75)/7,rx+(tx*0.75)/5, ry+(ty*0.75)/4);
         }
-        if( mpMap->rooms[pArea->rooms[i]]->down > 0 )
+        if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->down ) && mpMap->rooms[pArea->rooms[i]]->down > 0 )
         {
             p.drawLine(rx-(tx*0.75)/5, ry-(ty*0.75)/4, rx, ry-(ty*0.75)/7);
             p.drawLine(rx,ry-(ty*0.75)/7,rx+(tx*0.75)/5, ry-(ty*0.75)/4);
         }
-        if( mpMap->rooms[pArea->rooms[i]]->in > 0 )
+        if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->in ) && mpMap->rooms[pArea->rooms[i]]->in > 0 )
         {
             p.drawLine(rx-(tx*0.75)/5, ry-(ty*0.75)/4, rx-(tx*0.75)/7, ry);
             p.drawLine(rx-(tx*0.75)/7,ry,rx-(tx*0.75)/5, ry+(ty*0.75)/4);
         }
-        if( mpMap->rooms[pArea->rooms[i]]->out > 0 )
+        if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->out ) && mpMap->rooms[pArea->rooms[i]]->out > 0 )
         {
             p.drawLine(rx+(tx*0.75)/5, ry-(ty*0.75)/4, rx+(tx*0.75)/7, ry);
             p.drawLine(rx+(tx*0.75)/7,ry,rx+(tx*0.75)/5, ry+(ty*0.75)/4);
@@ -477,18 +501,19 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 
 void T2DMap::slot_moveRoom()
 {
-    qDebug()<<"slot_moveRoom(): mRoomBeingMoved=true";
     mRoomBeingMoved = true;
     setMouseTracking(true);
 }
 
 void T2DMap::slot_deleteRoom()
 {
-
+    if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+        mpHost->mpMap->deleteRoom( mRoomSelection );
 }
 
 void T2DMap::slot_changeColor()
 {
+
 
 }
 
@@ -510,12 +535,16 @@ void T2DMap::slot_setUserData()
 
 void T2DMap::slot_lockRoom()
 {
-
+    if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+        mpHost->mpMap->rooms[mRoomSelection]->isLocked = true;
 }
 
 void T2DMap::slot_setRoomWeight()
 {
-
+    if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+    {
+        //mpHost->mpMap->rooms[mRoomSelection]->weight = w;
+    }
 }
 
 
@@ -530,7 +559,6 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
         {
             mpMap->rooms[mRoomSelection]->x = mMoveTarget.x();
             mpMap->rooms[mRoomSelection]->y = mMoveTarget.y();
-            qDebug()<<"-->setting new room coords"<<mMoveTarget;
         }
         update();
     }
@@ -538,16 +566,16 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
 
 void T2DMap::wheelEvent ( QWheelEvent * e )
 {
-    //int delta = e->delta() / 8 / 15;
+    int delta = e->delta() / 8 / 15;
     if( e->delta() < 0 )
     {
         mPick = false;
-        xspan--;
-        yspan--;
-        if( yspan < 3 | xspan < 3 )
+        xzoom += delta;
+        yzoom += delta;
+        if( yzoom < 3 || xzoom < 3 )
         {
-            xspan = 3;
-            yspan = 3;
+            xzoom = 3;
+            yzoom = 3;
         }
         update();
         e->accept();
@@ -557,8 +585,8 @@ void T2DMap::wheelEvent ( QWheelEvent * e )
     if( e->delta() > 0 )
     {
         mPick = false;
-        xspan++;
-        yspan++;
+        xzoom += delta;
+        yzoom += delta;
 
         e->accept();
         update();

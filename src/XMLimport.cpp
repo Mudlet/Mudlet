@@ -752,6 +752,96 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mCommandLineFont.fromString( readElementText() );
                 continue;
             }
+            else if( name() == "mFgColor2")
+            {
+                pT->mFgColor_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mBgColor2")
+            {
+                pT->mBgColor_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mBlack2")
+            {
+                pT->mBlack_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightBlack2")
+            {
+                pT->mLightBlack_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mRed2")
+            {
+                pT->mRed_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightRed2")
+            {
+                pT->mLightRed_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mBlue2")
+            {
+                pT->mBlue_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightBlue2")
+            {
+                pT->mLightBlue_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mGreen2")
+            {
+                pT->mGreen_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightGreen2")
+            {
+                pT->mLightGreen_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mYellow2")
+            {
+                pT->mYellow_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightYellow2")
+            {
+                pT->mLightYellow_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mCyan2")
+            {
+                pT->mCyan_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightCyan2")
+            {
+                pT->mLightCyan_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mMagenta2")
+            {
+                pT->mMagenta_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightMagenta2")
+            {
+                pT->mLightMagenta_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mWhite2")
+            {
+                pT->mWhite_2.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mLightWhite2")
+            {
+                pT->mLightWhite_2.setNamedColor( readElementText() );
+                continue;
+            }
             else
             {
                 readUnknownHostElement();

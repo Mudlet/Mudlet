@@ -2538,7 +2538,7 @@ int TLuaInterpreter::setRoomName( lua_State *L )
     }
     else
     {
-        name = lua_tonumber( L, 2 );
+        name = lua_tostring( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString _name = name.c_str();
@@ -4863,6 +4863,71 @@ int TLuaInterpreter::addAreaName( lua_State *L )
     else
         lua_pushnumber( L, -1 );
     return 1;
+}
+
+int TLuaInterpreter::deleteArea( lua_State *L )
+{
+    qDebug()<<"TLua::deleteArea";
+    int id = -1;
+    string name;
+
+    if( lua_isnumber( L, 1 ) )
+    {
+        id = lua_tonumber( L, 1 );
+        if( id == -1 ) return 0;
+    }
+    else if( lua_isstring( L, 1 ) )
+    {
+        name = lua_tostring( L, 1 );
+    }
+    else
+    {
+        lua_pushstring( L, "addAreaName: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( id == -1 )
+    {
+        QString _name = name.c_str();
+        if( pHost->mpMap->areaNamesMap.values().contains( _name ) )
+        {
+            pHost->mpMap->deleteArea( id );
+        }
+    }
+    else
+    {
+        if( pHost->mpMap->areas.contains( id ) )
+        {
+            pHost->mpMap->deleteArea( id );
+        }
+    }
+    return 0;
+}
+
+int TLuaInterpreter::deleteRoom( lua_State *L )
+{
+    int id;
+
+    if( lua_isnumber( L, 1 ) )
+    {
+        id = lua_tonumber( L, 1 );
+        if( id <= 0 ) return 0;
+    }
+    else
+    {
+        lua_pushstring( L, "addAreaName: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+       pHost->mpMap->deleteRoom( id );
+    }
+    return 0;
 }
 
 
@@ -7330,6 +7395,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRoomIDbyHash", TLuaInterpreter::getRoomIDbyHash );
     lua_register( pGlobalLua, "addAreaName", TLuaInterpreter::addAreaName );
     lua_register( pGlobalLua, "getRoomAreaName", TLuaInterpreter::getRoomAreaName );
+    lua_register( pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea );
+    lua_register( pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

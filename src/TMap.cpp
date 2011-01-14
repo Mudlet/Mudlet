@@ -37,6 +37,7 @@ void TMap::deleteRoom( int id )
 {
     if( rooms.contains(id ) && id != 0 )
     {
+        qDebug()<<"--> removing id from all exits";
         QMapIterator<int, TRoom *> it( rooms );
         while( it.hasNext() )
         {
@@ -60,9 +61,11 @@ void TMap::deleteRoom( int id )
         int areaID = pR->area;
         if( areas.contains((areaID)) )
         {
+            qDebug()<<"------> removing AREA";
             TArea * pA = areas[areaID];
             pA->rooms.removeAll( id );
         }
+        qDebug()<<"====> finally remoning room ID:"<<id;
         rooms.remove( id );
         delete pR;
     }
@@ -70,6 +73,7 @@ void TMap::deleteRoom( int id )
 
 void TMap::deleteArea( int id )
 {
+    qDebug()<<"delting area: id="<<id;
     if( areas.contains( id ) )
     {
         TArea * pA = areas[id];
@@ -78,6 +82,7 @@ void TMap::deleteArea( int id )
             deleteRoom( pA->rooms[i] );
         }
         areas.remove( id );
+        areaNamesMap.remove( id );
     }
 }
 
@@ -111,8 +116,8 @@ bool TMap::setRoomCoordinates( int id, int x, int y, int z )
 
 int TMap::createNewRoomID()
 {
-    int _id = 100000000;
-    for( ; _id > 0; _id++ )
+    int _id = 1;
+    for( ; ; _id++ )
     {
         if( ! rooms.contains( _id ) )
         {
@@ -542,6 +547,7 @@ bool TMap::gotoRoom( int r1, int r2 )
 
 bool TMap::findPath( int from, int to )
 {
+     qDebug()<<"findPath() from "<<from<<" to "<<to;
      typedef adjacency_list<listS, vecS, directedS, no_property, property<edge_weight_t, cost> > mygraph_t;
      typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
      typedef mygraph_t::vertex_descriptor vertex;
@@ -557,11 +563,11 @@ bool TMap::findPath( int from, int to )
      int edgeCount=0;
      while( it.hasNext() )
      {
+
          it.next();
          int i = it.key();
          if( ! rooms.contains( i ) || rooms[i]->isLocked )
          {
-             qDebug()<<"skipping room ID:"<<i;
              continue;
          }
          roomCount++;
@@ -570,6 +576,7 @@ bool TMap::findPath( int from, int to )
          l.y = rooms[i]->y;
          l.z = rooms[i]->z;
          locations.push_back( l );
+
          if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
          {
              edgeCount++;
@@ -736,7 +743,7 @@ bool TMap::findPath( int from, int to )
          {
              cout << "assembling path: v="<<v<<endl;
              if( ! rooms.contains( v ) )
-             {
+            {
                  cout<<"ERROR path assembly: path room not in map!"<<endl;
                  return false;
              }

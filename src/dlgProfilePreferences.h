@@ -43,7 +43,7 @@ signals:
 
 public slots:
     void setFontSize();
-    void setColorBlack(); 
+    void setColorBlack();
     void setColorLightBlack();
     void setColorRed();
     void setColorLightRed();
@@ -63,10 +63,30 @@ public slots:
     void setCommandLineFont();
     void setFgColor();
     void setBgColor();
+
     void setCommandFgColor();
     void setCommandBgColor();
+    void setColorBlack2();
+    void setColorLightBlack2();
+    void setColorRed2();
+    void setColorLightRed2();
+    void setColorBlue2();
+    void setColorLightBlue2();
+    void setColorGreen2();
+    void setColorLightGreen2();
+    void setColorYellow2();
+    void setColorLightYellow2();
+    void setColorCyan2();
+    void setColorLightCyan2();
+    void setColorMagenta2();
+    void setColorLightMagenta2();
+    void setColorWhite2();
+    void setColorLightWhite2();
+    void setFgColor2();
+    void setBgColor2();
+
     void resetColors();
-    
+
     void slot_save_and_exit();
 
 private:

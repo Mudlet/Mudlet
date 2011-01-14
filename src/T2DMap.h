@@ -38,8 +38,8 @@ public:
     void     mouseMoveEvent( QMouseEvent * event );
     TMap *   mpMap;
     Host *   mpHost;
-    int      xspan;
-    int      yspan;
+    int      xzoom;
+    int      yzoom;
     int      _rx;
     int      _ry;
     QPoint   mPHighlight;
@@ -51,8 +51,8 @@ public:
     QPoint   mMoveTarget;
     bool     mRoomBeingMoved;
     QPoint   mPHighlightMove;
-    int      mTX;
-    int      mTY;
+    float    mTX;
+    float    mTY;
 
 signals:
 

@@ -246,6 +246,25 @@ public:
 
     QMap<int,QTime>    mStopWatchMap;
 
+    QColor             mBlack_2;
+    QColor             mLightBlack_2;
+    QColor             mRed_2;
+    QColor             mLightRed_2;
+    QColor             mLightGreen_2;
+    QColor             mGreen_2;
+    QColor             mLightBlue_2;
+    QColor             mBlue_2;
+    QColor             mLightYellow_2;
+    QColor             mYellow_2;
+    QColor             mLightCyan_2;
+    QColor             mCyan_2;
+    QColor             mLightMagenta_2;
+    QColor             mMagenta_2;
+    QColor             mLightWhite_2;
+    QColor             mWhite_2;
+    QColor             mFgColor_2;
+    QColor             mBgColor_2;
+
 private:
     Host();
 
