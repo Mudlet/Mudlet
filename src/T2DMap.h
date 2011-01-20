@@ -32,8 +32,10 @@ public:
 
     T2DMap();
     explicit T2DMap( QWidget *parent = 0);
+    QColor & getColor( int id );
     void     paintEvent( QPaintEvent * );
     void     mousePressEvent(QMouseEvent * );
+    void     mouseDoubleClickEvent ( QMouseEvent * event );
     void     wheelEvent ( QWheelEvent * );
     void     mouseMoveEvent( QMouseEvent * event );
     TMap *   mpMap;
@@ -53,11 +55,16 @@ public:
     QPoint   mPHighlightMove;
     float    mTX;
     float    mTY;
+    int      mChosenRoomColor;
+    int xspan;
+    int yspan;
 
 signals:
 
 public slots:
 
+    void slot_defineNewColor();
+    void slot_selectRoomColor(QListWidgetItem * pI );
     void slot_moveRoom();
     void slot_deleteRoom();
     void slot_changeColor();

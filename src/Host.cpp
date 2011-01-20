@@ -149,6 +149,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
     mErrorLogStream.setDevice( &mErrorLogFile );
     mpMap->restore();
     mpMap->init( this );
+    mMapStrongHighlight = false;
 }
 
 Host::Host()
@@ -260,6 +261,7 @@ Host::Host()
     mErrorLogStream.setDevice( &mErrorLogFile );
     mpMap->restore();
     mpMap->init( this );
+    mMapStrongHighlight = false;
 
 }
 

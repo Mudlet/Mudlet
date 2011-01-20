@@ -198,22 +198,6 @@ end
 
 
 
---- Opens the default OS browser for the given URL.
----
---- @usage Either command will open Mudlet home page.
----   <pre>
----   openUrl("www.mudlet.org")
----   openUrl("http://www.mudlet.org/")
----   </pre>
-function openURL(url)
-	local os = getOS()
-	if os == "linux" then _G.os.execute("xdg-open " .. url)
-	elseif os == "mac" then _G.os.execute("open " .. url)
-	elseif os == "windows" then _G.os.execute("start " .. url) end
-end
-
-
-
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
 --- Variables are automatically unpacked into the global namespace when the profile is loaded.
 --- They are saved to "SavedVariables.lua" when the profile is closed or saved.
@@ -464,23 +448,6 @@ end
 
 
 
---- <b><u>TODO</u></b> SavedVariables:Add(tbl)
-function SavedVariables:Add(tbl)
-	if type(tbl) == 'string' then
-		self[tbl] = _G[tbl]
-	elseif type(tbl) == 'table' then
-		for k,v in pairs(_G) do
-			if _comp(v, tbl) then
-				self[k] = tbl
-			end
-		end
-	else
-		hecho"|cff0000Error registering table for persistence: invalid argument to SavedVariables:Add()"
-	end
-end
-
-
-
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
 function phpTable(...)
 	local newTable, keys, values = {}, {}, {}
@@ -511,3 +478,26 @@ function phpTable(...)
 	return newTable
 end
 
+
+
+--- <b><u>TODO</u></b> getColorWildcard(color)
+function getColorWildcard(color)
+	local color = tonumber(color)
+	local startc
+	local endc
+	local results = {}
+	
+	for i = 1, string.len(line) do
+		selectSection(i, 1)
+		if isAnsiFgColor(color) then
+			if not startc then if i == 1 then startc = 1 else startc = i + 1 end
+			else endc = i + 1 
+				if i == line:len() then results[#results + 1] = line:sub(startc, endc) end
+			end
+		elseif startc then
+			results[#results + 1] = line:sub(startc, endc)
+			startc = nil
+		end	
+	end
+	return results[1] and results or false
+end

@@ -35,6 +35,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     glWidget->mpMap = pM;
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
+    strongHighlight->setCheckState( mpHost->mMapStrongHighlight ? Qt::Checked : Qt::Unchecked );
     searchList->setSelectionMode( QAbstractItemView::SingleSelection );
     connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
     connect(ortho, SIGNAL(pressed()), glWidget, SLOT(fullView()));
@@ -55,11 +56,16 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setXRotation(int)));
     connect(yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setYRotation(int)));
     connect(zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setZRotation(int)));
-
+    connect(strongHighlight, SIGNAL(stateChanged(int)), this, SLOT( slot_toggleStrongHighlight(int)));
     mpDownloader = new QNetworkAccessManager( this );
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
 
     glWidget->hide();
+}
+
+void dlgMapper::slot_toggleStrongHighlight( int v )
+{
+    mpHost->mMapStrongHighlight = v == Qt::Checked ? true : false;
 }
 
 void dlgMapper::slot_togglePanel()

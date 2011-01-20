@@ -2619,6 +2619,7 @@ int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
         hash = lua_tostring( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    qDebug()<<"SETUP HASH: id="<<id<<" hash:"<<hash.c_str();
     pHost->mpMap->hashTable[QString(hash.c_str())] = id;
     return 0;
 }
@@ -2637,12 +2638,17 @@ int TLuaInterpreter::getRoomIDbyHash( lua_State *L )
         hash = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    qDebug()<<pHost->mpMap->hashTable;
-    if( pHost->mpMap->hashTable.contains( QString(hash.c_str())) )
-        lua_pushnumber( L, pHost->mpMap->hashTable[QString(hash.c_str())] );
+    int retID = -1;
+    QString _hash = hash.c_str();
+    if( pHost->mpMap->hashTable.contains( _hash ) )
+    {
+        retID = pHost->mpMap->hashTable[_hash];
+        lua_pushnumber( L, retID );
+    }
     else
         lua_pushnumber( L, -1 );
-    qDebug()<<"LOOKUP HASH:"<<hash.c_str() << " ID="<<pHost->mpMap->hashTable[QString(hash.c_str())];
+
+    qDebug()<<"LOOKUP HASH:"<< _hash << " ID="<< retID;
     return 1;
 }
 

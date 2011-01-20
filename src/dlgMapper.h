@@ -51,6 +51,7 @@ public:
 
 public slots:
 
+        void slot_toggleStrongHighlight( int v );
         void show2dView();
         void slot_togglePanel();
         void setDownloadProgress( qint64, qint64 );

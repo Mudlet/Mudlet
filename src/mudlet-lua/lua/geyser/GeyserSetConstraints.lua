@@ -58,13 +58,13 @@ function Geyser.set_constraints (window, cons, container)
          end
          
          -- Define the getter function
-
-	 -- Heiko: on European locales this leads to compile errors because
-	 --        scale will be "0,5" instead of "0.5"-> syntax error
-	 --        Need to find out if there's more such cases in Geyser
-	 h_scale = tostring(scale)
-	 h_scale = string.gsub(h_scale, ",", ".")
-         local src = "local self,container = ...  return function () return " .. min .. " + (" .. h_scale .. " * " .. max .. ") end"
+         -- Heiko: on European locales this leads to compile errors because
+		 --        scale will be "0,5" instead of "0.5"-> syntax error
+		 --        Need to find out if there's more such cases in Geyse
+		 --        Need to find out if there's more such cases in Geyser
+		 h_scale = tostring(scale)
+		 h_scale = string.gsub(h_scale, ",", ".")
+		 local src = "local self,container = ...  return function () return " .. min .. " + (" .. h_scale .. " * " .. max .. ") end"
          
          -- compile the getter
          window[getter] = assert(loadstring(src, "getter for " .. v))(window,container)

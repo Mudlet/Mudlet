@@ -117,7 +117,7 @@
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap>:/Mudlet_splashscreen_main</pixmap>
+      <pixmap resource="../mudlet_alpha.qrc">:/Mudlet_splashscreen_main</pixmap>
      </property>
      <property name="scaledContents">
       <bool>false</bool>
@@ -641,7 +641,7 @@ p, li { white-space: pre-wrap; }
 &lt;table border=&quot;0&quot; style=&quot;-qt-table-type: root; margin-top:4px; margin-bottom:4px; margin-left:4px; margin-right:4px;&quot;&gt;
 &lt;tr&gt;
 &lt;td style=&quot;border: none;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt;Mudlet 1.1.0 built: March 8, 2010&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt;Mudlet 2.0-dev built: January 19, 2011&lt;/span&gt;&lt;/p&gt;
 &lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'DejaVu Sans'; font-weight:600; text-decoration: underline; color:#005500;&quot;&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:9pt; font-weight:600; color:#000000;&quot;&gt;homepage and forum at: &lt;/span&gt;&lt;a href=&quot;http://mudlet.sourceforge.net&quot;&gt;&lt;span style=&quot; font-family:'Sans Serif'; font-size:9pt; text-decoration: underline; color:#0000ff;&quot;&gt;mudlet.sourceforge.net&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:9pt; font-weight:600; color:#000000;&quot;&gt;latest version can be found at:&lt;/span&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:9pt; font-weight:600; color:#00007f;&quot;&gt; &lt;/span&gt;&lt;a href=&quot;http://mudlet.sourceforge.net&quot;&gt;&lt;span style=&quot; font-family:'Sans Serif'; font-size:9pt; text-decoration: underline; color:#0000ff;&quot;&gt;mudlet.sourceforge.net&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-family:'DejaVu Sans'; font-size:9pt; font-weight:600; color:#00007f;&quot;&gt;/&lt;/span&gt;&lt;/p&gt;
@@ -876,6 +876,8 @@ p, li { white-space: pre-wrap; }
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections/>
 </ui>

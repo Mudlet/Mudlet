@@ -31,6 +31,22 @@ TMap::TMap( Host * pH )
 , mpM( 0 )
 , mpMapper( 0 )
 {
+    customEnvColors[257] = mpHost->mRed_2;
+    customEnvColors[258] = mpHost->mGreen_2;
+    customEnvColors[259] = mpHost->mYellow_2;
+    customEnvColors[260] = mpHost->mBlue_2;
+    customEnvColors[261] = mpHost->mMagenta_2;
+    customEnvColors[262] = mpHost->mCyan_2;
+    customEnvColors[263] = mpHost->mWhite_2;
+    customEnvColors[264] = mpHost->mBlack_2;
+    customEnvColors[265] = mpHost->mLightRed_2;
+    customEnvColors[266] = mpHost->mLightGreen_2;
+    customEnvColors[267] = mpHost->mLightYellow_2;
+    customEnvColors[268] = mpHost->mLightBlue_2;
+    customEnvColors[269] = mpHost->mLightMagenta_2;
+    customEnvColors[270] = mpHost->mLightCyan_2;
+    customEnvColors[271] = mpHost->mLightWhite_2;
+
 }
 
 void TMap::deleteRoom( int id )
@@ -63,6 +79,7 @@ void TMap::deleteRoom( int id )
         {
             qDebug()<<"------> removing AREA";
             TArea * pA = areas[areaID];
+            hashTable.remove(hashTable.key(id));
             pA->rooms.removeAll( id );
         }
         qDebug()<<"====> finally remoning room ID:"<<id;
@@ -124,7 +141,7 @@ int TMap::createNewRoomID()
             return _id;
         }
     }
-    return 0;
+    return -1;
 }
 
 bool TMap::setExit( int from, int to, int dir )
@@ -969,7 +986,21 @@ bool TMap::restore()
                 ifs >> rooms[i]->other;
             }
         }
-
+        customEnvColors[257] = mpHost->mRed_2;
+        customEnvColors[258] = mpHost->mGreen_2;
+        customEnvColors[259] = mpHost->mYellow_2;
+        customEnvColors[260] = mpHost->mBlue_2;
+        customEnvColors[261] = mpHost->mMagenta_2;
+        customEnvColors[262] = mpHost->mCyan_2;
+        customEnvColors[263] = mpHost->mWhite_2;
+        customEnvColors[264] = mpHost->mBlack_2;
+        customEnvColors[265] = mpHost->mLightRed_2;
+        customEnvColors[266] = mpHost->mLightGreen_2;
+        customEnvColors[267] = mpHost->mLightYellow_2;
+        customEnvColors[268] = mpHost->mLightBlue_2;
+        customEnvColors[269] = mpHost->mLightMagenta_2;
+        customEnvColors[270] = mpHost->mLightCyan_2;
+        customEnvColors[271] = mpHost->mLightWhite_2;
 
         qDebug()<<"LOADED rooms:"<<rooms.size();
         if( canRestore )

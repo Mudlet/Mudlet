@@ -264,6 +264,7 @@ public:
     QColor             mWhite_2;
     QColor             mFgColor_2;
     QColor             mBgColor_2;
+    bool               mMapStrongHighlight;
 
 private:
     Host();

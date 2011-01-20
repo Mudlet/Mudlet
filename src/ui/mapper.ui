@@ -344,6 +344,57 @@
               </property>
              </widget>
             </item>
+            <item row="4" column="1">
+             <widget class="QToolButton" name="sideView">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="font">
+               <font>
+                <family>Century Schoolbook L</family>
+                <pointsize>8</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>side view</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QToolButton" name="topView">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="font">
+               <font>
+                <family>Century Schoolbook L</family>
+                <pointsize>8</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>top view</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0" colspan="2">
+             <widget class="QCheckBox" name="strongHighlight">
+              <property name="font">
+               <font>
+                <family>Bookman Uralic</family>
+                <pointsize>8</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Strong Highlight</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
@@ -377,50 +428,6 @@
                <property name="margin">
                 <number>0</number>
                </property>
-               <item>
-                <widget class="QWidget" name="widget_5" native="true">
-                 <layout class="QGridLayout" name="gridLayout_2">
-                  <item row="2" column="0">
-                   <widget class="QToolButton" name="topView">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>top view</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="1">
-                   <widget class="QToolButton" name="sideView">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
-                    </property>
-                    <property name="text">
-                     <string>side view</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
                <item>
                 <widget class="QLineEdit" name="roomID"/>
                </item>
@@ -489,31 +496,6 @@
                  </property>
                 </widget>
                </item>
-               <item row="2" column="0">
-                <widget class="QSlider" name="yRot">
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>25</height>
-                  </size>
-                 </property>
-                 <property name="minimum">
-                  <number>-360</number>
-                 </property>
-                 <property name="maximum">
-                  <number>360</number>
-                 </property>
-                 <property name="pageStep">
-                  <number>1</number>
-                 </property>
-                 <property name="value">
-                  <number>5</number>
-                 </property>
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                </widget>
-               </item>
                <item row="0" column="1">
                 <widget class="QSlider" name="xRot">
                  <property name="maximumSize">
@@ -533,6 +515,31 @@
                  </property>
                  <property name="value">
                   <number>1</number>
+                 </property>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QSlider" name="yRot">
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>25</height>
+                  </size>
+                 </property>
+                 <property name="minimum">
+                  <number>-360</number>
+                 </property>
+                 <property name="maximum">
+                  <number>360</number>
+                 </property>
+                 <property name="pageStep">
+                  <number>1</number>
+                 </property>
+                 <property name="value">
+                  <number>5</number>
                  </property>
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
@@ -565,10 +572,6 @@
                 </widget>
                </item>
               </layout>
-              <zorder>yRot</zorder>
-              <zorder>scale</zorder>
-              <zorder>xRot</zorder>
-              <zorder>zRot</zorder>
              </widget>
             </item>
            </layout>
