@@ -38,6 +38,7 @@ public:
     void     mouseDoubleClickEvent ( QMouseEvent * event );
     void     wheelEvent ( QWheelEvent * );
     void     mouseMoveEvent( QMouseEvent * event );
+    void     mouseReleaseEvent(QMouseEvent * e );
     TMap *   mpMap;
     Host *   mpHost;
     int      xzoom;
@@ -56,8 +57,16 @@ public:
     float    mTX;
     float    mTY;
     int      mChosenRoomColor;
-    int xspan;
-    int yspan;
+    int      xspan;
+    int      yspan;
+    bool     mMultiSelection;
+    QRectF   mMultiRect;
+    bool     mPopupMenu;
+    QList<int> mMultiSelectionList;
+    QPoint   mOldMousePos;
+    bool     mNewMoveAction;
+    QRectF   mMapInfoRect;
+    int      mFontHeight;
 
 signals:
 

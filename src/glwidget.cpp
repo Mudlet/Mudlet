@@ -249,6 +249,7 @@ void GLWidget::initializeGL()
 
 void GLWidget::paintGL()
 {
+    QTime __time; __time.start();
     float px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
     {
@@ -1772,7 +1773,7 @@ void GLWidget::paintGL()
 //    cout<<"dif r="<<diffuseLight[0]<<" g="<<diffuseLight[1]<<" b="<<diffuseLight[2]<<endl;
 //    cout << "xRot:"<<xRot<<" yRot:"<<yRot<<" zRot:"<<zRot<<endl;
     glFlush();
-    //qDebug()<<"render:"<<__t.elapsed();
+    qDebug()<<"3D-render:"<<__time.elapsed();
 }
 
 void GLWidget::resizeGL(int w, int h)

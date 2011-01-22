@@ -4829,6 +4829,11 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
             lua_pushnumber( L, idList[0] );
             return 1;
         }
+        else
+        {
+            lua_pushnumber( L, -1 );
+            return 1;
+        }
     }
     else
     {
@@ -5023,7 +5028,7 @@ int TLuaInterpreter::getRoomArea( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->rooms.contains( id ) )
     {
-        lua_pushstring( L, "getRoomCoordinates: room ID does not exist");
+        lua_pushstring( L, "getRoomArea: room ID does not exist");
         lua_error( L );
         return 1;
     }
@@ -5421,8 +5426,8 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
     pHost->mpMap->rooms[id]->area = area;
     if( ! pHost->mpMap->areas[area]->rooms.contains( id ) )
         pHost->mpMap->areas[area]->rooms.push_back(id);
-    pHost->mpMap->areas[area]->ausgaengeBestimmen();
-    pHost->mpMap->areas[area]->calcSpan();
+    pHost->mpMap->areas[area]->fast_ausgaengeBestimmen(id);
+    pHost->mpMap->areas[area]->fast_calcSpan(id);
     return 0;
 }
 

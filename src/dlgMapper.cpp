@@ -60,6 +60,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpDownloader = new QNetworkAccessManager( this );
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
 
+
+    mp2dMap->mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
     glWidget->hide();
 }
 

@@ -46,6 +46,7 @@ TMap::TMap( Host * pH )
     customEnvColors[269] = mpHost->mLightMagenta_2;
     customEnvColors[270] = mpHost->mLightCyan_2;
     customEnvColors[271] = mpHost->mLightWhite_2;
+    customEnvColors[272] = mpHost->mLightBlack_2;
 
 }
 
@@ -75,17 +76,20 @@ void TMap::deleteRoom( int id )
         }
         TRoom * pR = rooms[id];
         int areaID = pR->area;
-        if( areas.contains((areaID)) )
+        if( areas.contains(areaID) )
         {
-            qDebug()<<"------> removing AREA";
+            qDebug()<<"------> removing room from area";
             TArea * pA = areas[areaID];
-            hashTable.remove(hashTable.key(id));
+
             pA->rooms.removeAll( id );
         }
         qDebug()<<"====> finally remoning room ID:"<<id;
         rooms.remove( id );
+        qDebug()<<"--> removing id from hashTable";
+
         delete pR;
     }
+    hashTable.remove(hashTable.key(id));
 }
 
 void TMap::deleteArea( int id )
@@ -1001,7 +1005,7 @@ bool TMap::restore()
         customEnvColors[269] = mpHost->mLightMagenta_2;
         customEnvColors[270] = mpHost->mLightCyan_2;
         customEnvColors[271] = mpHost->mLightWhite_2;
-
+        customEnvColors[272] = mpHost->mLightBlack_2;
         qDebug()<<"LOADED rooms:"<<rooms.size();
         if( canRestore )
         {

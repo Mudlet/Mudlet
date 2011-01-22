@@ -133,6 +133,63 @@ QList<int> TArea::getCollisionNodes()
     return problems;
 }
 
+void TArea::fast_ausgaengeBestimmen( int id )
+{
+    if( ! mpMap->rooms.contains(( id ) ) ) return;
+    if( ! mpMap->areas.contains( mpMap->rooms[id]->area ) ) return;
+
+    if( ! rooms.indexOf( mpMap->rooms[id]->north ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, NORTH);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->northeast ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, NORTHEAST);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->east ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, EAST);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->southeast ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, SOUTHEAST);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->south ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, SOUTH);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->southwest ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, SOUTHWEST);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->west ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, WEST);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->northwest ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, NORTHWEST);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->up ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, UP);
+        exits.insertMulti( id, p );
+    }
+    if( ! rooms.indexOf( mpMap->rooms[id]->down ) )
+    {
+        QPair<int, int> p = QPair<int,int>(id, DOWN);
+        exits.insertMulti( id, p );
+    }
+}
+
 void TArea::ausgaengeBestimmen()
 {
     exits.clear();
@@ -191,6 +248,23 @@ void TArea::ausgaengeBestimmen()
         }
     }
     //qDebug()<<"exits:"<<exits.size();
+}
+
+void TArea::fast_calcSpan( int id )
+{
+
+    if( ! mpMap->rooms.contains(( id ) ) ) return;
+    if( ! mpMap->areas.contains( mpMap->rooms[id]->area ) ) return;
+
+    int x = mpMap->rooms[id]->x;
+    int y = mpMap->rooms[id]->y;
+    int z = mpMap->rooms[id]->z;
+    if( x > max_x ) max_x = x;
+    if( x < min_x ) min_x = x;
+    if( y > max_y ) max_y = y;
+    if( y < min_y ) min_y = y;
+    if( z > max_z ) max_z = z;
+    if( z < min_z ) min_z = z;
 }
 
 void TArea::calcSpan()

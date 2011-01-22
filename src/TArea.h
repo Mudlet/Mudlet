@@ -36,6 +36,8 @@ public:
 
     TArea( TMap * );
     void calcSpan();
+    void fast_calcSpan(int);
+    void fast_ausgaengeBestimmen(int);
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition( int x, int y, int z );
     QMap<int,QMap<int,QMultiMap<int,int> > > koordinatenSystem();
