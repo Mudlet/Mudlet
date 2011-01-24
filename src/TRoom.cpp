@@ -66,7 +66,6 @@ bool TRoom::hasExit( int id )
 
 void TRoom::setExitLock(int exit, bool state )
 {
-    qDebug()<<"setExitLock: exit="<<exit<<" state="<<state;
     if( ! state )
     {
         exitLocks.removeAll( exit );
@@ -74,18 +73,18 @@ void TRoom::setExitLock(int exit, bool state )
     }
     switch( exit )
     {
-        case DIR_NORTH: exitLocks[DIR_NORTH] = true; break;
-        case DIR_NORTHEAST: exitLocks[DIR_NORTHEAST] = true; break;
-        case DIR_NORTHWEST: exitLocks[DIR_NORTHWEST] = true; break;
-        case DIR_SOUTHEAST: exitLocks[DIR_SOUTHEAST] = true; break;
-        case DIR_SOUTHWEST: exitLocks[DIR_SOUTHWEST] = true; break;
-        case DIR_SOUTH: exitLocks[DIR_SOUTH] = true; break;
-        case DIR_EAST: exitLocks[DIR_EAST] = true; break;
-        case DIR_WEST: exitLocks[DIR_WEST] = true; break;
-        case DIR_UP: exitLocks[DIR_UP] = true; break;
-        case DIR_DOWN: exitLocks[DIR_DOWN] = true; break;
-        case DIR_IN: exitLocks[DIR_IN] = true; break;
-        case DIR_OUT: exitLocks[DIR_OUT] = true; break;
+        case DIR_NORTH: exitLocks.push_back(DIR_NORTH); break;
+        case DIR_NORTHEAST: exitLocks.push_back(DIR_NORTHEAST); break;
+        case DIR_NORTHWEST: exitLocks.push_back(DIR_NORTHWEST); break;
+        case DIR_SOUTHEAST: exitLocks.push_back(DIR_SOUTHEAST); break;
+        case DIR_SOUTHWEST: exitLocks.push_back(DIR_SOUTHWEST); break;
+        case DIR_SOUTH: exitLocks.push_back(DIR_SOUTH); break;
+        case DIR_EAST: exitLocks.push_back(DIR_EAST); break;
+        case DIR_WEST: exitLocks.push_back(DIR_WEST); break;
+        case DIR_UP: exitLocks.push_back(DIR_UP); break;
+        case DIR_DOWN: exitLocks.push_back(DIR_DOWN); break;
+        case DIR_IN: exitLocks.push_back(DIR_IN); break;
+        case DIR_OUT: exitLocks.push_back(DIR_OUT); break;
     }
 }
 

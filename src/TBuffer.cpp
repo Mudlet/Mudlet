@@ -3134,13 +3134,13 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
 
     if( ( x < 0 )
         || ( x >= static_cast<int>(buffer[y].size()) )
-        || ( P2.x() > static_cast<int>(buffer[y].size()) ) )
+        || ( P2.x() >= static_cast<int>(buffer[y].size()) ) )
     {
         x=0;
     }
     if( P2.x() < 0 )
     {
-        P2.setX(buffer[y].size());
+        P2.setX(buffer[y].size()-1);
     }
 
     bool bold = false;

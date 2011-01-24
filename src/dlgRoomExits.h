@@ -39,7 +39,9 @@ public:
 signals:
 
 public slots:
+    void slot_editItem(QTreeWidgetItem * pI, int column );
     void save();
+    void slot_addSpecialExit();
     //void cancel();
 
 };
