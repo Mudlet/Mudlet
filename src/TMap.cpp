@@ -230,10 +230,10 @@ void TMap::setView(float x, float y, float z, float zoom )
 {
     if( rooms.contains(mRoomId) )
     {
-        rooms[mRoomId]->xRot = x;
-        rooms[mRoomId]->yRot = y;
-        rooms[mRoomId]->zRot = z;
-        rooms[mRoomId]->zoom = zoom;
+//        rooms[mRoomId]->xRot = x;
+//        rooms[mRoomId]->yRot = y;
+//        rooms[mRoomId]->zRot = z;
+//        rooms[mRoomId]->zoom = zoom;
     }
 }
 
@@ -867,7 +867,7 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 7;
+    int version = 8;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
@@ -898,10 +898,10 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << rooms[i]->out;
         ofs << rooms[i]->environment;
         ofs << rooms[i]->weight;
-        ofs << rooms[i]->xRot;
-        ofs << rooms[i]->yRot;
-        ofs << rooms[i]->zRot;
-        ofs << rooms[i]->zoom;
+//        ofs << rooms[i]->xRot;
+//        ofs << rooms[i]->yRot;
+//        ofs << rooms[i]->zRot;
+//        ofs << rooms[i]->zoom;
         ofs << rooms[i]->name;
         ofs << rooms[i]->isLocked;
         ofs << rooms[i]->other;
@@ -979,10 +979,14 @@ bool TMap::restore()
             ifs >> rooms[i]->out;
             ifs >> rooms[i]->environment;
             ifs >> rooms[i]->weight;
-            ifs >> rooms[i]->xRot;
-            ifs >> rooms[i]->yRot;
-            ifs >> rooms[i]->zRot;
-            ifs >> rooms[i]->zoom;
+            if( version < 8 )
+            {
+                float f1,f2,f3,f4;
+                ifs >> f1;//rooms[i]->xRot;
+                ifs >> f2;//rooms[i]->yRot;
+                ifs >> f3;//rooms[i]->zRot;
+                ifs >> f4;//rooms[i]->zoom;
+            }
             ifs >> rooms[i]->name;
             ifs >> rooms[i]->isLocked;
             if( version >= 6 )

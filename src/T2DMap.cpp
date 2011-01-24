@@ -26,6 +26,7 @@
 #include "TRoom.h"
 #include "Host.h"
 #include "TConsole.h"
+#include <QPixmap>
 
 T2DMap::T2DMap()
 {
@@ -54,10 +55,26 @@ T2DMap::T2DMap(QWidget * parent)
     mPHighlightMove = QPoint(width()/2, height()/2);
     mNewMoveAction = false;
     mFontHeight = 20;
+    mShowRoomID = false;
+    QFont f =QFont( QFont("Bitstream Vera Sans Mono", 20, QFont::Courier ) );//( QFont("Monospace", 10, QFont::Courier) );
+    f.setPointSize(25);
+    f.setBold(true);
+    for( int i=33;i<255;i++ )
+    {
+        QPixmap b(26,26);
+        b.fill(QColor(0,0,0,0));
+        QPainter p(&b);
+        p.setPen(QColor(0,0,0,255));
+        p.setFont(f);
+        QRect r(0,0,26,26);
+        p.drawText(r, Qt::AlignHCenter|Qt::AlignVCenter, QChar(i) );
+        mPixMap[i]=b;
+    }
+
 
 }
 
-QColor & T2DMap::getColor( int id )
+QColor T2DMap::getColor( int id )
 {
     QColor c;
 
@@ -171,7 +188,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     mTY = ty;
 
 
-    p.setRenderHint(QPainter::NonCosmeticDefaultPen);
+   // p.setRenderHint(QPainter::NonCosmeticDefaultPen);
 
     int px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
@@ -439,14 +456,31 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
             else
             {
-
                 mRoomSelection = pArea->rooms[i];
-                qDebug()<<"SECTION:"<<mRoomSelection;
-
             }
         }
         else
+        {
             p.fillRect(dr,c);
+            if( mShowRoomID )
+            {
+                QPen __pen = p.pen();
+                QColor lc;
+                if( c.red()+c.green()+c.blue() > 200 )
+                    lc=QColor(0,0,0);
+                else
+                    lc=QColor(255,255,255);
+                p.setPen(QPen(lc));
+                p.drawText(dr, Qt::AlignHCenter|Qt::AlignVCenter,QString::number(pArea->rooms[i]));
+                p.setPen(__pen);
+            }
+            char _ch = mpMap->rooms[pArea->rooms[i]]->c;
+            if( _ch >= 33 && _ch < 255 )
+            {
+                QPixmap pix = mPixMap[_ch].scaled(dr.width(), dr.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                p.drawPixmap(dr.topLeft(), pix);
+            }
+        }
 
         QColor lc;
         if( c.red()+c.green()+c.blue() > 200 )
@@ -683,8 +717,22 @@ void T2DMap::slot_moveRoom()
 
 void T2DMap::slot_deleteRoom()
 {
-    if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+    if( mMultiSelection )
+    {
+        mMultiRect = QRect(0,0,0,0);
+        for( int j=0; j<mMultiSelectionList.size(); j++ )
+        {
+            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
+            {
+                mpHost->mpMap->deleteRoom( mMultiSelectionList[j] );
+            }
+        }
+    }
+    else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+    {
         mpHost->mpMap->deleteRoom( mRoomSelection );
+    }
+    repaint();
 }
 
 void T2DMap::slot_selectRoomColor(QListWidgetItem * pI )
@@ -700,6 +748,7 @@ void T2DMap::slot_defineNewColor()
         mpMap->customEnvColors[mpMap->customEnvColors.size()+257+16] = color;
         slot_changeColor();
     }
+    repaint();
 }
 
 void T2DMap::slot_changeColor()
@@ -774,9 +823,18 @@ void T2DMap::slot_addSpecialExit()
 
 }
 
+#include "dlgRoomExits.h"
 void T2DMap::slot_setExits()
 {
+//    if( mMultiSelection ) return;
 
+    if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+    {
+        dlgRoomExits * pD = new dlgRoomExits( mpHost, this );
+        pD->init( mRoomSelection );
+        pD->show();
+        pD->raise();
+    }
 }
 
 
@@ -787,15 +845,49 @@ void T2DMap::slot_setUserData()
 
 void T2DMap::slot_lockRoom()
 {
-    if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+    if( mMultiSelection )
+    {
+        mMultiRect = QRect(0,0,0,0);
+        for( int j=0; j<mMultiSelectionList.size(); j++ )
+        {
+            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
+            {
+                mpMap->rooms[mMultiSelectionList[j]]->isLocked = true;
+            }
+        }
+    }
+    else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+    {
         mpHost->mpMap->rooms[mRoomSelection]->isLocked = true;
+    }
 }
 
+#include <QInputDialog>
 void T2DMap::slot_setRoomWeight()
 {
-    if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+
+
+    if( mMultiSelection )
     {
-        //mpHost->mpMap->rooms[mRoomSelection]->weight = w;
+        int w = QInputDialog::getInt(this,"Enter a room weight (= travel time)","room weight:", 1);
+        mMultiRect = QRect(0,0,0,0);
+        for( int j=0; j<mMultiSelectionList.size(); j++ )
+        {
+            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
+            {
+                mpMap->rooms[mMultiSelectionList[j]]->weight = w;
+            }
+        }
+        repaint();
+    }
+    else
+    {
+        if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+        {
+            int _w = mpHost->mpMap->rooms[mRoomSelection]->weight;
+            int w = QInputDialog::getInt(this, "Enter a room weight (= travel time)","room weight:",_w);
+            mpHost->mpMap->rooms[mRoomSelection]->weight = w;
+        }
     }
 }
 

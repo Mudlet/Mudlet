@@ -23,7 +23,7 @@
 #include "TTextEdit.h"
 #include <QPlainTextEdit>
 #include "TSplitter.h"
-#include "hunspell/hunspell.hxx"
+//#include "hunspell/hunspell.hxx"
 
 TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent )
 : QPlainTextEdit( parent )
@@ -31,7 +31,7 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 , mpConsole( pConsole )
 , mSelectedText( "" )
 , mSelectionStart( 0 )
-, mpHunspell( new Hunspell("en_US.aff", "en_US.dic") )
+//, mpHunspell( new Hunspell("en_US.aff", "en_US.dic") )
 {
     mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
@@ -390,34 +390,34 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-    QTextCursor oldCursor = textCursor();
-    QTextCharFormat f;
-    QColor cred = QColor(255,0,0);
-    f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
-    f.setUnderlineColor(cred);
-    QTextCursor c = textCursor();
-    c.movePosition(QTextCursor::Start);
-    c.movePosition(QTextCursor::NextWord);
-    //dont spell check first word as it's always an alias or mud command
-    while( c.movePosition(QTextCursor::NextWord) )
-    {
-        c.select(QTextCursor::WordUnderCursor);
-        if( ! mpHunspell->spell( c.selectedText().toLatin1().data()) )
-        {
-            f.setFontUnderline(true);
-            c.setCharFormat(f);
-        }
-        else
-        {
-            f.setFontUnderline(false);
-            c.setCharFormat(f);
-        }
-    }
+//    QTextCursor oldCursor = textCursor();
+//    QTextCharFormat f;
+//    QColor cred = QColor(255,0,0);
+//    f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+//    f.setUnderlineColor(cred);
+//    QTextCursor c = textCursor();
+//    c.movePosition(QTextCursor::Start);
+//    c.movePosition(QTextCursor::NextWord);
+//    //dont spell check first word as it's always an alias or mud command
+//    while( c.movePosition(QTextCursor::NextWord) )
+//    {
+//        c.select(QTextCursor::WordUnderCursor);
+//        if( ! mpHunspell->spell( c.selectedText().toLatin1().data()) )
+//        {
+//            f.setFontUnderline(true);
+//            c.setCharFormat(f);
+//        }
+//        else
+//        {
+//            f.setFontUnderline(false);
+//            c.setCharFormat(f);
+//        }
+//    }
 
-    f.setFontUnderline(false);
-    c.setCharFormat(f);
-    setTextCursor(c);
-    setTextCursor(oldCursor);
+//    f.setFontUnderline(false);
+//    c.setCharFormat(f);
+//    setTextCursor(c);
+//    setTextCursor(oldCursor);
 }
 
 void TCommandLine::enterCommand( QKeyEvent * event )

@@ -23,6 +23,12 @@ public:
     TRoom();
     bool hasExit( int );
     void setWeight( int );
+    void setExitLock( int, bool );
+    void setSpecialExitLock(int to, QString cmd, bool doLock);
+    bool hasExitLock(int to);
+    bool hasSpecialExitLock( int, QString );
+    void removeSpecialExit( int to, QString cmd );
+    void addSpecialExit( int to, QString cmd );
     int id;
     int area;
     int x;
@@ -43,14 +49,17 @@ public:
     int environment;
     int weight;
     bool isLocked;
-    float xRot;
-    float yRot;
-    float zRot;
-    float zoom;
+//    float xRot;
+//    float yRot;
+//    float zRot;
+//    float zoom;
+    char c;
     QString name;
     QVector3D v;
-    QMap<int, QString> other;
+    QMultiMap<int, QString> other; // es können mehrere exits zum gleichen raum verlaufen
+                                   //verbotene exits werden mit 0 geprefixed, offene mit 1
     QMap<QString, QString> userData;
+    QList<int> exitLocks;
 };
 
 #endif // TROOM_H

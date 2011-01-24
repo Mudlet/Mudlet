@@ -1,5 +1,5 @@
 #CONFIG += release warn_off
-CONFIG += debug
+CONFIG += release
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
 MOC_DIR = ./tmp
@@ -18,7 +18,7 @@ win32:LIBS += -Lc:\mudlet_package \
 unix:INCLUDEPATH += /usr/include/lua5.1
 win32:INCLUDEPATH += c:\Lua\include \
     c:\zlib-1.2.5\
-    c:\boost_1_44_0 \
+    c:\boost_1_45_0 \
     c:\pcre-8.0-lib\include \
     c:\yajl\yajl\src
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
@@ -109,7 +109,8 @@ SOURCES += TConsole.cpp \
     irc/src/ircsession.cpp \
     irc/src/ircutil.cpp \
     dlgIRC.cpp \
-    T2DMap.cpp
+    T2DMap.cpp \
+    dlgRoomExits.cpp
 
 
 HEADERS += mudlet.h \
@@ -183,7 +184,8 @@ HEADERS += mudlet.h \
     irc/include/ircsession.h \
     irc/include/ircutil.h \
     dlgIRC.h \
-    T2DMap.h
+    T2DMap.h \
+    dlgRoomExits.h
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \
@@ -210,7 +212,8 @@ FORMS += ui/connection_profiles.ui \
     ui/mapper.ui \
     ui/profile_preferences.ui \
     ui/irc.ui \
-    ui/mapper_room_color.ui
+    ui/mapper_room_color.ui \
+    ui/room_exits.ui
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc

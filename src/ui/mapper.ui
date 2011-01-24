@@ -140,7 +140,7 @@
          </size>
         </property>
         <property name="text">
-         <string>&gt;</string>
+         <string>&lt;</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -178,21 +178,21 @@
           <widget class="QWidget" name="widget_4" native="true">
            <layout class="QGridLayout" name="gridLayout">
             <property name="leftMargin">
-             <number>2</number>
+             <number>4</number>
             </property>
             <property name="topMargin">
-             <number>2</number>
+             <number>3</number>
             </property>
             <property name="rightMargin">
-             <number>2</number>
+             <number>3</number>
             </property>
             <property name="bottomMargin">
-             <number>0</number>
+             <number>3</number>
             </property>
             <property name="spacing">
-             <number>0</number>
+             <number>2</number>
             </property>
-            <item row="0" column="0">
+            <item row="0" column="0" colspan="2">
              <widget class="QToolButton" name="dim2">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -211,7 +211,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="1">
+            <item row="0" column="2">
              <widget class="QToolButton" name="defaultView">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -230,7 +230,7 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="0">
+            <item row="1" column="0" colspan="2">
              <widget class="QToolButton" name="singleLevel">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -249,7 +249,7 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="1">
+            <item row="1" column="2">
              <widget class="QToolButton" name="ortho">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -268,7 +268,7 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
+            <item row="2" column="0" colspan="2">
              <widget class="QToolButton" name="reduceTop">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -287,7 +287,7 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="1">
+            <item row="2" column="2">
              <widget class="QToolButton" name="increaseTop">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -306,7 +306,7 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
+            <item row="3" column="0" colspan="2">
              <widget class="QToolButton" name="reduceBottom">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -325,7 +325,7 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="1">
+            <item row="3" column="2">
              <widget class="QToolButton" name="increaseBottom">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -344,26 +344,7 @@
               </property>
              </widget>
             </item>
-            <item row="4" column="1">
-             <widget class="QToolButton" name="sideView">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="font">
-               <font>
-                <family>Century Schoolbook L</family>
-                <pointsize>8</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>side view</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
+            <item row="4" column="0" colspan="2">
              <widget class="QToolButton" name="topView">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -382,8 +363,33 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="0" colspan="2">
+            <item row="4" column="2">
+             <widget class="QToolButton" name="sideView">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="font">
+               <font>
+                <family>Century Schoolbook L</family>
+                <pointsize>8</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>side view</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0" rowspan="2" colspan="3">
              <widget class="QCheckBox" name="strongHighlight">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="font">
                <font>
                 <family>Bookman Uralic</family>
@@ -392,6 +398,25 @@
               </property>
               <property name="text">
                <string>Strong Highlight</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0" colspan="3">
+             <widget class="QCheckBox" name="showRoomIDs">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="font">
+               <font>
+                <family>Bookman Uralic</family>
+                <pointsize>8</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>show room IDs</string>
               </property>
              </widget>
             </item>

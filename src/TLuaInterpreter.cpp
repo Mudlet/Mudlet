@@ -5431,6 +5431,48 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::setRoomChar( lua_State * L )
+{
+    int id;
+    string c;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        c = lua_tostring( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushstring( L, "setRoomArea: room ID does not exist");
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        if( c.size() >= 1 )
+        {
+            pHost->mpMap->rooms[id]->c = c[0];
+        }
+    }
+    return 0;
+}
+
+
 int TLuaInterpreter::getRoomsByPosition( lua_State * L )
 {
     int area, x, y, z;
@@ -7408,6 +7450,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRoomAreaName", TLuaInterpreter::getRoomAreaName );
     lua_register( pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea );
     lua_register( pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom );
+    lua_register( pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

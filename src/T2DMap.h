@@ -23,6 +23,7 @@
 
 #include <QWidget>
 #include <TMap.h>
+#include <QPixmap>
 
 class T2DMap : public QWidget
 {
@@ -32,7 +33,7 @@ public:
 
     T2DMap();
     explicit T2DMap( QWidget *parent = 0);
-    QColor & getColor( int id );
+    QColor   getColor( int id );
     void     paintEvent( QPaintEvent * );
     void     mousePressEvent(QMouseEvent * );
     void     mouseDoubleClickEvent ( QMouseEvent * event );
@@ -67,6 +68,8 @@ public:
     bool     mNewMoveAction;
     QRectF   mMapInfoRect;
     int      mFontHeight;
+    bool     mShowRoomID;
+    QMap<int,QPixmap> mPixMap;
 
 signals:
 

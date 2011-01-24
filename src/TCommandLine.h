@@ -31,7 +31,7 @@
 #include "TCommandLine.h"
 #include "Host.h"
 #include <QPlainTextEdit>
-#include "hunspell/hunspell.hxx"
+//#include "hunspell/hunspell.hxx"
 
 class TConsole;
 class KeyUnit;
@@ -79,7 +79,7 @@ private:
     QString           mSelectedText;
     int               mSelectionStart;
     QString           mTabCompletionOld;
-    Hunspell *        mpHunspell;
+  //  Hunspell *        mpHunspell;
 
 signals:
     void              textChanged ( const QString & );

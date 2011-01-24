@@ -248,21 +248,16 @@ int main(int argc, char *argv[])
 
     QFile file_f(":/fonts/ttf-bitstream-vera-1.10/");
     file_f.copy( directory+"/" );  */
-
-
-    mudlet::self();
-
-    mudlet::debugMode = false;
-    HostManager::self();
-    FontManager fm;
-    fm.addFonts();
-    mudlet::self()->show();
-
     splash.showMessage("All data has been loaded successfully.\n\nHave fun!");
     QTime t;
     t.start();
     while( t.elapsed() < 1500 );
     splash.finish( mudlet::self() );
+    mudlet::debugMode = false;
+    HostManager::self();
+    FontManager fm;
+    fm.addFonts();
+    mudlet::self()->show();
     app.exec();
 }
 

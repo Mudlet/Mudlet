@@ -59,10 +59,34 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(strongHighlight, SIGNAL(stateChanged(int)), this, SLOT( slot_toggleStrongHighlight(int)));
     mpDownloader = new QNetworkAccessManager( this );
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
-
-
+    showRoomIDs->setChecked(Qt::Unchecked);
+    connect(showRoomIDs, SIGNAL(stateChanged(int)), this, SLOT(slot_toggleShowRoomIDs(int)));
     mp2dMap->mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
     glWidget->hide();
+    mpMap->customEnvColors[257] = mpHost->mRed_2;
+    mpMap->customEnvColors[258] = mpHost->mGreen_2;
+    mpMap->customEnvColors[259] = mpHost->mYellow_2;
+    mpMap->customEnvColors[260] = mpHost->mBlue_2;
+    mpMap->customEnvColors[261] = mpHost->mMagenta_2;
+    mpMap->customEnvColors[262] = mpHost->mCyan_2;
+    mpMap->customEnvColors[263] = mpHost->mWhite_2;
+    mpMap->customEnvColors[264] = mpHost->mBlack_2;
+    mpMap->customEnvColors[265] = mpHost->mLightRed_2;
+    mpMap->customEnvColors[266] = mpHost->mLightGreen_2;
+    mpMap->customEnvColors[267] = mpHost->mLightYellow_2;
+    mpMap->customEnvColors[268] = mpHost->mLightBlue_2;
+    mpMap->customEnvColors[269] = mpHost->mLightMagenta_2;
+    mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
+    mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
+    mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
+}
+
+void dlgMapper::slot_toggleShowRoomIDs(int s)
+{
+    if( s == Qt::Checked )
+        mp2dMap->mShowRoomID = true;
+    else
+        mp2dMap->mShowRoomID = false;
 }
 
 void dlgMapper::slot_toggleStrongHighlight( int v )
@@ -72,7 +96,6 @@ void dlgMapper::slot_toggleStrongHighlight( int v )
 
 void dlgMapper::slot_togglePanel()
 {
-    qDebug()<<"TOGGLE";
     panel->setVisible(!panel->isVisible());
 }
 
