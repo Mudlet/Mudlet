@@ -107,7 +107,7 @@
    <property name="geometry">
     <rect>
      <x>460</x>
-     <y>100</y>
+     <y>110</y>
      <width>81</width>
      <height>20</height>
     </rect>
@@ -117,7 +117,7 @@
    <property name="geometry">
     <rect>
      <x>460</x>
-     <y>210</y>
+     <y>230</y>
      <width>81</width>
      <height>20</height>
     </rect>
@@ -127,7 +127,7 @@
    <property name="geometry">
     <rect>
      <x>460</x>
-     <y>160</y>
+     <y>180</y>
      <width>81</width>
      <height>20</height>
     </rect>
@@ -254,7 +254,7 @@
    <property name="geometry">
     <rect>
      <x>480</x>
-     <y>80</y>
+     <y>90</y>
      <width>46</width>
      <height>13</height>
     </rect>
@@ -280,7 +280,7 @@
    <property name="geometry">
     <rect>
      <x>490</x>
-     <y>190</y>
+     <y>210</y>
      <width>21</width>
      <height>16</height>
     </rect>
@@ -293,9 +293,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>240</y>
+     <y>270</y>
      <width>541</width>
-     <height>231</height>
+     <height>201</height>
     </rect>
    </property>
    <property name="rootIsDecorated">
@@ -327,6 +327,9 @@
      <height>23</height>
     </rect>
    </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
+   </property>
    <property name="text">
     <string>lock</string>
    </property>
@@ -342,6 +345,9 @@
      <width>31</width>
      <height>23</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>lock</string>
@@ -359,6 +365,9 @@
      <height>23</height>
     </rect>
    </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
+   </property>
    <property name="text">
     <string>lock</string>
    </property>
@@ -374,6 +383,9 @@
      <width>31</width>
      <height>23</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>lock</string>
@@ -391,6 +403,9 @@
      <height>23</height>
     </rect>
    </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
+   </property>
    <property name="text">
     <string>lock</string>
    </property>
@@ -406,6 +421,9 @@
      <width>31</width>
      <height>23</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>lock</string>
@@ -423,6 +441,9 @@
      <height>23</height>
     </rect>
    </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
+   </property>
    <property name="text">
     <string>lock</string>
    </property>
@@ -438,6 +459,9 @@
      <width>31</width>
      <height>23</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>lock</string>
@@ -455,6 +479,9 @@
      <height>23</height>
     </rect>
    </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
+   </property>
    <property name="text">
     <string>lock</string>
    </property>
@@ -466,10 +493,13 @@
    <property name="geometry">
     <rect>
      <x>420</x>
-     <y>100</y>
+     <y>110</y>
      <width>31</width>
      <height>23</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>lock</string>
@@ -482,10 +512,13 @@
    <property name="geometry">
     <rect>
      <x>420</x>
-     <y>160</y>
+     <y>180</y>
      <width>31</width>
      <height>23</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>lock</string>
@@ -498,10 +531,13 @@
    <property name="geometry">
     <rect>
      <x>420</x>
-     <y>210</y>
+     <y>230</y>
      <width>31</width>
      <height>23</height>
     </rect>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::NoFocus</enum>
    </property>
    <property name="text">
     <string>lock</string>
@@ -533,7 +569,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Abot</string>
+    <string>Cancel</string>
    </property>
   </widget>
   <widget class="QPushButton" name="addSpecialExit">
@@ -550,6 +586,24 @@
    </property>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>nw</tabstop>
+  <tabstop>n</tabstop>
+  <tabstop>ne</tabstop>
+  <tabstop>w</tabstop>
+  <tabstop>e</tabstop>
+  <tabstop>sw</tabstop>
+  <tabstop>s</tabstop>
+  <tabstop>se</tabstop>
+  <tabstop>up</tabstop>
+  <tabstop>down</tabstop>
+  <tabstop>in</tabstop>
+  <tabstop>out</tabstop>
+  <tabstop>addSpecialExit</tabstop>
+  <tabstop>specialExits</tabstop>
+  <tabstop>saveButton</tabstop>
+  <tabstop>pushButton_14</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

@@ -53,7 +53,7 @@ public:
 //    float yRot;
 //    float zRot;
 //    float zoom;
-    char c;
+    qint8 c;
     QString name;
     QVector3D v;
     QMultiMap<int, QString> other; // es können mehrere exits zum gleichen raum verlaufen

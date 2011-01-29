@@ -1,5 +1,5 @@
 #CONFIG += release warn_off
-CONFIG += release
+CONFIG += debug
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
 MOC_DIR = ./tmp

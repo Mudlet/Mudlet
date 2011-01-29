@@ -2174,6 +2174,7 @@ void TConsole::createMapper( int x, int y, int width, int height )
     }
     mpMapper->resize( width, height );
     mpMapper->move( x, y );
+    mpMapper->mp2dMap->init();
     mpMapper->show();
 }
 

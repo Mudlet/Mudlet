@@ -87,7 +87,8 @@ public:
     QList<int> conList;
     int mPlausaOptOut;
     QMap<QString,int> hashTable;
-
+    QMap<QString, int> pixNameTable;
+    QMap<int, QPixmap> pixTable;
 
 
 };

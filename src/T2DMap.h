@@ -34,12 +34,15 @@ public:
     T2DMap();
     explicit T2DMap( QWidget *parent = 0);
     QColor   getColor( int id );
+    QColor   _getColor( int id );
+    void     init();
     void     paintEvent( QPaintEvent * );
     void     mousePressEvent(QMouseEvent * );
     void     mouseDoubleClickEvent ( QMouseEvent * event );
     void     wheelEvent ( QWheelEvent * );
     void     mouseMoveEvent( QMouseEvent * event );
     void     mouseReleaseEvent(QMouseEvent * e );
+    int      getTopLeftSelection();
     TMap *   mpMap;
     Host *   mpHost;
     int      xzoom;
@@ -70,17 +73,23 @@ public:
     int      mFontHeight;
     bool     mShowRoomID;
     QMap<int,QPixmap> mPixMap;
+    QMap<int, QPixmap *> mGridPix;
+    int      gzoom;
 
 signals:
 
 public slots:
 
+    void slot_setCharacter();
+    void slot_setImage();
+    void slot_movePosition();
     void slot_defineNewColor();
     void slot_selectRoomColor(QListWidgetItem * pI );
     void slot_moveRoom();
     void slot_deleteRoom();
     void slot_changeColor();
-    void slot_addSpecialExit();
+    void slot_spread();
+    void slot_shrink();
     void slot_setExits();
     void slot_setUserData();
     void slot_lockRoom();

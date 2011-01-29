@@ -59,18 +59,54 @@ void dlgRoomExits::save()
         QString value = pI->text(1);
         mpHost->mpMap->rooms[mRoomID]->other.insertMulti( key, value );
     }
-    mpHost->mpMap->rooms[mRoomID]->north = n->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->south = s->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->west = w->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->east = e->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->northeast = ne->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->northwest = nw->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->southeast = se->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->southwest = sw->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->up = up->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->down = down->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->in = in->text().toInt();
-    mpHost->mpMap->rooms[mRoomID]->out = out->text().toInt();
+    if( n->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->north = n->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->north = -1;
+    if( s->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->south = s->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->south = -1;
+    if( w->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->west = w->text().toInt();
+    else mpHost->mpMap->rooms[mRoomID]->west = -1;
+    if( e->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->east = e->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->east = -1;
+    if( ne->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->northeast = ne->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->northeast = -1;
+    if( nw->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->northwest = nw->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->northwest = -1;
+    if( se->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->southeast = se->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->southeast = -1;
+    if( sw->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->southwest = sw->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->southwest = -1;
+    if( up->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->up = up->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->up = -1;
+    if( down->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->down = down->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->down = -1;
+    if( in->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->in = in->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->in = -1;
+    if( out->text().size() > 0 )
+        mpHost->mpMap->rooms[mRoomID]->out = out->text().toInt();
+    else
+        mpHost->mpMap->rooms[mRoomID]->out = -1;
+
     if( !n->isEnabled() )
         mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_NORTH, true);
     else
@@ -127,66 +163,150 @@ void dlgRoomExits::init( int id )
     if( !mpHost->mpMap->rooms.contains(id) ) return;
 
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_NORTH) )
+    {
         n->setDisabled(true);
+        ln->setChecked(true);
+    }
     else
+    {
         n->setDisabled(false);
+        ln->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_NORTHEAST) )
+    {
         ne->setDisabled(true);
+        lne->setChecked(true);
+    }
     else
+    {
         ne->setDisabled(false);
+        le->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_NORTHWEST) )
+    {
         nw->setDisabled(true);
+        lnw->setChecked(true);
+    }
     else
+    {
         nw->setDisabled(false);
+        lnw->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_SOUTH) )
+    {
         s->setDisabled(true);
+        ls->setChecked(true);
+    }
     else
+    {
         s->setDisabled(false);
+        ls->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_SOUTHEAST) )
+    {
         se->setDisabled(true);
+        lse->setChecked(true);
+    }
     else
+    {
         se->setDisabled(false);
+        lse->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_SOUTHWEST) )
+    {
         sw->setDisabled(true);
+        lsw->setChecked(true);
+    }
     else
+    {
         sw->setDisabled(false);
+        lsw->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_WEST) )
+    {
         w->setDisabled(true);
+        lw->setChecked(true);
+    }
     else
+    {
         w->setDisabled(false);
+        lw->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_EAST) )
+    {
         e->setDisabled(true);
+        le->setChecked(true);
+    }
     else
+    {
         e->setDisabled(false);
+        le->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_UP) )
+    {
         up->setDisabled(true);
+        lup->setChecked(true);
+    }
     else
+    {
         up->setDisabled(false);
+        lup->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_DOWN) )
+    {
         down->setDisabled(true);
+        ldown->setChecked(true);
+    }
     else
+    {
         down->setDisabled(false);
+        ldown->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_IN) )
+    {
         in->setDisabled(true);
+        lin->setChecked(true);
+    }
     else
+    {
         in->setDisabled(false);
+        lin->setChecked(false);
+    }
     if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_OUT) )
+    {
         out->setDisabled(true);
+        lout->setChecked(true);
+    }
     else
+    {
         out->setDisabled(false);
+        lout->setChecked(false);
+    }
 
-    n->setText(QString::number(mpHost->mpMap->rooms[id]->north));
-    s->setText(QString::number(mpHost->mpMap->rooms[id]->south));
-    w->setText(QString::number(mpHost->mpMap->rooms[id]->west));
-    e->setText(QString::number(mpHost->mpMap->rooms[id]->east));
-    nw->setText(QString::number(mpHost->mpMap->rooms[id]->northwest));
-    ne->setText(QString::number(mpHost->mpMap->rooms[id]->northeast));
-    sw->setText(QString::number(mpHost->mpMap->rooms[id]->southwest));
-    se->setText(QString::number(mpHost->mpMap->rooms[id]->southeast));
-    up->setText(QString::number(mpHost->mpMap->rooms[id]->up));
-    down->setText(QString::number(mpHost->mpMap->rooms[id]->down));
-    in->setText(QString::number(mpHost->mpMap->rooms[id]->in));
-    out->setText(QString::number(mpHost->mpMap->rooms[id]->out));
+    if( mpHost->mpMap->rooms[id]->north > 0 )
+        n->setText(QString::number(mpHost->mpMap->rooms[id]->north));
+    if( mpHost->mpMap->rooms[id]->south > 0 )
+        s->setText(QString::number(mpHost->mpMap->rooms[id]->south));
+    if( mpHost->mpMap->rooms[id]->west > 0 )
+        w->setText(QString::number(mpHost->mpMap->rooms[id]->west));
+    if( mpHost->mpMap->rooms[id]->east > 0 )
+        e->setText(QString::number(mpHost->mpMap->rooms[id]->east));
+    if( mpHost->mpMap->rooms[id]->northwest > 0 )
+        nw->setText(QString::number(mpHost->mpMap->rooms[id]->northwest));
+    if( mpHost->mpMap->rooms[id]->northeast > 0 )
+        ne->setText(QString::number(mpHost->mpMap->rooms[id]->northeast));
+    if( mpHost->mpMap->rooms[id]->southwest > 0 )
+        sw->setText(QString::number(mpHost->mpMap->rooms[id]->southwest));
+    if( mpHost->mpMap->rooms[id]->southeast > 0 )
+        se->setText(QString::number(mpHost->mpMap->rooms[id]->southeast));
+    if( mpHost->mpMap->rooms[id]->up > 0 )
+        up->setText(QString::number(mpHost->mpMap->rooms[id]->up));
+    if( mpHost->mpMap->rooms[id]->down > 0 )
+        down->setText(QString::number(mpHost->mpMap->rooms[id]->down));
+    if( mpHost->mpMap->rooms[id]->in > 0 )
+        in->setText(QString::number(mpHost->mpMap->rooms[id]->in));
+    if( mpHost->mpMap->rooms[id]->out > 0 )
+        out->setText(QString::number(mpHost->mpMap->rooms[id]->out));
 
     QMapIterator<int, QString> it(mpHost->mpMap->rooms[id]->other);
     while( it.hasNext() )

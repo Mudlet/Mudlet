@@ -79,6 +79,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
+    mp2dMap->init();
 }
 
 void dlgMapper::slot_toggleShowRoomIDs(int s)

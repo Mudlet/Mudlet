@@ -88,7 +88,7 @@ mudlet::mudlet()
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
-, version( "Mudlet 2.0-rc1-1 January 2011" )
+, version( "Mudlet 2.0-rc1-2 January 2011" )
 {
     setupUi(this);
 
@@ -1397,6 +1397,7 @@ void mudlet::slot_mapper()
     {
         pHost->mpMap->restore();
         pHost->mpMap->init( pHost );
+        pHost->mpMap->mpMapper->mp2dMap->init();
         pHost->mpMap->mpMapper->show();
     }
     else
