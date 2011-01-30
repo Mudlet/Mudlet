@@ -663,13 +663,12 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( _ch >= 33 && _ch < 255 )
             {
                 int _color = (mpMap->rooms[pArea->rooms[i]]->environment - 257 ) * 254 + _ch;
+                p.fillRect(dr,QColor(90,90,90));
                 if( mPixMap.contains( _color ) )
                 {
                     QPixmap pix = mPixMap[_color].scaled(dr.width(), dr.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
                     p.drawPixmap(dr.topLeft(), pix);
                 }
-                else
-                    p.fillRect(dr,c);
             }
             else
                 p.fillRect(dr,c);
@@ -782,8 +781,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     }
     else
     {
-        text = QString("Area: %1 ID:%2 x:%3-%4 y:%5-%6").arg(mpMap->areaNamesMap[mpMap->rooms[mRoomSelection]->area]).arg(mpMap->rooms[mRoomSelection]->area).arg(mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area]->min_x).arg(mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area]->max_x).arg(mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area]->min_y).arg(mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area]->max_y);
-        //text = QString("Area: %1 ID:%2").arg(mpMap->areaNamesMap[mpMap->rooms[mpMap->mRoomId]->area]).arg(mpMap->rooms[mpMap->mRoomId]->area);
+        text = QString("Area: %1 ID:%2").arg(mpMap->areaNamesMap[mpMap->rooms[mpMap->mRoomId]->area]).arg(mpMap->rooms[mpMap->mRoomId]->area);
         p.drawText( 10, mFontHeight, text );
         text = QString("Room Name: %1").arg(mpMap->rooms[mpMap->mRoomId]->name);
         p.drawText( 10, 2*mFontHeight, text );
@@ -864,8 +862,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent * e )
 
 void T2DMap::mousePressEvent(QMouseEvent *event)
 {
-init();
-
     mNewMoveAction = true;
     if( event->buttons() & Qt::LeftButton )
     {
