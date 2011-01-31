@@ -85,11 +85,15 @@ void TMap::deleteRoom( int id )
         }
         qDebug()<<"====> finally remoning room ID:"<<id;
         rooms.remove( id );
-        qDebug()<<"--> removing id from hashTable";
 
         delete pR;
     }
-    hashTable.remove(hashTable.key(id));
+    QList<QString> kL = hashTable.keys(id);
+    for( int i=0; i<kL.size(); i++ )
+    {
+        qDebug()<<"->removing hash:"<<kL[i];
+        hashTable.remove( kL[i] );
+    }
 }
 
 void TMap::deleteArea( int id )

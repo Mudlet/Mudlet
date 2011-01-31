@@ -66,6 +66,7 @@ T2DMap::T2DMap(QWidget * parent)
 
 void T2DMap::init()
 {
+    if( ! mpMap ) return;
     mPixMap.clear();
     mGridPix.clear();
     QFont f = QFont( QFont("Bitstream Vera Sans Mono", 20, QFont::Courier ) );//( QFont("Monospace", 10, QFont::Courier) );
@@ -89,11 +90,12 @@ void T2DMap::init()
         }
     }
     // bilder aller grid areas erzeugen
-    for( int i=0; i<mpMap->areas.size(); i++ )
+    QList<int> kL = mpMap->areas.keys();
+    for( int i=0; i<kL.size(); i++ )
     {
-        if( ! mpMap->areas[i]->gridMode ) continue;
+        if( ! mpMap->areas[kL[i]]->gridMode ) continue;
 
-        TArea * pA = mpMap->areas[i];
+        TArea * pA = mpMap->areas[kL[i]];
 
         int x_min, x_max, y_min, y_max;
         TRoom * pK = mpMap->rooms[pA->rooms[0]];
@@ -137,9 +139,9 @@ void T2DMap::init()
             else
                 p.fillRect(dr,c);
         }
-        if( mpMap->areas[i]->rooms.size() > 0 )
+        if( mpMap->areas[kL[i]]->rooms.size() > 0 )
         {
-            mGridPix[mpMap->rooms[mpMap->areas[i]->rooms[0]]->area] = pix;
+            mGridPix[mpMap->rooms[mpMap->areas[kL[i]]->rooms[0]]->area] = pix;
         }
     }
 }
@@ -356,12 +358,13 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     int zEbene;
     zEbene = mpMap->rooms[mpMap->mRoomId]->z;
-    if( ! mpMap->rooms.contains(mpMap->mRoomId) ) return;
+
     if( ! mpMap ) return;
+    if( ! mpMap->rooms.contains(mpMap->mRoomId) ) return;
 
-    p.fillRect(0,0,_w,_h,mpHost->mBgColor_2);
+    p.fillRect(0,0,2000,2000,mpHost->mBgColor_2);
 
-    if( pArea->gridMode && mpMap->rooms[mpMap->mRoomId]->area == 1 )
+    if( pArea->gridMode )
     {
         int areaID = mpMap->rooms[mpMap->mRoomId]->area;
         QRectF rect = QRectF(0,0,width(),height());
@@ -931,6 +934,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         action12->setStatusTip(tr("move selected group to a given position"));
         connect( action12, SIGNAL(triggered()), this, SLOT(slot_movePosition()));
 
+        QAction * action13 = new QAction("area", this );
+        action13->setStatusTip(tr("set room area ID"));
+        connect( action13, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
         mPopupMenu = true;
         QMenu * popup = new QMenu( this );
@@ -948,6 +954,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         popup->addAction( action2 );
 
         popup->addAction( action9 );
+        popup->addAction( action13 );
 
         popup->popup( mapToGlobal( event->pos() ) );
     }
@@ -1304,6 +1311,31 @@ void T2DMap::slot_setRoomWeight()
     }
 }
 
+void T2DMap::slot_setArea()
+{
+    if( mMultiSelection )
+    {
+        int w = QInputDialog::getInt(this,"Enter the area ID:", "area ID:", 1);
+        mMultiRect = QRect(0,0,0,0);
+        for( int j=0; j<mMultiSelectionList.size(); j++ )
+        {
+            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
+            {
+                mpMap->rooms[mMultiSelectionList[j]]->area = w;
+            }
+        }
+        repaint();
+    }
+    else
+    {
+        if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+        {
+            int _w = mpHost->mpMap->rooms[mRoomSelection]->area;
+            int w = QInputDialog::getInt(this, "Enter area ID:","area ID:",_w);
+            mpHost->mpMap->rooms[mRoomSelection]->area = w;
+        }
+    }
+}
 
 
 void T2DMap::mouseMoveEvent( QMouseEvent * event )

@@ -57,7 +57,9 @@ void dlgRoomExits::save()
         QTreeWidgetItem * pI = specialExits->topLevelItem(i);
         int key = pI->text(0).toInt();
         QString value = pI->text(1);
-        mpHost->mpMap->rooms[mRoomID]->other.insertMulti( key, value );
+        qDebug()<<"key="<<key<<" value=<"<<value<<">";
+        if( value != "<command or Lua script>" && key != 0 )
+            mpHost->mpMap->rooms[mRoomID]->other.insertMulti( key, value );
     }
     if( n->text().size() > 0 )
         mpHost->mpMap->rooms[mRoomID]->north = n->text().toInt();

@@ -94,6 +94,7 @@ public slots:
     void slot_setUserData();
     void slot_lockRoom();
     void slot_setRoomWeight();
+    void slot_setArea();
 };
 
 #endif // T2DMAP_H

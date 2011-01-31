@@ -5280,15 +5280,13 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
         }
         else
         {
-            lua_pushstring( L, "getRoomUserData: no such key" );
-            lua_error( L );
+            lua_pushstring( L, "" );
             return 1;
         }
     }
     else
     {
-        lua_pushstring( L, "getRoomUserData: no such roomID" );
-        lua_error( L );
+        lua_pushstring( L, "" );
         return 1;
     }
 }
