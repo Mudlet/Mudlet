@@ -271,6 +271,37 @@ function moveGauge(gaugeName, newX, newY)
 end
 
 
+--- Hide a custom gauge.
+---
+--- @usage This should hide the given gauge.
+---   <pre>
+---   hideGauge("healthBar")
+---   </pre>
+---
+--- @see createGauge, moveGauge, showGauge
+function hideGauge(gaugeName)
+	assert(gaugesTable[gaugeName], "hideGauge: no such gauge exists.")
+
+	hideWindow(gaugeName)
+	hideWindow(gaugeName .. "_back", newX)
+end
+
+
+--- Show a custom gauge.
+---
+--- @usage This should show the given gauge.
+---   <pre>
+---   showGauge("healthBar")
+---   </pre>
+---
+--- @see createGauge, moveGauge, hideGauge
+function showGauge(gaugeName)
+	assert(gaugesTable[gaugeName], "showGauge: no such gauge exists.")
+
+	showWindow(gaugeName)
+	showWindow(gaugeName .. "_back", newX)
+end
+
 
 --- Set the text on a custom gauge.
 ---
