@@ -17,6 +17,11 @@ Geyser.Mapper = Geyser.Window:new({
 -- Save a reference to our parent constructor
 Geyser.Mapper.parent = Geyser.Window
 
+-- Overridden reposition function - mapper does it differently right now
+function Geyser.Mapper:reposition()
+   createMapper(self:get_x(), self:get_y(), self:get_width(), self:get_height())
+end
+
 -- Overridden constructor
 function Geyser.Mapper:new (cons, container)
    cons = cons or {}
