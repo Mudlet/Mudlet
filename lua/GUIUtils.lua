@@ -564,9 +564,18 @@ end
 --- @usage This will replace all occurrences of John with the word Doe.
 ---   <pre>
 ---   replaceAll("John", "Doe")
+---   
+---   -- also handles recursive matches:
+---   replaceAll("you", "you and me")
 ---   </pre>
 function replaceAll(word, what)
-	while selectString(word, 1) > 0 do replace(what) end
+  local startp, endp = 1, 1
+  while true do
+    startp, endp = getCurrentLine():find(word, endp+(#what-#word)+1)
+    if not startp then break end
+    selectSection(startp-1, endp-startp+1)
+    replace(what)
+  end
 end
 
 
