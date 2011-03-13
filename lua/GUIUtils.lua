@@ -810,30 +810,38 @@ if rex then
 --- @see cinsertText
 --- @see dinsertText
 --- @see hinsertText
-	function xEcho(style, insert, win, str)
-		if not str then str = win; win = nil end
-		local reset, out
-		if insert then
-			if win then
-				out = function(win, str)
-					insertText(win, str)
-				end
+	function xEcho(style, func, ...)
+		local win, str, cmd, hint, fmt
+		local out, reset
+		local args = {...}
+		local n = #args
+		
+		if func == 'echoLink' then
+			if n < 3 then
+				error'Insufficient arguments, usage: ([window, ] string, command, hint [, bool use_current_format or defaultLinkFormat])'
+			elseif n == 3 then
+				str, cmd, hint = ...
+			elseif n == 4 and type(args[4]) == 'boolean' then
+				str, cmd, hint, fmt = ...
+			elseif n == 4 and type(args[4]) == 'string' then
+				win, str, cmd, hint = ...
+			elseif n > 4 and type(args[5]) == 'boolean' then
+				win, str, cmd, hint, fmt = ...
 			else
-				out = function(str)
-					insertText(str)
-				end
+				error'Improper arguments, usage: ([window, ] string, command, hint [, bool use_current_format or defaultLinkFormat])'
 			end
 		else
-			if win then
-				out = function(win, str)
-					echo(win, str)
-				end
+			if args[1] and args[2] then
+				win, str = args[1], args[2]
 			else
-				out = function(str)
-					echo(str)
-				end
+				str = args[1]
 			end
 		end
+		
+		out = function(...)
+			_G[func](...)
+		end
+		
 		if win then
 			reset = function()
 				resetFormat(win)
@@ -848,7 +856,7 @@ if rex then
 
 		deselect()
 		reset()
-
+		
 		for _, v in ipairs(t) do
 			if type(v) == 'table' then
 				if v.fg then
@@ -862,10 +870,15 @@ if rex then
 			elseif v == "\27reset" then
 				reset()
 			else
-				if win then out(win, v) else out(v) end
+				if func == 'echo' or func == 'insertText' then
+					if win then out(win, v) else out(v) end
+				else
+					if win then setUnderline(win, true) else setUnderline(true) end
+					if win then out(win, v, cmd, hint, true) else out(v, cmd, hint, true) end
+				end
 			end
 		end
-		if win then resetFormat(win) else resetFormat() end
+		reset()
 	end
 
 
@@ -878,7 +891,7 @@ if rex then
 ---
 --- @see xEcho
 --- @see hinsertText
-	function hecho(...) xEcho("Hex", false, ...) end
+	function hecho(...) xEcho("Hex", "echo", ...) end
 
 
 
@@ -894,7 +907,7 @@ if rex then
 ---
 --- @see xEcho
 --- @see dinsertText
-	function decho(...) xEcho("Decimal", false, ...) end
+	function decho(...) xEcho("Decimal", "echo", ...) end
 
 
 
@@ -907,31 +920,52 @@ if rex then
 ---
 --- @see xEcho
 --- @see cinsertText
-	function cecho(...) xEcho("Color", false, ...) end
+	function cecho(...) xEcho("Color", "echo", ...) end
 
 
 --- Inserts string with embedded hex color information.
 ---
 --- @see xEcho
 --- @see hecho
-	function hinsertText(...) xEcho("Hex", true, ...) end
+	function hinsertText(...) xEcho("Hex", "insertText", ...) end
 
 
 --- Inserts string with embedded decimal color information.
 ---
 --- @see xEcho
 --- @see decho
-	function dinsertText(...) xEcho("Decimal", true, ...) end
+	function dinsertText(...) xEcho("Decimal", "insertText", ...) end
 
 
 --- Inserts string with embedded color name information.
 ---
 --- @see xEcho
 --- @see cecho
-	function cinsertText(...) xEcho("Color", true, ...) end
+	function cinsertText(...) xEcho("Color", "insertText", ...) end
 
 
-	-- TODO - what is this one
+--- Inserts string with embedded hex color information.
+---
+--- @see xEcho
+--- @see hecho
+	function hechoLink(...) xEcho("Hex", "echoLink", ...) end
+
+
+--- Inserts string with embedded decimal color information.
+---
+--- @see xEcho
+--- @see decho
+	function dechoLink(...) xEcho("Decimal", "echoLink", ...) end
+
+
+--- Inserts string with embedded color name information.
+---
+--- @see xEcho
+--- @see cecho
+	function cechoLink(...) xEcho("Color", "echoLink", ...) end
+
+
+	-- Backwards compatibility
 	checho = cecho
 
 
