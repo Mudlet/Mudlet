@@ -818,17 +818,15 @@ if rex then
 		
 		if func == 'echoLink' then
 			if n < 3 then
-				error'Insufficient arguments, usage: ([window, ] string, command, hint [, bool use_current_format or defaultLinkFormat])'
+				error'Insufficient arguments, usage: ([window, ] string, command, hint)'
 			elseif n == 3 then
 				str, cmd, hint = ...
 			elseif n == 4 and type(args[4]) == 'boolean' then
 				str, cmd, hint, fmt = ...
-			elseif n == 4 and type(args[4]) == 'string' then
+			elseif n >= 4 and type(args[4]) == 'string' then
 				win, str, cmd, hint = ...
-			elseif n > 4 and type(args[5]) == 'boolean' then
-				win, str, cmd, hint, fmt = ...
 			else
-				error'Improper arguments, usage: ([window, ] string, command, hint [, bool use_current_format or defaultLinkFormat])'
+				error'Improper arguments, usage: ([window, ] string, command, hint)'
 			end
 		else
 			if args[1] and args[2] then
@@ -889,6 +887,11 @@ if rex then
 --- FG is the foreground green value, FB is the foreground blue value, BR is the background red value, etc., BRBGBB is optional.
 --- |r can be used within the string to reset the colors to default.
 ---
+--- @usage Print red test on green background.
+---   <pre>
+---   hecho("|cff0000,00ff00test")
+---   </pre>
+---
 --- @see xEcho
 --- @see hinsertText
 	function hecho(...) xEcho("Hex", "echo", ...) end
@@ -944,21 +947,27 @@ if rex then
 	function cinsertText(...) xEcho("Color", "insertText", ...) end
 
 
---- Inserts string with embedded hex color information.
+--- Echos a link with embedded hex color information.
+---
+--- @usage hechoLink([window, ] string, command, hint)
 ---
 --- @see xEcho
 --- @see hecho
 	function hechoLink(...) xEcho("Hex", "echoLink", ...) end
 
 
---- Inserts string with embedded decimal color information.
+--- Echos a link with embedded decimal color information.
+---
+--- @usage dechoLink([window, ] string, command, hint)
 ---
 --- @see xEcho
 --- @see decho
 	function dechoLink(...) xEcho("Decimal", "echoLink", ...) end
 
 
---- Inserts string with embedded color name information.
+--- Echos a link with embedded color name information.
+---
+--- @usage cechoLink([window, ] string, command, hint)
 ---
 --- @see xEcho
 --- @see cecho
