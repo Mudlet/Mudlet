@@ -642,6 +642,7 @@ end
 --- @see fg
 --- @see showColors
 function bg(colorName)
+	assert(color_table[colorName], "bg: no such colour name")
 	setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 end
 
@@ -657,6 +658,7 @@ end
 --- @see bg
 --- @see showColors
 function fg(colorName)
+	assert(color_table[colorName], "fg: no such colour name")
 	setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 end
 
