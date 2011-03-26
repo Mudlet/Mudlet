@@ -343,7 +343,8 @@ function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
 	local l__Echostring = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
 
 	echo(gaugeName, l__Echostring)
-	echo(gaugeName .. "_back", l__Echostring)
+	-- do not set the text for the back, because <center> tags mess with the alignment
+	--echo(gaugeName .. "_back", l__Echostring)
 
 	gaugesTable[gaugeName].text = l__Echostring
 	gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
