@@ -41,7 +41,7 @@ extern "C"
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
-#include "lua_yajl.c"
+    #include "lua_yajl.c"
 }
 
 extern QStringList gSysErrors;
@@ -5041,6 +5041,31 @@ int TLuaInterpreter::getRoomArea( lua_State * L )
     return 1;
 }
 
+
+int TLuaInterpreter::roomExists( lua_State * L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) || ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "roomExists: What room do you check for?" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushboolean( L, 1 );
+        return 1;
+    }
+    lua_pushboolean( L, 0 );
+    return 1;
+}
+
 int TLuaInterpreter::addRoom( lua_State * L )
 {
     int id;
@@ -7484,6 +7509,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger );
     lua_register( pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger );
     lua_register( pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP );
+    lua_register( pGlobalLua, "roomExists", TLuaInterpreter::roomExists );
     lua_register( pGlobalLua, "addRoom", TLuaInterpreter::addRoom );
     lua_register( pGlobalLua, "setExit", TLuaInterpreter::setExit );
     lua_register( pGlobalLua, "setRoomCoordinates", TLuaInterpreter::setRoomCoordinates );
