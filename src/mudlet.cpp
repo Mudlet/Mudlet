@@ -28,6 +28,7 @@
 #include <QTextStream>
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <QtUiTools>
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgTriggerEditor.h"
@@ -1403,6 +1404,7 @@ void mudlet::slot_mapper()
         pHost->mpMap->mpMapper->setVisible( ! pHost->mpMap->mpMapper->isVisible() );
         return;
     }
+
     QDockWidget * pDock = new QDockWidget("Mudlet Mapper");
     pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap );//FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
@@ -1423,6 +1425,35 @@ void mudlet::slot_mapper()
         }
     }
     addDockWidget(Qt::RightDockWidgetArea, pDock);
+
+    check_for_mappingscript();
+}
+
+void mudlet::check_for_mappingscript()
+{
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+
+    if (!pHost->check_for_mappingscript()) {
+        QUiLoader loader;
+
+        QFile file(":/ui/lacking_mapper_script.ui");
+        file.open(QFile::ReadOnly);
+
+        QDialog *dialog = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+
+        connect(dialog, SIGNAL(accepted()), this, SLOT(slot_open_mappingscripts_page()));
+
+        dialog->show();
+        dialog->raise();
+        dialog->activateWindow();
+    }
+}
+
+void mudlet::slot_open_mappingscripts_page()
+{
+    QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
 }
 
 void mudlet::slot_show_help_dialog_download()

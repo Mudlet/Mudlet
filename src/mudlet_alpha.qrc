@@ -109,5 +109,6 @@
         <file>icons/mudlet_notepad.png</file>
         <file>icons/gw2.png</file>
         <file>icons/internet-telephony.png</file>
+        <file>ui/lacking_mapper_script.ui</file>
     </qresource>
 </RCC>

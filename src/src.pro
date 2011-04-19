@@ -1,5 +1,5 @@
-#CONFIG += release warn_off
-CONFIG += debug
+#CONFIG += release warn_off uitools
+CONFIG += debug uitools
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
 MOC_DIR = ./tmp
@@ -217,7 +217,8 @@ FORMS += ui/connection_profiles.ui \
     ui/profile_preferences.ui \
     ui/irc.ui \
     ui/mapper_room_color.ui \
-    ui/room_exits.ui
+    ui/room_exits.ui \
+    ui/lacking_mapper_script.ui
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc

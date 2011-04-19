@@ -86,6 +86,7 @@ public:
     void loadGlobal();
     //void execLuaCode( QString code );
     QString get_lua_string( QString & stringName );
+    int check_for_mappingscript( );
     void set_lua_string( const QString & varName, QString & varValue );
     void set_lua_table( QString & tableName, QStringList & variableList );
     void setCaptureGroups( const std::list<std::string> &, const std::list<int> & );

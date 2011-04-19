@@ -7295,7 +7295,25 @@ QString TLuaInterpreter::get_lua_string( QString & stringName )
     return QString( lua_tostring( L, 1 ) );
 }
 
+int TLuaInterpreter::check_for_mappingscript()
+{
+    lua_State * L = pGlobalLua;
+    lua_getglobal(L, "mudlet");
+    if( !lua_istable(L, -1) ) {
+        lua_pop( L, 1 );
+        return 0;
+    }
 
+    lua_getfield(L, -1, "mapper_script");
+    if( !lua_isboolean(L, -1) ) {
+        lua_pop( L, 2 );
+        return 0;
+    }
+
+    int r = lua_toboolean(L, -1);
+    lua_pop( L, 2 );
+    return r;
+}
 
 void TLuaInterpreter::threadLuaInterpreterExec( string code )
 {

@@ -89,6 +89,7 @@ public:
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
     bool               closingDown();
     void               assemblePath();
+    int                check_for_mappingscript();
     void               orderShutDown();
     TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
     TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }

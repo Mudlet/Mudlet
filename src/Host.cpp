@@ -328,6 +328,11 @@ void Host::assemblePath()
     mLuaInterpreter.set_lua_table( t2, list2 );
 }
 
+int Host::check_for_mappingscript()
+{
+   return mLuaInterpreter.check_for_mappingscript();
+}
+
 void Host::startSpeedWalk()
 {
     QStringList list;

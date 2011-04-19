@@ -153,6 +153,7 @@ public slots:
    void                          slot_show_help_dialog_forum();
    void                          slot_show_help_dialog_irc();
    void                          slot_show_help_dialog_download();
+   void                          slot_open_mappingscripts_page();
 
    void                          slot_multi_view();
    void                          slot_stopAllTriggers();
@@ -210,6 +211,8 @@ private:
    Host *                        mpCurrentActiveHost;
    QAction *                     actionReplaySpeedDown;
    QAction *                     actionReplaySpeedUp;
+
+   void                          check_for_mappingscript();
 
 };
 
