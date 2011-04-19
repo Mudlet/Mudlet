@@ -178,7 +178,7 @@
   </action>
   <action name="dactionScriptEditor">
    <property name="text">
-    <string>Script Editor</string>
+    <string>Script editor</string>
    </property>
    <property name="toolTip">
     <string>Open script editor</string>

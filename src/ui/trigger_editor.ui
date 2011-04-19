@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Script Editor</string>
+   <string>Script editor</string>
   </property>
   <widget class="QWidget" name="randomwidget">
    <property name="sizePolicy">
