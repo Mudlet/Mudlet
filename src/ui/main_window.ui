@@ -181,7 +181,7 @@
     <string>Script Editor</string>
    </property>
    <property name="toolTip">
-    <string>Open Script Editor</string>
+    <string>Open script editor</string>
    </property>
    <property name="shortcut">
     <string>Alt+E</string>
@@ -202,7 +202,7 @@
   </action>
   <action name="dactionForum_2">
    <property name="text">
-    <string>Online Forum</string>
+    <string>Online forum</string>
    </property>
   </action>
   <action name="dactionAbout">
@@ -212,45 +212,45 @@
   </action>
   <action name="dactionIRC">
    <property name="text">
-    <string>IRC Help Channel</string>
+    <string>IRC help channel</string>
    </property>
   </action>
   <action name="dactionVideo">
    <property name="text">
-    <string>Video Tutorials</string>
+    <string>Video tutorials</string>
    </property>
   </action>
   <action name="dactionReplay">
    <property name="text">
-    <string>Load Replay</string>
+    <string>Load replay</string>
    </property>
   </action>
   <action name="dactionForum">
    <property name="text">
-    <string>Online Forum</string>
+    <string>Online forum</string>
    </property>
   </action>
   <action name="dactionDownload">
    <property name="text">
-    <string>Download Latest Version</string>
+    <string>Download latest version</string>
    </property>
   </action>
   <action name="dactionIRC_2">
    <property name="text">
-    <string>Help Chat</string>
+    <string>Help chat</string>
    </property>
    <property name="toolTip">
-    <string>get live help on IRC</string>
+    <string>Get live help on IRC. If nobody answers right away, give it time</string>
    </property>
   </action>
   <action name="actionLive_Help_Chat">
    <property name="text">
-    <string>live Help Chat</string>
+    <string>Live help chat</string>
    </property>
   </action>
   <action name="actionShow_Map">
    <property name="text">
-    <string>Show Map</string>
+    <string>Show map</string>
    </property>
   </action>
  </widget>
