@@ -375,12 +375,14 @@ void mudlet::slot_close_profile_requested( int tab )
         mTabMap.remove( pH->getName() );
     }
 
+    // hide the tab bar if we only have 1 or no tabs available. saves screen space.
     if( mConsoleMap.size() > 1 )
     {
         mpTabBar->show();
     }
     else
         mpTabBar->hide();
+
 }
 
 void mudlet::slot_close_profile()
@@ -461,6 +463,9 @@ void mudlet::slot_tab_changed( int tabID )
         mpCurrentActiveHost = 0;
         return;
     }
+
+    // update the window title for the currently selected profile
+    setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
 }
 
 void mudlet::addConsoleForNewHost( Host * pH )
@@ -479,6 +484,9 @@ void mudlet::addConsoleForNewHost( Host * pH )
     }
     else
         mpTabBar->hide();
+    //update the main window title when we spawn a new tab
+    setWindowTitle(pH->getName() + " - " + version);
+
     mainPane->layout()->addWidget( pConsole );
     if( mpCurrentActiveHost )
         mpCurrentActiveHost->mpConsole->hide();
