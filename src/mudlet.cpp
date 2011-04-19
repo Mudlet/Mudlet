@@ -374,6 +374,13 @@ void mudlet::slot_close_profile_requested( int tab )
         HostManager::self()->deleteHost( pH->getName() );
         mTabMap.remove( pH->getName() );
     }
+
+    if( mConsoleMap.size() > 1 )
+    {
+        mpTabBar->show();
+    }
+    else
+        mpTabBar->hide();
 }
 
 void mudlet::slot_close_profile()
