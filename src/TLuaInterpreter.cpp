@@ -4878,7 +4878,6 @@ int TLuaInterpreter::addAreaName( lua_State *L )
 
 int TLuaInterpreter::deleteArea( lua_State *L )
 {
-    qDebug()<<"TLua::deleteArea";
     int id = -1;
     string name;
 
@@ -4893,7 +4892,7 @@ int TLuaInterpreter::deleteArea( lua_State *L )
     }
     else
     {
-        lua_pushstring( L, "addAreaName: wrong argument type" );
+        lua_pushstring( L, "deleteArea: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -5535,7 +5534,7 @@ int TLuaInterpreter::getRoomsByPosition( lua_State * L )
 }
 
 
-
+// returns true if area exits, otherwise false
 int TLuaInterpreter::setGridMode( lua_State * L )
 {
     int area;
@@ -5560,18 +5559,19 @@ int TLuaInterpreter::setGridMode( lua_State * L )
     {
         gridMode = lua_toboolean( L, 2 );
     }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->areas.contains( area ) )
     {
-        lua_pushstring( L, "setGridMode: area ID does not exist");
-        lua_error( L );
+        lua_pushboolean( L, false);
         return 1;
     }
     else
     {
         pHost->mpMap->areas[area]->gridMode = gridMode;
     }
-    return 0;
+    lua_pushboolean( L, true );
+    return 1;
 }
 
 

@@ -102,9 +102,14 @@ void TMap::deleteArea( int id )
     if( areas.contains( id ) )
     {
         TArea * pA = areas[id];
+        QList<int> rl;
         for( int i=0; i< pA->rooms.size(); i++ )
         {
-            deleteRoom( pA->rooms[i] );
+            rl.push_back( pA->rooms[i] );
+        }
+        for( int i=0; i<rl.size(); i++ )
+        {
+            deleteRoom( rl[i] );
         }
         areas.remove( id );
         areaNamesMap.remove( id );

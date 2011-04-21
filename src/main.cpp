@@ -38,32 +38,38 @@ using namespace std;
 
 TConsole *  spDebugConsole = 0;
 
+QFile debugStreamFile("C:\\mudletDebugStream.txt");;
+QTextStream debugStream(&debugStreamFile);
+
+
 void debugOutput(QtMsgType type, const char *msg)
 {
-    switch (type)
-    {
-    case QtDebugMsg:
-        cout << msg << endl;
-        /*if( mudlet::mpDebugConsole )
-        {
-            ;//mudlet::mpDebugConsole->print( msg );
-        }
-        else
-        {
-            fprintf(stderr, "Debug: %s\n", msg);
-        }*/
-        break;
-    case QtWarningMsg:
-        fprintf(stderr, "Warning: %s\n", msg);
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "Critical: %s\n", msg);
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "Fatal: %s\n", msg);
-        abort();
-        break;
-    }
+    debugStream << msg << endl;
+//    switch (type)
+//    {
+//    case QtDebugMsg:
+//        cout << msg << endl;
+
+//        /*if( mudlet::mpDebugConsole )
+//        {
+//            ;//mudlet::mpDebugConsole->print( msg );
+//        }
+//        else
+//        {
+//            fprintf(stderr, "Debug: %s\n", msg);
+//        }*/
+//        break;
+//    case QtWarningMsg:
+//        fprintf(stderr, "Warning: %s\n", msg);
+//        break;
+//    case QtCriticalMsg:
+//        fprintf(stderr, "Critical: %s\n", msg);
+//        break;
+//    case QtFatalMsg:
+//        fprintf(stderr, "Fatal: %s\n", msg);
+//        abort();
+//        break;
+//    }
 }
 
 QStringList gSysErrors;
@@ -72,6 +78,9 @@ QStringList gSysErrors;
 
 int main(int argc, char *argv[])
 {
+
+    debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);
+
     spDebugConsole = 0;
     qInstallMsgHandler( debugOutput );
 
