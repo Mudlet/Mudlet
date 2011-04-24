@@ -267,9 +267,7 @@ end
 ---
 --- @see table.load
 function table.save( sfile, t )
-	if t == nil then
-		t = _G
-	end
+	assert(type(sfile) == "string", "table.save requires a file path to save to")
 	local tables = {}
 	table.insert( tables, t )
 	local lookup = { [t] = 1 }
@@ -332,6 +330,7 @@ end
 ---
 --- @see table.save
 function table.load( sfile, loadinto )
+	assert(type(sfile) == "string", "table.load requires a file path to load")
 	local tables = dofile( sfile )
 	if tables then
 		if loadinto ~= nil and type(loadinto) == "table" then
