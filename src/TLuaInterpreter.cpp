@@ -7573,10 +7573,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setglobal( pGlobalLua, "yajl" );
 
     QString n;
-    int error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
+    int error;
+    
+    // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
+    luaL_dostring (pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;' end");
 
-
-
+    error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
 
     if( error != 0 )
     {
