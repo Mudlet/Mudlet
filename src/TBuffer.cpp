@@ -166,6 +166,9 @@ TBuffer::TBuffer( Host * pH )
     newLines = 0;
     mLastLine = 0;
     updateColors();
+    mWaitingForHighColorCode = false;
+    mHighColorModeForeground = false;
+    mHighColorModeBackground = false;
 }
 
 void TBuffer::setBufferSize( int s, int batch )
@@ -1133,7 +1136,6 @@ void TBuffer::translateToPlainText( std::string & s )
                         }
 
                         // we are dealing with standard ANSI colors
-
                         switch( tag )
                         {
                         case 0:
@@ -1163,6 +1165,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             break;
                         case 4:
                             mUnderline = true;
+                            break;
                         case 5:
                             break; //FIXME support blinking
                         case 6:
@@ -1301,7 +1304,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             bgColorG = mWhiteG;
                             bgColorB = mWhiteB;
                             break;
-                        default: qDebug()<<"code error:"<<tag;
+                        default: qDebug()<<"ERROR: stream decoder code error:"<<tag;
                         };
                     }
                     codeRet = 0;
@@ -1312,7 +1315,6 @@ void TBuffer::translateToPlainText( std::string & s )
                     msPos++;
                     gotHeader = false;
                     goto DECODE;
-                    qDebug()<<"unrecognized sequence:<"<<code<<s[msPos]<<">";
                 }
             }
             // sequenz ist im naechsten tcp paket keep decoder state

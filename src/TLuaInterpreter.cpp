@@ -6807,12 +6807,7 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
     }
     bool __needMerge = false;
     lua_getfield(L, -1, tokenList[i].toLatin1().data());
-    if( !lua_istable(L, -1) )
-    {
-        __needMerge = false;
-        lua_pop( L, 1 );
-    }
-    else
+    if( lua_istable(L, -1) )
     {
         // only merge tables (instead of replacing them) if the key has been registered as a need to merge key by the user default is Char.Status only
         if( mpHost->mGMCP_merge_table_keys.contains( key ) )
@@ -6820,6 +6815,7 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
             __needMerge = true;
         }
     }
+    lua_pop( L, 1 );
     if( ! __needMerge )
         lua_pushstring(L, tokenList[i].toLatin1().data());
     else

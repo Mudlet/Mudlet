@@ -33,7 +33,7 @@
 #undef DEBUG
 #endif
 
-//#define DEBUG
+#define DEBUG
 
 extern QStringList gSysErrors;
 
@@ -68,8 +68,9 @@ cTelnet::cTelnet( Host * pH )
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
-    termType = "Mudlet 1.1";
+    termType = "Mudlet 2.0";
     iac = iac2 = insb = false;
+
     command = "";
     curX = 80;
     curY = 25;
@@ -82,9 +83,9 @@ cTelnet::cTelnet( Host * pH )
     //connect(&socket, SIGNAL(hostFound()), this, SLOT (handle_socket_signal_hostFound()));
 
     // initialize telnet session
-    reset ();
+    reset();
 
-    mpPostingTimer->setInterval( 100 );//FIXME
+    mpPostingTimer->setInterval( 300 );//FIXME
     connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
 
     mTimerLogin = new QTimer( this );
@@ -109,6 +110,8 @@ void cTelnet::reset ()
     }
     iac = iac2 = insb = false;
     command = "";
+    mMudData = "";
+
 }
 
 
@@ -1019,6 +1022,7 @@ void cTelnet::gotPrompt( string & mud_data )
 
 void cTelnet::gotRest( string & mud_data )
 {
+
     if( mud_data.size() < 1 )
     {
         return;
@@ -1326,7 +1330,7 @@ void cTelnet::handle_socket_signal_readyRead()
     }
     buffer[datalen] = '\0';
     #ifdef DEBUG
-        cout<<"got<"<<pBuffer<<">"<<endl;
+        qDebug()<<"got<"<<pBuffer<<">";
     #endif
     if( mpHost->mpConsole->mRecordReplay )
     {
@@ -1344,7 +1348,7 @@ void cTelnet::handle_socket_signal_readyRead()
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
-                cout <<" SERVER SENDS telnet command "<<(unsigned int)_ch<<endl;
+                qDebug() <<" SERVER SENDS telnet command "<<(unsigned int)ch;
             #endif
             if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
@@ -1430,15 +1434,13 @@ void cTelnet::handle_socket_signal_readyRead()
                             }
                             if( _compress )
                             {
-                                cout << "COMPRESSION START sequence found"<<endl;
                                 mNeedDecompression = true;
                                 // from this position in stream onwards, data will be compressed by zlib
-                                cout << "starting ZLIB decompression. ";
                                 gotRest( cleandata );
+                                mpHost->mpConsole->print("\n<starting MCCP data compression>\n");
                                 cleandata = "";
                                 initStreamDecompressor();
                                 pBuffer += i + 3;//bugfix: BenH
-                                //mWaitingForCompressedStreamToStart = false;
                                 int restLength = datalen - i - 3;
                                 if( restLength > 0 )
                                 {
