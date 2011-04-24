@@ -45,10 +45,8 @@ for _, package in ipairs(packages) do
 end
 
 function __gmcp_merge_gmcp_sub_tables( a )
-echo("\nMERGING:\n")
 	local _m = a.__needMerge;
 	for k,v in pairs(_m) do
-		echo("merging:"..k.."\n");
 		a[k] = v;
 	end
 	a.__needMerge = nil

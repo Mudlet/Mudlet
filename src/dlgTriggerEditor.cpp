@@ -6133,6 +6133,8 @@ void dlgTriggerEditor::slot_import()
     mCurrentScript = 0;
     mCurrentAction = 0;
     mCurrentKey = 0;
+
+    slot_show_triggers();
     //mCurrentView = 0;
 }
 
