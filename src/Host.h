@@ -265,6 +265,7 @@ public:
     QColor             mFgColor_2;
     QColor             mBgColor_2;
     bool               mMapStrongHighlight;
+    QStringList        mGMCP_merge_table_keys;
 
 private:
     Host();

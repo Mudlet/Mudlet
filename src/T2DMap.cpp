@@ -437,6 +437,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             int rz = mpMap->rooms[pArea->rooms[i]]->z;
 
             if( rz != zEbene ) continue;
+            if( rx < 0 || ry < 0 || rx > _w || ry > _h ) continue;
 
             QList<int> exitList;
             exitList.push_back( mpMap->rooms[pArea->rooms[i]]->north );
@@ -547,6 +548,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         int rz = mpMap->rooms[pArea->rooms[i]]->z;
 
         if( rz != zEbene ) continue;
+        if( rx < 0 || ry < 0 || rx > _w || ry > _h ) continue;
 
         QRectF dr;
         if( pArea->gridMode )

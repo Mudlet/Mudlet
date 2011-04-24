@@ -889,7 +889,7 @@ void TTextEdit::swap( QPoint & p1, QPoint & p2 )
 void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 {
     if( (mFontWidth == 0) | (mFontHeight == 0) ) return;
-    int x = event->x() / mFontWidth - 1;
+    int x = event->x() / mFontWidth;// bugfix by BenH (used to be mFontWidth-1)
     int y = ( event->y() / mFontHeight ) + imageTopLine();
     //qDebug()<<"Mouse: x()="<<event->x()<<" y()="<<event->y()<< "x="<<x<<" y="<<y;
     if( x < 0 ) x = 0;

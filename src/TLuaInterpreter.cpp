@@ -4866,8 +4866,14 @@ int TLuaInterpreter::addAreaName( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString _name = name.c_str();
     id = pHost->mpMap->areaNamesMap.size()+1;
+
+
     if( ! pHost->mpMap->areaNamesMap.values().contains( _name ) )
     {
+        while( pHost->mpMap->areaNamesMap.contains( id ) )
+        {
+            id++;
+        }
         pHost->mpMap->areaNamesMap[id] = _name;
         lua_pushnumber( L, id );
     }
@@ -6799,7 +6805,26 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
         }
         lua_remove(L, -2);
     }
-    lua_pushstring(L, tokenList[i].toLatin1().data());
+    bool __needMerge = false;
+    lua_getfield(L, -1, tokenList[i].toLatin1().data());
+    if( !lua_istable(L, -1) )
+    {
+        __needMerge = false;
+        lua_pop( L, 1 );
+    }
+    else
+    {
+        // only merge tables (instead of replacing them) if the key has been registered as a need to merge key by the user default is Char.Status only
+        if( mpHost->mGMCP_merge_table_keys.contains( key ) )
+        {
+            __needMerge = true;
+        }
+    }
+    if( ! __needMerge )
+        lua_pushstring(L, tokenList[i].toLatin1().data());
+    else
+        lua_pushstring(L, "__needMerge");
+
     lua_getglobal(L, "json_to_value");
 
     if( !lua_isfunction(L, -1) )
@@ -6814,6 +6839,28 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
     {
         // Top of stack should now contain the lua representation of json.
         lua_rawset(L, -3);
+        if( __needMerge )
+        {
+            lua_settop(L, 0);
+            lua_getglobal(L, "__gmcp_merge_gmcp_sub_tables");
+            if( !lua_isfunction(L, -1) )
+            {
+               lua_settop(L, 0);
+               qDebug()<<"CRITICAL ERROR: __gmcp_merge_gmcp_sub_tables is not defined in lua_LuaGlobal.lua";
+               return;
+            }
+            lua_getglobal(L, "gmcp");
+            i = 0;
+            for( ; i<tokenList.size()-1; i++ )
+            {
+                lua_getfield(L, -1, tokenList[i].toLatin1().data());
+                lua_remove(L, -2);
+            }
+
+            lua_getfield(L, -1, tokenList[i].toLatin1().data());
+            lua_remove(L, -2);
+            lua_pcall(L, 1, 0, 0);
+        }
     }
     lua_settop(L, 0);
 

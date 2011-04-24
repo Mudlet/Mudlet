@@ -1437,14 +1437,19 @@ void cTelnet::handle_socket_signal_readyRead()
                                 gotRest( cleandata );
                                 cleandata = "";
                                 initStreamDecompressor();
-                                pBuffer += 3;
+                                pBuffer += i + 3;//bugfix: BenH
                                 //mWaitingForCompressedStreamToStart = false;
                                 int restLength = datalen - i - 3;
                                 if( restLength > 0 )
                                 {
                                     datalen = decompressBuffer( pBuffer, restLength );
+                                    if(datalen != -1 ) datalen += i+3; //bugfix: BenH
                                 }
-                                i = 0;
+                                //bugfix: BenH
+                                i += 2;
+                                iac = false;
+                                insb = false;
+                                ////////////////
                                 goto MAIN_LOOP_END;
                             }
                         }

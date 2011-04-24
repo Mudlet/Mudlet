@@ -10,6 +10,19 @@ if package.loaded["lpeg"] then lpeg = require "lpeg" end
 
 json_to_value = yajl.to_value
 
+function __gmcp_merge_gmcp_sub_tables( a )
+	local _m = a.__needMerge;
+	display(a)
+	display(_m)
+	for k,v in pairs(_m) do
+		echo("merging:"..k.."\n");
+		a[k] = v;
+	end
+	display(a)	
+	
+end
+
+
 gmcp = {}
 
 local packages = {
