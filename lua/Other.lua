@@ -89,6 +89,10 @@ walkdelay = 0
 SavedVariables = {}
 
 
+-- LuaJIT does not look in /usr, only in /usr/local by default - this adds it.
+if jit then
+  package.cpath = package.cpath .. ";./?.so;/usr/local/lib/lua/5.1/?.so;/usr/lib/lua/5.1/?.so;/usr/local/lib/lua/5.1/loadall.so"
+end
 
 --- Sends a list of commands to the MUD. You can use this to send some things at once instead of having
 --- to use multiple send() commands one after another.
