@@ -66,6 +66,12 @@ function Geyser.Label:setClickCallback (func, ...)
    setLabelClickCallback(self.name, func, ...)
 end
 
+--- Sets the style sheet of the label
+-- @param css The style sheet string
+function Geyser.Label:setStyleSheet(css)
+        setLabelStyleSheet(self.name, css)
+end
+
 -- Save a reference to our parent constructor
 Geyser.Label.parent = Geyser.Window
 
