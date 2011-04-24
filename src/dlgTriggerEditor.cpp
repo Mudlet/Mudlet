@@ -4309,6 +4309,7 @@ void dlgTriggerEditor::fillout_form()
     for(IT it=baseNodeList.begin(); it!=baseNodeList.end(); it++ )
     {
         TTrigger * pT = *it;
+        if( pT->isTempTrigger() ) continue;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -4382,6 +4383,7 @@ void dlgTriggerEditor::fillout_form()
     for( list<TTimer *>::iterator it = baseNodeList_timers.begin(); it!=baseNodeList_timers.end(); it++ )
     {
         TTimer * pT = *it;
+        if( pT->isTempTimer() ) continue;
         QString s = pT->getName();
 
         qDebug()<<"init: name="<<pT->getName()<<" mUserActiveState="<<pT->shouldBeActive();
