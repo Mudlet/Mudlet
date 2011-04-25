@@ -124,6 +124,44 @@ function sendAll(...)
 end
 
 
+--- Creates a group of a given type that will persist through sessions.
+---
+--- @param name name of the teim
+--- @param itemtype type of the item - can be trigger, alias, or timer
+---
+--- @usage
+--- <pre>
+---   --create a new trigger group
+---   permGroup("Combat triggers", "trigger")
+--- </pre>
+--- @usage
+--- <pre>
+---   --create a new alias group only if one doesn't exist already
+---   if exists("Defensive aliases", "alias") == 0 then
+---     permGroup("Defensive aliases", "alias")
+---   end
+--- </pre>
+function permGroup(name, itemtype)
+  assert(type(name) == "string", "permGroup: need a name for the new thing")
+
+  local t = {
+    timer = function(name)
+        return (permTimer(name, "", 0, "") == -1) and false or true
+       end,
+    trigger = function(name)
+        return (permSubstringTrigger(name, "", {""}, "") == -1) and false or true
+      end,
+    alias = function(name)
+        return (permAlias(name, "", "", "") == -1) and false or true
+      end
+ }
+
+ assert(t[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
+
+ return t[itemtype](name)
+end
+
+
 
 --- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
 ---
