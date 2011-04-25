@@ -81,6 +81,13 @@ function Geyser.Gauge:setText (text)
    end
 end
 
+-- Sets the style sheet for the gauge
+-- @param css Style sheet for the front label
+-- @param cssback Style sheet for the back label
+function Geyser.Gauge:setStyleSheet(css, cssback)
+        self.front:setStyleSheet(css)
+        self.back:setStyleSheet(cssback or css)
+end
 
 -- Save a reference to our parent constructor
 Geyser.Gauge.parent = Geyser.Container
