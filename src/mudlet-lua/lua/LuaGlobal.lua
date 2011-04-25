@@ -51,3 +51,9 @@ function __gmcp_merge_gmcp_sub_tables( a )
 	end
 	a.__needMerge = nil
 end
+
+function onConnect()
+end
+
+function handleWindowResizeevent()
+end

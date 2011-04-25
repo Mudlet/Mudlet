@@ -5337,12 +5337,12 @@ int TLuaInterpreter::setRoomUserData( lua_State * L )
         QString _key = key.c_str();
         QString _value = value.c_str();
         pHost->mpMap->rooms[roomID]->userData[_key] = _value;
-        return 0;
+        lua_pushboolean( L, true );
+        return 1;
     }
     else
     {
-        lua_pushstring( L, "getRoomUserData: no such roomID" );
-        lua_error( L );
+        lua_pushboolean( L, false );
         return 1;
     }
 }
@@ -7480,6 +7480,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRoomUserData", TLuaInterpreter::getRoomUserData );
     lua_register( pGlobalLua, "setRoomUserData", TLuaInterpreter::setRoomUserData );
     lua_register( pGlobalLua, "getRoomsByPosition", TLuaInterpreter::getRoomsByPosition );
+    //lua_register( pGlobalLua, "dumpRoomUserData", TLuaInterpreter::dumpRoomUserData );
     lua_register( pGlobalLua, "clearRoomUserData", TLuaInterpreter::clearRoomUserData );
     lua_register( pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile );
     lua_register( pGlobalLua, "appendCmdLine", TLuaInterpreter::appendCmdLine );
