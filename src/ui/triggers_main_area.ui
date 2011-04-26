@@ -206,7 +206,7 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
-       <number>6</number>
+       <number>1</number>
       </property>
       <property name="margin">
        <number>0</number>
@@ -239,8 +239,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>455</width>
-              <height>130</height>
+              <width>482</width>
+              <height>139</height>
              </rect>
             </property>
            </widget>
@@ -471,7 +471,7 @@
                <item>
                 <widget class="QSpinBox" name="spinBox_stayOpen">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -627,7 +627,7 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>58</height>
+       <height>65</height>
       </size>
      </property>
      <property name="palette">
@@ -783,16 +783,10 @@
          <bool>true</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_5">
-         <property name="leftMargin">
-          <number>7</number>
-         </property>
-         <property name="topMargin">
+         <property name="margin">
           <number>1</number>
          </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
+         <property name="spacing">
           <number>1</number>
          </property>
          <item row="0" column="0">
@@ -900,6 +894,21 @@ as this is a complex topic.</string>
             <bool>false</bool>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>3</number>
+            </property>
+            <property name="topMargin">
+             <number>1</number>
+            </property>
+            <property name="rightMargin">
+             <number>3</number>
+            </property>
+            <property name="bottomMargin">
+             <number>1</number>
+            </property>
             <item>
              <widget class="QLabel" name="label_3">
               <property name="sizePolicy">
@@ -937,7 +946,7 @@ as this is a complex topic.</string>
             <item>
              <widget class="QSpinBox" name="spinBox_linemargin">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -1459,15 +1468,15 @@ otherwise highlight the entire match</string>
             <item row="0" column="1">
              <widget class="QPushButton" name="pushButtonFgColor">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="maximumSize">
                <size>
-                <width>22</width>
-                <height>16</height>
+                <width>16777215</width>
+                <height>16777215</height>
                </size>
               </property>
               <property name="text">
@@ -1502,15 +1511,15 @@ otherwise highlight the entire match</string>
             <item row="1" column="1">
              <widget class="QPushButton" name="pushButtonBgColor">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="maximumSize">
                <size>
-                <width>22</width>
-                <height>16</height>
+                <width>16777215</width>
+                <height>16777215</height>
                </size>
               </property>
               <property name="text">

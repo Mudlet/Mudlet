@@ -3160,6 +3160,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     bool needChange = true;
     for( ; x<P2.x(); x++ )
     {
+        if( x >= static_cast<int>(buffer[y].size()) ) break;
         if( needChange
             || buffer[y][x].fgR != fgR
             || buffer[y][x].fgG != fgG
@@ -3203,10 +3204,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
         }
         s.append(lineBuffer[y][x]);
     }
-//    s.replace(QChar('\\'), "\\\\");
-//    s.replace(QChar('\n'), "<br />");
-//    s.replace(QChar('\t'), "     ");
-    s.append("<br />");
+    if( s.size() > 0 ) s.append("<br />");
     return s;
 }
 

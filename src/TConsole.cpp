@@ -952,6 +952,7 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
                     }
                     mLastBufferLogLine--;
                 }
+                mLogStream.flush();
             }
         }
     }
