@@ -35,10 +35,10 @@ function Geyser.HBox:reposition()
       local width = nil
       local height = nil
       window:move(start_x, nil)
-      if window.horizontal_policy == Geyser.Expand then
+      if window.horizontal_policy == Geyser.Dynamic then
          width = window_width
       end
-      if window.vertical_policy == Geyser.Expand then
+      if window.vertical_policy == Geyser.Dynamic then
          height = self.get_height()
       end
       window:resize(width, height)

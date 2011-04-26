@@ -15,8 +15,8 @@
 -- minimum number of functions needed to behave as a Container.
 Geyser = Geyser or {i = 0, x = 0, y = 0}
 
---Layout policies. Fixed = Do not stretch/shrink, Expand = Do stretch/shrink
-Geyser.Fixed, Geyser.Expand = 0, 1
+--Layout policies. Fixed = Do not stretch/shrink, Dynamic = Do stretch/shrink
+Geyser.Fixed, Geyser.Dynamic = 0, 1
 
 Geyser.width, Geyser.height = getMainWindowSize()
 
