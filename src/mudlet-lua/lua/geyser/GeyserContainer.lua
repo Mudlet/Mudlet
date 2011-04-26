@@ -54,8 +54,8 @@ Geyser.Container =  {
    windowList = {},
    windows = {},
    fontSize = 8,
-   horizontal_policy = Geyser.Expand,
-   vertical_policy = Geyser.Expand,
+   horizontal_policy = Geyser.Dynamic,
+   vertical_policy = Geyser.Dynamic,
 }
 
 --- Responsible for placing/moving/resizing this window to the correct place/size.

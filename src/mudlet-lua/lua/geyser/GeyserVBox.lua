@@ -30,10 +30,10 @@ function Geyser.VBox:reposition()
       window:move(0, start_x)
       local width = nil
       local height = nil
-      if window.horizontal_policy == Geyser.Expand then
+      if window.horizontal_policy == Geyser.Dynamic then
          width = self.get_width()
       end
-      if window.vertical_policy == Geyser.Expand then
+      if window.vertical_policy == Geyser.Dynamic then
          height = window_height
       end
       window:resize(width, height)
