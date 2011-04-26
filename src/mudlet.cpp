@@ -88,7 +88,7 @@ mudlet::mudlet()
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
-, version( "Mudlet 2.0-rc2 April 2011" )
+, version( "Mudlet 2.0-rc3 April 2011" )
 {
     setupUi(this);
 

@@ -540,6 +540,23 @@ void Host::registerEventHandler( QString name, TScript * pScript )
         mEventHandlerMap.insert( name, scriptList );
     }
 }
+void Host::registerAnonymousEventHandler( QString name, QString fun )
+{
+
+    if( mAnonymousEventHandlerFunctions.contains( name ) )
+    {
+        if( ! mAnonymousEventHandlerFunctions[name].contains( fun ) )
+        {
+            mAnonymousEventHandlerFunctions[name].push_back( fun );
+        }
+    }
+    else
+    {
+        QStringList newList;
+        newList << fun;
+        mAnonymousEventHandlerFunctions[name] = newList;
+    }
+}
 
 void Host::unregisterEventHandler( QString name, TScript * pScript )
 {
@@ -552,11 +569,24 @@ void Host::unregisterEventHandler( QString name, TScript * pScript )
 void Host::raiseEvent( TEvent * pE )
 {
     if( pE->mArgumentList.size() < 1 ) return;
-    if( ! mEventHandlerMap.contains( pE->mArgumentList[0] ) ) return;
-    QList<TScript *> scriptList = mEventHandlerMap.value( pE->mArgumentList[0] );
-    for( int i=0; i<scriptList.size(); i++ )
+    if( mEventHandlerMap.contains( pE->mArgumentList[0] ) )
     {
-        scriptList.value( i )->callEventHandler( pE );
+        QList<TScript *> scriptList = mEventHandlerMap.value( pE->mArgumentList[0] );
+        for( int i=0; i<scriptList.size(); i++ )
+        {
+            scriptList.value( i )->callEventHandler( pE );
+        }
+    }
+    qDebug()<<"host::raiseEvent() event="<<pE->mArgumentList[0];
+    if( mAnonymousEventHandlerFunctions.contains( pE->mArgumentList[0] ) )
+    {
+        QStringList funList = mAnonymousEventHandlerFunctions[pE->mArgumentList[0]];
+        qDebug()<<"funList to call="<<funList;
+        for( int i=0; i<funList.size(); i++ )
+        {
+            qDebug()<<"-->calling:"<<funList[i];
+            mLuaInterpreter.callEventHandler( funList[i], pE );
+        }
     }
 }
 

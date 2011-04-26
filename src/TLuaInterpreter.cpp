@@ -6429,6 +6429,36 @@ int TLuaInterpreter::appendCmdLine( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::registerAnonymousEventHandler( lua_State * L )
+{
+    string event;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "appendCmdLine(): wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        event = lua_tostring( L, 1 );
+    }
+    string func;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "appendCmdLine(): wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        func = lua_tostring( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString e = event.c_str();
+    QString f = func.c_str();
+    pHost->registerAnonymousEventHandler( e, f );
+    return 0;
+}
 
 
 int TLuaInterpreter::Send( lua_State * L )
@@ -7493,6 +7523,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea );
     lua_register( pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom );
     lua_register( pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar );
+    lua_register( pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
