@@ -40,8 +40,11 @@
 --                   used to handle proper resizing of held windows as well as
 --                   during show()s and hide()s to recursive show and hide all
 --                   children windows.
+-- @field windows This is an ordered list of the names of the window held by this container. 
 -- @field fontSize The default size font used when calculating dimensions
 --                 based on the character constraint. Default is 8.
+-- @field horizontal_policy This sets if this widget should be stretched/shrinked horizontally or not
+-- @field vertical_policy This sets if this widget should be stretched/shrinked vertically or not
 Geyser.Container =  {
    name = "ContainerClass",
    x = "10px",
@@ -49,7 +52,10 @@ Geyser.Container =  {
    height = "200px",
    width = "300px",
    windowList = {},
+   windows = {},
    fontSize = 8,
+   horizontal_policy = Geyser.Expand,
+   vertical_policy = Geyser.Expand,
 }
 
 --- Responsible for placing/moving/resizing this window to the correct place/size.
@@ -161,7 +167,7 @@ function Geyser.Container:new(cons, container)
    me.type = me.type or "container"
    me.name = me.name or Geyser.nameGen()
    me.windowList = {}
-
+   me.windows = {}
    -- Set the metatable.
    setmetatable(me, self)
    self.__index = self
