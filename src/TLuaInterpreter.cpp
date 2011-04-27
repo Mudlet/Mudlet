@@ -4165,7 +4165,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "permAlias: wrong argument type" );
+        lua_pushstring( L, "permAlias: need a name for this alias" );
         lua_error( L );
         return 1;
     }
@@ -4177,7 +4177,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaParent;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "permAlias: wrong argument type" );
+        lua_pushstring( L, "permAlias: need a parent alias/group to add this alias to" );
         lua_error( L );
         return 1;
     }
@@ -4189,7 +4189,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaRegex;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, "permAlias: wrong argument type" );
+        lua_pushstring( L, "permAlias: need the pattern for the alias" );
         lua_error( L );
         return 1;
     }
@@ -4202,7 +4202,7 @@ int TLuaInterpreter::permAlias( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, "permAlias: wrong argument type" );
+        lua_pushstring( L, "permAlias: need Lua code for this alias" );
         lua_error( L );
         return 1;
     }
@@ -4217,8 +4217,8 @@ int TLuaInterpreter::permAlias( lua_State *L )
     QString _luaParent = luaParent.c_str();
     QString _luaFunction = luaFunction.c_str();
     QString _luaRegex = luaRegex.c_str();
-    int timerID = pLuaInterpreter->startPermAlias( _luaName, _luaParent, _luaRegex, _luaFunction );
-    lua_pushnumber( L, timerID );
+    int aliasID = pLuaInterpreter->startPermAlias( _luaName, _luaParent, _luaRegex, _luaFunction );
+    lua_pushnumber( L, aliasID );
     return 1;
 }
 
@@ -7482,12 +7482,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize );
     lua_register( pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger );
     lua_register( pGlobalLua, "permSubstringTrigger", TLuaInterpreter::permSubstringTrigger );
+    lua_register( pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger );
     lua_register( pGlobalLua, "permTimer", TLuaInterpreter::permTimer );
     lua_register( pGlobalLua, "permAlias", TLuaInterpreter::permAlias );
     lua_register( pGlobalLua, "exists", TLuaInterpreter::exists );
     lua_register( pGlobalLua, "isActive", TLuaInterpreter::isActive );
     lua_register( pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias );
-    lua_register( pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger );
     lua_register( pGlobalLua, "tempAlias", TLuaInterpreter::tempAlias );
     lua_register( pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias );
     lua_register( pGlobalLua, "killAlias", TLuaInterpreter::killAlias );
