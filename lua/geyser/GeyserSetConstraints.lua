@@ -14,9 +14,13 @@
 -- represents the dimensions of the "window" that holds whatever
 -- widget is being created.
 function Geyser.set_constraints (window, cons, container)
+   oldlocale = os.setlocale(nil, "numeric")
+   if not os.setlocale("en_GB", "numeric") then
+      os.setlocale("english_uk", "numeric") --Windows again
+   end
    -- If container is nil then by default it is the dimensions of the main window
    container = container or Geyser
-
+   
    -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
    -- Parse the position constraints to generate functions that will get
    -- window dimensions according to those constraints. Also, update position
@@ -63,7 +67,6 @@ function Geyser.set_constraints (window, cons, container)
 		 --        Need to find out if there's more such cases in Geyse
 		 --        Need to find out if there's more such cases in Geyser
 		 h_scale = tostring(scale)
-		 h_scale = string.gsub(h_scale, ",", ".")
 		 local src = "local self,container = ...  return function () return " .. min .. " + (" .. h_scale .. " * " .. max .. ") end"
          
          -- compile the getter
