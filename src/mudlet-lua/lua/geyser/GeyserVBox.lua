@@ -2,45 +2,43 @@ Geyser.VBox = Geyser.Container:new({
       name = "VBoxClass"
    })
 
-function Geyser.VBox:calculate_dynamic_window_height()
-   local total_count = #self.windows
-   local fixed_count = 0
-   local fixed_height_sum  = 0
-   if total_count <= 1 then
-      --If there is only one window it can have all the height, if there are none then it doesn't matter
-      return self:get_height()
+function Geyser.VBox:begin_update()
+   self.defer_updates = true
+end
+   
+function Geyser.VBox:add (window, cons)
+   Geyser.add(self, window, cons)
+   if not self.defer_updates then
+      self:reposition()
    end
-   for _, window_name in ipairs(self.windows) do
-      window = self.windowList[window_name]
-      if window.vertical_policy == Geyser.Fixed then
-         fixed_count = fixed_count + 1
-         fixed_height_sum = fixed_height_sum + window.get_height()
-      end
-   end
-   return (self:get_height() - fixed_height_sum) / (total_count - fixed_count)
+end
+   
+function Geyser.VBox:end_update()
+   self.defer_updates = false
+   self:reposition()
 end
 
 --- Responsible for placing/moving/resizing this window to the correct place/size.
 -- Called on window resize events.
 function Geyser.VBox:reposition()
-   local window_height = self:calculate_dynamic_window_height()
-   start_y = 0
+   self.parent:reposition()
+
+   local window_height = self:calculate_dynamic_window_size().height
+   local start_y = 0
    for _, window_name in ipairs(self.windows) do
-      window = self.windowList[window_name]
-      window:move(0, start_x)
-      local width = nil
-      local height = nil
-      if window.horizontal_policy == Geyser.Dynamic then
-         width = self.get_width()
+      local window = self.windowList[window_name]
+      window:move(nil, start_y)
+      local width = window.get_width()
+      local height = window.get_height()
+      if window.h_policy == Geyser.Dynamic then
+         width = self:get_width()
       end
-      if window.vertical_policy == Geyser.Dynamic then
-         height = window_height
+      if window.v_policy == Geyser.Dynamic then
+         height = window_height * window.v_stretch_factor
       end
       window:resize(width, height)
-      window:reposition()
-      start_y = start_y + window.get_height()
+      start_y = start_y + window:get_height()
    end
-   self.parent:reposition()
 end
 
 Geyser.VBox.parent = Geyser.Container
