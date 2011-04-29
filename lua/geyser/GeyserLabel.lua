@@ -59,6 +59,12 @@ function Geyser.Label:setBackgroundImage (imageFileName)
    setBackgroundImage(self.name, imageFileName)
 end
 
+--- Sets a tiled background image for this label.
+-- @param imageFileName The image to use for a background image.
+function Geyser.Label:setTiledBackgroundImage (imageFileName)
+   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
+end
+
 --- Sets a callback to be used when this label is clicked.
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
