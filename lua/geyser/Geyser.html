@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type"><title>Geyser</title>
+
+<link rel="stylesheet" href="mudlet.css" type="text/css">
+</head><body>
+<h1><a name="The_Geyser_Layout_Manager"></a>The
+Geyser Layout Manager</h1>
+(Some Texts, mostly those in the Intruduction and Windows section, are
+taken from guy's pdf)<br>
+<h2><a name="Geyser_Introduction"></a>Introduction</h2>
+Geyser is an object oriented framework for creating, updating and
+organizing GUI elements<br>
+within Mudlet.<br>
+<br>
+<h4>Motivation</h4>
+Mudlet makes the creation of label, miniconsoles and gauges a quick and
+easy thing. Mudlet provides<br>
+a nice signal when window resize events happen. Mudlet does not provide
+a good framework for<br>
+complex window management, which Geyser attempts to address. The name
+`Geyser' was partly<br>
+chosen to go with Crucible...sort of like if you were to pour some
+window glass into a hot crucible<br>
+it might shoot up or something.<br>
+<br>
+<h4>Main Geyser Features<span style="font-weight: bold;"></span></h4>
+Geyser is based on traditional GUI concepts and should feel similar to
+using Java's Swing. The<br>
+biggest difference is in how positions are specified.<br>
+<br>
+<ul>
+<li>All window positions are specified relative to their
+container -
+nothing new there. However, window positions can also take on
+percentages and negative pixel and
+character values. For instance, a window could be constrained to have a
+height of 50% of its
+container and a width such that the window's right edge is always 20
+characters from its
+container's right edge. See examples below and the demos/tests that
+come with Geyser.
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; </li>
+<li>All windows under Geyser control are automatically resized
+as necessary
+when the main Mudlet window is resized. Once you create a window and
+assign it to a
+container, you never have to worry about positioning it again.
+Nonetheless, it's very easy
+to shift the container that a window is in, maintaining its constraints
+so that it resizes as
+needed according to the dimensions of the new container.</li>
+<li>Due to the container heirarchy, hiding a container window
+automatically
+hides all its contained windows too. The same for show. With clever
+construction and labels
+with callbacks, this lets one make complex GUI elements that are
+minimizable or maximizable
+or ...</li>
+<li>However, there is always some overhead for automation
+systems and
+Geyser is no exception. Fortunately, most of the overhead is during
+window creation and resize
+events - not things that happen frequently.</li>
+</ul>
+<h4><span style="font-weight: bold;">Constraints
+format</span></h4>
+Geyser position constraints are very simple. They are a
+string composed of a number and a format type. For example, "10px"
+means 10 pixels, either pixels from the origin (e.g. x or y) or a value
+for the width or height. A negative number indicates distance from a
+container's right or bottom border depending on whether is a constraint
+for x/width or y/height, respectively. Percentages for width and height
+are in terms of the container's dimensions and negative values are
+converted to the equivalent positive value. A 100% width subwindow with
+an x-coordinate of 10 will have part of itself displayed outside the
+confines of its container. There is no hard limit on maximum window
+size, just as with regular Mudlet windows. If a number, n, is passed as
+a contraint instead of a string, it is assumed to be equivalent to
+"npx". Any Lua table that contains entries for x, y, width and height
+in the proper format can be used for Geyser constructors and setting
+constraints. <br>
+<br>
+The following is a valid example:<br>
+<br>
+<div class="listingblock">
+<div class="content">
+<pre><tt>{x = "20px", y = "-10c", width = "40%", height = 30}</tt></pre>
+</div>
+</div>
+<h2><a name="Geyser_Windows"></a>Windows<br>
+</h2>
+<h4>Container</h4>
+The Container class is the root type of window. The Geyser
+table/namespace has the functionality of a Container and represents the
+main Mudlet window and control of other windows therein. Notice that
+because Container is the root class, that all types of Geyser windows
+can act as a container - labels anchored within miniconsoles anchored
+within gauges are possible (but not necessarily desireable).<br>
+<h4>HBox/VBox</h4>
+These are special types of containers. Every window in these are
+horizontally or vertically aligned in the order <br>
+<h4>Window</h4>
+Abstract class meant to be subclassed into Label and MiniConsole that
+contains functions common<br>
+to both<br>
+<h4>Label</h4>
+Based on the primitive Mudlet label, nothing new.<br>
+<h4>Minoconsole</h4>
+Based on the primitive Mudlet miniconsole, nothing new.<br>
+<h4>Gauge</h4>
+This is a composite window. Gauge duplicates the functionality of the
+built in Mudlet gauges, but in a clean and easily extended way.
+Internally, a Geyser Gauge is a container holding two Labels, front and
+back, which are initially scaled to fill the entire Gauge container.
+Hence, a gauge, g, can be given callbacks with the
+g.front:setClickCallback() method.<br>
+The backgroundColor parameter initially sets the colors of the gauge,
+but of course the front and back components can be accessed
+individually as labels for high control over their looks. Gauges can be
+horizontal or vertical and decrease in value left to right, right to
+left, down up or up down depending on the value of the orientation
+parameter.
+<ul>
+<span style="font-weight: bold;"></span>
+</ul>
+<ul>
+</ul>
+</body></html>
