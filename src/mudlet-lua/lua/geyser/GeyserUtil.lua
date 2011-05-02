@@ -58,3 +58,23 @@ function Geyser.copyTable (table)
 	end
 	return copy
 end
+
+---Checks whether a table contains a value or not
+function table.contains(table, element)
+  for _, value in pairs(table) do
+    if value == element then
+      return true
+    end
+  end
+  return false
+end
+
+---Returns the index of the value in a table
+function table.index_of(table, element)
+  for index, value in ipairs(table) do
+    if value == element then
+      return index
+    end
+  end
+  return nil
+end
