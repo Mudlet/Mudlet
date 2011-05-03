@@ -22,12 +22,13 @@ end
 -- Called on window resize events.
 function Geyser.HBox:reposition()
    self.parent:reposition()
+   
    local window_width = self:calculate_dynamic_window_size().width
    local start_x = 0
    for _, window_name in ipairs(self.windows) do
       local window = self.windowList[window_name]
-      local width = window.get_width()
-      local height = window.get_height()
+      local width = window.width
+      local height = window.height
       window:move(start_x, 0)
       if window.h_policy == Geyser.Dynamic then
          width = window_width * window.h_stretch_factor

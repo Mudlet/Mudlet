@@ -28,8 +28,8 @@ function Geyser.VBox:reposition()
    for _, window_name in ipairs(self.windows) do
       local window = self.windowList[window_name]
       window:move(0, start_y)
-      local width = window.get_width()
-      local height = window.get_height()
+      local width = window.width
+      local height = window.height
       if window.h_policy == Geyser.Dynamic then
          width = self:get_width()
       end
