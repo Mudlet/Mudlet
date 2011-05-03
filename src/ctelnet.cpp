@@ -418,7 +418,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h += TN_IAC;
               _h += TN_SB;
               _h += 200;
-              _h += "hello Mudlet 1.2.0\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n";
+              _h += "hello Mudlet 2.0-rc3\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
               _h += TN_IAC;
               _h += TN_SE;
               socketOutRaw( _h );
