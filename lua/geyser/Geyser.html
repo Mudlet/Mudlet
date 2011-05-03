@@ -359,12 +359,7 @@ padding-left: 0.5em;
 }
 /* IE6 sets dynamically generated links as visited. */
 div#toc a:visited { color: blue; }
-</style>
-
-
-
-
-</head>
+</style></head>
 <body>
 <h1><a name="The_Geyser_Layout_Manager"></a>The
 Geyser Layout Manager</h1>
@@ -486,7 +481,9 @@ left, down up or up down depending on the value of the orientation
 parameter.<br>
 <h2>Tutorial</h2>
 Note: This tutorial assumes you know how scripts in mudlet work. If not
-then you should look at the manual first.<br>
+then you should look at the manual first. Also it only shows how Geyser
+basically works and explains Geysers special windows. It wont go into
+detail about the windows that where already in Mudlet.<br><br>
 <h4>Hello World</h4>
 Let's start with something simple. A Label.<br>
 <br>
@@ -595,7 +592,60 @@ the position we wanted - the position of the container.<br><br>When we now move 
 <div class="content">
 <pre>container:move(400, nil)</pre>
 </div>
-</div><img style="width: 897px; height: 229px;" alt="" src="Geyser_Container_4.png"><br>The first parameter is the x-, the second the y-position. If the value is nil the current value is used.
+</div><img style="width: 897px; height: 229px;" alt="" src="Geyser_Container_4.png"><br>The first parameter is the x-, the second the y-position. If the value is nil the current value is used.<br><h4>VBox and HBox</h4>The VBox and HBox classes are special Containers.<br>They
+will automatically align its containing windows vertically or
+horizontally, respectively, in the order they where added to them.<br><br><div class="listingblock">
+<div class="content">
+<pre>local HBox = Geyser.HBox:new({<br>	name="HBox",<br>	x=0, y=0,<br>	width=400, height=30,<br>	})</pre>
+
+
+
+</div>
+</div>Like containers you won't see them by themselves.<br><br>Adding childs works like with containers<br><div class="listingblock">
+<div class="content">
+<pre>local label1 = Geyser.Label:new({<br>	name="Label1",<br>	},<br>	HBox)<br>label1:echo("Label 1", "black", "c")<br>label1:setColor(255, 0, 0)</pre>
+
+
+
+
+
+
+
+</div>
+</div><img style="width: 439px; height: 166px;" alt="" src="HVBox_1.png"><br><br>We didn't &nbsp;set any position or size, but the label gets the same size as the HBox.<br><br>If we add another window:<br><div class="listingblock">
+<div class="content">
+<pre>local label2 = Geyser.Label:new({<br>	name="Label2",<br>	},<br>	HBox)<br>label2:echo("Label 2", "black", "c")<br>label2:setColor(0, 255, 0)</pre>
+
+
+
+
+
+
+
+</div>
+</div><img style="width: 449px; height: 164px;" alt="" src="HVBox_2.png"><br><br>the size will be divided equally between them!<br><br>What if you want a child that takes more or less space than the others?<br>Thats possible too:<br><div class="listingblock">
+<div class="content">
+<pre>local label3 = Geyser.Label:new({<br>	name="Label3",<br>	h_stretch_factor=2.0,<br>	},<br>	HBox)<br>label3:echo("Label 3", nil, "c")<br>label3:setColor(0, 0, 255)</pre>
+
+
+
+
+
+
+
+</div>
+</div><img style="width: 446px; height: 173px;" alt="" src="HVBox_3.png"><br><br>As you can see, Label 3 takes the same space as Label 1 and 2 Together. <br>Thats because we supplied a horizontal stretch factor with "h_stretch_factor=2.0"<br><br>This works also with a vertical stretch factor, just replace "h_stretch_factor" with "v_stretch_factor"<br><br>Now you may have windows that should not be stretched at all.<br>To accomplish this you have to set the horizontal and/or vertical policy:<br><br><div class="listingblock">
+<div class="content">
+<pre>local label4 = Geyser.Label:new({<br>	name="Label4",<br>	width="13%",<br>	h_policy=Geyser.Fixed,<br>	},<br>	HBox)<br>label4:echo("Label 4", "black", "c")<br>label4:setColor(0, 255, 255)</pre>
+
+
+
+
+
+
+
+</div>
+</div><img style="width: 459px; height: 171px;" alt="" src="HVBox_4.png"><br><br>Possible values for the policies are Geyser.Fixed and Geyser.Dynamic. The default is Geyser.Dynamic.<br>Note that, like in the example above, the label will retain relative values (like percent) if used.<br><br>The VBox works like the HBox, only that the child windows are aligned vertically.
 <ul>
 </ul>
 </body></html>
