@@ -27,7 +27,7 @@ function Geyser.VBox:reposition()
    local start_y = 0
    for _, window_name in ipairs(self.windows) do
       local window = self.windowList[window_name]
-      window:move(nil, start_y)
+      window:move(0, start_y)
       local width = window.get_width()
       local height = window.get_height()
       if window.h_policy == Geyser.Dynamic then
