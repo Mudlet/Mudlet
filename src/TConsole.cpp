@@ -401,7 +401,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     networkLatency->setReadOnly( true );
     networkLatency->setSizePolicy( sizePolicy4 );
     networkLatency->setFocusPolicy( Qt::NoFocus );
-    networkLatency->setToolTip("latency of the MUD-server and network (current/average)");
+    networkLatency->setToolTip("<i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your triggers took to process the last line(s)");
     networkLatency->setMaximumSize( 120, 30 );
     networkLatency->setMinimumSize( 120, 30 );
     networkLatency->setAutoFillBackground( true );
