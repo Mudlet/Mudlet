@@ -28,7 +28,7 @@ function Geyser.HBox:reposition()
       local window = self.windowList[window_name]
       local width = window.get_width()
       local height = window.get_height()
-      window:move(start_x, nil)
+      window:move(start_x, 0)
       if window.h_policy == Geyser.Dynamic then
          width = window_width * window.h_stretch_factor
       end
