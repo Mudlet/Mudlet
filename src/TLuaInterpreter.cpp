@@ -7441,7 +7441,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "resetStopWatch", TLuaInterpreter::resetStopWatch );
     lua_register( pGlobalLua, "closeUserWindow", TLuaInterpreter::closeUserWindow );
     lua_register( pGlobalLua, "resizeWindow", TLuaInterpreter::resizeUserWindow );
-    lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );
     lua_register( pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer );
     lua_register( pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage );
     lua_register( pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor );
