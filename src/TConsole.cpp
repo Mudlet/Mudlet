@@ -775,14 +775,14 @@ void TConsole::slot_toggleLogging()
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
         if( mpHost->mRawStreamDump ) mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
-        QString message = QString("Logging has started. Log file is ") + mLogFile.fileName();
+        QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
         printSystemMessage( message );
     }
     else
     {
         if( ! mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
         mLogFile.close();
-        QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() ;
+        QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
         printSystemMessage( message );
     }
 }
@@ -805,13 +805,13 @@ void TConsole::slot_toggleReplayRecording()
         mReplayFile.open( QIODevice::WriteOnly );
         mReplayStream.setDevice( &mReplayFile );
         mpHost->mTelnet.recordReplay();
-        QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName();
+        QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName() + "\n";
         printSystemMessage( message );
     }
     else
     {
         mReplayFile.close();
-        QString message = QString("Replay recording has been stopped. File: ") + mLogFile.fileName() ;
+        QString message = QString("Replay recording has been stopped. File: ") + mLogFile.fileName() + "\n";
         printSystemMessage( message );
     }
 }
