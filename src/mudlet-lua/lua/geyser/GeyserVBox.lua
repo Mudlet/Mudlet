@@ -1,3 +1,10 @@
+--------------------------------------
+--                                  --
+-- The Geyser Layout Manager by guy --
+--                                  --
+--        VBox by Beliar            --
+--                                  --
+--------------------------------------
 Geyser.VBox = Geyser.Container:new({
       name = "VBoxClass"
    })
