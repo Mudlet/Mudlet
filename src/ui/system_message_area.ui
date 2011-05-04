@@ -134,8 +134,8 @@
          <brush brushstyle="SolidPattern">
           <color alpha="255">
            <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
+           <green>254</green>
+           <blue>215</blue>
           </color>
          </brush>
         </colorrole>
@@ -271,8 +271,8 @@
          <brush brushstyle="SolidPattern">
           <color alpha="255">
            <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
+           <green>254</green>
+           <blue>215</blue>
           </color>
          </brush>
         </colorrole>
@@ -463,7 +463,6 @@
      </property>
      <property name="font">
       <font>
-       <family>Arial Black</family>
        <pointsize>16</pointsize>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
@@ -472,19 +471,14 @@
       <cursorShape>ArrowCursor</cursorShape>
      </property>
      <property name="autoFillBackground">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
-     <property name="frameShape">
-      <enum>QFrame::Box</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="lineWidth">
-      <number>3</number>
-     </property>
-     <property name="midLineWidth">
-      <number>3</number>
+     <property name="styleSheet">
+      <string notr="true">QFrame#notificationArea {
+  border: 3px solid;
+  border-radius: 6px;
+  background-color: rgb(255, 254, 215);
+}</string>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="spacing">
@@ -509,7 +503,6 @@
         </property>
         <property name="font">
          <font>
-          <family>Sans Serif</family>
           <pointsize>10</pointsize>
          </font>
         </property>
@@ -1880,6 +1873,9 @@
              <width>0</width>
              <height>0</height>
             </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true"/>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <property name="spacing">
