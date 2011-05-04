@@ -1,3 +1,10 @@
+--------------------------------------
+--                                  --
+-- The Geyser Layout Manager by guy --
+--                                  --
+--        HBox by Beliar            --
+--                                  --
+--------------------------------------
 Geyser.HBox = Geyser.Container:new({
       name = "HBoxClass"
    })
