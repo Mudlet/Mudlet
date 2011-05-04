@@ -300,7 +300,7 @@ void TTextEdit::scrollTo( int line )
     {
         if( (line < (mpBuffer->getLastLineNumber()-mScreenHeight) && mIsTailMode ) )
         {
-qDebug()<<"scroll: setzte cursor im slitscreen ans ende...";
+
             mpConsole->console2->mCursorY = mpBuffer->size();
             mpConsole->console2->mIsTailMode = true;
             mIsTailMode = false;

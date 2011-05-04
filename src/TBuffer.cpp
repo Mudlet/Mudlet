@@ -99,6 +99,7 @@ bool TChar::operator==( const TChar & c )
     if( fgG != c.fgG ) return false;
     if( fgB != c.fgB ) return false;
     if( bgR != c.bgR ) return false;
+    if( bgG != c.bgG ) return false;
     if( bgB != c.bgB ) return false;
     if( bold != c.bold ) return false;
     if( italics != c.italics ) return false;
@@ -1307,6 +1308,7 @@ void TBuffer::translateToPlainText( std::string & s )
                         default: qDebug()<<"ERROR: stream decoder code error:"<<tag;
                         };
                     }
+
                     codeRet = 0;
                     goto DECODE;
                 }
@@ -1409,8 +1411,6 @@ void TBuffer::translateToPlainText( std::string & s )
                  mItalics,
                  mUnderline );
         mMudBuffer.push_back( c );
-
-
         msPos++;
     }
 }
