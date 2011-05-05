@@ -1549,6 +1549,33 @@ void TConsole::skipLine()
     }
 }
 
+bool TConsole::saveMap(QString location)
+{
+    QDir dir_map;
+    QString filename_map;
+    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
+
+    if (location == "")
+        filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
+    else
+        filename_map = location;
+
+    if( ! dir_map.exists( directory_map ) )
+    {
+        dir_map.mkpath( directory_map );
+    }
+    QFile file_map( filename_map );
+    if ( file_map.open( QIODevice::WriteOnly ) )
+    {
+        QDataStream out( & file_map );
+        mpHost->mpMap->serialize( out );
+        file_map.close();
+    } else
+        return false;
+
+    return true;
+}
+
 bool TConsole::deleteLine( int y )
 {
     return buffer.deleteLine( y );

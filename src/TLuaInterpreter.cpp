@@ -1316,6 +1316,31 @@ int TLuaInterpreter::deleteLine( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::saveMap( lua_State * L )
+{
+    string location="";
+    if( lua_gettop( L ) == 1 )
+    {
+        if( ! lua_isstring( L, 1 ) )
+        {
+            lua_pushstring( L, "saveMap: where do you want to save to?" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            location = lua_tostring( L, 1 );
+        }
+    }
+
+    QString _location( location.c_str() );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
+    bool error = pHost->mpConsole->saveMap(_location);
+    lua_pushboolean( L, error );
+    return 1;
+}
+
 // enableTimer( sess, timer_name )
 int TLuaInterpreter::enableTimer( lua_State *L )
 {
@@ -7567,6 +7592,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom );
     lua_register( pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar );
     lua_register( pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler );
+    lua_register( pGlobalLua, "saveMap", TLuaInterpreter::saveMap );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
