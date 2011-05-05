@@ -11,3 +11,5 @@ function GeyserReposition()
 		window:reposition()
 	end
 end
+
+registerAnonymousEventHandler("sysWindowResizeEvent", "GeyserReposition")
