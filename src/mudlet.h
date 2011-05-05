@@ -211,6 +211,7 @@ private:
    Host *                        mpCurrentActiveHost;
    QAction *                     actionReplaySpeedDown;
    QAction *                     actionReplaySpeedUp;
+   QAction *                     actionReconnect;
 
    void                          check_for_mappingscript();
 

@@ -204,7 +204,7 @@ mudlet::mudlet()
     actionNotes->setStatusTip(tr("load replay"));
     mpMainToolBar->addAction( actionReplay );
 
-    QAction * actionReconnect = new QAction(QIcon(":/icons/system-restart.png"), tr("Reconnect"), this);
+    actionReconnect = new QAction(QIcon(":/icons/system-restart.png"), tr("Reconnect"), this);
     actionNotes->setStatusTip(tr("reconnect"));
     mpMainToolBar->addAction( actionReconnect );
 
@@ -1368,6 +1368,8 @@ void mudlet::show_options_dialog()
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
     dlgProfilePreferences * pDlg = new dlgProfilePreferences( this, pHost );
+    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_gmcp, SLOT(hide()));
+    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_gmcp, SLOT(hide()));
     if( ! pDlg ) return;
     pDlg->show();
 }

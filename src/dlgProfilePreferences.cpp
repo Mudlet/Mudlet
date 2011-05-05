@@ -39,7 +39,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     // init generated dialog
     setupUi(this);
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
-     connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
+    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
     QPalette palette;
     QString styleSheet;
     QColor color;
@@ -285,7 +285,9 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     pushButton_background_color_2->setStyleSheet( styleSheet );
 
 
-
+    // the GMCP warning is hidden by default and is only enabled when the value is toggled
+    need_reconnect_for_gmcp->hide();
+    connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_gmcp, SLOT(show()));
 
     Host * pHost = mpHost;
     if( pHost )
