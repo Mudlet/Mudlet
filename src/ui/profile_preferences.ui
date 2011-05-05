@@ -38,7 +38,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>6</number>
      </property>
      <widget class="QWidget" name="General">
       <property name="sizePolicy">
@@ -1720,22 +1720,22 @@ or some other computer model that has a small screen.</string>
          <property name="title">
           <string>Special options needed for some older MUD drivers</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_12">
-          <item row="0" column="0">
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
            <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
             <property name="text">
-             <string>Force compression off (needs restart)</string>
+             <string>Force compression off</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item>
            <widget class="QCheckBox" name="mFORCE_GA_OFF">
             <property name="text">
-             <string>Force telnet GA signal interpretation off (needs restart)</string>
+             <string>Force telnet GA signal interpretation off</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item>
            <widget class="QCheckBox" name="checkBox_mUSE_FORCE_LF_AFTER_PROMPT">
             <property name="toolTip">
              <string>This option adds a line line break &lt;LF&gt; or &quot;
@@ -1743,6 +1743,30 @@ or some other computer model that has a small screen.</string>
             </property>
             <property name="text">
              <string>Force new line on empty commands</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="need_reconnect_for_specialoption">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="mouseTracking">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Please reconnect to your game for the change to take effect</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::AutoText</enum>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
             </property>
            </widget>
           </item>

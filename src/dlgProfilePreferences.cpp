@@ -289,6 +289,11 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     need_reconnect_for_gmcp->hide();
     connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_gmcp, SLOT(show()));
 
+    // same with special connection warnings
+    need_reconnect_for_specialoption->hide();
+    connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+    connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+
     Host * pHost = mpHost;
     if( pHost )
     {
