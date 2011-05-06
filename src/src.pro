@@ -18,13 +18,15 @@ win32:LIBS += -Lc:\mudlet_package \
     -llua51 \
     -lpcre \
     -Lc:\mudlet_package\Lua \
+    -lhunspell \
     -lyajl
 unix:INCLUDEPATH += /usr/include/lua5.1
-win32:INCLUDEPATH += c:\Lua\include \
-    c:\zlib-1.2.5\
-    c:\boost_1_45_0 \
-    c:\pcre-8.0-lib\include \
-    c:\yajl\yajl\src
+win32:INCLUDEPATH += c:\mudlet_package\Lua_src\include \
+    c:\mudlet_package\zlib-1.2.5\
+    c:\mudlet_package\boost_1_45_0 \
+    c:\mudlet_package\pcre-8.0-lib\include \
+    c:\mudlet_package\yajl\yajl\src \
+    C:\mudlet_package\hunspell-1.3.1\src\
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: {
     SHARE_DIR = /usr/local/share/mudlet
@@ -97,17 +99,6 @@ SOURCES += TConsole.cpp \
     TMap.cpp \
     lua_yajl.c \
     TBuffer.cpp \
-    hunspell/affentry.cxx \
-    hunspell/affixmgr.cxx \
-    hunspell/csutil.cxx \
-    hunspell/dictmgr.cxx \
-    hunspell/hashmgr.cxx \
-    hunspell/hunspell.cxx \
-    hunspell/suggestmgr.cxx \
-    hunspell/phonet.cxx \
-    hunspell/filemgr.cxx \
-    hunspell/hunzip.cxx \
-    hunspell/replist.cxx \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
     irc/src/ircsession.cpp \
