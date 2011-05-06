@@ -1222,7 +1222,8 @@ void dlgProfilePreferences::slot_save_and_exit()
 {
     Host * pHost = mpHost;
     if( ! pHost ) return;
-    pHost->mSpellDic = dictList->currentItem()->text();
+    if( dictList->currentItem() )
+        pHost->mSpellDic = dictList->currentItem()->text();
     pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
     pHost->mWrapAt = wrap_at_spinBox->value();
     pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
