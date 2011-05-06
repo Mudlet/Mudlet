@@ -23,7 +23,7 @@
 #include "TTextEdit.h"
 #include <QPlainTextEdit>
 #include "TSplitter.h"
-//#include "hunspell/hunspell.hxx"
+#include <hunspell/hunspell.h>
 
 TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent )
 : QPlainTextEdit( parent )
@@ -31,8 +31,11 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 , mpConsole( pConsole )
 , mSelectedText( "" )
 , mSelectionStart( 0 )
-//, mpHunspell( new Hunspell("en_US.aff", "en_US.dic") )
+
 {
+    QString spell_aff = pHost->mSpellDic + ".aff";
+    QString spell_dic = pHost->mSpellDic + ".dic";
+    mpHunspell = Hunspell_create( spell_aff.toLatin1().data(), spell_dic.toLatin1().data() );//"en_US.aff", "en_US.dic");
     mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -377,7 +380,6 @@ void TCommandLine::adjustHeight()
         _height = mpHost->commandLineMinimumHeight;
     if( _height > height() || _height < height() )
     {
-        qDebug()<<"***resizing commandline: _height="<<_height<<" height()="<<height();
         mpConsole->layerCommandLine->setMinimumHeight( _height );
         mpConsole->layerCommandLine->setMaximumHeight( _height );
         int x = mpConsole->width();
@@ -390,34 +392,76 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-//    QTextCursor oldCursor = textCursor();
-//    QTextCharFormat f;
-//    QColor cred = QColor(255,0,0);
-//    f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
-//    f.setUnderlineColor(cred);
-//    QTextCursor c = textCursor();
-//    c.movePosition(QTextCursor::Start);
-//    c.movePosition(QTextCursor::NextWord);
-//    //dont spell check first word as it's always an alias or mud command
-//    while( c.movePosition(QTextCursor::NextWord) )
-//    {
-//        c.select(QTextCursor::WordUnderCursor);
-//        if( ! mpHunspell->spell( c.selectedText().toLatin1().data()) )
-//        {
-//            f.setFontUnderline(true);
-//            c.setCharFormat(f);
-//        }
-//        else
-//        {
-//            f.setFontUnderline(false);
-//            c.setCharFormat(f);
-//        }
-//    }
+    if( ! mpHost->mEnableSpellCheck ) return;
 
-//    f.setFontUnderline(false);
-//    c.setCharFormat(f);
-//    setTextCursor(c);
-//    setTextCursor(oldCursor);
+    QTextCursor oldCursor = textCursor();
+    QTextCharFormat f;
+    QColor cred = QColor(255,0,0);
+    f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+    f.setUnderlineColor(cred);
+    QTextCursor c = textCursor();
+    c.select(QTextCursor::WordUnderCursor);
+
+    if( ! Hunspell_spell( mpHunspell, c.selectedText().toLatin1().data()) )
+    {
+        f.setFontUnderline(true);
+        c.setCharFormat(f);
+    }
+    else
+    {
+        f.setFontUnderline(false);
+        c.setCharFormat(f);
+    }
+    setTextCursor(c);
+    f.setFontUnderline(false);
+    oldCursor.setCharFormat(f);
+    setTextCursor(oldCursor);
+}
+
+void TCommandLine::slot_popupMenu()
+{
+    QAction * pA = (QAction *)sender();
+    if( ! pA )
+    {
+        return;
+    }
+    QString t = pA->text();
+    QTextCursor c = cursorForPosition( mPopupPosition );
+    c.select(QTextCursor::WordUnderCursor);
+
+    c.removeSelectedText();
+    c.insertText( t );
+    c.clearSelection();
+    Hunspell_free_list( mpHunspell, &mpHunspellSuggestionList, mHunspellSuggestionNumber );
+}
+
+void TCommandLine::mousePressEvent( QMouseEvent * event )
+{
+    if( event->button() == Qt::RightButton )
+    {
+        QTextCursor c = cursorForPosition( event->pos() );
+        c.select(QTextCursor::WordUnderCursor);
+
+        if( ! Hunspell_spell( mpHunspell, c.selectedText().toLatin1().data()) )
+        {
+            char ** sl;
+            mHunspellSuggestionNumber = Hunspell_suggest( mpHunspell, &sl, c.selectedText().toLatin1().data() );
+            QMenu * popup = new QMenu( this );
+            for( int i=0; i<mHunspellSuggestionNumber; i++ )
+            {
+                QAction * pA;
+                pA = popup->addAction( sl[i] );
+                connect( pA, SIGNAL(triggered()), this, SLOT(slot_popupMenu()));
+            }
+            mpHunspellSuggestionList = sl;
+            mPopupPosition = event->pos();
+            popup->popup( event->globalPos() );
+        }
+
+        event->accept();
+        return;
+    }
+    QPlainTextEdit::mousePressEvent( event );
 }
 
 void TCommandLine::enterCommand( QKeyEvent * event )

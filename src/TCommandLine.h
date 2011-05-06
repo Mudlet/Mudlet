@@ -31,7 +31,7 @@
 #include "TCommandLine.h"
 #include "Host.h"
 #include <QPlainTextEdit>
-//#include "hunspell/hunspell.hxx"
+#include <hunspell/hunspell.h>
 
 class TConsole;
 class KeyUnit;
@@ -45,7 +45,7 @@ class TCommandLine : public QPlainTextEdit//QLineEdit
 public:
 
                       TCommandLine( Host *, TConsole *, QWidget * );
-    //void              keyPressEvent(QKeyEvent *event);
+//    void              keyPressEvent(QKeyEvent *event);
     void              focusInEvent ( QFocusEvent * );
     void              focusOutEvent ( QFocusEvent * );
 
@@ -59,6 +59,7 @@ private:
     bool              event(QEvent *event);
     void              enterCommand(QKeyEvent *event);
     void              adjustHeight();
+    void              mousePressEvent( QMouseEvent * event );
 
     int               mHistoryBuffer;
     QStringList       mHistoryList;
@@ -79,7 +80,10 @@ private:
     QString           mSelectedText;
     int               mSelectionStart;
     QString           mTabCompletionOld;
-  //  Hunspell *        mpHunspell;
+    Hunhandle *       mpHunspell;
+    QPoint            mPopupPosition;
+    int               mHunspellSuggestionNumber;
+    char **           mpHunspellSuggestionList;
 
 signals:
     void              textChanged ( const QString & );
@@ -87,6 +91,7 @@ signals:
 public slots:
     void              slot_textChanged(const QString &);
     void              slot_sendCommand(const char * pS);
+    void              slot_popupMenu();
 };
 
 #endif
