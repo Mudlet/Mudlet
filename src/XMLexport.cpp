@@ -116,6 +116,8 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mFORCE_SAVE_ON_EXIT", pT->mFORCE_SAVE_ON_EXIT ? "yes" : "no" );
     writeAttribute( "mEnableGMCP", pT->mEnableGMCP ? "yes" : "no" );
     writeAttribute( "mMapStrongHighlight", pT->mMapStrongHighlight ? "yes" : "no" );
+    writeAttribute( "mLogStatus", pT->mLogStatus ? "yes" : "no" );
+    writeAttribute( "mEnableSpellCheck", pT->mEnableSpellCheck ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
@@ -172,7 +174,7 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mLightMagenta2", pT->mLightMagenta_2.name() );
     writeTextElement( "mWhite2", pT->mWhite_2.name() );
     writeTextElement( "mLightWhite2", pT->mLightWhite_2.name() );
-
+    writeTextElement( "mSpellDic", pT->mSpellDic );
     writeEndElement(); // end Host tag
     writeEndElement(); // end HostPackage tag
 

@@ -134,6 +134,9 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mWhite_2             ( QColor(192,192,192, 255) )
 , mFgColor_2           ( QColor(192,192,192, 255) )
 , mBgColor_2           ( QColor(  0,  0,  0, 255) )
+, mSpellDic            ( "en_US" )
+, mLogStatus           ( false )
+, mEnableSpellCheck    ( true )
 {
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
@@ -247,6 +250,9 @@ Host::Host()
 , mWhite_2             ( QColor(192,192,192, 255) )
 , mFgColor_2           ( QColor(192,192,192, 255) )
 , mBgColor_2           ( QColor(  0,  0,  0, 255) )
+, mSpellDic            ( "en_US" )
+, mLogStatus           ( false )
+, mEnableSpellCheck    ( true )
 {
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);

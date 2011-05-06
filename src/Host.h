@@ -269,6 +269,9 @@ public:
     bool               mMapStrongHighlight;
     QStringList        mGMCP_merge_table_keys;
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
+    QString            mSpellDic;
+    bool               mLogStatus;
+    bool               mEnableSpellCheck;
 
 private:
     Host();
