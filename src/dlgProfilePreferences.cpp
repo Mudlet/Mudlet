@@ -27,6 +27,7 @@
 #include "dlgProfilePreferences.h"
 #include <QtCore>
 #include <QDir>
+#include <QRegExp>
 #include "Host.h"
 #include "mudlet.h"
 #include "TTextEdit.h"
@@ -38,6 +39,23 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 {
     // init generated dialog
     setupUi(this);
+
+    dictList->setSelectionMode( QAbstractItemView::SingleSelection );
+    QDir dir( "./" );
+    QStringList entries = dir.entryList( QDir::Files, QDir::Time );
+    QRegExp rex("\\.dic$");
+    entries = entries.filter( rex );
+    for( int i=0; i<entries.size(); i++ )
+    {
+        QString n = entries[i].replace( ".dic", "" );
+        QListWidgetItem * item = new QListWidgetItem( entries[i] );
+        dictList->addItem( item );
+        if( entries[i] == mpHost->mSpellDic )
+        {
+            item->setSelected( true );
+        }
+    }
+
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
     connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
     QPalette palette;
@@ -1204,6 +1222,8 @@ void dlgProfilePreferences::slot_save_and_exit()
 {
     Host * pHost = mpHost;
     if( ! pHost ) return;
+    pHost->mSpellDic = dictList->currentItem()->text();
+    pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
     pHost->mWrapAt = wrap_at_spinBox->value();
     pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
     pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
