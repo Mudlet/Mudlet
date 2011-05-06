@@ -99,6 +99,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mWrapAt( 100 )
 , networkLatency( new QLineEdit )
 , mLastBufferLogLine( 0 )
+, mUserAgreedToCloseConsole( false )
 {
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -387,7 +388,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     replayButton->setIcon( icon4 );
     connect( replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
 
-    QToolButton * logButton = new QToolButton;
+    logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
     logButton->setMaximumSize(QSize(30, 30));
     logButton->setCheckable( true );
@@ -652,7 +653,6 @@ void TConsole::closeEvent( QCloseEvent *event )
                 file_xml.close();
 
             }
-qDebug()<<"rooms.size()="<<mpHost->mpMap->rooms.size();
             if( mpHost->mpMap->rooms.size() > 0 )
             {
                 QDir dir_map;
@@ -675,9 +675,15 @@ qDebug()<<"rooms.size()="<<mpHost->mpMap->rooms.size();
         }
     }
 
-    if( profile_name != "default_host" )
+    if( profile_name != "default_host" && ! mUserAgreedToCloseConsole )
     {
-        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No );
+        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
+        if( choice == QMessageBox::Cancel )
+        {
+            event->setAccepted(false);
+            event->ignore();
+            return;
+        }
         if( choice == QMessageBox::Yes )
         {
             QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
@@ -754,6 +760,8 @@ void TConsole::slot_toggleLogging()
 {
     if( mIsDebugConsole ) return;
     mLogToLogFile = ! mLogToLogFile;
+    mpHost->mLogStatus = mLogToLogFile;
+
     if( mLogToLogFile )
     {
         mLastBufferLogLine = buffer.size();

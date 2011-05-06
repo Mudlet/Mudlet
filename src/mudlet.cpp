@@ -365,6 +365,11 @@ void mudlet::slot_close_profile_requested( int tab )
     QString name = mpTabBar->tabText( tab );
     Host * pH = HostManager::self()->getHost( name );
     if( ! pH ) return;
+
+    if( ! pH->mpConsole->close() )
+        return;
+    else
+        pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
     mConsoleMap[pH]->close();
@@ -492,6 +497,8 @@ void mudlet::addConsoleForNewHost( Host * pH )
     if( mpCurrentActiveHost )
         mpCurrentActiveHost->mpConsole->hide();
     mpCurrentActiveHost = pH;
+    if( pH->mLogStatus ) pConsole->logButton->click();
+
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
 
@@ -1194,6 +1201,17 @@ void mudlet::addSubWindow( TConsole* pConsole )
 
 void mudlet::closeEvent(QCloseEvent *event)
 {
+    foreach( TConsole * pC, mConsoleMap )
+    {
+        if( ! pC->close() )
+        {
+            event->ignore();
+            return;
+        }
+        else
+            pC->mUserAgreedToCloseConsole = true;
+    }
+
     goingDown();
     if( mpDebugConsole )
     {
