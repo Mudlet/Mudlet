@@ -6933,9 +6933,10 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
                 lua_remove(L, -2);
             }
 
-            lua_getfield(L, -1, tokenList[i].toLatin1().data());
-            lua_remove(L, -2);
-            lua_pcall(L, 1, 0, 0);
+            //lua_getfield(L, -1, tokenList[i].toLatin1().data());
+            lua_pushstring( L, tokenList[i].toLatin1().data());
+            //lua_remove(L, -2);
+            lua_pcall(L, 2, 0, 0);
         }
     }
     lua_settop(L, 0);
