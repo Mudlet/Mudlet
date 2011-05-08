@@ -362,3 +362,12 @@ function table:update(t1, t2)
 	return t1
 end
 
+---Returns the index of the value in a table
+function table.index_of(table, element)
+  for index, value in ipairs(table) do
+    if value == element then
+      return index
+    end
+  end
+  return nil
+end
