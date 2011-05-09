@@ -272,6 +272,7 @@ public:
     QString            mSpellDic;
     bool               mLogStatus;
     bool               mEnableSpellCheck;
+    QString            mIRCNick;
 
 private:
     Host();

@@ -138,6 +138,8 @@ public:
    QMap<QTimer *, TTimer *>      mTimerMap;
    dlgIRC *                      mpIRC;
    QString                       version;
+   Host *                        mpCurrentActiveHost;
+
 
 
 public slots:
@@ -208,7 +210,7 @@ private:
 
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
-   Host *                        mpCurrentActiveHost;
+
    QAction *                     actionReplaySpeedDown;
    QAction *                     actionReplaySpeedUp;
    QAction *                     actionReconnect;

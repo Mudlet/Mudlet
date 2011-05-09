@@ -33,8 +33,15 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 , mSelectionStart( 0 )
 
 {
-    QString spell_aff = pHost->mSpellDic + ".aff";
-    QString spell_dic = pHost->mSpellDic + ".dic";
+    QString path;
+#ifdef Q_OS_WIN32
+    path = "./";
+#else
+    path = "/usr/share/hunspell/";
+#endif
+
+    QString spell_aff = path + pHost->mSpellDic + ".aff";
+    QString spell_dic = path + pHost->mSpellDic + ".dic";
     mpHunspell = Hunspell_create( spell_aff.toLatin1().data(), spell_dic.toLatin1().data() );//"en_US.aff", "en_US.dic");
     mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);

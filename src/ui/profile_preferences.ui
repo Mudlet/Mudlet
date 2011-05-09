@@ -173,44 +173,6 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QGroupBox" name="groupBox_3">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="title">
-          <string>MXP</string>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QLabel" name="label_36">
-            <property name="text">
-             <string>MXP Mode</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="mMXPMode">
-            <item>
-             <property name="text">
-              <string>MXP off</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>MXP auto detect (default)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>MXP always on</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item row="4" column="0">
         <widget class="QGroupBox" name="groupBox_13">
          <property name="title">
@@ -254,7 +216,7 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="8" column="0">
         <spacer name="verticalSpacer_8">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -266,6 +228,67 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item row="7" column="0">
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="title">
+          <string>MXP</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_36">
+            <property name="text">
+             <string>MXP Mode</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="mMXPMode">
+            <item>
+             <property name="text">
+              <string>MXP off</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>MXP auto detect (default)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>MXP always on</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QGroupBox" name="groupBox_16">
+         <property name="title">
+          <string>IRC</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QLabel" name="label_58">
+            <property name="text">
+             <string>Nick name in mudlet IRC channel:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="ircNick"/>
+          </item>
+         </layout>
+         <zorder>label_58</zorder>
+         <zorder>ircNick</zorder>
+         <zorder>ircNick</zorder>
+         <zorder>label_58</zorder>
+        </widget>
        </item>
       </layout>
      </widget>

@@ -30,6 +30,7 @@ dlgIRC::dlgIRC()
     setupUi(this);
     session = new Irc::Session(this);
     irc->setOpenExternalLinks ( true );
+    setUnifiedTitleAndToolBarOnMac( true );
     connect( irc, SIGNAL(anchorClicked(QUrl)), this, SLOT(anchorClicked(QUrl)));
     connect( session, SIGNAL(msgMessageReceived(const QString &, const QString &, const QString &)), this, SLOT(irc_gotMsg(QString, QString, QString)));
     connect( session, SIGNAL(msgNoticeReceived(const QString &, const QString &, const QString &)), this, SLOT(irc_gotMsg(QString, QString, QString)));
@@ -40,7 +41,7 @@ dlgIRC::dlgIRC()
     connect( session, SIGNAL(msgParted(const QString &, const QString &, const QString &)), this, SLOT(slot_parted(QString, QString, QString)));
 
     QStringList chans;
-    chans << "#mudlet-help";
+    chans << "#mudlet";
     session->setAutoJoinChannels( chans );
     QString nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
     session->setNick(nick);
@@ -53,8 +54,8 @@ void dlgIRC::sendMsg()
 {
     QString txt = lineEdit->text();
     lineEdit->clear();
-    session->cmdMessage("#mudlet-help", txt);
-    session->cmdNames( "#mudlet-help" );
+    session->cmdMessage("#mudlet", txt);
+    session->cmdNames( "#mudlet" );
 }
 
 #include <QTime>
@@ -186,7 +187,7 @@ void dlgIRC::slot_parted(QString nick, QString chan, QString msg )
     cur.insertHtml(t);
     irc->verticalScrollBar()->triggerAction(QScrollBar::SliderToMaximum);
     nickList->clear();
-    session->cmdNames( "#mudlet-help" );
+    session->cmdNames( "#mudlet" );
 }
 
 

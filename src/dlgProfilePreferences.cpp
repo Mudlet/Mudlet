@@ -40,8 +40,14 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     // init generated dialog
     setupUi(this);
 
+    ircNick->setText( pH->mIRCNick );
+
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
+#ifdef Q_OS_WIN32
     QDir dir( "./" );
+#else
+    QDir dir( "/usr/share/hunspell/" );
+#endif
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     QRegExp rex("\\.dic$");
     entries = entries.filter( rex );

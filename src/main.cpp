@@ -44,7 +44,7 @@ QTextStream debugStream(&debugStreamFile);
 
 void debugOutput(QtMsgType type, const char *msg)
 {
-    //debugStream << msg << endl;
+    debugStream << msg << endl;
 
 //    switch (type)
 //    {
