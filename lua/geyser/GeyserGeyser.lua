@@ -30,6 +30,22 @@ Geyser.__index = Geyser
 -- Create the window list for updates
 Geyser.windowList = Geyser.windowList or {}
 Geyser.windows = Geyser.windows or {}
+Geyser.defer_updates = false
+
+function Geyser:begin_update()
+   self.defer_updates = true
+end
+
+function Geyser:end_update()
+   self.defer_updates = false
+   self:reposition()
+end
+
+function Geyser:reposition()
+   if not self.defer_updates then
+      GeyserReposition()
+   end
+end
 
 --- Add a window to the list that this container manages.
 -- @param window The window to add this container
@@ -46,7 +62,9 @@ function Geyser:add (window, cons)
    self.windowList[window.name] = window
    table.insert(self.windows, window.name)
    Geyser.set_constraints(window, cons, self)
-   window:reposition()
+   if not self.defer_updates then
+      window:reposition()
+   end
    window:show()
 end
 
