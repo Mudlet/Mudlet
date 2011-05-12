@@ -15,6 +15,22 @@ json_to_value = yajl.to_value
 
 gmcp = {}
 
+function __gmcp_merge_gmcp_sub_tables( a, key )
+	local _m = a.__needMerge;
+	for k,v in pairs(_m) do
+		a[key][k] = v;
+	end
+	a.__needMerge = nil
+end
+
+function onConnect()
+end
+
+function handleWindowResizeevent()
+end
+
+echo("\nLOADING LuaGlobal\n")
+
 local packages = {
 	"StringUtils.lua",
 	"TableUtils.lua",
@@ -46,16 +62,3 @@ for _, package in ipairs(packages) do
 	local result = pcall(dofile, "./mudlet-lua/lua/" .. package) or echo("Error attempting to load file: " .. package .. "\n")
 end
 
-function __gmcp_merge_gmcp_sub_tables( a )
-	local _m = a.__needMerge;
-	for k,v in pairs(_m) do
-		a[k] = v;
-	end
-	a.__needMerge = nil
-end
-
-function onConnect()
-end
-
-function handleWindowResizeevent()
-end
