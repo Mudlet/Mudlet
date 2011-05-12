@@ -50,6 +50,7 @@ const char TN_DONT = 254;
 const char TN_IAC = 255;
 
 const char GMCP = 201; /* GMCP */
+const char MXP = 91; //MXP
 
 const char OPT_ECHO = 1;
 const char OPT_SUPPRESS_GA = 3;

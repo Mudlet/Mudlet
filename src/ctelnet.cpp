@@ -33,6 +33,7 @@
 #undef DEBUG
 #endif
 
+
 //#define DEBUG
 
 extern QStringList gSysErrors;
@@ -470,6 +471,13 @@ void cTelnet::processTelnetCommand( const string & command )
               break;
           }
 
+          if( option == MXP )
+          {
+              sendTelnetOption( TN_DO, 91 );
+              mpHost->mpConsole->print("\n<MXP enabled>\n");
+              break;
+          }
+
           //option = command[2];
           if( option == static_cast<char>(102) ) // Aardwulf channel 102 support
           {
@@ -600,6 +608,12 @@ void cTelnet::processTelnetCommand( const string & command )
             cout << "TELNET IAC DO GMCP" << endl;
             enableATCP = true;
             sendTelnetOption( TN_WILL, 201 );
+            break;
+          }
+          if( option == MXP ) // MXP support
+          {
+            sendTelnetOption( TN_WILL, 91 );
+            mpHost->mpConsole->print("\n<MXP support enabled>\n");
             break;
           }
           if( option == static_cast<char>(102) ) // channel 102 support

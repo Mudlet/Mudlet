@@ -26,7 +26,7 @@ end
 function onConnect()
 end
 
-function handleWindowResizeevent()
+function handleWindowResizeEvent()
 end
 
 echo("\nLOADING LuaGlobal\n")
