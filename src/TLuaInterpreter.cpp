@@ -900,7 +900,10 @@ int TLuaInterpreter::setWindowWrap( lua_State * L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString name = luaSendText.c_str();
-    mudlet::self()->setWindowWrap( pHost, name, luaFrom );
+    if( name == "main" )
+        pHost->mpConsole->setWrapAt( luaFrom );
+    else
+        mudlet::self()->setWindowWrap( pHost, name, luaFrom );
     return 0;
 }
 

@@ -69,7 +69,7 @@ cTelnet::cTelnet( Host * pH )
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
-    termType = "Mudlet 2.0";
+    termType = "Mudlet 2.0.0";
     iac = iac2 = insb = false;
 
     command = "";
@@ -1343,9 +1343,9 @@ void cTelnet::handle_socket_signal_readyRead()
         datalen = decompressBuffer( pBuffer, amount );
     }
     buffer[datalen] = '\0';
-    #ifdef DEBUG
+    //#ifdef DEBUG
         qDebug()<<"got<"<<pBuffer<<">";
-    #endif
+    //#endif
     if( mpHost->mpConsole->mRecordReplay )
     {
         mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;
