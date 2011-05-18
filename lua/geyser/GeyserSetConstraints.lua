@@ -15,9 +15,7 @@
 -- widget is being created.
 function Geyser.set_constraints (window, cons, container)
    oldlocale = os.setlocale(nil, "numeric")
-   if not os.setlocale("en_GB", "numeric") then
-      os.setlocale("english_uk", "numeric") --Windows again
-   end
+   os.setlocale("C", "numeric")
    -- If container is nil then by default it is the dimensions of the main window
    container = container or Geyser
    
@@ -133,6 +131,6 @@ function Geyser.set_constraints (window, cons, container)
       -- constraints requested.
       --window[v] = window[getter]()
    end -- END for that generates POSITION FUNCTIONS
-
+   os.setlocale(oldlocale, "numeric")
    window:reposition()
 end
