@@ -171,6 +171,7 @@ TBuffer::TBuffer( Host * pH )
 , mIgnoreTag         ( false )
 , mSkip              ( "" )
 , mParsingVar        ( false )
+, mMXP_SEND_NO_REF_MODE ( false )
 {
     clear();
     newLines = 0;
@@ -1375,28 +1376,44 @@ void TBuffer::translateToPlainText( std::string & s )
 
         if( mMXP )
         {
+            // ignore < and > inside of parameter strings
+            if( openT == 1 )
+            {
+                if( ch == '\'' || ch == '\"' )
+                {
+                    if( ! mParsingVar )
+                    {
+                        mOpenMainQuote = ch;
+                        mParsingVar = true;
+                    }
+                    else
+                    {
+                        if( ch == mOpenMainQuote )
+                        {
+                            mParsingVar = false;
+                        }
+                    }
+                }
+            }
+
             if( ch == '<' )
             {
-                openT++;
-                if( currentToken.size() > 0 )
+                if( ! mParsingVar )
                 {
-                    currentToken += ch;
+                    openT++;
+                    if( currentToken.size() > 0 )
+                    {
+                        currentToken += ch;
+                    }
+                    mAssemblingToken = true;
+                    msPos++;
+                    continue;
                 }
-                mAssemblingToken = true;
-                msPos++;
-                continue;
             }
-            // workaround for Avalon.de where "->" appears inside a token as part of a var definition
-//            if( mAssemblingToken && ch == '\'' )
-//            {
-//                mParsingVar = ! mParsingVar;
-//            }
+
             if( ch == '>' )
             {
-                // workaround for Avalon.de where "->" appears incorrectly inside a token as part of a var definition
-                //if( ! mParsingVar || (closeT+2 <= openT) ) closeT++;
-                // correctly it should be:
-                closeT++;
+                if( ! mParsingVar ) closeT++;
 
                 // sanity check
                 if( closeT > openT )
@@ -1440,40 +1457,63 @@ void TBuffer::translateToPlainText( std::string & s )
                         QString _tp = currentToken.substr( currentToken.find_first_of(' ') ).c_str();
                         _tn = _tp.section( ' ', 1, 1 ).toUpper();
                         _tp = _tp.section( ' ', 2 ).toUpper();
-                        if( ( _tp.indexOf( "SEND" ) > -1 ) )
+                        qDebug()<<"_tn="<<_tn<<" tp="<<_tp;
+                        if( ( _tp.indexOf( "SEND" ) != -1 ) )
                         {
                             QString _t2 = _tp;
                             int pRef = _t2.indexOf( "HREF=" );
+                            bool _got_ref = false;
                             // wenn kein href angegeben ist, dann gilt das 1. parameter als href
-                            if( pRef < 0 )
+                            if( pRef == -1 )
                             {
                                 pRef = _t2.indexOf("SEND ");
                             }
+                            else
+                                _got_ref = true;
+
+                            if( pRef == -1 ) return;
                             pRef += 5;
 
-                            int pRef2 = _t2.indexOf( ' ', pRef );
+                            QChar _quote_type = _t2[pRef];
+                            int pRef2 = _t2.indexOf( _quote_type, pRef+1 ); //' ', pRef );
                             QString _ref = _t2.mid( pRef, pRef2-pRef );
-                            if( _ref.startsWith('\'') )
+                            qDebug()<<"quote_type="<<_quote_type<<" _ref param extracted="<<_ref;
+                            // gegencheck, ob es keine andere variable ist
+                            if( _ref.startsWith( '&' ) )
                             {
-
-                                pRef2 = _t2.indexOf( '\'', _t2.indexOf( '\'', pRef )+1 );
-                                _ref = _t2.mid( pRef, pRef2-pRef );
+                                _ref = _t2.mid( pRef, _t2.indexOf( ' ', pRef+1 ));
+                            }
+                            else if( _ref.startsWith('\'') )
+                            {
+                                int pRef3 = _t2.indexOf( '\'', _t2.indexOf( '\'', pRef )+1 );
+                                int pRef4 = _t2.indexOf( '=' );
+                                if( ( ( pRef4 == -1 ) || ( pRef4 != 0 && pRef4 > pRef3 ) ) || ( _got_ref ) )
+                                {
+                                    _ref = _t2.mid( pRef, pRef2-pRef );
+                                }
                             }
                             else if( _ref.startsWith('\"') )
                             {
-                                pRef2 = _t2.indexOf( '\"', _t2.indexOf( '\"', pRef )+1 );
-                                _ref = _t2.mid( pRef, pRef2-pRef );
+                                int pRef3 = _t2.indexOf( '\"', _t2.indexOf( '\"', pRef )+1 );
+                                int pRef4 = _t2.indexOf( '=' );
+                                if( ( ( pRef4 == -1 ) || ( pRef4 != 0 && pRef4 > pRef3 ) ) || ( _got_ref ) )
+                                {
+                                    _ref = _t2.mid( pRef, pRef2-pRef );
+                                }
                             }
+                            else
+                                _ref = "";
                             _ref = _ref.replace( ';' , "" );
                             _ref = _ref.replace( "&#34", "" );
                             _ref = _ref.replace( "&quot", "" );
                             _ref = _ref.replace( "&amp", "&" );
                             _ref = _ref.replace('\'', "" );//NEU
                             _ref = _ref.replace( '\"', "" );//NEU
+                            qDebug()<<"_ref="<<_ref;
 
                             pRef = _t2.indexOf( "HINT=" );
                             QString _hint;
-                            if( pRef > 0 )
+                            if( pRef != -1 )
                             {
                                 pRef += 5;
                                 int pRef2 = _t2.indexOf( ' ', pRef );
@@ -1491,7 +1531,11 @@ void TBuffer::translateToPlainText( std::string & s )
                                 _hint = _hint.replace( ';' , "" );
                                 _hint = _hint.replace( "&#34", "" );
                                 _hint = _hint.replace( "&quot", "" );
+                                _hint = _ref.replace( "&amp", "&" );
+                                _hint = _ref.replace('\'', "" );//NEU
+                                _hint = _ref.replace( '\"', "" );//NEU
                             }
+                            qDebug()<<"_hint="<<_hint;
                             TMxpElement * _element = new TMxpElement;
                             _element->name = _tn;
                             _element->href = _ref;
@@ -1504,11 +1548,27 @@ void TBuffer::translateToPlainText( std::string & s )
                         msPos++;
                         continue;
                     }
+
+
+
                     if( mMXP_LINK_MODE )
                     {
                         if( _tn.indexOf('/') != -1 )
                         {
                             mMXP_LINK_MODE = false;
+                        }
+                    }
+
+                    if( mMXP_SEND_NO_REF_MODE )
+                    {
+                        if( _tn.indexOf('/') != -1 )
+                        {
+                            mMXP_SEND_NO_REF_MODE = false;
+                            QString _t_ref = "send([[" + QString( mAssembleRef.c_str() ) + "]])";
+                            QStringList _t_ref_list;
+                            _t_ref_list << _t_ref;
+                            mLinkStore[mLinkID] = _t_ref_list;
+                            mAssembleRef.clear();
                         }
                     }
                     else if( mMXP_Elements.contains( _tn ) )
@@ -1575,7 +1635,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             {
                                 QString _var = _rl1[i];
                                 _var.prepend('&');
-                                if( _userTag && _t2.contains( "HREF" ) )
+                                if( _userTag )
                                 {
                                     _t2 = _t2.replace( _var, _rl2[i] );
                                     _t3 = _t3.replace( _var, _rl2[i] );
@@ -1591,6 +1651,7 @@ void TBuffer::translateToPlainText( std::string & s )
                         }
 
                         mMXP_LINK_MODE = true;
+                        if( _t2.size() < 1 ) mMXP_SEND_NO_REF_MODE = true;
                         mLinkID++;
                         if( mLinkID > 1000 )
                         {
@@ -1604,10 +1665,15 @@ void TBuffer::translateToPlainText( std::string & s )
                             _tl[i] = "send([[" + _tl[i] + "]])";
                             qDebug()<<"->"<<_tl[i];
                         }
+                        if( mMXP_SEND_NO_REF_MODE )
+                        {
+                            _t1.clear();
+                            _t2.clear();
+                        }
                         mLinkStore[mLinkID] = _tl;
                         QStringList _tl2 = _t3.split('|');
                         _tl2.replaceInStrings("|", "");
-                        _tl2.pop_front();
+                        //_tl2.pop_front();
                         mHintStore[mLinkID] = _tl2;
                     }
                     openT = 0;
@@ -1623,6 +1689,11 @@ void TBuffer::translateToPlainText( std::string & s )
                 currentToken += ch;
                 msPos++;
                 continue;
+            }
+
+            if( mMXP_SEND_NO_REF_MODE )
+            {
+                mAssembleRef += ch;
             }
 
             if( ch == '&' || mIgnoreTag )
@@ -1695,6 +1766,9 @@ void TBuffer::translateToPlainText( std::string & s )
                 }
             }
         }
+
+
+
 
         COMMIT_LINE: if( ( ch == '\n' ) || ( ch == '\xff') || ( ch == '\r' ) )
         {
