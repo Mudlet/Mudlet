@@ -1442,7 +1442,6 @@ void TBuffer::translateToPlainText( std::string & s )
                     if( _tn == "VERSION" )
                     {
                         mpHost->sendRaw( QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n") );
-                        qDebug()<< "MXP: responding to <version> sending version 1.0";
                     }
                     if( _tn == "BR" )
                     {
@@ -1457,7 +1456,6 @@ void TBuffer::translateToPlainText( std::string & s )
                         QString _tp = currentToken.substr( currentToken.find_first_of(' ') ).c_str();
                         _tn = _tp.section( ' ', 1, 1 ).toUpper();
                         _tp = _tp.section( ' ', 2 ).toUpper();
-                        qDebug()<<"_tn="<<_tn<<" tp="<<_tp;
                         if( ( _tp.indexOf( "SEND" ) != -1 ) )
                         {
                             QString _t2 = _tp;
@@ -1475,15 +1473,16 @@ void TBuffer::translateToPlainText( std::string & s )
                             pRef += 5;
 
                             QChar _quote_type = _t2[pRef];
-                            int pRef2 = _t2.indexOf( _quote_type, pRef+1 ); //' ', pRef );
+                            int pRef2;
+                            if( _quote_type != '&' )
+                                pRef2 = _t2.indexOf( _quote_type, pRef+1 ); //' ', pRef );
+                            else
+                                pRef2 = _t2.indexOf( ' ', pRef+1 );
                             QString _ref = _t2.mid( pRef, pRef2-pRef );
-                            qDebug()<<"quote_type="<<_quote_type<<" _ref param extracted="<<_ref;
+
                             // gegencheck, ob es keine andere variable ist
-                            if( _ref.startsWith( '&' ) )
-                            {
-                                _ref = _t2.mid( pRef, _t2.indexOf( ' ', pRef+1 ));
-                            }
-                            else if( _ref.startsWith('\'') )
+
+                            if( _ref.startsWith('\'') )
                             {
                                 int pRef3 = _t2.indexOf( '\'', _t2.indexOf( '\'', pRef )+1 );
                                 int pRef4 = _t2.indexOf( '=' );
@@ -1501,15 +1500,18 @@ void TBuffer::translateToPlainText( std::string & s )
                                     _ref = _t2.mid( pRef, pRef2-pRef );
                                 }
                             }
+                            else if( _ref.startsWith( '&' ) )
+                            {
+                                _ref = _t2.mid( pRef, _t2.indexOf( ' ', pRef+1 )-pRef );
+                            }
                             else
                                 _ref = "";
                             _ref = _ref.replace( ';' , "" );
-                            _ref = _ref.replace( "&#34", "" );
                             _ref = _ref.replace( "&quot", "" );
                             _ref = _ref.replace( "&amp", "&" );
                             _ref = _ref.replace('\'', "" );//NEU
                             _ref = _ref.replace( '\"', "" );//NEU
-                            qDebug()<<"_ref="<<_ref;
+                            _ref = _ref.replace( "&#34", "\"" );
 
                             pRef = _t2.indexOf( "HINT=" );
                             QString _hint;
@@ -1529,13 +1531,12 @@ void TBuffer::translateToPlainText( std::string & s )
                                     _hint = _t2.mid( pRef, pRef2-pRef );
                                 }
                                 _hint = _hint.replace( ';' , "" );
-                                _hint = _hint.replace( "&#34", "" );
                                 _hint = _hint.replace( "&quot", "" );
-                                _hint = _ref.replace( "&amp", "&" );
-                                _hint = _ref.replace('\'', "" );//NEU
-                                _hint = _ref.replace( '\"', "" );//NEU
+                                _hint = _hint.replace( "&amp", "&" );
+                                _hint = _hint.replace('\'', "" );//NEU
+                                _hint = _hint.replace( '\"', "" );//NEU
+                                _hint = _hint.replace( "&#34", "\"" );
                             }
-                            qDebug()<<"_hint="<<_hint;
                             TMxpElement * _element = new TMxpElement;
                             _element->name = _tn;
                             _element->href = _ref;
@@ -1597,7 +1598,7 @@ void TBuffer::translateToPlainText( std::string & s )
                         if( ( _ki3 == -1 ) // no = whatsoever
                          || ( ( _ki3 != -1 ) && ( ( _ki2 < _ki3 ) || ( _ki1 < _ki3 ) ) ) ) // first parameter is given without =
                         {
-                            if( _ki1 < _ki2 && _ki1 != -1 )
+                            if( ( _ki1 < _ki2  && _ki1 != -1 ) || ( _ki2 == -1 && _ki1 != -1 ) )
                             {
                                 if( _ki1 < _ki3 || _ki3 == -1 )
                                 {
@@ -1606,7 +1607,7 @@ void TBuffer::translateToPlainText( std::string & s )
                                     _rl2 << _tp.mid(_ki1+1, _cki1-1-(_ki1+1));
                                 }
                             }
-                            else if( _ki2 < _ki1 && _ki2 != -1 )
+                            else if( ( _ki2 < _ki1 && _ki2 != -1 ) || ( _ki1 == -1 && _ki2 != -1 ) )
                             {
                                 if( _ki2 < _ki3 || _ki3 == -1 )
                                 {
@@ -1635,7 +1636,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             {
                                 QString _var = _rl1[i];
                                 _var.prepend('&');
-                                if( _userTag )
+                                if( _userTag || _t2.indexOf( _var ) != -1 )
                                 {
                                     _t2 = _t2.replace( _var, _rl2[i] );
                                     _t3 = _t3.replace( _var, _rl2[i] );
@@ -1649,7 +1650,6 @@ void TBuffer::translateToPlainText( std::string & s )
                                 }
                             }
                         }
-
                         mMXP_LINK_MODE = true;
                         if( _t2.size() < 1 ) mMXP_SEND_NO_REF_MODE = true;
                         mLinkID++;
@@ -1673,7 +1673,7 @@ void TBuffer::translateToPlainText( std::string & s )
                         mLinkStore[mLinkID] = _tl;
                         QStringList _tl2 = _t3.split('|');
                         _tl2.replaceInStrings("|", "");
-                        //_tl2.pop_front();
+                        _tl2.pop_front();
                         mHintStore[mLinkID] = _tl2;
                     }
                     openT = 0;
