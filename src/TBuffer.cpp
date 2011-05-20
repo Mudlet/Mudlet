@@ -1565,10 +1565,21 @@ void TBuffer::translateToPlainText( std::string & s )
                         if( _tn.indexOf('/') != -1 )
                         {
                             mMXP_SEND_NO_REF_MODE = false;
-                            QString _t_ref = "send([[" + QString( mAssembleRef.c_str() ) + "]])";
-                            QStringList _t_ref_list;
-                            _t_ref_list << _t_ref;
-                            mLinkStore[mLinkID] = _t_ref_list;
+                            if( mLinkStore[mLinkID].front() == "send([[]])" )
+                            {
+                                QString _t_ref = "send([[";
+                                _t_ref.append( mAssembleRef.c_str() );
+                                _t_ref.append( "]])" );
+                                QStringList _t_ref_list;
+                                _t_ref_list << _t_ref;
+                                mLinkStore[mLinkID] = _t_ref_list;
+                                qDebug()<<"MXP_SEND_NO_REF_MODE: tag closed cmd="<<_t_ref;
+                            }
+                            else
+                            {
+                                mLinkStore[mLinkID].replaceInStrings( "&text;", mAssembleRef.c_str() );
+                                qDebug()<<"MXP_SEND_NO_REF_MODE (replace &text): tag closed cmd="<<mLinkStore[mLinkID];
+                            }
                             mAssembleRef.clear();
                         }
                     }
@@ -1651,7 +1662,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             }
                         }
                         mMXP_LINK_MODE = true;
-                        if( _t2.size() < 1 ) mMXP_SEND_NO_REF_MODE = true;
+                        if( _t2.size() < 1 || _t2.contains( "&text;" ) ) mMXP_SEND_NO_REF_MODE = true;
                         mLinkID++;
                         if( mLinkID > 1000 )
                         {
@@ -1665,15 +1676,18 @@ void TBuffer::translateToPlainText( std::string & s )
                             _tl[i] = "send([[" + _tl[i] + "]])";
                             qDebug()<<"->"<<_tl[i];
                         }
-                        if( mMXP_SEND_NO_REF_MODE )
-                        {
-                            _t1.clear();
-                            _t2.clear();
-                        }
+//                        if( mMXP_SEND_NO_REF_MODE )
+//                        {
+//                            _t1.clear();
+//                            _t2.clear();
+//                        }
                         mLinkStore[mLinkID] = _tl;
                         QStringList _tl2 = _t3.split('|');
                         _tl2.replaceInStrings("|", "");
-                        _tl2.pop_front();
+                        if( _tl2.size() >= _tl.size()+1 )
+                        {
+                            _tl2.pop_front();
+                        }
                         mHintStore[mLinkID] = _tl2;
                     }
                     openT = 0;
@@ -1691,10 +1705,10 @@ void TBuffer::translateToPlainText( std::string & s )
                 continue;
             }
 
-            if( mMXP_SEND_NO_REF_MODE )
-            {
-                mAssembleRef += ch;
-            }
+//            if( mMXP_SEND_NO_REF_MODE )
+//            {
+//                mAssembleRef += ch;
+//            }
 
             if( ch == '&' || mIgnoreTag )
             {
@@ -1768,7 +1782,10 @@ void TBuffer::translateToPlainText( std::string & s )
         }
 
 
-
+        if( mMXP_SEND_NO_REF_MODE )
+        {
+            mAssembleRef += ch;
+        }
 
         COMMIT_LINE: if( ( ch == '\n' ) || ( ch == '\xff') || ( ch == '\r' ) )
         {
@@ -1860,9 +1877,9 @@ void TBuffer::translateToPlainText( std::string & s )
         if( mMXP_LINK_MODE )
         {
             c.link = mLinkID;
-            c.fgR = 0;
-            c.fgG = 0;
-            c.fgB = 255;
+//            c.fgR = 0;
+//            c.fgG = 0;
+//            c.fgB = 255;
             c.underline = true;
         }
 
