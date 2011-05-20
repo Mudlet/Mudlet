@@ -29,7 +29,7 @@
 #include <deque>
 #include <QTime>
 #include "Host.h"
-
+#include <QXmlStreamReader>
 
 #ifndef TBUFFER_H
 #define TBUFFER_H
@@ -64,6 +64,13 @@ class Host;
 
 const QChar cLF = QChar('\n');
 const QChar cSPACE = QChar(' ');
+
+struct TMxpElement
+{
+    QString name;
+    QString href;
+    QString hint;
+};
 
 class TBuffer
 {
@@ -149,6 +156,21 @@ public:
     int               msPos;
 
     int               mCursorY;
+    bool              mMXP;
+
+    bool              mAssemblingToken;
+    std::string       currentToken;
+    int               openT;
+    int               closeT;
+    QMap<QString,TMxpElement *> mMXP_Elements;
+    TMxpElement       mCurrentElement;
+    bool              mMXP_LINK_MODE;
+    bool              mIgnoreTag;
+    std::string       mSkip;
+    bool              mParsingVar;
+    char              mOpenMainQuote;
+    bool              mMXP_SEND_NO_REF_MODE;
+    std::string       mAssembleRef;
 
 private:
     inline void       shrinkBuffer();

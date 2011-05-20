@@ -33,6 +33,7 @@
 #undef DEBUG
 #endif
 
+
 //#define DEBUG
 
 extern QStringList gSysErrors;
@@ -68,7 +69,7 @@ cTelnet::cTelnet( Host * pH )
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
-    termType = "Mudlet 2.0";
+    termType = "Mudlet 2.0.0";
     iac = iac2 = insb = false;
 
     command = "";
@@ -470,6 +471,13 @@ void cTelnet::processTelnetCommand( const string & command )
               break;
           }
 
+          if( option == MXP )
+          {
+              sendTelnetOption( TN_DO, 91 );
+              mpHost->mpConsole->print("\n<MXP enabled>\n");
+              break;
+          }
+
           //option = command[2];
           if( option == static_cast<char>(102) ) // Aardwulf channel 102 support
           {
@@ -600,6 +608,12 @@ void cTelnet::processTelnetCommand( const string & command )
             cout << "TELNET IAC DO GMCP" << endl;
             enableATCP = true;
             sendTelnetOption( TN_WILL, 201 );
+            break;
+          }
+          if( option == MXP ) // MXP support
+          {
+            sendTelnetOption( TN_WILL, 91 );
+            mpHost->mpConsole->print("\n<MXP support enabled>\n");
             break;
           }
           if( option == static_cast<char>(102) ) // channel 102 support
@@ -1329,9 +1343,9 @@ void cTelnet::handle_socket_signal_readyRead()
         datalen = decompressBuffer( pBuffer, amount );
     }
     buffer[datalen] = '\0';
-    #ifdef DEBUG
+    //#ifdef DEBUG
         qDebug()<<"got<"<<pBuffer<<">";
-    #endif
+    //#endif
     if( mpHost->mpConsole->mRecordReplay )
     {
         mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;

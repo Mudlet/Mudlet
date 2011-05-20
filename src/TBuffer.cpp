@@ -162,6 +162,16 @@ TBuffer::TBuffer( Host * pH )
 , mUnderline         ( false )
 , mFgColorCode       ( 0 )
 , mBgColorCode       ( 0 )
+, mMXP               ( false )
+, mAssemblingToken   ( false )
+, currentToken       ( "" )
+, openT              ( 0 )
+, closeT             ( 0 )
+, mMXP_LINK_MODE     ( false )
+, mIgnoreTag         ( false )
+, mSkip              ( "" )
+, mParsingVar        ( false )
+, mMXP_SEND_NO_REF_MODE ( false )
 {
     clear();
     newLines = 0;
@@ -170,6 +180,12 @@ TBuffer::TBuffer( Host * pH )
     mWaitingForHighColorCode = false;
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
+
+    TMxpElement * _element = new TMxpElement;
+    _element->name = "SEND";
+    _element->href = "";
+    _element->hint = "";
+    mMXP_Elements["SEND"] = _element;
 }
 
 void TBuffer::setBufferSize( int s, int batch )
@@ -719,6 +735,7 @@ NORMAL_ANSI_COLOR_TAG:
       6 blink fast
       7 inverse on
       9 strikethrough
+      10 ? TODO
       22 intensity normal (not bold, not faint)
       23 italics off
       24 underline off
@@ -741,7 +758,7 @@ NORMAL_ANSI_COLOR_TAG:
       45 bg magenta
       46 bg cyan
       47 bg white
-      49 bg black
+      49 bg black FIXME: add
 
       sequences for 256 Color support:
       38;5;0-256 foreground color
@@ -821,7 +838,7 @@ void TBuffer::translateToPlainText( std::string & s )
         {
             return;
         }
-        const char & ch = s[msPos];
+        char & ch = s[msPos];
         if( ch == '\033' )
         {
             gotESC = true;
@@ -841,10 +858,34 @@ void TBuffer::translateToPlainText( std::string & s )
 
         if( gotHeader )
         {
-
             while( msPos < msLength )
             {
                 QChar ch2 = s[msPos];
+
+                if( ch2 == 'z' )
+                {
+                    gotHeader = false;
+                    gotESC = false;
+                    // MXP line modes
+
+                    // locked mode
+                    if( code == "7" || code == "2" ) mMXP = false;
+                    // secure mode
+                    if( code == "1" || code == "6" || code == "4" ) mMXP = true;
+                    // reset
+                    if( code == "3" )
+                    {
+                        closeT = 0;
+                        openT = 0;
+                        mAssemblingToken = false;
+                        currentToken.clear();
+                        mParsingVar = false;
+                    }
+                    codeRet = 0;
+                    code.clear();
+                    msPos++;
+                    goto DECODE;
+                }
                 int digit = cDigit.indexOf( ch2 );
                 if( digit > -1 )
                 {
@@ -1168,13 +1209,15 @@ void TBuffer::translateToPlainText( std::string & s )
                             mUnderline = true;
                             break;
                         case 5:
-                            break; //FIXME support blinking
+                            break; //blinking
                         case 6:
-                            break; //FIXME support fast blinking
+                            break; //fast blinking
                         case 7:
-                            break; //FIXME support inverse
+                            break; //inverse
                         case 9:
-                            break; //FIXME support strikethrough
+                            break; //strikethrough
+                        case 10:
+                            break; //default font
                         case 22:
                             mBold = false;
                             break;
@@ -1185,9 +1228,9 @@ void TBuffer::translateToPlainText( std::string & s )
                             mUnderline = false;
                             break;
                         case 27:
-                            break; //FIXME inverse off
+                            break; //inverse off
                         case 29:
-                            break; //FIXME
+                            break; //not crossed out text
                         case 30:
                             fgColorR = mBlackR;
                             fgColorG = mBlackG;
@@ -1260,10 +1303,10 @@ void TBuffer::translateToPlainText( std::string & s )
                             fgColorLightB = mLightWhiteB;
                             mIsDefaultColor = false;
                             break;
-                        case 39:
-                            bgColorR = mBgColorR;
-                            bgColorG = mBgColorG;
-                            bgColorB = mBgColorB;
+                        case 39: //default text color
+                            fgColorR = mFgColorR;
+                            fgColorG = mFgColorG;
+                            fgColorB = mFgColorB;
                             break;
                         case 40:
                             bgColorR = mBlackR;
@@ -1305,6 +1348,11 @@ void TBuffer::translateToPlainText( std::string & s )
                             bgColorG = mWhiteG;
                             bgColorB = mWhiteB;
                             break;
+                        case 49: // default background color
+                            bgColorR = mBgColorR;
+                            bgColorG = mBgColorG;
+                            bgColorB = mBgColorB;
+                            break;
                         default: qDebug()<<"ERROR: stream decoder code error:"<<tag;
                         };
                     }
@@ -1322,9 +1370,424 @@ void TBuffer::translateToPlainText( std::string & s )
             // sequenz ist im naechsten tcp paket keep decoder state
             return;
         }
+
         const QString nothing = "";
         TChar stdCh;
-        if( ( ch == '\n' ) || ( ch == '\xff') || ( ch == '\r' ) )
+
+        if( mMXP )
+        {
+            // ignore < and > inside of parameter strings
+            if( openT == 1 )
+            {
+                if( ch == '\'' || ch == '\"' )
+                {
+                    if( ! mParsingVar )
+                    {
+                        mOpenMainQuote = ch;
+                        mParsingVar = true;
+                    }
+                    else
+                    {
+                        if( ch == mOpenMainQuote )
+                        {
+                            mParsingVar = false;
+                        }
+                    }
+                }
+            }
+
+            if( ch == '<' )
+            {
+                if( ! mParsingVar )
+                {
+                    openT++;
+                    if( currentToken.size() > 0 )
+                    {
+                        currentToken += ch;
+                    }
+                    mAssemblingToken = true;
+                    msPos++;
+                    continue;
+                }
+            }
+
+            if( ch == '>' )
+            {
+                if( ! mParsingVar ) closeT++;
+
+                // sanity check
+                if( closeT > openT )
+                {
+                    qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
+                    closeT = 0;
+                    openT = 0;
+                    mAssemblingToken = false;
+                    currentToken.clear();
+                    mParsingVar = false;
+                }
+
+                if( ( openT > 0 ) && ( closeT == openT ) )
+                {
+                    mAssemblingToken = false;
+                    qDebug()<<"identified TAG("<<currentToken.c_str()<<")";
+                    int _pfs = currentToken.find_first_of(' ');
+                    QString _tn;
+                    if( _pfs == std::string::npos )
+                    {
+                        _tn = currentToken.c_str();
+                    }
+                    else
+                        _tn = currentToken.substr( 0, _pfs ).c_str();
+                    _tn = _tn.toUpper();
+                    if( _tn == "VERSION" )
+                    {
+                        mpHost->sendRaw( QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n") );
+                    }
+                    if( _tn == "BR" )
+                    {
+                        ch = '\n';
+                        openT = 0;
+                        closeT = 0;
+                        currentToken.clear();
+                        goto COMMIT_LINE;
+                    }
+                    if( _tn.startsWith( "!EL" ) )
+                    {
+                        QString _tp = currentToken.substr( currentToken.find_first_of(' ') ).c_str();
+                        _tn = _tp.section( ' ', 1, 1 ).toUpper();
+                        _tp = _tp.section( ' ', 2 ).toUpper();
+                        if( ( _tp.indexOf( "SEND" ) != -1 ) )
+                        {
+                            QString _t2 = _tp;
+                            int pRef = _t2.indexOf( "HREF=" );
+                            bool _got_ref = false;
+                            // wenn kein href angegeben ist, dann gilt das 1. parameter als href
+                            if( pRef == -1 )
+                            {
+                                pRef = _t2.indexOf("SEND ");
+                            }
+                            else
+                                _got_ref = true;
+
+                            if( pRef == -1 ) return;
+                            pRef += 5;
+
+                            QChar _quote_type = _t2[pRef];
+                            int pRef2;
+                            if( _quote_type != '&' )
+                                pRef2 = _t2.indexOf( _quote_type, pRef+1 ); //' ', pRef );
+                            else
+                                pRef2 = _t2.indexOf( ' ', pRef+1 );
+                            QString _ref = _t2.mid( pRef, pRef2-pRef );
+
+                            // gegencheck, ob es keine andere variable ist
+
+                            if( _ref.startsWith('\'') )
+                            {
+                                int pRef3 = _t2.indexOf( '\'', _t2.indexOf( '\'', pRef )+1 );
+                                int pRef4 = _t2.indexOf( '=' );
+                                if( ( ( pRef4 == -1 ) || ( pRef4 != 0 && pRef4 > pRef3 ) ) || ( _got_ref ) )
+                                {
+                                    _ref = _t2.mid( pRef, pRef2-pRef );
+                                }
+                            }
+                            else if( _ref.startsWith('\"') )
+                            {
+                                int pRef3 = _t2.indexOf( '\"', _t2.indexOf( '\"', pRef )+1 );
+                                int pRef4 = _t2.indexOf( '=' );
+                                if( ( ( pRef4 == -1 ) || ( pRef4 != 0 && pRef4 > pRef3 ) ) || ( _got_ref ) )
+                                {
+                                    _ref = _t2.mid( pRef, pRef2-pRef );
+                                }
+                            }
+                            else if( _ref.startsWith( '&' ) )
+                            {
+                                _ref = _t2.mid( pRef, _t2.indexOf( ' ', pRef+1 )-pRef );
+                            }
+                            else
+                                _ref = "";
+                            _ref = _ref.replace( ';' , "" );
+                            _ref = _ref.replace( "&quot", "" );
+                            _ref = _ref.replace( "&amp", "&" );
+                            _ref = _ref.replace('\'', "" );//NEU
+                            _ref = _ref.replace( '\"', "" );//NEU
+                            _ref = _ref.replace( "&#34", "\"" );
+
+                            pRef = _t2.indexOf( "HINT=" );
+                            QString _hint;
+                            if( pRef != -1 )
+                            {
+                                pRef += 5;
+                                int pRef2 = _t2.indexOf( ' ', pRef );
+                                _hint = _t2.mid( pRef, pRef2-pRef );
+                                if( _hint.startsWith('\'') || pRef2 < 0 )
+                                {
+                                    pRef2 = _t2.indexOf( '\'', _t2.indexOf( '\'', pRef )+1 );
+                                    _hint = _t2.mid( pRef, pRef2-pRef );
+                                }
+                                else if( _hint.startsWith('\"') || pRef2 < 0 )
+                                {
+                                    pRef2 = _t2.indexOf( '\"', _t2.indexOf( '\"', pRef )+1 );
+                                    _hint = _t2.mid( pRef, pRef2-pRef );
+                                }
+                                _hint = _hint.replace( ';' , "" );
+                                _hint = _hint.replace( "&quot", "" );
+                                _hint = _hint.replace( "&amp", "&" );
+                                _hint = _hint.replace('\'', "" );//NEU
+                                _hint = _hint.replace( '\"', "" );//NEU
+                                _hint = _hint.replace( "&#34", "\"" );
+                            }
+                            TMxpElement * _element = new TMxpElement;
+                            _element->name = _tn;
+                            _element->href = _ref;
+                            _element->hint = _hint;
+                            mMXP_Elements[_tn] = _element;
+                        }
+                        openT = 0;
+                        closeT = 0;
+                        currentToken.clear();
+                        msPos++;
+                        continue;
+                    }
+
+
+
+                    if( mMXP_LINK_MODE )
+                    {
+                        if( _tn.indexOf('/') != -1 )
+                        {
+                            mMXP_LINK_MODE = false;
+                        }
+                    }
+
+                    if( mMXP_SEND_NO_REF_MODE )
+                    {
+                        if( _tn.indexOf('/') != -1 )
+                        {
+                            mMXP_SEND_NO_REF_MODE = false;
+                            if( mLinkStore[mLinkID].front() == "send([[]])" )
+                            {
+                                QString _t_ref = "send([[";
+                                _t_ref.append( mAssembleRef.c_str() );
+                                _t_ref.append( "]])" );
+                                QStringList _t_ref_list;
+                                _t_ref_list << _t_ref;
+                                mLinkStore[mLinkID] = _t_ref_list;
+                                qDebug()<<"MXP_SEND_NO_REF_MODE: tag closed cmd="<<_t_ref;
+                            }
+                            else
+                            {
+                                mLinkStore[mLinkID].replaceInStrings( "&text;", mAssembleRef.c_str() );
+                                qDebug()<<"MXP_SEND_NO_REF_MODE (replace &text): tag closed cmd="<<mLinkStore[mLinkID];
+                            }
+                            mAssembleRef.clear();
+                        }
+                    }
+                    else if( mMXP_Elements.contains( _tn ) )
+                    {
+                        QString _tp;
+                        int _fs = currentToken.find_first_of(' ');
+                        if( _fs != std::string::npos )
+                            _tp = currentToken.substr( _fs ).c_str();
+                        else
+                            _tp = "";
+                        QString _t1 = _tp.toUpper();
+                        TMxpElement * _element = mMXP_Elements[_tn];
+                        QString _t2 = _element->href;
+                        QString _t3 = _element->hint;
+                        bool _userTag = true;
+                        if( _t2.size() < 1 ) _userTag = false;
+                        QRegExp _rex;
+                        QStringList _rl1, _rl2;
+                        int _ki1 = _tp.indexOf('\'');
+                        int _ki2 = _tp.indexOf('\"');
+                        int _ki3 = _tp.indexOf('=');
+                        // is the first parameter to send given in the form
+                        // send "what" hint="bla" or send href="what" hint="bla"
+
+                        // handle the first case without a variable assignment
+                        if( ( _ki3 == -1 ) // no = whatsoever
+                         || ( ( _ki3 != -1 ) && ( ( _ki2 < _ki3 ) || ( _ki1 < _ki3 ) ) ) ) // first parameter is given without =
+                        {
+                            if( ( _ki1 < _ki2  && _ki1 != -1 ) || ( _ki2 == -1 && _ki1 != -1 ) )
+                            {
+                                if( _ki1 < _ki3 || _ki3 == -1 )
+                                {
+                                    _rl1 << "HREF";
+                                    int _cki1 = _tp.indexOf('\'', _ki1+1);
+                                    _rl2 << _tp.mid(_ki1+1, _cki1-1-(_ki1+1));
+                                }
+                            }
+                            else if( ( _ki2 < _ki1 && _ki2 != -1 ) || ( _ki1 == -1 && _ki2 != -1 ) )
+                            {
+                                if( _ki2 < _ki3 || _ki3 == -1 )
+                                {
+                                    _rl1 << "HREF";
+                                    int _cki2 = _tp.indexOf('\"', _ki2+1);
+                                    _rl2 << _tp.mid(_ki2+1, _cki2-1-(_ki2+1));
+                                }
+                            }
+                        }
+                        // parse parameters in the form var="val" or var='val' where val can be given in the form "foo'b'ar" or 'foo"b"ar'
+                        if( _tp.contains("=\'") )
+                            _rex = QRegExp("\\b(\\w+)=[\\']([^\\\']*) ?");
+                        else
+                            _rex = QRegExp("\\b(\\w+)=[\\\"]([^\\\"]*) ?");
+
+                        int _rpos = 0;
+                        while( ( _rpos = _rex.indexIn( _tp, _rpos ) ) != -1 )
+                        {
+                            _rl1 << _rex.cap(1).toUpper();
+                            _rl2 << _rex.cap(2);
+                            _rpos += _rex.matchedLength();
+                        }
+                        if( ( _rl1.size() == _rl2.size() ) && ( _rl1.size() > 0 ) )
+                        {
+                            for( int i=0; i<_rl1.size(); i++ )
+                            {
+                                QString _var = _rl1[i];
+                                _var.prepend('&');
+                                if( _userTag || _t2.indexOf( _var ) != -1 )
+                                {
+                                    _t2 = _t2.replace( _var, _rl2[i] );
+                                    _t3 = _t3.replace( _var, _rl2[i] );
+                                }
+                                else
+                                {
+                                    if( _rl1[i] == "HREF" )
+                                        _t2 = _rl2[i];
+                                    if( _rl1[i] == "HINT" )
+                                        _t3 = _rl2[i];
+                                }
+                            }
+                        }
+                        mMXP_LINK_MODE = true;
+                        if( _t2.size() < 1 || _t2.contains( "&text;" ) ) mMXP_SEND_NO_REF_MODE = true;
+                        mLinkID++;
+                        if( mLinkID > 1000 )
+                        {
+                            mLinkID = 1;
+                        }
+                        QStringList _tl = _t2.split('|');
+                        for( int i=0; i<_tl.size(); i++ )
+                        {
+                            qDebug()<<i<<"."<<_tl[i];
+                            _tl[i].replace( "|", "" );
+                            _tl[i] = "send([[" + _tl[i] + "]])";
+                            qDebug()<<"->"<<_tl[i];
+                        }
+//                        if( mMXP_SEND_NO_REF_MODE )
+//                        {
+//                            _t1.clear();
+//                            _t2.clear();
+//                        }
+                        mLinkStore[mLinkID] = _tl;
+                        QStringList _tl2 = _t3.split('|');
+                        _tl2.replaceInStrings("|", "");
+                        if( _tl2.size() >= _tl.size()+1 )
+                        {
+                            _tl2.pop_front();
+                        }
+                        mHintStore[mLinkID] = _tl2;
+                    }
+                    openT = 0;
+                    closeT = 0;
+                    currentToken.clear();
+                }
+                msPos++;
+                continue;
+            }
+
+            if( mAssemblingToken )
+            {
+                currentToken += ch;
+                msPos++;
+                continue;
+            }
+
+//            if( mMXP_SEND_NO_REF_MODE )
+//            {
+//                mAssembleRef += ch;
+//            }
+
+            if( ch == '&' || mIgnoreTag )
+            {
+                if( ( msPos+4 < msLength ) && ( mSkip.size() == 0 ) )
+                {
+                    if( s.substr( msPos, 4 ) == "&gt;" )
+                    {
+                        msPos += 3;
+                        ch = '>';
+                        mIgnoreTag = false;
+                    }
+                    else if(  s.substr( msPos, 4 ) == "&lt;" )
+                    {
+                        msPos += 3;
+                        ch = '<';
+                        mIgnoreTag = false;
+                    }
+                    else if( s.substr( msPos, 5 ) == "&amp;" )
+                    {
+                        mIgnoreTag = false;
+                        msPos += 4;
+                        ch = '&';
+                    }
+                    else if( s.substr( msPos, 6 ) == "&quot;" )
+                    {
+                        msPos += 5;
+                        mIgnoreTag = false;
+                        mSkip.clear();
+                        ch = '&';
+                    }
+                }
+                // if the content is split across package borders
+                else if( mSkip == "&gt"  && ch == ';' )
+                {
+                    mIgnoreTag = false;
+                    mSkip.clear();
+                    ch = '>';
+                }
+                else if( mSkip == "&lt"  && ch == ';' )
+                {
+                    mIgnoreTag = false;
+                    mSkip.clear();
+                    ch = '<';
+                }
+                else if( mSkip == "&amp;" )
+                {
+                    mIgnoreTag = false;
+                    mSkip.clear();
+                    ch = '&';
+                }
+                else if( mSkip == "&quot;" )
+                {
+                    mIgnoreTag = false;
+                    mSkip.clear();
+                    ch = '&';
+                }
+                else
+                {
+                    mIgnoreTag = true;
+                    mSkip += ch;
+                    // sanity check
+                    if( mSkip.size() > 7 )
+                    {
+                        mIgnoreTag = false;
+                        mSkip.clear();
+                    }
+                    msPos++;
+                    continue;
+                }
+            }
+        }
+
+
+        if( mMXP_SEND_NO_REF_MODE )
+        {
+            mAssembleRef += ch;
+        }
+
+        COMMIT_LINE: if( ( ch == '\n' ) || ( ch == '\xff') || ( ch == '\r' ) )
         {
             // MUD Zeilen werden immer am Zeilenanfang geschrieben
             if( lineBuffer.back().size() > 0 )
@@ -1400,6 +1863,7 @@ void TBuffer::translateToPlainText( std::string & s )
             }
             continue;
         }
+
         mMudLine.append( ch );
         TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
                  ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
@@ -1410,6 +1874,16 @@ void TBuffer::translateToPlainText( std::string & s )
                  mIsDefaultColor ? mBold : false,
                  mItalics,
                  mUnderline );
+        if( mMXP_LINK_MODE )
+        {
+            c.link = mLinkID;
+            c.fgR = 0;
+            c.fgG = 0;
+            c.fgB = 255;
+            c.underline = true;
+        }
+
+
         mMudBuffer.push_back( c );
         msPos++;
     }
