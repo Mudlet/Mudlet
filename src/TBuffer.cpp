@@ -1877,9 +1877,9 @@ void TBuffer::translateToPlainText( std::string & s )
         if( mMXP_LINK_MODE )
         {
             c.link = mLinkID;
-//            c.fgR = 0;
-//            c.fgG = 0;
-//            c.fgB = 255;
+            c.fgR = 0;
+            c.fgG = 0;
+            c.fgB = 255;
             c.underline = true;
         }
 
