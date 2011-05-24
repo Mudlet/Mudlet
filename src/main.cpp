@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-//#undef QT_NO_DEBUG_OUTPUT
+
 
 #include <QFontDatabase>
 #include <QApplication>

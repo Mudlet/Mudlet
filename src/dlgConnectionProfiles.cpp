@@ -28,7 +28,7 @@
 #include <QFileDialog>
 #include <QPainter>
 
-#define _DEBUG_
+//#define _DEBUG_
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
 {

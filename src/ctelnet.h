@@ -16,7 +16,7 @@ copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
 #define CTELNET_H
 #include <QObject>
 #include <list>
-#include <sys/time.h>
+//#include <sys/time.h>
 #include <stdio.h>
 #include <iostream>
 #include <string>

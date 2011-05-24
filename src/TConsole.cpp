@@ -31,7 +31,7 @@
 #include <iostream>
 #include <string>
 #include <time.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <QTextCodec>
 #include <QHostAddress>
 #include <iostream>
@@ -49,7 +49,6 @@
 #include "TSplitterHandle.h"
 #include <QDir>
 #include "dlgNotepad.h"
-//#define NDEBUG
 #include <assert.h>
 #include "dlgMapper.h"
 

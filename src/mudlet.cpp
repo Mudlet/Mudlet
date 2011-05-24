@@ -28,7 +28,7 @@
 #include <QTextStream>
 #include <QCloseEvent>
 #include <QFileDialog>
-#include <QtUiTools>
+#include <QtUiTools/quiloader.h>
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgTriggerEditor.h"
@@ -1212,6 +1212,8 @@ void mudlet::closeEvent(QCloseEvent *event)
             pC->mUserAgreedToCloseConsole = true;
     }
 
+    writeSettings();
+
     goingDown();
     if( mpDebugConsole )
     {
@@ -1245,7 +1247,6 @@ void mudlet::closeEvent(QCloseEvent *event)
     }
 
     event->accept();
-    writeSettings();
     qApp->quit();
 }
 

@@ -2104,6 +2104,36 @@ int TLuaInterpreter::moveWindow( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setMainWindowSize( lua_State *L )
+{
+    int x1;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setBackgroundColor: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        x1 = lua_tonumber( L, 1 );
+    }
+    int y1;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "setBackgroundColor: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        y1 = lua_tonumber( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
+    mudlet::self()->resize( x1, y1 );
+
+    return 0;
+}
 
 int TLuaInterpreter::setBackgroundColor( lua_State *L )
 {
@@ -3124,6 +3154,9 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     mudlet::self()->echoWindow( pHost, windowName, text );
     return 0;
 }
+
+#include <Phonon>
+
 int TLuaInterpreter::playSoundFile( lua_State * L )
 {
     string luaSendText="";
@@ -3137,7 +3170,10 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    QSound::play( QString( luaSendText.c_str() ) );
+    //QSound::play( QString( luaSendText.c_str() ) );
+
+    Phonon::MediaObject *music = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(luaSendText.c_str()));
+    music->play();
     return 0;
 }
 
@@ -7594,6 +7630,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar );
     lua_register( pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler );
     lua_register( pGlobalLua, "saveMap", TLuaInterpreter::saveMap );
+    lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

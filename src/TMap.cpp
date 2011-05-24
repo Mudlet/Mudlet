@@ -294,14 +294,17 @@ void TMap::astHoehenAnpassung( int id, int id2 )
 
 bool TMap::plausabilitaetsCheck( int area )
 {
+	return true;
 }
 
 bool TMap::fixExits( int id, int dir )
 {
+	return true;
 }
 
 bool TMap::fixExits2( int id )
 {
+	return true;
 }
 
 

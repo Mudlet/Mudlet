@@ -7,6 +7,10 @@
 #include <errno.h>
 #include <string.h>
 
+//VC10 compliance:
+#define isnan(x) ((x) != (x))
+//////////
+
 #define js_check_generator(L, narg) \
     (yajl_gen*)luaL_checkudata((L), (narg), "yajl.generator.meta")
 

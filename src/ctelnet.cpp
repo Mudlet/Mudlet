@@ -12,7 +12,7 @@
 
 #include "ctelnet.h"
 #include <time.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <QTextCodec>
 #include <QHostAddress>
 #include <iostream>
@@ -30,7 +30,7 @@
 #include "dlgMapper.h"
 
 #ifdef DEBUG
-#undef DEBUG
+    #undef DEBUG
 #endif
 
 
@@ -679,10 +679,10 @@ void cTelnet::processTelnetCommand( const string & command )
       {
           //subcommand - we analyze and respond...
           option = command[2];
-          //~ unsigned char c = option;
-          //~ printf("SB option: %d\n", (int)c);
+          //unsigned char c = option;
+          //printf("SB option: %d\n", (int)c);
 
-          /* ATCP */
+          // ATCP
           if( option == static_cast<char>(200) )
           {
               QString _m = command.c_str();
@@ -701,10 +701,19 @@ void cTelnet::processTelnetCommand( const string & command )
                   socketOutRaw( _h );
               }
 
+              if( _m.startsWith( "Client.GUI" ) )
+              {
+                  QString url = _m.section( '\n', 1 );
+                  mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
+                  mpHost->mpConsole->print( url );
+                  mpHost->mpConsole->print("')>\n");
+
+              }
+
               return;
           }
 
-          /* GMCP */
+          // GMCP
           if( option == GMCP )
           {
               QString _m = command.c_str();
@@ -1343,9 +1352,9 @@ void cTelnet::handle_socket_signal_readyRead()
         datalen = decompressBuffer( pBuffer, amount );
     }
     buffer[datalen] = '\0';
-    //#ifdef DEBUG
+    #ifdef DEBUG
         qDebug()<<"got<"<<pBuffer<<">";
-    //#endif
+    #endif
     if( mpHost->mpConsole->mRecordReplay )
     {
         mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;

@@ -5,7 +5,9 @@ CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 SET(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
 SET(QT_USE_QTNETWORK 1)
-SET(CMAKE_CONFIGURATION_TYPES "Release")
+SET(QT_USE_QOPENGL 1)
+SET(QT_USE_PHONON 1)
+SET(CMAKE_CONFIGURATION_TYPES "Release" "Debug")
 SET(mudlet_RCCS mudlet_alpha.qrc)
 SET( mudlet_SRCS 
 TConsole.cpp
@@ -68,6 +70,13 @@ dlgNotepad.cpp
 THighlighter.cpp
 dlgComposer.cpp
 TBuffer.cpp
+TMap.cpp
+TRoom.cpp
+dlgMapper.cpp
+T2DMap.cpp
+TArea.cpp
+dlgRoomExits.cpp
+glwidget.cpp
 )
 
 SET(mudlet_UIS 
@@ -94,6 +103,9 @@ ui/notes_editor.ui
 ui/trigger_pattern_edit.ui
 ui/composer.ui
 ui/profile_preferences.ui
+ui/mapper.ui
+ui/irc.ui
+ui/room_exits.ui
 )
 
 SET(mudlet_MOC_HDRS 
@@ -156,16 +168,33 @@ mudlet.h
     THighlighter.h
     dlgComposer.h
     Tree.h
+    dlgRoomExits.h
+    T2DMap.h
+    dlgMapper.h
+    glwidget.h
 )
 
 FIND_PACKAGE(Qt4 REQUIRED)
-FIND_PACKAGE(Lua51 REQUIRED)
-FIND_PACKAGE(ZLIB REQUIRED)
-FIND_PACKAGE(PCRE REQUIRED)
+#FIND_PACKAGE(Lua51 REQUIRED)
+#FIND_PACKAGE(ZLIB REQUIRED)
+#FIND_PACKAGE(PCRE REQUIRED)
+
 
 INCLUDE(../MudletCPack.cmake) # Use CPack
 INCLUDE(${QT_USE_FILE})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR} ${QSCINTILLA_INCLUDE_DIR} ${LUA_INCLUDE_DIR} ${ZLIB_INCLUDE_DIR} ${PCRE_INCLUDE_DIR})
+INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR} 
+"C:\\mudlet_package\\pcre-8.0-lib\\include" 
+"C:\\mudlet_package\\Lua_src\\include" 
+"C:\\mudlet_package\\zlib-1.2.5"
+"c:\\mudlet_package\\boost_1_45_0"
+"c:\\mudlet_package\\pcre-8.0-lib\\include"
+"c:\\mudlet_package\\yajl\\yajl\\src"
+"C:\\mudlet_package\\hunspell-1.3.1\\src"
+)
+
+IF(CMAKE_COMPILER_IS_GNUCXX)
+  ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-Wno-deprecated  -DUNICODE  -D_UNICODE")
+ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 QT4_AUTOMOC(${mudlet_SRCS})
 QT4_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
@@ -174,7 +203,12 @@ QT4_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
 add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
 
-TARGET_LINK_LIBRARIES(mudlet ${QT_LIBRARIES} ${LUA_LIBRARIES} ${ZLIB_LIBRARIES} ${PCRE_LIBRARIES})
+TARGET_LINK_LIBRARIES( mudlet 
+${QT_LIBRARIES} 
+C:\\mudlet_package\\Lua_src\\lib\\lua51.lib
+C:\\Users\\heiko\\Desktop\\pcre-8.12\\Release\\pcre.lib
+C:\\mudlet_package\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\\libhunspell.lib
+C:\\mudlet_package\\lua_yajl_src\\brimworks-lua-yajl-28f9b64\\yajl )
 
 install( PROGRAMS mudlet DESTINATION "/usr/local/bin" )
 install( FILES LuaGlobal.lua mudlet_documentation.html fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT fonts/ttf-bitstream-vera-1.10/local.conf fonts/ttf-bitstream-vera-1.10/README.TXT fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT fonts/ttf-bitstream-vera-1.10/VeraBd.ttf fonts/ttf-bitstream-vera-1.10/VeraBI.ttf fonts/ttf-bitstream-vera-1.10/VeraIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMono.ttf fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf fonts/ttf-bitstream-vera-1.10/VeraSe.ttf fonts/ttf-bitstream-vera-1.10/Vera.ttf DESTINATION "/usr/local/share/mudlet" )

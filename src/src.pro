@@ -1,10 +1,10 @@
-#CONFIG += release warn_off uitools
-CONFIG += debug uitools
+
+CONFIG += release debug uitools
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
-QT += network opengl
+QT += network opengl phonon
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 
