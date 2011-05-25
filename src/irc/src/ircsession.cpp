@@ -1815,4 +1815,4 @@ QDebug operator<<(QDebug debug, const Irc::Session* session)
 }
 #endif // QT_NO_DEBUG_STREAM
 
-#include "moc_ircsession.cpp"
+//#include "moc_ircsession.cpp"

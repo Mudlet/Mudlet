@@ -7,14 +7,11 @@ if package.loaded["rex_pcre"] then rex = require "rex_pcre" end
 if package.loaded["lpeg"] then lpeg = require "lpeg" end
 if package.loaded["zip"] then zip = require "zip" end
 if package.loaded["lfs"] then lfs = require "lfs" end
+
 -- TODO this is required by DB.lua, so we might load it all at one place
 --if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
 
 json_to_value = yajl.to_value
-
-
-
-
 gmcp = {}
 
 function __gmcp_merge_gmcp_sub_tables( a, key )

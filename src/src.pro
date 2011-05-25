@@ -15,19 +15,21 @@ unix:LIBS += -lpcre \
     $$LIBLUA \
     -lhunspell \
     -lyajl
-win32:LIBS += -Lc:\mudlet_package \
+win32:LIBS += -Lc:\mudlet_package_MINGW \
     -llua51 \
     -lpcre \
-    -Lc:\mudlet_package\Lua \
+#    -Lc:\mudlet_package_MINGW\lua \
     -lhunspell \
     -lyajl
 unix:INCLUDEPATH += /usr/include/lua5.1
-win32:INCLUDEPATH += c:\mudlet_package\Lua_src\include \
-    c:\mudlet_package\zlib-1.2.5\
-    c:\mudlet_package\boost_1_45_0 \
-    c:\mudlet_package\pcre-8.0-lib\include \
-    c:\mudlet_package\yajl\yajl\src \
-    C:\mudlet_package\hunspell-1.3.1\src\
+
+win32:INCLUDEPATH += c:\mudlet_package_MINGW\Lua_src\include \
+    c:\mudlet_package_MINGW\zlib-1.2.5 \
+    c:\mudlet_package_MINGW\boost_1_45_0 \
+    c:\mudlet_package_MINGW\pcre-8.0-lib\include \
+    C:\mudlet_package_MSVC\lloyd-yajl-f4b2b1a\yajl-2.0.1\include \
+    C:\mudlet_package_MINGW\hunspell-1.3.1\src
+
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: {
     SHARE_DIR = /usr/local/share/mudlet
@@ -115,8 +117,8 @@ HEADERS += mudlet.h \
     TConsole.h \
     ctelnet.h \
     Host.h \
-        TMap.h \
-        TAStar.h \
+    TMap.h \
+    TAStar.h \
     HostManager.h \
     HostPool.h \
     dlgConnectionProfiles.h \

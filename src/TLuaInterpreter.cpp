@@ -35,13 +35,13 @@
 #include <string>
 #include "TEvent.h"
 #include "dlgMapper.h"
+#include "lua_yajl.c"
 
 extern "C"
 {
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
-    #include "lua_yajl.c"
 }
 
 extern QStringList gSysErrors;
@@ -7637,7 +7637,7 @@ void TLuaInterpreter::initLuaGlobals()
 
     QString n;
     int error;
-    
+
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring (pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;' end");
 
@@ -7651,13 +7651,52 @@ void TLuaInterpreter::initLuaGlobals()
             e = "Lua error:";
             e+=lua_tostring( pGlobalLua, 1 );
         }
-        //QString msg = "[FAILED] cannot find Lua module rex_pcre. Some functions may not be available.";
-        QString msg = e.c_str();
+        QString msg = "[ERROR] cannot find Lua module rex_pcre. Some functions may not be available.";
+        msg.append( e.c_str() );
         gSysErrors << msg;
     }
     else
     {
-        QString msg = "[INFO] found Lua module rex_pcre";
+        QString msg = "[OK] Lua module rex_pcre loaded";
+        gSysErrors << msg;
+    }
+
+    error = luaL_dostring( pGlobalLua, "require \"zip\"" );
+
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, 1 ) )
+        {
+            e = "Lua error:";
+            e+=lua_tostring( pGlobalLua, 1 );
+        }
+        QString msg = "[ERROR] cannot find Lua module zip";
+        msg.append( e.c_str() );
+        gSysErrors << msg;
+    }
+    else
+    {
+        QString msg = "[OK] Lua module zip loaded";
+        gSysErrors << msg;
+    }
+    error = luaL_dostring( pGlobalLua, "require \"lfs\"" );
+
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, 1 ) )
+        {
+            e = "Lua error:";
+            e+=lua_tostring( pGlobalLua, 1 );
+        }
+        QString msg = "[ERROR] cannot find Lua module lfs (Lua File System).";
+        msg.append( e.c_str() );
+        gSysErrors << msg;
+    }
+    else
+    {
+        QString msg = "[OK] Lua module lfs loaded";
         gSysErrors << msg;
     }
 
@@ -7671,13 +7710,13 @@ void TLuaInterpreter::initLuaGlobals()
             e = "Lua error:";
             e+=lua_tostring( pGlobalLua, 1 );
         }
-        //QString msg = "[FAILED] cannot find Lua module luasql.sqlite3. The database functionality will not be available.";
-        QString msg = e.c_str();
+        QString msg = "[ERROR] cannot find Lua module luasql.sqlite3. Database support will not be available.";
+        msg.append( e.c_str() );
         gSysErrors << msg;
     }
     else
     {
-        QString msg = "[INFO] found Lua module luasql.sqlite3";
+        QString msg = "[OK] Lua module sqlite3 loaded";
         gSysErrors << msg;
     }
 
