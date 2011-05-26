@@ -17,7 +17,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-//#define NDEBUG
+
 #include <assert.h>
 #include <QDebug>
 #include <stdio.h>
@@ -1700,9 +1700,21 @@ void TBuffer::translateToPlainText( std::string & s )
 
             if( mAssemblingToken )
             {
-                currentToken += ch;
-                msPos++;
-                continue;
+                if( ch == '\n' )
+                {
+                    qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
+                    closeT = 0;
+                    openT = 0;
+                    mAssemblingToken = false;
+                    currentToken.clear();
+                    mParsingVar = false;
+                }
+                else
+                {
+                    currentToken += ch;
+                    msPos++;
+                    continue;
+                }
             }
 
 //            if( mMXP_SEND_NO_REF_MODE )
@@ -1877,9 +1889,9 @@ void TBuffer::translateToPlainText( std::string & s )
         if( mMXP_LINK_MODE )
         {
             c.link = mLinkID;
-            c.fgR = 0;
-            c.fgG = 0;
-            c.fgB = 255;
+//            c.fgR = 0;
+//            c.fgG = 0;
+//            c.fgB = 255;
             c.underline = true;
         }
 

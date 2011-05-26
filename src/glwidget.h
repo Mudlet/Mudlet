@@ -21,7 +21,7 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 class TMap;
-#include <QGLWidget>
+#include <QtOpenGL\qgl.h>//<QGLWidget>
 #include "TMap.h"
 #include "Host.h"
 

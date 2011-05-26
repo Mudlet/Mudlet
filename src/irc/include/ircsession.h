@@ -14,8 +14,8 @@
 
 #ifndef IRC_SESSION_H
 #define IRC_SESSION_H
-
-#include <ircglobal.h>
+//#include <ircglobal.h>
+#include "ircglobal.h"
 #include <QObject>
 
 QT_FORWARD_DECLARE_CLASS(QAbstractSocket)

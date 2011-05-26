@@ -4,7 +4,13 @@
 #include <QMainWindow>
 #include "ui_irc.h"
 
-#include "irc/include/ircsession.h"
+#ifdef Q_CC_MSVC
+    #define IRC_SHARED
+    #include <ircsession.h>
+#else
+    #include "irc/include/ircsession.h"
+#endif
+
 
 class dlgIRC : public QMainWindow, public Ui::irc_dlg
 {

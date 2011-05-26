@@ -31,7 +31,7 @@
 #include <iostream>
 #include <string>
 #include <time.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <QTextCodec>
 #include <QHostAddress>
 #include <iostream>
@@ -49,7 +49,6 @@
 #include "TSplitterHandle.h"
 #include <QDir>
 #include "dlgNotepad.h"
-//#define NDEBUG
 #include <assert.h>
 #include "dlgMapper.h"
 
@@ -2481,7 +2480,7 @@ void TConsole::showStatistics()
     QString footer = QString("\n+--------------------------------------------------------------+\n" );
     QString msg = h + r;
     printSystemMessage( msg );
-    QString script = "echo(\[[\nATCP messages sent by the server (table=atcp):\n]]);display( atcp )";
+    QString script = "echo([[\nATCP messages sent by the server (table=atcp):\n]]);display( atcp )";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
     script = "echo([[\nchannel102 messages sent by the server (table=channel102):\n]]);display( channel102 )";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );

@@ -28,7 +28,7 @@
 #include <QTextStream>
 #include <QCloseEvent>
 #include <QFileDialog>
-#include <QtUiTools>
+#include <QtUiTools/quiloader.h>
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgTriggerEditor.h"
@@ -41,7 +41,10 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 #include "dlgNotepad.h"
-#include "dlgIRC.h"
+
+//#ifdef Q_CC_GNU
+    #include "dlgIRC.h"
+//#endif
 
 //#define NDEBUG
 #include <assert.h>
@@ -89,7 +92,11 @@ mudlet::mudlet()
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
-, version( "Mudlet 2.0-rc5 May 2011" )
+#ifdef Q_CC_GNU
+    , version( "Mudlet 2.0-rc6 May 2011" )
+#else
+    , version( "Mudlet 2.0-rc6-MSVC10 May 2011" )
+#endif
 {
     setupUi(this);
 
@@ -1212,6 +1219,8 @@ void mudlet::closeEvent(QCloseEvent *event)
             pC->mUserAgreedToCloseConsole = true;
     }
 
+    writeSettings();
+
     goingDown();
     if( mpDebugConsole )
     {
@@ -1245,7 +1254,6 @@ void mudlet::closeEvent(QCloseEvent *event)
     }
 
     event->accept();
-    writeSettings();
     qApp->quit();
 }
 
@@ -1514,6 +1522,7 @@ void mudlet::slot_notes()
 
 void mudlet::slot_irc()
 {
+//#ifdef Q_CC_GNU
     if( ! mpIRC )
     {
         mpIRC = new dlgIRC();
@@ -1521,6 +1530,7 @@ void mudlet::slot_irc()
     }
     mpIRC->raise();
     mpIRC->show();
+//#endif
 }
 
 void mudlet::slot_reconnect()

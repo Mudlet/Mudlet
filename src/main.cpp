@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-//#undef QT_NO_DEBUG_OUTPUT
+
 
 #include <QFontDatabase>
 #include <QApplication>
@@ -44,10 +44,11 @@ QTextStream debugStream(&debugStreamFile);
 
 void debugOutput(QtMsgType type, const char *msg)
 {
-    #ifndef QT_NO_DEBUG
+
+    #ifdef QT_DEBUG
         debugStream << msg << endl;
     #endif
-
+    ;
 //    switch (type)
 //    {
 //    case QtDebugMsg:
@@ -77,7 +78,7 @@ void debugOutput(QtMsgType type, const char *msg)
 
 QStringList gSysErrors;
 
-//extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 
 int main(int argc, char *argv[])
 {

@@ -115,6 +115,7 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int setMainWindowSize( lua_State * L );
     static int registerAnonymousEventHandler( lua_State * L );
     static int setRoomChar( lua_State * );
     static int deleteArea( lua_State * );

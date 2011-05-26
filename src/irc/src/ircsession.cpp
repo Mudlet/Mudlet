@@ -48,7 +48,7 @@
     session->connectToServer("irc.freenode.net", 6667);
     \endcode
 
-    \note Irc::Session supports SSL (Secure Sockets Layer) connections since version 0.3.0 
+    \note Irc::Session supports SSL (Secure Sockets Layer) connections since version 0.3.0
 
     Example SSL usage:
     \code
@@ -163,7 +163,7 @@
     were valid. (Any previously enabled capabilities will still be
     enabled.)
  */
- 
+
 /*!
     \fn Q_DECL_DEPRECATED void Irc::Session::msgJoined ( const QString &origin, const QString &channel)
 
@@ -235,7 +235,7 @@
 
     \deprecated Use Irc::Buffer::ctcpReplyReceived(const QString& origin, const QString& reply)
  */
- 
+
  /*!
     \fn Q_DECL_DEPRECATED void Irc::Session::msgCtcpActionReceived (const QString &origin, const QString &receiver, const QString &action)
 
@@ -1129,7 +1129,7 @@ namespace Irc
         {
             d->nick = nick;
             if (d->socket)
-            	raw(QString(QLatin1String("NICK %1")).arg(nick));
+                raw(QString(QLatin1String("NICK %1")).arg(nick));
         }
     }
 
