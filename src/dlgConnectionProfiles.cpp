@@ -477,7 +477,10 @@ void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
     if (profile != text)
         delete_button->setDisabled(true);
     else
+    {
         delete_button->setEnabled(true);
+        delete_button->setFocus();
+    }
 }
 
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
@@ -485,35 +488,8 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
     QString profile = profiles_tree_widget->currentItem()->text();
     int currentRow = profiles_tree_widget->currentIndex().row();
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
-    if (removeDir(dir.path()))
-    {
-        profiles_tree_widget->takeItem( currentRow );
-    }
-
-    int row = mProfileList.indexOf( profile );
-    mProfileList.removeAt(row);
-
-
-    if (mProfileList.size()-1 >= row)
-    {
-        QList<QListWidgetItem *>l = profiles_tree_widget->findItems(mProfileList[row], Qt::MatchFixedString | Qt::MatchCaseSensitive)       ;
-        if (!l.isEmpty())
-            slot_item_clicked(l.first());
-    } else if(mProfileList.size() > 0 && mProfileList.size()-1 >= row-1)
-    {
-        QList<QListWidgetItem *>l = profiles_tree_widget->findItems(mProfileList[row-1], Qt::MatchFixedString | Qt::MatchCaseSensitive)       ;
-        if (!l.isEmpty())
-            slot_item_clicked(l.first());
-    } else
-    {
-        fillout_form();
-    }
-
-    if( ! mProfileList.size() )
-    {
-        welcome_message->show();
-    }
-
+    removeDir( dir.path(), dir.path() );
+    fillout_form();
     profiles_tree_widget->setFocus();
 }
 
@@ -553,7 +529,6 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     delete_profile_dialog->show();
     delete_profile_dialog->raise();
-    //delete_profile_dialog->activateWindow();
 }
 
 QString dlgConnectionProfiles::readProfileData( QString profile, QString item )
@@ -740,13 +715,14 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             datetime.setDate(QDate (year.toInt(), month.toInt(), day.toInt()));
 
             //readableEntries << datetime.toString(Qt::SystemLocaleLongDate);
-            profile_history->addItem(datetime.toString(Qt::SystemLocaleLongDate), QVariant(entries.at(i)));
-        } else
+            profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entries.at(i)));
+        }
+        else
             profile_history->addItem(entries.at(i), QVariant(entries.at(i))); // if it has a custom name, use it as it is
 
     }
 
-    if (profile_history->count() == 0)
+    if( profile_history->count() == 0 )
         profile_history->setDisabled(true);
     else
         profile_history->setEnabled(true);
@@ -1251,29 +1227,30 @@ void dlgConnectionProfiles::copyFolder(QString sourceFolder, QString destFolder)
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
-bool dlgConnectionProfiles::removeDir(const QString &dirName)
+bool dlgConnectionProfiles::removeDir( const QString dirName, QString originalPath )
 {
     bool result = true;
     QDir dir(dirName);
-
-    if (dir.exists(dirName))
+    if( dir.exists( dirName ) )
     {
-        Q_FOREACH(QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
+        Q_FOREACH( QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
         {
-            if (info.isDir())
+            // prevent recursion outside of the original branch
+            if( info.isDir() && info.absoluteFilePath().startsWith( originalPath ) )
             {
-                result = removeDir(info.absoluteFilePath());
+                result = removeDir( info.absoluteFilePath(), originalPath );
             }
-            else {
-                result = QFile::remove(info.absoluteFilePath());
+            else
+            {
+                result = QFile::remove( info.absoluteFilePath() );
             }
 
-            if (!result)
+            if( !result )
             {
                 return result;
             }
         }
-        result = dir.rmdir(dirName);
+        result = dir.rmdir( dirName );
     }
 
     return result;

@@ -72,7 +72,7 @@ public slots:
 
 
 private:
-    bool removeDir(const QString &dirName);
+    bool removeDir( QString dirName, QString originalPath );
     void copyFolder(QString sourceFolder, QString destFolder);
 
     bool validName;
