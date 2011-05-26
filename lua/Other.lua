@@ -522,18 +522,44 @@ function getColorWildcard(color)
 	local startc
 	local endc
 	local results = {}
-	
+
 	for i = 1, string.len(line) do
 		selectSection(i, 1)
 		if isAnsiFgColor(color) then
 			if not startc then if i == 1 then startc = 1 else startc = i + 1 end
-			else endc = i + 1 
+			else endc = i + 1
 				if i == line:len() then results[#results + 1] = line:sub(startc, endc) end
 			end
 		elseif startc then
 			results[#results + 1] = line:sub(startc, endc)
 			startc = nil
-		end	
+		end
 	end
 	return results[1] and results or false
+end
+
+
+do
+local oldsetExit = setExit
+
+local exitmap = {
+  n = 1,
+  ne = 2,
+  nw = 3,
+  e = 4,
+  w = 5,
+  s = 6,
+  se = 7,
+  sw = 8,
+  u = 9,
+  d = 10,
+  ["in"] = 11,
+  out = 12
+}
+
+function setExit(from, to, direction)
+  if type(direction) == "string" and not exitmap[direction] then return false end
+
+  return oldsetExit(from, to, type(direction) == "string" and exitmap[direction] or direction)
+end
 end
