@@ -374,7 +374,7 @@ void cTelnet::setDisplayDimensions()
     }
 }
 
-void cTelnet::sendTelnetOption (char type, char option)
+void cTelnet::sendTelnetOption( char type, char option )
 {
     //cout << "CLIENT SENDING Telnet option: command<"<<(int)type<<"> option<"<<(int)option<<">"<<endl;
     string cmd;
@@ -403,6 +403,7 @@ void cTelnet::processTelnetCommand( const string & command )
       }
       case TN_WILL:
       {
+
           //server wants to enable some option (or he sends a timing-mark)...
           option = command[2];
           int idxOption = static_cast<int>(option);
@@ -724,7 +725,7 @@ void cTelnet::processTelnetCommand( const string & command )
               return;
           }
 
-          if( option == static_cast<char>(102) )
+          if( option == static_cast<unsigned char>(102) )
           {
               QString _m = command.c_str();
               if( command.size() < 6 ) return;

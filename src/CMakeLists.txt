@@ -79,6 +79,7 @@ TConsole.cpp
     T2DMap.cpp
     dlgRoomExits.cpp
 	lua_yajl.c
+	dlgIrc.cpp
 )
 
 SET(mudlet_UIS 
@@ -180,6 +181,7 @@ mudlet.h
     Tree.h
     T2DMap.h
     dlgRoomExits.h
+	dlgIrc.h
 )
 
 FIND_PACKAGE(Qt4 REQUIRED)
@@ -198,6 +200,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}
 "c:\\mudlet_package_MSVC\\pcre-8.0-lib\\include"
 "C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src"
 "C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include"
+"C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\include"
 )
 
 IF(CMAKE_COMPILER_IS_GNUCXX)
@@ -227,6 +230,7 @@ C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\
 "C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\Lib\\OpenGL32.Lib"
 "C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\Lib\\GlU32.Lib"
 "C:\\Users\\heiko\\Desktop\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\lib\\Release\\yajl.lib"
+"C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\lib\\ircclient-qt.lib"
 )
 
 install( PROGRAMS mudlet DESTINATION "/usr/local/bin" )

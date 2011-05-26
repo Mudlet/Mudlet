@@ -1,10 +1,13 @@
 
-CONFIG += release debug uitools
+CONFIG += release uitools
+
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
 QT += network opengl phonon
+DEPENDPATH += .
+INCLUDEPATH += .
 LIBLUA = -llua5.1
 !exists(/usr/lib/liblua5.1.a):LIBLUA = -llua
 
@@ -15,20 +18,21 @@ unix:LIBS += -lpcre \
     $$LIBLUA \
     -lhunspell \
     -lyajl
-win32:LIBS += -Lc:\mudlet_package_MINGW \
+
+win32:LIBS += -L"c:\mudlet_package_MINGW" \
     -llua51 \
     -lpcre \
-#    -Lc:\mudlet_package_MINGW\lua \
     -lhunspell \
     -lyajl
+
 unix:INCLUDEPATH += /usr/include/lua5.1
 
-win32:INCLUDEPATH += c:\mudlet_package_MINGW\Lua_src\include \
-    c:\mudlet_package_MINGW\zlib-1.2.5 \
-    c:\mudlet_package_MINGW\boost_1_45_0 \
-    c:\mudlet_package_MINGW\pcre-8.0-lib\include \
-    C:\mudlet_package_MSVC\lloyd-yajl-f4b2b1a\yajl-2.0.1\include \
-    C:\mudlet_package_MINGW\hunspell-1.3.1\src
+win32:INCLUDEPATH += "c:\mudlet_package_MINGW\Lua_src\include" \
+    "c:\mudlet_package_MINGW\zlib-1.2.5" \
+    "c:\mudlet_package_MINGW\boost_1_45_0" \
+    "c:\mudlet_package_MINGW\pcre-8.0-lib\include" \
+    "C:\mudlet_package_MSVC\lloyd-yajl-f4b2b1a\yajl-2.0.1\include" \
+    "C:\mudlet_package_MINGW\hunspell-1.3.1\src"
 
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: {

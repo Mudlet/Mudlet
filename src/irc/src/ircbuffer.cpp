@@ -379,4 +379,4 @@ QDebug operator<<(QDebug debug, const Irc::Buffer* buffer)
 }
 #endif // QT_NO_DEBUG_STREAM
 
-//#include "moc_ircbuffer.cpp"
+#include "moc_ircbuffer.cpp"

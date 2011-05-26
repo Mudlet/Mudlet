@@ -964,8 +964,8 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
                 if( y == y1 )
                 {
                     x = PC.x();
-                    if( x >= mpBuffer->buffer[y].size() )
-                        x = mpBuffer->buffer[y].size()-1;
+                    if( x >= static_cast<int>(mpBuffer->buffer[y].size()) )
+                        x = static_cast<int>(mpBuffer->buffer[y].size())-1;
                     if( x < 0 ) x = 0;
                 }
                 mpBuffer->dirty[y] = true;

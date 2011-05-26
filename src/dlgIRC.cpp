@@ -21,8 +21,11 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QScrollBar>
+//#define IRC_SHARED
 #include "dlgIRC.h"
-#include "irc/include/ircsession.h"
+//#include "irc/include/ircsession.h"
+
+//#include <ircsession.h>
 #include "mudlet.h"
 
 dlgIRC::dlgIRC()

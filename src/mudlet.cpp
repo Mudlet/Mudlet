@@ -92,7 +92,11 @@ mudlet::mudlet()
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
-, version( "Mudlet 2.0-rc5 May 2011" )
+#ifdef Q_CC_GNU
+    , version( "Mudlet 2.0-rc6 May 2011" )
+#else
+    , version( "Mudlet 2.0-rc6-MSVC10 May 2011" )
+#endif
 {
     setupUi(this);
 
