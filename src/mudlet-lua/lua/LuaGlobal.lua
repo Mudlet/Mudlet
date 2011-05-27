@@ -62,7 +62,6 @@ end
 function handleWindowResizeEvent()
 end
 
-echo("\nLOADING LuaGlobal\n")
 
 local packages = {
 	"StringUtils.lua",

@@ -1,3 +1,13 @@
+bin/*
+qtcreator-build/*
+src-build-desktop/*
+src/CMakeLists.txt.user
+src/debug/*
+src/release/*
+src/Makefile*
+src/object_script*
+src/src.pro.orig
+src/src.pro.user*
 *.o
 moc_*.cpp
 *.cxx
