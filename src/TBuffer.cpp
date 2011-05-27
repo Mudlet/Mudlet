@@ -3628,7 +3628,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     }
     if( P2.x() < 0 )
     {
-        P2.setX(buffer[y].size()-1);
+        P2.setX(buffer[y].size());
     }
 
     bool bold = false;
