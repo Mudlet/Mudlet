@@ -268,7 +268,7 @@ void dlgConnectionProfiles::slot_update_name( const QString _n )
     QString name = profile_name_entry->text().trimmed();
     QListWidgetItem * pItem = profiles_tree_widget->currentItem();
 
-    const QString allowedChars = " _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ";
+    const QString allowedChars = ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ";
     bool __error = false;
     for( int __i=0; __i<name.size(); __i++ )
     {
@@ -291,7 +291,7 @@ void dlgConnectionProfiles::slot_update_name( const QString _n )
         return;
     }
 
-    // see if this an edit that already uses a similar name
+    // see if there is an edit that already uses a similar name
     if( pItem->text() != name && mProfileList.contains( name ) )
     {
         notificationArea->show();
@@ -302,7 +302,9 @@ void dlgConnectionProfiles::slot_update_name( const QString _n )
         notificationAreaMessageBox->setText( tr("This profile name is already in use.") );
         validName = false;
         connect_button->setDisabled(true);
-    } else {
+    }
+    else
+    {
         notificationArea->hide();
         notificationAreaIconLabelWarning->hide();
         notificationAreaIconLabelError->hide();
