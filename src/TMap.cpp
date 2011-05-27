@@ -30,6 +30,7 @@ TMap::TMap( Host * pH )
 : mpHost( pH )
 , mpM( 0 )
 , mpMapper( 0 )
+, mMapGraphNeedsUpdate( true )
 {
     customEnvColors[257] = mpHost->mRed_2;
     customEnvColors[258] = mpHost->mGreen_2;
@@ -124,6 +125,7 @@ bool TMap::addRoom( int id )
     {
         rooms[id] = pT;
         pT->id = id;
+        mMapGraphNeedsUpdate = true;
         return true;
     }
     else
@@ -187,6 +189,7 @@ bool TMap::setExit( int from, int to, int dir )
         case DIR_OUT: rooms[from]->out = to; break;
         default: return false;
     }
+    mMapGraphNeedsUpdate = true;
     return true;
 }
 
@@ -294,17 +297,17 @@ void TMap::astHoehenAnpassung( int id, int id2 )
 
 bool TMap::plausabilitaetsCheck( int area )
 {
-	return true;
+        return true;
 }
 
 bool TMap::fixExits( int id, int dir )
 {
-	return true;
+        return true;
 }
 
 bool TMap::fixExits2( int id )
 {
-	return true;
+        return true;
 }
 
 
@@ -578,187 +581,187 @@ bool TMap::gotoRoom( int r1, int r2 )
     return findPath( r1, r2 );
 }
 
+void TMap::initGraph()
+{
+    g = mygraph_t(rooms.size()*10);//FIXME
+    weightmap = get(edge_weight, g);
+    QMapIterator<int, TRoom *> it( rooms );
+    int roomCount=0;
+    int edgeCount=0;
+    while( it.hasNext() )
+    {
+
+        it.next();
+        int i = it.key();
+        if( ! rooms.contains( i ) || rooms[i]->isLocked )
+        {
+            continue;
+        }
+        roomCount++;
+        location l;
+        l.x = rooms[i]->x;
+        l.y = rooms[i]->y;
+        l.z = rooms[i]->z;
+        locations.push_back( l );
+
+        if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->north,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->north]->weight;
+        }
+        if( rooms[i]->south != -1 && rooms.contains( rooms[i]->south ) && !rooms[rooms[i]->south]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->south,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->south]->weight;
+        }
+        if( rooms[i]->northeast != -1 && rooms.contains( rooms[i]->northeast ) && !rooms[rooms[i]->northeast]->isLocked )
+        {
+           edgeCount++;
+           edge_descriptor e;
+           bool inserted;
+           tie(e, inserted) = add_edge( i,
+                                        rooms[i]->northeast,
+                                        g );
+           weightmap[e] = rooms[rooms[i]->northeast]->weight;
+        }
+        if( rooms[i]->east != -1 && rooms.contains( rooms[i]->east ) && !rooms[rooms[i]->east]->isLocked )
+        {
+           edgeCount++;
+           edge_descriptor e;
+           bool inserted;
+           tie(e, inserted) = add_edge( i,
+                                        rooms[i]->east,
+                                        g );
+           weightmap[e] = rooms[rooms[i]->east]->weight;
+        }
+        if( rooms[i]->west != -1 && rooms.contains( rooms[i]->west ) && !rooms[rooms[i]->west]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->west,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->west]->weight;
+        }
+        if( rooms[i]->southwest != -1 && rooms.contains( rooms[i]->southwest ) && !rooms[rooms[i]->southwest]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->southwest,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->southwest]->weight;
+        }
+        if( rooms[i]->southeast != -1 && rooms.contains( rooms[i]->southeast ) && !rooms[rooms[i]->southeast]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->southeast,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->southeast]->weight;
+        }
+        if( rooms[i]->northwest != -1 && rooms.contains( rooms[i]->northwest ) && !rooms[rooms[i]->northwest]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->northwest,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->northwest]->weight;
+        }
+        if( rooms[i]->up != -1 && rooms.contains( rooms[i]->up ) && !rooms[rooms[i]->up]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->up,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->up]->weight;
+        }
+        if( rooms[i]->down != -1 && rooms.contains( rooms[i]->down ) && !rooms[rooms[i]->down]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->down,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->down]->weight;
+        }
+        if( rooms[i]->in != -1 && rooms.contains( rooms[i]->in ) && !rooms[rooms[i]->in]->isLocked )
+        {
+            edgeCount++;
+            edge_descriptor e;
+            bool inserted;
+            tie(e, inserted) = add_edge( i,
+                                         rooms[i]->in,
+                                         g );
+            weightmap[e] = rooms[rooms[i]->in]->weight;
+        }
+        if( rooms[i]->out != -1 && rooms.contains( rooms[i]->out ) && !rooms[rooms[i]->out]->isLocked )
+        {
+             edgeCount++;
+             edge_descriptor e;
+             bool inserted;
+             tie(e, inserted) = add_edge( i,
+                                          rooms[i]->out,
+                                          g );
+             weightmap[e] = rooms[rooms[i]->out]->weight;
+        }
+        if( rooms[i]->other.size() > 0 )
+        {
+            QMapIterator<int, QString> it( rooms[i]->other );
+            while( it.hasNext() )
+            {
+                it.next();
+                int _id = it.key();
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             _id,
+                                             g );
+                weightmap[e] = rooms[_id]->weight;
+            }
+        }
+    }
+    mMapGraphNeedsUpdate = false;
+    qDebug() << "TOTAL: initialized nodes:"<<roomCount<<" edges:"<<edgeCount<<endl;
+}
+
 bool TMap::findPath( int from, int to )
 {
-     qDebug()<<"findPath() from "<<from<<" to "<<to;
-     typedef adjacency_list<listS, vecS, directedS, no_property, property<edge_weight_t, cost> > mygraph_t;
-     typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
-     typedef mygraph_t::vertex_descriptor vertex;
-     typedef mygraph_t::edge_descriptor edge_descriptor;
-     typedef mygraph_t::vertex_iterator vertex_iterator;
-     typedef std::pair<int, int> edge;
-
-     std::vector<location> locations;
-     mygraph_t g(rooms.size()*10);
-     WeightMap weightmap = get(edge_weight, g);
-     QMapIterator<int, TRoom *> it( rooms );
-     int roomCount=0;
-     int edgeCount=0;
-     while( it.hasNext() )
+     if( mMapGraphNeedsUpdate )
      {
-
-         it.next();
-         int i = it.key();
-         if( ! rooms.contains( i ) || rooms[i]->isLocked )
-         {
-             continue;
-         }
-         roomCount++;
-         location l;
-         l.x = rooms[i]->x;
-         l.y = rooms[i]->y;
-         l.z = rooms[i]->z;
-         locations.push_back( l );
-
-         if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->north,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->north]->weight;
-         }
-         if( rooms[i]->south != -1 && rooms.contains( rooms[i]->south ) && !rooms[rooms[i]->south]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->south,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->south]->weight;
-         }
-         if( rooms[i]->northeast != -1 && rooms.contains( rooms[i]->northeast ) && !rooms[rooms[i]->northeast]->isLocked )
-         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->northeast,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->northeast]->weight;
-         }
-         if( rooms[i]->east != -1 && rooms.contains( rooms[i]->east ) && !rooms[rooms[i]->east]->isLocked )
-         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->east,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->east]->weight;
-         }
-         if( rooms[i]->west != -1 && rooms.contains( rooms[i]->west ) && !rooms[rooms[i]->west]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->west,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->west]->weight;
-         }
-         if( rooms[i]->southwest != -1 && rooms.contains( rooms[i]->southwest ) && !rooms[rooms[i]->southwest]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->southwest,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->southwest]->weight;
-         }
-         if( rooms[i]->southeast != -1 && rooms.contains( rooms[i]->southeast ) && !rooms[rooms[i]->southeast]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->southeast,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->southeast]->weight;
-         }
-         if( rooms[i]->northwest != -1 && rooms.contains( rooms[i]->northwest ) && !rooms[rooms[i]->northwest]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->northwest,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->northwest]->weight;
-         }
-         if( rooms[i]->up != -1 && rooms.contains( rooms[i]->up ) && !rooms[rooms[i]->up]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->up,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->up]->weight;
-         }
-         if( rooms[i]->down != -1 && rooms.contains( rooms[i]->down ) && !rooms[rooms[i]->down]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->down,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->down]->weight;
-         }
-         if( rooms[i]->in != -1 && rooms.contains( rooms[i]->in ) && !rooms[rooms[i]->in]->isLocked )
-         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->in,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->in]->weight;
-         }
-         if( rooms[i]->out != -1 && rooms.contains( rooms[i]->out ) && !rooms[rooms[i]->out]->isLocked )
-         {
-              edgeCount++;
-              edge_descriptor e;
-              bool inserted;
-              tie(e, inserted) = add_edge( i,
-                                           rooms[i]->out,
-                                           g );
-              weightmap[e] = rooms[rooms[i]->out]->weight;
-         }
-         if( rooms[i]->other.size() > 0 )
-         {
-             QMapIterator<int, QString> it( rooms[i]->other );
-             while( it.hasNext() )
-             {
-                 it.next();
-                 int _id = it.key();
-                 edgeCount++;
-                 edge_descriptor e;
-                 bool inserted;
-                 tie(e, inserted) = add_edge( i,
-                                              _id,
-                                              g );
-                 weightmap[e] = rooms[_id]->weight;
-             }
-         }
+        initGraph();
      }
-     cout << "TOTAL: initialized rooms:"<<roomCount<<" edges:"<<edgeCount<<endl;
+#ifdef QT_DEBUG
+     QTime t;
+     t.start();
+#endif
      vertex start = from;//mRoomId;
      vertex goal = to;//mTargetID;
-     cout<<"SEARCHING PATH from:"<<start<<" to:"<<goal<<endl;
      if( ! rooms.contains( start ) || ! rooms.contains( goal ) )
      {
          cout << "ERROR: start or tartget room not in map!" << endl;
          return false;
      }
-     cout << "start vertex: " << start << endl;
-     cout << "target vertex: " << goal << endl;
-
      vector<mygraph_t::vertex_descriptor> p(num_vertices(g));
      vector<cost> d(num_vertices(g));
      try
@@ -797,7 +800,6 @@ bool TMap::findPath( int from, int to )
                  cout << "ERROR: path not possible. curRoom not in map!" << endl;
                  return false;
              }
-             cout << " -> " << *spi;
              mPathList.push_back( *spi );
              if( rooms[curRoom]->north == rooms[*spi]->id )
              {
@@ -862,13 +864,14 @@ bool TMap::findPath( int from, int to )
 
              curRoom = *spi;
          }
-         cout << endl << "PATH FOUND: Total travel time: " << d[goal] << endl;
+#ifdef QT_DEBUG
+         qDebug() << endl << "PATH FOUND: time="<<t.elapsed()<<" Total travel time: " << d[goal] << endl;
+#endif
          return true;
      }
      if( rooms.contains(start) && rooms.contains(goal))
      {
-        cout << "Didn't find a path from " << rooms[start]->id << " -to- "
-             << rooms[goal]->id << " ROOM NOT IN MAP!" << endl;
+        qDebug() << "INFO: no path from " << rooms[start]->id << " to " << rooms[goal]->id;
      }
      else
      {

@@ -70,6 +70,7 @@ public:
     void setView( float, float, float, float );
     bool serialize( QDataStream & );
     bool restore();
+    void initGraph();
     QMap<int, TRoom *> rooms;
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
@@ -89,6 +90,16 @@ public:
     QMap<QString,int> hashTable;
     QMap<QString, int> pixNameTable;
     QMap<int, QPixmap> pixTable;
+    typedef adjacency_list<listS, vecS, directedS, no_property, property<edge_weight_t, cost> > mygraph_t;
+    typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
+    typedef mygraph_t::vertex_descriptor vertex;
+    typedef mygraph_t::edge_descriptor edge_descriptor;
+    typedef mygraph_t::vertex_iterator vertex_iterator;
+    typedef std::pair<int, int> edge;
+    mygraph_t g;
+    WeightMap weightmap;
+    std::vector<location> locations;
+    bool mMapGraphNeedsUpdate;
 
 
 };
