@@ -38,7 +38,7 @@ class TimerUnit
     friend class XMLimport;
 
 public:
-                          TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
+                          TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0) {;}
     void                  removeAllTempTimers();
     std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
     TTimer *              getTimer( int id );
@@ -54,12 +54,17 @@ public:
     void                  reenableAllTriggers();
     void                  markCleanup( TTimer * );
     void                  doCleanup();
+    QString               assembleReport();
     qint64                getNewID();
     QMultiMap<QString, TTimer *> mLookupTable;
     QMutex                mTimerUnitLock;
+    int                   statsActiveTriggers;
+    int                   statsTriggerTotal;
+    int                   statsTempTriggers;
 
 private:
     TimerUnit(){;}
+    void                  _assembleReport(TTimer *);
     TTimer *              getTimerPrivate( int id );
     void                  addTimerRootNode( TTimer * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addTimer( TTimer * pT );

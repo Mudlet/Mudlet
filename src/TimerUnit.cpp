@@ -406,5 +406,47 @@ void TimerUnit::markCleanup( TTimer * pT )
     //qDebug()<<"==> ADDED to cleanup list";
 }
 
+void TimerUnit::_assembleReport( TTimer * pChild )
+{
+    typedef list<TTimer *>::const_iterator I;
+    list<TTimer*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TTimer * pT = *it2;
+        _assembleReport( pT );
+        if( pT->isActive() ) statsActiveTriggers++;
+        if( pT->isTempTimer() ) statsTempTriggers++;
+        statsTriggerTotal++;
+    }
+}
 
+QString TimerUnit::assembleReport()
+{
+    statsActiveTriggers = 0;
+    statsTriggerTotal = 0;
+    statsTempTriggers = 0;
+    typedef list<TTimer *>::const_iterator I;
+    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    {
+        TTimer * pChild = *it;
+        if( pChild->isActive() ) statsActiveTriggers++;
+        if( pChild->isTempTimer() ) statsTempTriggers++;
+        statsTriggerTotal++;
+        list<TTimer*> * childrenList = pChild->mpMyChildrenList;
+        for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        {
+            TTimer * pT = *it2;
+            _assembleReport( pT );
+            if( pT->isActive() ) statsActiveTriggers++;
+            if( pT->isTempTimer() ) statsTempTriggers++;
+            statsTriggerTotal++;
+        }
+    }
+    QStringList msg;
+    msg << "timers current total: " << QString::number(statsTriggerTotal) << "\n"
+        << "tempTimers current total: " << QString::number(statsTempTriggers) << "\n"
+        << "active timers: " << QString::number(statsActiveTriggers) << "\n";
+
+    return msg.join("");
+}
 

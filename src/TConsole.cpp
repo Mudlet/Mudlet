@@ -2471,21 +2471,35 @@ void TConsole::showStatistics()
            << "|               system statistics                              |\n"
            << "+--------------------------------------------------------------+\n";
 
-    QString r = mpHost->getTriggerUnit()->assembleReport();
     QString h = header.join("");
+    QString msg = h;
+    print( msg, 150, 120, 0, 0, 0, 0 );
 
-    //mpHost->getTimerUnit()->printReport();
+    QString script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nGMCP events:\n]]);setUnderline(false);setFgColor(150,120,0);display( gmcp );";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nATCP events:\n]]);setUnderline(false);setFgColor(150,120,0); display( atcp );";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nchannel102 events:\n]]);setUnderline(false);setFgColor(150,120,0);display( channel102 );";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 
 
+    script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+
+    QString r1 = mpHost->getTriggerUnit()->assembleReport();
+    msg = r1;
+    print( msg, 150, 120, 0, 0, 0, 0 );
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+    QString r2 = mpHost->getTimerUnit()->assembleReport();
     QString footer = QString("\n+--------------------------------------------------------------+\n" );
-    QString msg = h + r;
-    printSystemMessage( msg );
-    QString script = "echo([[\nATCP messages sent by the server (table=atcp):\n]]);display( atcp )";
+    msg = r2;
+    print( msg, 150, 120, 0, 0, 0, 0 );
+    mpHost->mpConsole->print( footer, 150, 120, 0, 0, 0, 0 );
+    script = "resetFormat();";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-    script = "echo([[\nchannel102 messages sent by the server (table=channel102):\n]]);display( channel102 )";
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-    printSystemMessage( footer );
 
+    mpHost->mpConsole->raise();
 }
 
 
