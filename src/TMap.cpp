@@ -882,7 +882,7 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 9;
+    int version = 10;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
@@ -921,6 +921,7 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << rooms[i]->isLocked;
         ofs << rooms[i]->other;
         ofs << rooms[i]->c;
+        ofs << rooms[i]->userData;
     }
 
     return true;
@@ -1012,6 +1013,10 @@ bool TMap::restore()
             if( version >= 9 )
             {
                 ifs >> rooms[i]->c;
+            }
+            if( version >= 10 )
+            {
+                ifs >> rooms[i]->userData;
             }
         }
         customEnvColors[257] = mpHost->mRed_2;
