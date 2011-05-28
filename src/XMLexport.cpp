@@ -122,6 +122,12 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
     //writeTextElement( "pass", pT->mPass );
+    writeStartElement( "mInstalledPackages" );
+    for( int i=0; i<pT->mInstalledPackages.size(); i++ )
+    {
+        writeTextElement( "string", pT->mInstalledPackages[i] );
+    }
+    writeEndElement();
     writeTextElement( "url", pT->mUrl );
     writeTextElement( "port", QString::number(pT->mPort) );
     writeTextElement( "borderTopHeight", QString::number(pT->mBorderTopHeight) );
@@ -386,6 +392,7 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     writeTextElement( "conditonLineDelta", QString::number( pT->mConditionLineDelta ) );
     writeTextElement( "mStayOpen", QString::number( pT->mStayOpen ) );
     writeTextElement( "mCommand", pT->mCommand );
+    writeTextElement( "packageName", pT->mPackageName );
     writeTextElement( "mFgColor", pT->mFgColor.name() );
     writeTextElement( "mBgColor", pT->mBgColor.name() );
     writeTextElement( "mSoundFile", pT->mSoundFile );
@@ -456,6 +463,7 @@ bool XMLexport::writeAlias( TAlias * pT )
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
+    writeTextElement( "packageName", pT->mPackageName );
     writeTextElement( "regex", pT->mRegexCode );
 
     typedef list<TAlias *>::const_iterator I;
@@ -509,6 +517,7 @@ bool XMLexport::writeAction( TAction * pT )
     writeAttribute( "useCustomLayout", pT->mUseCustomLayout ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
+    writeTextElement( "packageName", pT->mPackageName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "css", pT->css );
     writeTextElement( "commandButtonUp", pT->mCommandButtonUp );
@@ -577,6 +586,7 @@ bool XMLexport::writeTimer( TTimer * pT )
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
+    writeTextElement( "packageName", pT->mPackageName );
     writeTextElement( "time", pT->mTime.toString( "hh:mm:ss.zzz" ) );
 
     typedef list<TTimer *>::const_iterator I;
@@ -628,6 +638,7 @@ bool XMLexport::writeScript( TScript * pT )
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
+    writeTextElement( "packageName", pT->mPackageName );
     writeTextElement( "script", pT->mScript );
 
     writeStartElement( "eventHandlerList" );
@@ -686,6 +697,7 @@ bool XMLexport::writeKey( TKey * pT )
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
+    writeTextElement( "packageName", pT->mPackageName );
     writeTextElement( "script", pT->mScript );
     writeTextElement( "command", pT->mCommand );
     writeTextElement( "keyCode", QString::number( pT->mKeyCode ) );

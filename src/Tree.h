@@ -68,6 +68,7 @@ public:
     QString            getPackageName() { return mPackageName; }
     void               setPackageName( QString n ){ mPackageName = n; }
     bool               FullyExpanded;
+    QString            mPackageName;
 
 
 protected:
@@ -81,7 +82,7 @@ private:
     bool               mActive;
     bool               mUserActiveState;
     QString            mErrorMessage;
-    QString            mPackageName;
+
 
 };
 

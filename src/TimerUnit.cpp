@@ -36,6 +36,40 @@
 
 using namespace std;
 
+void TimerUnit::_uninstall( TTimer * pChild, QString packageName )
+{
+    typedef list<TTimer *>::const_iterator I;
+    list<TTimer*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TTimer * pT = *it2;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+}
+
+
+void TimerUnit::uninstall( QString packageName )
+{
+    typedef std::list<TTimer *>::iterator IT;
+    for( IT it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
+    {
+        TTimer * pT = *it;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterTimer(uninstallList[i]);
+    }
+}
+
 void TimerUnit::stopAllTriggers()
 {
     typedef list<TTimer *>::const_iterator I;

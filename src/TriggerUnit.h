@@ -63,6 +63,8 @@ public:
     QMutex                mTriggerUnitLock;
     void                  markCleanup( TTrigger * pT );
     void                  doCleanup();
+    void                  uninstall( QString );
+    void                  _uninstall( TTrigger * pChild, QString packageName );
 
     int                   statsTriggerTotal;
     int                   statsTempTriggers;
@@ -76,7 +78,7 @@ public:
     int                   statsMaxLineProcessingTime;
     int                   statsMinLineProcessingTime;
     int                   statsRegexTriggers;
-
+    QList<TTrigger*>        uninstallList;
 
 private:
                               TriggerUnit(){;}

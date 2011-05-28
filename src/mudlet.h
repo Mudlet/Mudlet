@@ -171,6 +171,8 @@ public slots:
    void                          slot_close_profile_requested(int);
    void                          startAutoLogin();
    void                          slot_irc();
+   void                          slot_uninstall_package();
+   void                          slot_package_manager();
 
 protected:
 
@@ -216,6 +218,9 @@ private:
    QAction *                     actionReconnect;
 
    void                          check_for_mappingscript();
+
+   QListWidget *                 packageList;
+   QPushButton *                 uninstallButton;
 
 };
 

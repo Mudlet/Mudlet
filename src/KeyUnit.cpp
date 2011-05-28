@@ -43,6 +43,41 @@ KeyUnit::KeyUnit( Host * pHost )
     setupKeyNames();
 }
 
+
+void KeyUnit::_uninstall( TKey * pChild, QString packageName )
+{
+    typedef list<TKey *>::const_iterator I;
+    list<TKey*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TKey * pT = *it2;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+}
+
+
+void KeyUnit::uninstall( QString packageName )
+{
+    typedef std::list<TKey *>::iterator IT;
+    for( IT it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
+    {
+        TKey * pT = *it;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterKey(uninstallList[i]);
+    }
+}
+
 bool KeyUnit::processDataStream( int key, int modifier )
 {
     typedef list<TKey *>::const_iterator I;

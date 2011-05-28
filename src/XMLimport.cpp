@@ -78,7 +78,6 @@ bool XMLimport::importPackage( QIODevice * device, QString packName )
         mpHost->getScriptUnit()->registerScript( mpScript );
 
     }
-qDebug()<<"trace#1";
     while( ! atEnd() )
     {
         readNext();
@@ -100,38 +99,23 @@ qDebug()<<"trace#1";
             else
             {
                 qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
-                raiseError( QObject::tr("The file is not a Mudlet package version 1.0 file.") );
             }
         }
     }
 
-//    if( gotTrigger )
-//        mpHost->getTriggerUnit()->registerTrigger( mpTrigger );
-////    else
-////        delete mpTrigger;
-//    if( gotTimer )
-//        mpHost->getTimerUnit()->registerTimer( mpTimer );
-////    else
-////        delete mpTimer;
-//    if( gotAlias )
-//        mpHost->getAliasUnit()->registerAlias( mpAlias );
-////    else
-////        delete mpAlias;
-//    if( gotAction )
-//        mpHost->getActionUnit()->registerAction( mpAction );
-////    else
-////        delete mpAction;
-//    if( gotKey )
-//        mpHost->getKeyUnit()->registerKey( mpKey );
-////    else
-////        delete mpKey;
+   if( ! gotTrigger )
+        delete mpTrigger;
+   if( ! gotTimer )
+        delete mpTimer;
+   if( ! gotAlias )
+        delete mpAlias;
+   if( ! gotAction )
+        delete mpAction;
+   if( ! gotKey )
+        delete mpKey;
+   if( ! gotScript )
+        delete mpScript;
 
-//    if( gotScript )
-//        mpHost->getScriptUnit()->registerScript( mpScript );
-//    else
-//        delete mpScript;
-
-qDebug()<<"trace#2....ende";
     return ! error();
 }
 
@@ -673,6 +657,12 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mHostName = readElementText();
                 continue;
             }
+            else if( name() == "mInstalledPackages")
+            {
+          qDebug()<<"reading package list";
+                readStringList( pT->mInstalledPackages );
+                continue;
+            }
             else if( name() =="url" )
             {
                 pT->mUrl = readElementText();
@@ -977,12 +967,17 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             {
 
                 pT->setName( readElementText() );
-                qDebug()<<"name="<<pT->getName();
                 continue;
             }
+
             else if( name() == "script")
             {
                 pT->mScript = readElementText();
+                continue;
+            }
+            else if( name() == "packageName")
+            {
+                pT->mPackageName = readElementText();
                 continue;
             }
             else if( name() == "triggerType" )
@@ -1133,6 +1128,11 @@ void XMLimport::readTimerGroup( TTimer * pParent )
                 pT->setName( readElementText() );
                 continue;
             }
+            else if( name() == "packageName")
+            {
+                pT->mPackageName = readElementText();
+                continue;
+            }
             else if( name() == "script")
             {
                 QString script = readElementText();
@@ -1238,6 +1238,11 @@ void XMLimport::readAliasGroup( TAlias * pParent )
                 pT->setName( readElementText() );
                 continue;
             }
+            else if( name() == "packageName")
+            {
+                pT->mPackageName = readElementText();
+                continue;
+            }
             else if( name() == "script")
             {
                 QString script = readElementText();
@@ -1335,6 +1340,11 @@ void XMLimport::readActionGroup( TAction * pParent )
             if( name() == "name" )
             {
                 pT->mName = readElementText();
+                continue;
+            }
+            else if( name() == "packageName")
+            {
+                pT->mPackageName = readElementText();
                 continue;
             }
             else if( name() == "script")
@@ -1497,6 +1507,11 @@ void XMLimport::readScriptGroup( TScript * pParent )
                 pT->mName = readElementText();
                 continue;
             }
+            else if( name() == "packageName")
+            {
+                pT->mPackageName = readElementText();
+                continue;
+            }
             else if( name() == "script")
             {
                 QString script = readElementText();
@@ -1589,6 +1604,11 @@ void XMLimport::readKeyGroup( TKey * pParent )
                 pT->mName = readElementText();
                 continue;
             }
+            else if( name() == "packageName")
+            {
+                pT->mPackageName = readElementText();
+                continue;
+            }
             else if( name() == "script")
             {
                 QString script = readElementText();
@@ -1640,7 +1660,9 @@ void XMLimport::readStringList( QStringList & list )
         {
             if( name() == "string")
             {
+
                 list << readElementText();
+qDebug()<<"List:"<<list;
             }
             else
             {
@@ -1648,6 +1670,7 @@ void XMLimport::readStringList( QStringList & list )
             }
         }
     }
+    qDebug()<<"ENDE LISTE return";
 }
 
 void XMLimport::readIntegerList( QList<int> & list )

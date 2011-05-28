@@ -77,6 +77,7 @@ public:
     void                        focusInEvent( QFocusEvent * );
     void                        focusOutEvent( QFocusEvent * );
     void                        enterEvent( QEvent * pE );
+    void                        doCleanReset();
     QToolBar *                  toolBar;
     QToolBar *                  toolBar2;
     bool                        mNeedUpdateData;

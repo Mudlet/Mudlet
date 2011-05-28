@@ -715,6 +715,133 @@ void Host::orderShutDown()
 }
 
 
+bool Host::installPackage( QString fileName )
+{
+    if( fileName.isEmpty() ) return false;
+
+    QFile file(fileName);
+    if( ! file.open(QFile::ReadOnly | QFile::Text) )
+    {
+        return false;
+    }
+
+    QString packageName = fileName.section("/",-1 );
+    packageName.replace( ".zip" , "" );
+    packageName.replace( "trigger", "" );
+    packageName.replace( "xml", "" );
+    packageName.replace( ".mpackage" , "" );
+    packageName.replace( '/' , "" );
+    packageName.replace( '\\' , "" );
+    packageName.replace( '.' , "" );
+
+    if( mInstalledPackages.contains( packageName ) )
+    {
+        return false;
+    }
+    QFile file2;
+    if( fileName.endsWith(".zip") || fileName.endsWith(".mpackage") )
+    {
+        QString _home = QDir::homePath();
+        _home.append( "/.config/mudlet/profiles/" );
+        _home.append( getName() );
+        QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
+        QDir _tmpDir;
+        _tmpDir.mkpath(_dest);
+        QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
+        qDebug()<<"SCRIPT="<<_script;
+        mLuaInterpreter.compileAndExecuteScript( _script );
+
+        // requirements for zip packages:
+        // - packages must be compressed in zip format
+        // - file extension should be .mpackage (though .zip is accepted)
+        // - there can only be a single xml file per package
+        // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
+
+        QDir _dir( _dest );
+        QStringList _filterList;
+        _filterList << "*.xml" << "*.trigger";
+        QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
+        if( entries.size() > 0 )
+        {
+            file2.setFileName( entries[0].absoluteFilePath() );
+        }
+    }
+    else
+    {
+        file2.setFileName( fileName );
+    }
+    file2.open(QFile::ReadOnly | QFile::Text);
+
+    mInstalledPackages.append( packageName );
+    qDebug()<<"[INSTALLING XML]:"<<file2.fileName();
+    QString profileName = getName();
+    QString login = getLogin();
+    QString pass = getPass();
+
+    XMLimport reader( this );
+    reader.importPackage( & file2, packageName );
+
+    setName( profileName );
+    setLogin( login );
+    setPass( pass );
+    return true;
+}
+
+// credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
+bool Host::removeDir( const QString dirName, QString originalPath )
+{
+    bool result = true;
+    QDir dir(dirName);
+    if( dir.exists( dirName ) )
+    {
+        Q_FOREACH( QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
+        {
+            // prevent recursion outside of the original branch
+            if( info.isDir() && info.absoluteFilePath().startsWith( originalPath ) )
+            {
+                result = removeDir( info.absoluteFilePath(), originalPath );
+            }
+            else
+            {
+                result = QFile::remove( info.absoluteFilePath() );
+            }
+
+            if( !result )
+            {
+                return result;
+            }
+        }
+        result = dir.rmdir( dirName );
+    }
+
+    return result;
+}
+
+bool Host::uninstallPackage( QString packageName )
+{
+    if( ! mInstalledPackages.contains( packageName ) ) return false;
+    if( mpEditorDialog )
+    {
+        mpEditorDialog->doCleanReset();
+    }
+    mTriggerUnit.uninstall( packageName );
+    mTimerUnit.uninstall( packageName );
+    mAliasUnit.uninstall( packageName );
+    mActionUnit.uninstall( packageName );
+    mScriptUnit.uninstall( packageName );
+    mKeyUnit.uninstall( packageName );
+    QString _home = QDir::homePath();
+    _home.append( "/.config/mudlet/profiles/" );
+    _home.append( getName() );
+    QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
+    removeDir( _dest, _dest );
+    mInstalledPackages.removeAll( packageName );
+    if( mpEditorDialog )
+    {
+        mpEditorDialog->doCleanReset();
+    }
+}
+
 #endif
 
 

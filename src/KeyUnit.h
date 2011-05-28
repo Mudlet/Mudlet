@@ -49,8 +49,11 @@ public:
     qint64                getNewID();
     QString               getKeyName( int keyCode, int modifier );
     void                  setupKeyNames();
+    void                  uninstall( QString );
+    void                  _uninstall( TKey * pChild, QString packageName );
     bool                  processDataStream( int, int );
     QMutex                mKeyUnitLock;
+    QList<TKey*>        uninstallList;
 
 private:
     KeyUnit(){;}

@@ -216,7 +216,8 @@ FORMS += ui/connection_profiles.ui \
     ui/irc.ui \
     ui/mapper_room_color.ui \
     ui/room_exits.ui \
-    ui/lacking_mapper_script.ui
+    ui/lacking_mapper_script.ui \
+    ui/package_manager.ui
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc

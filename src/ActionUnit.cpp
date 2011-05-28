@@ -35,6 +35,40 @@
 
 using namespace std;
 
+void ActionUnit::_uninstall( TAction * pChild, QString packageName )
+{
+    typedef list<TAction *>::const_iterator I;
+    list<TAction*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TAction * pT = *it2;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+}
+
+
+void ActionUnit::uninstall( QString packageName )
+{
+    typedef std::list<TAction *>::iterator IT;
+    for( IT it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
+    {
+        TAction * pT = *it;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterAction(uninstallList[i]);
+    }
+}
+
 void ActionUnit::compileAll()
 {
     typedef list<TAction *>::const_iterator I;

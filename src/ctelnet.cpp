@@ -173,8 +173,10 @@ void cTelnet::connectIt(const QString &address, int port)
         m.append("\n");
         postMessage( m );
     }
-
-    QString server = "[ INFO ]  -  looking up the IP address of server:" + address + ":" + QString::number(port) + " ...\n";
+    // QChar(0x2714));//'?'
+    // QChar(0x2718));//'?'
+    // QChar(0x24d8));//info i im kreis
+    QString server = "[ info ]  -  looking up the IP address of server:" + address + ":" + QString::number(port) + " ...\n";
     postMessage( server );
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
@@ -980,17 +982,24 @@ void cTelnet::postMessage( QString msg )
     {
         msg.append("\n");
     }
-    if( msg.indexOf("[ ERROR ]") != -1 )
+    if( msg.indexOf("[ ERROR ] ") != -1 )
     {
         mpHost->mpConsole->print( msg, 150, 0, 0, 0, 0, 0 );
     }
-    else if( msg.contains( "[  OK  ]" ) )
+    else if( msg.contains( "[  OK  ] " ) )
     {
-        mpHost->mpConsole->print( msg, 0, 150, 0, 0, 0, 0 );
+        QString a = "[  OK  ]";
+        QString b = msg.mid(8);
+        mpHost->mpConsole->print( a, 0, 160, 0, 0, 0, 0 );
+        mpHost->mpConsole->print( b, 190, 100, 50, 0, 0, 0 );
     }
     else
     {
-        mpHost->mpConsole->print( msg, 150, 120, 0, 0, 0, 0 );
+        QString a = "[ INFO ]";
+        QString b = msg.mid(8);
+        mpHost->mpConsole->print( a, 0, 150, 190, 0, 0, 0 );
+        mpHost->mpConsole->print( b, 190, 150, 0, 0, 0, 0 );
+        //mpHost->mpConsole->print( msg, 190, 150, 0, 0, 0, 0 );
     }
 }
 

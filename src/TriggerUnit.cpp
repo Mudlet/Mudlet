@@ -52,6 +52,41 @@ void TriggerUnit::initStats()
     statsRegexTriggers = 0;
 }
 
+void TriggerUnit::_uninstall( TTrigger * pChild, QString packageName )
+{
+    typedef list<TTrigger *>::const_iterator I;
+    list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TTrigger * pT = *it2;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterTrigger(uninstallList[i]);
+
+    }
+}
+
+
+void TriggerUnit::uninstall( QString packageName )
+{
+    typedef std::list<TTrigger *>::iterator IT;
+    for( IT it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
+    {
+        TTrigger * pT = *it;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+}
+
 void TriggerUnit::removeAllTempTriggers()
 {
     typedef list<TTrigger *>::const_iterator I;

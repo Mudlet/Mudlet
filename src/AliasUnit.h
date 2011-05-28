@@ -1,6 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,6 +46,8 @@ public:
     bool                            killAlias( QString & name );
     bool                            registerAlias( TAlias * pT );
     void                            unregisterAlias( TAlias * pT );
+    void                            uninstall( QString );
+    void                            _uninstall( TAlias * pChild, QString packageName );
 //    bool                            serialize( QDataStream & );
 //    bool                            restore( QDataStream &, bool );
     void                            reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
@@ -75,6 +76,7 @@ public:
     int                             statsMaxLineProcessingTime;
     int                             statsMinLineProcessingTime;
     int                             statsRegexAliass;
+    QList<TAlias*>                  uninstallList;
 
 
 private:
