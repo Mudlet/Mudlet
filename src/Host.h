@@ -141,6 +141,10 @@ public:
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
 
+    bool               installPackage( QString );
+    bool               uninstallPackage( QString );
+    bool               removeDir( const QString dirName, QString originalPath );
+
     cTelnet            mTelnet;
     TConsole *         mpConsole;
     TLuaInterpreter    mLuaInterpreter;
@@ -273,6 +277,7 @@ public:
     bool               mLogStatus;
     bool               mEnableSpellCheck;
     QString            mIRCNick;
+    QStringList        mInstalledPackages;
 
 private:
     Host();

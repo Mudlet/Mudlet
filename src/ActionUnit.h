@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                *
+ *   Copyright (C) 2008-2011 by Heiko Koehn                                *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -51,6 +51,8 @@ public:
     bool                  restore( QDataStream &, bool );
     void                  reParentAction( int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1 );
     qint64                getNewID();
+    void                  uninstall( QString );
+    void                  _uninstall( TAction * pChild, QString packageName );
     void                  updateToolbar();
     std::list<TToolBar *> getToolBarList();
     std::list<TEasyButtonBar *> getEasyButtonBarList();
@@ -63,6 +65,7 @@ public:
     void                  hideToolBar( QString & );
 
     QMutex                mActionUnitLock;
+    QList<TAction*>       uninstallList;
 
 private:
                           ActionUnit(){;}

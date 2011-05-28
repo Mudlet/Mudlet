@@ -34,9 +34,9 @@ class ScriptUnit
 {
     friend class XMLexport;
     friend class XMLimport;
-    
+
 public:
-    
+
     ScriptUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     std::list<TScript *>  getScriptRootNodeList()   { QMutexLocker locker(& mScriptUnitLock); return mScriptRootNodeList; }
     TScript *             getScript( int id );
@@ -45,12 +45,14 @@ public:
     void                  unregisterScript( TScript * pT );
     void                  reParentScript( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  stopAllTriggers();
-    
+    void                  uninstall( QString );
+    void                  _uninstall( TScript * pChild, QString packageName );
     qint64                getNewID();
     QMutex                mScriptUnitLock;
-    
-private: 
-    
+    QList<TScript*>        uninstallList;
+
+private:
+
     ScriptUnit(){;}
     TScript *             getScriptPrivate( int id );
     void                  addScriptRootNode( TScript * pT, int parentPosition = -1, int childPosition = -1 );
@@ -61,8 +63,8 @@ private:
     QMap<int, TScript *>  mScriptMap;
     std::list<TScript *>  mScriptRootNodeList;
     qint64                mMaxID;
-   
-    
+
+
 };
 
 

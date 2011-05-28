@@ -6107,6 +6107,56 @@ void dlgTriggerEditor::slot_import()
         return;
     }
 
+    QString packageName = fileName.section("/",-1 );
+    packageName.replace( ".zip" , "" );
+    packageName.replace( "trigger", "" );
+    packageName.replace( "xml", "" );
+    packageName.replace( ".mpackage" , "" );
+    packageName.replace( '/' , "" );
+    packageName.replace( '\\' , "" );
+    packageName.replace( '.' , "" );
+
+    if( mpHost->mInstalledPackages.contains( packageName ) )
+    {
+        QMessageBox::information(this, tr("Import Mudlet Package:"), tr("Package %1 is already installed.").arg(packageName));
+        return;
+    }
+    QFile file2;
+    if( fileName.endsWith(".zip") || fileName.endsWith(".mpackage") )
+    {
+        QString _home = QDir::homePath();
+        _home.append( "/.config/mudlet/profiles/" );
+        _home.append( mpHost->getName() );
+        QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
+        QDir _tmpDir;
+        _tmpDir.mkpath(_dest);
+        QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
+        qDebug()<<"SCRIPT="<<_script;
+        mpHost->mLuaInterpreter.compileAndExecuteScript( _script );
+
+        // requirements for zip packages:
+        // - packages must be compressed in zip format
+        // - file extension should be .mpackage (though .zip is accepted)
+        // - there can only be a single xml file per package
+        // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
+
+        QDir _dir( _dest );
+        QStringList _filterList;
+        _filterList << "*.xml" << "*.trigger";
+        QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
+        if( entries.size() > 0 )
+        {
+            file2.setFileName( entries[0].absoluteFilePath() );
+        }
+    }
+    else
+    {
+        file2.setFileName( fileName );
+    }
+    file2.open(QFile::ReadOnly | QFile::Text);
+
+    mpHost->mInstalledPackages.append( packageName );
+    qDebug()<<"[INSTALLING XML]:"<<file2.fileName();
     QString profileName = mpHost->getName();
     QString login = mpHost->getLogin();
     QString pass = mpHost->getPass();
@@ -6119,7 +6169,7 @@ void dlgTriggerEditor::slot_import()
     treeWidget_scripts->clear();
 
     XMLimport reader( mpHost );
-    reader.importPackage( & file );
+    reader.importPackage( & file2, packageName );
 
     mpHost->setName( profileName );
     mpHost->setLogin( login );
@@ -6138,6 +6188,49 @@ void dlgTriggerEditor::slot_import()
     //mCurrentView = 0;
 }
 
+void dlgTriggerEditor::doCleanReset()
+{
+    if( mCurrentView )
+    {
+        switch( mCurrentView )
+        {
+            case cmTriggerView:
+                saveTrigger();
+                break;
+            case cmTimerView:
+                saveTimer();
+                break;
+            case cmAliasView:
+                saveAlias();
+                break;
+            case cmScriptView:
+                saveScript();
+                break;
+            case cmActionView:
+                saveAction();
+                break;
+            case cmKeysView:
+                saveKey();
+                break;
+        };
+    }
+    treeWidget->clear();
+    treeWidget_alias->clear();
+    treeWidget_actions->clear();
+    treeWidget_timers->clear();
+    treeWidget_keys->clear();
+    treeWidget_scripts->clear();
+    fillout_form();
+    mCurrentTrigger = 0;
+    mCurrentTimer = 0;
+    mCurrentAlias = 0;
+    mCurrentScript = 0;
+    mCurrentAction = 0;
+    mCurrentKey = 0;
+    slot_show_triggers();
+}
+
+
 void dlgTriggerEditor::slot_profileSaveAction()
 {
     QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/current";
@@ -6150,13 +6243,13 @@ void dlgTriggerEditor::slot_profileSaveAction()
     QFile file_xml( filename_xml );
     if ( file_xml.open( QIODevice::WriteOnly ) )
     {
-            XMLexport writer( mpHost );
-            writer.exportHost( & file_xml );
-            file_xml.close();
+        XMLexport writer( mpHost );
+        writer.exportHost( & file_xml );
+        file_xml.close();
     }
     else
     {
-            QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+mpHost->getName()+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+        QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+mpHost->getName()+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
     }
 }
 

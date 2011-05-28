@@ -36,6 +36,40 @@
 
 using namespace std;
 
+void ScriptUnit::_uninstall( TScript * pChild, QString packageName )
+{
+    typedef list<TScript *>::const_iterator I;
+    list<TScript*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TScript * pT = *it2;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+}
+
+
+void ScriptUnit::uninstall( QString packageName )
+{
+    typedef std::list<TScript *>::iterator IT;
+    for( IT it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
+    {
+        TScript * pT = *it;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterScript(uninstallList[i]);
+    }
+}
+
 void ScriptUnit::stopAllTriggers()
 {
     typedef list<TScript *>::const_iterator I;

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
+ *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -36,8 +36,8 @@ class Tree
 {
 public:
                        Tree();
-                       Tree( T * parent );		     
-    virtual            ~Tree(); 
+                       Tree( T * parent );
+    virtual            ~Tree();
                        T * getParent()             { return mpParent; }
     std::list<T *> *   getChildrenList();
     bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
@@ -65,8 +65,10 @@ public:
     QString &          getError();
     void               setError( QString );
     bool               state();
-
+    QString            getPackageName() { return mPackageName; }
+    void               setPackageName( QString n ){ mPackageName = n; }
     bool               FullyExpanded;
+    QString            mPackageName;
 
 
 protected:
@@ -80,14 +82,15 @@ private:
     bool               mActive;
     bool               mUserActiveState;
     QString            mErrorMessage;
-    
+
+
 };
 
 template<class T>
-Tree<T>::Tree() 
+Tree<T>::Tree()
 : mpParent( 0 )
 , mpMyChildrenList( new std::list<T *> )
-, mID( 0 ) 
+, mID( 0 )
 , mOK_init( true )
 , mOK_code( true )
 , mActive( false )
@@ -96,7 +99,7 @@ Tree<T>::Tree()
 }
 
 template<class T>
-Tree<T>::Tree( T *  pParent ) 
+Tree<T>::Tree( T *  pParent )
 : mpParent( pParent )
 , mpMyChildrenList( new std::list<T *> )
 , mID( 0 )
@@ -105,16 +108,16 @@ Tree<T>::Tree( T *  pParent )
 , mActive( false )
 , mUserActiveState( false )
 {
-    if( pParent ) 
+    if( pParent )
     {
         pParent->addChild( (T*)( this ) );
     }
     else mpParent=0;
 }
 
-template<class T> 
+template<class T>
 Tree<T>::~Tree()
-{  
+{
     while( mpMyChildrenList->size() > 0 )
     {
         typename std::list<T*>::iterator it = mpMyChildrenList->begin();
@@ -129,7 +132,7 @@ Tree<T>::~Tree()
         {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
-    }               
+    }
 }
 
 

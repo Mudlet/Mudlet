@@ -207,6 +207,18 @@ mudlet::mudlet()
     actionNotes->setStatusTip(tr("take notes"));
     mpMainToolBar->addAction( actionNotes );
 
+    QAction * actionPackageM = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Package Manager"), this);
+    actionPackageM->setStatusTip(tr("Package Manager"));
+    mpMainToolBar->addAction( actionPackageM );
+    QAction * menuActionPackageM = new QAction("Package Manager", this);
+    menuActionPackageM->setStatusTip(tr("Package Manager"));
+    connect(menuActionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
+    QMenu * _miscMenu = new QMenu("Misc", this);
+    _miscMenu->addAction(menuActionPackageM);
+    menuBar()->addMenu(_miscMenu);
+
+
+
     QAction * actionReplay = new QAction(QIcon(":/icons/media-optical.png"), tr("Replay"), this);
     actionNotes->setStatusTip(tr("load replay"));
     mpMainToolBar->addAction( actionReplay );
@@ -296,6 +308,9 @@ mudlet::mudlet()
     connect(actionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
     connect(actionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(actionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
+    connect(actionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
+
+
 
     QAction * mactionConnect = new QAction(tr("Connect"), this);
     QAction * mactionTriggers = new QAction(tr("Triggers"), this);
@@ -327,6 +342,7 @@ mudlet::mudlet()
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
+//    connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -365,6 +381,37 @@ mudlet::mudlet()
 
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
 
+}
+
+void mudlet::slot_package_manager()
+{
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+    QUiLoader loader;
+    QFile file(":/ui/package_manager.ui");
+    file.open(QFile::ReadOnly);
+    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
+    file.close();
+    if( ! d ) return;
+    packageList = d->findChild<QListWidget *>("packageList");
+    uninstallButton = d->findChild<QPushButton *>("uninstallButton");
+    if( ! packageList || ! uninstallButton ) return;
+    packageList->addItems( pH->mInstalledPackages );
+    connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
+    d->setWindowTitle("Package Manager");
+    d->show();
+    d->raise();
+}
+
+void mudlet::slot_uninstall_package()
+{
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+    QListWidgetItem * pI = packageList->currentItem();
+    if( pI )
+        pH->uninstallPackage( pI->text() );
+    packageList->clear();
+    packageList->addItems( pH->mInstalledPackages );
 }
 
 void mudlet::slot_close_profile_requested( int tab )

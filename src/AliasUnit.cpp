@@ -36,6 +36,37 @@
 
 using namespace std;
 
+
+void AliasUnit::_uninstall( TAlias * pChild, QString packageName )
+{
+    typedef list<TAlias *>::const_iterator I;
+    list<TAlias*> * childrenList = pChild->mpMyChildrenList;
+    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    {
+        TAlias * pT = *it2;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+}
+
+
+void AliasUnit::uninstall( QString packageName )
+{
+    typedef std::list<TAlias *>::iterator IT;
+    for( IT it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
+    {
+        TAlias * pT = *it;
+        _uninstall( pT, packageName );
+        if( pT->mPackageName == packageName )
+        {
+            uninstallList.append( pT );
+        }
+    }
+}
+
 void AliasUnit::compileAll()
 {
     typedef list<TAlias *>::const_iterator I;
@@ -46,6 +77,10 @@ void AliasUnit::compileAll()
         {
             pChild->compileAll();
         }
+    }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterAlias(uninstallList[i]);
     }
 }
 

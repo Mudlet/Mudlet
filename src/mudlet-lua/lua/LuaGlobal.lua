@@ -23,7 +23,7 @@ function __gmcp_merge_gmcp_sub_tables( a, key )
 end
 
 
-function unzip( what, dest )    
+function unzip( what, dest )  
 	local z = zip.open( what )
 	local _first = true
 	
@@ -37,9 +37,9 @@ function unzip( what, dest )
 		end
 		
 		local _f, err = z:open( file.filename )
+
 		local _data = _f:read("*a")
-		local _path = dest .. file.filename
-	
+		local _path = dest .. file.filename		
   		if file.compressed_size == 0 then
 			lfs.mkdir( _path )
 		else

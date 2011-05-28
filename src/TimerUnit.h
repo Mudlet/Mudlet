@@ -56,11 +56,16 @@ public:
     void                  doCleanup();
     QString               assembleReport();
     qint64                getNewID();
+    void                  uninstall( QString );
+    void                  _uninstall( TTimer * pChild, QString packageName );
+
+
     QMultiMap<QString, TTimer *> mLookupTable;
     QMutex                mTimerUnitLock;
     int                   statsActiveTriggers;
     int                   statsTriggerTotal;
     int                   statsTempTriggers;
+    QList<TTimer*>        uninstallList;
 
 private:
     TimerUnit(){;}
