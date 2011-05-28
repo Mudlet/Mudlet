@@ -32,10 +32,53 @@ XMLimport::XMLimport( Host * pH )
 {
 }
 
-bool XMLimport::importPackage( QIODevice * device )
+bool XMLimport::importPackage( QIODevice * device, QString packName )
 {
+    mPackageName = packName;
     setDevice( device );
 
+    gotTrigger = false;
+    gotTimer = false;
+    gotAlias = false;
+    gotKey = false;
+    gotAction = false;
+    gotScript = false;
+
+    if( ! packName.isEmpty() )
+    {
+        mpKey = new TKey( 0, mpHost );
+        mpKey->setPackageName( mPackageName );
+        mpKey->setName( mPackageName );
+
+        mpTrigger = new TTrigger( 0, mpHost );
+        mpTrigger->setPackageName( mPackageName );
+        mpTrigger->setName( mPackageName );
+
+        mpTimer = new TTimer( 0, mpHost );
+        mpTimer->setPackageName( mPackageName );
+        mpTimer->setName( mPackageName );
+
+        mpAlias = new TAlias( 0, mpHost );
+        mpAlias->setPackageName( mPackageName );
+        mpAlias->setName( mPackageName );
+
+        mpAction = new TAction( 0, mpHost );
+        mpAction->setPackageName( mPackageName );
+        mpAction->setName( mPackageName );
+
+        mpScript = new TScript( 0, mpHost );
+        mpScript->setPackageName( mPackageName );
+        mpScript->setName( mPackageName );
+
+        mpHost->getTriggerUnit()->registerTrigger( mpTrigger );
+        mpHost->getTimerUnit()->registerTimer( mpTimer );
+        mpHost->getAliasUnit()->registerAlias( mpAlias );
+        mpHost->getActionUnit()->registerAction( mpAction );
+        mpHost->getKeyUnit()->registerKey( mpKey );
+        mpHost->getScriptUnit()->registerScript( mpScript );
+
+    }
+qDebug()<<"trace#1";
     while( ! atEnd() )
     {
         readNext();
@@ -61,6 +104,34 @@ bool XMLimport::importPackage( QIODevice * device )
             }
         }
     }
+
+//    if( gotTrigger )
+//        mpHost->getTriggerUnit()->registerTrigger( mpTrigger );
+////    else
+////        delete mpTrigger;
+//    if( gotTimer )
+//        mpHost->getTimerUnit()->registerTimer( mpTimer );
+////    else
+////        delete mpTimer;
+//    if( gotAlias )
+//        mpHost->getAliasUnit()->registerAlias( mpAlias );
+////    else
+////        delete mpAlias;
+//    if( gotAction )
+//        mpHost->getActionUnit()->registerAction( mpAction );
+////    else
+////        delete mpAction;
+//    if( gotKey )
+//        mpHost->getKeyUnit()->registerKey( mpKey );
+////    else
+////        delete mpKey;
+
+//    if( gotScript )
+//        mpHost->getScriptUnit()->registerScript( mpScript );
+//    else
+//        delete mpScript;
+
+qDebug()<<"trace#2....ende";
     return ! error();
 }
 
@@ -524,11 +595,19 @@ void XMLimport::readTriggerPackage()
         {
             if( name() == "TriggerGroup" )
             {
-                readTriggerGroup( 0 );
+                gotTrigger = true;
+                if( mPackageName.isEmpty() )
+                    readTriggerGroup(0);
+                else
+                    readTriggerGroup(mpTrigger);
             }
             else if( name() == "Trigger" )
             {
-                readTriggerGroup( 0 );
+                gotTrigger = true;
+                if( mPackageName.isEmpty() )
+                    readTriggerGroup(0);
+                else
+                    readTriggerGroup(mpTrigger);
             }
             else
             {
@@ -896,7 +975,9 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
         {
             if( name() == "name" )
             {
+
                 pT->setName( readElementText() );
+                qDebug()<<"name="<<pT->getName();
                 continue;
             }
             else if( name() == "script")
@@ -985,6 +1066,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     {
         qDebug()<<"IMPORT: ERROR: trigger script "<< pT->getName()<<" does not compile";
     }
+    qDebug()<<"<-- ende trigger group()";
 }
 
 void XMLimport::readTimerPackage()
@@ -1001,11 +1083,19 @@ void XMLimport::readTimerPackage()
         {
             if( name() == "TimerGroup" )
             {
-                readTimerGroup( 0 );
+                gotTimer = true;
+                if( mPackageName.isEmpty() )
+                    readTimerGroup(0);
+                else
+                    readTimerGroup(mpTimer);
             }
             else if( name() == "Timer" )
             {
-                readTimerGroup( 0 );
+                gotTimer = true;
+                if( mPackageName.isEmpty() )
+                    readTimerGroup(0);
+                else
+                    readTimerGroup(mpTimer);
             }
             else
             {
@@ -1097,11 +1187,20 @@ void XMLimport::readAliasPackage()
         {
             if( name() == "AliasGroup" )
             {
-                readAliasGroup( 0 );
+                gotAlias = true;
+                if( mPackageName.isEmpty() )
+                    readAliasGroup(0);
+                else
+                    readAliasGroup(mpAlias);
+
             }
             else if( name() == "Alias" )
             {
-                readAliasGroup( 0 );
+                gotAlias = true;
+                if( mPackageName.isEmpty() )
+                    readAliasGroup(0);
+                else
+                    readAliasGroup(mpAlias);
             }
             else
             {
@@ -1187,11 +1286,19 @@ void XMLimport::readActionPackage()
         {
             if( name() == "ActionGroup" )
             {
-                readActionGroup( 0 );
+                gotAction = true;
+                if( mPackageName.isEmpty() )
+                    readActionGroup(0);
+                else
+                    readActionGroup(mpAction);
             }
             else if( name() == "Action" )
             {
-                readActionGroup( 0 );
+                gotAction = true;
+                if( mPackageName.isEmpty() )
+                    readActionGroup(0);
+                else
+                    readActionGroup(mpAction);
             }
             else
             {
@@ -1341,11 +1448,19 @@ void XMLimport::readScriptPackage()
         {
             if( name() == "ScriptGroup" )
             {
-                readScriptGroup( 0 );
+                gotScript = true;
+                if( mPackageName.isEmpty() )
+                    readScriptGroup(0);
+                else
+                    readScriptGroup(mpScript);
             }
             else if( name() == "Script" )
             {
-                readScriptGroup( 0 );
+                gotScript = true;
+                if( mPackageName.isEmpty() )
+                    readScriptGroup(0);
+                else
+                    readScriptGroup(mpScript);
             }
             else
             {
@@ -1424,11 +1539,20 @@ void XMLimport::readKeyPackage()
         {
             if( name() == "KeyGroup" )
             {
-                readKeyGroup( 0 );
+                gotKey = true;
+                if( mPackageName.isEmpty() )
+                    readKeyGroup(0);
+                else
+                    readKeyGroup(mpKey);
+
             }
             else if( name() == "Key" )
             {
-                readKeyGroup( 0 );
+                gotKey = true;
+                if( mPackageName.isEmpty() )
+                    readKeyGroup(0);
+                else
+                    readKeyGroup(mpKey);
             }
             else
             {

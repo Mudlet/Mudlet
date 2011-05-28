@@ -6107,6 +6107,12 @@ void dlgTriggerEditor::slot_import()
         return;
     }
 
+    QString packageName = fileName;
+    if( fileName.endsWith(".zip") ) //IDEA chose different file ending to prevent archive manager from opening the packages
+    {
+        // TODO: unpack to profile home and load xml
+
+    }
     QString profileName = mpHost->getName();
     QString login = mpHost->getLogin();
     QString pass = mpHost->getPass();
@@ -6119,7 +6125,7 @@ void dlgTriggerEditor::slot_import()
     treeWidget_scripts->clear();
 
     XMLimport reader( mpHost );
-    reader.importPackage( & file );
+    reader.importPackage( & file, packageName );
 
     mpHost->setName( profileName );
     mpHost->setLogin( login );
