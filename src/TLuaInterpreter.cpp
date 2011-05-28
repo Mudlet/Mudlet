@@ -35,7 +35,13 @@
 #include <string>
 #include "TEvent.h"
 #include "dlgMapper.h"
-#include "lua_yajl.c"
+
+
+#ifdef Q_OS_LINUX
+    #include "lua_yajl1.c"
+#else
+    #include "lua_yajl.c"
+#endif
 
 extern "C"
 {
@@ -43,6 +49,7 @@ extern "C"
     #include "lualib.h"
     #include "lauxlib.h"
 }
+#include <phonon>
 
 extern QStringList gSysErrors;
 

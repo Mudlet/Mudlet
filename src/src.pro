@@ -104,7 +104,7 @@ SOURCES += TConsole.cpp \
     dlgMapper.cpp \
     TRoom.cpp \
     TMap.cpp \
-    lua_yajl.c \
+    #lua_yajl.c \
     TBuffer.cpp \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
@@ -218,6 +218,15 @@ FORMS += ui/connection_profiles.ui \
     ui/room_exits.ui \
     ui/lacking_mapper_script.ui \
     ui/package_manager.ui
+
+win32: {
+    SOURCES += lua_yajl.c
+}
+
+unix: {
+    SOURCES += lua_yajl1.c
+}
+
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc

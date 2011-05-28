@@ -1749,7 +1749,7 @@ void GLWidget::paintGL()
                 }
                 glEnd();
             }
-			
+
 
             glTranslatef( -0.1, 0.0, 0.0 );
             if( mpMap->rooms[pArea->rooms[i]]->in > -1 )
