@@ -44,6 +44,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName )
     gotAction = false;
     gotScript = false;
 
+
     if( ! packName.isEmpty() )
     {
         mpKey = new TKey( 0, mpHost );
@@ -103,19 +104,21 @@ bool XMLimport::importPackage( QIODevice * device, QString packName )
         }
     }
 
-   if( ! gotTrigger )
-        delete mpTrigger;
-   if( ! gotTimer )
-        delete mpTimer;
-   if( ! gotAlias )
-        delete mpAlias;
-   if( ! gotAction )
-        delete mpAction;
-   if( ! gotKey )
-        delete mpKey;
-   if( ! gotScript )
-        delete mpScript;
-
+    if( ! packName.isEmpty() )
+    {
+       if( ! gotTrigger )
+            mpHost->getTriggerUnit()->unregisterTrigger( mpTrigger );
+       if( ! gotTimer )
+            mpHost->getTimerUnit()->unregisterTimer( mpTimer );
+       if( ! gotAlias )
+            mpHost->getAliasUnit()->unregisterAlias( mpAlias );
+       if( ! gotAction )
+            mpHost->getActionUnit()->unregisterAction( mpAction );
+       if( ! gotKey )
+            mpHost->getKeyUnit()->unregisterKey( mpKey );
+       if( ! gotScript )
+            mpHost->getScriptUnit()->unregisterScript( mpScript );
+    }
     return ! error();
 }
 
@@ -659,7 +662,6 @@ void XMLimport::readHostPackage( Host * pT )
             }
             else if( name() == "mInstalledPackages")
             {
-          qDebug()<<"reading package list";
                 readStringList( pT->mInstalledPackages );
                 continue;
             }

@@ -757,6 +757,12 @@ bool mudlet::setBackgroundImage( Host * pHost, QString & name, QString & path )
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
     {
+        if( QDir::homePath().contains('\\') )
+        {
+            path.replace('/', "\\");
+        }
+        else
+            path.replace('\\', "/");
         QPixmap bgPixmap( path );
         labelMap[name]->setPixmap( bgPixmap );
         return true;

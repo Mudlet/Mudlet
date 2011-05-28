@@ -101,6 +101,9 @@ cTelnet::cTelnet( Host * pH )
     mTimerPass = new QTimer( this );
     mTimerPass->setSingleShot( true );
     connect(mTimerPass, SIGNAL(timeout()), this, SLOT(slot_send_pass()));
+
+    mpDownloader = new QNetworkAccessManager( this );
+    connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
 }
 
 void cTelnet::reset ()
@@ -385,6 +388,26 @@ void cTelnet::sendTelnetOption( char type, char option )
 }
 
 
+void cTelnet::replyFinished( QNetworkReply * reply )
+{
+    qDebug()<<"download complete!";
+    mpProgressDialog->close();
+
+    QString name = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName();
+    name.append( mServerPackage );
+    QFile file( name );
+    file.open( QFile::WriteOnly );
+    file.write( reply->readAll() );
+    file.flush();
+    file.close();
+    mpHost->installPackage( mServerPackage );
+}
+
+void cTelnet::setDownloadProgress( qint64 got, qint64 tot )
+{
+    mpProgressDialog->setRange(0, static_cast<int>(tot) );
+    mpProgressDialog->setValue(static_cast<int>(got));
+}
 
 void cTelnet::processTelnetCommand( const string & command )
 {
@@ -705,9 +728,19 @@ void cTelnet::processTelnetCommand( const string & command )
               if( _m.startsWith( "Client.GUI" ) )
               {
                   QString url = _m.section( '\n', 1 );
+                  mServerPackage = url.section('/',-1);
                   mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
                   mpHost->mpConsole->print( url );
+                  mpHost->mpConsole->print("') (package='");
+                  mpHost->mpConsole->print(mServerPackage);
                   mpHost->mpConsole->print("')>\n");
+
+                  //FIXME:check if package is already installed
+                  qDebug()<<"DOWNLOADING:"<<url;
+                  QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
+                  mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole );
+                  connect(reply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));
+                  mpProgressDialog->show();
 
               }
 

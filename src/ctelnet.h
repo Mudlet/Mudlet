@@ -31,6 +31,8 @@ copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
 #include <QTime>
 #include <QColor>
 #include "dlgComposer.h"
+#include <QNetworkAccessManager>
+#include <QProgressDialog>
 
 const char TN_SE = 240;
 const char TN_NOP = 241;
@@ -111,10 +113,13 @@ public:
   bool                mGA_Driver;
   bool                mFORCE_GA_OFF;
   dlgComposer *       mpComposer;
+  QNetworkAccessManager * mpDownloader;
+  QProgressDialog *   mpProgressDialog;
+  QString             mServerPackage;
 
-
-protected slots:
-
+public slots:
+  void                setDownloadProgress( qint64, qint64 );
+  void                replyFinished( QNetworkReply * );
   void                readPipe();
   void                handle_socket_signal_hostFound(QHostInfo);
   void                handle_socket_signal_connected();
