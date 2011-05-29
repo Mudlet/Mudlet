@@ -393,9 +393,9 @@ void cTelnet::replyFinished( QNetworkReply * reply )
     qDebug()<<"download complete!";
     mpProgressDialog->close();
 
-    QString name = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName();
-    name.append( mServerPackage );
-    QFile file( name );
+
+    QFile file( mServerPackage );
+    qDebug()<<"unzipping:'"<<mServerPackage<<"'";
     file.open( QFile::WriteOnly );
     file.write( reply->readAll() );
     file.flush();
@@ -728,15 +728,31 @@ void cTelnet::processTelnetCommand( const string & command )
               if( _m.startsWith( "Client.GUI" ) )
               {
                   QString url = _m.section( '\n', 1 );
-                  mServerPackage = url.section('/',-1);
+                  QString packageName = url.section('/',-1);
+                  QString fileName = packageName;
+                  packageName.replace( ".zip" , "" );
+                  packageName.replace( "trigger", "" );
+                  packageName.replace( "xml", "" );
+                  packageName.replace( ".mpackage" , "" );
+                  packageName.replace( '/' , "" );
+                  packageName.replace( '\\' , "" );
+                  packageName.replace( '.' , "" );
                   mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
                   mpHost->mpConsole->print( url );
                   mpHost->mpConsole->print("') (package='");
-                  mpHost->mpConsole->print(mServerPackage);
+                  mpHost->mpConsole->print(packageName);
                   mpHost->mpConsole->print("')>\n");
+                  if( mpHost->mInstalledPackages.contains( packageName ) )
+                  {
+                      mpHost->mpConsole->print("<package is already installed>\n");
+                      return;
+                  }
+                  QString _home = QDir::homePath();
+                  _home.append( "/.config/mudlet/profiles/" );
+                  _home.append( mpHost->getName() );
+                  mServerPackage = QString( "%1/%2").arg( _home ).arg( fileName );
 
-                  //FIXME:check if package is already installed
-                  qDebug()<<"DOWNLOADING:"<<url;
+                  qDebug()<<"DOWNLOADING:"<<url<< "mServerPackage="<<mServerPackage;
                   QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
                   mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole );
                   connect(reply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));

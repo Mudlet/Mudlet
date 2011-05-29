@@ -24,31 +24,42 @@ end
 
 
 function unzip( what, dest )  
+	cecho("\n<blue>unpacking package:<"..what.."< to <"..dest..">\n") 
 	local z = zip.open( what )
-	local _first = true
-	
-	for file in z:files() do
-		if _first then
-			local _dir
-			for _dir in string.gmatch(file.filename, "(%w+)/") do
-       			lfs.mkdir( dest .. _dir )
-			end
-			_first = false	
-		end
-		
+	local createdDirs = {}
+	for file in z:files() do	
 		local _f, err = z:open( file.filename )
-
 		local _data = _f:read("*a")
+		local _path = dest .. file.filename
+		local _dir = string.split( file.filename, '/' )
+		local created = dest;
+		for k,v in ipairs( _dir ) do
+			if k < # _dir then
+				created = created .. '/'.. v;
+				if not table.contains( createdDirs, created ) then
+					table.insert( createdDirs, created );
+					lfs.mkdir( created );
+					cecho("<red>--> creating dir:" .. created .. "\n");
+				end
+			elseif file.uncompressed_size == 0 then
+				if not table.contains( createdDirs, created ) then
+					cecho("<red>--> creating dir:" .. file.filename .. "\n")
+					table.insert( createdDirs, created );
+					lfs.mkdir( file.filename )
+				end
+			end
+		end
 		local _path = dest .. file.filename		
-  		if file.compressed_size == 0 then
-			lfs.mkdir( _path )
-		else
+  		if file.uncompressed_size > 0 then
 			local out = io.open( _path, "wb" )
 			if out then
+				cecho("<green>unpacking file:".._path.."\n")
 				out:write( _data )
 				out:close()
+			else
+				echo("ERROR: can't write file:".._path.."\n")
 			end
-		end
+		end		
 		_f:close();
 	end
 	z:close()

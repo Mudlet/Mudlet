@@ -49,27 +49,39 @@ bool XMLimport::importPackage( QIODevice * device, QString packName )
     {
         mpKey = new TKey( 0, mpHost );
         mpKey->setPackageName( mPackageName );
+        mpKey->setIsActive( true );
         mpKey->setName( mPackageName );
+        mpKey->setIsFolder( true );
 
         mpTrigger = new TTrigger( 0, mpHost );
         mpTrigger->setPackageName( mPackageName );
+        mpTrigger->setIsActive( true );
         mpTrigger->setName( mPackageName );
+        mpTrigger->setIsFolder( true );
 
         mpTimer = new TTimer( 0, mpHost );
         mpTimer->setPackageName( mPackageName );
+        mpTimer->setIsActive( true );
         mpTimer->setName( mPackageName );
+        mpTimer->setIsFolder( true );
 
         mpAlias = new TAlias( 0, mpHost );
         mpAlias->setPackageName( mPackageName );
+        mpAlias->setIsActive( true );
         mpAlias->setName( mPackageName );
+        mpAlias->setIsFolder( true );
 
         mpAction = new TAction( 0, mpHost );
         mpAction->setPackageName( mPackageName );
+        mpAction->setIsActive( true );
         mpAction->setName( mPackageName );
+        mpAction->setIsFolder( true );
 
         mpScript = new TScript( 0, mpHost );
         mpScript->setPackageName( mPackageName );
+        mpScript->setIsActive( true );
         mpScript->setName( mPackageName );
+        mpScript->setIsFolder( true );
 
         mpHost->getTriggerUnit()->registerTrigger( mpTrigger );
         mpHost->getTimerUnit()->registerTimer( mpTimer );

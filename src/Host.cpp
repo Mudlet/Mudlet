@@ -717,6 +717,7 @@ void Host::orderShutDown()
 
 bool Host::installPackage( QString fileName )
 {
+    qDebug()<<"installing:"<<fileName;
     if( fileName.isEmpty() ) return false;
 
     QFile file(fileName);
@@ -737,6 +738,10 @@ bool Host::installPackage( QString fileName )
     if( mInstalledPackages.contains( packageName ) )
     {
         return false;
+    }
+    if( mpEditorDialog )
+    {
+        mpEditorDialog->doCleanReset();
     }
     QFile file2;
     if( fileName.endsWith(".zip") || fileName.endsWith(".mpackage") )
@@ -761,30 +766,40 @@ bool Host::installPackage( QString fileName )
         QStringList _filterList;
         _filterList << "*.xml" << "*.trigger";
         QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
-        if( entries.size() > 0 )
+        for( int i=0; i<entries.size(); i++ )
         {
-            file2.setFileName( entries[0].absoluteFilePath() );
+            file2.setFileName( entries[i].absoluteFilePath() );
+            file2.open(QFile::ReadOnly | QFile::Text);
+            QString profileName = getName();
+            QString login = getLogin();
+            QString pass = getPass();
+            XMLimport reader( this );
+            mInstalledPackages.append( packageName );
+            reader.importPackage( & file2, packageName );
+            setName( profileName );
+            setLogin( login );
+            setPass( pass );
         }
     }
     else
     {
         file2.setFileName( fileName );
+        file2.open(QFile::ReadOnly | QFile::Text);
+        mInstalledPackages.append( packageName );
+        QString profileName = getName();
+        QString login = getLogin();
+        QString pass = getPass();
+        XMLimport reader( this );
+        reader.importPackage( & file2, packageName );
+        setName( profileName );
+        setLogin( login );
+        setPass( pass );
+        return true;
     }
-    file2.open(QFile::ReadOnly | QFile::Text);
-
-    mInstalledPackages.append( packageName );
-    qDebug()<<"[INSTALLING XML]:"<<file2.fileName();
-    QString profileName = getName();
-    QString login = getLogin();
-    QString pass = getPass();
-
-    XMLimport reader( this );
-    reader.importPackage( & file2, packageName );
-
-    setName( profileName );
-    setLogin( login );
-    setPass( pass );
-    return true;
+    if( mpEditorDialog )
+    {
+        mpEditorDialog->doCleanReset();
+    }
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
