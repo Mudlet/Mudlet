@@ -3162,6 +3162,19 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     return 0;
 }
 
+//qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
+int TLuaInterpreter::setAppStyleSheet( lua_State *L )
+{
+    string luaWindowName="";
+    if( lua_isstring( L, 1 ) )
+    {
+        luaWindowName = lua_tostring( L, 1 );
+    }
+    else
+        luaWindowName = "main";
+    qApp->setStyleSheet( luaWindowName.c_str() );
+}
+
 #include <Phonon>
 
 int TLuaInterpreter::playSoundFile( lua_State * L )
@@ -7644,7 +7657,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler );
     lua_register( pGlobalLua, "saveMap", TLuaInterpreter::saveMap );
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
-
+    lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
