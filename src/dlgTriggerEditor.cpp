@@ -2929,7 +2929,18 @@ void dlgTriggerEditor::saveTrigger()
             }
             else if( pT->isFolder() )
             {
-                if( pT->isActive() )
+                if( ! pT->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+                else if( pT->isActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                 }
@@ -3112,7 +3123,18 @@ void dlgTriggerEditor::saveTimer()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( pT->shouldBeActive() )
+                if( ! pT->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+                else if( pT->shouldBeActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
                 }
@@ -3263,7 +3285,18 @@ void dlgTriggerEditor::saveAlias()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( pT->isActive() )
+                if( ! pT->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+                else if( pT->isActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                 }
@@ -3461,7 +3494,18 @@ void dlgTriggerEditor::saveAction()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( ! pT->getParent() )
+                if( ! pT->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+                else if( ! pT->getParent() )
                 {
                     if( pT->isActive() )
                     {
@@ -3627,7 +3671,18 @@ void dlgTriggerEditor::saveScript()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( pT->isActive() )
+                if( ! pT->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+                else if( pT->isActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
                 }
@@ -3776,7 +3831,18 @@ void dlgTriggerEditor::saveKey()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( pT->isActive() )
+                if( ! pT->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
+                else if( pT->isActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                 }
