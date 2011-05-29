@@ -3177,9 +3177,15 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
+    QString sound = luaSendText.c_str();
     //QSound::play( QString( luaSendText.c_str() ) );
-
-    Phonon::MediaObject *music = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(luaSendText.c_str()));
+    if( QDir::homePath().contains('\\') )
+    {
+        sound.replace('/', "\\");
+    }
+    else
+        sound.replace('\\', "/");
+    Phonon::MediaObject *music = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(sound.toLatin1().data()));
     music->play();
     return 0;
 }

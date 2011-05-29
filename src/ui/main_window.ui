@@ -104,20 +104,18 @@
     <property name="title">
      <string>Toolbox</string>
     </property>
-    <addaction name="actionPackage_manager"/>
     <addaction name="dactionScriptEditor"/>
     <addaction name="actionShow_Map"/>
     <addaction name="dactionNotepad"/>
     <addaction name="actionLive_Help_Chat"/>
+    <addaction name="actionPackage_manager"/>
     <addaction name="dactionReplay"/>
-    <addaction name="actionTest1"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
      <string>Options</string>
     </property>
     <addaction name="dactionOptions"/>
-    <addaction name="actionAsdf"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -177,6 +175,9 @@
   <action name="dactionOptions">
    <property name="text">
     <string>Preferences</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+P</string>
    </property>
   </action>
   <action name="dactionScriptEditor">
