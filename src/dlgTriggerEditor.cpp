@@ -6159,8 +6159,7 @@ void dlgTriggerEditor::slot_import()
     }
 
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
-                                                    QDir::currentPath(),
-                                                    tr("*.xml"));
+                                                    QDir::currentPath());
     if( fileName.isEmpty() ) return;
 
     QFile file(fileName);
@@ -6197,7 +6196,6 @@ void dlgTriggerEditor::slot_import()
         QDir _tmpDir;
         _tmpDir.mkpath(_dest);
         QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
-        qDebug()<<"SCRIPT="<<_script;
         mpHost->mLuaInterpreter.compileAndExecuteScript( _script );
 
         // requirements for zip packages:
@@ -6222,7 +6220,6 @@ void dlgTriggerEditor::slot_import()
     file2.open(QFile::ReadOnly | QFile::Text);
 
     mpHost->mInstalledPackages.append( packageName );
-    qDebug()<<"[INSTALLING XML]:"<<file2.fileName();
     QString profileName = mpHost->getName();
     QString login = mpHost->getLogin();
     QString pass = mpHost->getPass();
@@ -6251,7 +6248,6 @@ void dlgTriggerEditor::slot_import()
     mCurrentKey = 0;
 
     slot_show_triggers();
-    //mCurrentView = 0;
 }
 
 void dlgTriggerEditor::doCleanReset()

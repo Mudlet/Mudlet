@@ -65,6 +65,11 @@ void AliasUnit::uninstall( QString packageName )
             uninstallList.append( pT );
         }
     }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterAlias(uninstallList[i]);
+
+    }
 }
 
 void AliasUnit::compileAll()

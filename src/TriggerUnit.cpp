@@ -65,11 +65,7 @@ void TriggerUnit::_uninstall( TTrigger * pChild, QString packageName )
             uninstallList.append( pT );
         }
     }
-    for( int i=0; i<uninstallList.size(); i++ )
-    {
-        unregisterTrigger(uninstallList[i]);
 
-    }
 }
 
 
@@ -84,6 +80,11 @@ void TriggerUnit::uninstall( QString packageName )
         {
             uninstallList.append( pT );
         }
+    }
+    for( int i=0; i<uninstallList.size(); i++ )
+    {
+        unregisterTrigger(uninstallList[i]);
+
     }
 }
 
