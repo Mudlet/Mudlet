@@ -217,7 +217,8 @@ FORMS += ui/connection_profiles.ui \
     ui/mapper_room_color.ui \
     ui/room_exits.ui \
     ui/lacking_mapper_script.ui \
-    ui/package_manager.ui
+    ui/package_manager.ui \
+    ui/package_manager_unpack.ui
 
 win32: {
     SOURCES += lua_yajl.c

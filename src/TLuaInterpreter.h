@@ -115,6 +115,8 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int sendIrc( lua_State * );
+    static int showUnzipProgress( lua_State * );
     static int setAppStyleSheet( lua_State * );
     static int setMainWindowSize( lua_State * L );
     static int registerAnonymousEventHandler( lua_State * L );

@@ -6304,6 +6304,8 @@ void dlgTriggerEditor::slot_import()
     mpHost->setLogin( login );
     mpHost->setPass( pass );
 
+    slot_profileSaveAction();
+
     fillout_form();
 
     mCurrentTrigger = 0;

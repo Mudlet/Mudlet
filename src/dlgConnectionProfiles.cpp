@@ -717,7 +717,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             datetime.setDate(QDate (year.toInt(), month.toInt(), day.toInt()));
 
             //readableEntries << datetime.toString(Qt::SystemLocaleLongDate);
-            profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entries.at(i)));
+            //profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entries.at(i)));
+            profile_history->addItem(datetime.toString(Qt::SystemLocaleLongDate), QVariant(entries.at(i)));
         }
         else
             profile_history->addItem(entries.at(i), QVariant(entries.at(i))); // if it has a custom name, use it as it is

@@ -50,6 +50,11 @@ Host * HostManager::getHost( QString hostname )
     return mHostPool.getHost( hostname );
 }
 
+void HostManager::postIrcMessage( QString a, QString b, QString c )
+{
+    mHostPool.postIrcMessage( a, b, c );
+}
+
 bool HostManager::addHost( QString url, QString port, QString login, QString pass )
 {
     bool ret = mHostPool.addNewHost( url, port, login, pass );

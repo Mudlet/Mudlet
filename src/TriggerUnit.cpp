@@ -473,6 +473,7 @@ void TriggerUnit::_assembleReport( TTrigger * pChild )
         _assembleReport( pT );
         if( pT->isActive() ) statsActiveTriggers++;
         if( pT->isTempTrigger() ) statsTempTriggers++;
+        statsPatterns += pT->mRegexCodeList.size();
         statsTriggerTotal++;
     }
 }
@@ -482,12 +483,14 @@ QString TriggerUnit::assembleReport()
     statsActiveTriggers = 0;
     statsTriggerTotal = 0;
     statsTempTriggers = 0;
+    statsPatterns = 0;
     typedef list<TTrigger *>::const_iterator I;
     for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         if( pChild->isActive() ) statsActiveTriggers++;
         if( pChild->isTempTrigger() ) statsTempTriggers++;
+        statsPatterns += pChild->mRegexCodeList.size();
         statsTriggerTotal++;
         list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
         for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
@@ -496,11 +499,13 @@ QString TriggerUnit::assembleReport()
             _assembleReport( pT );
             if( pT->isActive() ) statsActiveTriggers++;
             if( pT->isTempTrigger() ) statsTempTriggers++;
+            statsPatterns += pT->mRegexCodeList.size();
             statsTriggerTotal++;
         }
     }
     QStringList msg;
     msg << "triggers current total: " << QString::number(statsTriggerTotal) << "\n"
+        << "trigger patterns total: " << QString::number(statsPatterns) << "\n"
         << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
         << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
         /*<< "active triggers max this session: " << QString::number(statsActiveTriggersMax) << "\n"

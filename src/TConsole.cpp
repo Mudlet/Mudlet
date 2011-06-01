@@ -759,8 +759,19 @@ void TConsole::slot_toggleLogging()
 {
     if( mIsDebugConsole ) return;
     mLogToLogFile = ! mLogToLogFile;
-    mpHost->mLogStatus = mLogToLogFile;
-
+    //mpHost->mLogStatus = mLogToLogFile;
+    if( mLogToLogFile )
+    {
+        QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
+        file.open( QIODevice::WriteOnly | QIODevice::Text );
+        QTextStream out(&file);
+        file.close();
+    }
+    else
+    {
+       QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
+       file.remove();
+    }
     if( mLogToLogFile )
     {
         mLastBufferLogLine = buffer.size();

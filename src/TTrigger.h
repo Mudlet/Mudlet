@@ -151,6 +151,7 @@ public:
     Host *           mpHost;
     QString                                mName;
     bool                                   mIsTempTrigger;
+    QStringList                            mRegexCodeList;
 
 private:
 
@@ -160,7 +161,7 @@ private:
                                                               std::list<int> & posList );
     void                                   filter( std::string &, int & );
 
-    QStringList                            mRegexCodeList;
+
     QList<int>                             mRegexCodePropertyList;
     QMap<int, pcre *>                      mRegexMap;
 

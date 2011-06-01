@@ -157,6 +157,17 @@ void HostPool::orderShutDown()
     } */
 }
 
+void HostPool::postIrcMessage( QString a, QString b, QString c )
+{
+    QMutexLocker locker(& mPoolLock);
+
+    QList<Host*> hostList = mHostPool.values();
+    for( int i=0; i<hostList.size(); i++ )
+    {
+        hostList[i]->postIrcMessage( a, b, c );
+    }
+}
+
 Host * HostPool::getHost( QString hostname )
 {
     QMutexLocker locker(& mPoolLock);

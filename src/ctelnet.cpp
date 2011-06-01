@@ -230,11 +230,11 @@ void cTelnet::handle_socket_signal_disconnected()
     mNeedDecompression = false;
     reset();
     QString lf = "\n\n";
-    QString err = "[ INFO ]  -  Socket got disconnected. " + socket.errorString() + "\n";
-    QString spacer = "-------------------------------------------------------------\n";
+    QString err =    "[ INFO ]  -  Socket got disconnected. " + socket.errorString() + "\n";
+    QString spacer = "          -                 \n";//"-------------------------------------------------------------\n";
     if( ! mpHost->mIsGoingDown )
     {
-        postMessage( lf );
+        //postMessage( lf );
         postMessage( spacer );
         postMessage( err );
         postMessage( msg );
@@ -1495,7 +1495,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 {
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
                     // IAC SB COMPRESS2 IAC SE for MCCP v2
-                    if( mMCCP_version_1 || mMCCP_version_2 )
+                    if( ( mMCCP_version_1 || mMCCP_version_2 ) && ( ! mNeedDecompression ) )
                     {
                         char _ch = buffer[i];
                         if( (_ch == OPT_COMPRESS ) || (_ch == OPT_COMPRESS2 ) )
@@ -1529,10 +1529,10 @@ void cTelnet::handle_socket_signal_readyRead()
                                 if( restLength > 0 )
                                 {
                                     datalen = decompressBuffer( pBuffer, restLength );
-                                    if(datalen != -1 ) datalen += i+3; //bugfix: BenH
+                                    //if(datalen != -1 ) datalen += i+3; //bugfix: BenH
                                 }
                                 //bugfix: BenH
-                                i += 2;
+                                //i += 2;
                                 iac = false;
                                 insb = false;
                                 ////////////////

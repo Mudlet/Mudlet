@@ -68,6 +68,7 @@ public:
 
     int                   statsTriggerTotal;
     int                   statsTempTriggers;
+    int                   statsPatterns;
     int                   statsActiveTriggers;
     int                   statsActiveTriggersMax;
     int                   statsActiveTriggersMin;

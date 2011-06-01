@@ -3175,6 +3175,25 @@ int TLuaInterpreter::setAppStyleSheet( lua_State *L )
     qApp->setStyleSheet( luaWindowName.c_str() );
 }
 
+// this is an internal only function used by the package system
+int TLuaInterpreter::showUnzipProgress( lua_State * L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "showUnzipProgress: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    QString txt = luaSendText.c_str();
+    mudlet::self()->showUnzipProgress( txt );
+    return 0;
+}
+
 #include <Phonon>
 
 int TLuaInterpreter::playSoundFile( lua_State * L )
@@ -6683,6 +6702,39 @@ int TLuaInterpreter::sendSocket( lua_State * L )
     return 0;
 }
 
+#include "dlgIRC.h"
+int TLuaInterpreter::sendIrc( lua_State * L )
+{
+    string who;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "sendSocket: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        who = lua_tostring( L, 1 );
+    }
+    string text;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "sendSocket: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        text = lua_tostring( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString chan = who.c_str();
+    QString txt = text.c_str();
+    if( ! mudlet::self()->mpIRC ) return 0;
+    mudlet::self()->mpIRC->session->cmdMessage( chan, txt );
+    return 0;
+}
+
 
 bool TLuaInterpreter::compileAndExecuteScript( QString & code )
 {
@@ -7467,7 +7519,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_pushstring( pGlobalLua, "SCRIPT_ID" );
     lua_pushnumber( pGlobalLua, -1 ); // ID 1 is used to indicate that this is the global Lua interpreter
     lua_settable( pGlobalLua, LUA_GLOBALSINDEX );
-
+    lua_register( pGlobalLua, "showUnzipProgress", TLuaInterpreter::showUnzipProgress );//internal function used by the package system NOT FOR USERS
     lua_register( pGlobalLua, "wait", TLuaInterpreter::Wait );
     lua_register( pGlobalLua, "expandAlias", TLuaInterpreter::Send );
     lua_register( pGlobalLua, "echo", TLuaInterpreter::Echo );
@@ -7658,6 +7710,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "saveMap", TLuaInterpreter::saveMap );
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
     lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
+    lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
+
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 

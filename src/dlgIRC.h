@@ -19,6 +19,7 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
 public:
     dlgIRC();
     Irc::Session* session;
+    QString mNick;
 
 public slots:
     void irc_gotMsg( QString, QString, QString );

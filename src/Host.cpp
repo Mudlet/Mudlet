@@ -137,7 +137,9 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mSpellDic            ( "en_US" )
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
+, mpUnzipDialog        ( 0 )
 {
+   // mLogStatus = mudlet::self()->mAutolog;
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
     directoryLogFile.append("/log");
@@ -253,7 +255,9 @@ Host::Host()
 , mSpellDic            ( "en_US" )
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
+, mpUnzipDialog        ( 0 )
 {
+
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
     directoryLogFile.append("/log");
@@ -601,6 +605,15 @@ void Host::raiseEvent( TEvent * pE )
     }
 }
 
+void Host::postIrcMessage( QString a, QString b, QString c )
+{
+    TEvent * pE = new TEvent;
+    pE->mArgumentList << "sysIrcMessage";
+    pE->mArgumentList << a << b << c;
+    pE->mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent( pE );
+}
+
 void Host::enableTimer( QString & name )
 {
     mTimerUnit.enableTimer( name );
@@ -714,10 +727,23 @@ void Host::orderShutDown()
     mIsClosingDown = true;
 }
 
+// this is called by the Lua function unzip() defined in LuaGlobal.lua
+void Host::showUnpackingProgress( QString  txt )
+{
+    return;
+    if( ! mpUnzipDialog ) return;
+    QStringList l;
+    l << txt;
+    packageList->addItems( l );
+    qDebug()<<txt;
+    packageList->scrollToBottom();
+    packageList->update();
+    QApplication::sendPostedEvents();
+}
 
+#include <QtUiTools>
 bool Host::installPackage( QString fileName )
 {
-    qDebug()<<"installing:"<<fileName;
     if( fileName.isEmpty() ) return false;
 
     QFile file(fileName);
@@ -752,9 +778,26 @@ bool Host::installPackage( QString fileName )
         QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
         QDir _tmpDir;
         _tmpDir.mkpath(_dest);
+
+        QUiLoader loader;
+        QFile file(":/ui/package_manager_unpack.ui");
+        file.open(QFile::ReadOnly);
+        mpUnzipDialog = dynamic_cast<QDialog *>(loader.load( &file, 0 ) );
+        file.close();
+        if( ! mpUnzipDialog ) return false;
+        QString _title = QString("Unpacking package: %1").arg(fileName);
+        mpUnzipDialog->setWindowTitle( _title );
+        mpUnzipDialog->show();
+        mpUnzipDialog->raise();
+        QApplication::sendPostedEvents();
+
+
+
         QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
-        qDebug()<<"SCRIPT="<<_script;
         mLuaInterpreter.compileAndExecuteScript( _script );
+
+        mpUnzipDialog->close();
+        mpUnzipDialog = 0;
 
         // requirements for zip packages:
         // - packages must be compressed in zip format
@@ -799,6 +842,20 @@ bool Host::installPackage( QString fileName )
     if( mpEditorDialog )
     {
         mpEditorDialog->doCleanReset();
+    }
+    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
+    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
+    QDir dir_xml;
+    if( ! dir_xml.exists( directory_xml ) )
+    {
+        dir_xml.mkpath( directory_xml );
+    }
+    QFile file_xml( filename_xml );
+    if ( file_xml.open( QIODevice::WriteOnly ) )
+    {
+        XMLexport writer( this );
+        writer.exportHost( & file_xml );
+        file_xml.close();
     }
 }
 
@@ -854,6 +911,20 @@ bool Host::uninstallPackage( QString packageName )
     if( mpEditorDialog )
     {
         mpEditorDialog->doCleanReset();
+    }
+    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
+    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
+    QDir dir_xml;
+    if( ! dir_xml.exists( directory_xml ) )
+    {
+        dir_xml.mkpath( directory_xml );
+    }
+    QFile file_xml( filename_xml );
+    if ( file_xml.open( QIODevice::WriteOnly ) )
+    {
+        XMLexport writer( this );
+        writer.exportHost( & file_xml );
+        file_xml.close();
     }
 }
 

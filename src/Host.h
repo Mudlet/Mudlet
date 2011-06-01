@@ -50,7 +50,7 @@ class TLuaInterpreter;
 #include "TArea.h"
 #include "TRoom.h"
 #include "TMap.h"
-
+#include <QListWidget>;
 
 class dlgTriggerEditor;
 class TConsole;
@@ -104,7 +104,7 @@ public:
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
     TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
     void               incomingStreamProcessor( QString & paragraph, int line );
-
+    void               postIrcMessage( QString, QString, QString );
     void               enableTimer( QString & );
     void               disableTimer( QString & );
     void               enableTrigger( QString & );
@@ -278,6 +278,11 @@ public:
     bool               mEnableSpellCheck;
     QString            mIRCNick;
     QStringList        mInstalledPackages;
+
+    void               showUnpackingProgress( QString  txt );
+    QDialog *          mpUnzipDialog;
+    QPushButton *      uninstallButton;
+    QListWidget *      packageList;
 
 private:
     Host();

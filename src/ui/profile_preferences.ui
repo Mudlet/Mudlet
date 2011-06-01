@@ -249,17 +249,12 @@
            <widget class="QComboBox" name="mMXPMode">
             <item>
              <property name="text">
-              <string>MXP off</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
               <string>MXP auto detect (default)</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>MXP always on</string>
+              <string>MXP off</string>
              </property>
             </item>
            </widget>
@@ -284,8 +279,6 @@
            <widget class="QLineEdit" name="ircNick"/>
           </item>
          </layout>
-         <zorder>label_58</zorder>
-         <zorder>ircNick</zorder>
          <zorder>ircNick</zorder>
          <zorder>label_58</zorder>
         </widget>

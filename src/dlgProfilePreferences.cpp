@@ -40,7 +40,15 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     // init generated dialog
     setupUi(this);
 
-    ircNick->setText( pH->mIRCNick );
+    QString nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
+    QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
+    file.open( QIODevice::ReadOnly );
+    QDataStream ifs( & file );
+    ifs >> nick;
+    file.close();
+    if( nick.isEmpty() )
+        nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
+    ircNick->setText( nick );
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
 #ifdef Q_OS_WIN32
@@ -1222,7 +1230,7 @@ void dlgProfilePreferences::setColorLightWhite2()
     }
 }
 
-
+#include "dlgIRC.h"
 
 void dlgProfilePreferences::slot_save_and_exit()
 {
@@ -1272,6 +1280,19 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
     pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
     pHost->mpConsole->changeColors();
+
+    //pHost->mIRCNick = ircNick->text();
+    QString old_nick = mudlet::self()->mIrcNick;
+    QString new_nick = ircNick->text();
+    if( new_nick.isEmpty() )
+        new_nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
+    QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
+    file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
+    QDataStream ofs( & file );
+    ofs << new_nick;
+    file.close();
+    if( mudlet::self()->mpIRC )
+        mudlet::self()->mpIRC->session->setNick( new_nick );
 
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {

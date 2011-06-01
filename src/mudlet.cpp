@@ -93,7 +93,7 @@ mudlet::mudlet()
 , actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
 #ifdef Q_CC_GNU
-    , version( "Mudlet 2.0-rc6 May 2011" )
+    , version( "Mudlet 2.0-rc6-pre1 May 2011" )
 #else
     , version( "Mudlet 2.0-rc6-MSVC10 May 2011" )
 #endif
@@ -144,6 +144,16 @@ mudlet::mudlet()
     mainPane->setContentsMargins(0,0,0,0);
     mainPane->setSizePolicy( sizePolicy );
     mainPane->setFocusPolicy( Qt::NoFocus );
+
+    QFile file_autolog( QDir::homePath()+"/.config/mudlet/autolog" );
+    if( file_autolog.exists() )
+    {
+        mAutolog = true;
+    }
+    else
+    {
+        mAutolog = false;
+    }
 
     QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
     if( file_use_smallscreen.exists() )
@@ -338,11 +348,11 @@ mudlet::mudlet()
     connect(dactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(dactionVideo, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_video()));
     connect(dactionForum, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_forum()));
-    connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_irc()));
+    connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
-//    connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
+    connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -395,12 +405,46 @@ void mudlet::slot_package_manager()
     if( ! d ) return;
     packageList = d->findChild<QListWidget *>("packageList");
     uninstallButton = d->findChild<QPushButton *>("uninstallButton");
+    installButton = d->findChild<QPushButton *>("installButton");
     if( ! packageList || ! uninstallButton ) return;
     packageList->addItems( pH->mInstalledPackages );
     connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
+    connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
     d->setWindowTitle("Package Manager");
     d->show();
     d->raise();
+}
+
+void mudlet::slot_install_package()
+{
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"),
+                                                    QDir::currentPath());
+    if( fileName.isEmpty() ) return;
+
+    QFile file(fileName);
+    if( ! file.open(QFile::ReadOnly | QFile::Text) )
+    {
+        QMessageBox::warning(this, tr("Import Mudlet Package:"),
+                             tr("Cannot read file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(file.errorString()));
+        return;
+    }
+
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+
+    pH->installPackage( fileName );
+    packageList->clear();
+    packageList->addItems( pH->mInstalledPackages );
+}
+
+void mudlet::showUnzipProgress( QString txt )
+{
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+    pH->showUnpackingProgress( txt );
 }
 
 void mudlet::slot_uninstall_package()
@@ -531,6 +575,7 @@ void mudlet::slot_tab_changed( int tabID )
 void mudlet::addConsoleForNewHost( Host * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
+    pH->mLogStatus = mAutolog;
     TConsole * pConsole = new TConsole( pH, false );
     if( ! pConsole ) return;
     pH->mpConsole = pConsole;
@@ -1580,7 +1625,9 @@ void mudlet::slot_irc()
     {
         mpIRC = new dlgIRC();
         mpIRC->setWindowTitle( "Mudlet live IRC Help Channel #mudlet-help on irc.freenode.net" );
+        mpIRC->resize(660,380);
     }
+
     mpIRC->raise();
     mpIRC->show();
 //#endif

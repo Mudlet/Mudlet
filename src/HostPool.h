@@ -48,6 +48,7 @@ class HostPool
     bool                  serialize( QString path );
     void                  orderShutDown();
     Host *                getHostFromHostID( int id );
+    void                  postIrcMessage( QString, QString, QString );
 
 private:
 

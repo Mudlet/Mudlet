@@ -108,6 +108,7 @@ public:
    int                           getLastLineNumber( Host *, QString & );
    void                          readSettings();
    void                          writeSettings();
+   void                          showUnzipProgress( QString txt );
    static TConsole *             mpDebugConsole;
    static QMainWindow *          mpDebugArea;
    static bool                   debugMode;
@@ -139,6 +140,8 @@ public:
    dlgIRC *                      mpIRC;
    QString                       version;
    Host *                        mpCurrentActiveHost;
+   bool                          mAutolog;
+   QString                       mIrcNick;
 
 
 
@@ -172,6 +175,7 @@ public slots:
    void                          startAutoLogin();
    void                          slot_irc();
    void                          slot_uninstall_package();
+   void                          slot_install_package();
    void                          slot_package_manager();
 
 protected:
@@ -221,6 +225,7 @@ private:
 
    QListWidget *                 packageList;
    QPushButton *                 uninstallButton;
+   QPushButton *                 installButton;
 
 };
 

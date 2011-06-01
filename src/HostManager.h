@@ -45,6 +45,7 @@ public:
     bool               renameHost( QString );
     Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
     bool               serialize();
+    void               postIrcMessage(QString, QString, QString );
 
 private:
 
