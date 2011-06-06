@@ -65,15 +65,21 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 
             mScreenWidth = 100;//width()/mFontWidth;
         }
+        mpHost->mDisplayFont.setWordSpacing( 0 );
+        mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
         setFont( mpHost->mDisplayFont );
     }
     else
     {
         initDefaultSettings();
         mIsDebugConsole = true;
+        mDisplayFont.setWordSpacing( 0 );
+        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
         mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
         mScreenWidth = 100;
+        mDisplayFont.setWordSpacing( 0 );
+        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
         setFont( mDisplayFont );
     }
     mScreenHeight = height() / mFontHeight;
@@ -163,6 +169,8 @@ void TTextEdit::initDefaultSettings()
     mFgColor = QColor(192,192,192);
     mBgColor = QColor(0,0,0);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
+    mDisplayFont.setWordSpacing( 0 );
+    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
     setFont( mDisplayFont );
     mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
     mCommandSeperator = QString(";");

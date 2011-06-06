@@ -37,10 +37,11 @@
 #include "dlgMapper.h"
 
 
-#ifdef Q_OS_LINUX
-    #include "lua_yajl1.c"
-#else
+
+#ifdef Q_OS_WIN32
     #include "lua_yajl.c"
+#else
+    #include "lua_yajl1.c"
 #endif
 
 extern "C"
@@ -3217,8 +3218,8 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     }
     else
         sound.replace('\\', "/");
-    Phonon::MediaObject *music = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(sound.toLatin1().data()));
-    music->play();
+        Phonon::MediaObject *music = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(sound.toLatin1().data()));
+        music->play();
     return 0;
 }
 
@@ -7499,6 +7500,9 @@ void TLuaInterpreter::startLuaSessionInterpreter()
     mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
 }
 
+
+#include "luazip.c"
+
 // this function initializes the Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
@@ -7715,6 +7719,9 @@ void TLuaInterpreter::initLuaGlobals()
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
+    luaopen_zip( pGlobalLua );
+    lua_setglobal( pGlobalLua, "zip" );
+
     QString n;
     int error;
 
@@ -7850,8 +7857,8 @@ void TLuaInterpreter::initLuaGlobals()
 void TLuaInterpreter::loadGlobal()
 {
     //QString path = QDir::homePath()+"/.config/mudlet/mudlet-lua/lua/LuaGlobal.lua";
-    QString path = "mudlet-lua/lua/LuaGlobal.lua";
 
+    QString path = "mudlet-lua/lua/LuaGlobal.lua";
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
     if( error != 0 )
     {

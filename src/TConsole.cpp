@@ -100,6 +100,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mLastBufferLogLine( 0 )
 , mUserAgreedToCloseConsole( false )
 {
+    mDisplayFont.setWordSpacing( 0 );
+    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
@@ -836,9 +838,13 @@ void TConsole::slot_toggleReplayRecording()
 
 void TConsole::changeColors()
 {
+    mDisplayFont.setWordSpacing( 0 );
+    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
     if( mIsDebugConsole )
     {
         mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality) );
+        mDisplayFont.setWordSpacing( 0 );
+        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
         console->setFont( mDisplayFont );
         console2->setFont( mDisplayFont );
         QPalette palette;
@@ -851,6 +857,8 @@ void TConsole::changeColors()
     else if( mIsSubConsole )
     {
         mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality ) );
+        mDisplayFont.setWordSpacing( 0 );
+        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
         console->setFont( mDisplayFont );
         console2->setFont( mDisplayFont );
         QPalette palette;
@@ -868,6 +876,8 @@ void TConsole::changeColors()
             mpHost->mDisplayFont.setStyleStrategy( QFont::NoAntialias );
         else
             mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
+        mpHost->mDisplayFont.setWordSpacing( 0 );
+        mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
         console->setFont( mpHost->mDisplayFont );
         console2->setFont( mpHost->mDisplayFont );
         QPalette palette;
@@ -880,6 +890,7 @@ void TConsole::changeColors()
         console2->setPalette( palette );
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
+        mpCommandLine->setFont(mpHost->mDisplayFont);
     }
     QPalette palette;
     palette.setColor( QPalette::Button, QColor(0,0,255) );

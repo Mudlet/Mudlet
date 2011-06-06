@@ -51,10 +51,12 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     ircNick->setText( nick );
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
-#ifdef Q_OS_WIN32
-    QDir dir( "./" );
-#else
+
+
+#ifdef Q_OS_LINUX
     QDir dir( "/usr/share/hunspell/" );
+#else
+    QDir dir( "./" );
 #endif
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     QRegExp rex("\\.dic$");

@@ -38,9 +38,10 @@ using namespace std;
 
 TConsole *  spDebugConsole = 0;
 
-QFile debugStreamFile("C:\\mudletDebugStream.txt");;
-QTextStream debugStream(&debugStreamFile);
-
+#ifdef QT_DEBUG
+    QFile debugStreamFile("C:\\mudletDebugStream.txt");;
+    QTextStream debugStream(&debugStreamFile);
+#endif
 
 void debugOutput(QtMsgType type, const char *msg)
 {
@@ -82,11 +83,12 @@ extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 
 int main(int argc, char *argv[])
 {
-
-    debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);
-
+    #ifdef QT_DEBUG
+        debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);
+        qInstallMsgHandler( debugOutput );
+    #endif
     spDebugConsole = 0;
-    qInstallMsgHandler( debugOutput );
+
 
     Q_INIT_RESOURCE(mudlet_alpha);
     QApplication app(argc, argv);
@@ -270,6 +272,9 @@ int main(int argc, char *argv[])
     HostManager::self();
     FontManager fm;
     fm.addFonts();
+    QString home = QDir::homePath()+"/.config/mudlet";
+    QString homeLink = QDir::homePath()+"/mudlet-data";
+    QFile::link(home, homeLink);
     mudlet::self()->show();
     app.exec();
 }

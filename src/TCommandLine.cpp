@@ -34,10 +34,10 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 
 {
     QString path;
-#ifdef Q_OS_WIN32
-    path = "./";
-#else
+#ifdef Q_OS_LINUX
     path = "/usr/share/hunspell/";
+#else
+    path = "./";
 #endif
 
     QString spell_aff = path + pHost->mSpellDic + ".aff";
