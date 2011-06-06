@@ -51,7 +51,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     ircNick->setText( nick );
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
-
+    enableSpellCheck->setChecked( pH->mEnableSpellCheck );
 
 #ifdef Q_OS_LINUX
     QDir dir( "/usr/share/hunspell/" );

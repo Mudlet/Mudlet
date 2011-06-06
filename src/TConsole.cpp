@@ -2186,6 +2186,8 @@ TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width,
         pC->mOldY = y;
         pC->setContentsMargins(0,0,0,0);
         pC->move( x, y );
+        std::string _n = name.toStdString();
+        pC->setMiniConsoleFontSize( _n, 12 );
         pC->show();
         return pC;
     }

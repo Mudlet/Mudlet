@@ -15,18 +15,8 @@ macx:INCLUDEPATH += /Users/heikokoehn/Downloads/lua5_1_4_MacOS106_lib/include \
 /Users/heikokoehn/Downloads/boost_1_46_1 \
 /usr/local/include/yajl/include
 
-#\
-
 macx:LIBS += \
-#-L/usr/local/Trolltech/Qt-4.7.3/lib/ \
-#/usr/local/Trolltech/Qt-4.7.3/lib/libQtGui.a \
-#/usr/local/Trolltech/Qt-4.7.3/lib/libQtCore.a \
-#/usr/local/Trolltech/Qt-4.7.3/lib/libQtNetwork.a \
-#/usr/local/Trolltech/Qt-4.7.3/lib/libQtXml.a \
-#/usr/local/Trolltech/Qt-4.7.3/lib/libQtOpenGL.a \
-#/usr/local/Trolltech/Qt-4.7.3/lib/libphonon.a \
-#/usr/local/Trolltech/Qt-4.7.3/plugins/phonon_backend/libphonon_qt7.a \
-/Users/heikokoehn/Downloads/liblua.a \
+/Users/heikokoehn/lib/liblua.a \
 /usr/local/lib/libzzip.a \
 -F../Frameworks \
 -L../Frameworks \
