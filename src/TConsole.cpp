@@ -100,8 +100,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mLastBufferLogLine( 0 )
 , mUserAgreedToCloseConsole( false )
 {
-    mDisplayFont.setWordSpacing( 0 );
-    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+    //mDisplayFont.setWordSpacing( 0 );
+//    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
@@ -838,13 +838,15 @@ void TConsole::slot_toggleReplayRecording()
 
 void TConsole::changeColors()
 {
-    mDisplayFont.setWordSpacing( 0 );
-    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+    mDisplayFont.setFixedPitch(true);
+    //mDisplayFont.setWordSpacing( 0 );
+//    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
     if( mIsDebugConsole )
     {
         mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality) );
-        mDisplayFont.setWordSpacing( 0 );
-        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+        //mDisplayFont.setWordSpacing( 0 );
+
+        mDisplayFont.setFixedPitch(true);
         console->setFont( mDisplayFont );
         console2->setFont( mDisplayFont );
         QPalette palette;
@@ -857,8 +859,23 @@ void TConsole::changeColors()
     else if( mIsSubConsole )
     {
         mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality ) );
-        mDisplayFont.setWordSpacing( 0 );
-        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+#ifdef Q_OS_MAC
+        QPixmap pixmap = QPixmap( 2000, 600 );
+        QPainter p(&pixmap);
+        p.setFont(mDisplayFont);
+        const QRectF r = QRectF(0,0,2000, 600);
+        QRectF r2;
+        const QString t = "123";
+        p.drawText(r,1,t,&r2);
+        int mFontHeight = QFontMetrics( mDisplayFont ).height();
+        int mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
+        qreal letterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
+        console->mLetterSpacing = letterSpacing;
+        console2->mLetterSpacing = letterSpacing;
+        mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, letterSpacing );
+        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, console->mLetterSpacing );
+#endif
+        mDisplayFont.setFixedPitch(true);
         console->setFont( mDisplayFont );
         console2->setFont( mDisplayFont );
         QPalette palette;
@@ -876,8 +893,24 @@ void TConsole::changeColors()
             mpHost->mDisplayFont.setStyleStrategy( QFont::NoAntialias );
         else
             mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
-        mpHost->mDisplayFont.setWordSpacing( 0 );
-        mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+        mpHost->mDisplayFont.setFixedPitch(true);
+        mDisplayFont.setFixedPitch(true);
+#ifdef Q_OS_MAC
+        QPixmap pixmap = QPixmap( 2000, 600 );
+        QPainter p(&pixmap);
+        p.setFont(mpHost->mDisplayFont);
+        const QRectF r = QRectF(0,0,2000, 600);
+        QRectF r2;
+        const QString t = "123";
+        p.drawText(r,1,t,&r2);
+        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
+        int mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
+        qreal letterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
+        console->mLetterSpacing = letterSpacing;
+        console2->mLetterSpacing = letterSpacing;
+        mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, letterSpacing );
+        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, console->mLetterSpacing );
+#endif
         console->setFont( mpHost->mDisplayFont );
         console2->setFont( mpHost->mDisplayFont );
         QPalette palette;

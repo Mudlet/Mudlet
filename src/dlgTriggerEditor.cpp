@@ -594,6 +594,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
         pItem->number->show();
     }
 
+
 }
 
 void dlgTriggerEditor::slot_viewStatsAction()

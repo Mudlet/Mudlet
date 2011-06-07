@@ -84,16 +84,16 @@ extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 int main(int argc, char *argv[])
 {
     #ifdef QT_DEBUG
-        debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);
-        qInstallMsgHandler( debugOutput );
+        debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);      
     #endif
+//qInstallMsgHandler( debugOutput );
     spDebugConsole = 0;
 
 
     Q_INIT_RESOURCE(mudlet_alpha);
     QApplication app(argc, argv);
     app.setApplicationName("Mudlet");
-    QPixmap pixmap(":/Mudlet_splashscreen_main");
+    QPixmap pixmap(":/Mudlet_splashscreen_main.png");
     QSplashScreen splash(pixmap);
     splash.show();
 

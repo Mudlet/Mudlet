@@ -239,8 +239,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>482</width>
-              <height>139</height>
+              <width>459</width>
+              <height>137</height>
              </rect>
             </property>
            </widget>
@@ -414,8 +414,8 @@
               </property>
               <property name="font">
                <font>
-                <family>Century Schoolbook L</family>
-                <pointsize>11</pointsize>
+                <family>Lucida Grande</family>
+                <pointsize>13</pointsize>
                </font>
               </property>
               <property name="toolTip">
@@ -438,7 +438,7 @@
                 <number>0</number>
                </property>
                <property name="margin">
-                <number>3</number>
+                <number>0</number>
                </property>
                <item>
                 <widget class="QLabel" name="label_6">
@@ -450,8 +450,8 @@
                  </property>
                  <property name="font">
                   <font>
-                   <family>Sans Serif</family>
-                   <pointsize>7</pointsize>
+                   <family>Lucida Grande</family>
+                   <pointsize>12</pointsize>
                   </font>
                  </property>
                  <property name="text">
@@ -524,7 +524,7 @@
                 <number>0</number>
                </property>
                <property name="margin">
-                <number>3</number>
+                <number>0</number>
                </property>
                <item>
                 <widget class="QLabel" name="label_16">
@@ -542,8 +542,8 @@
                  </property>
                  <property name="font">
                   <font>
-                   <family>Sans Serif</family>
-                   <pointsize>7</pointsize>
+                   <family>Lucida Grande</family>
+                   <pointsize>12</pointsize>
                   </font>
                  </property>
                  <property name="text">
@@ -925,8 +925,8 @@ as this is a complex topic.</string>
               </property>
               <property name="font">
                <font>
-                <family>Sans Serif</family>
-                <pointsize>9</pointsize>
+                <family>Lucida Grande</family>
+                <pointsize>12</pointsize>
                </font>
               </property>
               <property name="text">
@@ -976,6 +976,24 @@ as this is a complex topic.</string>
       </item>
       <item>
        <widget class="QWidget" name="widget_12" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="baseSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="palette">
          <palette>
           <active>
@@ -1096,8 +1114,8 @@ as this is a complex topic.</string>
               </property>
               <property name="minimumSize">
                <size>
-                <width>57</width>
-                <height>20</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
               <property name="maximumSize">
@@ -1108,14 +1126,14 @@ as this is a complex topic.</string>
               </property>
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>11</pointsize>
                </font>
               </property>
               <property name="toolTip">
                <string>Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)</string>
               </property>
               <property name="text">
-               <string>act as filter, i.e. only pass matches to its children to trigger on</string>
+               <string>only pass matches to children as trigger input</string>
               </property>
               <property name="scaledContents">
                <bool>true</bool>
@@ -1275,7 +1293,7 @@ Without this option, the pattern matching will stop after the first successful m
               </property>
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="toolTip">
@@ -1425,46 +1443,16 @@ otherwise highlight the entire match</string>
            <property name="checked">
             <bool>false</bool>
            </property>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <property name="leftMargin">
-             <number>3</number>
+           <layout class="QGridLayout" name="gridLayout">
+            <property name="horizontalSpacing">
+             <number>5</number>
             </property>
-            <property name="topMargin">
-             <number>1</number>
+            <property name="verticalSpacing">
+             <number>12</number>
             </property>
-            <property name="rightMargin">
-             <number>3</number>
+            <property name="margin">
+             <number>0</number>
             </property>
-            <property name="bottomMargin">
-             <number>1</number>
-            </property>
-            <property name="spacing">
-             <number>3</number>
-            </property>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_9">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>11</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>11</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>7</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>foreground color:</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="1">
              <widget class="QPushButton" name="pushButtonFgColor">
               <property name="sizePolicy">
@@ -1479,36 +1467,41 @@ otherwise highlight the entire match</string>
                 <height>16777215</height>
                </size>
               </property>
+              <property name="font">
+               <font>
+                <family>Lucida Grande</family>
+               </font>
+              </property>
               <property name="text">
                <string/>
               </property>
              </widget>
             </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_10">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_9">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
-                <verstretch>11</verstretch>
+                <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>11</height>
+                <height>13</height>
                </size>
               </property>
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>12</pointsize>
                </font>
               </property>
               <property name="text">
-               <string>background color:</string>
+               <string>fg color</string>
               </property>
              </widget>
             </item>
-            <item row="1" column="1">
+            <item row="4" column="1">
              <widget class="QPushButton" name="pushButtonBgColor">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1522,11 +1515,40 @@ otherwise highlight the entire match</string>
                 <height>16777215</height>
                </size>
               </property>
+              <property name="font">
+               <font>
+                <pointsize>13</pointsize>
+               </font>
+              </property>
               <property name="text">
                <string/>
               </property>
               <property name="flat">
                <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_10">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>13</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>12</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>bg color</string>
               </property>
              </widget>
             </item>

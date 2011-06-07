@@ -106,6 +106,7 @@ public:
     bool              mShowTimeStamps;
     int               mWrapAt;
     int               mWrapIndentCount;
+    qreal             mLetterSpacing;
 
 signals:
 

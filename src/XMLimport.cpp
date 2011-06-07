@@ -831,8 +831,9 @@ void XMLimport::readHostPackage( Host * pT )
             else if( name() == "mDisplayFont")
             {
                 pT->mDisplayFont.fromString( readElementText() );
-                pT->mDisplayFont.setWordSpacing( 0 );
-                pT->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+                pT->mDisplayFont.setFixedPitch( true );
+//                pT->mDisplayFont.setWordSpacing( 0 );
+//                pT->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
                 continue;
             }
             else if( name() == "mCommandLineFont")

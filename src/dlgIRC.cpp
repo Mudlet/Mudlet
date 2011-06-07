@@ -36,7 +36,6 @@ dlgIRC::dlgIRC()
     session = new Irc::Session(this);
     irc->setOpenExternalLinks ( true );
     setUnifiedTitleAndToolBarOnMac( true );
-    //setStatusBar(new QStatusBar);
     connect( irc, SIGNAL(anchorClicked(QUrl)), this, SLOT(anchorClicked(QUrl)));
     connect( session, SIGNAL(msgMessageReceived(const QString &, const QString &, const QString &)), this, SLOT(irc_gotMsg(QString, QString, QString)));
     connect( session, SIGNAL(msgNoticeReceived(const QString &, const QString &, const QString &)), this, SLOT(irc_gotMsg(QString, QString, QString)));
@@ -83,6 +82,7 @@ void dlgIRC::sendMsg()
         txt.replace("/nick ", "" );
         session->setNick( txt );
         mNick = txt;
+        session->cmdNames("#mudlet");
         return;
     }
     if( txt.startsWith( "/msg ") )
@@ -94,6 +94,7 @@ void dlgIRC::sendMsg()
         QString r = txt.mid(0, _i-1);
         QString m = txt.mid( _i+1 );
         session->cmdMessage( r, m );
+        qDebug()<<"r="<<r<<" msg="<<m;
         session->cmdNames("#mudlet");
         return;
     }
