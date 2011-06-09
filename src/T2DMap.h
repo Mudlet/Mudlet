@@ -77,15 +77,24 @@ public:
     QMap<int,QPixmap> mPixMap;
     QMap<int, QPixmap *> mGridPix;
     int      gzoom;
-    double    rSize;
-    double    eSize;
+    double   rSize;
+    double   eSize;
+    int      mRID;
+    int      mAID;
+    int      mOx;
+    int      mOy;
+    bool     mShiftMode;
 
 
 signals:
 
 public slots:
 
-
+    void toggleShiftMode();
+    void shiftUp();
+    void shiftDown();
+    void shiftLeft();
+    void shiftRight();
     void slot_setCharacter();
     void slot_setImage();
     void slot_movePosition();

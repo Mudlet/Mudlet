@@ -48,7 +48,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(reduceTop, SIGNAL(pressed()), glWidget, SLOT(reduceTop()));
     connect(reduceBottom, SIGNAL(pressed()), glWidget, SLOT(reduceBottom()));
     connect(searchList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(choseRoom(QListWidgetItem*)));
-
+    connect(shiftLeft, SIGNAL(pressed()), mp2dMap, SLOT(shiftLeft()));
+    connect(shiftRight, SIGNAL(pressed()), mp2dMap, SLOT(shiftRight()));
+    connect(shiftUp, SIGNAL(pressed()), mp2dMap, SLOT(shiftUp()));
+    connect(shiftDown, SIGNAL(pressed()), mp2dMap, SLOT(shiftDown()));
     connect(defaultView, SIGNAL(pressed()), glWidget, SLOT(defaultView()));
     connect(dim2,SIGNAL(pressed()), this, SLOT(show2dView()));
     connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));
