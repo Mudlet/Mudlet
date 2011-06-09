@@ -181,6 +181,8 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mWhite2", pT->mWhite_2.name() );
     writeTextElement( "mLightWhite2", pT->mLightWhite_2.name() );
     writeTextElement( "mSpellDic", pT->mSpellDic );
+    writeTextElement( "mLineSize", QString::number(pT->mLineSize) );
+    writeTextElement( "mRoomSize", QString::number(pT->mRoomSize) );
     writeEndElement(); // end Host tag
     writeEndElement(); // end HostPackage tag
 

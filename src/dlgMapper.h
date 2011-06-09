@@ -58,6 +58,8 @@ public slots:
         void replyFinished( QNetworkReply * );
         void goRoom();
         void choseRoom( QListWidgetItem * );
+        void slot_roomSize(double d);
+        void slot_lineSize(double d);
 };
 
 #endif // DLGMAPPER_H

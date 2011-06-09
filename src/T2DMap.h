@@ -43,6 +43,8 @@ public:
     void     mouseMoveEvent( QMouseEvent * event );
     void     mouseReleaseEvent(QMouseEvent * e );
     int      getTopLeftSelection();
+    void     setRoomSize( double );
+    void     setExitSize( double );
     TMap *   mpMap;
     Host *   mpHost;
     int      xzoom;
@@ -75,10 +77,14 @@ public:
     QMap<int,QPixmap> mPixMap;
     QMap<int, QPixmap *> mGridPix;
     int      gzoom;
+    double    rSize;
+    double    eSize;
+
 
 signals:
 
 public slots:
+
 
     void slot_setCharacter();
     void slot_setImage();

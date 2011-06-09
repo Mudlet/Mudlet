@@ -1,9 +1,8 @@
-
 CONFIG += release uitools
 CONFIG += app_bundle
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.4
 
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp

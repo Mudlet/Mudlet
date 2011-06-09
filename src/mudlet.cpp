@@ -92,14 +92,14 @@ mudlet::mudlet()
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
-#ifdef Q_OS_LINUX
-    , version( "Mudlet 2.0-rc6-Linux May 2011" )
+#ifdef Q_OS_LINUX,
+    , version( "Mudlet 2.0-rc7-Linux June 2011" )
 #endif
 #ifdef Q_OS_MAC
-    , version( "Mudlet 2.0-rc6-Mac May 2011" )
+    , version( "Mudlet 2.0-rc7-Mac June 2011" )
 #endif
-#ifdef Q_OS_WIN32
-    , version( "Mudlet 2.0-rc6-Windows May 2011" )
+#ifdef Q_OS_WIN
+    , version( "Mudlet 2.0-rc7-Windows June 2011" )
 #endif
 {
     setupUi(this);

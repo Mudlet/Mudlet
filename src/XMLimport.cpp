@@ -936,6 +936,14 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mSpellDic = readElementText();
                 continue;
             }
+            else if( name() == "mRoomSize" )
+            {
+                pT->mRoomSize = readElementText().toDouble();
+            }
+            else if( name() == "mLineSize" )
+            {
+                pT->mLineSize = readElementText().toDouble();
+            }
             else
             {
                 readUnknownHostElement();

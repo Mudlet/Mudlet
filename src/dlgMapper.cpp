@@ -35,6 +35,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     glWidget->mpMap = pM;
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
+    d3buttons->setVisible(false);
+    roomSize->setValue(mpHost->mRoomSize);
+    lineSize->setValue(mpHost->mLineSize);
     strongHighlight->setCheckState( mpHost->mMapStrongHighlight ? Qt::Checked : Qt::Unchecked );
     searchList->setSelectionMode( QAbstractItemView::SingleSelection );
     connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
@@ -51,7 +54,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));
     connect(topView, SIGNAL(pressed()), glWidget, SLOT(topView()));
     connect(togglePanel, SIGNAL(pressed()), this, SLOT(slot_togglePanel()));
-
+    connect(lineSize, SIGNAL(valueChanged(double)), this, SLOT(slot_lineSize(double)));
+    connect(roomSize, SIGNAL(valueChanged(double)), this, SLOT(slot_roomSize(double)));
     connect(scale, SIGNAL(valueChanged(int)), glWidget, SLOT(setScale(int)));
     connect(xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setXRotation(int)));
     connect(yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setYRotation(int)));
@@ -104,6 +108,11 @@ void dlgMapper::show2dView()
 {
     glWidget->setVisible(!glWidget->isVisible());
     mp2dMap->setVisible(!mp2dMap->isVisible());
+    if(glWidget->isVisible())
+        d3buttons->setVisible(true);
+    else
+        d3buttons->setVisible(false);
+
 }
 
 void dlgMapper::downloadMap()
@@ -217,4 +226,17 @@ void dlgMapper::goRoom()
         }
     }
     mpHost->mpConsole->setFocus();
+}
+
+
+void dlgMapper::slot_roomSize(double d)
+{
+    mp2dMap->setRoomSize( d );
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_lineSize(double d)
+{
+    mp2dMap->setExitSize( d );
+    mp2dMap->update();
 }

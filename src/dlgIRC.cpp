@@ -91,7 +91,7 @@ void dlgIRC::sendMsg()
         txt = txt.mid(5);
         int _i = txt.indexOf(" ");
         if( _i == -1 || _i < 1 || txt.size()<_i+2 ) return;
-        QString r = txt.mid(0, _i-1);
+        QString r = txt.mid(0, _i);
         QString m = txt.mid( _i+1 );
         session->cmdMessage( r, m );
         qDebug()<<"r="<<r<<" msg="<<m;
@@ -133,7 +133,7 @@ void dlgIRC::irc_gotMsg( QString a, QString b, QString c )
     const QString n = a;
     QString t;
     if( b == a )
-        t = tr("<font color=#a5a5a5>[%1] </font><font color=#ff0000>%2</font><font color=#ff0000>: %3</font>").arg(_t).arg(n).arg(msg);
+        t = tr("<font color=#a5a5a5>[%1] </font>msg from <font color=#ff0000>%2</font><font color=#ff0000>: %3</font>").arg(_t).arg(n).arg(msg);
     else if( a == mNick )
         t = tr("<font color=#a5a5a5>[%1] </font><font color=#00aaaa>%2</font><font color=#004400>: %3</font>").arg(_t).arg(n).arg(msg);
     else

@@ -283,6 +283,8 @@ public:
     QDialog *          mpUnzipDialog;
     QPushButton *      uninstallButton;
     QListWidget *      packageList;
+    double             mLineSize;
+    double             mRoomSize;
 
 private:
     Host();

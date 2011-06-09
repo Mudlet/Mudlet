@@ -838,6 +838,7 @@ void TConsole::slot_toggleReplayRecording()
 
 void TConsole::changeColors()
 {
+    qDebug()<<"TConsole::changeColors()";
     mDisplayFont.setFixedPitch(true);
     //mDisplayFont.setWordSpacing( 0 );
 //    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
@@ -862,6 +863,7 @@ void TConsole::changeColors()
 #ifdef Q_OS_MAC
         QPixmap pixmap = QPixmap( 2000, 600 );
         QPainter p(&pixmap);
+        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
         p.setFont(mDisplayFont);
         const QRectF r = QRectF(0,0,2000, 600);
         QRectF r2;
@@ -898,7 +900,9 @@ void TConsole::changeColors()
 #ifdef Q_OS_MAC
         QPixmap pixmap = QPixmap( 2000, 600 );
         QPainter p(&pixmap);
-        p.setFont(mpHost->mDisplayFont);
+        QFont _font = mpHost->mDisplayFont;
+        _font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
+        p.setFont(_font);
         const QRectF r = QRectF(0,0,2000, 600);
         QRectF r2;
         const QString t = "123";
@@ -1312,6 +1316,7 @@ void TConsole::scrollUp( int lines )
     console2->mIsTailMode = true;
     console2->mCursorY = buffer.size();//getLastLineNumber();
     console2->show();
+    console2->updateScreenView();
     console2->forceUpdate();
     console->scrollUp( lines );
 }
@@ -2201,7 +2206,6 @@ void TConsole::resetMainConsole()
 
 TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width, int height )
 {
-    qDebug()<<"createMiniConsole: name="<<name;
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
     {
@@ -2327,12 +2331,16 @@ bool TConsole::setBackgroundColor( QString & name, int r, int g, int b, int alph
 
 bool TConsole::showWindow( QString & name )
 {
+    qDebug()<<"TConsole::showWindow name="<<name;
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
         mSubConsoleMap[key]->console->updateScreenView();
         mSubConsoleMap[key]->console->forceUpdate();
         mSubConsoleMap[key]->show();
+
+        mSubConsoleMap[key]->console2->updateScreenView();
+        mSubConsoleMap[key]->console2->forceUpdate();
         //mSubConsoleMap[key]->move(mSubConsoleMap[key]->mOldX, mSubConsoleMap[key]->mOldY);
         return true;
     }
