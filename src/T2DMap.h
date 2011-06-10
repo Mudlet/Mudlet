@@ -83,13 +83,19 @@ public:
     int      mAID;
     int      mOx;
     int      mOy;
+    int      mOz;
     bool     mShiftMode;
+    bool     mShowInfo;
 
 
 signals:
 
 public slots:
 
+    void showInfo();
+    void shiftZup();
+    void shiftZdown();
+    void switchArea(QString);
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();

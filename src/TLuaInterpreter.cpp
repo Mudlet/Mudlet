@@ -2660,6 +2660,37 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::connectToServer( lua_State *L )
+{
+    int port;
+    string url;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "connectToServer: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        url = lua_tostring( L, 1 );
+    }
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "connectToServer: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        port = lua_tonumber( L, 2 );
+    }
+    QString _url = url.c_str();
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.connectIt( _url, port );
+    return 0;
+}
+
 int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
 {
     int id;
@@ -7715,6 +7746,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
     lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
     lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
+    lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

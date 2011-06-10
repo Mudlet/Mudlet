@@ -35,6 +35,13 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     glWidget->mpMap = pM;
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
+    QMapIterator<int, QString> it( mpMap->areaNamesMap );
+    while( it.hasNext() )
+    {
+        it.next();
+        QString name = it.value();
+        showArea->addItem( name );
+    }
     d3buttons->setVisible(false);
     roomSize->setValue(mpHost->mRoomSize);
     lineSize->setValue(mpHost->mLineSize);
@@ -48,10 +55,14 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(reduceTop, SIGNAL(pressed()), glWidget, SLOT(reduceTop()));
     connect(reduceBottom, SIGNAL(pressed()), glWidget, SLOT(reduceBottom()));
     connect(searchList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(choseRoom(QListWidgetItem*)));
+    connect(shiftZup, SIGNAL(pressed()), mp2dMap, SLOT(shiftZup()));
+    connect(shiftZdown, SIGNAL(pressed()), mp2dMap, SLOT(shiftZdown()));
     connect(shiftLeft, SIGNAL(pressed()), mp2dMap, SLOT(shiftLeft()));
     connect(shiftRight, SIGNAL(pressed()), mp2dMap, SLOT(shiftRight()));
     connect(shiftUp, SIGNAL(pressed()), mp2dMap, SLOT(shiftUp()));
     connect(shiftDown, SIGNAL(pressed()), mp2dMap, SLOT(shiftDown()));
+    connect(showInfo, SIGNAL(clicked()), mp2dMap, SLOT(showInfo()));
+    connect(showArea, SIGNAL(activated(QString)), mp2dMap, SLOT(switchArea(QString)));
     connect(defaultView, SIGNAL(pressed()), glWidget, SLOT(defaultView()));
     connect(dim2,SIGNAL(pressed()), this, SLOT(show2dView()));
     connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));

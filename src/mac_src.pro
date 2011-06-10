@@ -16,6 +16,7 @@ macx:INCLUDEPATH += /Users/heikokoehn/Downloads/lua5_1_4_MacOS106_lib/include \
 
 macx:LIBS += \
 /Users/heikokoehn/lib/liblua.a \
+#/usr/local/lib/libluajit-5.1.a \
 /usr/local/lib/libzzip.a \
 -F../Frameworks \
 -L../Frameworks \
