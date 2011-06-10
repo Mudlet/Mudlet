@@ -60,6 +60,12 @@ GLWidget::GLWidget(QWidget *parent)
     mShowBottomLevels = 999999;
     setAttribute( Qt::WA_OpaquePaintEvent );
     is2DView = false;
+    mShiftMode = false;
+    mAID = 0;
+    mRID = 0;
+    mOx = 0;
+    mOy = 0;
+    mOz = 0;
 }
 
 
@@ -69,6 +75,12 @@ GLWidget::GLWidget(TMap * pM, QWidget *parent)
     mpHost = 0;
     mpMap = pM;
     is2DView = false;
+    mShiftMode = false;
+    mAID = 0;
+    mRID = 0;
+    mOx = 0;
+    mOy = 0;
+    mOz = 0;
 }
 
 
@@ -95,6 +107,54 @@ void GLWidget::fullView()
 {
     mShowTopLevels = 9999999;
     mShowBottomLevels = 999999;
+    updateGL();
+}
+
+
+void GLWidget::shiftDown()
+{
+    mShiftMode = true;
+    mOy--;
+    updateGL();
+}
+
+void GLWidget::shiftUp()
+{
+    mShiftMode = true;
+    mOy++;
+    updateGL();
+}
+
+void GLWidget::shiftLeft()
+{
+    mShiftMode = true;
+    mOx--;
+    updateGL();
+}
+
+void GLWidget::shiftRight()
+{
+    mShiftMode = true;
+    mOx++;
+    updateGL();
+}
+void GLWidget::shiftZup()
+{
+    mShiftMode = true;
+    mOz++;
+    updateGL();
+}
+
+void GLWidget::shiftZdown()
+{
+    mShiftMode = true;
+    mOz--;
+    updateGL();
+}
+
+void GLWidget::showInfo()
+{
+    mShowInfo = !mShowInfo;
     updateGL();
 }
 
@@ -249,19 +309,75 @@ void GLWidget::initializeGL()
     is2DView = false;
 }
 
+void GLWidget::showArea(QString name)
+{
+    qDebug()<<"GLWidget::showArea:"<<name;
+    if( !mpMap ) return;
+    QMapIterator<int, QString> it( mpMap->areaNamesMap );
+    while( it.hasNext() )
+    {
+        it.next();
+        int areaID = it.key();
+        QString _n = it.value();
+        if( name == _n )
+        {
+            mAID = areaID;
+            mRID = mpMap->mRoomId;//FIXME:
+            mShiftMode = true;
+            mOx = 0;
+            mOy = 0;
+            mOz = 0;
+            updateGL();
+            qDebug()<<"selected AREA: mAID="<<mAID<<" name="<<_n;
+            break;
+        }
+    }
+
+}
+
 void GLWidget::paintGL()
 {
     QTime __time; __time.start();
     float px,py,pz;
-    if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
+
+
+    if( mRID != mpMap->mRoomId && mShiftMode )  mShiftMode = false;
+
+    int ox, oy, oz;
+    if( ! mShiftMode )
     {
-        qDebug()<<"ERROR: roomID not in rooms map";
-        return;
+        //if( ! mpMap->areas.contains( mpMap->rooms[mpMap->mRoomId]->area) ) return;
+
+
+        mRID = mpMap->mRoomId;
+        mAID = mpMap->rooms[mRID]->area;
+        ox = mpMap->rooms[mRID]->x;
+        oy = mpMap->rooms[mRID]->y;
+        oz = mpMap->rooms[mRID]->z;
+        mOx = ox;
+        mOy = oy;
+        mOz = oz;
+        if( ! mpMap->rooms.contains( mRID ) )
+        {
+            renderText(width()/3,height()/2,"no map found", QFont("Bitstream Vera Sans Mono", 30, QFont::Courier ) );
+            qDebug()<<"ERROR: roomID not in rooms map";
+            glLoadIdentity();
+            glFlush();
+            return;
+        }
     }
-    px = static_cast<float>(mpMap->rooms[mpMap->mRoomId]->x);
-    py = static_cast<float>(mpMap->rooms[mpMap->mRoomId]->y);
-    pz = static_cast<float>(mpMap->rooms[mpMap->mRoomId]->z);
-    TArea * pArea = mpMap->areas[mpMap->rooms[mpMap->mRoomId]->area];
+    else
+    {
+        ox = mOx;
+        oy = mOy;
+        oz = mOz;
+    }
+    qDebug()<<"mRID="<<mRID<<" mAID="<<mAID<<"";
+    px = static_cast<float>(ox);//mpMap->rooms[mpMap->mRoomId]->x);
+    py = static_cast<float>(oy);//mpMap->rooms[mpMap->mRoomId]->y);
+    pz = static_cast<float>(oz);//mpMap->rooms[mpMap->mRoomId]->z);
+    if( ! mpMap->areas.contains(mAID) ) return;
+    TArea * pArea = mpMap->areas[mAID];//mpMap->rooms[mpMap->mRoomId]->area];
     if( ! pArea ) return;
     if( pArea->gridMode )
     {
@@ -279,11 +395,11 @@ void GLWidget::paintGL()
     glClearColor (0.0,0.0,0.0,1.0);
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
-    GLfloat diffuseLight[] = {0.07, 0.07, 0.07, 1.0};
-    GLfloat diffuseLight2[] = {0.5, 0.5, 0.5, 1.0};
-    GLfloat ambientLight[] = {0.3, 0.3, 0.3, 1.0};
-    GLfloat ambientLight2[] = {0.01, 0.01, 0.01, 1.0};
-    if( !mpMap->rooms.contains(mpMap->mRoomId) ) return;
+    GLfloat diffuseLight[] = {0.207, 0.207, 0.207, 1.0};
+    GLfloat diffuseLight2[] = {0.01, 0.01, 0.01, 1.0};
+    GLfloat ambientLight[] = {0.403, 0.403, 0.403, 1.0};
+    GLfloat ambientLight2[] = {0.0501, 0.0501, 0.0501, 1.0};
+    if( !mpMap->rooms.contains(mRID) ) return;
 
     //GLfloat specularLight[] = {.01, .01, .01, 1.};//TODO: fuer ich-sphere
     GLfloat light0Pos[] = {5000.0, 4000.0, 1000.0, 0};
@@ -312,7 +428,7 @@ void GLWidget::paintGL()
     glDisable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHT1);
+    //glEnable(GL_LIGHT1);
 
     if( zRot <= 0 )
         zEbene = zmax;
@@ -427,7 +543,7 @@ void GLWidget::paintGL()
             int ef;
             ef = abs(e%26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
-            glMateriali(GL_FRONT, GL_SHININESS, 36);
+            glMateriali(GL_FRONT, GL_SHININESS, 1);
             glDisable(GL_DEPTH_TEST);
             if( rz <= pz )
             {
@@ -437,7 +553,7 @@ void GLWidget::paintGL()
                     glEnable( GL_LIGHTING );
                     float mc3[] = { 1.0f, 0.0f, 0.0f, 1.0f };
                     glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-                    glMateriali(GL_FRONT, GL_SHININESS, 96);
+                    glMateriali(GL_FRONT, GL_SHININESS, 1);
                     glColor4f(1.0, 0.0, 0.0, 1.0);
                 }
                 else
@@ -445,7 +561,7 @@ void GLWidget::paintGL()
                     glDisable(GL_BLEND);
                     glEnable( GL_LIGHTING );
                     glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
-                    glMateriali(GL_FRONT, GL_SHININESS, 36);
+                    glMateriali(GL_FRONT, GL_SHININESS, 1);
                     glColor4f(ebenenColor[ef][0],
                               ebenenColor[ef][1],
                               ebenenColor[ef][2],
@@ -459,7 +575,7 @@ void GLWidget::paintGL()
                     {
                         continue;
                     }
-                    if( mpMap->rooms[exitList[k]]->area != mpMap->rooms[mpMap->mRoomId]->area )
+                    if( mpMap->rooms[exitList[k]]->area != mpMap->rooms[mRID]->area )
                     {
                         areaExit = true;
                     }
@@ -475,13 +591,13 @@ void GLWidget::paintGL()
                         glLineWidth(1);//1/mScale+2);
                     else
                         glLineWidth(1);//1/mScale);
-                    if( exitList[k] == mpMap->mRoomId || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
+                    if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
                         glEnable( GL_LIGHTING );
                         float mc3[] = { 1.0f, 0.0f, 0.0f, 1.0f };
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-                        glMateriali(GL_FRONT, GL_SHININESS, 96);
+                        glMateriali(GL_FRONT, GL_SHININESS, 1);
                         glColor4f(1.0, 0.0, 0.0, 1.0);
                     }
                     else
@@ -489,7 +605,7 @@ void GLWidget::paintGL()
                         glDisable(GL_BLEND);
                         glEnable( GL_LIGHTING );
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
-                        glMateriali(GL_FRONT, GL_SHININESS, 36);
+                        glMateriali(GL_FRONT, GL_SHININESS, 1);
                         glColor4f(ebenenColor[ef][0],
                                   ebenenColor[ef][1],
                                   ebenenColor[ef][2],
@@ -533,7 +649,7 @@ void GLWidget::paintGL()
                         glDisable(GL_LIGHT1);
                         float mc4[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 1.0 };
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc4);
-                        glMateriali(GL_FRONT, GL_SHININESS, 56);
+                        glMateriali(GL_FRONT, GL_SHININESS, 1);
                         glColor4f(85.0/255.0, 170.0/255.0, 0.0/255.0, 1.0);
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
@@ -559,66 +675,69 @@ void GLWidget::paintGL()
                         else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
                             glTranslatef( p2.x(), p2.y(), p2.z()-1 );
 
+                        float mc6[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 0.0 };
+                        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc6);
+                        glMateriali(GL_FRONT, GL_SHININESS, 36);
 
                         glLoadName( exitList[k] );
                         quads++;
-                        glBegin( GL_QUADS );
-                        glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+//                        glBegin( GL_QUADS );
+//                        glNormal3f(0.57735, -0.57735, 0.57735);
+//                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(-0.57735, -0.57735, 0.57735);
+//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(-0.57735, -0.57735, -0.57735);
+//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(0.57735, -0.57735, -0.57735);
+//                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
 
-                        glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(0.57735, 0.57735, 0.57735);
+//                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(-0.57735, 0.57735, 0.57735);
+//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(-0.57735, -0.57735, 0.57735);
+//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(0.57735, -0.57735, 0.57735);
+//                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
 
-                        glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(-0.57735, 0.57735, -0.57735);
+//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(0.57735, 0.57735, -0.57735);
+//                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(0.57735, -0.57735, -0.57735);
+//                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(-0.57735, -0.57735, -0.57735);
+//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
 
-                        glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(0.57735, 0.57735, -0.57735);
+//                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(0.57735, 0.57735, 0.57735);
+//                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(0.57735, -0.57735, 0.57735);
+//                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(0.57735, -0.57735, -0.57735);
+//                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
 
-                        glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(-0.57735, 0.57735, 0.57735);
+//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(-0.57735, 0.57735, -0.57735);
+//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(-0.57735, -0.57735, -0.57735);
+//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(-0.57735, -0.57735, 0.57735);
+//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
 
-                        glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-                        glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-                        glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-                        glEnd();
+//                        glNormal3f(0.57735, 0.57735, -0.57735);
+//                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(-0.57735, 0.57735, -0.57735);
+//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+//                        glNormal3f(-0.57735, 0.57735, 0.57735);
+//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+//                        glNormal3f(0.57735, 0.57735, 0.57735);
+//                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+//                        glEnd();
                         //drauf
-                        float mc3[] = { 0.2, 0.2, 0.6, 0.2 };
+                        float mc3[] = { 0.2, 0.2, 0.6, 1.0 };
                         int env = mpMap->rooms[exitList[k]]->environment;
                         if( mpMap->envColors.contains(env) )
                             env = mpMap->envColors[env];
@@ -632,70 +751,70 @@ void GLWidget::paintGL()
                         switch( env )
                         {
                         case 1:
-                            glColor4b(128,50,50,2);
+                            glColor4b(128,50,50,200);
                             mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 2:
-                            glColor4b(128,128,50, 2);
+                            glColor4b(128,128,50, 200);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 3:
-                            glColor4b(50,128,50,2);
+                            glColor4b(50,128,50,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 4:
-                            glColor4b(50,50,128,2);
+                            glColor4b(50,50,128,200);
                             mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 5:
-                            glColor4b(128,50,128,2);
+                            glColor4b(128,50,128,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 6:
-                            glColor4b(50,128,128,2);
+                            glColor4b(50,128,128,200);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 7:
-                            glColor4b(52,38,78,2);
+                            glColor4b(52,38,78,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 8:
-                            glColor4b(65, 55, 35, 2);
+                            glColor4b(65, 55, 35, 200);
                             mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 9:
-                            glColor4b(175,50,50,2);
+                            glColor4b(175,50,50,200);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 10:
-                            glColor4b(255,255,50,2);
+                            glColor4b(255,255,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
                         case 11:
-                            glColor4b(50,175,175,2);
+                            glColor4b(50,175,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 12:
-                            glColor4b(175,175,50,2);
+                            glColor4b(175,175,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 13:
-                            glColor4b(175,50,175,2);
+                            glColor4b(175,50,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 14:
-                            glColor4b(50,175,50,2);
+                            glColor4b(50,175,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 15:
-                            glColor4b(50,50,175,2);
+                            glColor4b(50,50,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         default: //user defined room color
@@ -708,7 +827,7 @@ void GLWidget::paintGL()
                             mc3[3]=0.2;
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-                        glMateriali(GL_FRONT, GL_SHININESS, 36);
+                        glMateriali(GL_FRONT, GL_SHININESS, 6);
                         glDisable(GL_DEPTH_TEST);
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
@@ -805,7 +924,7 @@ void GLWidget::paintGL()
                     {
                         continue;
                     }
-                    if( mpMap->rooms[exitList[k]]->area != mpMap->rooms[mpMap->mRoomId]->area )
+                    if( mpMap->rooms[exitList[k]]->area != mAID )
                     {
                         areaExit = true;
                     }
@@ -821,13 +940,13 @@ void GLWidget::paintGL()
                         glLineWidth(1);//1/mScale+2);
                     else
                         glLineWidth(1);//1/mScale);
-                    if( exitList[k] == mpMap->mRoomId || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
+                    if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
                         glEnable( GL_LIGHTING );
                         float mc3[] = { 1.0f, 0.0f, 0.0f, 1.0f };
                         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mc3);
-                        glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 96);
+                        glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 36);
                         glColor4f(1.0, 0.0, 0.0, 1.0);
                     }
                     else
@@ -836,7 +955,7 @@ void GLWidget::paintGL()
                         glEnable( GL_LIGHTING );
                         glEnable(GL_LIGHT1);
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor2[ef]);
-                        glMateriali(GL_FRONT, GL_SHININESS, 56);//gut:36
+                        glMateriali(GL_FRONT, GL_SHININESS, 36);//gut:36
                         glColor4f(ebenenColor2[ef][0],
                                   ebenenColor2[ef][1],
                                   ebenenColor2[ef][2],
@@ -880,7 +999,7 @@ void GLWidget::paintGL()
                         glDisable(GL_LIGHT1);
                         float mc4[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 1.0 };
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc4);
-                        glMateriali(GL_FRONT, GL_SHININESS, 56);
+                        glMateriali(GL_FRONT, GL_SHININESS, 36);
                         glColor4f(85.0/255.0, 170.0/255.0, 0.0/255.0, 1.0);
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
@@ -1183,7 +1302,7 @@ void GLWidget::paintGL()
             int e = mpMap->rooms[pArea->rooms[i]]->z;
             int ef = abs(e%26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
-            glMateriali(GL_FRONT, GL_SHININESS, 56);//gut:96
+            glMateriali(GL_FRONT, GL_SHININESS, 36);//gut:96
 
             if( ( rz == pz ) && ( rx == px ) && ( ry == py ) )
             {
@@ -1192,7 +1311,7 @@ void GLWidget::paintGL()
                 glDisable(GL_LIGHT1);
                 float mc3[] = { 1.0f, 0.0f, 0.0f, 1.0f };
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-                glMateriali(GL_FRONT, GL_SHININESS, 96);
+                glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glColor4f(1.0, 0.0, 0.0, 1.0);
             }
             else if( pArea->rooms[i] == mTarget )
@@ -1202,7 +1321,7 @@ void GLWidget::paintGL()
                 glDisable(GL_LIGHT1);
                 float mc4[] = { 0.0, 1.0, 0.0, 1.0 };
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc4);
-                glMateriali(GL_FRONT, GL_SHININESS, 96);//36
+                glMateriali(GL_FRONT, GL_SHININESS, 36);//36
                 glColor4f(0.0, 1.0, 0.0, 1.0);
             }
             else if( rz <= pz )
@@ -1211,7 +1330,7 @@ void GLWidget::paintGL()
                 glEnable( GL_LIGHTING );
                 glDisable(GL_LIGHT1);
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor2[ef]);
-                glMateriali(GL_FRONT, GL_SHININESS, 96);
+                glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glColor4f(ebenenColor[ef][0],
                           ebenenColor[ef][1],
                           ebenenColor[ef][2],
@@ -1223,7 +1342,7 @@ void GLWidget::paintGL()
                 glEnable( GL_LIGHTING );
                 glEnable(GL_LIGHT1);
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
-                glMateriali(GL_FRONT, GL_SHININESS, 96);//56);//gut:36
+                glMateriali(GL_FRONT, GL_SHININESS, 36);//56);//gut:36
                 glColor4f(ebenenColor2[ef][0],
                           ebenenColor2[ef][1],
                           ebenenColor2[ef][2],
@@ -1392,7 +1511,7 @@ void GLWidget::paintGL()
                     mc3[3]=0.2;
                 }
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-                glMateriali(GL_FRONT, GL_SHININESS, 56);
+                glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glDisable(GL_DEPTH_TEST);
                 glLoadIdentity();
                 gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
@@ -1638,7 +1757,7 @@ void GLWidget::paintGL()
             }
             glDisable(GL_DEPTH_TEST);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-            glMateriali(GL_FRONT, GL_SHININESS, 56);
+            glMateriali(GL_FRONT, GL_SHININESS, 96);
             glLoadIdentity();
             gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
             if( pArea->gridMode )
@@ -1742,35 +1861,35 @@ void GLWidget::paintGL()
             }
             glEnd();
 
-            if( mpMap->rooms[pArea->rooms[i]]->out > -1 )
-            {
-                glBegin( GL_LINE_LOOP );
-                for( int angle=0; angle<360; angle += 1 )
-                {
-                    glVertex3f( (0.5 + sin((float)angle) * 0.25)/dehnung, ( cos((float)angle) * 0.25)/dehnung, 0.0);
-                }
-                glEnd();
-            }
+//            if( mpMap->rooms[pArea->rooms[i]]->out > -1 )
+//            {
+//                glBegin( GL_LINE_LOOP );
+//                for( int angle=0; angle<360; angle += 1 )
+//                {
+//                    glVertex3f( (0.5 + sin((float)angle) * 0.25)/dehnung, ( cos((float)angle) * 0.25)/dehnung, 0.0);
+//                }
+//                glEnd();
+//            }
 
 
-            glTranslatef( -0.1, 0.0, 0.0 );
-            if( mpMap->rooms[pArea->rooms[i]]->in > -1 )
-            {
-                glBegin( GL_TRIANGLE_FAN );
-                glVertex3f( 0.0, 0.0, 0.0);
-                for( int angle=0; angle<=360; angle += 5 )
-                {
-                    glVertex3f( (sin((float)angle)*0.25)/dehnung, (cos((float)angle)*0.25)/dehnung, 0.0);
-                }
-                glEnd();
-            }
+//            glTranslatef( -0.1, 0.0, 0.0 );
+//            if( mpMap->rooms[pArea->rooms[i]]->in > -1 )
+//            {
+//                glBegin( GL_TRIANGLE_FAN );
+//                glVertex3f( 0.0, 0.0, 0.0);
+//                for( int angle=0; angle<=360; angle += 5 )
+//                {
+//                    glVertex3f( (sin((float)angle)*0.25)/dehnung, (cos((float)angle)*0.25)/dehnung, 0.0);
+//                }
+//                glEnd();
+//            }
 
         }
 
 
         zEbene += 1.0;
     }
-//    qDebug()<<"FINAL: mQuads.size()="<<mQuads.size()<<"area.size()="<<pArea->rooms.size()<<" quads="<<quads<<" verts="<<verts;
+ //   qDebug()<<"FINAL: mQuads.size()="<<mQuads.size()<<"area.size()="<<pArea->rooms.size()<<" quads="<<quads<<" verts="<<verts;
 //    qDebug()<<"mScale="<<mScale<<" 1/mScale="<<1/mScale<<" env="<<env;
 //    cout<<"dif r="<<diffuseLight[0]<<" g="<<diffuseLight[1]<<" b="<<diffuseLight[2]<<endl;
 //    cout << "xRot:"<<xRot<<" yRot:"<<yRot<<" zRot:"<<zRot<<endl;

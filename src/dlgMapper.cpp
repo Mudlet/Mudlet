@@ -46,6 +46,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     roomSize->setValue(mpHost->mRoomSize);
     lineSize->setValue(mpHost->mLineSize);
     strongHighlight->setCheckState( mpHost->mMapStrongHighlight ? Qt::Checked : Qt::Unchecked );
+    showInfo->setCheckState( mpHost->mShowInfo ? Qt::Checked : Qt::Unchecked );
     searchList->setSelectionMode( QAbstractItemView::SingleSelection );
     connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
     connect(ortho, SIGNAL(pressed()), glWidget, SLOT(fullView()));
@@ -62,7 +63,16 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(shiftUp, SIGNAL(pressed()), mp2dMap, SLOT(shiftUp()));
     connect(shiftDown, SIGNAL(pressed()), mp2dMap, SLOT(shiftDown()));
     connect(showInfo, SIGNAL(clicked()), mp2dMap, SLOT(showInfo()));
+
+    connect(shiftZup, SIGNAL(pressed()), glWidget, SLOT(shiftZup()));
+    connect(shiftZdown, SIGNAL(pressed()), glWidget, SLOT(shiftZdown()));
+    connect(shiftLeft, SIGNAL(pressed()), glWidget, SLOT(shiftLeft()));
+    connect(shiftRight, SIGNAL(pressed()), glWidget, SLOT(shiftRight()));
+    connect(shiftUp, SIGNAL(pressed()), glWidget, SLOT(shiftUp()));
+    connect(shiftDown, SIGNAL(pressed()), glWidget, SLOT(shiftDown()));
+    connect(showInfo, SIGNAL(clicked()), glWidget, SLOT(showInfo()));
     connect(showArea, SIGNAL(activated(QString)), mp2dMap, SLOT(switchArea(QString)));
+    connect(showArea, SIGNAL(activated(QString)), glWidget, SLOT(showArea(QString)));
     connect(defaultView, SIGNAL(pressed()), glWidget, SLOT(defaultView()));
     connect(dim2,SIGNAL(pressed()), this, SLOT(show2dView()));
     connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));
@@ -106,11 +116,13 @@ void dlgMapper::slot_toggleShowRoomIDs(int s)
         mp2dMap->mShowRoomID = true;
     else
         mp2dMap->mShowRoomID = false;
+    mp2dMap->update();
 }
 
 void dlgMapper::slot_toggleStrongHighlight( int v )
 {
     mpHost->mMapStrongHighlight = v == Qt::Checked ? true : false;
+    mp2dMap->update();
 }
 
 void dlgMapper::slot_togglePanel()

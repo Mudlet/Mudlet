@@ -1429,7 +1429,7 @@ void TBuffer::translateToPlainText( std::string & s )
                 if( ( openT > 0 ) && ( closeT == openT ) )
                 {
                     mAssemblingToken = false;
-                    qDebug()<<"identified TAG("<<currentToken.c_str()<<")";
+                    //qDebug()<<"identified TAG("<<currentToken.c_str()<<")";
                     int _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if( _pfs == std::string::npos )
@@ -1573,12 +1573,12 @@ void TBuffer::translateToPlainText( std::string & s )
                                 QStringList _t_ref_list;
                                 _t_ref_list << _t_ref;
                                 mLinkStore[mLinkID] = _t_ref_list;
-                                qDebug()<<"MXP_SEND_NO_REF_MODE: tag closed cmd="<<_t_ref;
+                                //qDebug()<<"MXP_SEND_NO_REF_MODE: tag closed cmd="<<_t_ref;
                             }
                             else
                             {
                                 mLinkStore[mLinkID].replaceInStrings( "&text;", mAssembleRef.c_str() );
-                                qDebug()<<"MXP_SEND_NO_REF_MODE (replace &text): tag closed cmd="<<mLinkStore[mLinkID];
+                                //qDebug()<<"MXP_SEND_NO_REF_MODE (replace &text): tag closed cmd="<<mLinkStore[mLinkID];
                             }
                             mAssembleRef.clear();
                         }
@@ -1671,10 +1671,10 @@ void TBuffer::translateToPlainText( std::string & s )
                         QStringList _tl = _t2.split('|');
                         for( int i=0; i<_tl.size(); i++ )
                         {
-                            qDebug()<<i<<"."<<_tl[i];
+                            //qDebug()<<i<<"."<<_tl[i];
                             _tl[i].replace( "|", "" );
                             _tl[i] = "send([[" + _tl[i] + "]])";
-                            qDebug()<<"->"<<_tl[i];
+                            //qDebug()<<"->"<<_tl[i];
                         }
 //                        if( mMXP_SEND_NO_REF_MODE )
 //                        {

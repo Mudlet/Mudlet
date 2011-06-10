@@ -659,6 +659,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mMapStrongHighlight = ( attributes().value("mMapStrongHighlight") == "yes" );
     pT->mLogStatus = ( attributes().value("mLogStatus") == "yes" );
     pT->mEnableSpellCheck = ( attributes().value("mEnableSpellCheck") == "yes" );
+    pT->mShowInfo = ( attributes().value("mShowInfo") == "yes" );
 
     while( ! atEnd() )
     {

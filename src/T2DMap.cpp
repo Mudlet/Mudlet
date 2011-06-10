@@ -371,7 +371,6 @@ void T2DMap::switchArea(QString name)
             break;
         }
     }
-
 }
 
 void T2DMap::paintEvent( QPaintEvent * e )
@@ -385,8 +384,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
     if( ! p.isActive() ) return;
 
     mAreaExitList.clear();
-
-
 
     float _w = width();
     float _h = height();
@@ -417,6 +414,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
     int px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
     {
+        p.drawText(_w/2,_h/2,"no map found");
+
         qDebug()<<"ERROR: roomID not in rooms map";
         return;
     }
@@ -556,20 +555,25 @@ void T2DMap::paintEvent( QPaintEvent * e )
             int e = mpMap->rooms[pArea->rooms[i]]->z;
             for( int k=0; k<exitList.size(); k++ )
             {
-                bool areaExit = false;
+                bool areaExit;
                 if( exitList[k] == -1 ) continue;
                 if( ! mpMap->rooms.contains( exitList[k] ) )
                 {
                     continue;
                 }
-                if( mpMap->rooms[exitList[k]]->area != mpMap->rooms[mRID]->area )
+                if( mpMap->rooms[exitList[k]]->area != mAID )
                 {
                     areaExit = true;
                 }
+                else
+                    areaExit = false;
                 int ex = mpMap->rooms[exitList[k]]->x*tx+_rx;
                 int ey = mpMap->rooms[exitList[k]]->y*ty*-1+_ry;
                 int ez = mpMap->rooms[exitList[k]]->z;
-                if( ez != zEbene ) continue;
+                if( ez != zEbene || e != ez ) continue;
+
+                p.setPen(QPen( mpHost->mFgColor_2) );
+
                 QVector3D p1( ex, ey, ez );
                 QVector3D p2( rx, ry, rz );
                 if( ! areaExit )

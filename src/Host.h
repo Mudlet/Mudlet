@@ -285,6 +285,7 @@ public:
     QListWidget *      packageList;
     double             mLineSize;
     double             mRoomSize;
+    bool               mShowInfo;
 
 private:
     Host();

@@ -118,6 +118,8 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mMapStrongHighlight", pT->mMapStrongHighlight ? "yes" : "no" );
     writeAttribute( "mLogStatus", pT->mLogStatus ? "yes" : "no" );
     writeAttribute( "mEnableSpellCheck", pT->mEnableSpellCheck ? "yes" : "no" );
+    writeAttribute( "mShowInfo", pT->mShowInfo ? "yes" : "no" );
+
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );

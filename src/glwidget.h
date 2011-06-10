@@ -43,7 +43,25 @@ public:
     QSize minimumSizeHint() const;
     QSize sizeHint() const;
 
+    int mRID;
+    int mAID;
+    int mOx;
+    int mOy;
+    int mOz;
+    bool mShiftMode;
+    bool mShowInfo;
+
+
 public slots:
+
+    void showInfo();
+    void shiftUp();
+    void shiftDown();
+    void shiftLeft();
+    void shiftRight();
+    void shiftZup();
+    void shiftZdown();
+    void showArea(QString);
     void setXRotation(int angle);
     void setYRotation(int angle);
     void setZRotation(int angle);

@@ -260,6 +260,7 @@ Host::Host()
 , mpUnzipDialog        ( 0 )
 , mRoomSize            ( 0.5 )
 , mLineSize            ( 1.0 )
+, mShowInfo            ( true )
 {
 
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
