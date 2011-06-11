@@ -1447,9 +1447,7 @@ void TTrigger::execute()
 {
     if( mSoundTrigger )
     {
-        //QSound::play( mSoundFile );
-        Phonon::MediaObject * music = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource( mSoundFile ));
-        music->play();
+        mudlet::self()->playSound( mSoundFile );
     }
     if( mCommand.size() > 0 )
     {

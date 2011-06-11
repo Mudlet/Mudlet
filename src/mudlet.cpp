@@ -92,6 +92,10 @@ mudlet::mudlet()
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
+, mpMusicBox1(Phonon::createPlayer(Phonon::MusicCategory) )
+, mpMusicBox2(Phonon::createPlayer(Phonon::MusicCategory) )
+, mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
+, mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
 #ifdef Q_OS_LINUX,
     , version( "Mudlet 2.0-rc7-Linux June 2011" )
 #endif
@@ -103,7 +107,6 @@ mudlet::mudlet()
 #endif
 {
     setupUi(this);
-
     setUnifiedTitleAndToolBarOnMac( true );
     setContentsMargins(0,0,0,0);
     mudlet::debugMode = false;
@@ -957,6 +960,8 @@ bool mudlet::setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 
     else
         return false;
 }
+
+
 
 bool mudlet::resetFormat( Host * pHost, QString & name )
 {
@@ -1984,4 +1989,27 @@ void mudlet::slot_replaySpeedDown()
     replaySpeedDisplay->show();
 }
 
-
+void mudlet::playSound( QString s )
+{
+    if( mpMusicBox1->remainingTime() == 0 )
+    {
+        mpMusicBox1->setCurrentSource( s );
+        mpMusicBox1->play();
+    }
+    else if( mpMusicBox2->remainingTime() == 0 )
+    {
+        mpMusicBox2->setCurrentSource( s );
+        mpMusicBox2->play();
+    }
+    else if( mpMusicBox3->remainingTime() == 0 )
+    {
+        mpMusicBox3->setCurrentSource( s );
+        mpMusicBox3->play();
+    }
+    else
+    {
+        mpMusicBox4->clear();
+        mpMusicBox4->setCurrentSource( s );
+        mpMusicBox4->play();
+    }
+}

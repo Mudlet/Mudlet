@@ -3248,9 +3248,10 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
         sound.replace('/', "\\");
     }
     else
+    {
         sound.replace('\\', "/");
-        Phonon::MediaObject *music = Phonon::createPlayer(Phonon::MusicCategory, Phonon::MediaSource(sound.toLatin1().data()));
-        music->play();
+    }
+    mudlet::self()->playSound( sound );
     return 0;
 }
 

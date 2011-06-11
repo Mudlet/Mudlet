@@ -86,7 +86,7 @@ void TMap::deleteRoom( int id )
         }
         qDebug()<<"====> finally remoning room ID:"<<id;
         rooms.remove( id );
-
+        mMapGraphNeedsUpdate = true;
         delete pR;
     }
     QList<QString> kL = hashTable.keys(id);
@@ -114,6 +114,7 @@ void TMap::deleteArea( int id )
         }
         areas.remove( id );
         areaNamesMap.remove( id );
+        mMapGraphNeedsUpdate = true;
     }
 }
 
