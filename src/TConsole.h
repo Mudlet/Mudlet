@@ -279,12 +279,20 @@ public:
       bool              mIsPromptLine;
       QToolButton *     logButton;
       bool              mUserAgreedToCloseConsole;
+      QLineEdit *       mpBufferSearchBox;
+      QToolButton *     mpBufferSearchUp;
+      QToolButton *     mpBufferSearchDown;
+      int               mCurrentSearchResult;
+      QList<int>        mSearchResults;
+      QString           mSearchQuery;
 
 signals:
 
 
 public slots:
 
+      void              slot_searchBufferUp();
+      void              slot_searchBufferDown();
       void              slot_toggleReplayRecording();
       void              slot_stop_all_triggers( bool );
       void              slot_toggleLogging();

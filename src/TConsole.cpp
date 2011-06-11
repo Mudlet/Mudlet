@@ -99,6 +99,11 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , networkLatency( new QLineEdit )
 , mLastBufferLogLine( 0 )
 , mUserAgreedToCloseConsole( false )
+, mpBufferSearchBox( new QLineEdit )
+, mpBufferSearchUp( new QToolButton )
+, mpBufferSearchDown( new QToolButton )
+, mCurrentSearchResult( 0 )
+, mSearchQuery("")
 {
     //mDisplayFont.setWordSpacing( 0 );
 //    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
@@ -410,7 +415,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     networkLatency->setContentsMargins(0,0,0,0);
     QPalette basePalette;
     basePalette.setColor( QPalette::Text, QColor(0,0,0) );
-    basePalette.setColor( QPalette::Base, QColor(200, 255, 200) );
+    basePalette.setColor( QPalette::Base, QColor(255, 255, 255) );
     networkLatency->setPalette( basePalette );
     networkLatency->setAlignment( Qt::AlignHCenter | Qt::AlignVCenter );
 
@@ -450,13 +455,45 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
     connect( emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers( bool )));
 
+    mpBufferSearchBox->setMinimumSize(QSize(100,30));
+    mpBufferSearchBox->setMaximumSize(QSize(150,30));
+    mpBufferSearchBox->setSizePolicy( sizePolicy5 );
+    mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
+#if QT_VERSION >= 0x040700
+    mpBufferSearchBox->setPlaceholderText("search");
+#endif
+    mpBufferSearchBox->setToolTip("Search buffer");
+    connect( mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
+
+    mpBufferSearchUp->setMinimumSize(QSize(30,30));
+    mpBufferSearchUp->setMaximumSize(QSize(30,30));
+    mpBufferSearchUp->setSizePolicy( sizePolicy5 );
+    mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
+    mpBufferSearchUp->setToolTip("next result");
+    QIcon icon34(":/icons/export.png");
+    mpBufferSearchUp->setIcon( icon34 );
+    connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
+
+
+    mpBufferSearchDown->setMinimumSize(QSize(30,30));
+    mpBufferSearchDown->setMaximumSize(QSize(30,30));
+    mpBufferSearchDown->setSizePolicy( sizePolicy5 );
+    mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
+    mpBufferSearchDown->setToolTip("next result");
+    QIcon icon35(":/icons/import.png");
+    mpBufferSearchDown->setIcon( icon35 );
+    connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
+
     layoutLayer2->addWidget( mpCommandLine );
     layoutLayer2->addWidget( buttonMainLayer );
-    layoutButtonLayer->addWidget( timeStampButton, 0, 0 );
-    layoutButtonLayer->addWidget( replayButton, 0, 1 );
-    layoutButtonLayer->addWidget( logButton, 0, 2 );
-    layoutButtonLayer->addWidget( emergencyStop, 0, 3 );
-    layoutButtonLayer->addWidget( networkLatency, 0, 4, 0, 10 );
+    layoutButtonLayer->addWidget( mpBufferSearchBox,0, 0, 0, 4 );
+    layoutButtonLayer->addWidget( mpBufferSearchUp, 0, 5 );
+    layoutButtonLayer->addWidget( mpBufferSearchDown, 0, 6 );
+    layoutButtonLayer->addWidget( timeStampButton, 0, 7 );
+    layoutButtonLayer->addWidget( replayButton, 0, 8 );
+    layoutButtonLayer->addWidget( logButton, 0, 9 );
+    layoutButtonLayer->addWidget( emergencyStop, 0, 10 );
+    layoutButtonLayer->addWidget( networkLatency, 0, 11, 0, 14 );
     layoutLayer2->setContentsMargins(0,0,0,0);
     layout->addWidget( layer );
     networkLatency->setFrame( false );
@@ -509,10 +546,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     buttonLayerSpacer->setMinimumWidth(100);
     buttonLayer->setMaximumHeight(31);
     buttonLayer->setMaximumWidth(31);
-    buttonLayer->setMinimumWidth(240);
-    buttonLayer->setMaximumWidth(240);
-    buttonMainLayer->setMinimumWidth(240);
-    buttonMainLayer->setMaximumWidth(240);
+    buttonLayer->setMinimumWidth(400);
+    buttonLayer->setMaximumWidth(400);
+    buttonMainLayer->setMinimumWidth(400);
+    buttonMainLayer->setMaximumWidth(400);
 }
 
 void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
@@ -2567,8 +2604,86 @@ void TConsole::showStatistics()
     mpHost->mpConsole->raise();
 }
 
+void TConsole::slot_searchBufferUp()
+{
+    QString _txt = mpBufferSearchBox->text();
+    if( _txt != mSearchQuery )
+    {
+        mSearchQuery = _txt;
+        mCurrentSearchResult = buffer.lineBuffer.size();
+    }
+    if( buffer.lineBuffer.size() < 1 ) return;
+    bool _found = false;
+    for( int i=mCurrentSearchResult-1; i >= 0; i-- )
+    {
+        int begin = -1;
+        do
+        {
+            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin+1 );
+            if( begin > -1 )
+            {
+                int length = mSearchQuery.size();
+                moveCursor( 0, i );
+                selectSection( begin, length );
+                setBgColor( 255, 255, 0 );
+                setFgColor( 0, 0, 0 );
+                deselect();
+                reset();
+                _found = true;
+            }
+        }
+        while( begin > -1 );
+        if( _found )
+        {
+            scrollUp( buffer.mCursorY-i-3 );
+            console->forceUpdate();
+            mCurrentSearchResult = i;
+            return;
+        }
+    }
+    print("No search results, sorry!\n");
+}
 
-
+void TConsole::slot_searchBufferDown()
+{
+    QString _txt = mpBufferSearchBox->text();
+    if( _txt != mSearchQuery )
+    {
+        mSearchQuery = _txt;
+        mCurrentSearchResult = buffer.lineBuffer.size();
+    }
+    if( buffer.lineBuffer.size() < 1 ) return;
+    if( mCurrentSearchResult >= buffer.lineBuffer.size() ) return;
+    bool _found = false;
+    for( int i=mCurrentSearchResult+1; i < buffer.lineBuffer.size(); i++ )
+    {
+        int begin = -1;
+        do
+        {
+            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin+1 );
+            if( begin > -1 )
+            {
+                int length = mSearchQuery.size();
+                moveCursor( 0, i );
+                selectSection( begin, length );
+                setBgColor( 255, 255, 0 );
+                setFgColor( 0, 0, 0 );
+                deselect();
+                reset();
+                _found = true;
+            }
+        }
+        while( begin > -1 );
+        if( _found )
+        {
+            scrollUp( buffer.mCursorY-i-3 );
+            console->forceUpdate();
+            mCurrentSearchResult = i;
+            return;
+        }
+    }
+    print("No search results, sorry!\n");
+}
 
 
 
