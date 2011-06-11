@@ -1,5 +1,5 @@
-Compiling Mudlet 1.1.0
-----------------------
+Compiling Mudlet 2.0
+---------------------
 
 Use the Qt-4.6-SDK package from ftp://ftp.trolltech.com/qtsdk/ or http://qt.nokia.com 
 It comes with a binary distribution of the libs a ready made compiler for windows (mingw)  
@@ -11,6 +11,16 @@ required libs to compile Mudlet:
 - Qt >=4.4 (included in the SDK)
 - liblua-5.1 
 - libpcre-7.8 or later
+- yajl-1.0 (you can also use yajl-2.0 if you change make config file src/src.pro and include lua_yajl.c instead of lua_yajl1.c)
+- hunspell
+- boost (www.boost.org)
+- zlib.1.2.3
+- Open GL libs + Qt OpenGL module see Qt OpenGL docs for more info
+- zzlib (http://zziplib.sourceforge.net)
+- luazip (Lua unzip module) http://www.keplerproject.org/luazip/
+- Lua File System (LFS)
+- rex_pcre (Lua pcre interface)
+- Lua sql (Lua module for SQL)
 
 (NOTE: GNU/Linux: You'll always need the "dev" versions of the required libs if you use packages of your distro.)
 
@@ -23,17 +33,7 @@ additional packages that should be present on your system to get the full featur
 
 2. COMPILING:
 =============
-   There are two ways to compile Mudlet.
-
-1. CMAKE: The simplest: after having untared the source (tar xzvf mudlet-HEAD.tar.gz)
-   cd mudlet
-   ./build.sh (GNU/Linux) or build.bat (windows)
-   make
-   make install (not necessary)
-   The binary can be found in mudlet/src/mudlet
-
-2. FAILSAFE mode: Our cmake build doesn't work on all systems yet. So if you have problems you can use the
-   manual way with qmake. You can adjust the paths to the dependencies in the project file
+  Use qmake. You can adjust the paths to the dependencies in the project file
    mudlet/src/src.pro - simply look at the top of the file and adjust the paths you find to
    your own system. This is easy. If compile breaks with an error your paths are not correct.
    After having adjusted src.pro:
@@ -41,10 +41,8 @@ additional packages that should be present on your system to get the full featur
    qmake-qt4 (NOTE: On most systems there is qmake and qmake-qt4 qmake relates to the old qt version 3 qmake.)
    make
    make install
-
-   The binary can be found in mudlet/src/mudlet or mudlet/src/release/mudlet.exe 
-
-   Note: If you run into compiler problems then use build mode #2 and edit the file mudlet/src/src.pro in order to 
+ 
+  Note: If you run into compiler problems then edit the file mudlet/src/src.pro in order to 
    change the INCLUDE and/or LIBS part of the make file and set the correct path on your system.
 
 
