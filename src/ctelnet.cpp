@@ -736,10 +736,10 @@ void cTelnet::processTelnetCommand( const string & command )
 
               if( _m.startsWith( "Client.GUI" ) )
               {
-                  QString version = m.section( '\n', 0 );
+                  QString version = _m.section( '\n', 0 );
                   version.replace("Client.GUI ", "");
 
-                  QString newVersion = version.toInt();
+                  int newVersion = version.toInt();
                   if( mpHost->mServerGUI_Package_version != newVersion )
                   {
                       QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);

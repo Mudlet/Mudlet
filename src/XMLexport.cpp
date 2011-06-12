@@ -132,7 +132,7 @@ bool XMLexport::writeHost( Host * pT )
     writeEndElement();
     writeTextElement( "url", pT->mUrl );
     writeTextElement( "serverPackageName", pT->mServerGUI_Package_name );
-    writeTextElement( "serverPackageVersion", pT->mServerGUI_Package_version );
+    writeTextElement( "serverPackageVersion", QString::number(pT->mServerGUI_Package_version ) );
     writeTextElement( "port", QString::number(pT->mPort) );
     writeTextElement( "borderTopHeight", QString::number(pT->mBorderTopHeight) );
     writeTextElement( "borderBottomHeight", QString::number(pT->mBorderBottomHeight) );
