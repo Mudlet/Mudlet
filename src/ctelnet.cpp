@@ -401,6 +401,15 @@ void cTelnet::replyFinished( QNetworkReply * reply )
     file.flush();
     file.close();
     mpHost->installPackage( mServerPackage );
+    QString packageName = mServerPackage.section("/",-1 );
+    packageName.replace( ".zip" , "" );
+    packageName.replace( "trigger", "" );
+    packageName.replace( "xml", "" );
+    packageName.replace( ".mpackage" , "" );
+    packageName.replace( '/' , "" );
+    packageName.replace( '\\' , "" );
+    packageName.replace( '.' , "" );
+    mpHost->mServerGUI_Package_name = packageName;
 }
 
 void cTelnet::setDownloadProgress( qint64 got, qint64 tot )
@@ -727,6 +736,17 @@ void cTelnet::processTelnetCommand( const string & command )
 
               if( _m.startsWith( "Client.GUI" ) )
               {
+                  QString version = m.section( '\n', 0 );
+                  version.replace("Client.GUI ", "");
+
+                  QString newVersion = version.toInt();
+                  if( mpHost->mServerGUI_Package_version != newVersion )
+                  {
+                      QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
+                      mpHost->mpConsole->print(_smsg.toLatin1().data());
+                      mpHost->uninstallPackage( mpHost->mServerGUI_Package_name );
+                      mpHost->mServerGUI_Package_version = newVersion;
+                  }
                   QString url = _m.section( '\n', 1 );
                   QString packageName = url.section('/',-1);
                   QString fileName = packageName;

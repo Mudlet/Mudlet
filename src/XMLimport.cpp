@@ -683,7 +683,16 @@ void XMLimport::readHostPackage( Host * pT )
                 pT->mUrl = readElementText();
                 continue;
             }
-
+            else if( name() =="serverPackageName" )
+            {
+                pT->mServerGUI_Package_name = readElementText();
+                continue;
+            }
+            else if( name() == "serverPackageVersion")
+            {
+                pT->mServerGUI_Package_version = readElementText().toInt();
+                continue;
+            }
             else if( name() == "port")
             {
                 pT->mPort = readElementText().toInt();

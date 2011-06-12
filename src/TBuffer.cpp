@@ -1005,7 +1005,6 @@ void TBuffer::translateToPlainText( std::string & s )
                                         mIsDefaultColor = false;
                                         break;
                                      }
-                                     tag = -1;
                                     continue;
                                 }
                                 if( tag < 232 )
@@ -1036,7 +1035,6 @@ void TBuffer::translateToPlainText( std::string & s )
                                 mHighColorModeForeground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
-                                tag = -1;
                                 continue;
                             }
                             if( mHighColorModeBackground )
@@ -1139,7 +1137,6 @@ void TBuffer::translateToPlainText( std::string & s )
                                         bgColorG = bgColorLightG;
                                         bgColorB = bgColorLightB;
                                     }
-                                    tag = -1;
                                     continue;
                                 }
                                 if( tag < 232 )
@@ -1163,7 +1160,6 @@ void TBuffer::translateToPlainText( std::string & s )
                                 mHighColorModeBackground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
-                                 tag = -1;
                                 continue;
                             }
                         }

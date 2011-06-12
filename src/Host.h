@@ -286,6 +286,8 @@ public:
     double             mLineSize;
     double             mRoomSize;
     bool               mShowInfo;
+    int                mServerGUI_Package_version;
+    QString            mServerGUI_Package_name;
 
 private:
     Host();
