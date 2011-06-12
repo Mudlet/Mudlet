@@ -459,9 +459,16 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchBox->setMaximumSize(QSize(150,30));
     mpBufferSearchBox->setSizePolicy( sizePolicy5 );
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
+    mpBufferSearchBox->setFocusPolicy( Qt::ClickFocus );
 #if QT_VERSION >= 0x040700
-    mpBufferSearchBox->setPlaceholderText("search");
+    mpBufferSearchBox->setPlaceholderText("Search ...");
 #endif
+    QPalette __pal;
+    __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
+    __pal.setColor(QPalette::Highlight,QColor(0,0,192));
+    __pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    __pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
+    mpBufferSearchBox->setPalette( __pal );
     mpBufferSearchBox->setToolTip("Search buffer");
     connect( mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
 
@@ -470,6 +477,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchUp->setSizePolicy( sizePolicy5 );
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchUp->setToolTip("next result");
+    mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     QIcon icon34(":/icons/export.png");
     mpBufferSearchUp->setIcon( icon34 );
     connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
@@ -480,6 +488,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setSizePolicy( sizePolicy5 );
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchDown->setToolTip("next result");
+    mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
     QIcon icon35(":/icons/import.png");
     mpBufferSearchDown->setIcon( icon35 );
     connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
@@ -550,6 +559,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     buttonLayer->setMaximumWidth(400);
     buttonMainLayer->setMinimumWidth(400);
     buttonMainLayer->setMaximumWidth(400);
+    setFocusPolicy(Qt::ClickFocus);
+    setFocusProxy(mpCommandLine);
+    console->setFocusPolicy(Qt::ClickFocus);
+    console->setFocusProxy(mpCommandLine);
+    console2->setFocusPolicy(Qt::ClickFocus);
+    console2->setFocusProxy(mpCommandLine);
+
 }
 
 void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
@@ -875,15 +891,10 @@ void TConsole::slot_toggleReplayRecording()
 
 void TConsole::changeColors()
 {
-    qDebug()<<"TConsole::changeColors()";
     mDisplayFont.setFixedPitch(true);
-    //mDisplayFont.setWordSpacing( 0 );
-//    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
     if( mIsDebugConsole )
     {
         mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality) );
-        //mDisplayFont.setWordSpacing( 0 );
-
         mDisplayFont.setFixedPitch(true);
         console->setFont( mDisplayFont );
         console2->setFont( mDisplayFont );
@@ -928,6 +939,13 @@ void TConsole::changeColors()
     }
     else
     {
+        QPalette pal;
+        pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
+        pal.setColor(QPalette::Highlight,QColor(0,0,192));
+        pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
+        pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
+        mpCommandLine->setPalette( pal );
+        mpCommandLine->mRegularPalette = pal;
         if( mpHost->mNoAntiAlias )
             mpHost->mDisplayFont.setStyleStrategy( QFont::NoAntialias );
         else

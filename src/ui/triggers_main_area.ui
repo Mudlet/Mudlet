@@ -239,8 +239,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>465</width>
-              <height>137</height>
+              <width>483</width>
+              <height>139</height>
              </rect>
             </property>
            </widget>
@@ -429,10 +429,19 @@
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout">
                <property name="spacing">
+                <number>5</number>
+               </property>
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
                 <number>0</number>
                </property>
-               <property name="margin">
-                <number>0</number>
+               <property name="bottomMargin">
+                <number>5</number>
                </property>
                <item>
                 <widget class="QSpinBox" name="spinBox_stayOpen">
@@ -457,11 +466,6 @@
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <pointsize>11</pointsize>
-                  </font>
                  </property>
                  <property name="text">
                   <string>more lines</string>
@@ -516,8 +520,17 @@
                <property name="spacing">
                 <number>0</number>
                </property>
-               <property name="margin">
-                <number>0</number>
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>9</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
                </property>
                <item>
                 <widget class="QLabel" name="label_16">
@@ -532,14 +545,6 @@
                    <width>0</width>
                    <height>11</height>
                   </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>Arial</family>
-                   <pointsize>11</pointsize>
-                   <weight>50</weight>
-                   <bold>false</bold>
-                  </font>
                  </property>
                  <property name="text">
                   <string>chose file:</string>
@@ -564,15 +569,21 @@
                <item>
                 <widget class="QPushButton" name="pushButtonSound">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>16</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
-                   <width>22</width>
-                   <height>11</height>
+                   <width>16777215</width>
+                   <height>16</height>
                   </size>
                  </property>
                  <property name="text">
@@ -893,16 +904,16 @@ as this is a complex topic.</string>
              <number>0</number>
             </property>
             <property name="leftMargin">
-             <number>3</number>
+             <number>5</number>
             </property>
             <property name="topMargin">
-             <number>1</number>
+             <number>9</number>
             </property>
             <property name="rightMargin">
              <number>3</number>
             </property>
             <property name="bottomMargin">
-             <number>1</number>
+             <number>9</number>
             </property>
             <item>
              <widget class="QLabel" name="label_3">
@@ -943,7 +954,7 @@ as this is a complex topic.</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>25</height>
+                <height>15</height>
                </size>
               </property>
               <property name="maximumSize">
@@ -1090,7 +1101,16 @@ as this is a complex topic.</string>
             <bool>false</bool>
            </property>
            <layout class="QGridLayout" name="gridLayout_6">
-            <property name="margin">
+            <property name="leftMargin">
+             <number>5</number>
+            </property>
+            <property name="topMargin">
+             <number>5</number>
+            </property>
+            <property name="rightMargin">
+             <number>1</number>
+            </property>
+            <property name="bottomMargin">
              <number>1</number>
             </property>
             <item row="0" column="0">
@@ -1112,13 +1132,6 @@ as this is a complex topic.</string>
                 <width>16777215</width>
                 <height>16777215</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-                <weight>50</weight>
-                <bold>false</bold>
-               </font>
               </property>
               <property name="toolTip">
                <string>Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)</string>
@@ -1259,7 +1272,16 @@ Without this option, the pattern matching will stop after the first successful m
             <bool>false</bool>
            </property>
            <layout class="QGridLayout" name="gridLayout_7">
-            <property name="margin">
+            <property name="leftMargin">
+             <number>5</number>
+            </property>
+            <property name="topMargin">
+             <number>5</number>
+            </property>
+            <property name="rightMargin">
+             <number>1</number>
+            </property>
+            <property name="bottomMargin">
              <number>1</number>
             </property>
             <item row="0" column="0">
@@ -1281,13 +1303,6 @@ Without this option, the pattern matching will stop after the first successful m
                 <width>16777215</width>
                 <height>16777215</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-                <weight>50</weight>
-                <bold>false</bold>
-               </font>
               </property>
               <property name="toolTip">
                <string/>
@@ -1437,14 +1452,20 @@ otherwise highlight the entire match</string>
             <bool>false</bool>
            </property>
            <layout class="QGridLayout" name="gridLayout">
-            <property name="horizontalSpacing">
+            <property name="leftMargin">
              <number>5</number>
             </property>
-            <property name="verticalSpacing">
-             <number>12</number>
+            <property name="topMargin">
+             <number>5</number>
             </property>
-            <property name="margin">
+            <property name="rightMargin">
              <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>5</number>
+            </property>
+            <property name="spacing">
+             <number>5</number>
             </property>
             <item row="0" column="1">
              <widget class="QPushButton" name="pushButtonFgColor">
@@ -1483,11 +1504,6 @@ otherwise highlight the entire match</string>
                 <width>0</width>
                 <height>13</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-               </font>
               </property>
               <property name="text">
                <string>fg color</string>
@@ -1534,11 +1550,6 @@ otherwise highlight the entire match</string>
                 <width>0</width>
                 <height>13</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-               </font>
               </property>
               <property name="text">
                <string>bg color</string>

@@ -170,6 +170,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="acceptServerGUI">
+            <property name="text">
+             <string>Allow server to install scrpt packages</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -905,7 +912,7 @@ or some other computer model that has a small screen.</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="0" colspan="2">
+          <item row="8" column="0" colspan="2">
            <widget class="QLabel" name="label_19">
             <property name="text">
              <string>These preferences set how do you want a particular color to be represented visually in the main display</string>
@@ -915,7 +922,7 @@ or some other computer model that has a small screen.</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
+          <item row="9" column="0">
            <layout class="QGridLayout" name="gridLayout_4">
             <item row="0" column="0">
              <widget class="QLabel" name="label">
@@ -1055,7 +1062,7 @@ or some other computer model that has a small screen.</string>
             </item>
            </layout>
           </item>
-          <item row="7" column="1">
+          <item row="9" column="1">
            <layout class="QGridLayout" name="gridLayout_3">
             <item row="0" column="0">
              <widget class="QLabel" name="label_13">
@@ -1195,14 +1202,14 @@ or some other computer model that has a small screen.</string>
             </item>
            </layout>
           </item>
-          <item row="9" column="1">
+          <item row="11" column="1">
            <widget class="QPushButton" name="reset_colors_button">
             <property name="text">
              <string>Reset all colors to default</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="1">
+          <item row="10" column="1">
            <spacer name="verticalSpacer_3">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -1218,14 +1225,14 @@ or some other computer model that has a small screen.</string>
             </property>
            </spacer>
           </item>
-          <item row="2" column="0">
+          <item row="4" column="0">
            <widget class="QLabel" name="label_32">
             <property name="text">
              <string>Command foreground color:</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="4" column="1">
            <widget class="QPushButton" name="pushButton_command_foreground_color">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -1235,20 +1242,48 @@ or some other computer model that has a small screen.</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_37">
             <property name="text">
              <string>Command background color:</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="5" column="1">
            <widget class="QPushButton" name="pushButton_command_background_color">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
              <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_command_line_foreground_color">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_31">
+            <property name="text">
+             <string>Command line foreground color:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="pushButton_command_line_background_color">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_59">
+            <property name="text">
+             <string>Command line background color:</string>
             </property>
            </widget>
           </item>
@@ -1648,106 +1683,13 @@ or some other computer model that has a small screen.</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_11">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_31">
-            <property name="text">
-             <string>default trigger pattern type:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="defaultTriggerType">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="palette">
-             <palette>
-              <active>
-               <colorrole role="Base">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>255</red>
-                  <green>230</green>
-                  <blue>232</blue>
-                 </color>
-                </brush>
-               </colorrole>
-              </active>
-              <inactive>
-               <colorrole role="Base">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>255</red>
-                  <green>230</green>
-                  <blue>232</blue>
-                 </color>
-                </brush>
-               </colorrole>
-              </inactive>
-              <disabled>
-               <colorrole role="Base">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>244</red>
-                  <green>244</green>
-                  <blue>244</blue>
-                 </color>
-                </brush>
-               </colorrole>
-              </disabled>
-             </palette>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <item>
-             <property name="text">
-              <string>pattern is a substring of the line (speed: good)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>pattern is a Perl style regular expression (speed: slowest)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>pattern is located at the beginning of the line (speed: best)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>pattern equals entire line (speed: good)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Condition is defined as a Lua Function that returns true or false</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="1" column="0">
            <widget class="QLabel" name="label_33">
             <property name="text">
              <string>folder/group in tree icons size:</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="0" column="1">
            <widget class="QSpinBox" name="TEFolderIconSize">
             <property name="minimum">
              <number>1</number>

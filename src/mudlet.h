@@ -36,7 +36,7 @@
 #include <QMdiArea>
 #include "TConsole.h"
 #include "ui_main_window.h"
-#ifdef QT_OS_LINUX
+#ifdef Q_OS_LINUX
     #include <phonon>
 #else
     #include <Phonon>

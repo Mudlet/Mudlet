@@ -3255,7 +3255,7 @@ int TLuaInterpreter::showUnzipProgress( lua_State * L )
     return 0;
 }
 
-#ifdef QT_OS_LINUX
+#ifdef Q_OS_LINUX
     #include <phonon>
 #else
     #include <Phonon>
@@ -7582,8 +7582,9 @@ void TLuaInterpreter::startLuaSessionInterpreter()
     mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
 }
 
-
-#include "luazip.c"
+#ifdef QT_OS_MAC
+    #include "luazip.c"
+#endif
 
 // this function initializes the Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
@@ -7803,9 +7804,10 @@ void TLuaInterpreter::initLuaGlobals()
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
+#ifdef QT_OS_MAC
     luaopen_zip( pGlobalLua );
     lua_setglobal( pGlobalLua, "zip" );
-
+#endif
     QString n;
     int error;
 

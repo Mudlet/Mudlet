@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>309</width>
-    <height>270</height>
+    <width>492</width>
+    <height>420</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -198,10 +198,13 @@
             </size>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
-            <property name="margin">
+            <property name="horizontalSpacing">
+             <number>5</number>
+            </property>
+            <property name="verticalSpacing">
              <number>0</number>
             </property>
-            <property name="spacing">
+            <property name="margin">
              <number>0</number>
             </property>
             <item row="0" column="0">
@@ -218,14 +221,6 @@
                 <height>16777215</height>
                </size>
               </property>
-              <property name="font">
-               <font>
-                <family>Century Schoolbook L</family>
-                <pointsize>10</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
               <property name="text">
                <string>2D/3D</string>
               </property>
@@ -233,11 +228,6 @@
             </item>
             <item row="0" column="3">
              <widget class="QLabel" name="label_2">
-              <property name="font">
-               <font>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>room size</string>
               </property>
@@ -245,11 +235,6 @@
             </item>
             <item row="0" column="5">
              <widget class="QLabel" name="label_3">
-              <property name="font">
-               <font>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>line width</string>
               </property>
@@ -309,10 +294,19 @@
             <item row="1" column="6" colspan="5">
              <widget class="QComboBox" name="showArea">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>19</height>
+               </size>
+              </property>
+              <property name="insertPolicy">
+               <enum>QComboBox::InsertAlphabetically</enum>
               </property>
               <property name="modelColumn">
                <number>0</number>
@@ -338,11 +332,6 @@
                 <width>50</width>
                 <height>16777215</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>9</pointsize>
-               </font>
               </property>
               <property name="text">
                <string>info</string>
@@ -370,12 +359,6 @@
                 <height>16777215</height>
                </size>
               </property>
-              <property name="font">
-               <font>
-                <family>Bookman Uralic</family>
-                <pointsize>8</pointsize>
-               </font>
-              </property>
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
               </property>
@@ -383,22 +366,6 @@
                <string>IDs</string>
               </property>
              </widget>
-            </item>
-            <item row="0" column="10">
-             <spacer name="horizontalSpacer">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeType">
-               <enum>QSizePolicy::Expanding</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
             </item>
             <item row="0" column="9">
              <widget class="QCheckBox" name="strongHighlight">
@@ -410,15 +377,9 @@
               </property>
               <property name="maximumSize">
                <size>
-                <width>50</width>
+                <width>16777215</width>
                 <height>16777215</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <family>Bookman Uralic</family>
-                <pointsize>8</pointsize>
-               </font>
               </property>
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
@@ -439,26 +400,44 @@
               <property name="maximumSize">
                <size>
                 <width>350</width>
-                <height>15</height>
+                <height>19</height>
                </size>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_2">
                <property name="spacing">
-                <number>15</number>
+                <number>0</number>
                </property>
                <property name="margin">
                 <number>0</number>
                </property>
                <item>
                 <widget class="QPushButton" name="shiftLeft">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>18</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
-                   <height>16777215</height>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="baseSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
                   </size>
                  </property>
                  <property name="text">
-                  <string>&lt;</string>
+                  <string>◄</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
@@ -467,14 +446,32 @@
                </item>
                <item>
                 <widget class="QPushButton" name="shiftUp">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>18</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
-                   <height>16777215</height>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="baseSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
                   </size>
                  </property>
                  <property name="text">
-                  <string>v</string>
+                  <string>▼</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
@@ -483,14 +480,32 @@
                </item>
                <item>
                 <widget class="QPushButton" name="shiftDown">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>18</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
-                   <height>16777215</height>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="baseSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
                   </size>
                  </property>
                  <property name="text">
-                  <string>^</string>
+                  <string>▲</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
@@ -499,8 +514,32 @@
                </item>
                <item>
                 <widget class="QPushButton" name="shiftRight">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="baseSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
                  <property name="text">
-                  <string>&gt;</string>
+                  <string>►</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
@@ -509,6 +548,30 @@
                </item>
                <item>
                 <widget class="QPushButton" name="shiftZup">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="baseSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
                  <property name="text">
                   <string>+</string>
                  </property>
@@ -516,6 +579,30 @@
                </item>
                <item>
                 <widget class="QPushButton" name="shiftZdown">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="baseSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
                  <property name="text">
                   <string>-</string>
                  </property>
@@ -539,17 +626,8 @@
             <property name="spacing">
              <number>0</number>
             </property>
-            <property name="leftMargin">
+            <property name="margin">
              <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>5</number>
             </property>
             <item>
              <widget class="QWidget" name="widget_3" native="true">
@@ -592,12 +670,6 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
-                    </property>
                     <property name="text">
                      <string>top view</string>
                     </property>
@@ -610,12 +682,6 @@
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
-                    </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
                     </property>
                     <property name="text">
                      <string>side view</string>
@@ -736,14 +802,6 @@
                       <height>16777215</height>
                      </size>
                     </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>10</pointsize>
-                      <weight>75</weight>
-                      <bold>true</bold>
-                     </font>
-                    </property>
                     <property name="text">
                      <string>default 3D view</string>
                     </property>
@@ -764,12 +822,6 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
-                    </property>
                     <property name="text">
                      <string>all levels</string>
                     </property>
@@ -782,12 +834,6 @@
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
-                    </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
                     </property>
                     <property name="text">
                      <string>1 level</string>
@@ -802,12 +848,6 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
-                    </property>
                     <property name="text">
                      <string>bottom + 1</string>
                     </property>
@@ -820,12 +860,6 @@
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
-                    </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
                     </property>
                     <property name="text">
                      <string>bottom -1</string>
@@ -840,12 +874,6 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
-                    </property>
                     <property name="text">
                      <string>top - 1</string>
                     </property>
@@ -858,12 +886,6 @@
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
-                    </property>
-                    <property name="font">
-                     <font>
-                      <family>Century Schoolbook L</family>
-                      <pointsize>8</pointsize>
-                     </font>
                     </property>
                     <property name="text">
                      <string>top + 1</string>

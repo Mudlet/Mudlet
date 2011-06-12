@@ -119,7 +119,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mLogStatus", pT->mLogStatus ? "yes" : "no" );
     writeAttribute( "mEnableSpellCheck", pT->mEnableSpellCheck ? "yes" : "no" );
     writeAttribute( "mShowInfo", pT->mShowInfo ? "yes" : "no" );
-
+    writeAttribute( "mAcceptServerGUI", pT->mAcceptServerGUI ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );
@@ -145,6 +145,8 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mBgColor", pT->mBgColor.name() );
     writeTextElement( "mCommandFgColor", pT->mCommandFgColor.name() );
     writeTextElement( "mCommandBgColor", pT->mCommandBgColor.name() );
+    writeTextElement( "mCommandLineFgColor", pT->mCommandLineFgColor.name() );
+    writeTextElement( "mCommandLineBgColor", pT->mCommandLineBgColor.name() );
     writeTextElement( "mBlack", pT->mBlack.name() );
     writeTextElement( "mLightBlack", pT->mLightBlack.name() );
     writeTextElement( "mRed", pT->mRed.name() );

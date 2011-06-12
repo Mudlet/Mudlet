@@ -660,7 +660,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mLogStatus = ( attributes().value("mLogStatus") == "yes" );
     pT->mEnableSpellCheck = ( attributes().value("mEnableSpellCheck") == "yes" );
     pT->mShowInfo = ( attributes().value("mShowInfo") == "yes" );
-
+    pT->mAcceptServerGUI = ( attributes().value("mAcceptServerGUI") == "yes" );
     while( ! atEnd() )
     {
         readNext();
@@ -736,6 +736,16 @@ void XMLimport::readHostPackage( Host * pT )
             else if( name() == "mCommandSeparator" )
             {
                 pT->mCommandSeparator = readElementText();
+                continue;
+            }
+            else if( name() == "mCommandLineFgColor")
+            {
+                pT->mCommandLineFgColor.setNamedColor( readElementText() );
+                continue;
+            }
+            else if( name() == "mCommandLineBgColor")
+            {
+                pT->mCommandLineBgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mFgColor")

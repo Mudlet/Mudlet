@@ -50,10 +50,10 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
     QFont font = mpHost->mDisplayFont;
     setFont(font);
 
-    mRegularPalette.setColor(QPalette::Text,QColor(0,0,192));
+    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    mRegularPalette.setColor(QPalette::Base,QColor(255,255,225));
+    mRegularPalette.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
 
     setPalette( mRegularPalette );
 

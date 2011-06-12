@@ -40,6 +40,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     // init generated dialog
     setupUi(this);
 
+    acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
     QString nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
     QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
     file.open( QIODevice::ReadOnly );
@@ -77,6 +78,19 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     QPalette palette;
     QString styleSheet;
     QColor color;
+
+    color = mpHost->mCommandLineFgColor;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_command_line_foreground_color->setStyleSheet( styleSheet );
+    connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
+
+    color = mpHost->mCommandLineBgColor;
+    palette.setColor( QPalette::Button, color );
+    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+    pushButton_command_line_background_color->setStyleSheet( styleSheet );
+    connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
+
     color = mpHost->mBlack;
     palette.setColor( QPalette::Button, color );
     styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
@@ -611,6 +625,45 @@ void dlgProfilePreferences::setCommandFgColor()
         pushButton_command_foreground_color->setStyleSheet( styleSheet );
     }
 }
+
+void dlgProfilePreferences::setCommandLineFgColor()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) return;
+    QColor color = QColorDialog::getColor( pHost->mCommandLineFgColor, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_command_line_foreground_color->setPalette( palette );
+        pHost->mCommandLineFgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
+        color = mpHost->mCommandLineFgColor;
+        palette.setColor( QPalette::Button, color );
+        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        pushButton_command_line_foreground_color->setStyleSheet( styleSheet );
+    }
+}
+
+void dlgProfilePreferences::setCommandLineBgColor()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) return;
+    QColor color = QColorDialog::getColor( pHost->mCommandLineBgColor, this );
+    if ( color.isValid() )
+    {
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        pushButton_command_line_background_color->setPalette( palette );
+        pHost->mCommandLineBgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
+        color = mpHost->mCommandLineBgColor;
+        palette.setColor( QPalette::Button, color );
+        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        pushButton_command_line_background_color->setStyleSheet( styleSheet );
+    }
+}
+
 void dlgProfilePreferences::setCommandBgColor()
 {
     Host * pHost = mpHost;
@@ -1246,6 +1299,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
     pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
     pHost->mCommandSeparator = command_separator_lineedit->text();
+    pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
     //pHost->mDisableAutoCompletion = disable_auto_completion_checkbox->isChecked();
     pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
     pHost->set_USE_IRE_DRIVER_BUGFIX( checkBox_USE_IRE_DRIVER_BUGFIX->isChecked() );

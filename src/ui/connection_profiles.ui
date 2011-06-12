@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>805</width>
-    <height>597</height>
+    <width>875</width>
+    <height>561</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -2159,7 +2159,19 @@
          </size>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
-         <property name="margin">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>12</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
           <number>0</number>
          </property>
          <item>
@@ -2222,6 +2234,9 @@ p, li { white-space: pre-wrap; }
             <string>Required</string>
            </property>
            <layout class="QGridLayout" name="gridLayout">
+            <property name="topMargin">
+             <number>9</number>
+            </property>
             <item row="0" column="0">
              <widget class="QLabel" name="label">
               <property name="font">

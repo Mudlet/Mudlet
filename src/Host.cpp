@@ -95,7 +95,8 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mUSE_UNIX_EOL( false )
 , mWrapAt( 100 )
 , mWrapIndentCount( 0 )
-
+, mCommandLineBgColor( QColor(  0,  0,  0) )
+, mCommandLineFgColor( QColor(128,128,128) )
 , mBlack             ( QColor(  0,  0,  0) )
 , mLightBlack        ( QColor(128,128,128) )
 , mRed               ( QColor(128,  0,  0) )
@@ -140,6 +141,9 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mpUnzipDialog        ( 0 )
 , mRoomSize            ( 0.5 )
 , mLineSize            ( 1.0 )
+, mServerGUI_Package_version( -1 )
+, mServerGUI_Package_name( "nothing" )
+, mAcceptServerGUI     ( true )
 {
    // mLogStatus = mudlet::self()->mAutolog;
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
@@ -216,6 +220,8 @@ Host::Host()
 , mUSE_UNIX_EOL( false )
 , mWrapAt( 100 )
 , mWrapIndentCount( 0 )
+, mCommandLineBgColor( QColor(  0,  0,  0) )
+, mCommandLineFgColor( QColor(128,128,128) )
 , mBlack             ( QColor(  0,  0,  0) )
 , mLightBlack        ( QColor(128,128,128) )
 , mRed               ( QColor(128,  0,  0) )
@@ -261,6 +267,9 @@ Host::Host()
 , mRoomSize            ( 0.5 )
 , mLineSize            ( 1.0 )
 , mShowInfo            ( true )
+, mServerGUI_Package_version( -1 )
+, mServerGUI_Package_name( "nothing" )
+, mAcceptServerGUI     ( true )
 {
 
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";

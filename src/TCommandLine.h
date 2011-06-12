@@ -48,6 +48,7 @@ public:
 //    void              keyPressEvent(QKeyEvent *event);
     void              focusInEvent ( QFocusEvent * );
     void              focusOutEvent ( QFocusEvent * );
+    QPalette          mRegularPalette;
 
 private:
     QString           mLastCompletion;
@@ -72,7 +73,7 @@ private:
     QString           mTabCompletionTyped;
     QString           mAutoCompletionTyped;
     bool              mUserKeptOnTyping;
-    QPalette          mRegularPalette;
+
     QPalette          mTabCompletionPalette;
     QPalette          mAutoCompletionPalette;
     KeyUnit *         mpKeyUnit;

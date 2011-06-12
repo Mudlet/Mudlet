@@ -288,6 +288,9 @@ public:
     bool               mShowInfo;
     int                mServerGUI_Package_version;
     QString            mServerGUI_Package_name;
+    bool               mAcceptServerGUI;
+    QColor             mCommandLineFgColor;
+    QColor             mCommandLineBgColor;
 
 private:
     Host();
