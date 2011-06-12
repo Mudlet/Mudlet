@@ -115,6 +115,7 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int isLockedRoom( lua_State * );
     static int connectToServer( lua_State *L );
     static int sendIrc( lua_State * );
     static int showUnzipProgress( lua_State * );

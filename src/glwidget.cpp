@@ -1962,19 +1962,19 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
                qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
                mpMap->mpHost->startSpeedWalk();
             }
-            else
-            {
-                QMessageBox msgBox;
-                msgBox.setText("Cannot find a path to this room using regular exits.#glWidget\n");
-                msgBox.exec();
-            }
+//            else
+//            {
+//                QMessageBox msgBox;
+//                msgBox.setText("Cannot find a path to this room using regular exits.#glWidget\n");
+//                msgBox.exec();
+//            }
         }
-        else
-        {
-            QMessageBox msgBox;
-            msgBox.setText("ERROR: Target room cannot be found in map db.\n");
-            msgBox.exec();
-        }
+//        else
+//        {
+//            QMessageBox msgBox;
+//            msgBox.setText("ERROR: Target room cannot be found in map db.\n");
+//            msgBox.exec();
+//        }
     }
 }
 

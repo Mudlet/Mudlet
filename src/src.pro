@@ -17,7 +17,8 @@ exists(/usr/local/lib/libluajit-5.1.a):LIBLUA = -L/usr/local/lib -lluajit-5.1
 unix:LIBS += -lpcre \
     $$LIBLUA \
     -lhunspell \
-    -lyajl
+    -lyajl \
+    -lzzip
 
 win32:LIBS += -L"c:\mudlet_package_MINGW" \
     -llua51 \

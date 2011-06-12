@@ -2655,6 +2655,7 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     if( pHost->mpMap->rooms.contains( pHost->mpMap->mRoomId ) )
     {
         pHost->mpMap->rooms[pHost->mpMap->mRoomId]->weight = w;
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
 
     return 0;
@@ -2838,6 +2839,7 @@ int TLuaInterpreter::lockRoom( lua_State *L )
     if( pHost->mpMap->rooms.contains( id ) )
     {
         pHost->mpMap->rooms[id]->isLocked = b;
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     }
     else
@@ -2846,6 +2848,33 @@ int TLuaInterpreter::lockRoom( lua_State *L )
     }
     return 1;
 }
+
+int TLuaInterpreter::isLockedRoom( lua_State *L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "lockRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushboolean( L, pHost->mpMap->rooms[id]->isLocked );
+    }
+    else
+    {
+        lua_pushboolean(L, false);
+    }
+    return 1;
+}
+
 
 int TLuaInterpreter::getRoomExits( lua_State *L )
 {
@@ -3226,7 +3255,11 @@ int TLuaInterpreter::showUnzipProgress( lua_State * L )
     return 0;
 }
 
-#include <Phonon>
+#ifdef QT_OS_LINUX
+    #include <phonon>
+#else
+    #include <Phonon>
+#endif
 
 int TLuaInterpreter::playSoundFile( lua_State * L )
 {
@@ -5052,6 +5085,7 @@ int TLuaInterpreter::deleteArea( lua_State *L )
         if( pHost->mpMap->areaNamesMap.values().contains( _name ) )
         {
             pHost->mpMap->deleteArea( id );
+            pHost->mpMap->mMapGraphNeedsUpdate = false;
         }
     }
     else
@@ -5059,6 +5093,7 @@ int TLuaInterpreter::deleteArea( lua_State *L )
         if( pHost->mpMap->areas.contains( id ) )
         {
             pHost->mpMap->deleteArea( id );
+            pHost->mpMap->mMapGraphNeedsUpdate = false;
         }
     }
     return 0;
@@ -5084,6 +5119,7 @@ int TLuaInterpreter::deleteRoom( lua_State *L )
     if( pHost->mpMap->rooms.contains( id ) )
     {
        pHost->mpMap->deleteRoom( id );
+       pHost->mpMap->mMapGraphNeedsUpdate = false;
     }
     return 0;
 }
@@ -5128,6 +5164,7 @@ int TLuaInterpreter::setExit( lua_State *L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     lua_pushboolean(L, pHost->mpMap->setExit( from, to, dir ) );
+    pHost->mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
 
@@ -5224,6 +5261,8 @@ int TLuaInterpreter::addRoom( lua_State * L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     lua_pushboolean( L, pHost->mpMap->addRoom( id ) );
+    pHost->mpMap->mMapGraphNeedsUpdate = true;
+
     return 1;
 }
 
@@ -5283,6 +5322,7 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
         else
         {
             pHost->mpMap->rooms[id_from]->other.insertMulti(id_to, _dir );
+            pHost->mpMap->mMapGraphNeedsUpdate = true;
         }
     }
     return 0;
@@ -5326,6 +5366,7 @@ int TLuaInterpreter::clearSpecialExits( lua_State * L )
     if( pHost->mpMap->rooms.contains( id_from ) )
     {
         pHost->mpMap->rooms[id_from]->other.clear();
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -5598,6 +5639,7 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
         pHost->mpMap->areas[area]->rooms.push_back(id);
     pHost->mpMap->areas[area]->fast_ausgaengeBestimmen(id);
     pHost->mpMap->areas[area]->fast_calcSpan(id);
+    pHost->mpMap->mMapGraphNeedsUpdate = true;
     return 0;
 }
 
@@ -6593,6 +6635,10 @@ int TLuaInterpreter::appendCmdLine( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString curText = pHost->mpConsole->mpCommandLine->toPlainText();
     pHost->mpConsole->mpCommandLine->setPlainText( curText + QString( luaSendText.c_str() ) );
+    QTextCursor cur = pHost->mpConsole->mpCommandLine->textCursor();
+    cur.clearSelection();
+    cur.movePosition(QTextCursor::EndOfLine);
+    pHost->mpConsole->mpCommandLine->setTextCursor(cur);
     return 0;
 }
 
@@ -6675,6 +6721,10 @@ int TLuaInterpreter::printCmdLine( lua_State * L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mpConsole->mpCommandLine->setPlainText( QString( luaSendText.c_str() ) );
+    QTextCursor cur = pHost->mpConsole->mpCommandLine->textCursor();
+    cur.clearSelection();
+    cur.movePosition(QTextCursor::EndOfLine);
+    pHost->mpConsole->mpCommandLine->setTextCursor(cur);
     return 0;
 }
 
@@ -7683,7 +7733,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "feedTriggers", TLuaInterpreter::feedTriggers );
     lua_register( pGlobalLua, "sendTelnetChannel102", TLuaInterpreter::sendTelnetChannel102 );
     lua_register( pGlobalLua, "setRoomWeight", TLuaInterpreter::setRoomWeight );
-    lua_register( pGlobalLua, "getRoomWeight", TLuaInterpreter::setRoomWeight );
+    lua_register( pGlobalLua, "getRoomWeight", TLuaInterpreter::getRoomWeight );
     lua_register( pGlobalLua, "gotoRoom", TLuaInterpreter::gotoRoom );
     lua_register( pGlobalLua, "setMapperView", TLuaInterpreter::setMapperView );
     lua_register( pGlobalLua, "getRoomExits", TLuaInterpreter::getRoomExits );
@@ -7748,6 +7798,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
     lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
     lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
+    //lua_register( pGlobalLua, "deselectCmdLine", TLuaInterpreter::deselectCmdLine );//=roomLocked()
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

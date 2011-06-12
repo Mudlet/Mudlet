@@ -45,10 +45,7 @@ TConsole *  spDebugConsole = 0;
 
 void debugOutput(QtMsgType type, const char *msg)
 {
-
-    #ifdef QT_DEBUG
-        debugStream << msg << endl;
-    #endif
+    //debugStream << msg << endl;
     ;
 //    switch (type)
 //    {
@@ -86,7 +83,7 @@ int main(int argc, char *argv[])
     #ifdef QT_DEBUG
         debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);      
     #endif
-    //qInstallMsgHandler( debugOutput );
+    qInstallMsgHandler( debugOutput );
     spDebugConsole = 0;
 
     QGL::setPreferredPaintEngine(QPaintEngine::OpenGL);//FIXME

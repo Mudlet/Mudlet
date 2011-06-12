@@ -930,7 +930,6 @@ void TBuffer::translateToPlainText( std::string & s )
                                     }
                                     else
                                         mBold = false;
-
                                     switch(tag)
                                     {
                                     case 0:
@@ -1006,6 +1005,7 @@ void TBuffer::translateToPlainText( std::string & s )
                                         mIsDefaultColor = false;
                                         break;
                                      }
+                                     tag = -1;
                                     continue;
                                 }
                                 if( tag < 232 )
@@ -1016,20 +1016,27 @@ void TBuffer::translateToPlainText( std::string & s )
                                     int g = (tag-(r*36)) / 6;
                                     int b = (tag-(r*36))-(g*6);
                                     fgColorR = r*42;
+                                    fgColorLightR = r*42;
                                     fgColorG = g*42;
+                                    fgColorLightG = g*42;
                                     fgColorB = b*42;
+                                    fgColorLightB = b*42;
                                 }
                                 else
                                 {
                                     // black + 23 tone grayscale from dark to light gray
                                     tag -= 232;
                                     fgColorR = tag*10;
+                                    fgColorLightR = tag*10;
                                     fgColorG = tag*10;
+                                    fgColorLightG = tag*10;
                                     fgColorB = tag*10;
+                                    fgColorLightB = tag*10;
                                 }
                                 mHighColorModeForeground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
+                                tag = -1;
                                 continue;
                             }
                             if( mHighColorModeBackground )
@@ -1132,6 +1139,7 @@ void TBuffer::translateToPlainText( std::string & s )
                                         bgColorG = bgColorLightG;
                                         bgColorB = bgColorLightB;
                                     }
+                                    tag = -1;
                                     continue;
                                 }
                                 if( tag < 232 )
@@ -1141,20 +1149,27 @@ void TBuffer::translateToPlainText( std::string & s )
                                     int g = (tag-(r*36)) / 6;
                                     int b = (tag-(r*36))-(g*6);
                                     bgColorR = r*42;
+                                    bgColorLightR = r*42;
                                     bgColorG = g*42;
+                                    bgColorLightG = g*42;
                                     bgColorB = b*42;
+                                    bgColorLightB = b*42;
                                 }
                                 else
                                 {
                                     // black + 23 tone grayscale from dark to light gray
                                     tag -= 232;
                                     bgColorR = tag*10;
+                                    bgColorLightR = tag*10;
                                     bgColorG = tag*10;
+                                    bgColorLightG = tag*10;
                                     bgColorB = tag*10;
+                                    bgColorLightB = tag*10;
                                 }
                                 mHighColorModeBackground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
+                                 tag = -1;
                                 continue;
                             }
                         }
@@ -1875,7 +1890,6 @@ void TBuffer::translateToPlainText( std::string & s )
             }
             continue;
         }
-
         mMudLine.append( ch );
         TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
                  ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
@@ -1886,6 +1900,7 @@ void TBuffer::translateToPlainText( std::string & s )
                  mIsDefaultColor ? mBold : false,
                  mItalics,
                  mUnderline );
+
         if( mMXP_LINK_MODE )
         {
             c.link = mLinkID;

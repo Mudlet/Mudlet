@@ -36,7 +36,11 @@
 #include <QMdiArea>
 #include "TConsole.h"
 #include "ui_main_window.h"
-#include <Phonon>
+#ifdef QT_OS_LINUX
+    #include <phonon>
+#else
+    #include <Phonon>
+#endif
 
 class QAction;
 class QMenu;

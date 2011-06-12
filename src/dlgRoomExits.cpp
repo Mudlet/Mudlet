@@ -50,6 +50,8 @@ void dlgRoomExits::save()
 {
     if( !mpHost->mpMap->rooms.contains(mRoomID) ) return;
 
+    mpHost->mpMap->mMapGraphNeedsUpdate = true;
+
     mpHost->mpMap->rooms[mRoomID]->other.clear();
 
     for( int i=0; i<specialExits->topLevelItemCount(); i++ )

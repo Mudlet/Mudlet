@@ -815,8 +815,14 @@ void T2DMap::paintEvent( QPaintEvent * e )
             char _ch = mpMap->rooms[pArea->rooms[i]]->c;
             if( _ch >= 33 && _ch < 255 )
             {
-                int _color = (mpMap->rooms[pArea->rooms[i]]->environment - 257 ) * 254 + _ch;
-                p.fillRect(dr,QColor(90,90,90));
+                int _color = ( 265 - 257 ) * 254 + _ch;//(mpMap->rooms[pArea->rooms[i]]->environment - 257 ) * 254 + _ch;
+
+                if( c.red()+c.green()+c.blue() > 260 )
+                    _color = ( 7 ) * 254 + _ch;
+                else
+                    _color = ( 6 ) * 254 + _ch;
+
+                p.fillRect( dr, c );
                 if( mPixMap.contains( _color ) )
                 {
                     QPixmap pix = mPixMap[_color].scaled(dr.width(), dr.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -1509,12 +1515,14 @@ void T2DMap::slot_lockRoom()
             if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
             {
                 mpMap->rooms[mMultiSelectionList[j]]->isLocked = true;
+                mpHost->mpMap->mMapGraphNeedsUpdate = true;
             }
         }
     }
     else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
     {
         mpHost->mpMap->rooms[mRoomSelection]->isLocked = true;
+        mpHost->mpMap->mMapGraphNeedsUpdate = true;
     }
 }
 
@@ -1532,6 +1540,7 @@ void T2DMap::slot_setRoomWeight()
             if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
             {
                 mpMap->rooms[mMultiSelectionList[j]]->weight = w;
+                mpHost->mpMap->mMapGraphNeedsUpdate = true;
             }
         }
         repaint();
@@ -1543,6 +1552,7 @@ void T2DMap::slot_setRoomWeight()
             int _w = mpHost->mpMap->rooms[mRoomSelection]->weight;
             int w = QInputDialog::getInt(this, "Enter a room weight (= travel time)","room weight:",_w);
             mpHost->mpMap->rooms[mRoomSelection]->weight = w;
+            mpHost->mpMap->mMapGraphNeedsUpdate = true;
         }
     }
 }
@@ -1558,6 +1568,7 @@ void T2DMap::slot_setArea()
             if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
             {
                 mpMap->rooms[mMultiSelectionList[j]]->area = w;
+                mpHost->mpMap->mMapGraphNeedsUpdate = true;
             }
         }
         repaint();
@@ -1569,6 +1580,7 @@ void T2DMap::slot_setArea()
             int _w = mpHost->mpMap->rooms[mRoomSelection]->area;
             int w = QInputDialog::getInt(this, "Enter area ID:","area ID:",_w);
             mpHost->mpMap->rooms[mRoomSelection]->area = w;
+            mpHost->mpMap->mMapGraphNeedsUpdate = true;
         }
     }
 }

@@ -239,7 +239,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>459</width>
+              <width>465</width>
               <height>137</height>
              </rect>
             </property>
@@ -412,12 +412,6 @@
                 </disabled>
                </palette>
               </property>
-              <property name="font">
-               <font>
-                <family>Lucida Grande</family>
-                <pointsize>13</pointsize>
-               </font>
-              </property>
               <property name="toolTip">
                <string>Keep firing the script for x more lines, after the trigger or chain has matched.</string>
               </property>
@@ -441,6 +435,22 @@
                 <number>0</number>
                </property>
                <item>
+                <widget class="QSpinBox" name="spinBox_stayOpen">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="toolTip">
+                  <string>Within how many lines must all condition be true to fire the trigger?</string>
+                 </property>
+                 <property name="maximum">
+                  <number>1000</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QLabel" name="label_6">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -450,8 +460,7 @@
                  </property>
                  <property name="font">
                   <font>
-                   <family>Lucida Grande</family>
-                   <pointsize>12</pointsize>
+                   <pointsize>11</pointsize>
                   </font>
                  </property>
                  <property name="text">
@@ -465,22 +474,6 @@
                  </property>
                  <property name="indent">
                   <number>0</number>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QSpinBox" name="spinBox_stayOpen">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="toolTip">
-                  <string>Within how many lines must all condition be true to fire the trigger?</string>
-                 </property>
-                 <property name="maximum">
-                  <number>1000</number>
                  </property>
                 </widget>
                </item>
@@ -542,8 +535,10 @@
                  </property>
                  <property name="font">
                   <font>
-                   <family>Lucida Grande</family>
-                   <pointsize>12</pointsize>
+                   <family>Arial</family>
+                   <pointsize>11</pointsize>
+                   <weight>50</weight>
+                   <bold>false</bold>
                   </font>
                  </property>
                  <property name="text">
@@ -923,12 +918,6 @@ as this is a complex topic.</string>
                 <height>25</height>
                </size>
               </property>
-              <property name="font">
-               <font>
-                <family>Lucida Grande</family>
-                <pointsize>12</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>line delta</string>
               </property>
@@ -1127,6 +1116,8 @@ as this is a complex topic.</string>
               <property name="font">
                <font>
                 <pointsize>11</pointsize>
+                <weight>50</weight>
+                <bold>false</bold>
                </font>
               </property>
               <property name="toolTip">
@@ -1293,7 +1284,9 @@ Without this option, the pattern matching will stop after the first successful m
               </property>
               <property name="font">
                <font>
-                <pointsize>10</pointsize>
+                <pointsize>11</pointsize>
+                <weight>50</weight>
+                <bold>false</bold>
                </font>
               </property>
               <property name="toolTip">
@@ -1493,7 +1486,7 @@ otherwise highlight the entire match</string>
               </property>
               <property name="font">
                <font>
-                <pointsize>12</pointsize>
+                <pointsize>11</pointsize>
                </font>
               </property>
               <property name="text">
@@ -1544,7 +1537,7 @@ otherwise highlight the entire match</string>
               </property>
               <property name="font">
                <font>
-                <pointsize>12</pointsize>
+                <pointsize>11</pointsize>
                </font>
               </property>
               <property name="text">
