@@ -367,7 +367,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutButtonLayer->setMargin(0);
     layoutButtonLayer->setSpacing(0);
 
-    QWidget * buttonLayerSpacer = new QWidget;
+    QWidget * buttonLayerSpacer = new QWidget(buttonLayer);
     buttonLayerSpacer->setSizePolicy( sizePolicy4 );
     layoutButtonMainLayer->addWidget( buttonLayerSpacer );
     layoutButtonMainLayer->addWidget( buttonLayer );
@@ -468,9 +468,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     __pal.setColor(QPalette::Highlight,QColor(0,0,192));
     __pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
     __pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
+    __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette( __pal );
     mpBufferSearchBox->setToolTip("Search buffer");
     connect( mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
+
+
+
 
     mpBufferSearchUp->setMinimumSize(QSize(30,30));
     mpBufferSearchUp->setMaximumSize(QSize(30,30));
@@ -502,7 +506,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutButtonLayer->addWidget( replayButton, 0, 8 );
     layoutButtonLayer->addWidget( logButton, 0, 9 );
     layoutButtonLayer->addWidget( emergencyStop, 0, 10 );
-    layoutButtonLayer->addWidget( networkLatency, 0, 11, 0, 14 );
+    layoutButtonLayer->addWidget( networkLatency, 0, 11 );
     layoutLayer2->setContentsMargins(0,0,0,0);
     layout->addWidget( layer );
     networkLatency->setFrame( false );
@@ -546,7 +550,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBaseVFrame->layout()->setSpacing(0);
     mpBaseHFrame->layout()->setMargin(0);
     mpBaseHFrame->layout()->setSpacing(0);
-    changeColors();
 
 
     setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
@@ -554,7 +557,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     buttonLayerSpacer->setMinimumHeight(0);
     buttonLayerSpacer->setMinimumWidth(100);
     buttonLayer->setMaximumHeight(31);
-    buttonLayer->setMaximumWidth(31);
+    //buttonLayer->setMaximumWidth(31);
     buttonLayer->setMinimumWidth(400);
     buttonLayer->setMaximumWidth(400);
     buttonMainLayer->setMinimumWidth(400);
@@ -565,6 +568,18 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     console->setFocusProxy(mpCommandLine);
     console2->setFocusPolicy(Qt::ClickFocus);
     console2->setFocusProxy(mpCommandLine);
+
+    buttonLayerSpacer->setAutoFillBackground( true );
+    buttonLayerSpacer->setPalette( __pal );
+    buttonMainLayer->setAutoFillBackground( true );
+    buttonMainLayer->setPalette( __pal );
+
+    buttonLayer->setAutoFillBackground( true );
+    buttonLayer->setPalette( __pal );
+
+    layerCommandLine->setPalette( __pal );
+
+    changeColors();
 
 }
 

@@ -397,7 +397,7 @@ void GLWidget::paintGL()
     glLoadIdentity();
     GLfloat diffuseLight[] = {0.207, 0.207, 0.207, 1.0};
     GLfloat diffuseLight2[] = {0.01, 0.01, 0.01, 1.0};
-    GLfloat ambientLight[] = {0.403, 0.403, 0.403, 1.0};
+    GLfloat ambientLight[] = {0.203, 0.203, 0.203, 1.0};
     GLfloat ambientLight2[] = {0.0501, 0.0501, 0.0501, 1.0};
     if( !mpMap->rooms.contains(mRID) ) return;
 
