@@ -4189,10 +4189,12 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
     if( ! pItem ) return;
     mCurrentAction = pItem;
     mpActionsMainArea->show();
+    mpSourceEditorArea->editor->show();
 
     mpSystemMessageArea->hide();
     mpActionsMainArea->lineEdit_action_button_down->clear();
     mpSourceEditorArea->editor->setPlainText( "" );
+
     mpActionsMainArea->lineEdit_action_button_up->clear();
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();

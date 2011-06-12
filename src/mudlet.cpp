@@ -227,12 +227,12 @@ mudlet::mudlet()
     QAction * actionPackageM = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Package Manager"), this);
     actionPackageM->setStatusTip(tr("Package Manager"));
     mpMainToolBar->addAction( actionPackageM );
-    QAction * menuActionPackageM = new QAction("Package Manager", this);
-    menuActionPackageM->setStatusTip(tr("Package Manager"));
-    connect(menuActionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
-    QMenu * _miscMenu = new QMenu("Misc", this);
-    _miscMenu->addAction(menuActionPackageM);
-    menuBar()->addMenu(_miscMenu);
+//    QAction * menuActionPackageM = new QAction("Package Manager", this);
+//    menuActionPackageM->setStatusTip(tr("Package Manager"));
+//    connect(menuActionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
+//    QMenu * _miscMenu = new QMenu("Misc", this);
+//    _miscMenu->addAction(menuActionPackageM);
+//    menuBar()->addMenu(_miscMenu);
 
 
 

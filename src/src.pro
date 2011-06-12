@@ -105,7 +105,7 @@ SOURCES += TConsole.cpp \
     dlgMapper.cpp \
     TRoom.cpp \
     TMap.cpp \
-    #lua_yajl.c \
+    lua_yajl1.c \
     TBuffer.cpp \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
@@ -221,13 +221,13 @@ FORMS += ui/connection_profiles.ui \
     ui/package_manager.ui \
     ui/package_manager_unpack.ui
 
-win32: {
-    SOURCES += lua_yajl.c
-}
+#win32: {
+#    SOURCES += lua_yajl.c
+#}
 
-unix: {
-    SOURCES += lua_yajl1.c
-}
+#unix: {
+#    SOURCES += lua_yajl1.c
+#}
 
 TEMPLATE = app
 TARGET = mudlet
