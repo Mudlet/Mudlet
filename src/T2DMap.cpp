@@ -765,7 +765,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( ! mpMap->customEnvColors.contains(env) ) break;
             c = mpMap->customEnvColors[env];
         }
-        if( ( mPick || __Pick ) && mPHighlight.x() >= dr.x()-tx/2 && mPHighlight.x() <= dr.x()+tx/2 && mPHighlight.y() >= dr.y()-ty/2 && mPHighlight.y() <= dr.y()+ty/2
+        if( ( mPick || __Pick ) && mPHighlight.x() >= dr.x()-(tx*rSize) && mPHighlight.x() <= dr.x()+(tx*rSize) && mPHighlight.y() >= dr.y()-(ty*rSize) && mPHighlight.y() <= dr.y()+(ty*rSize)
             || mMultiSelectionList.contains(pArea->rooms[i]) )
         {
             p.fillRect(dr,QColor(55,255,55));
@@ -954,7 +954,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 {
                     dr = QRectF(rx,ry,tx*rSize,ty*rSize);//rx-(tx*rSize)/2,ry-(ty*rSize)/2,tx*rSize,ty*rSize);
                 }
-                if( ((mPick || __Pick) && mPHighlight.x() >= dr.x()-tx && mPHighlight.x() <= dr.x()+tx && mPHighlight.y() >= dr.y()-ty && mPHighlight.y() <= dr.y()+ty
+                if( ((mPick || __Pick) && mPHighlight.x() >= dr.x()-tx/3 && mPHighlight.x() <= dr.x()+tx/3 && mPHighlight.y() >= dr.y()-ty/3 && mPHighlight.y() <= dr.y()+ty/3
                     ) && mStartSpeedWalk )
                 {
                     mStartSpeedWalk = false;

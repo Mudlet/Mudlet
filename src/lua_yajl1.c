@@ -1,5 +1,5 @@
-#include <yajl/yajl_parse.h>
-#include <yajl/yajl_gen.h>
+#include "yajl/yajl_parse.h"
+#include "yajl/yajl_gen.h"
 #include "lua.h"
 #include "lauxlib.h"
 #include <math.h>

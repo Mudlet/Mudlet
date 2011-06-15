@@ -204,9 +204,8 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
             mpMap->mTargetID = i;
             if( ! mpMap->findPath( mpMap->mRoomId, i ) )
             {
-                QMessageBox msgBox;
-                msgBox.setText("Cannot find a path to this room using regular exits.#2\n");
-                msgBox.exec();
+                QString msg = "Cannot find a path to this room.\n";
+                mpHost->mpConsole->printSystemMessage(msg);
             }
             else
                 mpMap->mpHost->startSpeedWalk();
@@ -232,9 +231,8 @@ void dlgMapper::goRoom()
         }
         else
         {
-            QMessageBox msgBox;
-            msgBox.setText("Cannot find a path to this room using regular exits.#1\n");
-            msgBox.exec();
+            QString msg = "Cannot find a path to this room.\n";
+            mpHost->mpConsole->printSystemMessage(msg);
         }
     }
     else

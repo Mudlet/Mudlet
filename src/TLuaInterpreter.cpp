@@ -38,11 +38,11 @@
 
 
 
-#ifdef Q_OS_WIN32
-    #include "lua_yajl.c"
-#else
+//#ifdef Q_OS_WIN32
+//    #include "lua_yajl.c"
+//#else
     #include "lua_yajl1.c"
-#endif
+//#endif
 
 extern "C"
 {
