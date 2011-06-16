@@ -73,6 +73,13 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         }
     }
 
+    if( pH->mUrl == "achaea.com" || pH->mUrl == "aetolia.com" || pH->mUrl == "imperian.com" || pH->mUrl == "midkemiaonline.com" || pH->mUrl == "lusternia.com" )
+    {
+        downloadMapOptions->setVisible( true );
+        connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
+    }
+
+
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
     connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
     QPalette palette;
@@ -1283,6 +1290,15 @@ void dlgProfilePreferences::setColorLightWhite2()
         QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
         pushButton_Lwhite_2->setStyleSheet( styleSheet );
     }
+}
+
+#include "dlgMapper.h"
+
+void dlgProfilePreferences::downloadMap()
+{
+    if( ! mpHost->mpMap->mpMapper ) return;
+
+    mpHost->mpMap->mpMapper->downloadMap();
 }
 
 #include "dlgIRC.h"

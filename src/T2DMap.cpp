@@ -423,8 +423,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     int ox, oy, oz;
     if( mRID != mpMap->mRoomId && mShiftMode ) mShiftMode = false;
-    if( ! __Pick && ! mShiftMode )
+    if( (! __Pick && ! mShiftMode ) || mpMap->mNewMove )
     {
+        mpMap->mNewMove = false; // das ist nur hier von Interesse, weil es nur hier einen map editor gibt -> map wird unter Umstaenden nicht geupdated, deshalb force ich mit mNewRoom ein map update bei centerview()
         if( ! mpMap->areas.contains( mpMap->rooms[mpMap->mRoomId]->area) ) return;
         mRID = mpMap->mRoomId;
         mAID = mpMap->rooms[mRID]->area;
@@ -573,6 +574,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 if( ez != zEbene || e != ez ) continue;
 
                 p.setPen(QPen( mpHost->mFgColor_2) );
+                pen = p.pen();
+                pen.setWidthF(eSize);
+                p.setPen( pen );
 
                 QVector3D p1( ex, ey, ez );
                 QVector3D p2( rx, ry, rz );
@@ -1557,30 +1561,57 @@ void T2DMap::slot_setRoomWeight()
     }
 }
 
+#include <QtUiTools>
+
 void T2DMap::slot_setArea()
 {
+    QUiLoader loader;
+
+    QFile file(":/ui/set_room_area.ui");
+    file.open(QFile::ReadOnly);
+    QDialog *set_room_area_dialog = dynamic_cast<QDialog *>(loader.load(&file, this));
+    file.close();
+    if( ! set_room_area_dialog ) return;
+    arealist_combobox = set_room_area_dialog->findChild<QComboBox*>("arealist_combobox");
+    if( !arealist_combobox ) return;
+
+    QMapIterator<int, QString> it( mpMap->areaNamesMap );
+    while( it.hasNext() )
+    {
+        it.next();
+        int areaID = it.key();
+        if( areaID > 0 )
+        {
+            arealist_combobox->addItem(QString(it.value() + " ("+QString::number(areaID)+")"), QVariant(areaID));
+        }
+    }
+    if( set_room_area_dialog->exec() == QDialog::Rejected ) return;
+
+    int w = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
+
+
     if( mMultiSelection )
     {
-        int w = QInputDialog::getInt(this,"Enter the area ID:", "area ID:", 1);
+        //int w = QInputDialog::getInt(this,"Enter the area ID:", "area ID:", 1);
+
         mMultiRect = QRect(0,0,0,0);
         for( int j=0; j<mMultiSelectionList.size(); j++ )
         {
             if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
             {
-                mpMap->rooms[mMultiSelectionList[j]]->area = w;
-                mpHost->mpMap->mMapGraphNeedsUpdate = true;
+                mpMap->setRoomArea( mMultiSelectionList[j], w );
+                //mpMap->rooms[mMultiSelectionList[j]]->area = w;
             }
         }
         repaint();
     }
     else
     {
-        if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+        if( mpMap->rooms.contains(mRoomSelection) )
         {
-            int _w = mpHost->mpMap->rooms[mRoomSelection]->area;
-            int w = QInputDialog::getInt(this, "Enter area ID:","area ID:",_w);
-            mpHost->mpMap->rooms[mRoomSelection]->area = w;
-            mpHost->mpMap->mMapGraphNeedsUpdate = true;
+            //int _w = mpHost->mpMap->rooms[mRoomSelection]->area;
+            //int w = QInputDialog::getInt(this, "Enter area ID:","area ID:",_w);
+            mpMap->setRoomArea( mRoomSelection, w );
         }
     }
 }

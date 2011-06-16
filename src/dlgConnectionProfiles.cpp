@@ -589,6 +589,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "avalon.mud.de";
         if( profile_name == "God Wars II" )
             val = "godwars2.org";
+        if( profile_name == "Materia Magica" )
+            val = "materiamagica.com";
         if( profile_name == "BatMUD" )
             val = "batmud.bat.org";
         if( profile_name == "Aardwolf" )
@@ -617,6 +619,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "23";
         if( profile_name == "God Wars II" )
             val = "3000";
+        if( profile_name == "Materia Magica" )
+            val = "23";
         if( profile_name == "BatMUD" )
             val = "23";
         if( profile_name == "Aardwolf" )
@@ -672,6 +676,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>";
         if( profile_name == "God Wars II" )
             val = "<center><a href='http://www.godwars2.org'>http://www.godwars2.org</a></center>";
+        if( profile_name == "Materia Magica" )
+            val = val = "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>";
         if( profile_name == "BatMUD" )
             val = val = "<center><a href='http://www.bat.org'>http://www.bat.org</a></center>";
         if( profile_name == "Aardwolf" )
@@ -809,15 +815,8 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->setIconSize(QSize(120,30));
     QFont font("Bitstream Vera Sans Mono", 1 );//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
     QString muds;
-    muds = "Avalon.de";
-    QListWidgetItem * pM = new QListWidgetItem( muds );
-    pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM );
-    QPixmap p(":/icons/avalon.png");
-    QIcon mi( p.scaled(QSize(120,30)) );
-    pM->setIcon(mi);
-    muds.clear();
+    QListWidgetItem * pM;
+    QIcon mi;
 
     muds = "God Wars II";
     pM = new QListWidgetItem( muds );
@@ -825,6 +824,16 @@ void dlgConnectionProfiles::fillout_form()
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( ":/icons/gw2.png" );
+    pM->setIcon(mi);
+    muds.clear();
+
+    muds = "Avalon.de";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    QPixmap p(":/icons/avalon.png");
+    mi = QIcon( p.scaled(QSize(120,30)) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -837,19 +846,16 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
-
-
-    QString muds3;
-    muds3 = "Aardwolf";
-    QListWidgetItem * pM3 = new QListWidgetItem( muds3 );
-    pM3->setFont(font);
-    pM3->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM3 );
-    QPixmap pa(":/icons/aardwolf_mud.png");
-    QPixmap pa1 = pa.scaled(QSize(120,30)).copy();
-    QIcon mi3( pa1 );
-    pM3->setIcon(mi3);
+    muds = "Midkemia";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( ":/icons/midkemia_120_30.png" );
+    pM->setIcon(mi);
     muds.clear();
+
+
 
     muds = "Realms of Despair";
     pM = new QListWidgetItem( muds );
@@ -857,6 +863,26 @@ void dlgConnectionProfiles::fillout_form()
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( ":/icons/120x30RoDLogo.png" );
+    pM->setIcon(mi);
+    muds.clear();
+
+
+
+    muds = "Lusternia";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( ":/icons/lusternia_120_30.png" );
+    pM->setIcon(mi);
+    muds.clear();
+
+    muds = "Materia Magica";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( ":/materiaMagicaIcon" );
     pM->setIcon(mi);
     muds.clear();
 
@@ -878,14 +904,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Lusternia";
-    pM = new QListWidgetItem( muds );
-    pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/lusternia_120_30.png" );
-    pM->setIcon(mi);
-    muds.clear();
+
 
     muds = "Imperian";
     pM = new QListWidgetItem( muds );
@@ -896,14 +915,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Midkemia";
-    pM = new QListWidgetItem( muds );
-    pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/midkemia_120_30.png" );
-    pM->setIcon(mi);
-    muds.clear();
+
 
     muds = "BatMUD";
     QPixmap pb(":/icons/batmud_mud.png");
@@ -916,6 +928,17 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
+    QString muds3;
+    muds3 = "Aardwolf";
+    QListWidgetItem * pM3 = new QListWidgetItem( muds3 );
+    pM3->setFont(font);
+    pM3->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM3 );
+    QPixmap pa(":/icons/aardwolf_mud.png");
+    QPixmap pa1 = pa.scaled(QSize(120,30)).copy();
+    QIcon mi3( pa1 );
+    pM3->setIcon(mi3);
+    muds.clear();
     QDateTime test_date;
     QListWidgetItem * toselect = 0;
     for( int i=0; i<mProfileList.size(); i++ )
@@ -929,6 +952,8 @@ void dlgConnectionProfiles::fillout_form()
         if( mProfileList[i] == "Avalon.de" )
             continue;
         if( mProfileList[i] == "BatMUD" )
+            continue;
+        if( mProfileList[i] == "Materia Magica" )
             continue;
         if( mProfileList[i] == "Aardwolf" )
             continue;

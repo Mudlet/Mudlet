@@ -44,6 +44,7 @@ class TMap
 public:
     TMap( Host *);
     bool addRoom( int id=0 );
+    void setRoomArea( int id, int area );
     void deleteRoom( int id );
     void deleteArea( int id );
     int  createNewRoomID();
@@ -100,6 +101,7 @@ public:
     WeightMap weightmap;
     std::vector<location> locations;
     bool mMapGraphNeedsUpdate;
+    bool mNewMove;
 
 
 };

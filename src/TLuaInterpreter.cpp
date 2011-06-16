@@ -785,6 +785,7 @@ int TLuaInterpreter::centerview( lua_State * L )
     if( pHost->mpMap && pHost->mpMap->rooms.contains( roomid ) )
     {
         pHost->mpMap->mRoomId = roomid;
+        pHost->mpMap->mNewMove = true;
         if( pHost->mpMap->mpM )
         {
             pHost->mpMap->mpM->update();
@@ -793,6 +794,7 @@ int TLuaInterpreter::centerview( lua_State * L )
         {
             pHost->mpMap->mpMapper->mp2dMap->update();
         }
+
     }
 
     return 0;
@@ -5616,30 +5618,8 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
         area = lua_tointeger( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->rooms.contains( id ) )
-    {
-        lua_pushstring( L, "setRoomArea: room ID does not exist");
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        if( pHost->mpMap->areas.contains( pHost->mpMap->rooms[id]->area ) )
-        {
-            pHost->mpMap->areas[pHost->mpMap->rooms[id]->area]->rooms.removeAll(id);
-        }
-    }
-    if( ! pHost->mpMap->areas.contains( area ) )
-    {
-        pHost->mpMap->areas[area] = new TArea(pHost->mpMap);
-    }
 
-    pHost->mpMap->rooms[id]->area = area;
-    if( ! pHost->mpMap->areas[area]->rooms.contains( id ) )
-        pHost->mpMap->areas[area]->rooms.push_back(id);
-    pHost->mpMap->areas[area]->fast_ausgaengeBestimmen(id);
-    pHost->mpMap->areas[area]->fast_calcSpan(id);
-    pHost->mpMap->mMapGraphNeedsUpdate = true;
+    pHost->mpMap->setRoomArea( id, area );
     return 0;
 }
 
@@ -7170,6 +7150,7 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
         {
             QString title = rx.cap(1);
             QString initialText = rx.cap(2);
+            initialText.replace(QString("\\n"), QString("\n"));
             Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
             if( pHost->mTelnet.mpComposer ) return;
             pHost->mTelnet.mpComposer = new dlgComposer( pHost );

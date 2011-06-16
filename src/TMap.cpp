@@ -31,6 +31,7 @@ TMap::TMap( Host * pH )
 , mpM( 0 )
 , mpMapper( 0 )
 , mMapGraphNeedsUpdate( true )
+, mNewMove( true )
 {
     customEnvColors[257] = mpHost->mRed_2;
     customEnvColors[258] = mpHost->mGreen_2;
@@ -50,6 +51,28 @@ TMap::TMap( Host * pH )
     customEnvColors[272] = mpHost->mLightBlack_2;
 
 }
+
+
+void TMap::setRoomArea( int id, int area )
+{
+    if( ! rooms.contains( id ) ) return;
+    if( areas.contains( rooms[id]->area ) )
+    {
+        areas[rooms[id]->area]->rooms.removeAll(id);
+    }
+    if( ! areas.contains( area ) )
+    {
+        areas[area] = new TArea(this);
+    }
+
+    rooms[id]->area = area;
+    if( ! areas[area]->rooms.contains( id ) )
+        areas[area]->rooms.push_back(id);
+    areas[area]->fast_ausgaengeBestimmen(id);
+    areas[area]->fast_calcSpan(id);
+    mMapGraphNeedsUpdate = true;
+}
+
 
 void TMap::deleteRoom( int id )
 {

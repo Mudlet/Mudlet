@@ -86,9 +86,8 @@ public slots:
     void setColorLightWhite2();
     void setFgColor2();
     void setBgColor2();
-
     void resetColors();
-
+    void downloadMap();
     void slot_save_and_exit();
 
 private:

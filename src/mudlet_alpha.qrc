@@ -113,5 +113,7 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>Mudlet_splashscreen_main.png</file>
+        <file>ui/set_room_area.ui</file>
+        <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
     </qresource>
 </RCC>

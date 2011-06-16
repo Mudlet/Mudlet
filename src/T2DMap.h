@@ -86,6 +86,7 @@ public:
     int      mOz;
     bool     mShiftMode;
     bool     mShowInfo;
+    QComboBox * arealist_combobox;
 
 
 signals:
