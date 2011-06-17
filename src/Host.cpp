@@ -851,7 +851,6 @@ bool Host::installPackage( QString fileName )
         setName( profileName );
         setLogin( login );
         setPass( pass );
-        return true;
     }
     if( mpEditorDialog )
     {

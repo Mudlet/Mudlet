@@ -401,30 +401,28 @@ void T2DMap::paintEvent( QPaintEvent * e )
         yspan = yzoom*(_h/_w);
     }
 
-
     float tx = _w/xspan;
     float ty = _h/yspan;
 
     mTX = tx;
     mTY = ty;
 
-
-   // p.setRenderHint(QPainter::NonCosmeticDefaultPen);
+    // p.setRenderHint(QPainter::NonCosmeticDefaultPen);
 
     int px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
     {
-        p.drawText(_w/2,_h/2,"no map found");
+        p.drawText(_w/2,_h/2,"No map or no valid position.");
 
         qDebug()<<"ERROR: roomID not in rooms map";
         return;
     }
 
-
     int ox, oy, oz;
     if( mRID != mpMap->mRoomId && mShiftMode ) mShiftMode = false;
     if( (! __Pick && ! mShiftMode ) || mpMap->mNewMove )
     {
+        mShiftMode = true;
         mpMap->mNewMove = false; // das ist nur hier von Interesse, weil es nur hier einen map editor gibt -> map wird unter Umstaenden nicht geupdated, deshalb force ich mit mNewRoom ein map update bei centerview()
         if( ! mpMap->areas.contains( mpMap->rooms[mpMap->mRoomId]->area) ) return;
         mRID = mpMap->mRoomId;
@@ -434,7 +432,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         mOx = ox;
         mOy = oy;
         mOz = mpMap->rooms[mRID]->z;
-
     }
     else
     {
@@ -458,17 +455,17 @@ void T2DMap::paintEvent( QPaintEvent * e )
     if( ! pArea ) return;
 
     int zEbene;
-    zEbene = mOz; //mpMap->rooms[mRID]->z;
+    zEbene = mOz;
 
     if( ! mpMap ) return;
-    if( ! mpMap->rooms.contains(mRID) ) return;
+    if( ! mpMap->rooms.contains( mRID ) ) return;
 
-    p.fillRect(0,0,2000,2000,mpHost->mBgColor_2);
+    p.fillRect( 0, 0, 2000, 2000, mpHost->mBgColor_2 );
 
     if( pArea->gridMode )
     {
         int areaID = mpMap->rooms[mRID]->area;
-        QRectF rect = QRectF(0,0,width(),height());
+        QRectF rect = QRectF( 0, 0, width(), height() );
 
         if( mGridPix.contains( mpMap->rooms[mRID]->area ) )
         {
@@ -1709,11 +1706,11 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
             mMultiRect = QRect(0,0,0,0);
             int _roomID = mRID;
             if( ! mpMap->rooms.contains( _roomID ) ) return;
-            int _areaID = mAID;//mpMap->rooms[_roomID ]->area;
+            int _areaID = mAID;
             if( ! mpMap->areas.contains(_areaID) ) return;
             TArea * pArea = mpMap->areas[_areaID];
-            int ox = mOx;//mpMap->rooms[mpMap->mRoomId]->x;
-            int oy = mOy;//mpMap->rooms[mpMap->mRoomId]->y*-1;
+            int ox = mOx;
+            int oy = mOy;
             float _rx;
             float _ry;
             if( ox*mTX > xspan/2*mTX )
@@ -1724,12 +1721,11 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 _ry = -(mTY*oy-yspan/2*mTY);
             else
                 _ry = yspan/2*mTY-mTY*oy;
-            int mx = event->pos().x()/mTX;
-            int my = event->pos().y()/mTY;
+            int mx = event->pos().x()/mTX + mOx;
+            int my = event->pos().y()/mTY + mOy;
             mx = mx - xspan/2 + 1;
             my = yspan/2 - my - 1;
-            mx += mOx;//mpMap->rooms[mRID]->x;//FIXME
-            my += mOy;//mpMap->rooms[mRID]->y;
+
             int dx,dy;
 
             if( mMultiSelectionList.size() < 1 )
