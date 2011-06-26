@@ -65,14 +65,14 @@ void dlgRoomExits::save()
         QTreeWidgetItem * pI = specialExits->topLevelItem(i);
         int key = pI->text(1).toInt();
         QString value = pI->text(2);
-        qDebug()<<"key="<<key<<" value=<"<<value<<">";
+        //qDebug()<<"key="<<key<<" value=<"<<value<<">";
         if( value != "<command or Lua script>" && key != 0 )
         {
             if( pI->checkState( 0 ) == Qt::Unchecked )
                 value = value.prepend( '0' );
             else
                 value = value.prepend( '1' );
-            qDebug()<<"setting: key="<<key<<" val="<<value;
+            //qDebug()<<"setting: key="<<key<<" val="<<value;
             mpHost->mpMap->rooms[mRoomID]->other.insertMulti( key, value );
         }
     }

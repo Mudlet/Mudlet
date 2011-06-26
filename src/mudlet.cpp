@@ -1345,7 +1345,7 @@ void mudlet::closeEvent(QCloseEvent *event)
             }
             if( pC->mpHost->mpNotePad )
             {
-                qDebug()<<"saving notepad";
+                //qDebug()<<"saving notepad";
                 pC->mpHost->mpNotePad->save();
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
@@ -1757,8 +1757,8 @@ void mudlet::doAutoLogin( QString & profile_name )
     QDir dir( folder );
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
-    for( int i=0;i<entries.size(); i++ )
-        qDebug()<<i<<"#"<<entries[i];
+    //for( int i=0;i<entries.size(); i++ )
+    //    qDebug()<<i<<"#"<<entries[i];
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+entries[0]);

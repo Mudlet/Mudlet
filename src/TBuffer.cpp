@@ -808,7 +808,7 @@ inline int TBuffer::lookupColor( QString & s, int pos )
         else
         {
             msPos++;
-            qDebug()<<"unrecognized sequence:<"<<s.mid(pos,msPos-pos)<<">";
+            //qDebug()<<"unrecognized sequence:<"<<s.mid(pos,msPos-pos)<<">";
             return 0; // unbekannte sequenz
         }
     }
@@ -1358,7 +1358,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             bgColorG = mBgColorG;
                             bgColorB = mBgColorB;
                             break;
-                        default: qDebug()<<"ERROR: stream decoder code error:"<<tag;
+                        default: ;//qDebug()<<"ERROR: stream decoder code error:"<<tag;
                         };
                     }
 
@@ -1423,7 +1423,7 @@ void TBuffer::translateToPlainText( std::string & s )
                 // sanity check
                 if( closeT > openT )
                 {
-                    qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
+                    //qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
                     closeT = 0;
                     openT = 0;
                     mAssemblingToken = false;
@@ -1707,7 +1707,7 @@ void TBuffer::translateToPlainText( std::string & s )
             {
                 if( ch == '\n' )
                 {
-                    qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
+                    //qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
                     closeT = 0;
                     openT = 0;
                     mAssemblingToken = false;

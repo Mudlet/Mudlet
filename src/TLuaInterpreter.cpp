@@ -106,13 +106,11 @@ lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
         case 5:
             return pGlobalLua;
     };
-    qDebug()<<"MUDLET ERROR: TLuaInterpreter::getLuaExecutionUnit() execution unit undefined";
     return 0;
 }
 
 void TLuaInterpreter::replyFinished(QNetworkReply * reply )
 {
-    qDebug()<<"DOWNLOAD done url="<<reply->url();
     if( ! downloadMap.contains(reply) ) return;
     QString name = downloadMap[reply];
     QFile file(name);
@@ -2730,7 +2728,6 @@ int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
         hash = lua_tostring( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    qDebug()<<"SETUP HASH: id="<<id<<" hash:"<<hash.c_str();
     pHost->mpMap->hashTable[QString(hash.c_str())] = id;
     return 0;
 }
@@ -2759,7 +2756,6 @@ int TLuaInterpreter::getRoomIDbyHash( lua_State *L )
     else
         lua_pushnumber( L, -1 );
 
-    qDebug()<<"LOOKUP HASH:"<< _hash << " ID="<< retID;
     return 1;
 }
 
@@ -2817,7 +2813,6 @@ int TLuaInterpreter::roomLocked( lua_State *L )
     }
     else
     {
-        qDebug()<<"error: room id:"<<id<<" not in db";
         lua_pushboolean(L, false);
     }
     return 1;
@@ -3071,7 +3066,6 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
     {
         area = lua_tonumber( L, 1 );
     }
-    qDebug()<<"dumping rooms for area#"<<area;
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->areas.contains( area ) )
     {
@@ -3086,9 +3080,7 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
         lua_pushnumber( L, i );
         lua_pushnumber( L, roomID );
         lua_settable(L, -3);
-        qDebug()<<"roomID="<<roomID;
     }
-    qDebug()<<"dump area room list:"<<pHost->mpMap->areas[area]->rooms;
     return 1;
 }
 
@@ -5027,7 +5019,6 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
     if( gotString )
     {
         QList<int> idList = pHost->mpMap->areaNamesMap.keys( _name );
-        qDebug()<<"getRoomAreaName() name="<<_name<<" id="<<idList;
         if( idList.size() > 0 )
         {
             lua_pushnumber( L, idList[0] );
@@ -5912,7 +5903,6 @@ int TLuaInterpreter::downloadFile( lua_State * L )
     QString _url = url.c_str();
     QString _path = path.c_str();
 
-    qDebug()<<"DOWNLOADING:"<<_url<<" to:"<<_path;
     QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( QNetworkRequest( QUrl( _url ) ) );
     pHost->mLuaInterpreter.downloadMap[reply] = _path;
     return 0;
@@ -7128,13 +7118,6 @@ int TLuaInterpreter::sendIrc( lua_State * L )
 bool TLuaInterpreter::compileAndExecuteScript( QString & code )
 {
     if( code.size() < 1 ) return false;
-    if( mudlet::debugMode )
-    {
-        qDebug("TLuaInterpreter: compiling following code:");
-        qDebug("--------------------------------------------snip<");
-        qDebug() << code;
-        qDebug(">snip--------------------------------------------");
-    }
     lua_State * L = pGlobalLua;
     if( ! L )
     {
@@ -7164,13 +7147,6 @@ bool TLuaInterpreter::compileAndExecuteScript( QString & code )
 
 bool TLuaInterpreter::compileScript( QString & code )
 {
-    if( mudlet::debugMode )
-    {
-        qDebug("TLuaInterpreter: compiling following code:");
-        qDebug("--------------------------------------------snip<");
-        qDebug() << code;
-        qDebug(">snip--------------------------------------------");
-    }
     lua_State * L = pGlobalLua;
     if( ! L )
     {

@@ -150,7 +150,7 @@ void dlgMapper::downloadMap()
     QString url = mpHost->mUrl;
     url.prepend("http://www.");
     url.append("/maps/map.xml");
-    qDebug()<<"DOWNLOADING:"<<url;
+    //qDebug()<<"DOWNLOADING:"<<url;
     QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
     mpProgressDialog = new QProgressDialog("downloading map ...", "Abort", 0, 4000000, this);
     connect(reply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));
@@ -167,7 +167,7 @@ void dlgMapper::setDownloadProgress( qint64 got, qint64 tot )
 
 void dlgMapper::replyFinished( QNetworkReply * reply )
 {
-    qDebug()<<"download complete!";
+    //qDebug()<<"download complete!";
     mpProgressDialog->close();
 
     QString name = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/map.xml";

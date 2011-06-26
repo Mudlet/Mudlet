@@ -167,7 +167,6 @@ void XMLimport::readEnvColors()
         readNext();
         if( name() == "environment" )
         {
-            qDebug()<<"################# new env color starting:";
             readEnvColor();
         }
         /*else
@@ -175,7 +174,6 @@ void XMLimport::readEnvColors()
             readUnknownMapElement();
         }*/
     }
-    qDebug()<<"ENV COLORS:"<<mpHost->mpMap->envColors;
 }
 
 void XMLimport::readEnvColor()
@@ -193,7 +191,6 @@ void XMLimport::readAreas()
         readNext();
         if( name() == "areas")
         {
-            qDebug()<<"===> end of area list reached";
             break;
         }
         if( name() == "area" )
@@ -202,7 +199,6 @@ void XMLimport::readAreas()
         }
 
     }
-    qDebug()<<"done reading areas - AREAS:"<<mpHost->mpMap->areaNamesMap;
 }
 
 void XMLimport::readAreaNames()
@@ -210,7 +206,6 @@ void XMLimport::readAreaNames()
     int id = attributes().value("id").toString().toInt();
     QString name = attributes().value("name").toString();
     mpHost->mpMap->areaNamesMap[id] = name;
-    qDebug()<<"+ NEW AREA:"<<name;
 }
 
 void XMLimport::readRooms()
@@ -324,8 +319,6 @@ void XMLimport::readRoom()
     {
         mpHost->mpMap->rooms[pT->id] = pT;
         maxRooms++;
-        qDebug()<<"adding room:"<<pT->id<<" area:"<<pT->area<<" rooms:"<<maxRooms;
-        qDebug()<<"-- n:"<<pT->north<<" s:"<<pT->south<<" w:"<<pT->west<<" e:"<<pT->east<<" ne:"<<pT->northeast<<" nw:"<<pT->northwest<<" se:"<<pT->southeast<<" nw:"<<pT->northwest<<" ne:"<<pT->northeast<<" up:"<<pT->up<<" down:"<<pT->down;
     }
     else
         delete pT;
@@ -337,7 +330,6 @@ void XMLimport::readUnknownMapElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN map element:name="<<name().toString();
 
         if( isEndElement() )
         {
@@ -1106,7 +1098,6 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     {
         qDebug()<<"IMPORT: ERROR: trigger script "<< pT->getName()<<" does not compile";
     }
-    qDebug()<<"<-- ende trigger group()";
 }
 
 void XMLimport::readTimerPackage()
@@ -1705,9 +1696,7 @@ void XMLimport::readStringList( QStringList & list )
         {
             if( name() == "string")
             {
-
                 list << readElementText();
-qDebug()<<"List:"<<list;
             }
             else
             {
@@ -1715,7 +1704,6 @@ qDebug()<<"List:"<<list;
             }
         }
     }
-    qDebug()<<"ENDE LISTE return";
 }
 
 void XMLimport::readIntegerList( QList<int> & list )

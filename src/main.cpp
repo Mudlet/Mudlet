@@ -38,10 +38,10 @@ using namespace std;
 
 TConsole *  spDebugConsole = 0;
 
-#ifdef QT_DEBUG
-    QFile debugStreamFile("C:\\mudletDebugStream.txt");;
-    QTextStream debugStream(&debugStreamFile);
-#endif
+//#ifdef QT_DEBUG
+//    QFile debugStreamFile("C:\\mudletDebugStream.txt");;
+//    QTextStream debugStream(&debugStreamFile);
+//#endif
 
 void debugOutput(QtMsgType type, const char *msg)
 {
@@ -80,10 +80,10 @@ extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 
 int main(int argc, char *argv[])
 {
-    #ifdef QT_DEBUG
-        debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);      
-    #endif
-   // qInstallMsgHandler( debugOutput );
+//    #ifdef QT_DEBUG
+//        debugStreamFile.open(QFile::WriteOnly | QFile::Truncate);
+//    #endif
+    qInstallMsgHandler( debugOutput );
     spDebugConsole = 0;
 
     QGL::setPreferredPaintEngine(QPaintEngine::OpenGL);//FIXME

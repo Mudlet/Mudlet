@@ -33,9 +33,9 @@
     #undef DEBUG
 #endif
 
-#ifdef QT_DEBUG
-    #define DEBUG
-#endif
+//#ifdef QT_DEBUG
+//    #define DEBUG
+//#endif
 
 
 
@@ -390,12 +390,10 @@ void cTelnet::sendTelnetOption( char type, char option )
 
 void cTelnet::replyFinished( QNetworkReply * reply )
 {
-    qDebug()<<"download complete!";
     mpProgressDialog->close();
 
 
     QFile file( mServerPackage );
-    qDebug()<<"unzipping:'"<<mServerPackage<<"'";
     file.open( QFile::WriteOnly );
     file.write( reply->readAll() );
     file.flush();
@@ -778,7 +776,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   _home.append( mpHost->getName() );
                   mServerPackage = QString( "%1/%2").arg( _home ).arg( fileName );
 
-                  qDebug()<<"DOWNLOADING:"<<url<< "mServerPackage="<<mServerPackage;
                   QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
                   mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole );
                   connect(reply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));
@@ -1283,7 +1280,7 @@ void cTelnet::_loadReplay()
 
         char * pB = &loadBuffer[0];
         loadedBytes = replayStream.readRawData ( pB, amount );
-        qDebug()<<"loaded:"<<loadedBytes<<"/"<<amount<<" bytes"<<" waiting for "<<offset<<" milliseconds";
+        //qDebug()<<"loaded:"<<loadedBytes<<"/"<<amount<<" bytes"<<" waiting for "<<offset<<" milliseconds";
         loadBuffer[loadedBytes+1] = '\0';
         QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
@@ -1440,7 +1437,7 @@ void cTelnet::handle_socket_signal_readyRead()
     }
     buffer[datalen] = '\0';
     #ifdef DEBUG
-        qDebug()<<"got<"<<pBuffer<<">";
+        //qDebug()<<"got<"<<pBuffer<<">";
     #endif
     if( mpHost->mpConsole->mRecordReplay )
     {
@@ -1458,7 +1455,7 @@ void cTelnet::handle_socket_signal_readyRead()
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
-                qDebug() <<" SERVER SENDS telnet command "<<(unsigned int)ch;
+                //qDebug() <<" SERVER SENDS telnet command "<<(unsigned int)ch;
             #endif
             if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {

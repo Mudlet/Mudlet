@@ -417,7 +417,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
     {
         p.drawText(_w/2,_h/2,"No map or no valid position.");
 
-        qDebug()<<"ERROR: roomID not in rooms map";
         return;
     }
 
@@ -896,7 +895,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
     {
         if( ! mpMap->rooms.contains( pArea->rooms[i] ) )
         {
-            qDebug()<<"ERROR: mapper 2d-draw: area room not in map roomID="<<pArea->rooms[i]    ;
             continue;
         }
         float rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
@@ -1017,7 +1015,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     mpMap->mTargetID = mTarget;
                     if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
                     {
-                       qDebug()<<"T2DMap: starting speedwalk path length="<<mpMap->mPathList.size();
                        mpMap->mpHost->startSpeedWalk();
                     }
                     else
@@ -1223,7 +1220,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
                        mpMap->mTargetID = mTarget;
                        if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
                        {
-                          qDebug()<<"T2DMap: starting speedwalk path length="<<mpMap->mPathList.size();
                           mpMap->mpHost->startSpeedWalk();
                        }
                        else
@@ -1280,7 +1276,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
                         mpMap->mTargetID = mTarget;
                         if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
                         {
-                           qDebug()<<"T2DMap: starting speedwalk path length="<<mpMap->mPathList.size();
                            mpMap->mpHost->startSpeedWalk();
                         }
                         else
@@ -1380,7 +1375,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         QString text = QString("render time:%1ms").arg(QString::number(__time.elapsed()));
         p.setPen(QColor(255,255,255));
         p.drawText( 10, 4*mFontHeight, text );
-        qDebug()<<"render time:"<<__time.elapsed();
     }
 
     if( mpMap->mapLabels.contains( mAID ) )
@@ -2257,7 +2251,6 @@ void T2DMap::slot_setCustomLine()
     file.open(QFile::ReadOnly);
     QDialog *d = dynamic_cast<QDialog *>(loader.load(&file, this));
     file.close();
-    qDebug()<<"loaded custom_lines.ui";
     if( ! d ) return;
     mpCustomLinesDialog = d;
     TRoom * pR = mpHost->mpMap->rooms[mRoomSelection];

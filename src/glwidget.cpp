@@ -311,7 +311,6 @@ void GLWidget::initializeGL()
 
 void GLWidget::showArea(QString name)
 {
-    qDebug()<<"GLWidget::showArea:"<<name;
     if( !mpMap ) return;
     QMapIterator<int, QString> it( mpMap->areaNamesMap );
     while( it.hasNext() )
@@ -328,7 +327,6 @@ void GLWidget::showArea(QString name)
             mOy = 0;
             mOz = 0;
             updateGL();
-            qDebug()<<"selected AREA: mAID="<<mAID<<" name="<<_n;
             break;
         }
     }
@@ -360,7 +358,6 @@ void GLWidget::paintGL()
         if( ! mpMap->rooms.contains( mRID ) )
         {
             renderText(width()/3,height()/2,"no map found", QFont("Bitstream Vera Sans Mono", 30, QFont::Courier ) );
-            qDebug()<<"ERROR: roomID not in rooms map";
             glLoadIdentity();
             glFlush();
             return;
@@ -395,9 +392,9 @@ void GLWidget::paintGL()
     glClearColor (0.0,0.0,0.0,1.0);
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
-    GLfloat diffuseLight[] = {0.207, 0.207, 0.207, 1.0};
+    GLfloat diffuseLight[] = {0.107, 0.107, 0.107, 1.0};
     GLfloat diffuseLight2[] = {0.01, 0.01, 0.01, 1.0};
-    GLfloat ambientLight[] = {0.203, 0.203, 0.203, 1.0};
+    GLfloat ambientLight[] = {0.103, 0.103, 0.103, 1.0};
     GLfloat ambientLight2[] = {0.0501, 0.0501, 0.0501, 1.0};
     if( !mpMap->rooms.contains(mRID) ) return;
 
@@ -1894,7 +1891,6 @@ void GLWidget::paintGL()
 //    cout<<"dif r="<<diffuseLight[0]<<" g="<<diffuseLight[1]<<" b="<<diffuseLight[2]<<endl;
 //    cout << "xRot:"<<xRot<<" yRot:"<<yRot<<" zRot:"<<zRot<<endl;
     glFlush();
-    qDebug()<<"3D-render:"<<__time.elapsed();
 }
 
 void GLWidget::resizeGL(int w, int h)
@@ -1959,7 +1955,6 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
             mpMap->mTargetID = mTarget;
             if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
             {
-               qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
                mpMap->mpHost->startSpeedWalk();
             }
 //            else

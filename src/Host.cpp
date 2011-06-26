@@ -606,14 +606,11 @@ void Host::raiseEvent( TEvent * pE )
             scriptList.value( i )->callEventHandler( pE );
         }
     }
-    qDebug()<<"host::raiseEvent() event="<<pE->mArgumentList[0];
     if( mAnonymousEventHandlerFunctions.contains( pE->mArgumentList[0] ) )
     {
         QStringList funList = mAnonymousEventHandlerFunctions[pE->mArgumentList[0]];
-        qDebug()<<"funList to call="<<funList;
         for( int i=0; i<funList.size(); i++ )
         {
-            qDebug()<<"-->calling:"<<funList[i];
             mLuaInterpreter.callEventHandler( funList[i], pE );
         }
     }
@@ -749,7 +746,6 @@ void Host::showUnpackingProgress( QString  txt )
     QStringList l;
     l << txt;
     packageList->addItems( l );
-    qDebug()<<txt;
     packageList->scrollToBottom();
     packageList->update();
     QApplication::sendPostedEvents();

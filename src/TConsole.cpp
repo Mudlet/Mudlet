@@ -768,7 +768,6 @@ void TConsole::closeEvent( QCloseEvent *event )
                 XMLexport writer( mpHost );
                 writer.exportHost( & file_xml );
                 file_xml.close();
-                qDebug()<<"rooms.size()="<<mpHost->mpMap->rooms.size();
                 if( mpHost->mpMap->rooms.size() > 0 )
                 {
                     QDir dir_map;
@@ -1057,7 +1056,6 @@ void TConsole::loadRawFile( std::string n )
 {
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
     QString fileName = directoryLogFile + "/"+QString(n.c_str());
-    qDebug()<<QTime::currentTime()<<": starting. Reading first packet from file ...";
     mpHost->mTelnet.loadReplay( fileName );
 }
 
@@ -1446,7 +1444,6 @@ void TConsole::reset()
 
 void TConsole::insertLink( QString text, QStringList & func, QStringList & hint, QPoint P, bool customFormat )
 {
-    qDebug()<<"insertLink() text="<<text<<" func="<<func<<" hint="<<hint;
     int x = P.x();
     int y = P.y();
     int o = 0;//FIXME: das ist ein fehler bei mehrzeiliger selection
@@ -2316,12 +2313,10 @@ TLabel * TConsole::createLabel( QString & name, int x, int y, int width, int hei
         pC->setContentsMargins(0,0,0,0);
         pC->move( x, y );
         pC->show();
-   qDebug()<<"created new miniconsole name="<<name;
         return pC;
     }
     else
     {
-        qDebug()<<"ERROR: couldn't create miniconsole name="<<name;
         return 0;
     }
 }
@@ -2401,7 +2396,6 @@ bool TConsole::setBackgroundColor( QString & name, int r, int g, int b, int alph
 
 bool TConsole::showWindow( QString & name )
 {
-    qDebug()<<"TConsole::showWindow name="<<name;
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {

@@ -92,7 +92,6 @@ void TMap::deleteRoom( int id )
 {
     if( rooms.contains(id ) && id != 0 )
     {
-        qDebug()<<"--> removing id from all exits";
         QMapIterator<int, TRoom *> it( rooms );
         while( it.hasNext() )
         {
@@ -116,12 +115,10 @@ void TMap::deleteRoom( int id )
         int areaID = pR->area;
         if( areas.contains(areaID) )
         {
-            qDebug()<<"------> removing room from area";
             TArea * pA = areas[areaID];
 
             pA->rooms.removeAll( id );
         }
-        qDebug()<<"====> finally remoning room ID:"<<id;
         rooms.remove( id );
         mMapGraphNeedsUpdate = true;
         delete pR;
@@ -129,14 +126,12 @@ void TMap::deleteRoom( int id )
     QList<QString> kL = hashTable.keys(id);
     for( int i=0; i<kL.size(); i++ )
     {
-        qDebug()<<"->removing hash:"<<kL[i];
         hashTable.remove( kL[i] );
     }
 }
 
 void TMap::deleteArea( int id )
 {
-    qDebug()<<"delting area: id="<<id;
     if( areas.contains( id ) )
     {
         TArea * pA = areas[id];
@@ -817,7 +812,6 @@ void TMap::initGraph()
         }
     }
     mMapGraphNeedsUpdate = false;
-    qDebug() << "TOTAL: initialized nodes:"<<roomCount<<" edges:"<<edgeCount<<endl;
 }
 
 bool TMap::findPath( int from, int to )
@@ -939,19 +933,12 @@ bool TMap::findPath( int from, int to )
 
              curRoom = *spi;
          }
-#ifdef QT_DEBUG
-         qDebug() << endl << "PATH FOUND: time="<<t.elapsed()<<" Total travel time: " << d[goal] << endl;
-#endif
+//#ifdef QT_DEBUG
+//         qDebug() << endl << "PATH FOUND: time="<<t.elapsed()<<" Total travel time: " << d[goal] << endl;
+//#endif
          return true;
      }
-     if( rooms.contains(start) && rooms.contains(goal))
-     {
-        qDebug() << "INFO: no path from " << rooms[start]->id << " to " << rooms[goal]->id;
-     }
-     else
-     {
-         qDebug()<<"PATH NOT FOUND && start or target not in map!";
-     }
+
      return false;
 }
 

@@ -351,7 +351,7 @@ bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
     qint64 children;
     ifs >> children;
 
-    if( initMode ) qDebug()<<"TriggerUnit::restore() mMaxID="<<mMaxID<<" children="<<children;
+    //if( initMode ) qDebug()<<"TriggerUnit::restore() mMaxID="<<mMaxID<<" children="<<children;
 
     bool ret1 = false;
     bool ret2 = true;
