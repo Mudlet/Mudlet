@@ -286,6 +286,7 @@ public:
     double             mLineSize;
     double             mRoomSize;
     bool               mShowInfo;
+    bool               mBubbleMode;
     int                mServerGUI_Package_version;
     QString            mServerGUI_Package_name;
     bool               mAcceptServerGUI;

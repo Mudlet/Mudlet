@@ -36,8 +36,24 @@ class T2DMap;
 #include <stdlib.h>
 #include "TAstar.h"
 //#include "dlgMapper.h"
+#include <QSizeF>
+#include <QColor>
+#include <QPixmap>
+#include <QVector3D>
 
 class dlgMapper;
+
+class TMapLabel
+{
+public:
+    QPointF pos;
+    QPointF pointer;
+    QSizeF size;
+    QString text;
+    QColor fgColor;
+    QColor bgColor;
+    QPixmap pix;
+};
 
 class TMap
 {
@@ -106,6 +122,7 @@ public:
     std::vector<location> locations;
     bool mMapGraphNeedsUpdate;
     bool mNewMove;
+    QMap<qint32, QMap<qint32, TMapLabel> > mapLabels;
 
 
 };

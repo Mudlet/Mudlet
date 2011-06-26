@@ -2642,7 +2642,7 @@ int TLuaInterpreter::getRoomName( lua_State *L )
 
 int TLuaInterpreter::setRoomWeight( lua_State *L )
 {
-    int w;
+    int id;
     if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "setRoomWeight: wrong argument type" );
@@ -2651,12 +2651,23 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     }
     else
     {
-        w = lua_tonumber( L, 1 );
+        id = lua_tonumber( L, 1 );
+    }
+    int w;
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "setRoomWeight: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        w = lua_tonumber( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( pHost->mpMap->mRoomId ) )
+    if( pHost->mpMap->rooms.contains( id ) )
     {
-        pHost->mpMap->rooms[pHost->mpMap->mRoomId]->weight = w;
+        pHost->mpMap->rooms[id]->weight = w;
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -5291,6 +5302,151 @@ int TLuaInterpreter::createRoomID( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::unHighlightRoom( lua_State * L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->rooms.contains( id ) ) return 0;
+    pHost->mpMap->rooms[id]->highlight = false;
+    return 0;
+}
+
+// highlightRoom( roomID, colorRed, colorGreen, colorBlue, col2Red, col2Green, col2Blue, (float)highlightRadius, alphaColor1, alphaColor2 )
+
+int TLuaInterpreter::highlightRoom( lua_State * L )
+{
+    int id, fgr, fgg, fgb, bgr, bgg, bgb;
+    float radius;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fgr = lua_tointeger( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fgg = lua_tointeger( L, 3 );
+    }
+
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fgb = lua_tointeger( L, 4 );
+    }
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bgr = lua_tointeger( L, 5 );
+    }
+
+    if( ! lua_isnumber( L, 6 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bgg = lua_tointeger( L, 6 );
+    }
+
+    if( ! lua_isnumber( L, 7 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bgb = lua_tointeger( L, 7 );
+    }
+    if( ! lua_isnumber( L, 8 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        radius = lua_tonumber( L, 8 );
+    }
+    int alpha1, alpha2;
+    if( ! lua_isnumber( L, 9 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        alpha1 = lua_tointeger( L, 9 );
+    }
+    if( ! lua_isnumber( L, 10 ) )
+    {
+        lua_pushstring( L, "highlightRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        alpha2 = lua_tointeger( L, 10 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->rooms.contains( id ) ) return 0;
+    QColor fg = QColor(fgr,fgg,fgb,alpha1);
+    QColor bg = QColor(bgr,bgg,bgb,alpha2);
+    pHost->mpMap->rooms[id]->highlight = true;
+    pHost->mpMap->rooms[id]->highlightColor = fg;
+    pHost->mpMap->rooms[id]->highlightColor2 = bg;
+    pHost->mpMap->rooms[id]->highlightRadius = radius;
+    qDebug()<<"**->Lua called  highlightRoom id="<<id;
+    return 0;
+}
+
+
 // labelID = createMapLabel( area, text, posx, posy, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue )
 int TLuaInterpreter::createMapLabel( lua_State * L )
 {
@@ -6647,20 +6803,20 @@ int TLuaInterpreter::getCustomEnvColorTable( lua_State * L )
             lua_newtable( L );
             // red component
             {
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].red() );
                 lua_pushnumber( L, 1 );
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].red() );
                 lua_settable( L, -3 );//match in matches
             }
             // green component
             {
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].green() );
                 lua_pushnumber( L, 2 );
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].green() );
                 lua_settable( L, -3 );//match in matches
             }
             // blue component
             {
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].blue() );
                 lua_pushnumber( L, 3 );
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].blue() );
                 lua_settable( L, -3 );//match in matches
             }
             lua_settable( L, -3 );//matches in regex
@@ -7954,7 +8110,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRooms", TLuaInterpreter::getRooms );
     lua_register( pGlobalLua, "createMapLabel", TLuaInterpreter::createMapLabel );
     lua_register( pGlobalLua, "deleteMapLabel", TLuaInterpreter::deleteMapLabel );
-
+    lua_register( pGlobalLua, "highlightRoom", TLuaInterpreter::highlightRoom );
+    lua_register( pGlobalLua, "unHighlightRoom", TLuaInterpreter::unHighlightRoom );
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 

@@ -3,6 +3,7 @@
 
 #include <QVector3D>
 #include <QMap>
+#include <QColor>
 
 #define DIR_NORTH 1
 #define DIR_NORTHEAST 2
@@ -60,6 +61,10 @@ public:
     QMap<QString, QList<int> > customLinesColor;
     QMap<QString, QString> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
+    bool highlight;
+    QColor highlightColor;
+    QColor highlightColor2;
+    float highlightRadius;
 };
 
 #endif // TROOM_H

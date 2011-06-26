@@ -957,12 +957,37 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 10;
+    int version = 11;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
     ofs << customEnvColors;
     ofs << hashTable;
+    //ofs << mapLabels;
+    ofs << mapLabels.size(); //anzahl der areas
+    QMapIterator<int, QMap<int, TMapLabel> > itL1(mapLabels);
+    while( itL1.hasNext() )
+    {
+        itL1.next();
+        int i = itL1.key();
+        ofs << itL1.value().size();//anzahl der labels pro area
+        ofs << itL1.key(); //area id
+        QMapIterator<int, TMapLabel> itL2(mapLabels[i]);
+        while( itL2.hasNext() )
+        {
+            itL2.next();
+            int ii = itL2.key();
+            ofs << itL2.key();//label ID
+            TMapLabel label = itL2.value();
+            ofs << label.pos;
+            ofs << label.pointer;
+            ofs << label.size;
+            ofs << label.text;
+            ofs << label.fgColor;
+            ofs << label.bgColor;
+            ofs << label.pix;
+        }
+    }
     QMapIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
@@ -997,6 +1022,11 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << rooms[i]->other;
         ofs << rooms[i]->c;
         ofs << rooms[i]->userData;
+        ofs << rooms[i]->customLines;
+        ofs << rooms[i]->customLinesArrow;
+        ofs << rooms[i]->customLinesColor;
+        ofs << rooms[i]->customLinesStyle;
+        ofs << rooms[i]->exitLocks;
     }
 
     return true;
@@ -1046,6 +1076,39 @@ bool TMap::restore()
         {
             ifs >> hashTable;
         }
+        if( version >= 11 )
+        {
+            //ifs >> mapLabels;
+            int size;
+            ifs >> size; //size of mapLabels
+            int areaLabelCount = 0;
+            while( ! ifs.atEnd() && areaLabelCount < size )
+            {
+                int areaID;
+                int size_labels;
+                ifs >> size_labels;
+                ifs >> areaID;
+                int labelCount = 0;
+                QMap<int, TMapLabel> _map;
+                while( ! ifs.atEnd() &&  labelCount < size_labels )
+                {
+                    int labelID;
+                    ifs >> labelID;
+                    TMapLabel label;
+                    ifs >> label.pos;
+                    ifs >> label.pointer;
+                    ifs >> label.size;
+                    ifs >> label.text;
+                    ifs >> label.fgColor;
+                    ifs >> label.bgColor;
+                    ifs >> label.pix;
+                    _map.insert( labelID, label );
+                    labelCount++;
+                }
+                mapLabels[areaID] = _map;
+                areaLabelCount++;
+            }
+        }
         while( ! ifs.atEnd() )
         {
             int i;
@@ -1092,6 +1155,15 @@ bool TMap::restore()
             if( version >= 10 )
             {
                 ifs >> rooms[i]->userData;
+            }
+            if( version >= 11 )
+            {
+                ifs >> rooms[i]->customLines;
+                ifs >> rooms[i]->customLinesArrow;
+                ifs >> rooms[i]->customLinesColor;
+                ifs >> rooms[i]->customLinesStyle;
+                ifs >> rooms[i]->exitLocks;
+
             }
         }
         customEnvColors[257] = mpHost->mRed_2;
@@ -1155,8 +1227,21 @@ int TMap::createMapLabel(int area, QString text, float x, float y, QColor fg, QC
     label.fgColor = fg;
     label.size = QSizeF(100,100);
     label.pos = QPointF( x, y );
-    int labelID = areas[area]->labelMap.size();
-    areas[area]->labelMap[labelID] = label;
+//    int labelID = areas[area]->labelMap.size();
+//    areas[area]->labelMap[labelID] = label;
+    int labelID;
+    if( ! mapLabels.contains( area ) )
+    {
+        QMap<int, TMapLabel> m;
+        m[0] = label;
+        mapLabels[area] = m;
+    }
+    else
+    {
+        labelID = mapLabels[area].size();
+        mapLabels[area].insert(labelID, label);
+    }
+
     if( mpMapper ) mpMapper->mp2dMap->update();
     return labelID;
 }
@@ -1164,8 +1249,8 @@ int TMap::createMapLabel(int area, QString text, float x, float y, QColor fg, QC
 void TMap::deleteMapLabel(int area, int labelID )
 {
     if( ! areas.contains( area ) ) return;
-    if( ! areas[area]->labelMap.contains( labelID ) ) return;
-    areas[area]->labelMap.remove( labelID );
+    if( ! mapLabels.contains( labelID ) ) return;
+    mapLabels.remove( labelID );
     if( mpMapper ) mpMapper->mp2dMap->update();
 }
 

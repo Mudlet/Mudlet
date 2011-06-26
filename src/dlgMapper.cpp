@@ -43,13 +43,15 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
         showArea->addItem( name );
     }
     grid->setChecked( true );
+    bubbles->setChecked( mpHost->mBubbleMode );
     d3buttons->setVisible(false);
     roomSize->setValue(mpHost->mRoomSize*10);
     lineSize->setValue(mpHost->mLineSize);
-    strongHighlight->setCheckState( mpHost->mMapStrongHighlight ? Qt::Checked : Qt::Unchecked );
-    showInfo->setChecked( true );
+    strongHighlight->setChecked( mpHost->mMapStrongHighlight );
+    showInfo->setChecked( mpHost->mShowInfo );
     //searchList->setSelectionMode( QAbstractItemView::SingleSelection );
     //connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
+    connect(bubbles, SIGNAL(clicked()), this, SLOT(slot_bubbles()));
     connect(grid, SIGNAL(clicked()), this, SLOT(slot_showGrid()));
     connect(ortho, SIGNAL(pressed()), glWidget, SLOT(fullView()));
     connect(singleLevel, SIGNAL(pressed()), glWidget, SLOT(singleView()));
@@ -271,5 +273,11 @@ void dlgMapper::slot_lineSize(int d)
 void dlgMapper::slot_showGrid()
 {
     mp2dMap->mShowGrid = grid->isChecked();
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_bubbles()
+{
+    mp2dMap->mBubbleMode = bubbles->isChecked();
     mp2dMap->update();
 }

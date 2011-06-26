@@ -98,6 +98,7 @@ public:
     QCheckBox * mpCurrentLineArrow;
     bool mShowGrid;
     QPointF mLastMouseClick;
+    bool mBubbleMode;
 
 signals:
 

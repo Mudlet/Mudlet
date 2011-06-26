@@ -46,6 +46,7 @@ T2DMap::T2DMap()
     mShiftMode = false;
     mShowInfo = true;
     mShowGrid = true;
+    mBubbleMode = true;
 }
 
 T2DMap::T2DMap(QWidget * parent)
@@ -68,6 +69,7 @@ T2DMap::T2DMap(QWidget * parent)
     mShiftMode = false;
     mShowInfo = true;
     mShowGrid = true;
+    mBubbleMode = true;
 }
 
 void T2DMap::init()
@@ -556,8 +558,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
         QList<int> drawnExits;
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
-            int rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
-            int ry = mpMap->rooms[pArea->rooms[i]]->y*-1*ty+_ry;
+            float rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
+            float ry = mpMap->rooms[pArea->rooms[i]]->y*-1*ty+_ry;
             int rz = mpMap->rooms[pArea->rooms[i]]->z;
 
             if( rz != zEbene ) continue;
@@ -627,7 +629,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northeast );
             }
 
-            drawnExits << exitList;
+            //drawnExits << exitList;
             //drawnExits << pArea->rooms[i]; // exits werden nicht doppelt gezeichnet
 
             QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[pArea->rooms[i]]->customLines);
@@ -741,8 +743,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
                 else
                     areaExit = false;
-                int ex = mpMap->rooms[exitList[k]]->x*tx+_rx;
-                int ey = mpMap->rooms[exitList[k]]->y*ty*-1+_ry;
+                float ex = mpMap->rooms[exitList[k]]->x*tx+_rx;
+                float ey = mpMap->rooms[exitList[k]]->y*ty*-1+_ry;
                 int ez = mpMap->rooms[exitList[k]]->z;
                 if( ez != zEbene || e != ez ) continue;
 
@@ -897,8 +899,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
             qDebug()<<"ERROR: mapper 2d-draw: area room not in map roomID="<<pArea->rooms[i]    ;
             continue;
         }
-        int rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
-        int ry = mpMap->rooms[pArea->rooms[i]]->y*-1*ty+_ry;
+        float rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
+        float ry = mpMap->rooms[pArea->rooms[i]]->y*-1*ty+_ry;
         int rz = mpMap->rooms[pArea->rooms[i]]->z;
 
         if( rz != zEbene ) continue;
@@ -1050,7 +1052,38 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
             }
             else
-                p.fillRect(dr,c);
+            {
+                if( mBubbleMode )
+                {
+                    float _radius = (rSize*tx)/2;
+                    QPointF _center = QPointF(rx,ry);
+                    QRadialGradient _gradient(_center,_radius);
+                    _gradient.setColorAt(0.85, c);
+                    _gradient.setColorAt(0, QColor(255,255,255,255));
+                    QPen myPen(QColor(0,0,0,0));
+                    QPainterPath myPath;
+                    p.setBrush(_gradient);
+                    p.setPen(myPen);
+                    myPath.addEllipse(_center,_radius,_radius);
+                    p.drawPath(myPath);
+                }
+                else
+                    p.fillRect(dr,c);
+            }
+            if( mpMap->rooms[pArea->rooms[i]]->highlight )
+            {
+                float _radius = (mpMap->rooms[pArea->rooms[i]]->highlightRadius*tx)/2;
+                QPointF _center = QPointF(rx,ry);
+                QRadialGradient _gradient(_center,_radius);
+                _gradient.setColorAt(0.85, mpMap->rooms[pArea->rooms[i]]->highlightColor);
+                _gradient.setColorAt(0, mpMap->rooms[pArea->rooms[i]]->highlightColor2 );
+                QPen myPen(QColor(0,0,0,0));
+                QPainterPath myPath;
+                p.setBrush(_gradient);
+                p.setPen(myPen);
+                myPath.addEllipse(_center,_radius,_radius);
+                p.drawPath(myPath);
+            }
             if( mShowRoomID )
             {
                 QPen __pen = p.pen();
@@ -1350,29 +1383,31 @@ void T2DMap::paintEvent( QPaintEvent * e )
         qDebug()<<"render time:"<<__time.elapsed();
     }
 
-    QMapIterator<int, TMapLabel> it(pArea->labelMap);
-    while( it.hasNext() )
+    if( mpMap->mapLabels.contains( mAID ) )
     {
-        it.next();
+        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
+        while( it.hasNext() )
+        {
+            it.next();
 
-        QRectF lr = QRectF( 0, 0, 1000, 100 );
-        QPixmap pix( lr.size().toSize() );
-        pix.fill(QColor(0,0,0,0));
-        QPainter lp( &pix );
+            QRectF lr = QRectF( 0, 0, 1000, 100 );
+            QPixmap pix( lr.size().toSize() );
+            pix.fill(QColor(0,0,0,0));
+            QPainter lp( &pix );
 
-        lp.fillRect( lr, it.value().bgColor );
-        QPen lpen;
-        lpen.setColor( it.value().fgColor );
-        lp.setPen( lpen );
-        QRectF br;
-        lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
-        QPointF lpos;
-        lpos.setX( it.value().pos.x()*tx+_rx );
-        lpos.setY( it.value().pos.y()*ty*-1+_ry );
-        p.drawPixmap( lpos, pix, br.toRect() );
+            lp.fillRect( lr, it.value().bgColor );
+            QPen lpen;
+            lpen.setColor( it.value().fgColor );
+            lp.setPen( lpen );
+            QRectF br;
+            lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
+            QPointF lpos;
+            lpos.setX( it.value().pos.x()*tx+_rx );
+            lpos.setY( it.value().pos.y()*ty*-1+_ry );
+            p.drawPixmap( lpos, pix, br.toRect() );
 
+        }
     }
-
 }
 
 void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
@@ -2414,7 +2449,17 @@ void T2DMap::slot_createLabel()
     my = yspan/2 - my;
     label.pos = QPointF( mx, my );
     if( ! mpMap->areas.contains(mAID) ) return;
-    int labelID = mpMap->areas[mAID]->labelMap.size();
-    mpMap->areas[mAID]->labelMap[labelID] = label;
+    int labelID;
+    if( ! mpMap->mapLabels.contains( mAID ) )
+    {
+        QMap<int, TMapLabel> m;
+        m[0] = label;
+        mpMap->mapLabels[mAID] = m;
+    }
+    else
+    {
+        labelID = mpMap->mapLabels[mAID].size();
+        mpMap->mapLabels[mAID].insert(labelID, label);
+    }
 }
 
