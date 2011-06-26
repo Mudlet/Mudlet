@@ -130,9 +130,8 @@ bool TRoom::hasSpecialExitLock(int to, QString cmd)
         {
             it.next();
             if( it.key() != to ) continue;
-            if( it.value().right(1) != cmd ) continue;
-            if( it.value().size() > 0 )
-                return it.value().mid(0,1) == "1";
+            if( it.value().size() < 2 ) continue;
+            return it.value().mid(0,1) == "1";
         }
         return false;
     }
@@ -148,20 +147,34 @@ void TRoom::addSpecialExit( int to, QString cmd )
     {
         it.next();
         if( it.key() != to ) continue;
-        if( it.value().right(1) != cmd ) continue;
         if( it.value().size() > 0 )
         {
-            QString _cmd = cmd;
-            _cmd.prepend("0");
-            other.replace( to, _cmd );
-            _cmd.mid(0,1) = "1";
+            QString _cmd;
+            if( cmd.startsWith('0') || cmd.startsWith('1') )
+            {
+                _cmd = cmd;
+            }
+            else
+            {
+                _cmd.prepend("0");
+                _cmd.append( cmd );
+            }
+
             other.replace( to, _cmd );
             return;
         }
     }
     // it doesnt exit -> add
-    QString _cmd = cmd;
-    cmd.prepend("0");
+    QString _cmd;
+    if( cmd.startsWith('0') || cmd.startsWith('1') )
+    {
+        _cmd = cmd;
+    }
+    else
+    {
+        _cmd.prepend("0");
+        _cmd.append( cmd );
+    }
     other.insertMulti( to, cmd );
 }
 

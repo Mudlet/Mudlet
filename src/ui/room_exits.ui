@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>560</width>
-    <height>520</height>
+    <width>550</width>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -294,27 +294,38 @@
     <rect>
      <x>10</x>
      <y>270</y>
-     <width>541</width>
+     <width>531</width>
      <height>201</height>
     </rect>
    </property>
    <property name="rootIsDecorated">
     <bool>false</bool>
    </property>
+   <property name="itemsExpandable">
+    <bool>false</bool>
+   </property>
    <property name="columnCount">
-    <number>2</number>
+    <number>3</number>
    </property>
    <attribute name="headerDefaultSectionSize">
     <number>80</number>
    </attribute>
+   <attribute name="headerStretchLastSection">
+    <bool>true</bool>
+   </attribute>
    <column>
     <property name="text">
-     <string>exit room ID</string>
+     <string>Lock</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>command or script (Lua scripts need to be prefixed with &quot;script:&quot;</string>
+     <string>Exit room ID</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Command or script (Lua scripts need to be prefixed with &quot;script:&quot;</string>
     </property>
    </column>
   </widget>

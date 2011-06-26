@@ -42,20 +42,22 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
         QString name = it.value();
         showArea->addItem( name );
     }
+    grid->setChecked( true );
     d3buttons->setVisible(false);
-    roomSize->setValue(mpHost->mRoomSize);
+    roomSize->setValue(mpHost->mRoomSize*10);
     lineSize->setValue(mpHost->mLineSize);
     strongHighlight->setCheckState( mpHost->mMapStrongHighlight ? Qt::Checked : Qt::Unchecked );
-    showInfo->setCheckState( mpHost->mShowInfo ? Qt::Checked : Qt::Unchecked );
-    searchList->setSelectionMode( QAbstractItemView::SingleSelection );
-    connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
+    showInfo->setChecked( true );
+    //searchList->setSelectionMode( QAbstractItemView::SingleSelection );
+    //connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
+    connect(grid, SIGNAL(clicked()), this, SLOT(slot_showGrid()));
     connect(ortho, SIGNAL(pressed()), glWidget, SLOT(fullView()));
     connect(singleLevel, SIGNAL(pressed()), glWidget, SLOT(singleView()));
     connect(increaseTop, SIGNAL(pressed()), glWidget, SLOT(increaseTop()));
     connect(increaseBottom, SIGNAL(pressed()), glWidget, SLOT(increaseBottom()));
     connect(reduceTop, SIGNAL(pressed()), glWidget, SLOT(reduceTop()));
     connect(reduceBottom, SIGNAL(pressed()), glWidget, SLOT(reduceBottom()));
-    connect(searchList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(choseRoom(QListWidgetItem*)));
+    //connect(searchList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(choseRoom(QListWidgetItem*)));
     connect(shiftZup, SIGNAL(pressed()), mp2dMap, SLOT(shiftZup()));
     connect(shiftZdown, SIGNAL(pressed()), mp2dMap, SLOT(shiftZdown()));
     connect(shiftLeft, SIGNAL(pressed()), mp2dMap, SLOT(shiftLeft()));
@@ -78,8 +80,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));
     connect(topView, SIGNAL(pressed()), glWidget, SLOT(topView()));
     connect(togglePanel, SIGNAL(pressed()), this, SLOT(slot_togglePanel()));
-    connect(lineSize, SIGNAL(valueChanged(double)), this, SLOT(slot_lineSize(double)));
-    connect(roomSize, SIGNAL(valueChanged(double)), this, SLOT(slot_roomSize(double)));
+    connect(lineSize, SIGNAL(valueChanged(int)), this, SLOT(slot_lineSize(int)));
+    connect(roomSize, SIGNAL(valueChanged(int)), this, SLOT(slot_roomSize(int)));
     connect(scale, SIGNAL(valueChanged(int)), glWidget, SLOT(setScale(int)));
     connect(xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setXRotation(int)));
     connect(yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setYRotation(int)));
@@ -217,50 +219,57 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
 
 void dlgMapper::goRoom()
 {
-    QString txt = roomID->text();
-    searchList->clear();
-    int id = txt.toInt();
+//    QString txt = roomID->text();
+//    searchList->clear();
+//    int id = txt.toInt();
 
-    if( id != 0 && mpMap->rooms.contains( id ) )
-    {
-        mpMap->mTargetID = id;
-        if( mpMap->findPath(0,0) )
-        {
-            qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
-            mpMap->mpHost->startSpeedWalk();
-        }
-        else
-        {
-            QString msg = "Cannot find a path to this room.\n";
-            mpHost->mpConsole->printSystemMessage(msg);
-        }
-    }
-    else
-    {
-        QMapIterator<int, TRoom *> it( mpMap->rooms );
-        while( it.hasNext() )
-        {
-            it.next();
-            int i = it.key();
-            if( mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive ) )
-            {
-                qDebug()<<"inserting match:"<<i;
-                searchList->addItem( mpMap->rooms[i]->name );
-            }
-        }
-    }
-    mpHost->mpConsole->setFocus();
+//    if( id != 0 && mpMap->rooms.contains( id ) )
+//    {
+//        mpMap->mTargetID = id;
+//        if( mpMap->findPath(0,0) )
+//        {
+//            qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
+//            mpMap->mpHost->startSpeedWalk();
+//        }
+//        else
+//        {
+//            QString msg = "Cannot find a path to this room.\n";
+//            mpHost->mpConsole->printSystemMessage(msg);
+//        }
+//    }
+//    else
+//    {
+//        QMapIterator<int, TRoom *> it( mpMap->rooms );
+//        while( it.hasNext() )
+//        {
+//            it.next();
+//            int i = it.key();
+//            if( mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive ) )
+//            {
+//                qDebug()<<"inserting match:"<<i;
+//                searchList->addItem( mpMap->rooms[i]->name );
+//            }
+//        }
+//    }
+//    mpHost->mpConsole->setFocus();
 }
 
 
-void dlgMapper::slot_roomSize(double d)
+void dlgMapper::slot_roomSize(int d)
 {
-    mp2dMap->setRoomSize( d );
+    float s = (float)d/10.0;
+    mp2dMap->setRoomSize( s );
     mp2dMap->update();
 }
 
-void dlgMapper::slot_lineSize(double d)
+void dlgMapper::slot_lineSize(int d)
 {
     mp2dMap->setExitSize( d );
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_showGrid()
+{
+    mp2dMap->mShowGrid = grid->isChecked();
     mp2dMap->update();
 }

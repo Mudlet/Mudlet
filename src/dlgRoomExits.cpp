@@ -34,14 +34,20 @@ dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW )
 
 void dlgRoomExits::slot_editItem(QTreeWidgetItem * pI, int column )
 {
-    specialExits->openPersistentEditor(pI, column);//edit(pI->in);
+    if( column == 0 ) return;
+    if( mpEditItem != 0 )
+        specialExits->closePersistentEditor( mpEditItem, mEditColumn );
+    mpEditItem = pI;
+    mEditColumn = column;
+    specialExits->openPersistentEditor(pI, column);
 }
 
 void dlgRoomExits::slot_addSpecialExit()
 {
     QStringList sL;
-    sL<<"<room ID>" << "<command or Lua script>";
-    QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits,sL);
+    QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);//
+    pI->setText(1, "<room ID>");
+    pI->setText(2, "<command or Lua script>");
     specialExits->addTopLevelItem(pI);
 
 }
@@ -57,11 +63,18 @@ void dlgRoomExits::save()
     for( int i=0; i<specialExits->topLevelItemCount(); i++ )
     {
         QTreeWidgetItem * pI = specialExits->topLevelItem(i);
-        int key = pI->text(0).toInt();
-        QString value = pI->text(1);
+        int key = pI->text(1).toInt();
+        QString value = pI->text(2);
         qDebug()<<"key="<<key<<" value=<"<<value<<">";
         if( value != "<command or Lua script>" && key != 0 )
+        {
+            if( pI->checkState( 0 ) == Qt::Unchecked )
+                value = value.prepend( '0' );
+            else
+                value = value.prepend( '1' );
+            qDebug()<<"setting: key="<<key<<" val="<<value;
             mpHost->mpMap->rooms[mRoomID]->other.insertMulti( key, value );
+        }
     }
     if( n->text().size() > 0 )
         mpHost->mpMap->rooms[mRoomID]->north = n->text().toInt();
@@ -159,6 +172,8 @@ void dlgRoomExits::save()
         mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_OUT, true);
     else
         mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_OUT, false);
+
+    mpHost->mpMap->mMapGraphNeedsUpdate = true;
     close();
 }
 
@@ -318,9 +333,17 @@ void dlgRoomExits::init( int id )
         it.next();
         int id_to = it.key();
         QString dir = it.value();
+        if( dir.size() < 1 )
+            continue;
         QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
-        pI->setText( 0, QString::number(id_to) );
-        pI->setText( 1, dir );
+        if( mpHost->mpMap->rooms[id]->hasSpecialExitLock( id_to, dir ) )
+            pI->setCheckState( 0, Qt::Checked );
+        else
+            pI->setCheckState( 0, Qt::Unchecked );
+        pI->setText( 1, QString::number(id_to) );
+        if( dir.startsWith('0') || dir.startsWith('1') ) dir = dir.mid(1);
+
+        pI->setText( 2, dir );
     }
     mRoomID = id;
 }

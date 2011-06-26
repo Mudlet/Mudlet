@@ -3081,6 +3081,22 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::getRooms( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_newtable(L);
+    QMapIterator<int,TRoom*> it(pHost->mpMap->rooms);
+    while( it.hasNext() )
+    {
+        it.next();
+        lua_pushnumber( L, it.key() );
+        lua_pushstring( L, it.value()->name.toLatin1().data() );
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
+
 
 int TLuaInterpreter::getRoomWeight( lua_State *L )
 {
@@ -5275,6 +5291,158 @@ int TLuaInterpreter::createRoomID( lua_State * L )
     return 1;
 }
 
+// labelID = createMapLabel( area, text, posx, posy, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue )
+int TLuaInterpreter::createMapLabel( lua_State * L )
+{
+    int area, fgr, fgg, fgb, bgr, bgg, bgb;
+    float posx, posy;
+    string text;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        text = lua_tostring( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        posx = lua_tonumber( L, 3 );
+    }
+
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        posy = lua_tonumber( L, 4 );
+    }
+
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fgr = lua_tointeger( L, 5 );
+    }
+
+    if( ! lua_isnumber( L, 6 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fgg = lua_tointeger( L, 6 );
+    }
+
+    if( ! lua_isnumber( L, 7 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fgb = lua_tointeger( L, 7 );
+    }
+
+    if( ! lua_isnumber( L, 8 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bgr = lua_tointeger( L, 8 );
+    }
+
+    if( ! lua_isnumber( L, 9 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bgg = lua_tointeger( L, 9 );
+    }
+
+    if( ! lua_isnumber( L, 10 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bgb = lua_tointeger( L, 10 );
+    }
+
+    QString _text = text.c_str();
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QColor fg = QColor(fgr,fgg,fgb);
+    QColor bg = QColor(bgr, bgg, bgb);
+    lua_pushinteger( L, pHost->mpMap->createMapLabel( area, _text, posx, posy, fg, bg ) );
+    return 1;
+}
+
+int TLuaInterpreter::deleteMapLabel( lua_State * L )
+{
+    int area, labelID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "deleteMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tointeger( L, 1 );
+    }
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "deleteMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        labelID = lua_tointeger( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mpMap->deleteMapLabel( area, labelID );
+}
+
+
 int TLuaInterpreter::addSpecialExit( lua_State * L )
 {
     int id_from, id_to;
@@ -5313,19 +5481,21 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( pHost->mpMap->rooms.contains( id_from ) )
     {
-        if( pHost->mpMap->rooms[id_from]->other.contains(id_to) )
-        {
-            QList<QString> valList = pHost->mpMap->rooms[id_from]->other.values( id_to );
-            if( valList.contains( _dir ) )
-            {
-                return 0; //skip duplicates, but allow multiple room links with different commands
-            }
-        }
-        else
-        {
-            pHost->mpMap->rooms[id_from]->other.insertMulti(id_to, _dir );
-            pHost->mpMap->mMapGraphNeedsUpdate = true;
-        }
+        pHost->mpMap->rooms[id_from]->addSpecialExit( id_to, _dir );
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
+//        if( pHost->mpMap->rooms[id_from]->other.contains(id_to) )
+//        {
+//            QList<QString> valList = pHost->mpMap->rooms[id_from]->other.values( id_to );
+//            if( valList.contains( _dir ) )
+//            {
+//                return 0; //skip duplicates, but allow multiple room links with different commands
+//            }
+//        }
+//        else
+//        {
+//            pHost->mpMap->rooms[id_from]->other.insertMulti(id_to, _dir );
+//            pHost->mpMap->mMapGraphNeedsUpdate = true;
+//        }
     }
     return 0;
 }
@@ -7563,7 +7733,7 @@ void TLuaInterpreter::startLuaSessionInterpreter()
     mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
 }
 
-#ifdef QT_OS_MAC
+#ifdef Q_OS_MAC
     #include "luazip.c"
 #endif
 
@@ -7777,15 +7947,18 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler );
     lua_register( pGlobalLua, "saveMap", TLuaInterpreter::saveMap );
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
-    lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
+    // removed because of various Qt crashes
+    //lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
     lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
     lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
-    //lua_register( pGlobalLua, "deselectCmdLine", TLuaInterpreter::deselectCmdLine );//=roomLocked()
+    lua_register( pGlobalLua, "getRooms", TLuaInterpreter::getRooms );
+    lua_register( pGlobalLua, "createMapLabel", TLuaInterpreter::createMapLabel );
+    lua_register( pGlobalLua, "deleteMapLabel", TLuaInterpreter::deleteMapLabel );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
-#ifdef QT_OS_MAC
+#ifdef Q_OS_MAC
     luaopen_zip( pGlobalLua );
     lua_setglobal( pGlobalLua, "zip" );
 #endif

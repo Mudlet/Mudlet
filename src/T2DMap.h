@@ -45,6 +45,7 @@ public:
     int      getTopLeftSelection();
     void     setRoomSize( double );
     void     setExitSize( double );
+
     TMap *   mpMap;
     Host *   mpHost;
     int      xzoom;
@@ -63,8 +64,8 @@ public:
     float    mTX;
     float    mTY;
     int      mChosenRoomColor;
-    int      xspan;
-    int      yspan;
+    float    xspan;
+    float    yspan;
     bool     mMultiSelection;
     QRectF   mMultiRect;
     bool     mPopupMenu;
@@ -87,12 +88,23 @@ public:
     bool     mShiftMode;
     bool     mShowInfo;
     QComboBox * arealist_combobox;
-
+    QDialog * mpCustomLinesDialog;
+    int  mCustomLinesRoomFrom;
+    int  mCustomLinesRoomTo;
+    QString mCustomLinesRoomExit;
+    QComboBox * mpCurrentLineStyle;
+    QPushButton * mpCurrentLineColor;
+    QColor mCurrentLineColor;
+    QCheckBox * mpCurrentLineArrow;
+    bool mShowGrid;
+    QPointF mLastMouseClick;
 
 signals:
 
 public slots:
 
+    void slot_createLabel();
+    void slot_customLineColor();
     void showInfo();
     void shiftZup();
     void shiftZdown();
@@ -117,6 +129,9 @@ public slots:
     void slot_lockRoom();
     void slot_setRoomWeight();
     void slot_setArea();
+    void slot_setCustomLine();
+    void slot_setCustomLine2();
+    void slot_setCustomLine2B(QTreeWidgetItem*, int);
 };
 
 #endif // T2DMAP_H

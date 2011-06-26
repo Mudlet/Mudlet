@@ -45,6 +45,7 @@ T2DMap::T2DMap()
     rSize = 0.5;
     mShiftMode = false;
     mShowInfo = true;
+    mShowGrid = true;
 }
 
 T2DMap::T2DMap(QWidget * parent)
@@ -66,6 +67,7 @@ T2DMap::T2DMap(QWidget * parent)
     eSize = 3.0;
     mShiftMode = false;
     mShowInfo = true;
+    mShowGrid = true;
 }
 
 void T2DMap::init()
@@ -407,7 +409,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
     mTX = tx;
     mTY = ty;
 
-    // p.setRenderHint(QPainter::NonCosmeticDefaultPen);
 
     int px,py,pz;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
@@ -459,6 +460,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     if( ! mpMap ) return;
     if( ! mpMap->rooms.contains( mRID ) ) return;
+
+    float wegBreite = 1/eSize * tx * rSize;
 
     p.fillRect( 0, 0, 2000, 2000, mpHost->mBgColor_2 );
 
@@ -525,12 +528,32 @@ void T2DMap::paintEvent( QPaintEvent * e )
         }
     }
 
-    p.setPen(QPen( mpHost->mFgColor_2) );
-    QPen pen = p.pen();
-    pen.setWidthF(eSize);
+    QPen pen;
+    if( mShowGrid )
+    {
+        pen = p.pen();
+        pen.setWidthF(0);
+        pen.setCosmetic( true );
+        QColor _gridColor = mpHost->mFgColor_2;
+        _gridColor.setAlpha(10);
+        pen.setColor( _gridColor );
+        p.setPen( pen );
+
+        for( int x=0; x<xspan; x++ )
+            p.drawLine( (int)(x*tx), 0, (int)(x*tx), (int)(yspan*ty) );
+
+        for( int x=0; x<yspan; x++ )
+            p.drawLine( 0, (int)(x*ty), (int)(xspan*tx), (int)(x*ty) );
+    }
+    pen = p.pen();
+    pen.setColor( mpHost->mFgColor_2 );
+    pen.setWidthF(wegBreite);
+    p.setRenderHint(QPainter::Antialiasing);
     p.setPen( pen );
+
     if( ! pArea->gridMode )
     {
+        QList<int> drawnExits;
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
             int rx = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
@@ -541,14 +564,167 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( rx < 0 || ry < 0 || rx > _w || ry > _h ) continue;
 
             QList<int> exitList;
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->north );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->east );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southeast );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->south );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southwest );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->west );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northeast );
+            if( mpMap->rooms[pArea->rooms[i]]->customLines.size() > 0 )
+            {
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("N") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->north) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->north );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->north );
+                }
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("NW") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->northwest) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
+                }
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("E") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->east) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->east );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->east );
+                }
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("SE") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->southeast) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->southeast );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southeast );
+                }
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("S") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->south) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->south );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->south );
+                }
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("SW") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->southwest) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->southwest );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southwest );
+                }
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("W") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->west) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->west );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->west );
+                }
+                if( !mpMap->rooms[pArea->rooms[i]]->customLines.contains("NE") && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->northeast) )
+                {
+                    drawnExits.push_back( mpMap->rooms[pArea->rooms[i]]->northeast );
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northeast );
+                }
+            }
+            else
+            {
+                if( mpMap->rooms[pArea->rooms[i]]->north > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->north) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->north );
+                if( mpMap->rooms[pArea->rooms[i]]->northwest > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->northwest) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
+                if( mpMap->rooms[pArea->rooms[i]]->east > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->east) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->east );
+                if( mpMap->rooms[pArea->rooms[i]]->southeast > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->southeast) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southeast );
+                if( mpMap->rooms[pArea->rooms[i]]->south > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->south) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->south );
+                if( mpMap->rooms[pArea->rooms[i]]->southwest > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->southwest) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southwest );
+                if( mpMap->rooms[pArea->rooms[i]]->west > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->west) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->west );
+                if( mpMap->rooms[pArea->rooms[i]]->northeast > 0 && ! drawnExits.contains(mpMap->rooms[pArea->rooms[i]]->northeast) )
+                    exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northeast );
+            }
+
+            drawnExits << exitList;
+            //drawnExits << pArea->rooms[i]; // exits werden nicht doppelt gezeichnet
+
+            QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[pArea->rooms[i]]->customLines);
+            while( itk.hasNext() )
+            {
+                itk.next();
+                QColor _color;
+                if( mpMap->rooms[pArea->rooms[i]]->customLinesColor[itk.key()].size() == 3 )
+                {
+                    _color.setRed( mpMap->rooms[pArea->rooms[i]]->customLinesColor[itk.key()][0] );
+                    _color.setGreen( mpMap->rooms[pArea->rooms[i]]->customLinesColor[itk.key()][1] );
+                    _color.setBlue( mpMap->rooms[pArea->rooms[i]]->customLinesColor[itk.key()][2] );
+                }
+                else
+                    _color = QColor(255,0,0);
+                bool _arrow = mpMap->rooms[pArea->rooms[i]]->customLinesArrow[itk.key()];
+                QString _style = mpMap->rooms[pArea->rooms[i]]->customLinesStyle[itk.key()];
+                QPointF _cstartP;
+                float ex = mpMap->rooms[pArea->rooms[i]]->x*tx+_rx;
+                float ey = mpMap->rooms[pArea->rooms[i]]->y*ty*-1+_ry;
+                if( itk.key() == "N" )
+                    _cstartP = QPoint(ex,ey-ty/2);
+                else if( itk.key() == "NW" )
+                    _cstartP = QPoint(ex-tx/2,ey-ty/2);
+                else if( itk.key() == "NE" )
+                    _cstartP = QPoint(ex+tx/2,ey-ty/2);
+                else if( itk.key() == "S" )
+                    _cstartP = QPoint(ex,ey+ty/2);
+                else if( itk.key() == "SW" )
+                    _cstartP = QPoint(ex-tx/2,ey+ty/2);
+                else if( itk.key() == "SE" )
+                    _cstartP = QPoint(ex+tx/2,ey+ty/2);
+                else if( itk.key() == "W" )
+                    _cstartP = QPoint(ex-tx/2, ey);
+                else if( itk.key() == "E" )
+                    _cstartP = QPoint(ex+tx/2, ey);
+                else
+                    _cstartP = QPointF(ex, ey);
+                QPointF ursprung = QPointF(ex,ey);
+                QPen customLinePen = p.pen();
+                customLinePen.setCosmetic(true);
+                customLinePen.setColor( _color );
+                if( _style == "solid line" )
+                    customLinePen.setStyle( Qt::SolidLine );
+                else if( _style == "dot line" )
+                    customLinePen.setStyle( Qt::DotLine );
+                else if( _style == "dash line" )
+                    customLinePen.setStyle( Qt::DashLine );
+                else
+                    customLinePen.setStyle( Qt::DashDotDotLine );
+
+                QList<QPointF> _pL = itk.value();
+                if( _pL.size() > 0 )
+                {
+                    p.setPen(customLinePen);
+                    p.drawLine( ursprung, _cstartP );
+                }
+
+                for( int pk=0; pk<_pL.size(); pk++ )
+                {
+                    QPointF _cendP;
+                    _cendP.setX( _pL[pk].x()*tx+_rx );
+                    _cendP.setY( _pL[pk].y()*ty*-1+_ry );
+                    p.drawLine( _cstartP, _cendP );
+
+                    if( pk == _pL.size()-1 && _arrow )
+                    {
+                        QLineF l0 = QLineF( _cendP, _cstartP );
+                        l0.setLength(wegBreite*5);
+                        QPointF _p1 = l0.p1();
+                        QPointF _p2 = l0.p2();
+                        QLineF l1 = QLineF( l0 );
+                        qreal w1 = l1.angle()-90.0;
+                        QLineF l2;
+                        l2.setP1(_p2);
+                        l2.setAngle(w1);
+                        l2.setLength(wegBreite*2);
+                        QPointF _p3 = l2.p2();
+                        l2.setAngle( l2.angle()+180.0 );
+                        QPointF _p4 = l2.p2();
+                        QPolygonF _poly;
+                        _poly.append( _p1 );
+                        _poly.append( _p3 );
+                        _poly.append( _p4 );
+                        QBrush brush = p.brush();
+                        brush.setColor( _color );
+                        brush.setStyle( Qt::SolidPattern );
+                        QPen arrowPen = p.pen();
+                        arrowPen.setCosmetic( true );
+                        arrowPen.setStyle(Qt::SolidLine);
+                        p.setPen( arrowPen );
+                        p.setBrush( brush );
+                        p.drawPolygon(_poly);
+                    }
+                    _cstartP = _cendP;
+                }
+            }
 
             int e = mpMap->rooms[pArea->rooms[i]]->z;
             for( int k=0; k<exitList.size(); k++ )
@@ -572,7 +748,10 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
                 p.setPen(QPen( mpHost->mFgColor_2) );
                 pen = p.pen();
-                pen.setWidthF(eSize);
+                pen.setWidthF( wegBreite );
+                pen.setJoinStyle( Qt::RoundJoin );
+                pen.setCapStyle( Qt::RoundCap );
+                pen.setCosmetic( true );
                 p.setPen( pen );
 
                 QVector3D p1( ex, ey, ez );
@@ -584,86 +763,128 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 else
                 {
                     QPen __pen = p.pen();
+                    QLine _line;
                     if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->south ) && mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x(), p2.y()+ty,p2.x(), p2.y() );
+                        _line = QLine( p2.x(), p2.y()+ty,p2.x(), p2.y() );
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x(), p2.y()+ty/2);
                         mAreaExitList[exitList[k]] = _p;
                     }
                     else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->north ) && mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x(), p2.y()-ty, p2.x(), p2.y() );
+                        _line = QLine( p2.x(), p2.y()-ty, p2.x(), p2.y() );
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x(), p2.y()-ty/2);
                         mAreaExitList[exitList[k]] = _p;
                     }
                     else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->west ) && mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x()-tx, p2.y(),p2.x(), p2.y() );
+                        _line = QLine(p2.x()-tx, p2.y(),p2.x(), p2.y() );
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x()-tx/2, p2.y());
                         mAreaExitList[exitList[k]] = _p;
                     }
                     else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->east ) && mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x()+tx, p2.y(),p2.x(), p2.y() );
+                        _line = QLine(p2.x()+tx, p2.y(),p2.x(), p2.y() );
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x()+tx/2, p2.y());
                         mAreaExitList[exitList[k]] = _p;
                     }
                     else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->northwest ) && mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x()-tx, p2.y()-ty,p2.x(), p2.y() );
+                        _line = QLine(p2.x()-tx, p2.y()-ty,p2.x(), p2.y() );
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x()-tx/2, p2.y()-ty/2);
                         mAreaExitList[exitList[k]] = _p;
                     }
                     else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->northeast ) && mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x()+tx, p2.y()-ty,p2.x(), p2.y() );
+                        _line = QLine(p2.x()+tx, p2.y()-ty,p2.x(), p2.y());
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x()+tx/2, p2.y()-ty/2);
                         mAreaExitList[exitList[k]] = _p;
                     }
                     else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->southeast ) && mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x()+tx, p2.y()+ty, p2.x(), p2.y() );
+                        _line = QLine(p2.x()+tx, p2.y()+ty, p2.x(), p2.y());
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x()+tx/2, p2.y()+ty/2);
                         mAreaExitList[exitList[k]] = _p;
                     }
                     else if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->southwest ) && mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
                     {
-                        p.setPen(getColor(exitList[k]));
                         pen = p.pen();
-                        pen.setWidthF(eSize);
+                        pen.setWidthF(wegBreite);
+                        pen.setCosmetic( true );
+                        pen.setColor(getColor(exitList[k]));
                         p.setPen( pen );
-                        p.drawLine( p2.x()-tx, p2.y()+ty, p2.x(), p2.y() );
+                        _line = QLine(p2.x()-tx, p2.y()+ty, p2.x(), p2.y());
+                        p.drawLine( _line );
                         QPoint _p = QPoint(p2.x()-tx/2, p2.y()+ty/2);
                         mAreaExitList[exitList[k]] = _p;
                     }
+                    QLineF l0 = QLineF( _line );
+                    l0.setLength(wegBreite*5);
+                    QPointF _p1 = l0.p1();
+                    QPointF _p2 = l0.p2();
+                    QLineF l1 = QLineF( l0 );
+                    qreal w1 = l1.angle()-90.0;
+                    QLineF l2;
+                    l2.setP1(_p2);
+                    l2.setAngle(w1);
+                    l2.setLength(wegBreite*2);
+                    QPointF _p3 = l2.p2();
+                    l2.setAngle( l2.angle()+180.0 );
+                    QPointF _p4 = l2.p2();
+                    QPolygonF _poly;
+                    _poly.append( _p1 );
+                    _poly.append( _p3 );
+                    _poly.append( _p4 );
+                    QBrush brush = p.brush();
+                    brush.setColor( getColor(exitList[k]) );
+                    brush.setStyle( Qt::SolidPattern );
+                    QPen arrowPen = p.pen();
+                    arrowPen.setCosmetic( true );
+                    p.setPen( arrowPen );
+                    p.setBrush( brush );
+                    p.drawPolygon(_poly);
                     p.setPen( __pen );
                 }
             }
@@ -694,8 +915,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         }
 
         QColor c;
-
-
         int env = mpMap->rooms[pArea->rooms[i]]->environment;
         if( mpMap->envColors.contains(env) )
             env = mpMap->envColors[env];
@@ -769,7 +988,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         if( ( mPick || __Pick ) && mPHighlight.x() >= dr.x()-(tx*rSize) && mPHighlight.x() <= dr.x()+(tx*rSize) && mPHighlight.y() >= dr.y()-(ty*rSize) && mPHighlight.y() <= dr.y()+(ty*rSize)
             || mMultiSelectionList.contains(pArea->rooms[i]) )
         {
-            p.fillRect(dr,QColor(55,255,55));
+            p.fillRect(dr,QColor(255,155,55));
             mPick = false;
             if( mStartSpeedWalk )
             {
@@ -869,30 +1088,77 @@ void T2DMap::paintEvent( QPaintEvent * e )
             lc=QColor(0,0,0);
         else
             lc=QColor(255,255,255);
-        p.setPen(QPen(lc));
         pen = p.pen();
-        pen.setWidthF(eSize);
+        pen.setColor( lc );
+        pen.setWidthF(0);//wegBreiteÏ);
+        pen.setCosmetic( true );
+        pen.setCapStyle( Qt::RoundCap );
+        pen.setJoinStyle( Qt::RoundJoin );
         p.setPen( pen );
 
         if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->up ) && mpMap->rooms[pArea->rooms[i]]->up > 0 )
         {
-            p.drawLine(rx-(tx*rSize)/5, ry+(ty*rSize)/4, rx, ry+(ty*rSize)/7);
-            p.drawLine(rx,ry+(ty*rSize)/7,rx+(tx*rSize)/5, ry+(ty*rSize)/4);
+            QPolygonF _poly;
+            QPointF _pt;
+            _pt = QPointF( rx, ry+(ty*rSize)/20 );
+            _poly.append( _pt );
+            _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)/3.1 );
+            _poly.append( _pt );
+            _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
+            _poly.append(_pt);
+            QBrush brush = p.brush();
+            brush.setColor( QColor(0, 0 ,0) );
+            brush.setStyle( Qt::SolidPattern );
+            p.setBrush( brush );
+            p.drawPolygon(_poly);
         }
         if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->down ) && mpMap->rooms[pArea->rooms[i]]->down > 0 )
         {
-            p.drawLine(rx-(tx*rSize)/5, ry-(ty*rSize)/4, rx, ry-(ty*rSize)/7);
-            p.drawLine(rx,ry-(ty*rSize)/7,rx+(tx*rSize)/5, ry-(ty*rSize)/4);
+            QPolygonF _poly;
+            QPointF _pt;
+            _pt = QPointF( rx, ry-(ty*rSize)/20 );
+            _poly.append( _pt );
+            _pt = QPointF( rx-(tx*rSize)/3.1, ry-(ty*rSize)/3.1 );
+            _poly.append( _pt );
+            _pt = QPointF( rx+(tx*rSize)/3.1, ry-(ty*rSize)/3.1);
+            _poly.append(_pt);
+            QBrush brush = p.brush();
+            brush.setColor( QColor(0, 0 ,0) );
+            brush.setStyle( Qt::SolidPattern );
+            p.setBrush( brush );
+            p.drawPolygon(_poly);
         }
         if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->in ) && mpMap->rooms[pArea->rooms[i]]->in > 0 )
         {
-            p.drawLine(rx-(tx*rSize)/5, ry-(ty*rSize)/4, rx-(tx*rSize)/7, ry);
-            p.drawLine(rx-(tx*rSize)/7,ry,rx-(tx*rSize)/5, ry+(ty*rSize)/4);
+            QPolygonF _poly;
+            QPointF _pt;
+            _pt = QPointF( rx+(tx*rSize)/20, ry );
+            _poly.append( _pt );
+            _pt = QPointF( rx-(tx*rSize)/3.1, ry-(ty*rSize)/3.1 );
+            _poly.append( _pt );
+            _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
+            _poly.append(_pt);
+            QBrush brush = p.brush();
+            brush.setColor( QColor(0, 0 ,0) );
+            brush.setStyle( Qt::SolidPattern );
+            p.setBrush( brush );
+            p.drawPolygon(_poly);
         }
         if( mpMap->rooms.contains( mpMap->rooms[pArea->rooms[i]]->out ) && mpMap->rooms[pArea->rooms[i]]->out > 0 )
         {
-            p.drawLine(rx+(tx*rSize)/5, ry-(ty*rSize)/4, rx+(tx*rSize)/7, ry);
-            p.drawLine(rx+(tx*rSize)/7,ry,rx+(tx*rSize)/5, ry+(ty*rSize)/4);
+            QPolygonF _poly;
+            QPointF _pt;
+            _pt = QPointF( rx-(tx*rSize)/20, ry);
+            _poly.append( _pt );
+            _pt = QPointF( rx+(tx*rSize)/3.1, ry-(ty*rSize)/3.1 );
+            _poly.append( _pt );
+            _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
+            _poly.append(_pt);
+            QBrush brush = p.brush();
+            brush.setColor( QColor(0, 0 ,0) );
+            brush.setStyle( Qt::SolidPattern );
+            p.setBrush( brush );
+            p.drawPolygon(_poly);
         }
         if( pArea->gridMode )
         {
@@ -1083,6 +1349,30 @@ void T2DMap::paintEvent( QPaintEvent * e )
         p.drawText( 10, 4*mFontHeight, text );
         qDebug()<<"render time:"<<__time.elapsed();
     }
+
+    QMapIterator<int, TMapLabel> it(pArea->labelMap);
+    while( it.hasNext() )
+    {
+        it.next();
+
+        QRectF lr = QRectF( 0, 0, 1000, 100 );
+        QPixmap pix( lr.size().toSize() );
+        pix.fill(QColor(0,0,0,0));
+        QPainter lp( &pix );
+
+        lp.fillRect( lr, it.value().bgColor );
+        QPen lpen;
+        lpen.setColor( it.value().fgColor );
+        lp.setPen( lpen );
+        QRectF br;
+        lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
+        QPointF lpos;
+        lpos.setX( it.value().pos.x()*tx+_rx );
+        lpos.setY( it.value().pos.y()*ty*-1+_ry );
+        p.drawPixmap( lpos, pix, br.toRect() );
+
+    }
+
 }
 
 void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
@@ -1111,6 +1401,30 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
     mNewMoveAction = true;
     if( event->buttons() & Qt::LeftButton )
     {
+        if( mCustomLinesRoomFrom > 0 )
+        {
+            if( mpMap->rooms.contains( mCustomLinesRoomFrom ) )
+            {
+                float ox = mOx;
+                float oy = mOy;
+                float _rx;
+                float _ry;
+                if( ox*mTX > xspan/2*mTX )
+                    _rx = -(mTX*ox-xspan/2*mTX);
+                else
+                    _rx = xspan/2*mTX-mTX*ox;
+                if( oy*mTY > yspan/2*mTY )
+                    _ry = -(mTY*oy-yspan/2*mTY);
+                else
+                    _ry = yspan/2*mTY-mTY*oy;
+                float mx = event->pos().x()/mTX + mOx;
+                float my = event->pos().y()/mTY + mOy;
+                mx = mx - xspan/2;
+                my = yspan/2 - my;;
+                mpMap->rooms[mCustomLinesRoomFrom]->customLines[mCustomLinesRoomExit].push_back( QPointF( mx, my ) );
+            }
+            repaint();
+        }
         if( mRoomBeingMoved )
         {
             mPHighlightMove = event->pos();
@@ -1132,6 +1446,10 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
     }
     if( event->buttons() & Qt::RightButton )
     {
+        if( mCustomLinesRoomFrom > 0 )
+        {
+            mCustomLinesRoomFrom = 0;
+        }
         int x = event->x();
         int y = event->y();
         mPHighlight = QPoint(x,y);
@@ -1181,6 +1499,14 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         action13->setStatusTip(tr("set room area ID"));
         connect( action13, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
+        QAction * action14 = new QAction("custom exit lines", this );
+        action14->setStatusTip(tr("replace an exit line with a custom line"));
+        connect( action14, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
+
+        QAction * action15 = new QAction("Create Label", this );
+        action15->setStatusTip(tr("Create labels to show text or images."));
+        connect( action15, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
+
         mPopupMenu = true;
         QMenu * popup = new QMenu( this );
 
@@ -1198,8 +1524,11 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 
         popup->addAction( action9 );
         popup->addAction( action13 );
+        popup->addAction( action14 );
+        popup->addAction( action15 );
 
         popup->popup( mapToGlobal( event->pos() ) );
+        mLastMouseClick = event->posF();
     }
     update();
 }
@@ -1652,7 +1981,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
             int ry = mpMap->rooms[pArea->rooms[k]]->y*-1*mTY+_ry;
             int rz = mpMap->rooms[pArea->rooms[k]]->z;
 
-            if( rz != mpMap->rooms[pArea->rooms[k]]->z ) continue;
+            // NOTE: in multi room selection mode you select all rooms within the selection rectangle on *all* z-levels to make area merges easier
 
             QRectF dr;
             if( pArea->gridMode )
@@ -1689,15 +2018,37 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
             mPHighlightMove = event->pos();
             if( mpMap->rooms.contains( mRoomSelection ) )
             {
-                int mx = mPHighlightMove.x()/mTX;
-                int my = mPHighlightMove.y()/mTY;
-                mx = mx - xspan/2 + 1;
-                my = yspan/2 - my - 1;
-                mx += mpMap->rooms[mRID]->x;
-                my += mpMap->rooms[mRID]->y;
-                mMoveTarget = QPoint( mx, my );
-                mpMap->rooms[mRoomSelection]->x = mMoveTarget.x();
-                mpMap->rooms[mRoomSelection]->y = mMoveTarget.y();
+                int ox = mOx;
+                int oy = mOy;
+                float _rx;
+                float _ry;
+                if( ox*mTX > xspan/2*mTX )
+                    _rx = -(mTX*ox-xspan/2*mTX);
+                else
+                    _rx = xspan/2*mTX-mTX*ox;
+                if( oy*mTY > yspan/2*mTY )
+                    _ry = -(mTY*oy-yspan/2*mTY);
+                else
+                    _ry = yspan/2*mTY-mTY*oy;
+                int mx = event->pos().x()/mTX + mOx;
+                int my = event->pos().y()/mTY + mOy;
+                mx = mx - xspan/2;// + 1;
+                my = yspan/2 - my;// - 1;
+                mpMap->rooms[mRoomSelection]->x = mx;
+                mpMap->rooms[mRoomSelection]->y = my;
+
+                QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mRoomSelection]->customLines);
+                while( itk.hasNext() )
+                {
+                    itk.next();
+                    QList<QPointF> _pL = itk.value();
+                    for( int pk=0; pk<_pL.size(); pk++ )
+                    {
+                        QPointF op = _pL[pk];
+                        _pL[pk].setX( (float)(mx - op.x()) );
+                        _pL[pk].setY( (float)(my - op.y()) );
+                    }
+                }
             }
             repaint();
         }
@@ -1742,6 +2093,22 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 {
                     mpMap->rooms[mMultiSelectionList[j]]->x += dx;
                     mpMap->rooms[mMultiSelectionList[j]]->y += dy;
+
+                    QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mMultiSelectionList[j]]->customLines);
+                    QMap<QString, QList<QPointF> > newMap;
+                    while( itk.hasNext() )
+                    {
+                        itk.next();
+                        QList<QPointF> _pL = itk.value();
+                        for( int pk=0; pk<_pL.size(); pk++ )
+                        {
+                            QPointF op = _pL[pk];
+                            _pL[pk].setX( (float)(op.x()+dx) );
+                            _pL[pk].setY( (float)(op.y()+dy) );
+                        }
+                        newMap.insert(itk.key(), _pL );
+                    }
+                    mpMap->rooms[mMultiSelectionList[j]]->customLines = newMap;
                 }
             }
             if( mMultiSelectionList.size() == 1 )
@@ -1843,3 +2210,211 @@ void T2DMap::setExitSize( double f )
     eSize = f;
     if( mpHost ) mpHost->mLineSize = f;
 }
+
+#include <QTreeWidget>
+
+void T2DMap::slot_setCustomLine()
+{
+    if( ! mpHost->mpMap->rooms.contains( mRoomSelection ) ) return;
+    QUiLoader loader;
+
+    QFile file(":/ui/custom_lines.ui");
+    file.open(QFile::ReadOnly);
+    QDialog *d = dynamic_cast<QDialog *>(loader.load(&file, this));
+    file.close();
+    qDebug()<<"loaded custom_lines.ui";
+    if( ! d ) return;
+    mpCustomLinesDialog = d;
+    TRoom * pR = mpHost->mpMap->rooms[mRoomSelection];
+
+    mCustomLinesRoomFrom = mRoomSelection;
+    mCustomLinesRoomTo = 0;
+    mCustomLinesRoomExit = "";
+    QPushButton * b_ = d->findChild<QPushButton*>("nw");
+    QTreeWidget * specialExits = d->findChild<QTreeWidget*>("specialExits");
+    mpCurrentLineStyle = d->findChild<QComboBox*>("lineStyle");
+    mpCurrentLineColor = d->findChild<QPushButton*>("lineColor");
+    mpCurrentLineArrow = d->findChild<QCheckBox*>("arrow");
+    if( ! b_ || ! specialExits || ! mpCurrentLineColor || ! mpCurrentLineStyle || ! mpCurrentLineArrow ) return;
+
+    b_->setCheckable(false);
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    if( pR->northwest <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("n");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->north <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("ne");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->northeast <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("w");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->west <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("e");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->east <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("s");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->south <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("se");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->southeast <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("sw");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->southwest <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("up");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->up <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("down");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->down <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("in");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->in <= 0 ) b_->setDisabled(true);
+
+    b_ = d->findChild<QPushButton*>("out");
+    if( !b_ ) return;
+    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    b_->setCheckable(false);
+    if( pR->out <= 0 ) b_->setDisabled(true);
+
+    QMapIterator<int, QString> it(pR->other);
+    while( it.hasNext() )
+    {
+        it.next();
+        int id_to = it.key();
+        QString dir = it.value();
+        QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
+        pI->setText( 0, QString::number(id_to) );
+        if( dir.size() > 1 )
+            if( dir.startsWith('0')|| dir.startsWith('1') )
+                dir = dir.mid(1);
+        pI->setText( 1, dir );
+    }
+
+    QStringList _lineStyles;
+    _lineStyles << "solid line" << "dot line" << "dash line" << " dash dot line" << "dash dot dot line";
+    mpCurrentLineStyle->addItems(_lineStyles);
+    connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem *,int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
+    connect( mpCurrentLineColor, SIGNAL(pressed()), this, SLOT(slot_customLineColor()));
+
+    d->show();
+    d->raise();
+}
+
+void T2DMap::slot_customLineColor()
+{
+    QColor color = QColorDialog::getColor( mpHost->mFgColor_2, this );
+    if ( color.isValid() )
+    {
+        mCurrentLineColor = color;
+        QPalette palette;
+        palette.setColor( QPalette::Button, color );
+        mpCurrentLineColor->setPalette( palette );
+        palette.setColor( QPalette::Button, color );
+        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        mpCurrentLineColor->setStyleSheet( styleSheet );
+    }
+    else
+        mCurrentLineColor = mpHost->mFgColor_2;
+}
+
+#include "TRoom.h"
+
+void T2DMap::slot_setCustomLine2()
+{
+    QPushButton* pB = (QPushButton*)sender();
+    if( ! pB ) return;
+    QString exit = pB->text();
+    mpCustomLinesDialog->close();
+    mCustomLinesRoomExit = exit;
+    if( ! mpHost->mpMap->rooms.contains(mCustomLinesRoomFrom) ) return;
+    QList<QPointF> _list;
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLines[exit] = _list;
+    QList<int> _colorList;
+    _colorList << mCurrentLineColor.red() << mCurrentLineColor.green() << mCurrentLineColor.blue();
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesColor[exit] = _colorList;
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesStyle[exit] = mpCurrentLineStyle->currentText();
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesArrow[exit] = mpCurrentLineArrow->isChecked();
+    qDebug()<<"exit="<<exit;
+}
+
+void T2DMap::slot_setCustomLine2B(QTreeWidgetItem * special_exit, int column )
+{
+    if( ! special_exit ) return;
+    QString exit = special_exit->text(1);
+    mpCustomLinesDialog->close();
+    mCustomLinesRoomExit = exit;
+    if( ! mpHost->mpMap->rooms.contains(mCustomLinesRoomFrom) ) return;
+    QList<QPointF> _list;
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLines[exit] = _list;
+    QList<int> _colorList;
+    _colorList << mCurrentLineColor.red() << mCurrentLineColor.green() << mCurrentLineColor.blue();
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesColor[exit] = _colorList;
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesStyle[exit] = mpCurrentLineStyle->currentText();
+    mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesArrow[exit] = mpCurrentLineArrow->isChecked();
+    qDebug()<<"exit="<<exit;
+}
+
+void T2DMap::slot_createLabel()
+{
+    if( ! mpMap->areas.contains( mAID ) ) return;
+
+    TMapLabel label;
+    QString title = "Enter label text.";
+    QString t = QInputDialog::getText(0, title, title );
+    label.text = t;
+    label.bgColor = QColor(50,50,150,100);
+    label.fgColor = QColor(255,255,50,255);
+    label.size = QSizeF(100,100);
+    int ox = mOx;
+    int oy = mOy;
+    float _rx;
+    float _ry;
+    if( ox*mTX > xspan/2*mTX )
+        _rx = -(mTX*ox-xspan/2*mTX);
+    else
+        _rx = xspan/2*mTX-mTX*ox;
+    if( oy*mTY > yspan/2*mTY )
+        _ry = -(mTY*oy-yspan/2*mTY);
+    else
+        _ry = yspan/2*mTY-mTY*oy;
+    float mx = mLastMouseClick.x()/mTX + mOx;
+    float my = mLastMouseClick.y()/mTY + mOy;
+    mx = mx - xspan/2;
+    my = yspan/2 - my;
+    label.pos = QPointF( mx, my );
+    if( ! mpMap->areas.contains(mAID) ) return;
+    int labelID = mpMap->areas[mAID]->labelMap.size();
+    mpMap->areas[mAID]->labelMap[labelID] = label;
+}
+

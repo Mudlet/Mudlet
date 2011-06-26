@@ -49,10 +49,6 @@ public:
     int environment;
     int weight;
     bool isLocked;
-//    float xRot;
-//    float yRot;
-//    float zRot;
-//    float zoom;
     qint8 c;
     QString name;
     QVector3D v;
@@ -60,6 +56,10 @@ public:
                                    //verbotene exits werden mit 0 geprefixed, offene mit 1
     QMap<QString, QString> userData;
     QList<int> exitLocks;
+    QMap<QString, QList<QPointF> > customLines;
+    QMap<QString, QList<int> > customLinesColor;
+    QMap<QString, QString> customLinesStyle;
+    QMap<QString, bool> customLinesArrow;
 };
 
 #endif // TROOM_H

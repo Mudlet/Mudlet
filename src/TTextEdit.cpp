@@ -867,15 +867,16 @@ void TTextEdit::paintEvent( QPaintEvent* e )
 {
     const QRect & rect = e->rect();
 
+    if( mFontWidth <= 0 || mFontHeight <= 0 ) return;
+
     if( mScreenHeight <= 0 || mScreenWidth <= 0 )
     {
         mScreenHeight = height()/mFontHeight;//e->rect().height();
         mScreenWidth = 100;//e->rect().width();
+        if( mScreenHeight <= 0 || mScreenWidth <= 0 ) return;
     }
     QPainter painter( this );
     if( ! painter.isActive() ) return;
-
-    QTime t; t.start();
 
     QRect borderRect = QRect( 0, mScreenHeight*mFontHeight, rect.width(), rect.height() );
     drawBackground( painter, borderRect, mBgColor );
@@ -883,8 +884,6 @@ void TTextEdit::paintEvent( QPaintEvent* e )
     drawBackground( painter, borderRect2, mBgColor );
     drawForeground( painter, rect );
     mUpdateSlice = false;
-
-    qDebug()<<"render timer: "<<t.elapsed()<<"ms rect="<<rect;
 }
 
 

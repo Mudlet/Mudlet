@@ -35,6 +35,8 @@ public:
     void init( int );
     Host * mpHost;
     int mRoomID;
+    int mEditColumn;
+    QTreeWidgetItem * mpEditItem;
 
 signals:
 

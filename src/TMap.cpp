@@ -52,6 +52,20 @@ TMap::TMap( Host * pH )
 
 }
 
+#include <QFileDialog>
+void TMap::exportMapToDatabase()
+{
+    QString dbName = QFileDialog::getSaveFileName( 0, "Chose db file name." );
+    QString script = QString("exportMapToDatabse([[%1]])").arg(dbName);
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+}
+
+void TMap::importMapFromDatabase()
+{
+    QString dbName = QFileDialog::getOpenFileName( 0, "Chose db file name." );
+    QString script = QString("importMapFromDatabase([[%1]])").arg(dbName);
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+}
 
 void TMap::setRoomArea( int id, int area )
 {
@@ -630,23 +644,30 @@ void TMap::initGraph()
 
         if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->north,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->north]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->north ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->north,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->north]->weight;
+
+            }
         }
         if( rooms[i]->south != -1 && rooms.contains( rooms[i]->south ) && !rooms[rooms[i]->south]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->south,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->south]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->south ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->south,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->south]->weight;
+            }
         }
         if( rooms[i]->northeast != -1 && rooms.contains( rooms[i]->northeast ) && !rooms[rooms[i]->northeast]->isLocked )
         {
@@ -660,93 +681,120 @@ void TMap::initGraph()
         }
         if( rooms[i]->east != -1 && rooms.contains( rooms[i]->east ) && !rooms[rooms[i]->east]->isLocked )
         {
-           edgeCount++;
-           edge_descriptor e;
-           bool inserted;
-           tie(e, inserted) = add_edge( i,
-                                        rooms[i]->east,
-                                        g );
-           weightmap[e] = rooms[rooms[i]->east]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->east ) )
+            {
+               edgeCount++;
+               edge_descriptor e;
+               bool inserted;
+               tie(e, inserted) = add_edge( i,
+                                            rooms[i]->east,
+                                            g );
+               weightmap[e] = rooms[rooms[i]->east]->weight;
+            }
         }
         if( rooms[i]->west != -1 && rooms.contains( rooms[i]->west ) && !rooms[rooms[i]->west]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->west,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->west]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->west ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->west,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->west]->weight;
+            }
         }
         if( rooms[i]->southwest != -1 && rooms.contains( rooms[i]->southwest ) && !rooms[rooms[i]->southwest]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->southwest,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->southwest]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->southwest ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->southwest,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->southwest]->weight;
+            }
         }
         if( rooms[i]->southeast != -1 && rooms.contains( rooms[i]->southeast ) && !rooms[rooms[i]->southeast]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->southeast,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->southeast]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->southeast ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->southeast,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->southeast]->weight;
+            }
         }
         if( rooms[i]->northwest != -1 && rooms.contains( rooms[i]->northwest ) && !rooms[rooms[i]->northwest]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->northwest,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->northwest]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->northwest ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->northwest,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->northwest]->weight;
+            }
         }
         if( rooms[i]->up != -1 && rooms.contains( rooms[i]->up ) && !rooms[rooms[i]->up]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->up,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->up]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->up ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->up,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->up]->weight;
+            }
         }
         if( rooms[i]->down != -1 && rooms.contains( rooms[i]->down ) && !rooms[rooms[i]->down]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->down,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->down]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->down ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->down,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->down]->weight;
+            }
         }
         if( rooms[i]->in != -1 && rooms.contains( rooms[i]->in ) && !rooms[rooms[i]->in]->isLocked )
         {
-            edgeCount++;
-            edge_descriptor e;
-            bool inserted;
-            tie(e, inserted) = add_edge( i,
-                                         rooms[i]->in,
-                                         g );
-            weightmap[e] = rooms[rooms[i]->in]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->in ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                             rooms[i]->in,
+                                             g );
+                weightmap[e] = rooms[rooms[i]->in]->weight;
+            }
         }
         if( rooms[i]->out != -1 && rooms.contains( rooms[i]->out ) && !rooms[rooms[i]->out]->isLocked )
         {
-             edgeCount++;
-             edge_descriptor e;
-             bool inserted;
-             tie(e, inserted) = add_edge( i,
-                                          rooms[i]->out,
-                                          g );
-             weightmap[e] = rooms[rooms[i]->out]->weight;
+            if( ! rooms[i]->hasExitLock( rooms[i]->out ) )
+            {
+                 edgeCount++;
+                 edge_descriptor e;
+                 bool inserted;
+                 tie(e, inserted) = add_edge( i,
+                                              rooms[i]->out,
+                                              g );
+                 weightmap[e] = rooms[rooms[i]->out]->weight;
+            }
         }
         if( rooms[i]->other.size() > 0 )
         {
@@ -755,13 +803,16 @@ void TMap::initGraph()
             {
                 it.next();
                 int _id = it.key();
-                edgeCount++;
-                edge_descriptor e;
-                bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             _id,
-                                             g );
-                weightmap[e] = rooms[_id]->weight;
+                if( ! rooms[i]->hasSpecialExitLock( _id, it.value() ) )
+                {
+                    edgeCount++;
+                    edge_descriptor e;
+                    bool inserted;
+                    tie(e, inserted) = add_edge( i,
+                                                 _id,
+                                                 g );
+                    weightmap[e] = rooms[_id]->weight;
+                }
             }
         }
     }
@@ -1093,6 +1144,30 @@ bool TMap::restore()
 }
 
 
+// called from scripts
+int TMap::createMapLabel(int area, QString text, float x, float y, QColor fg, QColor bg )
+{
+    if( ! areas.contains( area ) ) return -1;
+    TMapLabel label;
+    label.text = text;
+    label.bgColor = bg;
+    label.bgColor.setAlpha(50);
+    label.fgColor = fg;
+    label.size = QSizeF(100,100);
+    label.pos = QPointF( x, y );
+    int labelID = areas[area]->labelMap.size();
+    areas[area]->labelMap[labelID] = label;
+    if( mpMapper ) mpMapper->mp2dMap->update();
+    return labelID;
+}
+
+void TMap::deleteMapLabel(int area, int labelID )
+{
+    if( ! areas.contains( area ) ) return;
+    if( ! areas[area]->labelMap.contains( labelID ) ) return;
+    areas[area]->labelMap.remove( labelID );
+    if( mpMapper ) mpMapper->mp2dMap->update();
+}
 
 
 
