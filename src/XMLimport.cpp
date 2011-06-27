@@ -653,6 +653,8 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mEnableSpellCheck = ( attributes().value("mEnableSpellCheck") == "yes" );
     pT->mShowInfo = ( attributes().value("mShowInfo") == "yes" );
     pT->mAcceptServerGUI = ( attributes().value("mAcceptServerGUI") == "yes" );
+    pT->mMapperUseAntiAlias = ( attributes().value("mMapperUseAntiAlias") == "yes" );
+
     while( ! atEnd() )
     {
         readNext();

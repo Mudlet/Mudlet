@@ -99,6 +99,7 @@ public:
     bool mShowGrid;
     QPointF mLastMouseClick;
     bool mBubbleMode;
+    bool mMapperUseAntiAlias;
 
 signals:
 

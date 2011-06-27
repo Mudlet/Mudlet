@@ -292,6 +292,7 @@ public:
     bool               mAcceptServerGUI;
     QColor             mCommandLineFgColor;
     QColor             mCommandLineBgColor;
+    bool               mMapperUseAntiAlias;
 
 private:
     Host();

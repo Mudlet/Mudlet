@@ -120,6 +120,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mEnableSpellCheck", pT->mEnableSpellCheck ? "yes" : "no" );
     writeAttribute( "mShowInfo", pT->mShowInfo ? "yes" : "no" );
     writeAttribute( "mAcceptServerGUI", pT->mAcceptServerGUI ? "yes" : "no" );
+    writeAttribute( "mMapperUseAntiAlias", pT->mMapperUseAntiAlias ? "yes" : "no" );
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );

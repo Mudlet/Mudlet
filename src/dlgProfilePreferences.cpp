@@ -40,6 +40,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     // init generated dialog
     setupUi(this);
 
+    mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
     QString nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
     QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
@@ -1326,7 +1327,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
     pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
     pHost->mEnableGMCP = mEnableGMCP->isChecked();
-
+    pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+    if( pHost->mpMap )
+        if( pHost->mpMap->mpMapper )
+            pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
     pHost->mBorderTopHeight = topBorderHeight->value();
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();

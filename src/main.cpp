@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     qInstallMsgHandler( debugOutput );
     spDebugConsole = 0;
 
-    QGL::setPreferredPaintEngine(QPaintEngine::OpenGL);//FIXME
+    //QGL::setPreferredPaintEngine(QPaintEngine::OpenGL);//FIXME
     Q_INIT_RESOURCE(mudlet_alpha);
     QApplication app(argc, argv);
     app.setApplicationName("Mudlet");
