@@ -9,10 +9,6 @@ Geyser.VBox = Geyser.Container:new({
       name = "VBoxClass"
    })
 
-function Geyser.VBox:begin_update()
-   self.defer_updates = true
-end
-   
 function Geyser.VBox:add (window, cons)
    Geyser.add(self, window, cons)
    if not self.defer_updates then
@@ -20,11 +16,6 @@ function Geyser.VBox:add (window, cons)
    end
 end
    
-function Geyser.VBox:end_update()
-   self.defer_updates = false
-   self:reposition()
-end
-
 --- Responsible for placing/moving/resizing this window to the correct place/size.
 -- Called on window resize events.
 function Geyser.VBox:reposition()

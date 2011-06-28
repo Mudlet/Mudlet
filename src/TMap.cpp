@@ -1236,8 +1236,9 @@ int TMap::createMapLabel(int area, QString text, float x, float y, QColor fg, QC
 void TMap::deleteMapLabel(int area, int labelID )
 {
     if( ! areas.contains( area ) ) return;
-    if( ! mapLabels.contains( labelID ) ) return;
-    mapLabels.remove( labelID );
+    if( ! mapLabels.contains( area ) ) return;
+    if( ! mapLabels[area].contains( labelID ) ) return;
+    mapLabels[area].remove( labelID );
     if( mpMapper ) mpMapper->mp2dMap->update();
 }
 

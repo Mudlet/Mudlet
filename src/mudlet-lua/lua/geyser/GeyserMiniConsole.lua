@@ -104,7 +104,13 @@ function Geyser.MiniConsole:new (cons, container)
    if cons.wrapAt then
       me:setWrap(cons.wrapAt)
    end
-   
+   if cons.fontSize then
+      me:setFontSize(cons.fontSize)
+   elseif container then
+      me:setFontSize(container.fontSize)
+   else
+      me:setFontSize(8)
+   end   
    --print("  New in " .. self.name .. " : " .. me.name)
    return me
 end

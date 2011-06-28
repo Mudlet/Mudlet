@@ -130,19 +130,43 @@ function Geyser.Container:reposition ()
 end
 
 --- Hides this window and all its contained windows.
-function Geyser.Container:hide ()
-   hideWindow(self.name)
+function Geyser.Container:hide (auto)
+   if not (self.hidden or self.auto_hidden) then
+      self:hide_impl()
+   end
+   auto = auto or false
+   if auto then
+      self.auto_hidden=true
+   else
+      self.hidden=true
+   end
    for _,v in pairs(self.windowList) do
-      v:hide()
+      v:hide(true)
    end
 end
 
+function Geyser.Container:hide_impl()
+   hideWindow(self.name)
+end
+
 --- Shows this window and all windows it contains.
-function Geyser.Container:show ()
-   showWindow(self.name)
-   for _,v in pairs(self.windowList) do
-      v:show()
+function Geyser.Container:show (auto)
+   auto = auto or false
+   if auto then
+      self.auto_hidden=false
+   else
+      self.hidden=false
    end
+   if not self.hidden and not self.auto_hidden then
+      self:show_impl()
+   end
+   for _,v in pairs(self.windowList) do
+      v:show(true)
+   end
+end
+
+function Geyser.Container:show_impl()
+   showWindow(self.name)
 end
 
 --- Moves this window according to the new x and y contraints set. 
@@ -220,6 +244,8 @@ function Geyser.Container:new(cons, container)
    me.name = me.name or Geyser.nameGen()
    me.windowList = {}
    me.windows = {}
+   me.hidden = false
+   me.auto_hidden = false
    -- Set the metatable.
    setmetatable(me, self)
    self.__index = self

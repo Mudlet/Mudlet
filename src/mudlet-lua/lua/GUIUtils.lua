@@ -343,7 +343,8 @@ function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
 	local l__Echostring = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
 
 	echo(gaugeName, l__Echostring)
-	echo(gaugeName .. "_back", l__Echostring)
+	-- do not set the text for the back, because <center> tags mess with the alignment
+	--echo(gaugeName .. "_back", l__Echostring)
 
 	gaugesTable[gaugeName].text = l__Echostring
 	gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
@@ -564,9 +565,18 @@ end
 --- @usage This will replace all occurrences of John with the word Doe.
 ---   <pre>
 ---   replaceAll("John", "Doe")
+---   
+---   -- also handles recursive matches:
+---   replaceAll("you", "you and me")
 ---   </pre>
 function replaceAll(word, what)
-	while selectString(word, 1) > 0 do replace(what) end
+  local startp, endp = 1, 1
+  while true do
+    startp, endp = getCurrentLine():find(word, endp+(#what-#word)+1)
+    if not startp then break end
+    selectSection(startp-1, endp-startp+1)
+    replace(what)
+  end
 end
 
 
@@ -633,6 +643,7 @@ end
 --- @see fg
 --- @see showColors
 function bg(colorName)
+	assert(color_table[colorName], "bg: no such colour name")
 	setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 end
 
@@ -648,6 +659,7 @@ end
 --- @see bg
 --- @see showColors
 function fg(colorName)
+	assert(color_table[colorName], "fg: no such colour name")
 	setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 end
 

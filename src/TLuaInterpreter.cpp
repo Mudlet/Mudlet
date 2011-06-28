@@ -3069,8 +3069,7 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->areas.contains( area ) )
     {
-        lua_pushstring( L, "getAreaRooms ERROR: no such area ID" );
-        lua_error( L );
+        lua_pushnil(L);
         return 1;
     }
     lua_newtable(L);
@@ -5232,8 +5231,7 @@ int TLuaInterpreter::getRoomArea( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->rooms.contains( id ) )
     {
-        lua_pushstring( L, "getRoomArea: room ID does not exist");
-        lua_error( L );
+        lua_pushnil(L);
         return 1;
     }
     lua_pushnumber( L, pHost->mpMap->rooms[id]->area );
@@ -5309,6 +5307,9 @@ int TLuaInterpreter::unHighlightRoom( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->rooms.contains( id ) ) return 0;
     pHost->mpMap->rooms[id]->highlight = false;
+    if( pHost->mpMap )
+        if( pHost->mpMap->mpMapper )
+            pHost->mpMap->mpMapper->mp2dMap->update();
     return 0;
 }
 

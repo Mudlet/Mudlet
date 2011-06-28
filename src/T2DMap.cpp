@@ -1130,7 +1130,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             lc=QColor(255,255,255);
         pen = p.pen();
         pen.setColor( lc );
-        pen.setWidthF(0);//wegBreiteè);
+        pen.setWidthF(0);//wegBreite?);
         pen.setCosmetic( mMapperUseAntiAlias );
         pen.setCapStyle( Qt::RoundCap );
         pen.setJoinStyle( Qt::RoundJoin );

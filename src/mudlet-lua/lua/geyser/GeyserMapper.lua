@@ -1,8 +1,8 @@
 --------------------------------------
---                                  --
+-- --
 -- The Geyser Layout Manager by guy --
--- createMapper support by Vadi     --
---                                  --
+-- createMapper support by Vadi --
+-- --
 --------------------------------------
 
 --- Represents a mapper primitive
@@ -17,6 +17,20 @@ Geyser.Mapper = Geyser.Window:new({
 -- Save a reference to our parent constructor
 Geyser.Mapper.parent = Geyser.Window
 
+-- Overridden reposition function - mapper does it differently right now
+function Geyser.Mapper:reposition()
+   if self.hidden then return end
+   createMapper(self:get_x(), self:get_y(), self:get_width(), self:get_height())
+end
+
+function Geyser.Mapper:hide_impl()
+   createMapper(self:get_x(), self:get_y(), 0, 0)
+end
+
+function Geyser.Mapper:show_impl()
+   createMapper(self:get_x(), self:get_y(), self:get_width(), self:get_height())
+end
+
 -- Overridden constructor
 function Geyser.Mapper:new (cons, container)
    cons = cons or {}
@@ -24,7 +38,9 @@ function Geyser.Mapper:new (cons, container)
 
    -- Call parent's constructor
    local me = self.parent:new(cons, container)
-
+   
+   me.was_hidden = false
+   
    -- Set the metatable.
    setmetatable(me, self)
    self.__index = self
@@ -37,7 +53,6 @@ function Geyser.Mapper:new (cons, container)
    -- Set any defined colors
    Geyser.Color.applyColors(me)
 
-   --print("  New in " .. self.name .. " : " .. me.name)
+   --print(" New in " .. self.name .. " : " .. me.name)
    return me
 end
-

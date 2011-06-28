@@ -8,21 +8,12 @@
 Geyser.HBox = Geyser.Container:new({
       name = "HBoxClass"
    })
-
-function Geyser.HBox:begin_update()
-   self.defer_updates = true
-end
    
 function Geyser.HBox:add (window, cons)
    Geyser.add(self, window, cons)
    if not self.defer_updates then
       self:reposition()
    end
-end
-   
-function Geyser.HBox:end_update()
-   self.defer_updates = false
-   self:reposition()
 end
   
 --- Responsible for placing/moving/resizing this window to the correct place/size.
