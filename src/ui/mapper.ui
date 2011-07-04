@@ -261,7 +261,7 @@
                   <bool>true</bool>
                  </property>
                  <property name="autoRepeatDelay">
-                  <number>1</number>
+                  <number>100</number>
                  </property>
                  <property name="autoRepeatInterval">
                   <number>1</number>
@@ -301,7 +301,7 @@
                   <bool>true</bool>
                  </property>
                  <property name="autoRepeatDelay">
-                  <number>1</number>
+                  <number>100</number>
                  </property>
                  <property name="autoRepeatInterval">
                   <number>1</number>
@@ -341,7 +341,7 @@
                   <bool>true</bool>
                  </property>
                  <property name="autoRepeatDelay">
-                  <number>1</number>
+                  <number>100</number>
                  </property>
                  <property name="autoRepeatInterval">
                   <number>1</number>
@@ -381,7 +381,7 @@
                   <bool>true</bool>
                  </property>
                  <property name="autoRepeatDelay">
-                  <number>1</number>
+                  <number>100</number>
                  </property>
                  <property name="autoRepeatInterval">
                   <number>1</number>

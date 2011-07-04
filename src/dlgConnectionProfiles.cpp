@@ -1126,6 +1126,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     QDir dir( folder );
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
+    bool needsGenericPackagesInstall = false;
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+profile_history->itemData(profile_history->currentIndex()).toString());   //entries[0]);
@@ -1136,8 +1137,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     }
     else
     {
-        //install generic mapper script
-        pHost->installPackage(":/generic_mapper_script.xml");
+        needsGenericPackagesInstall = true;
     }
 
     // overwrite the generic profile with user supplied name, url and login information
@@ -1164,6 +1164,22 @@ void dlgConnectionProfiles::slot_connectToServer()
             pHost->setLogin( login_entry->text().trimmed() );
         else
             slot_update_login( pHost->getLogin() );
+    }
+
+    if( needsGenericPackagesInstall )
+    {
+        //install generic mapper script
+        if( pHost->getUrl() == "aetolia.com" ||
+            pHost->getUrl() == "achaea.com" ||
+            pHost->getUrl() == "lusternia.com" ||
+            pHost->getUrl() == "midkemiaonline.com" ||
+            pHost->getUrl() == "imperian.com" )
+        {
+           pHost->installPackage(":/mudlet-mapper.xml");
+        }
+        else
+           pHost->installPackage(":/generic_mapper_script.xml");
+
     }
 
     emit signal_establish_connection( profile_name, 0 );

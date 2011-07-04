@@ -529,7 +529,7 @@ void TCommandLine::handleTabCompletion( bool direction )
         mTabCompletionCount = -1;
     }
     int amount = mpHost->mpConsole->buffer.size();
-    if( amount > 100 ) amount = 100;
+    if( amount > 500 ) amount = 500;
 
     QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( amount );
     QString buffer = bufferList.join(" ");
