@@ -1535,9 +1535,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         QAction * action10 = new QAction("letter", this );
         action10->setStatusTip(tr("set a letter to mark special rooms"));
         connect( action10, SIGNAL(triggered()), this, SLOT(slot_setCharacter()));
-        QAction * action11 = new QAction("image", this );
-        action11->setStatusTip(tr("set an image to mark special rooms"));
-        connect( action11, SIGNAL(triggered()), this, SLOT(slot_setImage()));
+//        QAction * action11 = new QAction("image", this );
+//        action11->setStatusTip(tr("set an image to mark special rooms"));
+//        connect( action11, SIGNAL(triggered()), this, SLOT(slot_setImage()));
 
         QAction * action12 = new QAction("move to", this );
         action12->setStatusTip(tr("move selected group to a given position"));
@@ -1559,20 +1559,20 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         QMenu * popup = new QMenu( this );
 
         popup->addAction( action );
-        popup->addAction( action12 );
         popup->addAction( action8 );
+        popup->addAction( action14 );
         popup->addAction( action3 );
         popup->addAction( action10 );
-        popup->addAction( action11 );
+        //popup->addAction( action11 );
         popup->addAction( action4 );
         popup->addAction( action5 );
         popup->addAction( action6 );
         popup->addAction( action7 );
         popup->addAction( action2 );
-
+        popup->addAction( action12 );
         popup->addAction( action9 );
         popup->addAction( action13 );
-        popup->addAction( action14 );
+
         popup->addAction( action15 );
 
         popup->popup( mapToGlobal( event->pos() ) );
@@ -1866,8 +1866,6 @@ void T2DMap::slot_shrink()
 #include "dlgRoomExits.h"
 void T2DMap::slot_setExits()
 {
-//    if( mMultiSelection ) return;
-
     if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
     {
         dlgRoomExits * pD = new dlgRoomExits( mpHost, this );
@@ -1909,7 +1907,7 @@ void T2DMap::slot_setRoomWeight()
 {
 
 
-    if( mMultiSelection )
+    if( mMultiSelectionList.size() > 0 )
     {
         int w = QInputDialog::getInt(this,"Enter a room weight (= travel time)","room weight:", 1);
         mMultiRect = QRect(0,0,0,0);
@@ -1929,7 +1927,7 @@ void T2DMap::slot_setRoomWeight()
         {
             int _w = mpHost->mpMap->rooms[mRoomSelection]->weight;
             qDebug()<<"vorher weight:"<<_w;
-            int w = QInputDialog::getInt(this, "Enter a room weight (= travel time)","room weight:",_w);
+            int w = QInputDialog::getInt(this, "Enter a room weight (= travel time).","room weight:",_w);
             qDebug()<<"--> nachher weight:"<<w;
             mpHost->mpMap->rooms[mRoomSelection]->weight = w;
             mpHost->mpMap->mMapGraphNeedsUpdate = true;

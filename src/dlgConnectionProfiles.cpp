@@ -1134,6 +1134,11 @@ void dlgConnectionProfiles::slot_connectToServer()
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
         importer.importPackage( & file );
     }
+    else
+    {
+        //install generic mapper script
+        pHost->installPackage(":/generic_mapper_script.xml");
+    }
 
     // overwrite the generic profile with user supplied name, url and login information
     if( pHost )

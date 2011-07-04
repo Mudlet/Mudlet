@@ -116,5 +116,6 @@
         <file>ui/set_room_area.ui</file>
         <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file>ui/custom_lines.ui</file>
+        <file>generic_mapper_script.xml</file>
     </qresource>
 </RCC>

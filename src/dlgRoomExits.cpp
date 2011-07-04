@@ -34,9 +34,12 @@ dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW )
 
 void dlgRoomExits::slot_editItem(QTreeWidgetItem * pI, int column )
 {
-    if( column == 0 ) return;
+    if( column == 0 || !pI ) return;
     if( mpEditItem != 0 )
+    {
         specialExits->closePersistentEditor( mpEditItem, mEditColumn );
+        mpEditItem = 0;
+    }
     mpEditItem = pI;
     mEditColumn = column;
     specialExits->openPersistentEditor(pI, column);

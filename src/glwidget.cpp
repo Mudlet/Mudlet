@@ -342,6 +342,9 @@ void GLWidget::paintGL()
     int ox, oy, oz;
     if( ! mShiftMode )
     {
+
+
+        mRID = mpMap->mRoomId;
         if( ! mpMap->rooms.contains( mRID ) )
         {
             glClearDepth(1.0);
@@ -354,8 +357,6 @@ void GLWidget::paintGL()
             glFlush();
             return;
         }
-
-        mRID = mpMap->mRoomId;
         mAID = mpMap->rooms[mRID]->area;
         ox = mpMap->rooms[mRID]->x;
         oy = mpMap->rooms[mRID]->y;

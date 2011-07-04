@@ -2857,6 +2857,194 @@ int TLuaInterpreter::lockRoom( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::lockExit( lua_State *L )
+{
+    bool b = true;
+    int id;
+    int dir;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "lockExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "lockExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        dir = lua_tonumber( L, 2 );
+    }
+
+    if( ! lua_isboolean( L, 3 ) )
+    {
+        lua_pushstring( L, "lockRoom: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        b = lua_toboolean( L, 3 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        pHost->mpMap->rooms[id]->setExitLock( dir, b );
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::lockSpecialExit( lua_State *L )
+{
+    bool b = true;
+    int id, to;
+    std::string dir;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "lockSpecialExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "lockExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        to = lua_tonumber( L, 2 );
+    }
+
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "lockSpecialExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        dir = lua_tostring( L, 3 );
+    }
+
+    if( ! lua_isboolean( L, 4 ) )
+    {
+        lua_pushstring( L, "lockSpecialExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        b = lua_toboolean( L, 4 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        QString _dir = dir.c_str();
+        pHost->mpMap->rooms[id]->setSpecialExitLock( to, _dir, b );
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::hasSpecialExitLock( lua_State *L )
+{
+    bool b = true;
+    int id, to;
+    std::string dir;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "lockExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "lockExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        to = lua_tonumber( L, 2 );
+    }
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "hasSpecialExitLock: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        dir = lua_tostring( L, 3 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        QString _dir = dir.c_str();
+        lua_pushboolean( L, pHost->mpMap->rooms[id]->hasSpecialExitLock( to, _dir ) );
+        return 1;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::hasExitLock( lua_State *L )
+{
+    int id;
+    int dir;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "lockExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tonumber( L, 1 );
+    }
+
+
+    if( ! lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "lockExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        dir = lua_tonumber( L, 2 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushboolean( L, pHost->mpMap->rooms[id]->hasExitLock(dir) );
+        return 1;
+    }
+    return 0;
+}
+
 int TLuaInterpreter::isLockedRoom( lua_State *L )
 {
     int id;
@@ -5427,6 +5615,7 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( !pHost->mpMap ) return 0;
     if( ! pHost->mpMap->rooms.contains( id ) ) return 0;
     QColor fg = QColor(fgr,fgg,fgb,alpha1);
     QColor bg = QColor(bgr,bgg,bgb,alpha2);
@@ -5434,7 +5623,10 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
     pHost->mpMap->rooms[id]->highlightColor = fg;
     pHost->mpMap->rooms[id]->highlightColor2 = bg;
     pHost->mpMap->rooms[id]->highlightRadius = radius;
-    qDebug()<<"**->Lua called  highlightRoom id="<<id;
+
+    if( pHost->mpMap->mpMapper )
+        if( pHost->mpMap->mpMapper->mp2dMap )
+            pHost->mpMap->mpMapper->mp2dMap->update();
     return 0;
 }
 
@@ -8108,6 +8300,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "highlightRoom", TLuaInterpreter::highlightRoom );
     lua_register( pGlobalLua, "unHighlightRoom", TLuaInterpreter::unHighlightRoom );
     lua_register( pGlobalLua, "getMapLabels", TLuaInterpreter::getMapLabels );
+    lua_register( pGlobalLua, "lockExit", TLuaInterpreter::lockExit );
+    lua_register( pGlobalLua, "hasExitLock", TLuaInterpreter::hasExitLock );
+    lua_register( pGlobalLua, "lockSpecialExit", TLuaInterpreter::lockSpecialExit );
+    lua_register( pGlobalLua, "hasSpecialExitLock", TLuaInterpreter::hasSpecialExitLock );
+
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 

@@ -93,28 +93,32 @@ void TRoom::setExitLock(int exit, bool state )
 
 void TRoom::setSpecialExitLock(int to, QString cmd, bool doLock)
 {
-    if( other.contains( to ) )
+    QMapIterator<int, QString> it( other );
+    while(it.hasNext() )
     {
-        QMapIterator<int, QString> it( other );
-        while(it.hasNext() )
+        it.next();
+        if( it.key() != to ) continue;
+        if( it.value().size() < 1 ) continue;
+        if( it.value().mid(1) != cmd )
         {
-            it.next();
-            if( it.key() != to ) continue;
-            if( it.value().right(1) != cmd ) continue;
-            if( doLock && it.value().size() > 0 )
+            if( it.value() != cmd )
             {
-                QString _cmd = it.value();
-                _cmd.mid(0,1) = "1";
-                other.replace( it.key(), _cmd );
+                continue;
             }
-            else if( it.value().size() > 0 )
-            {
-                QString _cmd = it.value();
-                _cmd.mid(0,1) = "0";
-                other.replace( it.key(), _cmd );
-            }
-            return;
         }
+        if( doLock )
+        {
+            QString _cmd = it.value();
+            _cmd.replace( 0, 1, '1' );
+            other.replace( to, _cmd );
+        }
+        else
+        {
+            QString _cmd = it.value();
+            _cmd.replace( 0, 1, '0');
+            other.replace( to, _cmd );
+        }
+        return;
     }
 }
 
