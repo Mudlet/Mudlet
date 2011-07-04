@@ -293,6 +293,7 @@ public:
     QColor             mCommandLineFgColor;
     QColor             mCommandLineBgColor;
     bool               mMapperUseAntiAlias;
+    bool               mFORCE_MXP_NEGOTIATION_OFF;
 
 private:
     Host();

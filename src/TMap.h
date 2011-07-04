@@ -62,6 +62,7 @@ public:
     int createMapLabel(int area, QString text, float x, float y, QColor fg, QColor bg );
     void deleteMapLabel( int area, int labelID );
     bool addRoom( int id=0 );
+    void auditRooms();
     void setRoomArea( int id, int area );
     void deleteRoom( int id );
     void deleteArea( int id );

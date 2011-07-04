@@ -335,17 +335,25 @@ void GLWidget::showArea(QString name)
 
 void GLWidget::paintGL()
 {
-    QTime __time; __time.start();
+    if( ! mpMap ) return;
     float px,py,pz;
-
-
     if( mRID != mpMap->mRoomId && mShiftMode )  mShiftMode = false;
 
     int ox, oy, oz;
     if( ! mShiftMode )
     {
-        //if( ! mpMap->areas.contains( mpMap->rooms[mpMap->mRoomId]->area) ) return;
+        if( ! mpMap->rooms.contains( mRID ) )
+        {
+            glClearDepth(1.0);
+            glDepthFunc(GL_LESS);
+            glClearColor (0.0,0.0,0.0,1.0);
+            glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            renderText(width()/3,height()/2,"no map or no valid position on map", QFont("Bitstream Vera Sans Mono", 30, QFont::Courier ) );
 
+            glLoadIdentity();
+            glFlush();
+            return;
+        }
 
         mRID = mpMap->mRoomId;
         mAID = mpMap->rooms[mRID]->area;
@@ -355,13 +363,7 @@ void GLWidget::paintGL()
         mOx = ox;
         mOy = oy;
         mOz = oz;
-        if( ! mpMap->rooms.contains( mRID ) )
-        {
-            renderText(width()/3,height()/2,"no map found", QFont("Bitstream Vera Sans Mono", 30, QFont::Courier ) );
-            glLoadIdentity();
-            glFlush();
-            return;
-        }
+
     }
     else
     {
@@ -369,7 +371,6 @@ void GLWidget::paintGL()
         oy = mOy;
         oz = mOz;
     }
-    qDebug()<<"mRID="<<mRID<<" mAID="<<mAID<<"";
     px = static_cast<float>(ox);//mpMap->rooms[mpMap->mRoomId]->x);
     py = static_cast<float>(oy);//mpMap->rooms[mpMap->mRoomId]->y);
     pz = static_cast<float>(oz);//mpMap->rooms[mpMap->mRoomId]->z);
@@ -559,10 +560,10 @@ void GLWidget::paintGL()
                     glEnable( GL_LIGHTING );
                     glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
                     glMateriali(GL_FRONT, GL_SHININESS, 1);
-                    glColor4f(ebenenColor[ef][0],
+                    glColor4f(0.3,0.3,0.3,1.0);/*ebenenColor[ef][0],
                               ebenenColor[ef][1],
                               ebenenColor[ef][2],
-                              ebenenColor[ef][3]);
+                              ebenenColor[ef][3]);*/
                 }
                 for( int k=0; k<exitList.size(); k++ )
                 {
@@ -603,10 +604,10 @@ void GLWidget::paintGL()
                         glEnable( GL_LIGHTING );
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
                         glMateriali(GL_FRONT, GL_SHININESS, 1);
-                        glColor4f(ebenenColor[ef][0],
-                                  ebenenColor[ef][1],
-                                  ebenenColor[ef][2],
-                                  ebenenColor[ef][3]);
+                        glColor4f(0.3,0.3,0.3,1.0);//ebenenColor[ef][0],
+//                                  ebenenColor[ef][1],
+//                                  ebenenColor[ef][2],
+//                                  ebenenColor[ef][3]);
                     }
                     glBegin(GL_LINES);
                     if( ! areaExit )
@@ -674,7 +675,7 @@ void GLWidget::paintGL()
 
                         float mc6[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 0.0 };
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc6);
-                        glMateriali(GL_FRONT, GL_SHININESS, 36);
+                        glMateriali(GL_FRONT, GL_SHININESS, 96);
 
                         glLoadName( exitList[k] );
                         quads++;
@@ -824,7 +825,7 @@ void GLWidget::paintGL()
                             mc3[3]=0.2;
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-                        glMateriali(GL_FRONT, GL_SHININESS, 6);
+                        glMateriali(GL_FRONT, GL_SHININESS, 1);
                         glDisable(GL_DEPTH_TEST);
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
@@ -943,7 +944,7 @@ void GLWidget::paintGL()
                         glEnable( GL_LIGHTING );
                         float mc3[] = { 1.0f, 0.0f, 0.0f, 1.0f };
                         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mc3);
-                        glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 36);
+                        glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 1);
                         glColor4f(1.0, 0.0, 0.0, 1.0);
                     }
                     else
@@ -952,11 +953,11 @@ void GLWidget::paintGL()
                         glEnable( GL_LIGHTING );
                         glEnable(GL_LIGHT1);
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor2[ef]);
-                        glMateriali(GL_FRONT, GL_SHININESS, 36);//gut:36
-                        glColor4f(ebenenColor2[ef][0],
+                        glMateriali(GL_FRONT, GL_SHININESS, 1);//gut:36
+                        glColor4f(0.3,0.3,0.3,1.0);/*ebenenColor2[ef][0],
                                   ebenenColor2[ef][1],
                                   ebenenColor2[ef][2],
-                                  ebenenColor2[ef][3]);
+                                  ebenenColor2[ef][3])*/;
                     }
                     glBegin(GL_LINES);
                     if( ! areaExit )
@@ -996,7 +997,7 @@ void GLWidget::paintGL()
                         glDisable(GL_LIGHT1);
                         float mc4[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 1.0 };
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc4);
-                        glMateriali(GL_FRONT, GL_SHININESS, 36);
+                        glMateriali(GL_FRONT, GL_SHININESS, 1);
                         glColor4f(85.0/255.0, 170.0/255.0, 0.0/255.0, 1.0);
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
@@ -1508,7 +1509,7 @@ void GLWidget::paintGL()
                     mc3[3]=0.2;
                 }
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-                glMateriali(GL_FRONT, GL_SHININESS, 36);
+                glMateriali(GL_FRONT, GL_SHININESS, 96);
                 glDisable(GL_DEPTH_TEST);
                 glLoadIdentity();
                 gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
@@ -1754,7 +1755,7 @@ void GLWidget::paintGL()
             }
             glDisable(GL_DEPTH_TEST);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
-            glMateriali(GL_FRONT, GL_SHININESS, 96);
+            glMateriali(GL_FRONT, GL_SHININESS, 6);
             glLoadIdentity();
             gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
             if( pArea->gridMode )

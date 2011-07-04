@@ -65,6 +65,7 @@ public:
     QColor highlightColor;
     QColor highlightColor2;
     float highlightRadius;
+    bool rendered;
 };
 
 #endif // TROOM_H

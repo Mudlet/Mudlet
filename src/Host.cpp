@@ -144,6 +144,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mServerGUI_Package_version( -1 )
 , mServerGUI_Package_name( "nothing" )
 , mAcceptServerGUI     ( true )
+, mFORCE_MXP_NEGOTIATION_OFF( false )
 {
    // mLogStatus = mudlet::self()->mAutolog;
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
@@ -270,6 +271,7 @@ Host::Host()
 , mServerGUI_Package_version( -1 )
 , mServerGUI_Package_name( "nothing" )
 , mAcceptServerGUI     ( true )
+, mFORCE_MXP_NEGOTIATION_OFF( false )
 {
 
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";

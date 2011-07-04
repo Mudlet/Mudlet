@@ -115,6 +115,7 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int getMapLabels( lua_State * );
     static int highlightRoom( lua_State * );
     static int unHighlightRoom( lua_State * );
     static int createMapLabel( lua_State * );

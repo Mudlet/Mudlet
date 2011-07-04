@@ -5244,7 +5244,7 @@ int TLuaInterpreter::roomExists( lua_State * L )
     int id;
     if( ! lua_isnumber( L, 1 ) || ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "roomExists: What room do you check for?" );
+        lua_pushstring( L, "roomExists: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -5588,8 +5588,37 @@ int TLuaInterpreter::deleteMapLabel( lua_State * L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mpMap->deleteMapLabel( area, labelID );
+    return 0;
 }
 
+int TLuaInterpreter::getMapLabels( lua_State * L )
+{
+    int area, labelID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "deleteMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->mapLabels.contains( area ) )
+    {
+        lua_newtable(L);
+        QMapIterator<int,TMapLabel> it(pHost->mpMap->mapLabels[area]);
+        while( it.hasNext() )
+        {
+            it.next();
+            lua_pushnumber( L, it.key() );
+            lua_pushstring( L, it.value().text.toLatin1().data() );
+            lua_settable(L, -3);
+        }
+    }
+    return 1;
+}
 
 int TLuaInterpreter::addSpecialExit( lua_State * L )
 {
@@ -5629,21 +5658,11 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( pHost->mpMap->rooms.contains( id_from ) )
     {
-        pHost->mpMap->rooms[id_from]->addSpecialExit( id_to, _dir );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
-//        if( pHost->mpMap->rooms[id_from]->other.contains(id_to) )
-//        {
-//            QList<QString> valList = pHost->mpMap->rooms[id_from]->other.values( id_to );
-//            if( valList.contains( _dir ) )
-//            {
-//                return 0; //skip duplicates, but allow multiple room links with different commands
-//            }
-//        }
-//        else
-//        {
-//            pHost->mpMap->rooms[id_from]->other.insertMulti(id_to, _dir );
-//            pHost->mpMap->mMapGraphNeedsUpdate = true;
-//        }
+        if( pHost->mpMap->rooms.contains( id_to ) )
+        {
+            pHost->mpMap->rooms[id_from]->addSpecialExit( id_to, _dir );
+            pHost->mpMap->mMapGraphNeedsUpdate = true;
+        }
     }
     return 0;
 }
@@ -6030,8 +6049,7 @@ int TLuaInterpreter::getRoomsByPosition( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->areas.contains( area ) )
     {
-        lua_pushstring( L, "getRoomsByPosition: area ID does not exist");
-        lua_error( L );
+        lua_pushnil( L );
         return 1;
     }
     QList<int> rL = pHost->mpMap->areas[area]->getRoomsByPosition( x, y, z);
@@ -8089,6 +8107,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "deleteMapLabel", TLuaInterpreter::deleteMapLabel );
     lua_register( pGlobalLua, "highlightRoom", TLuaInterpreter::highlightRoom );
     lua_register( pGlobalLua, "unHighlightRoom", TLuaInterpreter::unHighlightRoom );
+    lua_register( pGlobalLua, "getMapLabels", TLuaInterpreter::getMapLabels );
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 

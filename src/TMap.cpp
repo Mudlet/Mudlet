@@ -253,8 +253,34 @@ void TMap::init( Host * pH )
         s_area_exits[areas[id]->exits.size()]++;
         it.value()->calcSpan();
     }
+
+    auditRooms();
+
     qDebug()<<"statistics: areas:"<<s_areas;
     qDebug()<<"area exit stats:" <<s_area_exits;
+}
+
+void TMap::auditRooms()
+{
+    QTime t; t.start();
+    // rooms konsolidieren
+    QMapIterator<int, TRoom* > itRooms( rooms );
+    while( itRooms.hasNext() )
+    {
+        itRooms.next();
+        TRoom * pR = itRooms.value();
+        if( ! rooms.contains(pR->north) ) pR->north = -1;
+        if( ! rooms.contains(pR->south) ) pR->south = -1;
+        if( ! rooms.contains(pR->northwest) ) pR->northwest = -1;
+        if( ! rooms.contains(pR->northeast) ) pR->northeast = -1;
+        if( ! rooms.contains(pR->southwest) ) pR->southwest = -1;
+        if( ! rooms.contains(pR->southeast) ) pR->southeast = -1;
+        if( ! rooms.contains(pR->west) ) pR->west = -1;
+        if( ! rooms.contains(pR->east) ) pR->east = -1;
+        if( ! rooms.contains(pR->in) ) pR->in = -1;
+        if( ! rooms.contains(pR->out) ) pR->out = -1;
+    }
+    qDebug()<<"auditExits runtime:"<<t.elapsed();
 }
 
 void TMap::buildAreas()
@@ -616,6 +642,8 @@ bool TMap::gotoRoom( int r1, int r2 )
 
 void TMap::initGraph()
 {
+    locations.clear();
+    g.clear();
     g = mygraph_t(rooms.size()*10);//FIXME
     weightmap = get(edge_weight, g);
     QMapIterator<int, TRoom *> it( rooms );
@@ -639,7 +667,7 @@ void TMap::initGraph()
 
         if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->north ) )
+            if( ! rooms[i]->hasExitLock( DIR_NORTH ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -653,7 +681,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->south != -1 && rooms.contains( rooms[i]->south ) && !rooms[rooms[i]->south]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->south ) )
+            if( ! rooms[i]->hasExitLock( DIR_SOUTH ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -666,17 +694,21 @@ void TMap::initGraph()
         }
         if( rooms[i]->northeast != -1 && rooms.contains( rooms[i]->northeast ) && !rooms[rooms[i]->northeast]->isLocked )
         {
-           edgeCount++;
-           edge_descriptor e;
-           bool inserted;
-           tie(e, inserted) = add_edge( i,
-                                        rooms[i]->northeast,
-                                        g );
-           weightmap[e] = rooms[rooms[i]->northeast]->weight;
+            if( ! rooms[i]->hasExitLock( DIR_NORTHEAST ) )
+            {
+                edgeCount++;
+                edge_descriptor e;
+                bool inserted;
+                tie(e, inserted) = add_edge( i,
+                                            rooms[i]->northeast,
+                                            g );
+                weightmap[e] = rooms[rooms[i]->northeast]->weight;
+
+            }
         }
         if( rooms[i]->east != -1 && rooms.contains( rooms[i]->east ) && !rooms[rooms[i]->east]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->east ) )
+            if( ! rooms[i]->hasExitLock( DIR_EAST ) )
             {
                edgeCount++;
                edge_descriptor e;
@@ -689,7 +721,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->west != -1 && rooms.contains( rooms[i]->west ) && !rooms[rooms[i]->west]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->west ) )
+            if( ! rooms[i]->hasExitLock( DIR_WEST ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -702,7 +734,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->southwest != -1 && rooms.contains( rooms[i]->southwest ) && !rooms[rooms[i]->southwest]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->southwest ) )
+            if( ! rooms[i]->hasExitLock( DIR_SOUTHWEST ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -715,7 +747,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->southeast != -1 && rooms.contains( rooms[i]->southeast ) && !rooms[rooms[i]->southeast]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->southeast ) )
+            if( ! rooms[i]->hasExitLock( DIR_SOUTHEAST ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -728,7 +760,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->northwest != -1 && rooms.contains( rooms[i]->northwest ) && !rooms[rooms[i]->northwest]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->northwest ) )
+            if( ! rooms[i]->hasExitLock( DIR_NORTHWEST ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -741,7 +773,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->up != -1 && rooms.contains( rooms[i]->up ) && !rooms[rooms[i]->up]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->up ) )
+            if( ! rooms[i]->hasExitLock( DIR_UP ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -754,7 +786,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->down != -1 && rooms.contains( rooms[i]->down ) && !rooms[rooms[i]->down]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->down ) )
+            if( ! rooms[i]->hasExitLock( DIR_DOWN ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -767,7 +799,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->in != -1 && rooms.contains( rooms[i]->in ) && !rooms[rooms[i]->in]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->in ) )
+            if( ! rooms[i]->hasExitLock( DIR_IN ) )
             {
                 edgeCount++;
                 edge_descriptor e;
@@ -780,7 +812,7 @@ void TMap::initGraph()
         }
         if( rooms[i]->out != -1 && rooms.contains( rooms[i]->out ) && !rooms[rooms[i]->out]->isLocked )
         {
-            if( ! rooms[i]->hasExitLock( rooms[i]->out ) )
+            if( ! rooms[i]->hasExitLock( DIR_OUT ) )
             {
                  edgeCount++;
                  edge_descriptor e;
@@ -820,15 +852,11 @@ bool TMap::findPath( int from, int to )
      {
         initGraph();
      }
-#ifdef QT_DEBUG
-     QTime t;
-     t.start();
-#endif
+
      vertex start = from;//mRoomId;
      vertex goal = to;//mTargetID;
      if( ! rooms.contains( start ) || ! rooms.contains( goal ) )
      {
-         cout << "ERROR: start or tartget room not in map!" << endl;
          return false;
      }
      vector<mygraph_t::vertex_descriptor> p(num_vertices(g));
@@ -933,9 +961,7 @@ bool TMap::findPath( int from, int to )
 
              curRoom = *spi;
          }
-//#ifdef QT_DEBUG
-//         qDebug() << endl << "PATH FOUND: time="<<t.elapsed()<<" Total travel time: " << d[goal] << endl;
-//#endif
+
          return true;
      }
 
@@ -1188,15 +1214,11 @@ bool TMap::restore()
             msgBox.setText("No map found. Going to download the map ...");
             msgBox.exec();
             init( mpHost );
-            qDebug()<<"--trace before map download";
             mpMapper->downloadMap();
-            qDebug()<<"--trace after map download";
         }
         else
         {
             mpHost->mpMap->init( mpHost );
-            //msgBox.setText("Sorry, this early version of the mapper can only be used on IRE games\n.This will change in the near future.");
-            //msgBox.exec();
         }
     }
     return canRestore;//FIXME

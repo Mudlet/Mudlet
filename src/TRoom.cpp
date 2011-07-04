@@ -28,6 +28,7 @@ TRoom::TRoom()
 , c( 0 )
 , highlight( false )
 , highlightColor( QColor( 255,150,0 ) )
+, rendered(false)
 {
 }
 

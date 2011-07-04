@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>770</width>
-    <height>667</height>
+    <height>735</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -38,7 +38,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="General">
       <property name="sizePolicy">
@@ -60,13 +60,13 @@
           </sizepolicy>
          </property>
          <property name="title">
-          <string>Toolbar Icon Size</string>
+          <string>Icon sizes</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_6">
           <item row="0" column="0">
            <widget class="QLabel" name="label_34">
             <property name="text">
-             <string>Icon size</string>
+             <string>Icon size toolbars:</string>
             </property>
            </widget>
           </item>
@@ -86,7 +86,27 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_33">
+            <property name="text">
+             <string>Icon size in tree views:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="TEFolderIconSize">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>4</number>
+            </property>
+            <property name="value">
+             <number>3</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
            <widget class="QCheckBox" name="showMenuBar">
             <property name="toolTip">
              <string>Enables the typical menu bar with drop-down menus in the main window. Requires restart to take effect</string>
@@ -96,7 +116,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="showToolbar">
             <property name="toolTip">
              <string>Enables the default button bar in the main window. Requires restart to take effect</string>
@@ -110,37 +130,6 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_5">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="title">
-          <string>Character Encoding</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
-           <widget class="QComboBox" name="encoding">
-            <item>
-             <property name="text">
-              <string>English (ASCII)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>UTF-8</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Chinese</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
           <string>Misc</string>
@@ -180,7 +169,7 @@
          </layout>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="3" column="0">
         <widget class="QGroupBox" name="groupBox_13">
          <property name="title">
           <string>GMCP</string>
@@ -223,7 +212,7 @@
          </layout>
         </widget>
        </item>
-       <item row="8" column="0">
+       <item row="7" column="0">
         <spacer name="verticalSpacer_8">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -236,7 +225,7 @@
          </property>
         </spacer>
        </item>
-       <item row="7" column="0">
+       <item row="6" column="0">
         <widget class="QGroupBox" name="groupBox_3">
          <property name="enabled">
           <bool>false</bool>
@@ -269,7 +258,7 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="4" column="0">
         <widget class="QGroupBox" name="groupBox_16">
          <property name="title">
           <string>IRC</string>
@@ -1307,7 +1296,7 @@ or some other computer model that has a small screen.</string>
      </widget>
      <widget class="QWidget" name="tab_4">
       <attribute name="title">
-       <string>Mapper options</string>
+       <string>Mapper</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_18">
        <item row="0" column="0">
@@ -1668,55 +1657,6 @@ or some other computer model that has a small screen.</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_2">
-      <attribute name="title">
-       <string>Script Editor Options</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_4">
-       <item>
-        <widget class="QGroupBox" name="groupBox_12">
-         <property name="title">
-          <string>Visual</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_11">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_33">
-            <property name="text">
-             <string>folder/group in tree icons size:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="TEFolderIconSize">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>4</number>
-            </property>
-            <property name="value">
-             <number>3</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>523</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
        <string>Special Options</string>
@@ -1725,9 +1665,9 @@ or some other computer model that has a small screen.</string>
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_7">
          <property name="title">
-          <string>Special options needed for some older MUD drivers</string>
+          <string>Special options needed for some older MUD drivers (needs client restart to take effect)</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
+         <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
            <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
             <property name="text">
@@ -1750,6 +1690,13 @@ or some other computer model that has a small screen.</string>
             </property>
             <property name="text">
              <string>Force new line on empty commands</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="mFORCE_MXP_NEGOTIATION_OFF">
+            <property name="text">
+             <string>Force MXP negotiation off</string>
             </property>
            </widget>
           </item>
