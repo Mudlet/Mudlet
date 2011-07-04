@@ -1,0 +1,638 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.0">
+    <HostPackage>
+        <Host autoClearCommandLineAfterSend="no" disableAutoCompletion="no" printCommand="yes" USE_IRE_DRIVER_BUGFIX="yes" mUSE_FORCE_LF_AFTER_PROMPT="no" mUSE_UNIX_EOL="no" mNoAntiAlias="no" mRawStreamDump="no" mAlertOnNewData="yes" mFORCE_NO_COMPRESSION="no" mFORCE_GA_OFF="no" mFORCE_SAVE_ON_EXIT="no" mEnableGMCP="no" mMapStrongHighlight="no" mLogStatus="no" mEnableSpellCheck="yes" mShowInfo="no" mAcceptServerGUI="yes" mMapperUseAntiAlias="no">
+            <name>realms of the dragon</name>
+            <mInstalledPackages/>
+            <url>mud.rod.org</url>
+            <serverPackageName>nothing</serverPackageName>
+            <serverPackageVersion>-1</serverPackageVersion>
+            <port>3000</port>
+            <borderTopHeight>0</borderTopHeight>
+            <borderBottomHeight>0</borderBottomHeight>
+            <borderLeftWidth>0</borderLeftWidth>
+            <borderRightWidth>0</borderRightWidth>
+            <wrapAt>100</wrapAt>
+            <wrapIndentCount>0</wrapIndentCount>
+            <commandSeperator>;</commandSeperator>
+            <mFgColor>#c0c0c0</mFgColor>
+            <mBgColor>#000000</mBgColor>
+            <mCommandFgColor>#717100</mCommandFgColor>
+            <mCommandBgColor>#000000</mCommandBgColor>
+            <mCommandLineFgColor>#808080</mCommandLineFgColor>
+            <mCommandLineBgColor>#000000</mCommandLineBgColor>
+            <mBlack>#000000</mBlack>
+            <mLightBlack>#808080</mLightBlack>
+            <mRed>#800000</mRed>
+            <mLightRed>#ff0000</mLightRed>
+            <mBlue>#000080</mBlue>
+            <mLightBlue>#0000ff</mLightBlue>
+            <mGreen>#00b300</mGreen>
+            <mLightGreen>#00ff00</mLightGreen>
+            <mYellow>#808000</mYellow>
+            <mLightYellow>#ffff00</mLightYellow>
+            <mCyan>#008080</mCyan>
+            <mLightCyan>#00ffff</mLightCyan>
+            <mMagenta>#800080</mMagenta>
+            <mLightMagenta>#ff00ff</mLightMagenta>
+            <mWhite>#c0c0c0</mWhite>
+            <mLightWhite>#ffffff</mLightWhite>
+            <mDisplayFont>Bitstream Vera Sans Mono,15,-1,5,2,0,0,0,1,0</mDisplayFont>
+            <mCommandLineFont>Bitstream Vera Sans Mono,10,-1,5,2,0,0,0,0,0</mCommandLineFont>
+            <mCommandSeparator>;</mCommandSeparator>
+            <commandLineMinimumHeight>30</commandLineMinimumHeight>
+            <mFgColor2>#c0c0c0</mFgColor2>
+            <mBgColor2>#000000</mBgColor2>
+            <mBlack2>#242424</mBlack2>
+            <mLightBlack2>#808080</mLightBlack2>
+            <mRed2>#800000</mRed2>
+            <mLightRed2>#ff0000</mLightRed2>
+            <mBlue2>#000080</mBlue2>
+            <mLightBlue2>#0000ff</mLightBlue2>
+            <mGreen2>#00b300</mGreen2>
+            <mLightGreen2>#00ff00</mLightGreen2>
+            <mYellow2>#808000</mYellow2>
+            <mLightYellow2>#ffff00</mLightYellow2>
+            <mCyan2>#008080</mCyan2>
+            <mLightCyan2>#00ffff</mLightCyan2>
+            <mMagenta2>#800080</mMagenta2>
+            <mLightMagenta2>#ff00ff</mLightMagenta2>
+            <mWhite2>#c0c0c0</mWhite2>
+            <mLightWhite2>#ffffff</mLightWhite2>
+            <mSpellDic>en_US</mSpellDic>
+            <mLineSize>3</mLineSize>
+            <mRoomSize>0.5</mRoomSize>
+        </Host>
+    </HostPackage>
+    <TriggerPackage>
+        <TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+            <name>generic mapper script</name>
+            <script></script>
+            <triggerType>0</triggerType>
+            <conditonLineDelta>1</conditonLineDelta>
+            <mStayOpen>0</mStayOpen>
+            <mCommand></mCommand>
+            <packageName></packageName>
+            <mFgColor>#ff0000</mFgColor>
+            <mBgColor>#ffff00</mBgColor>
+            <mSoundFile></mSoundFile>
+            <colorTriggerFgColor>#000000</colorTriggerFgColor>
+            <colorTriggerBgColor>#000000</colorTriggerBgColor>
+            <regexCodeList/>
+            <regexCodePropertyList/>
+            <TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                <name>highlight exits</name>
+                <script></script>
+                <triggerType>0</triggerType>
+                <conditonLineDelta>0</conditonLineDelta>
+                <mStayOpen>0</mStayOpen>
+                <mCommand></mCommand>
+                <packageName></packageName>
+                <mFgColor>#ff0000</mFgColor>
+                <mBgColor>#ffff00</mBgColor>
+                <mSoundFile></mSoundFile>
+                <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                <regexCodeList>
+                    <string>exits</string>
+                    <string>exit:</string>
+                    <string>EXIT</string>
+                    <string>EXITS</string>
+                </regexCodeList>
+                <regexCodePropertyList>
+                    <integer>0</integer>
+                    <integer>0</integer>
+                    <integer>0</integer>
+                    <integer>0</integer>
+                </regexCodePropertyList>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>exits</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>99</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>up</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>d</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>down</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>n</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>99</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>north</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>w</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>west</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>e</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>east</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>s</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>south</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>nw</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>99</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>northwest</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>ne</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>northeast</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>sw</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>southwest</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="yes" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>se</name>
+                    <script></script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>southeast</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+            </TriggerGroup>
+        </TriggerGroup>
+    </TriggerPackage>
+    <TimerPackage/>
+    <AliasPackage>
+        <AliasGroup isActive="yes" isFolder="yes">
+            <name>generic mapper script commands</name>
+            <script></script>
+            <command></command>
+            <packageName></packageName>
+            <regex></regex>
+            <AliasGroup isActive="yes" isFolder="yes">
+                <name>moving directions</name>
+                <script></script>
+                <command></command>
+                <packageName></packageName>
+                <regex></regex>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^out$</name>
+                    <script>send(&quot;out&quot;)
+mapperMove(&quot;out&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^out$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^in$</name>
+                    <script>send(&quot;in&quot;)
+mapperMove(&quot;in&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^in$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^d$</name>
+                    <script>send(&quot;d&quot;)
+mapperMove(&quot;down&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^d$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^u$</name>
+                    <script>send(&quot;u&quot;)
+mapperMove(&quot;up&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^u$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^se$</name>
+                    <script>send(&quot;se&quot;)
+mapperMove(&quot;se&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^se$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^sw$</name>
+                    <script>send(&quot;sw&quot;)
+mapperMove(&quot;sw&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^sw$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^ne$</name>
+                    <script>send(&quot;ne&quot;)
+mapperMove(&quot;ne&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^ne$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^nw$</name>
+                    <script>send(&quot;nw&quot;)
+mapperMove(&quot;nw&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^nw$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^e$</name>
+                    <script>send(&quot;e&quot;)
+mapperMove(&quot;e&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^e$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^w$</name>
+                    <script>send(&quot;w&quot;)
+mapperMove(&quot;w&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^w$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^s$</name>
+                    <script>send(&quot;s&quot;)
+mapperMove(&quot;s&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^s$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^n$</name>
+                    <script>send(&quot;n&quot;)
+mapperMove(&quot;n&quot;)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^n$</regex>
+                </Alias>
+            </AliasGroup>
+            <AliasGroup isActive="yes" isFolder="yes">
+                <name>tools</name>
+                <script></script>
+                <command></command>
+                <packageName></packageName>
+                <regex></regex>
+                <Alias isActive="yes" isFolder="no">
+                    <name>^deleteMap$</name>
+                    <script>deleteArea(1)</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^deleteMap$</regex>
+                </Alias>
+            </AliasGroup>
+        </AliasGroup>
+    </AliasPackage>
+    <ActionPackage/>
+    <ScriptPackage>
+        <ScriptGroup isActive="yes" isFolder="yes">
+            <name>generic mapper scripts</name>
+            <packageName></packageName>
+            <script></script>
+            <eventHandlerList/>
+            <Script isActive="yes" isFolder="no">
+                <name>mapper variables</name>
+                <packageName></packageName>
+                <script>mapperDirectionInvers = {}
+mapperDirectionInvers[1]=6
+mapperDirectionInvers[6]=1
+mapperDirectionInvers[4]=5
+mapperDirectionInvers[5]=4
+mapperDirectionInvers[2]=8
+mapperDirectionInvers[8]=2
+mapperDirectionInvers[3]=7
+mapperDirectionInvers[7]=3
+mapperDirectionInvers[9]=10
+mapperDirectionInvers[10]=9
+mapperDirectionInvers[11]=12
+mapperDirectionInvers[12]=11
+
+mapperRoomID = 1
+mapperStep = 3;
+addAreaName(&quot;main&quot;)
+mapperAreaID = 1
+mapperPositionX = 0
+mapperPositionY = 0
+mapperPositionZ = 0
+
+--#define DIR_NORTH 1
+--#define DIR_NORTHEAST 2
+--#define DIR_NORTHWEST 3
+--#define DIR_EAST 4
+--#define DIR_WEST 5
+--#define DIR_SOUTH 6
+--#define DIR_SOUTHEAST 7
+--#define DIR_SOUTHWEST 8
+--#define DIR_UP 9
+--#define DIR_DOWN 10
+--#define DIR_IN 11
+--#define DIR_OUT 12
+</script>
+                <eventHandlerList/>
+            </Script>
+            <Script isActive="yes" isFolder="no">
+                <name>functions</name>
+                <packageName></packageName>
+                <script>
+function mapperMoveRoom( id )
+	mapperRoomID = id
+	mapperPositionX, mapperPositionY, mapperPositionZ = getRoomCoordinates( id )
+	mapperAreaID = getRoomArea( id )
+end
+
+function mapperCheckExits( dir )
+	if not mapperRoomID then return false end
+	if not roomExists(mapperRoomID ) then return false end
+	local exits = getRoomExits(mapperRoomID);
+	if not exits then return false; end
+
+	if dir == &quot;n&quot; then 
+		if table.contains(exits, &quot;north&quot; ) then
+			mapperMoveRoom( exits[&quot;north&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;s&quot; then 
+		if table.contains(exits, &quot;south&quot; ) then
+			mapperMoveRoom( exits[&quot;south&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;w&quot; then 
+		if table.contains(exits, &quot;west&quot; ) then
+			mapperMoveRoom( exits[&quot;west&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;e&quot; then 
+		if table.contains(exits, &quot;east&quot; ) then
+			mapperMoveRoom( exits[&quot;east&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;nw&quot; then 
+		if table.contains(exits, &quot;northwest&quot; ) then
+			mapperMoveRoom( exits[&quot;northwest&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;ne&quot; then 
+		if table.contains(exits, &quot;northeast&quot; ) then
+			mapperMoveRoom( exits[&quot;northeast&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;sw&quot; then 
+		if table.contains(exits, &quot;southwest&quot; ) then
+			mapperMoveRoom( exits[&quot;southwest&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;se&quot; then 
+		if table.contains(exits, &quot;southeast&quot; ) then
+			mapperMoveRoom( exits[&quot;southeast&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;up&quot; then 
+		if table.contains(exits, &quot;up&quot; ) then
+			mapperMoveRoom( exits[&quot;up&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;down&quot; then 
+		if table.contains(exits, &quot;north&quot; ) then
+			mapperMoveRoom( exits[&quot;north&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;in&quot; then 
+		if table.contains(exits, &quot;in&quot; ) then
+			mapperMoveRoom( exits[&quot;in&quot;] )
+			return true
+		end  
+	end
+	if dir == &quot;out&quot; then 
+		if table.contains(exits, &quot;out&quot; ) then
+			mapperMoveRoom( exits[&quot;out&quot;] )
+			return true
+		end  
+	end
+
+	return false
+end
+
+
+
+function mapperMove( dir )
+	local _dir = 0; -- exit direction value see defines above
+	if not mapperCheckExits( dir ) then
+		if dir == &quot;n&quot; then mapperPositionY = mapperPositionY + mapperStep; _dir = 1 end
+		if dir == &quot;s&quot; then mapperPositionY = mapperPositionY - mapperStep; _dir = 6 end
+		if dir == &quot;w&quot; then mapperPositionX = mapperPositionX - mapperStep; _dir = 5 end
+		if dir == &quot;e&quot; then mapperPositionX = mapperPositionX + mapperStep; _dir = 4 end
+		if dir == &quot;nw&quot; then mapperPositionY = mapperPositionY + mapperStep; mapperPositionX = mapperPositionX - mapperStep; _dir = 3 end
+		if dir == &quot;ne&quot; then mapperPositionY = mapperPositionY + mapperStep; mapperPositionX = mapperPositionX + mapperStep; _dir = 2 end
+		if dir == &quot;sw&quot; then mapperPositionY = mapperPositionY - mapperStep; mapperPositionX = mapperPositionX - mapperStep; _dir = 8 end
+		if dir == &quot;se&quot; then mapperPositionY = mapperPositionY - mapperStep; mapperPositionX = mapperPositionX + mapperStep; _dir = 7 end
+		if dir == &quot;up&quot; then mapperPositionZ = mapperPositionZ + 1; end
+		if dir == &quot;down&quot; then mapperPositionZ = mapperPositionZ - 1; end
+		
+		local roomCollisions = {}
+	
+		if getAreaRooms( 1 ) ~= nil then
+			numRooms = getAreaRooms(1)
+			if # numRooms &gt; 0 then 
+				roomCollisions = getRoomsByPosition( mapperAreaID, mapperPositionX, mapperPositionY, mapperPositionZ )
+display(roomCollisions)
+echo(&quot;size=&quot;..table.size(roomCollisions)..&quot;\n&quot;)					
+if table.size(roomCollisions) &gt; 0 then
+					echo(&quot;(mapper:) room collisions: size=&quot;..table.size(roomCollisions)..&quot;\n&quot;)
+					display(roomCollisions )
+					echo(&quot;(mapper:) merging room\n&quot;);
+					mapperRoomID_old = mapperRoomID
+					mapperRoomID = roomCollisions[0]
+					setExit( mapperRoomID_old, mapperRoomID, _dir )
+					setExit( mapperRoomID, mapperRoomID_old, mapperDirectionInvers[_dir] )
+				end
+			else
+				echo(&quot;die area hat keine raeume\n&quot;)
+			end
+		end
+		if table.size(roomCollisions) == 0 then
+			echo(&quot;creating new room\n&quot;)
+			mapperRoomID_old = mapperRoomID
+			mapperRoomID = createRoomID();
+			addRoom(mapperRoomID)
+			setRoomCoordinates( mapperRoomID, mapperPositionX, mapperPositionY, mapperPositionZ )
+			setRoomArea( mapperRoomID, mapperAreaID )
+			setRoomEnv( mapperRoomID, 2 )
+			setExit( mapperRoomID_old, mapperRoomID, _dir )
+			setExit( mapperRoomID, mapperRoomID_old, mapperDirectionInvers[_dir] )
+			display(getAreaRooms(1))
+		else
+			display(roomCollisions)
+		end
+	end
+	centerview( mapperRoomID )
+echo(&quot;roomID:&quot;..mapperRoomID..&quot; POS(&quot;..mapperPositionX..&quot;/&quot;..mapperPositionY..&quot;/&quot;..mapperPositionZ..&quot;) move done\n&quot;)
+end</script>
+                <eventHandlerList/>
+            </Script>
+        </ScriptGroup>
+    </ScriptPackage>
+    <KeyPackage/>
+</MudletPackage>
