@@ -882,6 +882,9 @@ if rex then
 			else
 				if func == 'echo' or func == 'insertText' then
 					if win then out(win, v) else out(v) end
+					if func == 'insertText' then
+						moveCursor(window or "main", getColumnNumber() + string.len(v), getLineNumber())
+					end
 				else
 					if win then setUnderline(win, true) else setUnderline(true) end
 					if win then out(win, v, cmd, hint, true) else out(v, cmd, hint, true) end
