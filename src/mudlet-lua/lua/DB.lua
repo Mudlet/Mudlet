@@ -15,10 +15,7 @@ if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 -- Tests if a table is empty: this is useful in situations where you find
 -- yourself wanting to do 'if my_table == {}' and such.
 function table.is_empty(tbl)
-   for k, v in pairs(tbl) do
-      return false
-   end
-   return true
+   return next(tbl) == nil
 end
 
 function string.starts(String,Start)
