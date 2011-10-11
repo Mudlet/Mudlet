@@ -36,10 +36,16 @@
 #include <QMdiArea>
 #include "TConsole.h"
 #include "ui_main_window.h"
-#ifdef Q_OS_LINUX
-    #include <phonon>
+//#ifdef Q_OS_LINUX
+//    #include <phonon>
+//#else
+//    #include <Phonon>
+//#endif
+//Debian BSD patch:
+#ifdef Q_OS_WIN32
+     #include <Phonon>
 #else
-    #include <Phonon>
+     #include <phonon>
 #endif
 
 class QAction;
