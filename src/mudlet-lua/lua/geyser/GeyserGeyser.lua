@@ -33,6 +33,7 @@ Geyser.windows = Geyser.windows or {}
 Geyser.defer_updates = false
 
 function Geyser:begin_update()
+Geyser.display("here")
    self.defer_updates = true
 end
 

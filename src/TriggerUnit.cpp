@@ -435,11 +435,7 @@ bool TriggerUnit::killTrigger( QString & name )
         if( pChild->getName() == name )
         {
             // only temporary triggers can be killed
-            if( ! pChild->isTempTrigger() )
-            {
-                return false;
-            }
-            else
+            if( pChild->isTempTrigger() )
             {
                 pChild->setIsActive( false );
                 markCleanup( pChild );

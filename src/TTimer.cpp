@@ -42,6 +42,8 @@ TTimer::TTimer( TTimer * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mIsTempTimer( false )
+, mModuleMember(false)
+, mModuleMasterFolder(false)
 , mpTimer( new QTimer )
 {
 }
@@ -53,6 +55,8 @@ TTimer::TTimer( QString name, QTime time, Host * pHost )
 , mTime( time )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
+, mModuleMember(false)
+, mModuleMasterFolder(false)
 , mIsTempTimer( false )
 , mpTimer( new QTimer )
 {

@@ -32,6 +32,20 @@ TRoom::TRoom()
 {
 }
 
+int TRoom::hasExitStub(int direction){
+    if (exitStubs.contains(direction))
+        return 1;
+    else
+        return 0;
+}
+
+void TRoom::setExitStub(int direction, int status){
+    if (status)
+        exitStubs.append(direction);
+    else
+        exitStubs.removeOne(direction);
+}
+
 void TRoom::setWeight( int w )
 {
     weight = w;

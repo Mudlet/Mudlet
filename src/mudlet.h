@@ -91,6 +91,8 @@ public:
    bool                          setBackgroundImage( Host *, QString & name, QString & path );
    bool                          setTextFormat( Host *, QString & name, int, int, int, int, int, int, bool, bool, bool );
    bool                          setLabelClickCallback( Host *, QString &, QString &, TEvent * );
+   bool                          setLabelOnEnter( Host *, QString &, QString &, TEvent * );
+   bool                          setLabelOnLeave( Host *, QString &, QString &, TEvent * );
    bool                          moveWindow( Host *, QString & name, int, int );
    void                          deleteLine( Host *, QString & name );
    void                          insertText( Host *, QString & name, QString );
@@ -186,6 +188,11 @@ public slots:
    void                          slot_uninstall_package();
    void                          slot_install_package();
    void                          slot_package_manager();
+   void                          slot_uninstall_module();
+   void                          slot_install_module();
+   void                          slot_module_manager();
+   void                          slot_ok_module();
+   void                          layoutModules();
 
 protected:
 
@@ -235,6 +242,10 @@ private:
    QListWidget *                 packageList;
    QPushButton *                 uninstallButton;
    QPushButton *                 installButton;
+
+   QTableWidget *                 moduleTable;
+   QPushButton *                 moduleUninstallButton;
+   QPushButton *                 moduleInstallButton;
 
 };
 

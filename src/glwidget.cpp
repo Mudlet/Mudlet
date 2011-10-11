@@ -36,7 +36,8 @@
 
 bool ortho;
 bool selectionMode = false;
-float xpos = 0, ypos = 0, zpos = 0, xrot = 0, yrot = 0, angle=0.0;
+bool mPanMode = false;
+float xpos = 0, ypos = 0, zpos = 0, xrot = 0, yrot = 0, angle=0.0, mPanXStart=0, mPanYStart=0;
 float zmax, zmin;
 
 GLWidget::GLWidget(QWidget *parent)
@@ -1966,6 +1967,11 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 //                msgBox.exec();
 //            }
         }
+        else{
+            mPanMode = true;
+            mPanXStart = x;
+            mPanYStart = y;
+        }
 //        else
 //        {
 //            QMessageBox msgBox;
@@ -1977,6 +1983,32 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 
 void GLWidget::mouseMoveEvent( QMouseEvent * event )
 {
+    if (mPanMode)
+    {
+        int x = event->x();
+        int y = height()-event->y();//opengl ursprungspunkt liegt unten links
+        if ((mPanXStart-x) > 1){
+            shiftRight();
+            mPanXStart = x;
+        }
+        else if ((mPanXStart-x) < -1){
+            shiftLeft();
+            mPanXStart = x;
+        }
+        if ((mPanYStart-y) > 1){
+            shiftUp();
+            mPanYStart = y;
+        }
+        else if ((mPanYStart-y) < -1){
+            shiftDown();
+            mPanYStart = y;
+        }
+    }
+}
+
+void GLWidget::mouseReleaseEvent( QMouseEvent * event )
+{
+    mPanMode = false;
 }
 
 void GLWidget::wheelEvent ( QWheelEvent * e )

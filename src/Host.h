@@ -122,6 +122,8 @@ public:
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
     bool               serialize();
+    void               saveModules(int);
+    void               reloadModule(QString moduleName);
     bool               blockScripts() { return mBlockScriptCompile; }
 
     void               setIsAutologin( bool b ){ mIsAutologin = b; }
@@ -141,9 +143,9 @@ public:
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
 
-    bool               installPackage( QString );
-    bool               uninstallPackage( QString );
-    bool               removeDir( const QString dirName, QString originalPath );
+    bool               installPackage( QString, int module);
+    bool               uninstallPackage( QString, int module);
+    bool               removeDir( const QString dirName, QString originalPath);
 
     cTelnet            mTelnet;
     TConsole *         mpConsole;
@@ -278,11 +280,19 @@ public:
     bool               mEnableSpellCheck;
     QString            mIRCNick;
     QStringList        mInstalledPackages;
+    QMap<QString, QStringList> mInstalledModules;
+    QMap<QString, int> mModulePriorities;
+    QMap<QString, QStringList> modulesToWrite;
+    QStringList        mActiveModules;
+    bool               mModuleSaveBlock;
 
     void               showUnpackingProgress( QString  txt );
     QDialog *          mpUnzipDialog;
     QPushButton *      uninstallButton;
     QListWidget *      packageList;
+    QListWidget *                 moduleList;
+    QPushButton *                 moduleUninstallButton;
+    QPushButton *                 moduleInstallButton;
     double             mLineSize;
     double             mRoomSize;
     bool               mShowInfo;

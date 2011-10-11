@@ -16,6 +16,9 @@ end
 function doSpeedWalk()
 end
 
+function doSwitchArea()
+end
+
 -----------------------------------------------------------------------------
 -- General-purpose useful tools that were needed during development:
 -----------------------------------------------------------------------------

@@ -182,6 +182,7 @@ public:
       QString           getCurrentLine();
       void              selectCurrentLine();
       bool              saveMap(QString location);
+      bool              loadMap(QString location);
       QString           logger_translate( QString & );
       void              logger_set_text_properties( QString );
       QString           assemble_html_font_specs();

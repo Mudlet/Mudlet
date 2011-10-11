@@ -360,6 +360,7 @@ mudlet::mudlet()
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
+    connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -398,6 +399,129 @@ mudlet::mudlet()
 
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
 
+}
+
+void mudlet::layoutModules(){
+    Host * pH = getActiveHost();
+    QMapIterator<QString, QStringList > it (pH->mInstalledModules);
+    QStringList sl;
+    // The following seems like a non-intuitive operator
+    // overload but that is how they do it...
+    sl << "Save & Resync Module?" << "Priority" << "Module Name" << "Module Location";
+    moduleTable->setHorizontalHeaderLabels(sl);
+    moduleTable->horizontalHeader()->setResizeMode(0, QHeaderView::Stretch);
+    moduleTable->verticalHeader()->hide();
+    moduleTable->setShowGrid(true);
+    while( it.hasNext() ){
+        it.next();
+        QStringList moduleInfo = it.value();
+        int row = moduleTable->rowCount();
+        moduleTable->insertRow(row);
+        QTableWidgetItem *masterModule = new QTableWidgetItem ();
+        QTableWidgetItem *itemEntry = new QTableWidgetItem ();
+        QTableWidgetItem *itemLocation = new QTableWidgetItem ();
+        QTableWidgetItem *itemPriority = new QTableWidgetItem ();
+        masterModule->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        if (moduleInfo[1].toInt()){
+            masterModule->setCheckState(Qt::Checked);//Qt::Checked);
+            masterModule->setText("YES");
+        }
+        else{
+            masterModule->setCheckState(Qt::Unchecked);//Qt::Checked);
+            masterModule->setText("NO");
+        }
+        masterModule->setToolTip(QString("Checking this box will cause the module\nto be saved & resync'd across all\nopen sessions.  Make sure any\nimportant modules are backed up before enabling this option!"));
+        QString moduleName = it.key();
+        itemEntry->setText(moduleName);
+        itemLocation->setText(moduleInfo[0]);
+        itemPriority->setText(QString::number(pH->mModulePriorities[moduleName]));
+        moduleTable->setItem(row, 0, masterModule);
+        moduleTable->setItem(row, 1, itemPriority);
+        moduleTable->setItem(row, 2, itemEntry);
+        moduleTable->setItem(row, 3, itemLocation);
+    }
+    moduleTable->resizeColumnsToContents();
+}
+
+void mudlet::slot_module_manager(){
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+    QUiLoader loader;
+    QFile file(":/ui/module_manager.ui");
+    file.open(QFile::ReadOnly);
+    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
+    file.close();
+    if( ! d ) return;
+    //moduleList = d->findChild<QListWidget *>("packageList");
+    moduleTable = d->findChild<QTableWidget *>("moduleTable");
+    moduleUninstallButton = d->findChild<QPushButton *>("uninstallButton");
+    moduleInstallButton = d->findChild<QPushButton *>("installButton");
+    QDialogButtonBox * moduleButtonBox = d->findChild<QDialogButtonBox *>("buttonBox");
+    if( ! moduleTable || ! moduleUninstallButton ) return;
+    layoutModules();
+    connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
+    connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
+    connect(moduleButtonBox, SIGNAL(accepted()), this, SLOT(slot_ok_module()));
+    d->setWindowTitle("Module Manager");
+    d->show();
+    d->raise();
+
+}
+
+void mudlet::slot_ok_module(){
+    Host * pH = getActiveHost();
+    QStringList moduleStringList;
+    for (int i=0;i<moduleTable->rowCount();i++){
+        QTableWidgetItem * entry = moduleTable->item(i,2);
+        QTableWidgetItem * checkStatus = moduleTable->item(i,0);
+        QTableWidgetItem * itemPriority = moduleTable->item(i,1);
+        moduleStringList = pH->mInstalledModules[entry->text()];
+        if (checkStatus->checkState() == Qt::Unchecked)
+            moduleStringList[1] = "0";
+        if (checkStatus->checkState() == Qt::Checked)
+            moduleStringList[1] = "1";
+        pH->mInstalledModules[entry->text()] = moduleStringList;
+        pH->mModulePriorities[entry->text()] = itemPriority->text().toInt();
+    }
+}
+
+void mudlet::slot_install_module()
+{
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"),
+                                                    QDir::currentPath());
+    if( fileName.isEmpty() ) return;
+
+    QFile file(fileName);
+    if( ! file.open(QFile::ReadOnly | QFile::Text) )
+    {
+        QMessageBox::warning(this, tr("Load Mudlet Module:"),
+                             tr("Cannot read file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(file.errorString()));
+        return;
+    }
+
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+    pH->installPackage( fileName, 1);
+    //moduleTable->clearContents();
+    for (int i=moduleTable->rowCount()-1; i >= 0; --i)
+        moduleTable->removeRow(i);
+    layoutModules();
+}
+
+void mudlet::slot_uninstall_module()
+{
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+    int cRow = moduleTable->currentRow();
+    QTableWidgetItem * pI = moduleTable->item(cRow, 1);
+    if( pI )
+        pH->uninstallPackage( pI->text(), 1);
+    for (int i=moduleTable->rowCount()-1; i >= 0; --i)
+        moduleTable->removeRow(i);
+    layoutModules();
 }
 
 void mudlet::slot_package_manager()
@@ -442,7 +566,7 @@ void mudlet::slot_install_package()
     Host * pH = getActiveHost();
     if( ! pH ) return;
 
-    pH->installPackage( fileName );
+    pH->installPackage( fileName, 0);
     packageList->clear();
     packageList->addItems( pH->mInstalledPackages );
 }
@@ -460,7 +584,7 @@ void mudlet::slot_uninstall_package()
     if( ! pH ) return;
     QListWidgetItem * pI = packageList->currentItem();
     if( pI )
-        pH->uninstallPackage( pI->text() );
+        pH->uninstallPackage( pI->text(), 0);
     packageList->clear();
     packageList->addItems( pH->mInstalledPackages );
 }
@@ -1020,6 +1144,30 @@ bool mudlet::setLabelClickCallback( Host * pHost, QString & name, QString & func
         return false;
 }
 
+bool mudlet::setLabelOnEnter( Host * pHost, QString & name, QString & func, TEvent * pA )
+{
+    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
+    if( labelMap.contains( name ) )
+    {
+        labelMap[name]->setEnter( pHost, func, pA );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::setLabelOnLeave( Host * pHost, QString & name, QString & func, TEvent * pA )
+{
+    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
+    if( labelMap.contains( name ) )
+    {
+        labelMap[name]->setLeave( pHost, func, pA );
+        return true;
+    }
+    else
+        return false;
+}
+
 int mudlet::getLastLineNumber( Host * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
@@ -1549,7 +1697,7 @@ void mudlet::slot_mapper()
 
     if( pHost->mpMap->rooms.size() < 1 )
     {
-        pHost->mpMap->restore();
+        pHost->mpMap->restore("");
         pHost->mpMap->init( pHost );
         pHost->mpMap->mpMapper->mp2dMap->init();
         pHost->mpMap->mpMapper->show();
@@ -1843,6 +1991,37 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     pHost->mLuaInterpreter.loadGlobal();
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
+
+    //do modules here
+    qDebug()<<"loading modules now";
+    //QMapIterator<QString, QStringList > it (pHost->mInstalledModules);
+    QMapIterator<QString, int> it (pHost->mModulePriorities);
+    QMap<int, QStringList> moduleOrder;
+    while( it.hasNext() ){
+        it.next();
+        QStringList moduleEntry = moduleOrder[it.value()];
+        moduleEntry << it.key();
+        moduleOrder[it.value()] = moduleEntry;
+        /*QStringList entry = it.value();
+        pHost->installPackage(entry[0],1);
+        qDebug()<<entry[0]<<","<<entry[1];
+        //we repeat this step here b/c we use the same installPackage method for initial loading,
+        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+        pHost->mInstalledModules[it.key()] = entry;*/
+    }
+    QMapIterator<int, QStringList> it2 (moduleOrder);
+    while (it2.hasNext()){
+        it2.next();
+        QStringList modules = it2.value();
+        for (int i=0;i<modules.size();i++){
+            QStringList entry = pHost->mInstalledModules[modules[i]];
+            pHost->installPackage(entry[0],1);
+            qDebug()<<entry[0]<<","<<entry[1];
+            //we repeat this step here b/c we use the same installPackage method for initial loading,
+            //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+            pHost->mInstalledModules[modules[i]] = entry;
+        }
+    }
 
     TEvent event;
     event.mArgumentList.append( "sysLoadEvent" );

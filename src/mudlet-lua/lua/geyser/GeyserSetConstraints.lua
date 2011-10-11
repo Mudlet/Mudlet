@@ -18,7 +18,6 @@ function Geyser.set_constraints (window, cons, container)
    os.setlocale("C", "numeric")
    -- If container is nil then by default it is the dimensions of the main window
    container = container or Geyser
-   
    -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
    -- Parse the position constraints to generate functions that will get
    -- window dimensions according to those constraints. Also, update position

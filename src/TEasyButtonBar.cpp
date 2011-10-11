@@ -28,7 +28,6 @@
 TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
 : QWidget( pW )
 , mpTAction( pA )
-
 , mVerticalOrientation( false )
 , mpWidget( new QWidget )
 , mName( name )

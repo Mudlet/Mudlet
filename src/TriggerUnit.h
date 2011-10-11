@@ -95,6 +95,7 @@ private:
     QMap<int, TTrigger *>     mTriggerMap;
     std::list<TTrigger *>     mTriggerRootNodeList;
     qint64                    mMaxID;
+    bool                  mModuleMember;
 
 
 };

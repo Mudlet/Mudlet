@@ -40,6 +40,8 @@ using namespace std;
 TKey::TKey( TKey * parent, Host * pHost )
 : Tree<TKey>( parent )
 , mpHost( pHost )
+, mModuleMember(false)
+, mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
 {
 }
@@ -48,6 +50,8 @@ TKey::TKey( QString name, Host * pHost )
 : Tree<TKey>(0)
 , mName( name )
 , mpHost( pHost )
+, mModuleMember(false)
+, mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
 {
 }

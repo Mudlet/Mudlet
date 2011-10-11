@@ -41,7 +41,7 @@ class XMLimport : public QXmlStreamReader
 public:
               XMLimport( Host * );
 
-    bool      importPackage( QIODevice *device, QString packageName="" );
+    bool      importPackage( QIODevice *device, QString packageName="", int module=0);
 
 private:
 
@@ -84,6 +84,8 @@ private:
 
     void      readStringList( QStringList & );
     void      readIntegerList( QList<int> & );
+    void      readMapList( QMap<QString, QStringList> & );
+    //void      readMapList( QMap<QString, QString> &);
 
     Host *    mpHost;
     QString   mPackageName;
@@ -101,6 +103,7 @@ private:
     bool gotKey;
     bool gotAction;
     bool gotScript;
+    int  module;
 };
 
 #endif // XMLIMPORT_H

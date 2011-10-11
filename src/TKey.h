@@ -97,6 +97,8 @@ private:
     bool             mIsFolder;
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
+    bool                  mModuleMember;
+    bool            mModuleMasterFolder;
 };
 
 #endif

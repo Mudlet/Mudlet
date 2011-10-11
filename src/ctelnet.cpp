@@ -411,7 +411,7 @@ void cTelnet::replyFinished( QNetworkReply * reply )
     file.write( reply->readAll() );
     file.flush();
     file.close();
-    mpHost->installPackage( mServerPackage );
+    mpHost->installPackage( mServerPackage, 0);
     QString packageName = mServerPackage.section("/",-1 );
     packageName.replace( ".zip" , "" );
     packageName.replace( "trigger", "" );
@@ -784,7 +784,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
                       mpHost->mpConsole->print(_smsg.toLatin1().data());
-                      mpHost->uninstallPackage( mpHost->mServerGUI_Package_name );
+                      mpHost->uninstallPackage( mpHost->mServerGUI_Package_name, 0);
                       mpHost->mServerGUI_Package_version = newVersion;
                   }
                   QString url = _m.section( '\n', 1 );
@@ -1011,7 +1011,7 @@ void cTelnet::setGMCPVariables( QString & msg )
         {
             QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
             mpHost->mpConsole->print(_smsg.toLatin1().data());
-            mpHost->uninstallPackage( mpHost->mServerGUI_Package_name );
+            mpHost->uninstallPackage( mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;
         }
         QString url = msg.section( '\n', 1 );

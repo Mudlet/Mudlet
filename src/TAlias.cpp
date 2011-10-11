@@ -39,6 +39,8 @@ using namespace std;
 TAlias::TAlias( TAlias * parent, Host * pHost )
 : Tree<TAlias>( parent )
 , mpHost( pHost )
+, mModuleMember(false)
+, mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
 , mIsTempAlias( false )
 {
@@ -48,6 +50,8 @@ TAlias::TAlias( QString name, Host * pHost )
 : Tree<TAlias>(0)
 , mName( name )
 , mpHost( pHost )
+, mModuleMember(false)
+, mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
 , mIsTempAlias( false )
 {

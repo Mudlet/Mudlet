@@ -82,6 +82,23 @@ void ActionUnit::compileAll()
     }
 }
 
+TAction * ActionUnit::findAction( QString & name )
+{
+    //QMap<int, TAction *>  mActionMap;
+
+    QMapIterator<int,TAction *> it(mActionMap);
+    while( it.hasNext() )
+    {
+        it.next();
+        if (it.value()->getName() == name){
+            qDebug()<<it.value()->getName();
+            TAction * pT = it.value();
+            return pT;
+        }
+    }
+    return 0;
+}
+
 void ActionUnit::addActionRootNode( TAction * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
@@ -329,7 +346,6 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
             mEasyButtonBarList.push_back( pTB );
             (*it)->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
         }
-
         if( (*it)->mOrientation == 1 )
         {
             pTB->setVerticalOrientation();
@@ -342,7 +358,6 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         (*it)->mpEasyButtonBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
-
     return mEasyButtonBarList;
 }
 

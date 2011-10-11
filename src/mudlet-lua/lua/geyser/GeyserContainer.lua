@@ -119,7 +119,7 @@ function Geyser.Container:reposition ()
    
    -- deal with all children of this container
    for k,v in pairs(self.windowList) do
-      if k ~= self then
+      if k ~= self and not v.nestLabels then
          v:reposition()
       end
    end

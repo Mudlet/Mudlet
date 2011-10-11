@@ -24,6 +24,28 @@
 #include <QWidget>
 #include <TMap.h>
 #include <QPixmap>
+#include <QTcpServer>
+#include <QThread>
+#include <QTcpSocket>
+
+
+class T2DMapThread : public QThread
+{
+    Q_OBJECT
+
+public:
+    T2DMapThread(QObject *parent,TMap *map);
+    void run();
+    TMap *threadMap;
+    QObject *tParent;
+
+public slots:
+    void update(bool mPick, int mRoomSelection);
+
+signals:
+    void updateDone();
+private:
+};
 
 
 class T2DMap : public QWidget
@@ -34,6 +56,10 @@ public:
 
     T2DMap();
     explicit T2DMap(QWidget *parent = 0);
+    //connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+    //thread->start();
+    //connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+//    connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
     QColor   getColor( int id );
     QColor   _getColor( int id );
     void     init();
@@ -48,6 +74,7 @@ public:
     void     setExitSize( double );
 
 
+    T2DMapThread *mThread;
     TMap *   mpMap;
     Host *   mpHost;
     int      xzoom;
@@ -140,6 +167,7 @@ public slots:
     void slot_setCustomLine();
     void slot_setCustomLine2();
     void slot_setCustomLine2B(QTreeWidgetItem*, int);
+    void updateDone();
 };
 
 #endif // T2DMAP_H

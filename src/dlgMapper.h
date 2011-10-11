@@ -47,6 +47,7 @@ public:
         Host * mpHost;
         QNetworkAccessManager * mpDownloader;
         QProgressDialog * mpProgressDialog;
+        QNetworkReply * mpReply;
 
 
 public slots:
@@ -57,6 +58,7 @@ public slots:
         void show2dView();
         void slot_togglePanel();
         void setDownloadProgress( qint64, qint64 );
+        void cancel();
         void replyFinished( QNetworkReply * );
         void goRoom();
         void choseRoom( QListWidgetItem * );

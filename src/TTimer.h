@@ -100,6 +100,8 @@ private:
     bool               mIsTempTimer;
     QMutex             mLock;
     QTimer *           mpTimer;
+    bool                  mModuleMember;
+    bool            mModuleMasterFolder;
     //TLuaInterpreter *  mpLua;
 
 };

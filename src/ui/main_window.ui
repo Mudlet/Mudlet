@@ -97,7 +97,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -110,6 +110,7 @@
     <addaction name="actionLive_Help_Chat"/>
     <addaction name="actionPackage_manager"/>
     <addaction name="dactionReplay"/>
+    <addaction name="actionModule_manager"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -276,6 +277,11 @@
   <action name="actionAsdf">
    <property name="text">
     <string>asdf</string>
+   </property>
+  </action>
+  <action name="actionModule_manager">
+   <property name="text">
+    <string>Module manager</string>
    </property>
   </action>
  </widget>

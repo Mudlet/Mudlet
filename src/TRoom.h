@@ -30,6 +30,8 @@ public:
     bool hasSpecialExitLock( int, QString );
     void removeSpecialExit( int to, QString cmd );
     void addSpecialExit( int to, QString cmd );
+    int hasExitStub(int direction);
+    void setExitStub(int direction, int status);
     int id;
     int area;
     int x;
@@ -55,6 +57,7 @@ public:
     QVector3D v;
     QMultiMap<int, QString> other; // es können mehrere exits zum gleichen raum verlaufen
                                    //verbotene exits werden mit 0 geprefixed, offene mit 1
+    QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;
     QList<int> exitLocks;
     QMap<QString, QList<QPointF> > customLines;

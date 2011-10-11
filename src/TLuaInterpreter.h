@@ -120,6 +120,7 @@ public:
     static int hasExitLock( lua_State * );
     static int hasSpecialExitLock( lua_State * );
     static int getMapLabels( lua_State * );
+    static int getMapLabel( lua_State * );
     static int highlightRoom( lua_State * );
     static int unHighlightRoom( lua_State * );
     static int createMapLabel( lua_State * );
@@ -133,6 +134,7 @@ public:
     static int setMainWindowSize( lua_State * L );
     static int registerAnonymousEventHandler( lua_State * L );
     static int setRoomChar( lua_State * );
+    static int getRoomChar( lua_State * );
     static int deleteArea( lua_State * );
     static int deleteRoom( lua_State * );
     static int getRoomAreaName( lua_State * );
@@ -146,6 +148,7 @@ public:
     static int downloadFile( lua_State * );
     static int setRoomUserData( lua_State * );
     static int getRoomUserData( lua_State * );
+    static int searchRoomUserData( lua_State * );
     static int clearRoomUserData( lua_State * );
     static int addSpecialExit( lua_State * );
     static int getSpecialExits( lua_State * );
@@ -215,6 +218,9 @@ public:
     static int disableTrigger( lua_State * L );
     static int tempTrigger( lua_State * L );
     static int tempRegexTrigger( lua_State * L );
+    static int tempButtonToolbar( lua_State * L  );
+    static int tempButton( lua_State * L  );
+    static int tempComplexRegexTrigger( lua_State * L );
     static int killTrigger( lua_State * L );
     static int getLineCount( lua_State * L );
     static int getLineNumber( lua_State * L );
@@ -261,6 +267,8 @@ public:
     static int setBackgroundColor( lua_State * );
     static int createButton( lua_State * );
     static int setLabelClickCallback( lua_State * );
+    static int setLabelOnEnter( lua_State * );
+    static int setLabelOnLeave( lua_State * );
     static int getMainWindowSize( lua_State * );
     static int setMiniConsoleFontSize( lua_State * );
     static int getCurrentLine( lua_State * );
@@ -318,6 +326,15 @@ public:
     static int sendATCP( lua_State * );
     static int sendGMCP( lua_State * );
     static int saveMap( lua_State * L );
+    static int loadMap( lua_State * L );
+    static int setExitStub( lua_State * L  );
+    static int connectExitStub( lua_State * L  );
+    static int getExitStubs( lua_State * L  );
+    static int getModulePriority( lua_State * L  );
+    static int setModulePriority( lua_State * L  );
+    static int getMapVar( lua_State * L  );
+    static int setMapVar( lua_State * L  );
+    static int updateMap(lua_State * L);
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

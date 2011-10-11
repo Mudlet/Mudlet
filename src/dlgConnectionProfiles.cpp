@@ -1133,7 +1133,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
-        importer.importPackage( & file );
+        importer.importPackage( & file, 0);
     }
     else
     {
@@ -1175,12 +1175,25 @@ void dlgConnectionProfiles::slot_connectToServer()
             pHost->getUrl() == "midkemiaonline.com" ||
             pHost->getUrl() == "imperian.com" )
         {
-           pHost->installPackage(":/mudlet-mapper.xml");
+           pHost->installPackage(":/mudlet-mapper.xml", 0);
         }
         else
-           pHost->installPackage(":/generic_mapper_script.xml");
+           pHost->installPackage(":/generic_mapper_script.xml", 0);
 
     }
+
+    //take care of modules
+    /*qDebug()<<"loading modules now";
+    QMapIterator<QString, QStringList > it (pHost->mInstalledModules);
+    while( it.hasNext() ){
+        it.next();
+        QStringList entry = it.value();
+        pHost->installPackage(entry[0],1);
+        qDebug()<<entry[0]<<","<<entry[1];
+        //we repeat this step here b/c we use the same installPackage method for initial loading,
+        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+        pHost->mInstalledModules[it.key()] = entry;
+    }*/
 
     emit signal_establish_connection( profile_name, 0 );
 }

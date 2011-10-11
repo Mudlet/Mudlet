@@ -136,6 +136,8 @@ private:
 
     TAction(){};
     QString          mFuncName;
+    bool                  mModuleMember;
+    bool            mModuleMasterFolder;
 };
 
 #endif

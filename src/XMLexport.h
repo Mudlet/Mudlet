@@ -47,7 +47,7 @@ public:
     bool            writeAction( TAction * );
     bool            writeScript( TScript * );
     bool            writeKey( TKey * );
-
+    bool            writeModuleXML( QIODevice * device, QString moduleName);
     bool            exportHost( Host * );
 
     bool            exportHost( QIODevice * );

@@ -83,6 +83,8 @@ private:
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
     QStringList      mEventHandlerList;
+    bool                  mModuleMember;
+    bool            mModuleMasterFolder;
 };
 
 #endif

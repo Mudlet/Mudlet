@@ -51,6 +51,14 @@ extern "C"
     #include "lauxlib.h"
 }
 #include <phonon>
+/*//for map var access
+union mVarTypes {
+    int * i;
+    float * f;
+    bool * b;
+    string * s;
+    QString * qs;
+};*/
 
 extern QStringList gSysErrors;
 
@@ -765,6 +773,18 @@ int TLuaInterpreter::getLineNumber( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::updateMap(lua_State * L){
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap)
+    {
+        if (pHost->mpMap->mpM)
+            pHost->mpMap->mpM->update();
+        if (pHost->mpMap->mpMapper->mp2dMap)
+            pHost->mpMap->mpMapper->mp2dMap->update();
+    }
+    return 1;
+}
+
 int TLuaInterpreter::centerview( lua_State * L )
 {
     int roomid;
@@ -1057,9 +1077,6 @@ int TLuaInterpreter::resetStopWatch( lua_State * L )
     return 1;
 }
 
-
-
-
 // cusorPositionInLine = selectSection( from_cursorPos, to_cursorPos ) -1 on not found
 int TLuaInterpreter::selectSection( lua_State * L )
 {
@@ -1351,6 +1368,229 @@ int TLuaInterpreter::saveMap( lua_State * L )
     lua_pushboolean( L, error );
     return 1;
 }
+
+int TLuaInterpreter::setExitStub( lua_State * L  ){
+    //args:room id, direction (as given by the #define direction table), status (0 to disable, 1 to enable)
+    int roomId, dirType, status;
+    if (!lua_isnumber(L,1)){
+        lua_pushstring( L, "setExitStub: Need a room number as first argument" );
+        lua_error( L );
+        return 1;
+    }
+    else{
+        roomId = lua_tonumber(L,1);
+    }
+    if (!lua_isnumber(L,2)){
+        lua_pushstring( L, "setExitStub: Need a dir number as 2nd argument" );
+        lua_error( L );
+        return 1;
+    }
+    else{
+        dirType = lua_tonumber(L,2);
+    }
+    if (!lua_isnumber(L,3)){
+        lua_pushstring( L, "setExitStub: Need a 0 or 1 for third argument" );
+        lua_error( L );
+        return 1;
+    }
+    else{
+        status = lua_tonumber(L,3);
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost->mpMap->rooms.contains( roomId )){
+        lua_pushstring( L, "setExitStub: RoomId doesn't exist" );
+        lua_error( L );
+        return 1;
+    }
+    if (dirType>10 || dirType < 1){
+        lua_pushstring( L, "setExitStub: dirType must be between 1 and 10" );
+        lua_error( L );
+        return 1;
+    }
+    if (status){
+        if (pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType))
+            return 1;
+        pHost->mpMap->rooms[roomId]->setExitStub(dirType, 1);
+        }
+    else{
+        if (pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType))
+            pHost->mpMap->rooms[roomId]->setExitStub(dirType, 0);
+        }
+    return 1;
+}
+
+int TLuaInterpreter::connectExitStub( lua_State * L  ){
+    //takes exit stubs from the selected room, finds the room in that direction and if
+    //that room has a stub, a two way exit is formed
+    //args:room id, direction
+    //OR if 3 arguments, takes first argument as from room, 2nd at to room, 3rd as direction
+    //from start room to end room
+    int roomId;
+    int toRoom;
+    int dirType;
+    int roomsGiven = 0;
+    if (!lua_isnumber(L,1)){
+        lua_pushstring( L, "connectExitStub: Need a room number as first argument" );
+        lua_error( L );
+        return 1;
+    }
+    else
+        roomId = lua_tonumber(L,1);
+    if (!lua_isnumber(L,2)){
+        lua_pushstring( L, "connectExitStub: Need a direction number (or room id) as 2nd argument" );
+        lua_error( L );
+        return 1;
+    }
+    else
+        dirType = lua_tonumber(L,2);
+    if (!lua_isnumber(L,3) && !lua_isstring(L,3)){
+        roomsGiven = 0;
+    }
+    else{
+        roomsGiven = 1;
+        toRoom = lua_tonumber(L,2);
+        dirType = lua_tonumber(L,3);
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost->mpMap->rooms.contains( roomId )){
+        lua_pushstring( L, "connectExitStubs: RoomId doesn't exist" );
+        lua_error( L );
+        return 1;
+    }
+    if (!pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType)){
+        lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
+        lua_error( L );
+        return 1;
+    }
+    if (roomsGiven){
+        if (!pHost->mpMap->rooms.contains( toRoom )){
+            lua_pushstring( L, "connectExitStubs: toRoom doesn't exist" );
+            lua_error( L );
+            return 1;
+        }
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        lua_pushboolean(L, pHost->mpMap->setExit( roomId, toRoom, dirType ) );
+        //pHost->mpMap->rooms[roomId]->setExitStub(dirType, 0);
+        //setExit( toRoom, roomId, pHost->mpMap->reverseDirections[dirType]);
+        //pHost->mpMap->rooms[toRoom]->setExitStub(pHost->mpMap->reverseDirections[dirType], 0);
+    }
+    else{
+        if (!pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType)){
+            lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
+            lua_error( L );
+            return 1;
+        }
+        pHost->mpMap->connectExitStub(roomId, dirType);
+    }
+    pHost->mpMap->mMapGraphNeedsUpdate = true;
+    return 1;
+}
+
+int TLuaInterpreter::getExitStubs( lua_State * L  ){
+    //args:room id
+    int roomId;
+    if (!lua_isnumber(L,1)){
+        lua_pushstring( L, "getExitStubs: Need a room number as first argument" );
+        lua_error( L );
+        return 1;
+    }
+    else
+        roomId = lua_tonumber(L,1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost->mpMap->rooms.contains( roomId )){
+        lua_pushstring( L, "getExitStubs: RoomId doesn't exist" );
+        lua_error( L );
+        return 1;
+    }
+    else{
+        QList<int> stubs = pHost->mpMap->rooms[roomId]->exitStubs;
+        if (stubs.size()){
+            lua_newtable(L);
+            for(int i=0;i<stubs.size();i++){
+                int exitType = stubs[i];
+                lua_pushnumber( L, i );
+                lua_pushnumber( L, exitType );
+                lua_settable(L, -3);
+            }
+        }
+    }
+    return 1;
+}
+
+int TLuaInterpreter::getModulePriority( lua_State * L  ){
+    QString moduleName;
+    if (!lua_isstring(L,1)){
+        lua_pushstring(L, "getModulePriority: Module be be a string");
+        lua_error(L);
+        return 1;
+    }
+    else
+        moduleName = lua_tostring(L,1);
+    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (mpHost->mModulePriorities.contains(moduleName)){
+        int priority = mpHost->mModulePriorities[moduleName];
+        lua_pushnumber( L, priority );
+    }
+    else{
+        lua_pushstring(L, "getModulePriority: Module doesn't exist");
+        lua_error(L);
+        return 1;
+    }
+    return 1;
+}
+
+int TLuaInterpreter::setModulePriority( lua_State * L  ){
+    QString moduleName;
+    int modulePriority;
+    if (!lua_isstring(L,1)){
+        lua_pushstring(L, "setModulePriority: Module be be a string");
+        lua_error(L);
+        return 1;
+    }
+    else
+        moduleName = lua_tostring(L,1);
+    if (!lua_isnumber(L,2)){
+        lua_pushstring(L, "setModulePriority: Module priority must be an integer");
+        lua_error(L);
+        return 1;
+    }
+    else
+        modulePriority = lua_tonumber(L,2);
+    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (mpHost->mModulePriorities.contains(moduleName))
+        mpHost->mModulePriorities[moduleName] = modulePriority;
+    else{
+        lua_pushstring(L, "setModulePriority: Module doesn't exist");
+        lua_error(L);
+        return 1;
+    }
+    return 1;
+}
+
+int TLuaInterpreter::loadMap( lua_State * L )
+{
+    string location="";
+    if( lua_gettop( L ) == 1 )
+    {
+        if( ! lua_isstring( L, 1 ) )
+        {
+            lua_pushstring( L, "loadMap: where do you want to load from?" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            location = lua_tostring( L, 1 );
+        }
+    }
+    QString _location( location.c_str() );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    bool error = pHost->mpConsole->loadMap(_location);
+    lua_pushboolean( L, error );
+    return 1;
+}
+
+
 
 // enableTimer( sess, timer_name )
 int TLuaInterpreter::enableTimer( lua_State *L )
@@ -2343,6 +2583,106 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setLabelOnEnter( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "setLabelOnEnter: wrong first argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    string luaName="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setLabelOnEnter: wrong second argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 2 );
+    }
+
+    TEvent * pE = new TEvent;
+
+    int n = lua_gettop( L );
+    for( int i=3; i<=n; i++)
+    {
+        if( lua_isnumber( L, i ) )
+        {
+            pE->mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
+            pE->mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) )
+        {
+            pE->mArgumentList.append( QString(lua_tostring( L, i )) );
+            pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    QString name(luaName.c_str());
+    mudlet::self()->setLabelOnEnter( pHost, text, name, pE );
+
+    return 0;
+}
+
+int TLuaInterpreter::setLabelOnLeave( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    string luaName="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 2 );
+    }
+
+    TEvent * pE = new TEvent;
+
+    int n = lua_gettop( L );
+    for( int i=3; i<=n; i++)
+    {
+        if( lua_isnumber( L, i ) )
+        {
+            pE->mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
+            pE->mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) )
+        {
+            pE->mArgumentList.append( QString(lua_tostring( L, i )) );
+            pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    QString name(luaName.c_str());
+    mudlet::self()->setLabelOnLeave( pHost, text, name, pE );
+
+    return 0;
+}
+
 int TLuaInterpreter::setTextFormat( lua_State *L )
 {
     string luaSendText="";
@@ -3215,13 +3555,63 @@ int TLuaInterpreter::searchRoom( lua_State *L )
             {
                 QString name = pHost->mpMap->rooms[i]->name;
                 int roomID = pHost->mpMap->rooms[i]->id;
-                lua_pushstring( L, name.toLatin1().data() );
                 lua_pushnumber( L, roomID );
+                lua_pushstring( L, name.toLatin1().data() );
                 lua_settable(L, -3);
             }
         }
         return 1;
     }
+}
+
+int TLuaInterpreter::searchRoomUserData( lua_State *L )
+{
+	//basically stolen from searchRoom
+	//if we have, searchUserData(key, value)
+	//we look through all room ids in a given field for the string and
+	//return a table of roomids matching
+    string key, value;
+    if( lua_isstring( L, 1 ) )
+    {
+        key = lua_tostring( L, 1 );
+    }
+    else
+    {
+        lua_pushstring( L, "searchRoomUserData: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+	if( lua_isstring( L, 2 ) )
+    {
+        value = lua_tostring( L, 2 );
+    }
+    else
+    {
+        lua_pushstring( L, "searchRoomUserData: wrong 2nd argument type" );
+        lua_error( L );
+        return 1;
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+	QMapIterator<int, TRoom *> it( pHost->mpMap->rooms );
+	lua_newtable(L);
+	while( it.hasNext() )
+	{
+		it.next();
+		int i = it.key();
+		QString _key = key.c_str();
+        QString _value = value.c_str();
+		if (pHost->mpMap->rooms[i]->userData.contains( _key ))
+		{
+			QString _keyValue = pHost->mpMap->rooms[i]->userData[_key];
+			if (_keyValue.contains(_value))
+			{
+				lua_pushnumber( L, i );
+				lua_pushstring( L, _keyValue.toLatin1().data() );
+				lua_settable(L, -3);
+			}
+		}
+	}
+	return 1;
 }
 
 int TLuaInterpreter::getAreaTable( lua_State *L )
@@ -4244,6 +4634,7 @@ int TLuaInterpreter::tempTrigger( lua_State *L )
     QString _fun = luaFunction.c_str();
     int timerID = pLuaInterpreter->startTempTrigger( _reg, _fun );
     lua_pushnumber( L, timerID );
+    //lua_pushstring( L, _reg.toLatin1().data());
     return 1;
 }
 
@@ -4341,6 +4732,345 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
     return 1;
 }
 
+// tempTrigger( string name, string regex, string function to call, multiline, fg, bg, filter, match all(perlSlashG), highlight,
+// play sound, fire length(mStayOpen), lineDelta).
+int TLuaInterpreter::tempComplexRegexTrigger( lua_State *L )
+{
+    bool multiLine, matchAll, highlight, playSound, filter, colorTrigger;
+    int fireLength, lineDelta;
+    QString fgColor, bgColor;
+    QStringList regexList;
+    QString script, parent, pattern, soundFile;
+    QColor hlFgColor, hlBgColor;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        parent = lua_tostring( L, 1 );
+    }
+    
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        pattern = lua_tostring( L, 2 );
+    }
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        script = lua_tostring( L, 3 );
+    }
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        multiLine = lua_tonumber( L, 4 );
+    }
+    if( lua_isnumber( L, 5 ) )
+    {
+        colorTrigger = false;
+    }
+    else
+    {
+        colorTrigger = true;
+        fgColor = lua_tostring( L, 5 );
+    }
+    if( lua_isnumber( L, 6 ) )
+    {
+        colorTrigger = false;
+    }
+    else
+    {
+        bgColor = lua_tostring( L, 6 );
+    }
+    
+    if( ! lua_isnumber( L, 7 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        filter = lua_tonumber( L, 7 );
+    }
+    if( ! lua_isnumber( L, 8 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        matchAll = lua_tonumber( L, 8 );
+    }
+    if(lua_isnumber( L, 9 ) )
+    {
+        highlight = false;
+    }
+    else
+    {
+        highlight = true;
+        hlFgColor.setNamedColor(lua_tostring( L, 9 ));
+    }
+    if(lua_isnumber( L, 9 ) )
+    {
+        highlight = false;
+    }
+    else
+    {
+        highlight = true;
+        hlBgColor.setNamedColor(lua_tostring( L, 9 ));
+    }
+    //lineDelta).
+    if(lua_isnumber( L, 10 ) )
+    {
+        playSound = false;
+    }
+    else
+    {
+        playSound = true;
+        soundFile = lua_tostring( L, 10 );
+    }
+    if( ! lua_isnumber( L, 11 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        fireLength = lua_tonumber( L, 11 );
+    }
+    if( ! lua_isnumber( L, 12 ) )
+    {
+        lua_pushstring( L, "tempComplexRegexTrigger: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        lineDelta = lua_tonumber( L, 12 );
+    }
+
+    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+    //TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    //mpHost = pLuaInterpreter->mpHost;
+    TTrigger * pT;
+    QList<int> propertyList;
+    
+    TTrigger * pP = mpHost->getTriggerUnit()->findTrigger( parent );
+    
+    if( !pP )
+    {
+        regexList << pattern;
+        if (colorTrigger)
+            propertyList << REGEX_COLOR_PATTERN;
+        else
+            propertyList << REGEX_PERL;
+    }
+    else{
+        regexList = pP->getRegexCodeList();
+        propertyList = pP->getRegexCodePropertyList();
+    }
+
+    pT = new TTrigger( "a", regexList, propertyList, multiLine, mpHost );
+    //pT->setRegexCodeList( regexList, propertyList );
+    pT->setIsFolder( 0 );
+    pT->setIsActive( true );
+    pT->setIsTempTrigger( true );
+    pT->registerTrigger();
+    pT->setScript( script );
+    pT->setName( pattern );
+    //pT->setIsMultiline( multiLine );
+    pT->mPerlSlashGOption = matchAll;//match all
+    pT->mFilterTrigger = filter;
+    pT->setConditionLineDelta( lineDelta );//line delta
+    pT->mStayOpen = fireLength;//fire length
+    pT->mSoundTrigger = playSound;//sound trigger, need to set sound file if true
+    if (playSound){
+        pT->setSound(soundFile);
+    }
+    pT->setIsColorizerTrigger(highlight); //highlight
+    if (highlight){
+        pT->setFgColor( hlFgColor );
+        pT->setBgColor( hlBgColor );
+    }
+    //lua_pushnumber( L, pT->getID() );
+    lua_pushstring( L, pattern.toLatin1().data());
+    return 1;
+}
+
+int TLuaInterpreter::tempButton( lua_State *L){
+    //args: parent, name, orientation
+    QString toolbar, name;
+    QString cmdButtonUp = "";
+    QString cmdButtonDown = "";
+    QString script = "";
+    QStringList nameL;
+    nameL << toolbar;
+    int orientation;
+    if(!lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "tempButtonToolbar: wrong first arg" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        toolbar = lua_tostring( L, 1 );
+    }
+    if(!lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "tempButtonToolbar: wrong 2nd arg" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tostring( L, 2 );
+    }
+    if(!lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "tempButtonToolbar: wrong first arg" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        orientation = lua_tonumber( L, 3 );
+    }
+
+
+    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+    TAction * pP = mpHost->getActionUnit()->findAction( toolbar );
+    if (!pP) return 0;
+    TAction * pT = mpHost->getActionUnit()->findAction( name );
+    if (pT) return 0;
+    pT = new TAction( pP, mpHost );
+    pT->setName( name );
+    pT->setCommandButtonUp( cmdButtonUp );
+    pT->setCommandButtonDown( cmdButtonDown );
+    pT->setIsPushDownButton( false );
+    pT->mLocation = pP->mLocation;
+    pT->mOrientation = orientation;
+    pT->setScript( script );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+
+
+
+//    pT->setIsPushDownButton( isChecked );
+//    pT->mLocation = location;
+//    pT->mOrientation = orientation;
+//    pT->setIsActive( pT->shouldBeActive() );
+//    pT->setButtonColor( color );
+//    pT->setButtonRotation( rotation );
+//    pT->setButtonColumns( columns );
+////      pT->setButtonFlat( flatButton );
+//    pT->mUseCustomLayout = useCustomLayout;
+//    pT->mPosX = posX;
+//    pT->mPosY = posY;
+//    pT->mSizeX = sizeX;
+//    pT->mSizeY = sizeY;
+//    pT->css = mpActionsMainArea->css->toPlainText();
+
+
+    pT->registerAction();
+    int childID = pT->getID();
+    mpHost->getActionUnit()->updateToolbar();
+    return 1;
+}
+
+int TLuaInterpreter::tempButtonToolbar( lua_State *L  )
+{//args: name, location(0-4), orientation(0/1)
+    QString name;
+    QString cmdButtonUp = "";
+    QString cmdButtonDown = "";
+    QString script = "";
+    QStringList nameL;
+    nameL << name;
+    int location, orientation;
+
+    if(!lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "tempButtonToolbar: wrong first arg" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tostring( L, 1 );
+    }
+    if(!lua_isnumber( L, 2 ) )
+    {
+        lua_pushstring( L, "tempButtonToolbar: wrong first arg" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        location = lua_tonumber( L, 2 );
+    }
+    if(!lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "tempButtonToolbar: wrong first arg" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        orientation = lua_tonumber( L, 3 );
+    }
+
+    if( location > 0 ) location++;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TAction * pT = pHost->getActionUnit()->findAction( name );
+    if (pT) return 0;
+
+        //insert a new root item
+    //ROOT_ACTION:
+
+    pT = new TAction( name, pHost );
+    pT->setCommandButtonUp( cmdButtonUp );
+    QStringList nl;
+    nl << name;
+
+    pT->setName( name );
+    pT->setCommandButtonUp( cmdButtonUp );
+    pT->setCommandButtonDown( cmdButtonDown );
+    pT->setIsPushDownButton( false );
+    pT->mLocation = location;
+    pT->mOrientation = orientation;
+    pT->setScript( script );
+    pT->setIsFolder( true );
+    pT->setIsActive( true );
+    pT->registerAction();
+    int childID = pT->getID();
+    pHost->getActionUnit()->updateToolbar();
+
+
+
+
+    return 1;
+}
 
 // tempTrigger( string regex, string function to call ) // one shot timer.
 int TLuaInterpreter::tempRegexTrigger( lua_State *L )
@@ -5092,9 +5822,10 @@ int TLuaInterpreter::setRoomCoordinates( lua_State *L )
 int TLuaInterpreter::setCustomEnvColor( lua_State *L )
 {
     int id;
-    int x;
-    int y;
-    int z;
+    int r;
+    int g;
+    int b;
+    int alpha;
     if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
@@ -5114,7 +5845,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
     }
     else
     {
-        x = lua_tointeger( L, 2 );
+        r = lua_tointeger( L, 2 );
     }
 
     if( ! lua_isnumber( L, 3 ) )
@@ -5125,7 +5856,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
     }
     else
     {
-        y = lua_tointeger( L, 3 );
+        g = lua_tointeger( L, 3 );
     }
 
     if( ! lua_isnumber( L, 4 ) )
@@ -5136,11 +5867,22 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
     }
     else
     {
-        z = lua_tointeger( L, 4 );
+        b = lua_tointeger( L, 4 );
+    }
+
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        alpha = lua_tointeger( L, 5 );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpMap->customEnvColors[id] = QColor( x, y, z );
+    pHost->mpMap->customEnvColors[id] = QColor( r,g,b,alpha );
     return 0;
 }
 
@@ -5479,6 +6221,94 @@ int TLuaInterpreter::createRoomID( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::getMapVar( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name;
+    QMap<QString, mVarTypes> mapVars = pHost->mpMap->mVars;
+    if (!lua_objlen(L,1)){
+        //return all variables and their current values
+        QMapIterator<QString,mVarTypes> it(mapVars);
+        lua_newtable(L);
+        while( it.hasNext() )
+        {
+            it.next();
+            lua_pushstring( L, it.key().toLatin1().data() );
+            switch (it.value().c[8]){
+            case 'B':
+                lua_pushboolean( L, *(it.value().b) );
+                break;
+            case 'I':
+                lua_pushnumber( L, *(it.value().i) );
+                break;
+            }
+            lua_settable(L, -3);
+        }
+        return 1;
+    }
+    else if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "getMapVar: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tostring( L, 1 );
+    }
+    if (mapVars.contains(name))
+        switch (mapVars[name].c[8]){
+        case 'B':
+            lua_pushboolean( L, *(mapVars[name].b) );
+        case 'I':
+            lua_pushnumber( L, *(mapVars[name].i) );
+        }
+//        lua_pushnumber(L, *(mapVars[name].i));
+    else{
+        lua_pushstring( L, "getMapVar: Variable doesn't exist" );
+        lua_error( L );
+    }
+    return 1;
+}
+
+int TLuaInterpreter::setMapVar( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name;
+    int value;
+    QMap<QString, mVarTypes> mapVars = pHost->mpMap->mVars;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "setMapVar: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        name = lua_tostring( L, 1 );
+    }
+    if (mapVars.contains(name)){
+        switch (mapVars[name].c[8]){
+        case 'B':
+            if (lua_isboolean(L,2))
+                *(mapVars[name].b)=lua_toboolean(L,2);
+            break;
+        case 'I':
+            if (lua_isnumber(L,2))
+                *(mapVars[name].i)=lua_tonumber(L,2);
+            break;
+        default:
+            lua_pushstring( L, "setMapVar: Wrong argument type for variable" );
+            lua_error( L );
+        }
+    }
+    else{
+        lua_pushstring( L, "setMapVar: Variable doesn't exist" );
+        lua_error( L );
+    }
+    return 1;
+}
+
 int TLuaInterpreter::unHighlightRoom( lua_State * L )
 {
     int id;
@@ -5635,7 +6465,7 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
 int TLuaInterpreter::createMapLabel( lua_State * L )
 {
     int area, fgr, fgg, fgb, bgr, bgg, bgb;
-    float posx, posy;
+    float posx, posy, posz;
     string text;
     if( ! lua_isnumber( L, 1 ) )
     {
@@ -5680,8 +6510,8 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     {
         posy = lua_tonumber( L, 4 );
     }
-
-    if( ! lua_isnumber( L, 5 ) )
+	
+	if( ! lua_isnumber( L, 5 ) )
     {
         lua_pushstring( L, "createMapLabel: wrong argument type" );
         lua_error( L );
@@ -5689,7 +6519,7 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     }
     else
     {
-        fgr = lua_tointeger( L, 5 );
+        posz = lua_tonumber( L, 5 );
     }
 
     if( ! lua_isnumber( L, 6 ) )
@@ -5700,7 +6530,7 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     }
     else
     {
-        fgg = lua_tointeger( L, 6 );
+        fgr = lua_tointeger( L, 6 );
     }
 
     if( ! lua_isnumber( L, 7 ) )
@@ -5711,7 +6541,7 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     }
     else
     {
-        fgb = lua_tointeger( L, 7 );
+        fgg = lua_tointeger( L, 7 );
     }
 
     if( ! lua_isnumber( L, 8 ) )
@@ -5722,7 +6552,7 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     }
     else
     {
-        bgr = lua_tointeger( L, 8 );
+        fgb = lua_tointeger( L, 8 );
     }
 
     if( ! lua_isnumber( L, 9 ) )
@@ -5733,7 +6563,7 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     }
     else
     {
-        bgg = lua_tointeger( L, 9 );
+        bgr = lua_tointeger( L, 9 );
     }
 
     if( ! lua_isnumber( L, 10 ) )
@@ -5744,14 +6574,25 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     }
     else
     {
-        bgb = lua_tointeger( L, 10 );
+        bgg = lua_tointeger( L, 10 );
+    }
+
+    if( ! lua_isnumber( L, 11 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        bgb = lua_tointeger( L, 11 );
     }
 
     QString _text = text.c_str();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QColor fg = QColor(fgr,fgg,fgb);
     QColor bg = QColor(bgr, bgg, bgb);
-    lua_pushinteger( L, pHost->mpMap->createMapLabel( area, _text, posx, posy, fg, bg ) );
+    lua_pushinteger( L, pHost->mpMap->createMapLabel( area, _text, posx, posy, posz, fg, bg ) );
     return 1;
 }
 
@@ -5785,7 +6626,7 @@ int TLuaInterpreter::deleteMapLabel( lua_State * L )
 
 int TLuaInterpreter::getMapLabels( lua_State * L )
 {
-    int area, labelID;
+    int area;
     if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "deleteMapLabel: wrong argument type" );
@@ -5811,6 +6652,120 @@ int TLuaInterpreter::getMapLabels( lua_State * L )
     }
     return 1;
 }
+
+int TLuaInterpreter::getMapLabel( lua_State * L )
+{
+    int area, labelId = -1;
+    QString labelText;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tointeger( L, 1 );
+    }
+    if (!lua_isstring(L,2) && !lua_isnumber(L,2)){
+        lua_pushstring( L, "getMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else{
+        if (lua_isnumber(L,2))
+            labelId = lua_tointeger(L,2);
+        else
+            labelText = lua_tostring( L, 2 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap->mapLabels.contains( area ) )
+    {
+        lua_newtable(L);
+        if (labelId != -1){
+            if (pHost->mpMap->mapLabels[area].contains(labelId)){
+                TMapLabel label =  pHost->mpMap->mapLabels[area][labelId];
+                qDebug()<<"here";
+                int x = label.pos.x();
+                int y = label.pos.y();
+                int z = label.pos.z();
+                qDebug()<<"herea";
+                float height = label.size.height();
+                float width = label.size.width();
+                qDebug()<<"hereb";
+                QString text = label.text;
+                qDebug()<<"herec";
+
+                lua_pushstring( L, "X" );
+                lua_pushnumber( L, x );
+                lua_settable(L, -3);
+                lua_pushstring( L, "Y" );
+                lua_pushnumber( L, y );
+                lua_settable(L, -3);
+                lua_pushstring( L, "Z" );
+                lua_pushnumber( L, z );
+                lua_settable(L, -3);
+                lua_pushstring( L, "Height" );
+                lua_pushnumber( L, height );
+                lua_settable(L, -3);
+                lua_pushstring( L, "Width" );
+                lua_pushnumber( L, width );
+                lua_settable(L, -3);
+                lua_pushstring( L, "Text" );
+                lua_pushstring( L, text.toLatin1().data() );
+                lua_settable(L, -3);
+            }
+            else{
+                lua_pushstring( L, "getMapLabel: labelId doesn't exist" );
+                lua_error( L );
+                return 1;
+            }
+        }
+        else{
+            QMapIterator<int,TMapLabel> it(pHost->mpMap->mapLabels[area]);
+            while( it.hasNext() )
+            {
+                it.next();
+                if(it.value().text==labelText){
+                    TMapLabel label = it.value();
+                    lua_newtable(L);
+                    int id = it.key();
+                    int x = label.pos.x();
+                    int y = label.pos.y();
+                    int z = label.pos.z();
+                    float height = label.size.height();
+                    float width = label.size.width();
+                    QString text = label.text;
+                    qDebug()<<"here";
+                    lua_pushstring( L, "X" );
+                    lua_pushnumber( L, x );
+                    lua_settable(L, -3);
+                    lua_pushstring( L, "Y" );
+                    lua_pushnumber( L, y );
+                    lua_settable(L, -3);
+                    lua_pushstring( L, "Z" );
+                    lua_pushnumber( L, z );
+                    lua_settable(L, -3);
+                    lua_pushstring( L, "Height" );
+                    lua_pushnumber( L, height );
+                    lua_settable(L, -3);
+                    lua_pushstring( L, "Width" );
+                    lua_pushnumber( L, width );
+                    lua_settable(L, -3);
+                    lua_pushstring( L, "Text" );
+                    lua_pushstring( L, text.toLatin1().data() );
+                    lua_settable(L, -3);
+                    lua_pushnumber(L, id);
+                    lua_insert(L,-2);
+                    lua_settable(L, -3);
+
+                }
+            }
+        }
+    }
+    return 1;
+}
+
 
 int TLuaInterpreter::addSpecialExit( lua_State * L )
 {
@@ -5923,10 +6878,16 @@ int TLuaInterpreter::getSpecialExits( lua_State * L )
         while( it.hasNext() )
         {
             it.next();
+            lua_newtable(L);
             int id_to = it.key();
             QString dir = it.value();
-            lua_pushnumber( L, id_to );
-            lua_pushstring( L, dir.toLatin1().data() );
+            QString exitStatus = dir.left(1);
+            QString exit = dir.remove(0,1);
+            lua_pushstring( L, exit.toLatin1().data() );//done to remove the prepended special exit status
+            lua_pushstring( L, exitStatus.toLatin1().data() );//done to remove the prepended special exit status
+            lua_settable(L, -3);
+            lua_pushnumber(L, id_to);
+            lua_insert(L,-2);
             lua_settable(L, -3);
         }
         return 1;
@@ -6188,6 +7149,35 @@ int TLuaInterpreter::setRoomChar( lua_State * L )
         {
             pHost->mpMap->rooms[id]->c = c[0];
         }
+    }
+    return 0;
+}
+
+int TLuaInterpreter::getRoomChar( lua_State * L )
+{
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getRoomChar: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost->mpMap->rooms.contains( id ) )
+    {
+        lua_pushstring( L, "getRoomChar: room ID does not exist");
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        QString c = (QString)pHost->mpMap->rooms[id]->c;
+        lua_pushstring( L, c.toLatin1().data() );
+        return 1;
     }
     return 0;
 }
@@ -8032,6 +9022,7 @@ int TLuaInterpreter::check_for_mappingscript()
     return r;
 }
 
+
 void TLuaInterpreter::threadLuaInterpreterExec( string code )
 {
     /* cout << "TLuaMainThread::threadLuaInterpreterExec(code) executing following code:" << endl;
@@ -8167,6 +9158,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor );
     lua_register( pGlobalLua, "createButton", TLuaInterpreter::createButton );
     lua_register( pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback );
+    lua_register( pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter );
+    lua_register( pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave );
     lua_register( pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow );
     lua_register( pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat );
     lua_register( pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize );
@@ -8182,6 +9175,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setItalics", TLuaInterpreter::setItalics );
     lua_register( pGlobalLua, "setUnderline", TLuaInterpreter::setUnderline );
     lua_register( pGlobalLua, "disconnect", TLuaInterpreter::disconnect );
+    lua_register( pGlobalLua, "tempButtonToolbar", TLuaInterpreter::tempButtonToolbar );
+    lua_register( pGlobalLua, "tempButton", TLuaInterpreter::tempButton );
     lua_register( pGlobalLua, "reconnect", TLuaInterpreter::reconnect );
     lua_register( pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir );
     lua_register( pGlobalLua, "setTriggerStayOpen", TLuaInterpreter::setTriggerStayOpen );
@@ -8203,6 +9198,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger );
     lua_register( pGlobalLua, "permSubstringTrigger", TLuaInterpreter::permSubstringTrigger );
     lua_register( pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger );
+    lua_register( pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger );
     lua_register( pGlobalLua, "permTimer", TLuaInterpreter::permTimer );
     lua_register( pGlobalLua, "permAlias", TLuaInterpreter::permAlias );
     lua_register( pGlobalLua, "exists", TLuaInterpreter::exists );
@@ -8273,6 +9269,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRoomEnv", TLuaInterpreter::getRoomEnv );
     lua_register( pGlobalLua, "getRoomUserData", TLuaInterpreter::getRoomUserData );
     lua_register( pGlobalLua, "setRoomUserData", TLuaInterpreter::setRoomUserData );
+	lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
     lua_register( pGlobalLua, "getRoomsByPosition", TLuaInterpreter::getRoomsByPosition );
     //lua_register( pGlobalLua, "dumpRoomUserData", TLuaInterpreter::dumpRoomUserData );
     lua_register( pGlobalLua, "clearRoomUserData", TLuaInterpreter::clearRoomUserData );
@@ -8287,8 +9284,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea );
     lua_register( pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom );
     lua_register( pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar );
+    lua_register( pGlobalLua, "getRoomChar", TLuaInterpreter::getRoomChar );
     lua_register( pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler );
     lua_register( pGlobalLua, "saveMap", TLuaInterpreter::saveMap );
+    lua_register( pGlobalLua, "loadMap", TLuaInterpreter::loadMap );
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
     // removed because of various Qt crashes
     //lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
@@ -8300,10 +9299,20 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "highlightRoom", TLuaInterpreter::highlightRoom );
     lua_register( pGlobalLua, "unHighlightRoom", TLuaInterpreter::unHighlightRoom );
     lua_register( pGlobalLua, "getMapLabels", TLuaInterpreter::getMapLabels );
+    lua_register( pGlobalLua, "getMapLabel", TLuaInterpreter::getMapLabel );
     lua_register( pGlobalLua, "lockExit", TLuaInterpreter::lockExit );
     lua_register( pGlobalLua, "hasExitLock", TLuaInterpreter::hasExitLock );
     lua_register( pGlobalLua, "lockSpecialExit", TLuaInterpreter::lockSpecialExit );
     lua_register( pGlobalLua, "hasSpecialExitLock", TLuaInterpreter::hasSpecialExitLock );
+    lua_register( pGlobalLua, "setExitStub", TLuaInterpreter::setExitStub );
+    lua_register( pGlobalLua, "connectExitStub", TLuaInterpreter::connectExitStub );
+    lua_register( pGlobalLua, "getExitStubs", TLuaInterpreter::getExitStubs );
+    lua_register( pGlobalLua, "setModulePriority", TLuaInterpreter::setModulePriority );
+    lua_register( pGlobalLua, "getModulePriority", TLuaInterpreter::getModulePriority );
+    lua_register( pGlobalLua, "getMapVar", TLuaInterpreter::getMapVar );
+    lua_register( pGlobalLua, "setMapVar", TLuaInterpreter::setMapVar );
+    lua_register( pGlobalLua, "updateMap", TLuaInterpreter::updateMap );
+
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
@@ -8762,9 +9771,12 @@ int TLuaInterpreter::startPermRegexTrigger( QString & name, QString & parent, QS
     pT->setIsTempTrigger( false );
     pT->registerTrigger();
     pT->setScript( function );
-    pT->setName( name );
+    //pT->setName( name );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return 1;
+    //return 1;
+    return id;
 
 }
 
@@ -8795,9 +9807,11 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger( QString & name, QString 
     pT->setIsTempTrigger( false );
     pT->registerTrigger();
     pT->setScript( function );
-    pT->setName( name );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return 1;
+    //return 1;
+    return id;
 
 }
 
@@ -8828,9 +9842,11 @@ int TLuaInterpreter::startPermSubstringTrigger( QString & name, QString & parent
     pT->setIsTempTrigger( false );
     pT->registerTrigger();
     pT->setScript( function );
-    pT->setName( name );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return 1;
+    //return 1;
+    return id;
 
 }
 

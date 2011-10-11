@@ -83,6 +83,8 @@ public:
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
     bool             mIsTempAlias;
+    bool                  mModuleMember;
+    bool            mModuleMasterFolder;
     QString          mFuncName;
 };
 

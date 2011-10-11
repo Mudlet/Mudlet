@@ -1,5 +1,5 @@
 
-CONFIG += release uitools
+CONFIG += debug uitools
 
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
@@ -220,6 +220,7 @@ FORMS += ui/connection_profiles.ui \
     ui/room_exits.ui \
     ui/lacking_mapper_script.ui \
     ui/package_manager.ui \
+    ui/module_manager.ui \
     ui/package_manager_unpack.ui \
     ui/custom_lines.ui
 

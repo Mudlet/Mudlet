@@ -67,8 +67,11 @@ public:
     bool               state();
     QString            getPackageName() { return mPackageName; }
     void               setPackageName( QString n ){ mPackageName = n; }
+    void               setModuleName( QString n ){ mModuleName = n;}
+    QString            getModuleName() {return mModuleName;}
     bool               FullyExpanded;
     QString            mPackageName;
+    QString            mModuleName;
 
 
 protected:

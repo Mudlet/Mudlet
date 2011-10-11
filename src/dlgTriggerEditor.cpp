@@ -6379,6 +6379,8 @@ void dlgTriggerEditor::slot_profileSaveAction()
         XMLexport writer( mpHost );
         writer.exportHost( & file_xml );
         file_xml.close();
+        qDebug()<<"saving modules";
+        mpHost->saveModules(1);
     }
     else
     {
@@ -6477,7 +6479,13 @@ void dlgTriggerEditor::slot_chose_action_icon()
 
 void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
 {
-    QColor color = QColorDialog::getColor( mpHost->mBlue, this );
+    QTreeWidgetItem * pItem = mCurrentTrigger;
+    if( ! pItem ) return;
+    if( ! pItem->parent() ) return;
+    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+    
+    QColor color = QColorDialog::getColor( pT->getFgColor(), this );
     if ( color.isValid() )
     {
         QPalette palette;
@@ -6490,7 +6498,13 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
 
 void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
 {
-    QColor color = QColorDialog::getColor( mpHost->mRed, this );
+    QTreeWidgetItem * pItem = mCurrentTrigger;
+    if( ! pItem ) return;
+    if( ! pItem->parent() ) return;
+    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+
+    QColor color = QColorDialog::getColor( pT->getBgColor(), this );
     if ( color.isValid() )
     {
         QPalette palette;

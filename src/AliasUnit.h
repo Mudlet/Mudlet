@@ -93,6 +93,7 @@ private:
     QMap<int, TAlias *>             mAliasMap;
     std::list<TAlias *>             mAliasRootNodeList;
     qint64                          mMaxID;
+    bool                  mModuleMember;
 };
 
 

@@ -49,7 +49,28 @@ TMap::TMap( Host * pH )
     customEnvColors[270] = mpHost->mLightCyan_2;
     customEnvColors[271] = mpHost->mLightWhite_2;
     customEnvColors[272] = mpHost->mLightBlack_2;
-
+    unitVectors[1] = QVector3D(0,-1,0);
+    unitVectors[2] = QVector3D(1,-1,0);
+    unitVectors[3] = QVector3D(-1,-1,0);
+    unitVectors[4] = QVector3D(1, 0,0);
+    unitVectors[5] = QVector3D(-1,0,0);
+    unitVectors[6] = QVector3D(0,1,0);
+    unitVectors[7] = QVector3D(1,1,0);
+    unitVectors[8] = QVector3D(-1,1,0);
+    unitVectors[9] = QVector3D(0,0,1);
+    unitVectors[10] = QVector3D(0,0,-1);
+    reverseDirections[1] = 6; //contains complementary directions
+    reverseDirections[2] = 8;
+    reverseDirections[3] = 7;
+    reverseDirections[4] = 5;
+    reverseDirections[5] = 4;
+    reverseDirections[6] = 1;
+    reverseDirections[7] = 3;
+    reverseDirections[8] = 2;
+    reverseDirections[9] = 10;
+    reverseDirections[10] = 9;
+    reverseDirections[11] = 12;
+    reverseDirections[12] = 11;
 }
 
 #include <QFileDialog>
@@ -179,6 +200,70 @@ bool TMap::setRoomCoordinates( int id, int x, int y, int z )
     return true;
 }
 
+int compSign(int a, int b){
+    return (a < 0) == (b < 0);
+}
+
+void TMap::connectExitStub(int roomId, int dirType){
+    int area = rooms[roomId]->area;
+    int minDistance = 999999;
+    int minDistanceRoom=0, meanSquareDistance=0;
+    QVector3D unitVector = unitVectors[dirType];
+    int ux = unitVector.x(), uy = unitVector.y(), uz = unitVector.z();
+    int rx = rooms[roomId]->x, ry = rooms[roomId]->y, rz = rooms[roomId]->z;
+    int dx=0,dy=0,dz=0;
+    TArea * pA = areas[area];
+    for( int i=0; i< pA->rooms.size(); i++ ){
+        if (rooms[pA->rooms[i]]->id == roomId)
+            continue;
+        if (uz){
+            dz = (int)rooms[pA->rooms[i]]->z-rz;
+            if (!compSign(dz,uz) || !dz)
+                continue;
+        }
+        else{
+            //to avoid lower/upper floors from stealing stubs
+            if ((int)rooms[pA->rooms[i]]->z != rz)
+                continue;
+        }
+        if (ux){
+            dx = (int)rooms[pA->rooms[i]]->x-rx;
+            if (!compSign(dx,ux) || !dx) //we do !dx to make sure we have a component in the desired direction
+                continue;
+        }
+        else{
+            //to avoid rooms on same plane from stealing stubs
+            if ((int)rooms[pA->rooms[i]]->x != rx)
+                continue;
+        }
+        if (uy){
+            dy = (int)rooms[pA->rooms[i]]->y-ry;
+            //if the sign is the SAME here we keep it b/c we flip our y coordinate.
+            if (compSign(dy,uy) || !dy)
+                continue;
+        }
+        else{
+            //to avoid rooms on same plane from stealing stubs
+            if ((int)rooms[pA->rooms[i]]->y != ry)
+                continue;
+        }
+        meanSquareDistance=dx*dx+dy*dy+dz*dz;
+        if (meanSquareDistance < minDistance){
+            minDistanceRoom=rooms[pA->rooms[i]]->id;
+            cout << "new id" << minDistanceRoom;
+            minDistance=meanSquareDistance;
+        }
+    }
+    if (minDistanceRoom){
+        if (rooms[minDistanceRoom]->exitStubs.contains(reverseDirections[dirType])){
+            setExit( roomId, minDistanceRoom, dirType);
+            //rooms[roomId]->setExitStub(dirType, 0);
+            setExit( minDistanceRoom, roomId, reverseDirections[dirType]);
+            //rooms[minDistanceRoom]->setExitStub(reverseDirections[dirType], 0);
+        }
+    }
+}
+
 int TMap::createNewRoomID()
 {
     int _id = 1;
@@ -222,6 +307,7 @@ bool TMap::setExit( int from, int to, int dir )
         case DIR_OUT: rooms[from]->out = to; break;
         default: return false;
     }
+    rooms[from]->setExitStub(dir, 0);
     mMapGraphNeedsUpdate = true;
     return true;
 }
@@ -253,9 +339,10 @@ void TMap::init( Host * pH )
         s_area_exits[areas[id]->exits.size()]++;
         it.value()->calcSpan();
     }
+    //mVarTable[0].name = "RoomId";
+    //mVarTable[0].var = &mRoodId;
 
     auditRooms();
-
     qDebug()<<"statistics: areas:"<<s_areas;
     qDebug()<<"area exit stats:" <<s_area_exits;
 }
@@ -970,13 +1057,19 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 11;
+    int version = 13;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
     ofs << customEnvColors;
     ofs << hashTable;
     //ofs << mapLabels;
+    if (mRoomId)
+        ofs << mRoomId;
+    else{
+        mRoomId = 0;
+        ofs << mRoomId;
+    }
     ofs << mapLabels.size(); //anzahl der areas
     QMapIterator<int, QMap<int, TMapLabel> > itL1(mapLabels);
     while( itL1.hasNext() )
@@ -1040,6 +1133,7 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << rooms[i]->customLinesColor;
         ofs << rooms[i]->customLinesStyle;
         ofs << rooms[i]->exitLocks;
+        ofs << rooms[i]->exitStubs;
     }
 
     return true;
@@ -1047,20 +1141,27 @@ bool TMap::serialize( QDataStream & ofs )
 
 #include <QDir>
 
-bool TMap::restore()
+bool TMap::restore(QString location)
 {
+    QString folder;
+    QStringList entries;
     qDebug()<<"RESTORING MAP";
-    QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/map/";
-    QDir dir( folder );
-    dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList( QDir::Files, QDir::Time );
-    for( int i=0;i<entries.size(); i++ )
-        qDebug()<<i<<"#"<<entries[i];
+
+    if (location == "") {
+        folder = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/map/";
+        QDir dir( folder );
+        dir.setSorting(QDir::Time);
+        entries = dir.entryList( QDir::Files, QDir::Time );
+        for( int i=0;i<entries.size(); i++ )
+            qDebug()<<i<<"#"<<entries[i];
+    }
+
     bool canRestore = true;
-    if( entries.size() > 0 )
+    if( entries.size() > 0 || location != "")
     {
-        QFile file(folder+entries[0]);
-        file.open( QFile::ReadOnly );
+        QFile file((location == "") ? folder+entries[0] : location);
+        if (!file.open( QFile::ReadOnly ))
+            return false;
         qDebug()<<"[LOADING MAP]:"<<file.fileName();
         QDataStream ifs( & file );
         int version;
@@ -1089,6 +1190,11 @@ bool TMap::restore()
         {
             ifs >> hashTable;
         }
+        if (version >= 12){
+            ifs >> mRoomId;
+            mVars["RoomId"].i = &mRoomId;
+            mVars["RoomId"].c[8] = 'I';
+        }
         if( version >= 11 )
         {
             //ifs >> mapLabels;
@@ -1102,13 +1208,15 @@ bool TMap::restore()
                 ifs >> size_labels;
                 ifs >> areaID;
                 int labelCount = 0;
-                QMap<int, TMapLabel> _map;
+                QMap<int, TMapLabel> _map; 
                 while( ! ifs.atEnd() &&  labelCount < size_labels )
                 {
                     int labelID;
                     ifs >> labelID;
                     TMapLabel label;
                     ifs >> label.pos;
+					//ifs >> label.posz;
+					//cout << label.pos.x() << endl;
                     ifs >> label.pointer;
                     ifs >> label.size;
                     ifs >> label.text;
@@ -1176,7 +1284,9 @@ bool TMap::restore()
                 ifs >> rooms[i]->customLinesColor;
                 ifs >> rooms[i]->customLinesStyle;
                 ifs >> rooms[i]->exitLocks;
-
+            }
+            if( version>=13){
+                ifs >> rooms[i]->exitStubs;
             }
         }
         customEnvColors[257] = mpHost->mRed_2;
@@ -1211,10 +1321,16 @@ bool TMap::restore()
             || mpHost->mUrl == "midkemiaonline.com"
             || mpHost->mUrl == "lusternia.com" )
         {
-            msgBox.setText("No map found. Going to download the map ...");
+            msgBox.setText("No map found. Would you like to download the map or start your own?");
+            QPushButton *yesButton = msgBox.addButton("Download the map", QMessageBox::ActionRole);
+            QPushButton *noButton = msgBox.addButton("Start my own", QMessageBox::ActionRole);
             msgBox.exec();
             init( mpHost );
-            mpMapper->downloadMap();
+            if (msgBox.clickedButton() == yesButton) {
+                qDebug()<<"--trace before map download";
+                mpMapper->downloadMap();
+                qDebug()<<"--trace after map download";
+            }
         }
         else
         {
@@ -1226,7 +1342,7 @@ bool TMap::restore()
 
 
 // called from scripts
-int TMap::createMapLabel(int area, QString text, float x, float y, QColor fg, QColor bg )
+int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg )
 {
     if( ! areas.contains( area ) ) return -1;
     TMapLabel label;
@@ -1235,7 +1351,8 @@ int TMap::createMapLabel(int area, QString text, float x, float y, QColor fg, QC
     label.bgColor.setAlpha(50);
     label.fgColor = fg;
     label.size = QSizeF(100,100);
-    label.pos = QPointF( x, y );
+    label.pos = QVector3D( x, y, z);
+	//label.posz = z;
 //    int labelID = areas[area]->labelMap.size();
 //    areas[area]->labelMap[labelID] = label;
     int labelID;

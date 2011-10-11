@@ -111,6 +111,7 @@
         <file>ui/lacking_mapper_script.ui</file>
         <file>ui/delete_profile_confirmation.ui</file>
         <file>ui/package_manager.ui</file>
+        <file>ui/module_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>Mudlet_splashscreen_main.png</file>
         <file>ui/set_room_area.ui</file>

@@ -46,3 +46,34 @@ void TLabel::mousePressEvent( QMouseEvent * event )
 
     QWidget::mousePressEvent( event );
 }
+/*
+void TLabel::mouseMoveEvent( QMouseEvent * event )
+{
+    if (event->)
+}*/
+
+void TLabel::leaveEvent( QEvent * event )
+{
+    if (mLeave != ""){
+        if( mpHost )
+        {
+            mpHost->getLuaInterpreter()->callEventHandler( mLeave, mLeaveParams );
+        }
+        event->accept();
+        return;
+    }
+    QWidget::leaveEvent( event );
+}
+
+void TLabel::enterEvent( QEvent * event )
+{
+    if (mEnter != ""){
+        if( mpHost )
+        {
+            mpHost->getLuaInterpreter()->callEventHandler( mEnter, mEnterParams );
+        }
+        event->accept();
+        return;
+    }
+    QWidget::enterEvent( event );
+}

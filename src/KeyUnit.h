@@ -66,6 +66,7 @@ private:
     QMap<int, TKey *>     mKeyMap;
     std::list<TKey *>     mKeyRootNodeList;
     qint64                mMaxID;
+    bool                  mModuleMember;
     QMap<int, QString>    mKeys;
 
 };

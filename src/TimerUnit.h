@@ -79,6 +79,7 @@ private:
     QMap<int, TTimer *>   mTimerMap;
     std::list<TTimer *>   mTimerRootNodeList;
     qint64                mMaxID;
+    bool                  mModuleMember;
     std::list<TTimer *>   mCleanupList;
 
 

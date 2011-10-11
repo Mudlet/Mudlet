@@ -399,7 +399,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         mFORCE_MCCP_OFF->setChecked( pHost->mFORCE_NO_COMPRESSION );
         mFORCE_GA_OFF->setChecked( pHost->mFORCE_GA_OFF );
         mAlertOnNewData->setChecked( pHost->mAlertOnNewData );
-        mMXPMode->setCurrentIndex( pHost->mMXPMode );
+        //mMXPMode->setCurrentIndex( pHost->mMXPMode );
         //encoding->setCurrentIndex( pHost->mEncoding );
         mFORCE_SAVE_ON_EXIT->setChecked( pHost->mFORCE_SAVE_ON_EXIT );
         mEnableGMCP->setChecked( pHost->mEnableGMCP );
@@ -1337,7 +1337,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
-    pHost->mMXPMode = mMXPMode->currentIndex();
+    //pHost->mMXPMode = mMXPMode->currentIndex();
     //pHost->mEncoding = encoding->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
     mudlet::self()->mMainIconSize = MainIconSize->value();
