@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>621</width>
-    <height>378</height>
+    <height>443</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -16,8 +16,16 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="font">
+   <font>
+    <stylestrategy>PreferDefault</stylestrategy>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Script editor</string>
+  </property>
+  <property name="unifiedTitleAndToolBarOnMac">
+   <bool>true</bool>
   </property>
   <widget class="QWidget" name="ircWidget">
    <property name="sizePolicy">
@@ -30,17 +38,8 @@
     <property name="spacing">
      <number>0</number>
     </property>
-    <property name="leftMargin">
+    <property name="margin">
      <number>0</number>
-    </property>
-    <property name="topMargin">
-     <number>0</number>
-    </property>
-    <property name="rightMargin">
-     <number>0</number>
-    </property>
-    <property name="bottomMargin">
-     <number>10</number>
     </property>
     <item>
      <widget class="QWidget" name="i1" native="true">
@@ -248,23 +247,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <property name="maximumSize">
-    <size>
-     <width>16777215</width>
-     <height>0</height>
-    </size>
-   </property>
-  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
   <action name="actionAlias">
    <property name="text">
     <string>Alias</string>
