@@ -3693,7 +3693,12 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                 "; font-decoration: " + fontDecoration +
                 "\">";
         }
-        s.append(lineBuffer[y][x]);
+        if( lineBuffer[y][x] == '<' )
+            s.append("&lt;");
+        else if( lineBuffer[y][x] == '>' )
+            s.append("&rt;");
+        else
+            s.append(lineBuffer[y][x]);
     }
     if( s.size() > 0 ) s.append("<br />");
     return s;

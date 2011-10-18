@@ -457,10 +457,14 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( ! mpMap->areas.contains( mpMap->rooms[mpMap->mRoomId]->area) )
                 return;
         mRID = mpMap->mRoomId;
-        if (mViewArea){
-            int oldId = mRID;
-            mRID = mpMap->areas[mViewArea]->rooms.at(0);
-            mViewArea = oldId;
+        if (mViewArea)
+        {
+            if( mpMap->areas.contains( mViewArea ) && mpMap->areas[mViewArea]->rooms.size() > 0 )
+            {
+                int oldId = mRID;
+                mRID = mpMap->areas[mViewArea]->rooms.at(0);
+                mViewArea = oldId;
+            }
         }
         mAID = mpMap->rooms[mRID]->area;
         ox = mpMap->rooms[mRID]->x;
@@ -1432,23 +1436,23 @@ void T2DMap::paintEvent( QPaintEvent * e )
         {
             it.next();
             if (it.value().pos.z() == mOz && it.value().pos.x()*tx < _w && it.value().pos.y()*ty*-1 < _h)
-			{
-				QRectF lr = QRectF( 0, 0, 1000, 100 );
-				QPixmap pix( lr.size().toSize() );
-				pix.fill(QColor(0,0,0,0));
-				QPainter lp( &pix );
+                        {
+                                QRectF lr = QRectF( 0, 0, 1000, 100 );
+                                QPixmap pix( lr.size().toSize() );
+                                pix.fill(QColor(0,0,0,0));
+                                QPainter lp( &pix );
 
-				lp.fillRect( lr, it.value().bgColor );
-				QPen lpen;
-				lpen.setColor( it.value().fgColor );
-				lp.setPen( lpen );
-				QRectF br;
-				lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
-				QPointF lpos;
-				lpos.setX( it.value().pos.x()*tx+_rx );
-				lpos.setY( it.value().pos.y()*ty*-1+_ry );
-				p.drawPixmap( lpos, pix, br.toRect() );
-			}
+                                lp.fillRect( lr, it.value().bgColor );
+                                QPen lpen;
+                                lpen.setColor( it.value().fgColor );
+                                lp.setPen( lpen );
+                                QRectF br;
+                                lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
+                                QPointF lpos;
+                                lpos.setX( it.value().pos.x()*tx+_rx );
+                                lpos.setY( it.value().pos.y()*ty*-1+_ry );
+                                p.drawPixmap( lpos, pix, br.toRect() );
+                        }
         }
     }
     if( mShowInfo )
@@ -1572,7 +1576,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent * event )
         QAction * action15 = new QAction("Create Label", this );
         action15->setStatusTip(tr("Create labels to show text or images."));
         connect( action15, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
-        
+
         QAction * action16 = new QAction("Set Location Here", this );
         action16->setStatusTip(tr("Set player location here."));
         connect( action16, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
@@ -2286,7 +2290,7 @@ int T2DMap::getTopLeftSelection()
     if( mMultiSelectionList.size() < 1 ) return -1;
     min_x = mpMap->rooms[mMultiSelectionList[0]]->x;
     min_y = mpMap->rooms[mMultiSelectionList[0]]->y;
-	min_z = mpMap->rooms[mMultiSelectionList[0]]->z;
+        min_z = mpMap->rooms[mMultiSelectionList[0]]->z;
     for( int j=0; j<mMultiSelectionList.size(); j++ )
     {
         if( ! mpMap->rooms.contains( mMultiSelectionList[j] ) ) return -1;
@@ -2297,14 +2301,14 @@ int T2DMap::getTopLeftSelection()
             if( pR->y <= min_y )
             {
                 min_y = pR->y;
-				if (pR->z <= min_z and mMultiZSelection){
-					min_z = pR->z;
-					id = j;
-				}
-				else{
-					id=j;
-				}
-			}
+                                if (pR->z <= min_z and mMultiZSelection){
+                                        min_z = pR->z;
+                                        id = j;
+                                }
+                                else{
+                                        id=j;
+                                }
+                        }
         }
     }
     return id;
@@ -2556,7 +2560,7 @@ void T2DMap::slot_setPlayerLocation()
     TLuaInterpreter * LuaInt = mpHost->getLuaInterpreter();
     QString t1 = "mRoomSet";
     QString room;
-    room.setNum(mRoomSelection);    
+    room.setNum(mRoomSelection);
     if( mpMap->rooms.contains( mRoomSelection ) )
     {
         mpMap->mRoomId = mRoomSelection;
@@ -2597,7 +2601,7 @@ void T2DMap::slot_createLabel()
     mx = mx - xspan/2;
     my = yspan/2 - my;
     label.pos = QVector3D( mx, my, mOz);
-	//label.posz = mOz;
+        //label.posz = mOz;
     if( ! mpMap->areas.contains(mAID) ) return;
     int labelID;
     if( ! mpMap->mapLabels.contains( mAID ) )
