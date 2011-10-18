@@ -2209,6 +2209,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     pT->setIsActive( false );
     pT->setIsMultiline( false );
     pT->mStayOpen = 0;
+    pT->setConditionLineDelta( 0 );
     pT->registerTrigger();
     int childID = pT->getID();
     pNewItem->setData( 0, Qt::UserRole, childID );
@@ -2230,6 +2231,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
     mpTriggersMainArea->spinBox_linemargin->setValue( 0 );
+    mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
 
     QPalette pal = palette();
     QColor color =  pal.color( QPalette::Button );
@@ -6484,7 +6486,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     if( ! pItem->parent() ) return;
     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
-    
+
     QColor color = QColorDialog::getColor( pT->getFgColor(), this );
     if ( color.isValid() )
     {
