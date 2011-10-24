@@ -479,13 +479,6 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped = "";
-    if( mpHost->mAutoClearCommandLineAfterSend )
-        clear();
-    else
-    {
-        selectAll();
-    }
-    adjustHeight();
 
     QStringList _l = _t.split("\n");
     for( int i=0; i<_l.size(); i++ )
@@ -500,6 +493,14 @@ void TCommandLine::enterCommand( QKeyEvent * event )
         mHistoryList.removeAll( toPlainText() );
         mHistoryList.push_front( toPlainText() );
     }
+    if( mpHost->mAutoClearCommandLineAfterSend )
+        clear();
+    else
+    {
+        selectAll();
+    }
+    adjustHeight();
+
 
 
 

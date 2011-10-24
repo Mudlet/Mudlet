@@ -1248,12 +1248,19 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         {
             if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
-                if( mpBuffer->buffer[y][x].link > 0 )
+                if( x >= 0 && y >= 0 )
                 {
-                    QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
-                    QString func = command.at(0);
-                    mpHost->mLuaInterpreter.compileAndExecuteScript( func );
-                    return;
+                    if( mpBuffer->buffer[y][x].link > 0 )
+                    {
+                        QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
+                        QString func;
+                        if( command.size() > 0 )
+                        {
+                            func = command.at(0);
+                            mpHost->mLuaInterpreter.compileAndExecuteScript( func );
+                            return;
+                        }
+                    }
                 }
             }
         }
