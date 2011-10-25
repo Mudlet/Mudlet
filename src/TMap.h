@@ -122,6 +122,12 @@ public:
     QVector3D span;
     Host * mpHost;
     int mRoomId;
+    bool m2DPanMode;
+    bool mLeftDown;
+    bool mRightDown;
+    float m2DPanXStart;
+    float m2DPanYStart;
+    int mViewArea;
     //mapVar mVars[20];
     //mapVar <int> mvRoomId;
     QMap<QString, mVarTypes> mVars;

@@ -308,10 +308,17 @@ void Host::saveModules(int sync){
     qDebug()<<"DONE MAIN WRITING, DOING MODULES NOW";
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
+    QString dirName = QDir::homePath()+"/.config/mudlet/moduleBackups/";
+    QDir savePath = QDir(dirName);
+    if (!savePath.exists())
+        savePath.mkpath(dirName);
     while(it.hasNext()){
         it.next();
         QStringList entry = it.value();
         QString filename_xml = entry[0];
+        QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+        //move the old file, use the key (module name) as the file
+        savePath.rename(filename_xml,dirName+it.key()+time);
         QFile file_xml( filename_xml );
         qDebug()<<"writing module xml for:"<<entry[0];
         if ( file_xml.open( QIODevice::WriteOnly ) )

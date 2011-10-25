@@ -782,7 +782,7 @@ int TLuaInterpreter::updateMap(lua_State * L){
         if (pHost->mpMap->mpMapper->mp2dMap)
             pHost->mpMap->mpMapper->mp2dMap->update();
     }
-    return 1;
+    return 0;
 }
 
 int TLuaInterpreter::centerview( lua_State * L )
@@ -6247,6 +6247,9 @@ int TLuaInterpreter::getMapVar( lua_State * L )
             case 'I':
                 lua_pushnumber( L, *(it.value().i) );
                 break;
+            case 'F':
+                lua_pushnumber( L, *(it.value().f) );
+                break;
             }
             lua_settable(L, -3);
         }
@@ -6266,8 +6269,13 @@ int TLuaInterpreter::getMapVar( lua_State * L )
         switch (mapVars[name].c[8]){
         case 'B':
             lua_pushboolean( L, *(mapVars[name].b) );
+            break;
         case 'I':
             lua_pushnumber( L, *(mapVars[name].i) );
+            break;
+        case 'F':
+            lua_pushnumber( L, *(mapVars[name].f) );
+            break;
         }
 //        lua_pushnumber(L, *(mapVars[name].i));
     else{
@@ -6302,6 +6310,10 @@ int TLuaInterpreter::setMapVar( lua_State * L )
         case 'I':
             if (lua_isnumber(L,2))
                 *(mapVars[name].i)=lua_tonumber(L,2);
+            break;
+        case 'F':
+            if (lua_isnumber(L,2))
+                *(mapVars[name].f)=lua_tonumber(L,2);
             break;
         default:
             lua_pushstring( L, "setMapVar: Wrong argument type for variable" );
@@ -6814,6 +6826,7 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
         if( pHost->mpMap->rooms.contains( id_to ) )
         {
             pHost->mpMap->rooms[id_from]->addSpecialExit( id_to, _dir );
+            pHost->mpMap->rooms[id_from]->setSpecialExitLock( id_to, _dir, false );
             pHost->mpMap->mMapGraphNeedsUpdate = true;
         }
     }
@@ -8926,8 +8939,21 @@ bool TLuaInterpreter::callMulti( QString & function, QString & mName )
 bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
 {
     lua_State * L = pGlobalLua;
-    lua_getglobal( L, function.toLatin1().data() );
-    lua_getfield( L, LUA_GLOBALSINDEX, function.toLatin1().data() );
+    //lua_getglobal( L, function.toLatin1().data() );
+    //lua_getfield( L, LUA_GLOBALSINDEX, function.toLatin1().data() );
+    int error = luaL_dostring(L, QString("return " + function).toLatin1().data());
+    QString n;
+    if( error != 0 ){
+       string e = "no error message available from Lua";
+       if( lua_isstring( L, 1 ) )
+       {
+           e = "Lua error:";
+           e += lua_tostring( L, 1 );
+       }
+       emit signalEchoMessage( mHostID, QString( e.c_str() ) );
+       qDebug()<< "LUA_ERROR:"<<e.c_str();
+       return false;
+    }
     for( int i=0; i<pE->mArgumentList.size(); i++ )
     {
         if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
@@ -8939,13 +8965,14 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
             lua_pushstring( L, pE->mArgumentList[i].toLatin1().data() );
         }
     }
-    int error = lua_pcall( L, pE->mArgumentList.size(), LUA_MULTRET, 0 );
+    //int error = lua_pcall( L, pE->mArgumentList.size(), LUA_MULTRET, 0 );
+    error = lua_pcall( L, pE->mArgumentList.size(), LUA_MULTRET, 0 );
     if( error != 0 )
     {
         string e = "";
-        if(lua_isstring( L, 1) )
+        if(lua_isstring( L, -1) )
         {
-            e+=lua_tostring( L, 1 );
+            e+=lua_tostring( L, -1 );
         }
         QString _n = "event handler function";
         logError( e, _n, function );
@@ -9331,7 +9358,7 @@ void TLuaInterpreter::initLuaGlobals()
     int error;
 
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
-    luaL_dostring (pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;' end");
+    luaL_dostring (pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
 

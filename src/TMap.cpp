@@ -71,6 +71,12 @@ TMap::TMap( Host * pH )
     reverseDirections[10] = 9;
     reverseDirections[11] = 12;
     reverseDirections[12] = 11;
+    m2DPanMode = false;
+    mLeftDown = false;
+    mRightDown = false;
+    float m2DPanXStart=0;
+    float m2DPanYStart=0;
+    int mViewArea = 0;
 }
 
 #include <QFileDialog>
@@ -250,7 +256,6 @@ void TMap::connectExitStub(int roomId, int dirType){
         meanSquareDistance=dx*dx+dy*dy+dz*dz;
         if (meanSquareDistance < minDistance){
             minDistanceRoom=rooms[pA->rooms[i]]->id;
-            cout << "new id" << minDistanceRoom;
             minDistance=meanSquareDistance;
         }
     }
