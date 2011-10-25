@@ -1943,6 +1943,7 @@ void T2DMap::slot_spread()
 void T2DMap::slot_shrink()
 {
     int _spread = QInputDialog::getInt(this, "shrink grid",":",3);
+    if( _spread <= 0 ) return;
     if( mMultiSelection )
     {
         mMultiRect = QRect(0,0,0,0);

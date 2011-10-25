@@ -705,6 +705,11 @@ void TConsole::closeEvent( QCloseEvent *event )
 
     if( profile_name != "default_host" )
     {
+        TEvent conCloseEvent;
+        conCloseEvent.mArgumentList.append( "sysExitEvent" );
+        conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent( & conCloseEvent );
+
         if( mpHost->mFORCE_SAVE_ON_EXIT )
         {
             QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";

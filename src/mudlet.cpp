@@ -1498,10 +1498,7 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
             }
-            TEvent event;
-            event.mArgumentList.append( "sysExitEvent" );
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            pC->mpHost->raiseEvent( & event );
+
 
             // close console
             pC->close();
