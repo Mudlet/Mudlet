@@ -1244,22 +1244,21 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     {
         int x = event->x() / mFontWidth;
         int y = ( event->y() / mFontHeight ) + imageTopLine();
+        if( x < 0 ) x = 0;
+        if( y < 0 ) y = 0;
         if( y < static_cast<int>(mpBuffer->buffer.size()) )
         {
             if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
-                if( x >= 0 && y >= 0 )
-                {
-                    if( mpBuffer->buffer[y][x].link > 0 )
+               if( mpBuffer->buffer[y][x].link > 0 )
+               {
+                    QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
+                    QString func;
+                    if( command.size() > 0 )
                     {
-                        QStringList command = mpBuffer->mLinkStore[mpBuffer->buffer[y][x].link];
-                        QString func;
-                        if( command.size() > 0 )
-                        {
-                            func = command.at(0);
-                            mpHost->mLuaInterpreter.compileAndExecuteScript( func );
-                            return;
-                        }
+                        func = command.at(0);
+                        mpHost->mLuaInterpreter.compileAndExecuteScript( func );
+                        return;
                     }
                 }
             }
