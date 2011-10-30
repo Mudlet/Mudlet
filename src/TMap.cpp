@@ -1171,6 +1171,7 @@ bool TMap::restore(QString location)
         QDataStream ifs( & file );
         int version;
         ifs >> version;
+        qDebug()<<"map version:"<<version;
         if( version >= 3 )
         {
             ifs >> envColors;
@@ -1195,14 +1196,14 @@ bool TMap::restore(QString location)
         {
             ifs >> hashTable;
         }
-        if (version >= 12){
+        if( version >= 12 )
+        {
             ifs >> mRoomId;
             mVars["RoomId"].i = &mRoomId;
             mVars["RoomId"].c[8] = 'I';
         }
         if( version >= 11 )
         {
-            //ifs >> mapLabels;
             int size;
             ifs >> size; //size of mapLabels
             int areaLabelCount = 0;
@@ -1213,15 +1214,22 @@ bool TMap::restore(QString location)
                 ifs >> size_labels;
                 ifs >> areaID;
                 int labelCount = 0;
-                QMap<int, TMapLabel> _map; 
+                QMap<int, TMapLabel> _map;
                 while( ! ifs.atEnd() &&  labelCount < size_labels )
                 {
                     int labelID;
                     ifs >> labelID;
                     TMapLabel label;
-                    ifs >> label.pos;
-					//ifs >> label.posz;
-					//cout << label.pos.x() << endl;
+                    if( version >= 12 )
+                    {
+                        ifs >> label.pos;
+                    }
+                    else
+                    {
+                        QPointF __label_pos;
+                        ifs >> __label_pos;
+                        label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
+                    }
                     ifs >> label.pointer;
                     ifs >> label.size;
                     ifs >> label.text;
@@ -1290,7 +1298,8 @@ bool TMap::restore(QString location)
                 ifs >> rooms[i]->customLinesStyle;
                 ifs >> rooms[i]->exitLocks;
             }
-            if( version>=13){
+            if( version >= 13 )
+            {
                 ifs >> rooms[i]->exitStubs;
             }
         }
@@ -1357,7 +1366,7 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     label.fgColor = fg;
     label.size = QSizeF(100,100);
     label.pos = QVector3D( x, y, z);
-	//label.posz = z;
+        //label.posz = z;
 //    int labelID = areas[area]->labelMap.size();
 //    areas[area]->labelMap[labelID] = label;
     int labelID;
