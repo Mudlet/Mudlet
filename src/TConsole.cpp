@@ -1838,6 +1838,7 @@ std::list<int> TConsole::_getFgColor()
     int x = P_begin.x();
     int y = P_begin.y();
     if( y < 0 ) return result;
+    if( x < 0 ) return result;
     if( y >= static_cast<int>(buffer.buffer.size()) ) return result;
 
     if( static_cast<int>(buffer.buffer[y].size())-1 >=  x )
@@ -1855,6 +1856,7 @@ std::list<int> TConsole::_getBgColor()
     int x = P_begin.x();
     int y = P_begin.y();
     if( y < 0 ) return result;
+    if( x < 0 ) return result;
     if( y >= static_cast<int>(buffer.buffer.size()) ) return result;
 
     if( static_cast<int>(buffer.buffer[y].size())-1 >=  x )
