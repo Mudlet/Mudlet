@@ -196,7 +196,7 @@ void TRoom::addSpecialExit( int to, QString cmd )
         _cmd.prepend("0");
         _cmd.append( cmd );
     }
-    other.insertMulti( to, cmd );
+    other.insertMulti( to, _cmd );
 }
 
 

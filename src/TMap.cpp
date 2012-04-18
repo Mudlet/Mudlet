@@ -736,7 +736,7 @@ void TMap::initGraph()
 {
     locations.clear();
     g.clear();
-    g = mygraph_t(rooms.size()*10);//FIXME
+    g = mygraph_t(rooms.size()*100);//FIXME
     weightmap = get(edge_weight, g);
     QMapIterator<int, TRoom *> it( rooms );
     int roomCount=0;
@@ -746,7 +746,7 @@ void TMap::initGraph()
 
         it.next();
         int i = it.key();
-        if( ! rooms.contains( i ) || rooms[i]->isLocked )
+        if( ! rooms.contains( i ) || rooms[i]->isLocked || i == -1 )
         {
             continue;
         }
@@ -755,7 +755,9 @@ void TMap::initGraph()
         l.x = rooms[i]->x;
         l.y = rooms[i]->y;
         l.z = rooms[i]->z;
+        qDebug()<<"pushing back new location";
         locations.push_back( l );
+        qDebug()<<"done pushing location adding exits";
 
         if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
         {
@@ -934,6 +936,7 @@ void TMap::initGraph()
                 }
             }
         }
+        qDebug()<<"init room: "<<i;
     }
     mMapGraphNeedsUpdate = false;
 }

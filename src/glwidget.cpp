@@ -33,6 +33,7 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
+#include "gl/GLU.h"
 
 bool ortho;
 bool selectionMode = false;

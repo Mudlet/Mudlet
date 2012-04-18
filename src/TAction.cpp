@@ -265,9 +265,10 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
        button->setFlat( mButtonFlat );
        button->setStyleSheet( css );
        button->setChecked( (pChild->mButtonState==2) );
-       if( mpHost->mIsProfileLoadingSequence && pChild->mButtonState == 2 )
+       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
+       if( pChild->mIsPushDownButton && mpHost->mIsProfileLoadingSequence ) //&& pChild->mButtonState == 2 )
        {
-           qDebug()<<"name="<<pChild->mName<<" executing script";
+           qDebug()<<"expandToolBar() name="<<pChild->mName<<" executing script";
            QStringList bla;
            pChild->_execute(bla);
        }
@@ -299,9 +300,10 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
         action->mpHost = mpHost;
         action->setStatusTip( pChild->mName );
         action->setChecked((pChild->mButtonState==2));
-        if( mpHost->mIsProfileLoadingSequence && pChild->mButtonState == 2 )
+        //FIXME: Heiko April 2012 -> expandToolBar()
+        if( pChild->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )//&& pChild->mButtonState == 2 )
         {
-            qDebug()<<"name="<<pChild->mName<<" executing script";
+            qDebug()<<"fillMenu() name="<<pChild->mName<<" executing script";
             QStringList bla;
             pChild->_execute(bla);
         }

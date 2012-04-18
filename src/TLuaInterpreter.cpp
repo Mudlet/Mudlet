@@ -6900,8 +6900,16 @@ int TLuaInterpreter::getSpecialExits( lua_State * L )
             lua_newtable(L);
             int id_to = it.key();
             QString dir = it.value();
-            QString exitStatus = dir.left(1);
-            QString exit = dir.remove(0,1);
+            QString exitStatus;
+            if( dir.size() > 0 )
+                exitStatus = dir.left(1);
+            else
+                exitStatus = "0";
+            QString exit;
+            if( dir.size() > 0 )
+                exit = dir.remove(0,1);
+            else
+                exit = dir;
             lua_pushstring( L, exit.toLatin1().data() );//done to remove the prepended special exit status
             lua_pushstring( L, exitStatus.toLatin1().data() );//done to remove the prepended special exit status
             lua_settable(L, -3);
@@ -6937,7 +6945,22 @@ int TLuaInterpreter::getSpecialExitsSwap( lua_State * L )
             it.next();
             int id_to = it.key();
             QString dir = it.value();
-            lua_pushstring( L, dir.toLatin1().data() );
+            //lua_pushstring( L, dir.toLatin1().data() );
+            QString exitStatus;
+            if( dir.size() > 0 )
+            {
+                exitStatus = dir.left(1);
+            }
+            else
+                exitStatus = "0";
+            QString exit;
+            if( exit.size() > 0 )
+            {
+                exit = dir.remove(0,1);
+            }
+            else
+                exit = dir;
+            lua_pushstring( L, exit.toLatin1().data() );
             lua_pushnumber( L, id_to );
             lua_settable(L, -3);
         }
@@ -7759,6 +7782,7 @@ int TLuaInterpreter::echoPopup( lua_State *L )
     }
 
     if( ! lua_istable( L, s ) )
+
     {
         lua_pushstring( L, "echoPopup: wrong argument type" );
         lua_error( L );
