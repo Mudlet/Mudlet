@@ -6033,8 +6033,6 @@ int TLuaInterpreter::deleteArea( lua_State *L )
         return 1;
     }
 
-    cout << "deleteArea: id:"<<id<<" name:"<<name<<endl;
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( id == -1 )
     {

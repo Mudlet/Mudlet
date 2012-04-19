@@ -1498,11 +1498,15 @@ void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
 
 void T2DMap::mouseReleaseEvent(QMouseEvent * event )
 {
-    if (mpMap->mLeftDown){
+    if( mpMap->mLeftDown )
+    {
         mpMap->mLeftDown = false;
-        mpMap->m2DPanMode=false;
         if( event->buttons() && event->modifiers().testFlag(Qt::ControlModifier))
         {
+            mpMap->m2DPanMode=false;
+        }
+//        if( event->buttons() && event->modifiers().testFlag(Qt::ControlModifier))
+//        {
             if( mCustomLinesRoomFrom > 0 )
             {
                 if( mpMap->rooms.contains( mCustomLinesRoomFrom ) )
@@ -1527,9 +1531,10 @@ void T2DMap::mouseReleaseEvent(QMouseEvent * event )
                 }
                 repaint();
             }
-        }
+//        }
     }
-    if (mpMap->mRightDown){
+    if( mpMap->mRightDown )
+    {
         mpMap->mRightDown = false;
         if( mCustomLinesRoomFrom > 0 )//why do we even bother wasting a cycle on this if?
             mCustomLinesRoomFrom = 0;
@@ -1637,11 +1642,11 @@ void T2DMap::cleanupMap()
 void T2DMap::mousePressEvent(QMouseEvent *event)
 {
     //first and foremost, is there a menu up?
-    if (mPopupMenu)
-        mPopupMenu = false;
+    if( mPopupMenu ) mPopupMenu = false;
     mNewMoveAction = true;
-    if (event->buttons() & Qt::LeftButton){
-            mpMap->mLeftDown = true;
+    if( event->buttons() & Qt::LeftButton )
+    {
+        mpMap->mLeftDown = true;
     //if we're outside the realm for mPick, set it false
         if (!mPickBox.contains(event->pos())){
             //we clicked outside the selected room, deselect it
@@ -1655,7 +1660,8 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             setMouseTracking(false);
             mRoomBeingMoved=false;
         }
-        else{
+        else
+        {
             mMultiSelection = true;
             mMultiZSelection = !event->modifiers().testFlag(Qt::ShiftModifier);
             mMultiRect = QRect(event->pos(), event->pos());
@@ -2038,11 +2044,15 @@ void T2DMap::slot_setRoomWeight()
 
 void T2DMap::mouseMoveEvent( QMouseEvent * event )
 {
-    if (mpMap->mLeftDown & !mpMap->m2DPanMode & !event->modifiers().testFlag(Qt::ControlModifier)){
+    if (mpMap->mLeftDown & !mpMap->m2DPanMode & event->modifiers().testFlag(Qt::ControlModifier)){
         mpMap->m2DPanXStart = event->x();
         mpMap->m2DPanYStart = event->y();
         mpMap->m2DPanMode=true;
         cleanupMap();
+    }
+    if( mpMap->mLeftDown & mpMap->m2DPanMode & !event->modifiers().testFlag(Qt::ControlModifier))
+    {
+        mpMap->m2DPanMode = false;
     }
     if (mpMap->m2DPanMode)
     {
