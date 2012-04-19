@@ -44,10 +44,7 @@ void TimerUnit::_uninstall( TTimer * pChild, QString packageName )
     {
         TTimer * pT = *it2;
         _uninstall( pT, packageName );
-        if( pT->mPackageName == packageName )
-        {
-            uninstallList.append( pT );
-        }
+        uninstallList.append( pT );
     }
 }
 
@@ -68,6 +65,7 @@ void TimerUnit::uninstall( QString packageName )
     {
         unregisterTimer(uninstallList[i]);
     }
+     uninstallList.clear();
 }
 
 void TimerUnit::stopAllTriggers()
@@ -252,6 +250,9 @@ bool TimerUnit::registerTimer( TTimer * pT )
 void TimerUnit::unregisterTimer( TTimer * pT )
 {
     if( ! pT ) return;
+    pT->deactivate();
+    pT->stop();
+    qDebug()<<"unregistring timer: "<<pT->getName();
     if( pT->getParent() )
     {
         _removeTimer( pT );

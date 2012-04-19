@@ -44,10 +44,7 @@ void ScriptUnit::_uninstall( TScript * pChild, QString packageName )
     {
         TScript * pT = *it2;
         _uninstall( pT, packageName );
-        if( pT->mPackageName == packageName )
-        {
-            uninstallList.append( pT );
-        }
+        uninstallList.append( pT );
     }
 }
 
@@ -68,6 +65,7 @@ void ScriptUnit::uninstall( QString packageName )
     {
         unregisterScript(uninstallList[i]);
     }
+     uninstallList.clear();
 }
 
 void ScriptUnit::stopAllTriggers()

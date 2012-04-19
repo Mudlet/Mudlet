@@ -6033,15 +6033,20 @@ int TLuaInterpreter::deleteArea( lua_State *L )
         return 1;
     }
 
+    cout << "deleteArea: id:"<<id<<" name:"<<name<<endl;
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( id == -1 )
     {
         QString _name = name.c_str();
         if( pHost->mpMap->areaNamesMap.values().contains( _name ) )
         {
-            pHost->mpMap->deleteArea( id );
+            pHost->mpMap->deleteArea( pHost->mpMap->areaNamesMap.key(_name) );
             pHost->mpMap->mMapGraphNeedsUpdate = false;
+            pHost->mpMap->areaNamesMap.remove( pHost->mpMap->areaNamesMap.key(_name) );
         }
+        else
+            pHost->mpMap->areaNamesMap.remove( pHost->mpMap->areaNamesMap.key(_name) );
     }
     else
     {
@@ -6049,8 +6054,12 @@ int TLuaInterpreter::deleteArea( lua_State *L )
         {
             pHost->mpMap->deleteArea( id );
             pHost->mpMap->mMapGraphNeedsUpdate = false;
+            pHost->mpMap->areaNamesMap.remove( id );
         }
+        else
+            pHost->mpMap->areaNamesMap.remove( id );
     }
+
     return 0;
 }
 

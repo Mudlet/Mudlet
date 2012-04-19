@@ -45,10 +45,8 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
     gotAction = false;
     gotScript = false;
     module = moduleFlag;
-    /*if (moduleFlag)
-        module=1;*/
-    qDebug()<<"module flag:"<<module<<" importing: "<<mPackageName;
 
+    qDebug()<<"module flag:"<<module<<" importing: "<<mPackageName;
 
     if( ! packName.isEmpty() )
     {
@@ -73,14 +71,16 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpTrigger->setIsFolder( true );
 
         mpTimer = new TTimer( 0, mpHost );
+        mpTimer->setIsFolder( true );
+
         if (module){
             mpTimer->mModuleMasterFolder=true;
             mpTimer->mModuleMember=true;
         }
+        mpTimer->setIsActive( false );
+
         mpTimer->setPackageName( mPackageName );
-        mpTimer->setIsActive( true );
         mpTimer->setName( mPackageName );
-        mpTimer->setIsFolder( true );
 
         mpAlias = new TAlias( 0, mpHost );
         if (module){
@@ -140,6 +140,13 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
             }
         }
     }
+
+    if( gotTimer && ! packName.isEmpty() )
+    {
+        mpTimer->setIsActive( true );
+        mpTimer->enableTimer( mpTimer->getID() );
+    }
+
     if( ! packName.isEmpty())
     {
        if( ! gotTrigger )
@@ -442,6 +449,7 @@ void XMLimport::readPackage()
             }
         }
     }
+    qDebug()<<"reading package end";
 }
 
 void XMLimport::readUnknownPackage()
@@ -1195,9 +1203,11 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         pT = new TTimer( 0, mpHost );
     }
     pT->registerTimer();
-    pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
     pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
     pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
+
+    pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
+
     if (module)
         pT->mModuleMember = true;
 
@@ -1210,6 +1220,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         {
             if( name() == "name" )
             {
+
                 pT->setName( readElementText() );
                 continue;
             }

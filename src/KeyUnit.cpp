@@ -52,10 +52,7 @@ void KeyUnit::_uninstall( TKey * pChild, QString packageName )
     {
         TKey * pT = *it2;
         _uninstall( pT, packageName );
-        if( pT->mPackageName == packageName )
-        {
-            uninstallList.append( pT );
-        }
+        uninstallList.append( pT );
     }
 }
 
@@ -76,6 +73,7 @@ void KeyUnit::uninstall( QString packageName )
     {
         unregisterKey(uninstallList[i]);
     }
+     uninstallList.clear();
 }
 
 bool KeyUnit::processDataStream( int key, int modifier )

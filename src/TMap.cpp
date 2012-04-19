@@ -172,9 +172,10 @@ void TMap::deleteArea( int id )
             deleteRoom( rl[i] );
         }
         areas.remove( id );
-        areaNamesMap.remove( id );
+
         mMapGraphNeedsUpdate = true;
     }
+    areaNamesMap.remove( id );
 }
 
 bool TMap::addRoom( int id )

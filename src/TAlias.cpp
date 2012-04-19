@@ -78,7 +78,24 @@ void TAlias::setName( QString name )
 
 bool TAlias::match( QString & toMatch )
 {
-    if( ! isActive() ) return false;
+    if( ! isActive() )
+    {
+        if( isFolder() )
+        {
+            if( shouldBeActive() )
+            {
+                bool matchCondition = false;
+                typedef list<TAlias *>::const_iterator I;
+                for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+                {
+                    TAlias * pChild = *it;
+                    if( pChild->match( toMatch ) ) matchCondition = true;
+                }
+                return matchCondition;
+            }
+        }
+        return false;
+    }
 
     bool matchCondition = false;
     //bool ret = false;

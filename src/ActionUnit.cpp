@@ -43,10 +43,7 @@ void ActionUnit::_uninstall( TAction * pChild, QString packageName )
     {
         TAction * pT = *it2;
         _uninstall( pT, packageName );
-        if( pT->mPackageName == packageName )
-        {
-            uninstallList.append( pT );
-        }
+        uninstallList.append( pT );
     }
 }
 
@@ -67,6 +64,7 @@ void ActionUnit::uninstall( QString packageName )
     {
         unregisterAction(uninstallList[i]);
     }
+    uninstallList.clear();
 }
 
 void ActionUnit::compileAll()

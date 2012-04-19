@@ -1940,7 +1940,7 @@ void dlgTriggerEditor::slot_alias_toggle_active()
 
     TAlias * pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;
-
+    qDebug()<<"aliasToggleActive()";
     pT->setIsActive( ! pT->shouldBeActive() );
 
     if( pT->isFolder() )
@@ -1979,7 +1979,7 @@ void dlgTriggerEditor::slot_alias_toggle_active()
     }
     showInfo( QString( "Trying to %2 Alias %1 %3." )
               .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
+              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
               .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
 }
 
@@ -3322,7 +3322,7 @@ void dlgTriggerEditor::saveAlias()
 
             if( pT->state() )
             {
-                if( old_name == "New Alias" || old_name == "New Alias Group" )
+                if( old_name == "New Alias" )//|| old_name == "New Alias Group" )
                 {
                     QIcon _icon;
                     if( pT->isFolder() )
