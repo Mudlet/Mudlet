@@ -46,6 +46,7 @@ TTimer::TTimer( TTimer * parent, Host * pHost )
 , mModuleMasterFolder(false)
 , mpTimer( new QTimer )
 {
+    mpTimer->stop();
 }
 
 TTimer::TTimer( QString name, QTime time, Host * pHost )
@@ -60,6 +61,7 @@ TTimer::TTimer( QString name, QTime time, Host * pHost )
 , mIsTempTimer( false )
 , mpTimer( new QTimer )
 {
+    mpTimer->stop();
 }
 
 TTimer::~TTimer()
@@ -83,7 +85,7 @@ bool TTimer::registerTimer()
     }
     setTime( mTime );
     mudlet::self()->registerTimer( this, mpTimer );
-    mpTimer->connect(mpTimer, SIGNAL(timeout()), mudlet::self(),SLOT(slot_timer_fires()));
+    //mpTimer->connect(mpTimer, SIGNAL(timeout()), mudlet::self(),SLOT(slot_timer_fires()));
     return mpHost->getTimerUnit()->registerTimer( this );
 }
 
@@ -94,17 +96,17 @@ void TTimer::setName( QString name )
     if( ! mIsTempTimer )
     {
         mpHost->getTimerUnit()->mLookupTable.remove( mName, this );
+        mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );
     }
     mName = name;
-    mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );
 }
-
 
 void TTimer::setTime( QTime time )
 {
     QMutexLocker locker(& mLock);
     mTime = time;
     mpTimer->setInterval( mTime.msec()+(1000*mTime.second())+(1000*60*mTime.minute())+(1000*60*60*mTime.hour()));
+    mpTimer->stop();
 }
 
 // children of folder = regular timers
@@ -149,7 +151,11 @@ void TTimer::start()
         mpTimer->setSingleShot( true );
     else
         mpTimer->setSingleShot( false );
-    mpTimer->start();
+
+    if( ! mIsFolder )
+        mpTimer->start();
+    else
+        stop();
 }
 
 void TTimer::stop()
@@ -236,12 +242,13 @@ bool TTimer::checkRestart()
 
 void TTimer::execute()
 {
-    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
     if( ! isActive() || mIsFolder )
     {
         mpTimer->stop();
         return;
     }
+
+    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
 
     if( mIsTempTimer )
     {
@@ -281,17 +288,20 @@ void TTimer::execute()
         mpHost->send( mCommand );
     }
 
-    if( mNeedsToBeCompiled )
+    if( mScript.size() > 0 )
     {
-        if( ! compileScript() )
+        if( mNeedsToBeCompiled )
         {
-            disableTimer();
-            return;
+            if( ! compileScript() )
+            {
+                disableTimer();
+                return;
+            }
         }
-    }
-    if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) )
-    {
-        mpTimer->stop();
+        if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) )
+        {
+            mpTimer->stop();
+        }
     }
 }
 
@@ -336,13 +346,16 @@ void TTimer::enableTimer( qint64 id )
         }
     }
 
-    if( ! isOffsetTimer() )
+    if( mIsFolder )
     {
         typedef list<TTimer *>::const_iterator I;
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TTimer * pChild = *it;
-            pChild->enableTimer( pChild->getID() );
+            if( ! pChild->isOffsetTimer() )
+            {
+                pChild->enableTimer( pChild->getID() );
+            }
         }
     }
 }

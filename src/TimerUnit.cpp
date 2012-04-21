@@ -252,7 +252,7 @@ void TimerUnit::unregisterTimer( TTimer * pT )
     if( ! pT ) return;
     pT->deactivate();
     pT->stop();
-    qDebug()<<"unregistring timer: "<<pT->getName();
+    //qDebug()<<"unregistring timer: "<<pT->getName();
     if( pT->getParent() )
     {
         _removeTimer( pT );

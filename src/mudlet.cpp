@@ -794,6 +794,7 @@ void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
     if( ! mTimerMap.contains( pQT ) )
     {
         mTimerMap[pQT] = pTT;
+        connect(pQT, SIGNAL(timeout()), this,SLOT(slot_timer_fires()));
     }
 }
 

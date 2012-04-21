@@ -169,13 +169,13 @@ bool Tree<T>::setIsActive( bool b )
 template<class T>
 inline bool Tree<T>::state()
 {
-    return (mOK_init && mOK_code);
+    return ( mOK_init && mOK_code );
 }
 
 template<class T>
 inline bool Tree<T>::canBeActivated()
 {
-    return (shouldBeActive() && state());
+    return ( shouldBeActive() && state() );
 }
 
 template<class T>

@@ -736,6 +736,7 @@ bool XMLexport::writeTimer( TTimer * pT )
     writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
     writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
     writeAttribute( "isTempTimer", pT->mIsTempTimer ? "yes" : "no" );
+    writeAttribute( "isOffsetTimer", pT->isOffsetTimer() ? "yes" : "no" );
 
     writeTextElement( "name", pT->mName );
     writeTextElement( "script", pT->mScript );

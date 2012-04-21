@@ -33,7 +33,9 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
-#include "gl/GLU.h"
+#if QT_VERSION >= 0x040800
+    #include <gl/GLU.h>
+#endif
 
 bool ortho;
 bool selectionMode = false;

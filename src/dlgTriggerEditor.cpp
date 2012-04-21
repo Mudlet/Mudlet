@@ -3114,14 +3114,6 @@ void dlgTriggerEditor::saveTimer()
             pT->setCommand( command );
             pT->setName( name );
             pT->setScript( script );
-           /* if( pT->isOffsetTimer() )
-            {
-                pT->setShouldBeActive( false );
-            }
-            else
-            {
-                pT->setIsActive( false );
-            }*/
 
             QIcon icon;
             if( pT->isFolder() )
@@ -3162,18 +3154,19 @@ void dlgTriggerEditor::saveTimer()
                 if( pT->shouldBeActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    pT->setIsActive( true );
                 }
                 else
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 }
+
             }
 
             if( pT->state() )
             {
                 pItem->setIcon( 0, icon);
                 pItem->setText( 0, name );
-
             }
             else
             {
@@ -3183,6 +3176,7 @@ void dlgTriggerEditor::saveTimer()
                 pItem->setText( 0, name );
 
             }
+
         }
     }
 }
@@ -4467,11 +4461,7 @@ void dlgTriggerEditor::fillout_form()
         TTimer * pT = *it;
         if( pT->isTempTimer() ) continue;
         QString s = pT->getName();
-
         qDebug()<<"init: name="<<pT->getName()<<" mUserActiveState="<<pT->shouldBeActive();
-
-
-        //        TTimer * pTimer = *it;
         QStringList sList;
         sList << s;
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpTimerBaseItem, sList);
@@ -5205,14 +5195,15 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
             pItem->setIcon( 0, iconError );
             showError( pT->getError() );
         }
-        if( pT->isActive() )
-        {
-            pT->enableTimer( pT->getName() );
-        }
-        else
-        {
-            pT->disableTimer( pT->getName() );
-        }
+        qDebug()<<"WARNING: dlgTriggerEditor::expand_child_timers() called name:"<<pT->getName();
+//        if( pT->isActive() )
+//        {
+//            pT->enableTimer();// pT->getName() );
+//        }
+//        else
+//        {
+//            pT->disableTimer();// pT->getName() );
+//        }
     }
 }
 
