@@ -96,9 +96,9 @@ void TTimer::setName( QString name )
     if( ! mIsTempTimer )
     {
         mpHost->getTimerUnit()->mLookupTable.remove( mName, this );
-        mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );
     }
     mName = name;
+    mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );
 }
 
 void TTimer::setTime( QTime time )
