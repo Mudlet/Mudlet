@@ -1318,6 +1318,15 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
     if( zval == Z_STREAM_END )
     {
         inflateEnd( & mZstream );
+        std::cout << "recv Z_STREAM_END, ending compression" << std::endl;
+        this->mNeedDecompression = false;
+        this->mMCCP_version_1 = false;
+        this->mMCCP_version_2 = false;
+
+        // Reset the option state so we can re-enable compression again in the future
+        // such as in the case of a copyover -JM
+        hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
+        hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
     }
     else
     {
