@@ -156,6 +156,11 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpAlias->setIsActive( true );
     }
 
+    if( gotAction && ! packName.isEmpty() )
+    {
+        mpHost->getActionUnit()->updateToolbar();
+    }
+
     if( ! packName.isEmpty())
     {
        if( ! gotTrigger )

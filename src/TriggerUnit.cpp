@@ -71,9 +71,10 @@ void TriggerUnit::uninstall( QString packageName )
     for( IT it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
     {
         TTrigger * pT = *it;
-        _uninstall( pT, packageName );
+
         if( pT->mPackageName == packageName )
         {
+            _uninstall( pT, packageName );
             uninstallList.append( pT );
         }
     }

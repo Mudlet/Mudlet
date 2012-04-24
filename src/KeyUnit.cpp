@@ -63,9 +63,10 @@ void KeyUnit::uninstall( QString packageName )
     for( IT it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
     {
         TKey * pT = *it;
-        _uninstall( pT, packageName );
+
         if( pT->mPackageName == packageName )
         {
+            _uninstall( pT, packageName );
             uninstallList.append( pT );
         }
     }

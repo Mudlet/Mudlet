@@ -1075,6 +1075,9 @@ bool Host::uninstallPackage( QString packageName, int module)
     {
         mpEditorDialog->doCleanReset();
     }
+
+    getActionUnit()->updateToolbar();
+
     QString _home = QDir::homePath();
     _home.append( "/.config/mudlet/profiles/" );
     _home.append( getName() );

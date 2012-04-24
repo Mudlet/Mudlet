@@ -55,9 +55,10 @@ void TimerUnit::uninstall( QString packageName )
     for( IT it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
     {
         TTimer * pT = *it;
-        _uninstall( pT, packageName );
+
         if( pT->mPackageName == packageName )
         {
+            _uninstall( pT, packageName );
             uninstallList.append( pT );
         }
     }

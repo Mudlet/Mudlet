@@ -3513,6 +3513,17 @@ void dlgTriggerEditor::saveAction()
                         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 }
+                else if( ! pT->getParent()->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
                 else
                 {
                     if( pT->isActive() )
@@ -4731,6 +4742,17 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 }
+                else if( ! pT->getParent()->mPackageName.isEmpty() )
+                {
+                    if( pT->isActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                }
                 else
                 {
                     if( pT->isActive() )
@@ -5094,7 +5116,18 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
         }
         if( pT->state() )
         {
-            if( pT->isFolder() )
+            if( ! pT->getParent()->mPackageName.isEmpty() )
+            {
+                if( pT->isActive() )
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                }
+                else
+                {
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                }
+            }
+            else if( pT->isFolder() )
             {
                 if( pT->isActive() )
                 {

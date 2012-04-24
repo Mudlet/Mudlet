@@ -55,9 +55,10 @@ void ScriptUnit::uninstall( QString packageName )
     for( IT it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
     {
         TScript * pT = *it;
-        _uninstall( pT, packageName );
+
         if( pT->mPackageName == packageName )
         {
+            _uninstall( pT, packageName );
             uninstallList.append( pT );
         }
     }
