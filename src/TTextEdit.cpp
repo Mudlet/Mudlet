@@ -1362,6 +1362,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
 void TTextEdit::copySelectionToClipboard()
 {
+    qDebug()<<"TTExtEdit::copySelectionToClipboard";
     if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
     {
         swap( mPA, mPB );
@@ -1374,7 +1375,14 @@ void TTextEdit::copySelectionToClipboard()
 
     for( int y=mPA.y(); y<=mPB.y()+1; y++ )
     {
-        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) )
+        {
+            QClipboard * clipboard = QApplication::clipboard();
+            clipboard->setText( text );
+            mSelectedRegion = QRegion( 0, 0, 0, 0 );
+            forceUpdate();
+            return;
+        }
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
         while( x < static_cast<int>( mpBuffer->buffer[y].size() ) )
@@ -1394,6 +1402,7 @@ void TTextEdit::copySelectionToClipboard()
             x++;
         }
         text.append("\n");
+
     }
 }
 
