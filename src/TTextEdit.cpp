@@ -1362,7 +1362,6 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
 void TTextEdit::copySelectionToClipboard()
 {
-    qDebug()<<"TTExtEdit::copySelectionToClipboard";
     if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
     {
         swap( mPA, mPB );
