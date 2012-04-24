@@ -34,7 +34,13 @@ dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW )
 
 void dlgRoomExits::slot_editItem(QTreeWidgetItem * pI, int column )
 {
-    if( column == 0 || !pI ) return;
+    if( column == 0 || !pI )
+    {
+        if( mpEditItem ) specialExits->closePersistentEditor( mpEditItem, mEditColumn );
+        mpEditItem = 0;
+        mEditColumn = 0;
+        return;
+    }
     if( mpEditItem != 0 )
     {
         specialExits->closePersistentEditor( mpEditItem, mEditColumn );
@@ -49,6 +55,7 @@ void dlgRoomExits::slot_addSpecialExit()
 {
     QStringList sL;
     QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);//
+    pI->setCheckState( 0, Qt::Unchecked );
     pI->setText(1, "<room ID>");
     pI->setText(2, "<command or Lua script>");
     specialExits->addTopLevelItem(pI);
