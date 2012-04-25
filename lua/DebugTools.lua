@@ -50,9 +50,10 @@ end
 --- <i>Geyser.display()</i>, which will use only one level of recursion.
 ---
 --- @usage display(mytable)
-function display(what, numformat, recursion)
-	recursion = recursion or 0
-
+function display(what, numformat, recursion, checked)
+	local echo, tostring = echo, tostring
+    recursion = recursion or 0
+    checked = checked or {}
 	if recursion == 0 then
 		echo("\n")
 	end
@@ -60,16 +61,20 @@ function display(what, numformat, recursion)
 
 	-- Do all the stuff inside a table
 	if type(what) == 'table' then
-		echo(" {")
-
+        checked[tostring(what)] = true
+		echo(tostring(what):gsub("^table:","").." {")
 		local firstline = true   -- a kludge so empty tables print on one line
 		if getmetatable(what) and getmetatable(what).isPhpTable == true then
 			for k, v in what:pairs() do
 				if firstline then echo("\n"); firstline = false end
 				echo(indent(recursion))
-				echo(printable(k))
+				echo(printable())
 				echo(": ")
-				display(v, numformat, recursion + 1)
+				if not checked[tostring(v)] then
+					display(v, numformat, recursion + 1, checked)
+				else
+					echo("'Recursion of"..tostring(v):gsub("table:","").."'\n")
+				end
 			end
 		else
 			for k, v in pairs(what) do
@@ -77,7 +82,11 @@ function display(what, numformat, recursion)
 				echo(indent(recursion))
 				echo(printable(k))
 				echo(": ")
-				if not (k == _G) then display(v, numformat, recursion + 1) end
+				if not checked[tostring(v)] then
+					display(v, numformat, recursion + 1, checked)
+				else
+					echo("'Recursion of"..tostring(v):gsub("table:","").."'\n")
+				end
 			end
 		end
 
