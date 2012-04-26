@@ -23,11 +23,17 @@ function __gmcp_merge_gmcp_sub_tables( a, key )
 end
 
 
-function unzip( what, dest )  
-	cecho("\n<blue>unpacking package:<"..what.."< to <"..dest..">\n") 
-	local z = zip.open( what )
+function unzip( what, dest )
+	cecho("\n<blue>unpacking package:<"..what.."< to <"..dest..">\n")
+	local z, err = zip.open( what )
+
+	if not z then
+		cecho("\nerror unpacking: "..err)
+		return
+	end
+
 	local createdDirs = {}
-	for file in z:files() do	
+	for file in z:files() do
 		local _f, err = z:open( file.filename )
 		local _data = _f:read("*a")
 		local _path = dest .. file.filename
@@ -49,7 +55,7 @@ function unzip( what, dest )
 				end
 			end
 		end
-		local _path = dest .. file.filename		
+		local _path = dest .. file.filename
   		if file.uncompressed_size > 0 then
 			local out = io.open( _path, "wb" )
 			if out then
@@ -59,7 +65,7 @@ function unzip( what, dest )
 			else
 				echo("ERROR: can't write file:".._path.."\n")
 			end
-		end		
+		end
 		_f:close();
 	end
 	z:close()
