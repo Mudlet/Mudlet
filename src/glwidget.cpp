@@ -34,7 +34,7 @@
 #endif
 
 #if QT_VERSION >= 0x040800
-    #include <gl/GLU.h>
+    #include <GL/glu.h>
 #endif
 
 bool ortho;
