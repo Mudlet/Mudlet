@@ -7742,6 +7742,8 @@ int TLuaInterpreter::Echo( lua_State *L )
         txt = a1.c_str();
         pHost->mpConsole->echo( txt );
     }
+
+
     else
     {
         txt = a2.c_str();
@@ -8027,6 +8029,7 @@ int TLuaInterpreter::setLabelStyleSheet( lua_State * L )
         a2 = lua_tostring( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    qDebug()<<"CSS: name:"<<luaSendText.c_str()<<"<"<<a2.c_str()<<">";
     pHost->mpConsole->setLabelStyleSheet( luaSendText, a2 );
     return 0;
 }
