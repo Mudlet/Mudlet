@@ -269,6 +269,17 @@ void TArea::fast_calcSpan( int id )
 
 void TArea::calcSpan()
 {
+    if( rooms.size() > 0 )
+    {
+        int id = rooms[0];
+        min_x = mpMap->rooms[id]->x;
+        max_x = min_x;
+        min_y = mpMap->rooms[id]->y;
+        max_y = min_y;
+        min_z = mpMap->rooms[id]->z;
+        max_z = min_z;
+    }
+
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
@@ -329,19 +340,24 @@ void TArea::calcSpan()
         }
     }
 
-    qreal sx = abs( min_x ) + max_x;
-    qreal sy = abs( min_y ) + max_y;
-    qreal sz = abs( min_z ) + max_z;
-    span = QVector3D( sx, sy, sz );
-
     for( int k=0; k<ebenen.size(); k++ )
     {
-        int _min_x = max_x;
-        int _min_y = max_y;
-        int _min_z = max_z;
-        int _max_x = min_x;
-        int _max_y = min_y;
-        int _max_z = min_z;
+        int _min_x;
+        int _min_y;
+        int _min_z;
+        int _max_x;
+        int _max_y;
+        int _max_z;
+        if( rooms.size() > 0 )
+        {
+            int id = rooms[0];
+            _min_x = mpMap->rooms[id]->x;
+            _max_x = _min_x;
+            _min_y = mpMap->rooms[id]->y;
+            _max_y = _min_y;
+            _min_z = mpMap->rooms[id]->z;
+            _max_z = _min_z;
+        }
 
         for( int i=0; i<rooms.size(); i++ )
         {
@@ -365,7 +381,7 @@ void TArea::calcSpan()
             _m = mpMap->rooms[id]->x;
             if( _m > _max_x )
             {
-                max_x = _m;
+                _max_x = _m;
             }
             _m = mpMap->rooms[id]->y;
             if( _m > _max_y )
@@ -385,8 +401,6 @@ void TArea::calcSpan()
         ymaxEbene[ebenen[k]] = _max_y;
         zmaxEbene[ebenen[k]] = _max_z;
     }
-
-
 }
 
 

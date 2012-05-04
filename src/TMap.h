@@ -46,6 +46,8 @@ class dlgMapper;
 class TMapLabel
 {
 public:
+    TMapLabel(){ hilite=false; }
+
     QVector3D pos;
     QPointF pointer;
     QSizeF size;
@@ -53,6 +55,7 @@ public:
     QColor fgColor;
     QColor bgColor;
     QPixmap pix;
+    bool hilite;
 };
 
 union mVarTypes {

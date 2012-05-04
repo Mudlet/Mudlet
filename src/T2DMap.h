@@ -100,11 +100,17 @@ public:
     QPointF mLastMouseClick;
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
+    bool mLabelHilite;
+    bool mMoveLabel;
 
 signals:
 
 public slots:
 
+    void slot_moveLabel();
+    void slot_deleteLabel();
+    void slot_editLabel();
+    void slot_setPlayerLocation();
     void slot_createLabel();
     void slot_customLineColor();
     void showInfo();

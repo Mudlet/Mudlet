@@ -6908,12 +6908,12 @@ int TLuaInterpreter::getSpecialExits( lua_State * L )
             int id_to = it.key();
             QString dir = it.value();
             QString exitStatus;
-            if( dir.size() > 0 )
+            if( dir.size() > 0 && ( dir.startsWith('0') || dir.startsWith('1')) )
                 exitStatus = dir.left(1);
             else
                 exitStatus = "0";
             QString exit;
-            if( dir.size() > 0 )
+            if( dir.size() > 0 && ( dir.startsWith('0') || dir.startsWith('1')) )
                 exit = dir.remove(0,1);
             else
                 exit = dir;
@@ -6954,17 +6954,14 @@ int TLuaInterpreter::getSpecialExitsSwap( lua_State * L )
             QString dir = it.value();
             //lua_pushstring( L, dir.toLatin1().data() );
             QString exitStatus;
-            if( dir.size() > 0 )
-            {
+            QString exit;
+            if( dir.size() > 0 && ( dir.startsWith('0') || dir.startsWith('1')) )
                 exitStatus = dir.left(1);
-            }
             else
                 exitStatus = "0";
-            QString exit;
-            if( exit.size() > 0 )
-            {
+
+            if( dir.size() > 0 && ( dir.startsWith('0') || dir.startsWith('1')) )
                 exit = dir.remove(0,1);
-            }
             else
                 exit = dir;
             lua_pushstring( L, exit.toLatin1().data() );
@@ -7742,6 +7739,7 @@ int TLuaInterpreter::Echo( lua_State *L )
         txt = a1.c_str();
         pHost->mpConsole->echo( txt );
     }
+
 
 
     else

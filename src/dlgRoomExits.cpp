@@ -24,6 +24,7 @@
 
 dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW )
 : mpHost( pH )
+, mpEditItem( 0 )
 , QDialog( pW )
 {
     setupUi(this);
@@ -351,12 +352,12 @@ void dlgRoomExits::init( int id )
         else
             pI->setCheckState( 0, Qt::Unchecked );
         pI->setText( 1, QString::number(id_to) );
+        qDebug()<<"dir="<<dir;
         if( dir.startsWith('0') || dir.startsWith('1') ) dir = dir.mid(1);
 
         pI->setText( 2, dir );
     }
     mRoomID = id;
 }
-
 
 

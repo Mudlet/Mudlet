@@ -1059,7 +1059,12 @@ bool TMap::findPath( int from, int to )
                      it.next();
                      if( it.key() == rooms[*spi]->id )
                      {
-                         mDirList.push_back( it.value() );
+                         QString _cmd = it.value();
+                         if( _cmd.size() > 0 && (_cmd.startsWith('0')))
+                         {
+                             _cmd = _cmd.mid(1);
+                            mDirList.push_back( _cmd );
+                         }
                      }
                  }
              }
