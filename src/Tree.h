@@ -59,6 +59,8 @@ public:
     bool               setIsActive( bool );
     bool               shouldBeActive();
     void               setShouldBeActive( bool b );
+    bool               ancestorsActive(); // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+
     T *                mpParent;
     std::list<T *> *   mpMyChildrenList;
     qint64             mID;
@@ -138,6 +140,20 @@ Tree<T>::~Tree()
     }
 }
 
+template<class T>
+bool Tree<T>::ancestorsActive()
+{
+    Tree<T> * node(mpParent);
+    while(node)
+    {
+        if(!node->isActive())
+        {
+            return false;
+        }
+        node=node->mpParent;
+    }
+    return true;
+}
 
 template<class T>
 bool Tree<T>::shouldBeActive()

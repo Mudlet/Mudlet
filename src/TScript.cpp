@@ -110,7 +110,8 @@ void TScript::compileAll()
 
 void TScript::callEventHandler( TEvent * pE )
 {
-    if( isActive() )
+    // Only call this event handler if this script and all its ancestors are active:
+    if(isActive() && ancestorsActive())
     {
         mpHost->mLuaInterpreter.callEventHandler( mName, pE );
     }

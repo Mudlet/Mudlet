@@ -2739,5 +2739,15 @@ void TConsole::slot_searchBufferDown()
     print("No search results, sorry!\n");
 }
 
+QSize TConsole::getMainWindowSize() const
+{
+    QSize consoleSize = size();
+    int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
+    int toolbarHeight = mpTopToolBar->height();
+    int commandLineHeight = mpCommandLine->height();
+    QSize mainWindowSize( consoleSize.width()-toolbarWidth, consoleSize.height()-(commandLineHeight+toolbarHeight));
+    return mainWindowSize;
+}
+
 
 

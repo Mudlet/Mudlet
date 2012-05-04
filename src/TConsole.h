@@ -186,6 +186,7 @@ public:
       QString           logger_translate( QString & );
       void              logger_set_text_properties( QString );
       QString           assemble_html_font_specs();
+      QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
 
       Host *            mpHost;
 
