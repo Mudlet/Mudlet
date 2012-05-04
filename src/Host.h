@@ -146,6 +146,7 @@ public:
     bool               installPackage( QString, int module);
     bool               uninstallPackage( QString, int module);
     bool               removeDir( const QString dirName, QString originalPath);
+    void               readPackageConfig( QString, QString & );
 
     cTelnet            mTelnet;
     TConsole *         mpConsole;
