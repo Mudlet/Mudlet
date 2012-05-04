@@ -230,8 +230,8 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     fontSize->insertItems( 1, sizeList );
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
     //connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
-    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBoderColor()));
-    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBoderImage()));
+    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
+    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
 
 
 

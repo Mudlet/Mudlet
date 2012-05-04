@@ -86,6 +86,7 @@ void THighlighter::setSearchPattern( QString p )
     searchFormat.setBackground( QColor(255,255,0) );
 
     rule.pattern = QRegExp( mSearchPattern );
+    rule.pattern.setCaseSensitivity(Qt::CaseInsensitive);
     rule.format = searchFormat;
     highlightingRules.last() = rule;
 }
@@ -129,13 +130,13 @@ void THighlighter::highlightBlock( const QString & text )
 
 
     QRegExp expression( highlightingRules.last().pattern );
-    int index = text.indexOf( mSearchPattern );//expression );
+    int index = text.indexOf( mSearchPattern, 0, Qt::CaseInsensitive );//expression );
     while( index >= 0 )
     {
         int length = mSearchPattern.length();//expression.matchedLength();
         setFormat( index, length, highlightingRules.last().format );
         //index = text.indexOf( expression, index + length );
-        index = text.indexOf( mSearchPattern, index + length );
+        index = text.indexOf( mSearchPattern, index + length, Qt::CaseInsensitive );
     }
 }
 
