@@ -20,7 +20,7 @@
 
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
-#include "ExitsTreeWidget.h"
+#include "exitstreewidget.h"
 #include <QtGui>
 #include "Host.h"
 #include "HostManager.h"
@@ -34,7 +34,12 @@ ExitsTreeWidget::ExitsTreeWidget( QWidget * pW ) : QTreeWidget( pW )
 
 void ExitsTreeWidget::keyPressEvent ( QKeyEvent * event )
 {
-    if (event->key() == Qt::Key_Delete)
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+    {
+        closePersistentEditor( currentItem(), 1 );
+        closePersistentEditor( currentItem(), 2 );
+    }
+    if (event->key() == Qt::Key_Delete && hasFocus() )
     {
         QList<QTreeWidgetItem *> selection = selectedItems();
         foreach(QTreeWidgetItem *item, selection)

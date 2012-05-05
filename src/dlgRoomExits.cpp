@@ -50,6 +50,7 @@ void dlgRoomExits::slot_editItem(QTreeWidgetItem * pI, int column )
     mpEditItem = pI;
     mEditColumn = column;
     specialExits->openPersistentEditor(pI, column);
+    specialExits->editItem(pI, column);
 }
 
 void dlgRoomExits::slot_addSpecialExit()
