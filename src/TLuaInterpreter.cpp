@@ -6007,6 +6007,27 @@ int TLuaInterpreter::addAreaName( lua_State *L )
             id++;
         }
         pHost->mpMap->areaNamesMap[id] = _name;
+        pHost->mpMap->buildAreas();
+        if( pHost->mpMap->mpMapper )
+        {
+            pHost->mpMap->mpMapper->showArea->clear();
+            QMapIterator<int, QString> it( pHost->mpMap->areaNamesMap );
+            //sort them alphabetically (case sensitive)
+            QMap <QString, QString> areaNames;
+            while( it.hasNext() )
+            {
+                it.next();
+                QString name = it.value();
+                areaNames.insert(name.toLower(), name);
+            }
+
+            QMapIterator<QString, QString> areaIt( areaNames );
+            while( areaIt.hasNext() )
+            {
+                areaIt.next();
+                pHost->mpMap->mpMapper->showArea->addItem( areaIt.value() );
+            }
+        }
         lua_pushnumber( L, id );
     }
     else

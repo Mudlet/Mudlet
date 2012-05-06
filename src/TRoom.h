@@ -32,6 +32,7 @@ public:
     void addSpecialExit( int to, QString cmd );
     int hasExitStub(int direction);
     void setExitStub(int direction, int status);
+    void calcRoomDimensions();
     int id;
     int area;
     int x;
@@ -52,6 +53,11 @@ public:
     int environment;
     int weight;
     bool isLocked;
+    int min_x;
+    int min_y;
+    int max_x;
+    int max_y;
+
     qint8 c;
     QString name;
     QVector3D v;

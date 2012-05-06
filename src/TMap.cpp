@@ -1320,6 +1320,7 @@ bool TMap::restore(QString location)
             {
                 ifs >> rooms[i]->exitStubs;
             }
+            rooms[i]->calcRoomDimensions();
         }
         customEnvColors[257] = mpHost->mRed_2;
         customEnvColors[258] = mpHost->mGreen_2;

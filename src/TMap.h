@@ -164,6 +164,7 @@ public:
     QMap<qint32, QMap<qint32, TMapLabel> > mapLabels;
 
 
+
 };
 
 

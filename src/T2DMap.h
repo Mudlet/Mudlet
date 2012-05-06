@@ -39,6 +39,7 @@ public:
     void     paintEvent( QPaintEvent * );
     void     mousePressEvent(QMouseEvent * );
     void     mouseDoubleClickEvent ( QMouseEvent * event );
+    bool     event(QEvent * event );
     void     wheelEvent ( QWheelEvent * );
     void     mouseMoveEvent( QMouseEvent * event );
     void     mouseReleaseEvent(QMouseEvent * e );
@@ -102,6 +103,9 @@ public:
     bool mMapperUseAntiAlias;
     bool mLabelHilite;
     bool mMoveLabel;
+    int mCustomLineSelectedRoom;
+    QString mCustomLineSelectedExit;
+    int mCustomLineSelectedPoint;
 
 signals:
 
