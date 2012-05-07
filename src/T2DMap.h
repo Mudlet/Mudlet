@@ -106,11 +106,14 @@ public:
     int mCustomLineSelectedRoom;
     QString mCustomLineSelectedExit;
     int mCustomLineSelectedPoint;
+    QTreeWidget mMultiSelectionListWidget;
 
 signals:
 
 public slots:
 
+    void slot_roomSelectionChanged();
+    void slot_deleteCustomExitLine();
     void slot_moveLabel();
     void slot_deleteLabel();
     void slot_editLabel();

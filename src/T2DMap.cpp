@@ -30,7 +30,15 @@
 #include <QPixmap>
 
 T2DMap::T2DMap()
+: mMultiSelectionListWidget(this)
 {
+    mMultiSelectionListWidget.setHeaderLabel("Room Selection");
+    mMultiSelectionListWidget.setColumnCount(1);
+    mMultiSelectionListWidget.resize(100,180);
+    mMultiSelectionListWidget.move(1,1);
+    mMultiSelectionListWidget.hide();
+
+    //connect(&mMultiSelectionListWidget, SIGNAL(itemSelectionChanged()), this, SLOT(slot_roomSelectionChanged()));
     mLabelHilite = false;
     xzoom = 30;
     yzoom = 30;
@@ -53,12 +61,20 @@ T2DMap::T2DMap()
     mCustomLineSelectedRoom = 0;
     mCustomLineSelectedExit = "";
     mCustomLineSelectedPoint = -1;
-    setFocusPolicy( Qt::ClickFocus);
+    mCustomLinesRoomFrom = 0;
+    //setFocusPolicy( Qt::ClickFocus);
 }
 
 T2DMap::T2DMap(QWidget * parent)
 : QWidget(parent)
+, mMultiSelectionListWidget(this)
 {
+    mMultiSelectionListWidget.setHeaderLabel("Room Selection");
+    mMultiSelectionListWidget.setColumnCount(1);
+    mMultiSelectionListWidget.resize(100,180);
+    mMultiSelectionListWidget.move(1,1);
+    connect(&mMultiSelectionListWidget, SIGNAL(itemSelectionChanged()), this, SLOT(slot_roomSelectionChanged()));
+    mMultiSelectionListWidget.hide();
     mMoveLabel = false;
     mLabelHilite = false;
     xzoom = 30;
@@ -84,12 +100,13 @@ T2DMap::T2DMap(QWidget * parent)
     mCustomLineSelectedRoom = 0;
     mCustomLineSelectedExit = "";
     mCustomLineSelectedPoint = -1;
-    setFocusPolicy( Qt::ClickFocus);
+    mCustomLinesRoomFrom = 0;
+    //setFocusPolicy( Qt::ClickFocus);
 }
 
 void T2DMap::init()
 {
-    setFocusPolicy( Qt::ClickFocus);
+    //setFocusPolicy( Qt::ClickFocus);
 
     if( ! mpMap ) return;
     eSize = mpMap->mpHost->mLineSize;
@@ -1499,7 +1516,7 @@ void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
 
 void T2DMap::mouseReleaseEvent(QMouseEvent * e )
 {
-    //map panning
+    //move map with left mouse button + ALT (->
     if( mpMap->mLeftDown )
     {
         mpMap->mLeftDown = false;
@@ -1515,35 +1532,34 @@ void T2DMap::mouseReleaseEvent(QMouseEvent * e )
 
 bool T2DMap::event( QEvent * event )
 {
-        if( event->type() == QEvent::KeyPress )
-        {
-            QKeyEvent *ke = static_cast<QKeyEvent *>( event );
-    qDebug()<<"keypress event!";
-    qDebug()<<"modifier="<<ke->modifiers()<<" key="<<ke->key();
-    if( ke->key() == Qt::Key_Delete )
+    //NOTE: key events aren't being forwarded to T2DMap because the widget currently never has focus because it's more comfortable for the user to always have focus on the command line
+    //      If this were to be changed some day the setFocusPolicy() calls in the constructor need to be uncommented
+
+    if( event->type() == QEvent::KeyPress )
     {
-        if( mCustomLineSelectedRoom != 0  )
-        {
-            qDebug()<<"keypress event#2";
-            if( mpMap->rooms.contains(mCustomLineSelectedRoom) )
-            {
-                TRoom * pR = mpMap->rooms[mCustomLineSelectedRoom];
-                if( pR->customLines.contains( mCustomLineSelectedExit) )
-                {
-                    qDebug()<<"keypress event!#3";
-                    pR->customLines.remove(mCustomLineSelectedExit);
-                    repaint();
-                    mCustomLineSelectedRoom = 0;
-                    mCustomLineSelectedExit = "";
-                    mCustomLineSelectedPoint = -1;
-                    qDebug()<<"keypress event!---done";
-                    return QWidget::event(event);
-                }
-            }
-        }
+        QKeyEvent *ke = static_cast<QKeyEvent *>( event );
+        qDebug()<<"modifier="<<ke->modifiers()<<" key="<<ke->key();
+//        if( ke->key() == Qt::Key_Delete )
+//        {
+//            if( mCustomLineSelectedRoom != 0  )
+//            {
+//                if( mpMap->rooms.contains(mCustomLineSelectedRoom) )
+//                {
+//                    TRoom * pR = mpMap->rooms[mCustomLineSelectedRoom];
+//                    if( pR->customLines.contains( mCustomLineSelectedExit) )
+//                    {
+//                        pR->customLines.remove(mCustomLineSelectedExit);
+//                        repaint();
+//                        mCustomLineSelectedRoom = 0;
+//                        mCustomLineSelectedExit = "";
+//                        mCustomLineSelectedPoint = -1;
+//                        return QWidget::event(event);
+//                    }
+//                }
+//            }
+//        }
     }
-        }
-        return QWidget::event(event);
+    return QWidget::event(event);
 }
 
 void T2DMap::mousePressEvent(QMouseEvent *event)
@@ -1551,7 +1567,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
     mNewMoveAction = true;
     if( event->buttons() & Qt::LeftButton )
     {
-        // map panning
+        // move map with left mouse button + ALT
         if( event->modifiers().testFlag(Qt::AltModifier) )
         {
             mpMap->mLeftDown = true;
@@ -1640,10 +1656,6 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         mCustomLineSelectedRoom = 0;
         mCustomLineSelectedExit = "";
 
-
-
-
-
         if( mRoomBeingMoved )
         {
             mPHighlightMove = event->pos();
@@ -1658,9 +1670,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             mMultiRect = QRect(event->pos(), event->pos());
             //mPHighlight = event->pos();
             //mPick = true;
-            //update();
-
-            if( mMultiSelection && ! mRoomBeingMoved )
+            //if( ! mRoomBeingMoved )
             {
                 int _roomID = mRID;
                 if( ! mpMap->rooms.contains( _roomID ) ) return;
@@ -1694,7 +1704,10 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                     int mz = mOz;
                     if( (abs(mx-rx)<mTX*rSize/2) && (abs(my-ry)<mTY*rSize/2) && (mz == rz) )
                     {
-                        mMultiSelectionList << pArea->rooms[k];
+                        if( mMultiSelectionList.contains( pArea->rooms[k]) && event->modifiers().testFlag(Qt::ControlModifier) )
+                            mMultiSelectionList.removeAll( pArea->rooms[k] );
+                        else
+                            mMultiSelectionList << pArea->rooms[k];
                     }
                 }
 
@@ -1751,20 +1764,43 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         }
         else
             mPopupMenu = false;
+
+        // display room selection list widget if more than 1 room has been selected
+        // -> user can manually change currennt selection if rooms are overlapping
+        if( mMultiSelectionList.size() > 1 )
+        {
+            mMultiSelectionListWidget.clear();
+            for( int i=0; i<mMultiSelectionList.size(); i++ )
+            {
+                QTreeWidgetItem * _item = new QTreeWidgetItem;
+                _item->setText(0,QString::number(mMultiSelectionList[i]));
+                mMultiSelectionListWidget.addTopLevelItem( _item );
+            }
+            mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::ExtendedSelection);
+            mMultiSelectionListWidget.selectAll();
+            mMultiSelectionListWidget.show();
+
+        }
+        else
+            mMultiSelectionListWidget.hide();
+
+        update();
     }
+
+
     if( event->buttons() & Qt::RightButton )
     {
         if( mCustomLinesRoomFrom > 0 )
         {
             mCustomLinesRoomFrom = 0;
         }
-        int x = event->x();
-        int y = event->y();
-        mPHighlight = QPoint(x,y);
-        mPick = true;
+//        int x = event->x();
+//        int y = event->y();
+//        mPHighlight = QPoint(x,y);
+//        mPick = true;
         //repaint();
 
-        if( ! mLabelHilite )
+        if( ! mLabelHilite && mCustomLineSelectedRoom == 0 )
         {
             QAction * action = new QAction("move", this );
             action->setStatusTip(tr("move room"));
@@ -1844,7 +1880,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 
             popup->popup( mapToGlobal( event->pos() ) );
         }
-        else
+        else if( mLabelHilite )
         {
             QAction * action = new QAction("move", this );
             action->setStatusTip(tr("move label"));
@@ -1863,11 +1899,42 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             popup->addAction( action3 );
             popup->popup( mapToGlobal( event->pos() ) );
         }
+        else
+        {
+            QAction * action2 = new QAction("delete", this );
+            action2->setStatusTip(tr("delete"));
+            connect( action2, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
+            mPopupMenu = true;
+            QMenu * popup = new QMenu( this );
+
+            popup->addAction( action2 );
+            popup->popup( mapToGlobal( event->pos() ) );
+        }
         mLastMouseClick = event->posF();
     }
     update();
 }
 
+
+void T2DMap::slot_deleteCustomExitLine()
+{
+
+    if( mCustomLineSelectedRoom != 0  )
+    {
+        if( mpMap->rooms.contains(mCustomLineSelectedRoom) )
+        {
+            TRoom * pR = mpMap->rooms[mCustomLineSelectedRoom];
+            if( pR->customLines.contains( mCustomLineSelectedExit) )
+            {
+                pR->customLines.remove(mCustomLineSelectedExit);
+                repaint();
+                mCustomLineSelectedRoom = 0;
+                mCustomLineSelectedExit = "";
+                mCustomLineSelectedPoint = -1;
+            }
+        }
+    }
+}
 
 void T2DMap::slot_moveLabel()
 {
@@ -2982,4 +3049,19 @@ void T2DMap::slot_createLabel()
         labelID = mpMap->mapLabels[mAID].size();
         mpMap->mapLabels[mAID].insert(labelID, label);
     }
+}
+
+void T2DMap::slot_roomSelectionChanged()
+{
+    QList<QTreeWidgetItem *> _sl = mMultiSelectionListWidget.selectedItems();
+    qDebug()<<"slot_roomSelectinChanged() _sl.size="<<_sl.size();
+    if( _sl.size() > 0 )
+    {
+        mMultiSelectionList.clear();
+        for( int i=0; i<_sl.size(); i++ )
+        {
+            mMultiSelectionList.push_back(_sl[i]->text(0).toInt());
+        }
+    }
+
 }
