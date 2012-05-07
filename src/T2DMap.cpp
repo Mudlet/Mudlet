@@ -62,6 +62,9 @@ T2DMap::T2DMap()
     mCustomLineSelectedExit = "";
     mCustomLineSelectedPoint = -1;
     mCustomLinesRoomFrom = 0;
+    mMultiSelectionListWidget.setRootIsDecorated(false);
+    mMultiSelectionListWidget.setColumnWidth(0,90);
+
     //setFocusPolicy( Qt::ClickFocus);
 }
 
@@ -101,11 +104,15 @@ T2DMap::T2DMap(QWidget * parent)
     mCustomLineSelectedExit = "";
     mCustomLineSelectedPoint = -1;
     mCustomLinesRoomFrom = 0;
+    mMultiSelectionListWidget.setRootIsDecorated(false);
+    mMultiSelectionListWidget.setColumnWidth(0,90);
+
     //setFocusPolicy( Qt::ClickFocus);
 }
 
 void T2DMap::init()
 {
+
     //setFocusPolicy( Qt::ClickFocus);
 
     if( ! mpMap ) return;
@@ -1466,6 +1473,10 @@ void T2DMap::paintEvent( QPaintEvent * e )
         {
             it.next();
 
+            if( it.value().text.length() < 1 )
+            {
+                mpMap->mapLabels[mAID][it.key()].text = "no text";
+            }
             QRectF lr = QRectF( 0, 0, 1000, 100 );
             QPixmap pix( lr.size().toSize() );
             pix.fill(QColor(0,0,0,0));
@@ -1668,10 +1679,8 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         {
             mMultiSelection = true;
             mMultiRect = QRect(event->pos(), event->pos());
-            //mPHighlight = event->pos();
-            //mPick = true;
-            //if( ! mRoomBeingMoved )
             {
+                mMultiSelection = true;
                 int _roomID = mRID;
                 if( ! mpMap->rooms.contains( _roomID ) ) return;
                 int _areaID = mAID;
@@ -1708,6 +1717,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                             mMultiSelectionList.removeAll( pArea->rooms[k] );
                         else
                             mMultiSelectionList << pArea->rooms[k];
+                        if( mMultiSelectionList.size() > 0 ) mMultiSelection = false;
                     }
                 }
 
@@ -1760,6 +1770,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                 mLabelHilite = false;
                 update();
             }
+            if( mMultiSelection && mMultiSelectionList.size() > 0 && ( event->modifiers().testFlag(Qt::ControlModifier) ) ) mMultiSelection = false;
 
         }
         else
@@ -2546,7 +2557,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
     mCustomLineSelectedPoint = -1;
 
     //FIXME:
-    if( mMoveLabel )//&& mLabelHilite )
+    if(  mLabelHilite )//mMoveLabel )//&& mLabelHilite )
     {
         if( mpMap->mapLabels.contains( mAID ) )
         {
@@ -2605,7 +2616,8 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
             int ry = mpMap->rooms[pArea->rooms[k]]->y*-1*mTY+_ry;
             int rz = mpMap->rooms[pArea->rooms[k]]->z;
 
-            // NOTE: in multi room selection mode you select all rooms within the selection rectangle on *all* z-levels to make area merges easier
+            // copy rooms on all z-levels if the shift key is being pressed
+            if( rz != mOz && ! ( event->modifiers().testFlag(Qt::ShiftModifier)) ) continue;
 
             QRectF dr;
             if( pArea->gridMode )
@@ -2627,41 +2639,76 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
         my = yspan/2 - my - 1;
         if( mpMap->rooms.contains( mRID ) )
         {
-            mx += mpMap->rooms[mRID]->x;//FIXME
+            mx += mpMap->rooms[mRID]->x;
             my += mpMap->rooms[mRID]->y;
             mOldMousePos = QPoint(mx,my);
         }
 
-        update();
-    }
-    if( mRoomBeingMoved )
-    {
-        if( ! mMultiSelection )
+        if( mMultiSelectionList.size() > 1 )
         {
-            QPoint P = event->pos();
-            mPHighlightMove = event->pos();
-            if( mpMap->rooms.contains( mRoomSelection ) )
+            mMultiSelectionListWidget.clear();
+            for( int i=0; i<mMultiSelectionList.size(); i++ )
             {
-                int ox = mOx;
-                int oy = mOy;
-                float _rx;
-                float _ry;
-                if( ox*mTX > xspan/2*mTX )
-                    _rx = -(mTX*ox-xspan/2*mTX);
-                else
-                    _rx = xspan/2*mTX-mTX*ox;
-                if( oy*mTY > yspan/2*mTY )
-                    _ry = -(mTY*oy-yspan/2*mTY);
-                else
-                    _ry = yspan/2*mTY-mTY*oy;
-                int mx = event->pos().x()/mTX + mOx;
-                int my = event->pos().y()/mTY + mOy;
-                mx = mx - xspan/2;// + 1;
-                my = yspan/2 - my;// - 1;
-                mpMap->rooms[mRoomSelection]->x = mx;
-                mpMap->rooms[mRoomSelection]->y = my;
+                QTreeWidgetItem * _item = new QTreeWidgetItem;
+                _item->setText(0,QString::number(mMultiSelectionList[i]));
+                mMultiSelectionListWidget.addTopLevelItem( _item );
+            }
+            mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::ExtendedSelection);
+            mMultiSelectionListWidget.selectAll();
+            mMultiSelectionListWidget.show();
 
-                QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mRoomSelection]->customLines);
+        }
+        else
+            mMultiSelectionListWidget.hide();
+
+        update();
+        return;
+    }
+
+    if( mMultiSelectionList.size() > 0 )
+    {
+        mMultiRect = QRect(0,0,0,0);
+        int _roomID = mRID;
+        if( ! mpMap->rooms.contains( _roomID ) ) return;
+        int _areaID = mAID;
+        if( ! mpMap->areas.contains(_areaID) ) return;
+        TArea * pArea = mpMap->areas[_areaID];
+        int ox = mOx;
+        int oy = mOy;
+        float _rx;
+        float _ry;
+        if( ox*mTX > xspan/2*mTX )
+            _rx = -(mTX*ox-xspan/2*mTX);
+        else
+            _rx = xspan/2*mTX-mTX*ox;
+        if( oy*mTY > yspan/2*mTY )
+            _ry = -(mTY*oy-yspan/2*mTY);
+        else
+            _ry = yspan/2*mTY-mTY*oy;
+        int mx = event->pos().x()/mTX + mOx;
+        int my = event->pos().y()/mTY + mOy;
+        mx = mx - xspan/2 + 1;
+        my = yspan/2 - my - 1;
+
+        int dx,dy;
+
+        if( mMultiSelectionList.size() < 1 )
+        {
+            mMultiSelectionList.push_back( mRoomSelection );
+        }
+        int topLeftCorner = getTopLeftSelection();
+        if( topLeftCorner < 0 ) return;
+        dx = mx - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->x;
+        dy = my - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->y;
+        for( int j=0; j<mMultiSelectionList.size(); j++ )
+        {
+            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
+            {
+                mpMap->rooms[mMultiSelectionList[j]]->x += dx;
+                mpMap->rooms[mMultiSelectionList[j]]->y += dy;
+
+                QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mMultiSelectionList[j]]->customLines);
+                QMap<QString, QList<QPointF> > newMap;
                 while( itk.hasNext() )
                 {
                     itk.next();
@@ -2669,77 +2716,15 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                     for( int pk=0; pk<_pL.size(); pk++ )
                     {
                         QPointF op = _pL[pk];
-                        _pL[pk].setX( (float)(mx - op.x()) );
-                        _pL[pk].setY( (float)(my - op.y()) );
+                        _pL[pk].setX( (float)(op.x()+dx) );
+                        _pL[pk].setY( (float)(op.y()+dy) );
                     }
+                    newMap.insert(itk.key(), _pL );
                 }
+                mpMap->rooms[mMultiSelectionList[j]]->customLines = newMap;
             }
-            repaint();
         }
-        else
-        {
-            mMultiRect = QRect(0,0,0,0);
-            int _roomID = mRID;
-            if( ! mpMap->rooms.contains( _roomID ) ) return;
-            int _areaID = mAID;
-            if( ! mpMap->areas.contains(_areaID) ) return;
-            TArea * pArea = mpMap->areas[_areaID];
-            int ox = mOx;
-            int oy = mOy;
-            float _rx;
-            float _ry;
-            if( ox*mTX > xspan/2*mTX )
-                _rx = -(mTX*ox-xspan/2*mTX);
-            else
-                _rx = xspan/2*mTX-mTX*ox;
-            if( oy*mTY > yspan/2*mTY )
-                _ry = -(mTY*oy-yspan/2*mTY);
-            else
-                _ry = yspan/2*mTY-mTY*oy;
-            int mx = event->pos().x()/mTX + mOx;
-            int my = event->pos().y()/mTY + mOy;
-            mx = mx - xspan/2 + 1;
-            my = yspan/2 - my - 1;
-
-            int dx,dy;
-
-            if( mMultiSelectionList.size() < 1 )
-            {
-                mMultiSelectionList.push_back( mRoomSelection );
-            }
-            int topLeftCorner = getTopLeftSelection();
-            if( topLeftCorner < 0 ) return;
-            dx = mx - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->x;
-            dy = my - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->y;
-            for( int j=0; j<mMultiSelectionList.size(); j++ )
-            {
-                if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
-                {
-                    mpMap->rooms[mMultiSelectionList[j]]->x += dx;
-                    mpMap->rooms[mMultiSelectionList[j]]->y += dy;
-
-                    QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mMultiSelectionList[j]]->customLines);
-                    QMap<QString, QList<QPointF> > newMap;
-                    while( itk.hasNext() )
-                    {
-                        itk.next();
-                        QList<QPointF> _pL = itk.value();
-                        for( int pk=0; pk<_pL.size(); pk++ )
-                        {
-                            QPointF op = _pL[pk];
-                            _pL[pk].setX( (float)(op.x()+dx) );
-                            _pL[pk].setY( (float)(op.y()+dy) );
-                        }
-                        newMap.insert(itk.key(), _pL );
-                    }
-                    mpMap->rooms[mMultiSelectionList[j]]->customLines = newMap;
-                }
-            }
-            if( mMultiSelectionList.size() == 1 )
-                if( mMultiSelectionList[0] == mRoomSelection )
-                    mMultiSelectionList.clear();
-            repaint();
-        }
+        repaint();
     }
 }
 
@@ -3054,7 +3039,6 @@ void T2DMap::slot_createLabel()
 void T2DMap::slot_roomSelectionChanged()
 {
     QList<QTreeWidgetItem *> _sl = mMultiSelectionListWidget.selectedItems();
-    qDebug()<<"slot_roomSelectinChanged() _sl.size="<<_sl.size();
     if( _sl.size() > 0 )
     {
         mMultiSelectionList.clear();
