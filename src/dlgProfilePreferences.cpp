@@ -385,6 +385,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         topBorderHeight->setValue(pHost->mBorderTopHeight);
         bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
         leftBorderWidth->setValue(pHost->mBorderLeftWidth);
+        qDebug()<<"loading: left border width:"<<pHost->mBorderLeftWidth;
         rightBorderWidth->setValue(pHost->mBorderRightWidth);
         MainIconSize->setValue(mudlet::self()->mMainIconSize);
         TEFolderIconSize->setValue(mudlet::self()->mTEFolderIconSize);
@@ -1336,6 +1337,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
+  qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     //pHost->mMXPMode = mMXPMode->currentIndex();
     //pHost->mEncoding = encoding->currentIndex();
@@ -1392,7 +1394,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     QSize s = QSize(x,y);
     QResizeEvent event(s, s);
     QApplication::sendEvent( pHost->mpConsole, &event);
-
+qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     close();
 }
 

@@ -2741,6 +2741,7 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
+    qDebug()<<"CALLED!!!";
     QSize consoleSize = size();
     int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     int toolbarHeight = mpTopToolBar->height();

@@ -46,7 +46,7 @@ public:
     int      getTopLeftSelection();
     void     setRoomSize( double );
     void     setExitSize( double );
-
+    void     createLabel( QRectF labelRect );
     TMap *   mpMap;
     Host *   mpHost;
     int      xzoom;
@@ -107,6 +107,7 @@ public:
     QString mCustomLineSelectedExit;
     int mCustomLineSelectedPoint;
     QTreeWidget mMultiSelectionListWidget;
+    bool mSizeLabel;
 
 signals:
 

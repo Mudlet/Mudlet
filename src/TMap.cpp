@@ -372,6 +372,29 @@ void TMap::auditRooms()
         if( ! rooms.contains(pR->east) ) pR->east = -1;
         if( ! rooms.contains(pR->in) ) pR->in = -1;
         if( ! rooms.contains(pR->out) ) pR->out = -1;
+
+        AUDIT_SPECIAL_EXITS: QMapIterator<int, QString> it( pR->other );
+        while( it.hasNext() )
+        {
+            it.next();
+            QString _cmd = it.value();
+            if( _cmd.size() <= 0 )
+            {
+                rooms[itRooms.key()]->other.remove( it.key(), it.value() );
+                qDebug()<<"AUDIT_SPECIAL_EXITS: roomID:"<<pR->id<<" REMOVING invalid special exit:"<<_cmd;
+                goto AUDIT_SPECIAL_EXITS;
+            }
+            else if( ! ( _cmd.startsWith('1') || _cmd.startsWith('0') ) )
+            {
+                QString _nc = it.value();
+                int _nk = it.key();
+                _nc.prepend('0');
+                pR->other.remove( it.key(), it.value() );
+                pR->other.insertMulti( _nk, _nc );
+                qDebug()<<"AUDIT_SPECIAL_EXITS: roomID:"<<pR->id<<" PATCHING invalid special exit:"<<_cmd << " new:"<<_nc;
+                goto AUDIT_SPECIAL_EXITS;
+            }
+        }
     }
     qDebug()<<"auditExits runtime:"<<t.elapsed();
 }
@@ -997,11 +1020,14 @@ bool TMap::findPath( int from, int to )
          int curRoom = start;
          for( ++spi; spi != shortest_path.end(); ++spi )
          {
-             if( ! rooms.contains( curRoom ) )
+             if( ! rooms.contains( *spi ) )
              {
                  cout << "ERROR: path not possible. curRoom not in map!" << endl;
+                 mPathList.clear();
+                 mDirList.clear();
                  return false;
              }
+             cout <<" spi:"<<*spi<<" curRoom:"<< curRoom << endl;//" -> ";
              mPathList.push_back( *spi );
              if( rooms[curRoom]->north == rooms[*spi]->id )
              {
@@ -1063,12 +1089,20 @@ bool TMap::findPath( int from, int to )
                          if( _cmd.size() > 0 && (_cmd.startsWith('0')))
                          {
                              _cmd = _cmd.mid(1);
-                            mDirList.push_back( _cmd );
+                             mDirList.push_back( _cmd );
+                             qDebug()<<" adding special exit: roomID:"<<rooms[curRoom]->id<<" OPEN special exit:"<<_cmd;
                          }
+                         else if( _cmd.startsWith('1'))
+                         {
+                             qDebug()<<"NOT adding roomID:"<<rooms[curRoom]->id<<" LOCKED special exit:"<<_cmd;
+                         }
+                         else
+                             qDebug()<<"ERROR adding roomID:"<<rooms[curRoom]->id<<" special exit:"<<_cmd;
                      }
                  }
              }
 
+             qDebug()<<"added to DirList:"<<mDirList.back();
              curRoom = *spi;
          }
 

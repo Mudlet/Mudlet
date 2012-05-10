@@ -64,6 +64,7 @@ T2DMap::T2DMap()
     mCustomLinesRoomFrom = 0;
     mMultiSelectionListWidget.setRootIsDecorated(false);
     mMultiSelectionListWidget.setColumnWidth(0,90);
+    mSizeLabel = false;
 
     //setFocusPolicy( Qt::ClickFocus);
 }
@@ -106,7 +107,7 @@ T2DMap::T2DMap(QWidget * parent)
     mCustomLinesRoomFrom = 0;
     mMultiSelectionListWidget.setRootIsDecorated(false);
     mMultiSelectionListWidget.setColumnWidth(0,90);
-
+    mSizeLabel = false;
     //setFocusPolicy( Qt::ClickFocus);
 }
 
@@ -433,6 +434,7 @@ void T2DMap::switchArea(QString name)
     }
 }
 
+
 void T2DMap::paintEvent( QPaintEvent * e )
 {
     if( !mpMap ) return;
@@ -568,6 +570,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 p.setPen(QColor(255,255,255));
                 p.drawText( 10, 4*mFontHeight, text );
             }
+            else
+                p.fillRect(mMultiRect,QColor(190,190,190,60));
             QPointF _center = QPointF( _px, _py );
             QRadialGradient _gradient(_center,_radius);
             _gradient.setColorAt(0.95, QColor(255,0,0,150));
@@ -593,7 +597,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         pen.setWidthF(0);
         pen.setCosmetic( mMapperUseAntiAlias );
         QColor _gridColor = mpHost->mFgColor_2;
-        _gridColor.setAlpha(10);
+        _gridColor.setAlpha(150);
         pen.setColor( _gridColor );
         p.setPen( pen );
 
@@ -614,6 +618,38 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     //mpMap->auditRooms();
 
+    if( mpMap->mapLabels.contains( mAID ) )
+    {
+        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
+        while( it.hasNext() )
+        {
+            it.next();
+            if( it.value().pos.z() != mOz ) continue;
+            if( it.value().text.length() < 1 )
+            {
+                mpMap->mapLabels[mAID][it.key()].text = "no text";
+            }
+            QPointF lpos;
+            int _lx = it.value().pos.x()*tx+_rx;
+            int _ly = it.value().pos.y()*ty*-1+_ry;
+
+            lpos.setX( _lx );
+            lpos.setY( _ly );
+            int _lw = abs(it.value().size.width())*tx;
+            int _lh = abs(it.value().size.height())*ty;
+
+            if( ! ( ( 0<_lx || 0<_lx+_lw ) && (_w>_lx || _w>_lx+_lw ) ) ) continue;
+            if( ! ( ( 0<_ly || 0<_ly+_lh ) && (_h>_ly || _h>_ly+_lh ) ) ) continue;
+            QRectF _drawRect = QRect(it.value().pos.x()*tx+_rx, it.value().pos.y()*ty*-1+_ry, _lw, _lh);
+            p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+            if( it.value().hilite )
+            {
+                p.fillRect(_drawRect, QColor(255, 155, 55, 190));
+            }
+
+        }
+    }
+
     if( ! pArea->gridMode )
     {
         for( int i=0; i<pArea->rooms.size(); i++ )
@@ -630,7 +666,10 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 if( rx < 0 || ry < 0 || rx > _w || ry > _h ) continue;
             }
             else
+            {
                 if( ! (0<pR->min_x*tx+_rx || 0<pR->max_x*tx+_rx) && (_w>pR->min_x*tx+_rx || _w>pR->max_x*tx+_rx) ) continue;
+                if( ! (0<pR->min_y*ty+_ry || 0<pR->max_y*ty+_ry) && (_w>pR->min_y*ty+_ry || _w>pR->max_y*ty+_ry) ) continue;
+            }
 
             pR->rendered = true;
 
@@ -984,6 +1023,11 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
         }
     }
+    // draw group selection box
+    if( mSizeLabel )
+        p.fillRect(mMultiRect,QColor(250,190,0,190));
+    else
+        p.fillRect(mMultiRect,QColor(190,190,190,60));
     for( int i=0; i<pArea->rooms.size(); i++ )
     {
         TRoom * pR = mpMap->rooms[pArea->rooms[i]];
@@ -1420,6 +1464,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
 //            p.drawText( 10, 3*mFontHeight, text );
 //        }
     }
+
     if( mMapInfoRect == QRect(0,0,0,0) ) mMapInfoRect = QRect(0,0,width(),height()/10);
 
     if( ! mShiftMode )
@@ -1466,42 +1511,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         }
     }
 
-    if( mpMap->mapLabels.contains( mAID ) )
-    {
-        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
-        while( it.hasNext() )
-        {
-            it.next();
 
-            if( it.value().text.length() < 1 )
-            {
-                mpMap->mapLabels[mAID][it.key()].text = "no text";
-            }
-            QRectF lr = QRectF( 0, 0, 1000, 100 );
-            QPixmap pix( lr.size().toSize() );
-            pix.fill(QColor(0,0,0,0));
-            QPainter lp( &pix );
-
-            if( it.value().hilite )
-            {
-                lp.fillRect( lr, QColor(255,155,55) );
-            }
-            else
-            {
-                lp.fillRect( lr, it.value().bgColor );
-            }
-            QPen lpen;
-            lpen.setColor( it.value().fgColor );
-            lp.setPen( lpen );
-            QRectF br;
-            lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
-            QPointF lpos;
-            lpos.setX( it.value().pos.x()*tx+_rx );
-            lpos.setY( it.value().pos.y()*ty*-1+_ry );
-            p.drawPixmap( lpos, pix, br.toRect() );
-
-        }
-    }
     if( mShowInfo )
     {
         p.setPen(QColor(0,255,0,90));
@@ -1525,6 +1535,86 @@ void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
     repaint();
 }
 
+#include <QFontDialog>
+#include <QFileDialog>
+#include <QMessageBox>
+void T2DMap::createLabel( QRectF labelRect )
+{
+    QRectF selectedRegion = labelRect;
+    TMapLabel label;
+    QFont _font;
+    QString t = "no text";
+    QString imagePath ;
+
+    QMessageBox msgBox;
+    msgBox.setText("Text label or image label?");
+    QPushButton *textButton = msgBox.addButton(tr("Text Label"), QMessageBox::ActionRole);
+    QPushButton *imageButton = msgBox.addButton(tr("Image Label"), QMessageBox::ActionRole);
+    msgBox.exec();
+    if( msgBox.clickedButton() == textButton)
+    {
+        QString title = "Enter label text.";
+        _font = QFontDialog::getFont(0);
+        t = QInputDialog::getText(0, title, title );
+        if( t.length() < 1 ) t = "no text";
+        label.text = t;
+        label.bgColor = QColorDialog::getColor(QColor(50,50,150,100),0,"Background color");
+        label.fgColor = QColorDialog::getColor(QColor(255,255,50,255),0,"Foreground color");
+    }
+    else if(msgBox.clickedButton() == imageButton)
+    {
+        label.bgColor = QColor(50,50,150,100);
+        label.fgColor = QColor(255,255,50,255);
+        label.text = "";
+        imagePath = QFileDialog::getOpenFileName( 0, "Select image");
+    }
+
+    QPixmap pix( abs(labelRect.width()), abs(labelRect.height()) );
+    QRect drawRect = labelRect.normalized().toRect();
+    drawRect.moveTo(0,0);
+    //pix.fill(QColor(0,255,0,0));
+    QPainter lp( &pix );
+    QPen lpen;
+    lp.setFont(_font);
+    lpen.setColor( label.fgColor );
+    lp.setPen( lpen );
+    lp.fillRect( drawRect, label.bgColor );
+    if( msgBox.clickedButton() == textButton)
+       lp.drawText( drawRect, Qt::AlignHCenter|Qt::AlignCenter, t, 0);
+    else
+    {
+        QPixmap imagePixmap = QPixmap(imagePath);
+        lp.drawPixmap(QPoint(0,0), imagePixmap.scaled(drawRect.size()));
+    }
+    label.pix = pix.copy(drawRect);
+    labelRect = labelRect.normalized();
+    float mx = labelRect.topLeft().x()/mTX + mOx;
+    float my = labelRect.topLeft().y()/mTY + mOy;
+    mx = mx - xspan/2;
+    my = yspan/2 - my;
+
+    float mx2 = labelRect.bottomRight().x()/mTX + mOx;
+    float my2 = labelRect.bottomRight().y()/mTY + mOy;
+    mx2 = mx2 - xspan/2;
+    my2 = yspan/2 - my2;
+    label.pos = QVector3D( mx, my, mOz );
+    label.size = QRectF(QPointF(mx,my),QPointF(mx2,my2)).normalized().size();
+    if( ! mpMap->areas.contains(mAID) ) return;
+    int labelID;
+    if( ! mpMap->mapLabels.contains( mAID ) )
+    {
+        QMap<int, TMapLabel> m;
+        m[0] = label;
+        mpMap->mapLabels[mAID] = m;
+    }
+    else
+    {
+        labelID = mpMap->mapLabels[mAID].size();
+        mpMap->mapLabels[mAID].insert(labelID, label);
+    }
+    update();
+}
+
 void T2DMap::mouseReleaseEvent(QMouseEvent * e )
 {
     //move map with left mouse button + ALT (->
@@ -1533,9 +1623,15 @@ void T2DMap::mouseReleaseEvent(QMouseEvent * e )
         mpMap->mLeftDown = false;
     }
 
-    if( e->buttons() & Qt::LeftButton )
+    if( e->button() & Qt::LeftButton )
     {
         mMultiSelection = false;
+        if( mSizeLabel )
+        {
+            mSizeLabel = false;
+            QRectF labelRect = mMultiRect;
+            createLabel( labelRect );
+        }
         mMultiRect = QRect(0,0,0,0);
         update();
     }
@@ -1730,25 +1826,17 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                         it.next();
                         if( it.value().pos.z() != mOz ) continue;
 
-                        QRectF lr = QRectF( 0, 0, 1000, 100 );
-                        QPixmap pix( lr.size().toSize() );
-                        pix.fill(QColor(0,0,0,0));
-                        QPainter lp( &pix );
-
-                        lp.fillRect( lr, QColor(255,0,0) );
-                        QPen lpen;
-                        lpen.setColor( it.value().fgColor );
-                        lp.setPen( lpen );
-                        QRectF br;
-                        lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
                         QPointF lpos;
-                        lpos.setX( it.value().pos.x()*mTX+_rx );
-                        lpos.setY( it.value().pos.y()*mTY*-1+_ry );
+                        float _lx = it.value().pos.x()*mTX+_rx;
+                        float _ly = it.value().pos.y()*mTY*-1+_ry;
+
+                        lpos.setX( _lx );
+                        lpos.setY( _ly );
                         int mx = event->pos().x();
                         int my = event->pos().y();
                         int mz = mOz;
                         QPoint click = QPoint(mx,my);
-                        br.moveTopLeft(lpos);
+                        QRectF br = QRect(_lx, _ly, it.value().size.width()*mTX, it.value().size.height()*mTY);
                         if( br.contains( click ))
                         {
                             if( ! it.value().hilite )
@@ -2580,7 +2668,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
     else
         mMoveLabel = false;
 
-    if( mMultiSelection && ! mRoomBeingMoved )
+    if( (mMultiSelection && ! mRoomBeingMoved) || mSizeLabel )
     {
         if( mNewMoveAction )
         {
@@ -2608,64 +2696,67 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
         else
             _ry = yspan/2*mTY-mTY*oy;
 
-        QList<int> roomList = pArea->rooms;
-        mMultiSelectionList.clear();
-        for( int k=0; k<roomList.size(); k++ )
+        if( ! mSizeLabel )
         {
-            int rx = mpMap->rooms[pArea->rooms[k]]->x*mTX+_rx;
-            int ry = mpMap->rooms[pArea->rooms[k]]->y*-1*mTY+_ry;
-            int rz = mpMap->rooms[pArea->rooms[k]]->z;
-
-            // copy rooms on all z-levels if the shift key is being pressed
-            if( rz != mOz && ! ( event->modifiers().testFlag(Qt::ShiftModifier)) ) continue;
-
-            QRectF dr;
-            if( pArea->gridMode )
+            QList<int> roomList = pArea->rooms;
+            mMultiSelectionList.clear();
+            for( int k=0; k<roomList.size(); k++ )
             {
-                dr = QRectF(rx-mTX/2, ry-mTY/2,mTX,mTY);
+                int rx = mpMap->rooms[pArea->rooms[k]]->x*mTX+_rx;
+                int ry = mpMap->rooms[pArea->rooms[k]]->y*-1*mTY+_ry;
+                int rz = mpMap->rooms[pArea->rooms[k]]->z;
+
+                // copy rooms on all z-levels if the shift key is being pressed
+                if( rz != mOz && ! ( event->modifiers().testFlag(Qt::ShiftModifier)) ) continue;
+
+                QRectF dr;
+                if( pArea->gridMode )
+                {
+                    dr = QRectF(rx-mTX/2, ry-mTY/2,mTX,mTY);
+                }
+                else
+                {
+                    dr = QRectF(rx-(mTX*rSize)/2,ry-(mTY*rSize)/2,mTX*rSize,mTY*rSize);
+                }
+                if( mMultiRect.contains(dr) )
+                {
+                    mMultiSelectionList << pArea->rooms[k];
+                }
+            }
+            int mx = event->pos().x()/mTX;
+            int my = event->pos().y()/mTY;
+            mx = mx - xspan/2 + 1;
+            my = yspan/2 - my - 1;
+            if( mpMap->rooms.contains( mRID ) )
+            {
+                mx += mpMap->rooms[mRID]->x;
+                my += mpMap->rooms[mRID]->y;
+                mOldMousePos = QPoint(mx,my);
+            }
+
+            if( mMultiSelectionList.size() > 1 )
+            {
+                mMultiSelectionListWidget.clear();
+                for( int i=0; i<mMultiSelectionList.size(); i++ )
+                {
+                    QTreeWidgetItem * _item = new QTreeWidgetItem;
+                    _item->setText(0,QString::number(mMultiSelectionList[i]));
+                    mMultiSelectionListWidget.addTopLevelItem( _item );
+                }
+                mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::ExtendedSelection);
+                mMultiSelectionListWidget.selectAll();
+                mMultiSelectionListWidget.show();
+
             }
             else
-            {
-                dr = QRectF(rx-(mTX*rSize)/2,ry-(mTY*rSize)/2,mTX*rSize,mTY*rSize);
-            }
-            if( mMultiRect.contains(dr) )
-            {
-                mMultiSelectionList << pArea->rooms[k];
-            }
+                mMultiSelectionListWidget.hide();
         }
-        int mx = event->pos().x()/mTX;
-        int my = event->pos().y()/mTY;
-        mx = mx - xspan/2 + 1;
-        my = yspan/2 - my - 1;
-        if( mpMap->rooms.contains( mRID ) )
-        {
-            mx += mpMap->rooms[mRID]->x;
-            my += mpMap->rooms[mRID]->y;
-            mOldMousePos = QPoint(mx,my);
-        }
-
-        if( mMultiSelectionList.size() > 1 )
-        {
-            mMultiSelectionListWidget.clear();
-            for( int i=0; i<mMultiSelectionList.size(); i++ )
-            {
-                QTreeWidgetItem * _item = new QTreeWidgetItem;
-                _item->setText(0,QString::number(mMultiSelectionList[i]));
-                mMultiSelectionListWidget.addTopLevelItem( _item );
-            }
-            mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::ExtendedSelection);
-            mMultiSelectionListWidget.selectAll();
-            mMultiSelectionListWidget.show();
-
-        }
-        else
-            mMultiSelectionListWidget.hide();
 
         update();
         return;
     }
 
-    if( mMultiSelectionList.size() > 0 )
+    if( !mSizeLabel && mMultiSelectionList.size() > 0 )
     {
         mMultiRect = QRect(0,0,0,0);
         int _roomID = mRID;
@@ -2997,43 +3088,11 @@ void T2DMap::slot_createLabel()
 {
     if( ! mpMap->areas.contains( mAID ) ) return;
 
-    TMapLabel label;
-    QString title = "Enter label text.";
-    QString t = QInputDialog::getText(0, title, title );
-    label.text = t;
-    label.bgColor = QColor(50,50,150,100);
-    label.fgColor = QColor(255,255,50,255);
-    label.size = QSizeF(100,100);
-    int ox = mOx;
-    int oy = mOy;
-    float _rx;
-    float _ry;
-    if( ox*mTX > xspan/2*mTX )
-        _rx = -(mTX*ox-xspan/2*mTX);
-    else
-        _rx = xspan/2*mTX-mTX*ox;
-    if( oy*mTY > yspan/2*mTY )
-        _ry = -(mTY*oy-yspan/2*mTY);
-    else
-        _ry = yspan/2*mTY-mTY*oy;
-    float mx = mLastMouseClick.x()/mTX + mOx;
-    float my = mLastMouseClick.y()/mTY + mOy;
-    mx = mx - xspan/2;
-    my = yspan/2 - my;
-    label.pos = QVector3D( mx, my, mOz );
-    if( ! mpMap->areas.contains(mAID) ) return;
-    int labelID;
-    if( ! mpMap->mapLabels.contains( mAID ) )
-    {
-        QMap<int, TMapLabel> m;
-        m[0] = label;
-        mpMap->mapLabels[mAID] = m;
-    }
-    else
-    {
-        labelID = mpMap->mapLabels[mAID].size();
-        mpMap->mapLabels[mAID].insert(labelID, label);
-    }
+    mSizeLabel = true;
+    mMultiSelection = true;
+    return;
+
+
 }
 
 void T2DMap::slot_roomSelectionChanged()
