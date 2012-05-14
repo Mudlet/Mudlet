@@ -401,6 +401,7 @@ void TMap::auditRooms()
 
 void TMap::buildAreas()
 {
+    QTime _time; _time.start();
     QMapIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
@@ -423,6 +424,7 @@ void TMap::buildAreas()
             areas[id] = new TArea( this );
         }
     }
+    qDebug()<<"BUILD AREAS run time:"<<_time.elapsed();
 }
 
 void TMap::setView(float x, float y, float z, float zoom )

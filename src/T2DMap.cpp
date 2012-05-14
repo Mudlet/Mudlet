@@ -1759,7 +1759,6 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                 }
             }
         }
-
         mCustomLineSelectedRoom = 0;
         mCustomLineSelectedExit = "";
 
@@ -2291,21 +2290,16 @@ void T2DMap::slot_setImage()
 
 void T2DMap::slot_deleteRoom()
 {
-    if( mMultiSelection )
+    mMultiRect = QRect(0,0,0,0);
+    for( int j=0; j<mMultiSelectionList.size(); j++ )
     {
-        mMultiRect = QRect(0,0,0,0);
-        for( int j=0; j<mMultiSelectionList.size(); j++ )
+        if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
         {
-            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
-            {
-                mpHost->mpMap->deleteRoom( mMultiSelectionList[j] );
-            }
+            mpHost->mpMap->deleteRoom( mMultiSelectionList[j] );
         }
     }
-    else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
-    {
-        mpHost->mpMap->deleteRoom( mRoomSelection );
-    }
+    mMultiSelectionListWidget.clear();
+    mMultiSelectionListWidget.hide();
     repaint();
 }
 
@@ -2642,6 +2636,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 }
         }
     }
+
     mCustomLineSelectedPoint = -1;
 
     //FIXME:
@@ -2756,7 +2751,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
         return;
     }
 
-    if( !mSizeLabel && mMultiSelectionList.size() > 0 )
+    if( mRoomBeingMoved && !mSizeLabel && mMultiSelectionList.size() > 0 )
     {
         mMultiRect = QRect(0,0,0,0);
         int _roomID = mRID;

@@ -39,7 +39,7 @@
 
 
 
-//#define DEBUG
+#define DEBUG
 
 extern QStringList gSysErrors;
 
