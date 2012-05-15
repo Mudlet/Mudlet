@@ -163,6 +163,7 @@ public:
     bool mNewMove;
     QMap<qint32, QMap<qint32, TMapLabel> > mapLabels;
 
+    int version; //map file format version
 
 
 };

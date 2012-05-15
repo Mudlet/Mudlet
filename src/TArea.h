@@ -66,6 +66,8 @@ public:
     QList<int> ebenen;
     TMap * mpMap;
     bool gridMode;
+    bool isZone;
+    int zoneAreaRef;
     //QMap<int, TMapLabel> labelMap;
 
 };

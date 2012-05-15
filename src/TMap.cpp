@@ -32,6 +32,7 @@ TMap::TMap( Host * pH )
 , mpMapper( 0 )
 , mMapGraphNeedsUpdate( true )
 , mNewMove( true )
+, version( 0 )
 {
     customEnvColors[257] = mpHost->mRed_2;
     customEnvColors[258] = mpHost->mGreen_2;
@@ -320,37 +321,33 @@ bool TMap::setExit( int from, int to, int dir )
 
 void TMap::init( Host * pH )
 {
-    areas.clear();
-    int s_areas = 0;
-    QMap<int,int> s_area_exits;
-    buildAreas();
-    QMapIterator<int, TArea *> it( areas );
-    while( it.hasNext() )
+    // init areas
+    QTime _time; _time.start();
+    if( version < 14 )
     {
-        it.next();
-        int id = it.key();
+        areas.clear();
+        buildAreas();
+
         // area mit raeumen fuellen
-        QMapIterator<int, TRoom *> it2( rooms );
+        QMapIterator<int, TRoom *> it( rooms );
+        while( it.hasNext() )
+        {
+            it.next();
+            int roomID = it.key();
+            int areaID = rooms[roomID]->area;
+            if( areas.contains(areaID)) areas[areaID]->rooms.push_back(roomID);
+        }
+        QMapIterator<int, TArea *> it2( areas );
         while( it2.hasNext() )
         {
             it2.next();
-            int id2 = it2.key();
-            if( rooms[id2]->area == id )
-            {
-                areas[id]->rooms.push_back(id2);
-            }
+            TArea * pA = it2.value();
+            pA->ausgaengeBestimmen();
+            pA->calcSpan();
         }
-        areas[id]->ausgaengeBestimmen();
-        s_areas++;
-        s_area_exits[areas[id]->exits.size()]++;
-        it.value()->calcSpan();
     }
-    //mVarTable[0].name = "RoomId";
-    //mVarTable[0].var = &mRoodId;
-
+    qDebug()<<" TMap::init() initialize area rooms: run time:"<<_time.elapsed();
     auditRooms();
-    qDebug()<<"statistics: areas:"<<s_areas;
-    qDebug()<<"area exit stats:" <<s_area_exits;
 }
 
 void TMap::auditRooms()
@@ -396,7 +393,7 @@ void TMap::auditRooms()
             }
         }
     }
-    qDebug()<<"auditExits runtime:"<<t.elapsed();
+    qDebug()<<"audit map: runtime:"<<t.elapsed();
 }
 
 void TMap::buildAreas()
@@ -772,6 +769,7 @@ bool TMap::gotoRoom( int r1, int r2 )
 
 void TMap::initGraph()
 {
+    QTime _time; _time.start();
     locations.clear();
     g.clear();
     g = mygraph_t();
@@ -789,6 +787,7 @@ void TMap::initGraph()
             continue;
         }
         roomCount++;
+        int roomExits = edgeCount;
         location l;
         l.x = rooms[i]->x;
         l.y = rooms[i]->y;
@@ -972,8 +971,11 @@ void TMap::initGraph()
                 }
             }
         }
+        if( roomExits == edgeCount ) locations.pop_back();
     }
+
     mMapGraphNeedsUpdate = false;
+    qDebug()<<"initGraph: nodes: "<<locations.size()<<"/"<<roomCount<<" edges:"<<edgeCount<<" run time:"<<_time.elapsed();
 }
 
 bool TMap::findPath( int from, int to )
@@ -1116,13 +1118,44 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    int version = 13;
+    version = 14;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
     ofs << customEnvColors;
     ofs << hashTable;
-    //ofs << mapLabels;
+
+    ofs << areas.size();
+    // serialize area table
+    QMapIterator<int, TArea *> itAreaList(areas);
+    while( itAreaList.hasNext() )
+    {
+        itAreaList.next();
+        int areaID = itAreaList.key();
+        TArea * pA = itAreaList.value();
+        ofs << areaID;
+        ofs << pA->rooms;
+        ofs << pA->ebenen;
+        ofs << pA->exits;
+        ofs << pA->gridMode;
+        ofs << pA->max_x;
+        ofs << pA->max_y;
+        ofs << pA->max_z;
+        ofs << pA->min_x;
+        ofs << pA->min_y;
+        ofs << pA->min_z;
+        ofs << pA->span;
+        ofs << pA->xmaxEbene;
+        ofs << pA->ymaxEbene;
+        ofs << pA->zmaxEbene;
+        ofs << pA->xminEbene;
+        ofs << pA->yminEbene;
+        ofs << pA->zminEbene;
+        ofs << pA->pos;
+        ofs << pA->isZone;
+        ofs << pA->zoneAreaRef;
+    }
+
     if (mRoomId)
         ofs << mRoomId;
     else{
@@ -1202,6 +1235,8 @@ bool TMap::serialize( QDataStream & ofs )
 
 bool TMap::restore(QString location)
 {
+    qDebug()<<"restoring map of profile:"<<mpHost->getName()<<" url:"<<mpHost->getUrl();
+    QTime _time; _time.start();
     QString folder;
     QStringList entries;
     qDebug()<<"RESTORING MAP";
@@ -1223,7 +1258,7 @@ bool TMap::restore(QString location)
             return false;
         qDebug()<<"[LOADING MAP]:"<<file.fileName();
         QDataStream ifs( & file );
-        int version;
+
         ifs >> version;
         qDebug()<<"map version:"<<version;
         if( version >= 3 )
@@ -1250,11 +1285,45 @@ bool TMap::restore(QString location)
         {
             ifs >> hashTable;
         }
+        if( version >= 14 )
+        {
+            int areaSize;
+            ifs >> areaSize;
+            // restore area table
+            for( int i=0; i<areaSize; i++ )
+            {
+                TArea * pA = new TArea( this );
+                int areaID;
+                ifs >> areaID;
+                ifs >> pA->rooms;
+
+                ifs >> pA->ebenen;
+                ifs >> pA->exits;
+                ifs >> pA->gridMode;
+                ifs >> pA->max_x;
+                ifs >> pA->max_y;
+                ifs >> pA->max_z;
+                ifs >> pA->min_x;
+                ifs >> pA->min_y;
+                ifs >> pA->min_z;
+                ifs >> pA->span;
+                ifs >> pA->xmaxEbene;
+                ifs >> pA->ymaxEbene;
+                ifs >> pA->zmaxEbene;
+                ifs >> pA->xminEbene;
+                ifs >> pA->yminEbene;
+                ifs >> pA->zminEbene;
+                qDebug()<<"areaID:"<<areaID<<" rooms:"<<pA->rooms<<" exits:"<<pA->exits<<" xmaxEbene:"<<pA->xmaxEbene<<" ymaxEbene:"<<pA->ymaxEbene;
+                ifs >> pA->pos;
+                ifs >> pA->isZone;
+                ifs >> pA->zoneAreaRef;
+                areas[areaID] = pA;
+            }
+        }
+
         if( version >= 12 )
         {
             ifs >> mRoomId;
-            mVars["RoomId"].i = &mRoomId;
-            mVars["RoomId"].c[8] = 'I';
         }
         if( version >= 11 )
         {
@@ -1374,7 +1443,7 @@ bool TMap::restore(QString location)
         customEnvColors[270] = mpHost->mLightCyan_2;
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
-        qDebug()<<"LOADED rooms:"<<rooms.size();
+        qDebug()<<"LOADED rooms:"<<rooms.size()<<" loading time:"<<_time.elapsed();
         if( canRestore )
         {
             return true;

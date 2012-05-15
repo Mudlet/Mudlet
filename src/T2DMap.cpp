@@ -114,6 +114,7 @@ T2DMap::T2DMap(QWidget * parent)
 void T2DMap::init()
 {
 
+    QTime _time; _time.start();
     //setFocusPolicy( Qt::ClickFocus);
 
     if( ! mpMap ) return;
@@ -198,6 +199,7 @@ void T2DMap::init()
             mGridPix[mpMap->rooms[mpMap->areas[kL[i]]->rooms[0]]->area] = pix;
         }
     }
+    qDebug()<<"T2DMap::init() runtim: "<<_time.elapsed();
 }
 
 QColor T2DMap::_getColor( int id )
@@ -660,7 +662,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             float ry = pR->y*-1*ty+_ry;
             int rz = pR->z;
 
-            if( rz != zEbene ) continue;
+            if( rz != zEbene && !mMultiSelectionList.contains(i)) continue;
             if( pR->customLines.size() == 0 )
             {
                 if( rx < 0 || ry < 0 || rx > _w || ry > _h ) continue;
@@ -2792,6 +2794,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
             {
                 mpMap->rooms[mMultiSelectionList[j]]->x += dx;
                 mpMap->rooms[mMultiSelectionList[j]]->y += dy;
+                mpMap->rooms[mMultiSelectionList[j]]->z = mOz; // allow groups to be moved to a different z-level with the map editor
 
                 QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mMultiSelectionList[j]]->customLines);
                 QMap<QString, QList<QPointF> > newMap;
@@ -2851,6 +2854,7 @@ void T2DMap::wheelEvent ( QWheelEvent * e )
         {
             gzoom += delta;
             if( gzoom < 5 ) gzoom = 5;
+            qDebug()<<"ZOOM MAP -> call T2DMap::init()";
             init();
         }
         else
@@ -2876,6 +2880,7 @@ void T2DMap::wheelEvent ( QWheelEvent * e )
         if( mpMap->areas[mAID]->gridMode )
         {
             gzoom += delta;
+            qDebug()<<"ZOOM MAP -> call T2DMap::init()";
             init();
         }
         else

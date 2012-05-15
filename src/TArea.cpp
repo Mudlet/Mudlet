@@ -48,6 +48,8 @@ TArea::TArea( TMap * map )
 , max_y(0)
 , max_z(0)
 , gridMode( false )
+, isZone( false )
+, zoneAreaRef( 0 )
 {
     mpMap = map;
 }
