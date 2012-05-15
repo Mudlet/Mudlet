@@ -39,7 +39,7 @@
 
 
 
-#define DEBUG
+//#define DEBUG
 
 extern QStringList gSysErrors;
 
@@ -823,7 +823,7 @@ void cTelnet::processTelnetCommand( const string & command )
           }
 
           // GMCP
-          if( option == GMCP )
+          if( option == static_cast<char>(201) )
           {
               QString _m = command.c_str();
               if( command.size() < 6 ) return;

@@ -398,10 +398,10 @@ void GLWidget::paintGL()
     glClearColor (0.0,0.0,0.0,1.0);
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
-    GLfloat diffuseLight[] = {0.107, 0.107, 0.107, 1.0};
-    GLfloat diffuseLight2[] = {0.01, 0.01, 0.01, 1.0};
-    GLfloat ambientLight[] = {0.103, 0.103, 0.103, 1.0};
-    GLfloat ambientLight2[] = {0.0501, 0.0501, 0.0501, 1.0};
+    GLfloat diffuseLight[] = {0.507, 0.507, 0.507, 1.0};
+    GLfloat diffuseLight2[] = {0.501, 0.901, 0.501, 1.0};
+    GLfloat ambientLight[] = {0.403, 0.403, 0.403, 1.0};
+    GLfloat ambientLight2[] = {0.4501, 0.4501, 0.4501, 1.0};
     if( !mpMap->rooms.contains(mRID) ) return;
 
     //GLfloat specularLight[] = {.01, .01, .01, 1.};//TODO: fuer ich-sphere
@@ -578,9 +578,13 @@ void GLWidget::paintGL()
                     {
                         continue;
                     }
-                    if( mpMap->rooms[exitList[k]]->area != mpMap->rooms[mRID]->area )
+                    if( mpMap->rooms[exitList[k]]->area != mAID )// mpMap->rooms[mRID]->area )
                     {
                         areaExit = true;
+                    }
+                    else
+                    {
+                        areaExit = false;
                     }
                     float ex = static_cast<float>(mpMap->rooms[exitList[k]]->x);
                     float ey = static_cast<float>(mpMap->rooms[exitList[k]]->y);
@@ -684,61 +688,61 @@ void GLWidget::paintGL()
 
                         glLoadName( exitList[k] );
                         quads++;
-//                        glBegin( GL_QUADS );
-//                        glNormal3f(0.57735, -0.57735, 0.57735);
-//                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(-0.57735, -0.57735, 0.57735);
-//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(-0.57735, -0.57735, -0.57735);
-//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(0.57735, -0.57735, -0.57735);
-//                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+                        glBegin( GL_QUADS );
+                        glNormal3f(0.57735, -0.57735, 0.57735);
+                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(-0.57735, -0.57735, 0.57735);
+                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(-0.57735, -0.57735, -0.57735);
+                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(0.57735, -0.57735, -0.57735);
+                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
 
-//                        glNormal3f(0.57735, 0.57735, 0.57735);
-//                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(-0.57735, 0.57735, 0.57735);
-//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(-0.57735, -0.57735, 0.57735);
-//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(0.57735, -0.57735, 0.57735);
-//                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(0.57735, 0.57735, 0.57735);
+                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(-0.57735, 0.57735, 0.57735);
+                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(-0.57735, -0.57735, 0.57735);
+                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(0.57735, -0.57735, 0.57735);
+                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
 
-//                        glNormal3f(-0.57735, 0.57735, -0.57735);
-//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(0.57735, 0.57735, -0.57735);
-//                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(0.57735, -0.57735, -0.57735);
-//                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(-0.57735, -0.57735, -0.57735);
-//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(-0.57735, 0.57735, -0.57735);
+                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(0.57735, 0.57735, -0.57735);
+                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(0.57735, -0.57735, -0.57735);
+                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(-0.57735, -0.57735, -0.57735);
+                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
 
-//                        glNormal3f(0.57735, 0.57735, -0.57735);
-//                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(0.57735, 0.57735, 0.57735);
-//                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(0.57735, -0.57735, 0.57735);
-//                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(0.57735, -0.57735, -0.57735);
-//                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(0.57735, 0.57735, -0.57735);
+                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(0.57735, 0.57735, 0.57735);
+                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(0.57735, -0.57735, 0.57735);
+                        glVertex3f(1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(0.57735, -0.57735, -0.57735);
+                        glVertex3f(1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
 
-//                        glNormal3f(-0.57735, 0.57735, 0.57735);
-//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(-0.57735, 0.57735, -0.57735);
-//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(-0.57735, -0.57735, -0.57735);
-//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(-0.57735, -0.57735, 0.57735);
-//                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(-0.57735, 0.57735, 0.57735);
+                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(-0.57735, 0.57735, -0.57735);
+                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(-0.57735, -0.57735, -0.57735);
+                        glVertex3f(-1.0/dehnung, -1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(-0.57735, -0.57735, 0.57735);
+                        glVertex3f(-1.0/dehnung, -1.0/dehnung, 1.0/dehnung);
 
-//                        glNormal3f(0.57735, 0.57735, -0.57735);
-//                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(-0.57735, 0.57735, -0.57735);
-//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
-//                        glNormal3f(-0.57735, 0.57735, 0.57735);
-//                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-//                        glNormal3f(0.57735, 0.57735, 0.57735);
-//                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
-//                        glEnd();
+                        glNormal3f(0.57735, 0.57735, -0.57735);
+                        glVertex3f(1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(-0.57735, 0.57735, -0.57735);
+                        glVertex3f(-1.0/dehnung, 1.0/dehnung, -1.0/dehnung);
+                        glNormal3f(-0.57735, 0.57735, 0.57735);
+                        glVertex3f(-1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+                        glNormal3f(0.57735, 0.57735, 0.57735);
+                        glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
+                        glEnd();
                         //drauf
                         float mc3[] = { 0.2, 0.2, 0.6, 1.0 };
                         int env = mpMap->rooms[exitList[k]]->environment;
@@ -931,6 +935,11 @@ void GLWidget::paintGL()
                     {
                         areaExit = true;
                     }
+                    else
+                    {
+                        areaExit = true;
+                    }
+
                     float ex = static_cast<float>(mpMap->rooms[exitList[k]]->x);
                     float ey = static_cast<float>(mpMap->rooms[exitList[k]]->y);
                     float ez = static_cast<float>(mpMap->rooms[exitList[k]]->z);
@@ -942,7 +951,7 @@ void GLWidget::paintGL()
                     if( areaExit )
                         glLineWidth(1);//1/mScale+2);
                     else
-                        glLineWidth(1);//1/mScale);
+                        glLineWidth(5);//1/mScale);
                     if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
@@ -965,33 +974,33 @@ void GLWidget::paintGL()
                                   ebenenColor2[ef][3])*/;
                     }
                     glBegin(GL_LINES);
-                    if( ! areaExit )
+                   // if( ! areaExit )
                     {
                         glVertex3f( p1.x(), p1.y(), p1.z() );
                     }
-                    else
-                    {
-                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
-                            glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
-                            glVertex3f( p2.x(), p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
-                            glVertex3f( p2.x()-1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
-                            glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
-                            glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
-                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
-                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
-                            glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
-                            glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
-                            glVertex3f( p2.x(), p2.y(), p2.z()-1 );
-                    }
+//                    else
+//                    {
+//                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+//                            glVertex3f( p2.x(), p2.y()+1, p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+//                            glVertex3f( p2.x(), p2.y()-1, p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+//                            glVertex3f( p2.x()-1, p2.y(), p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+//                            glVertex3f( p2.x()+1, p2.y(), p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+//                            glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+//                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+//                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+//                            glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+//                            glVertex3f( p2.x(), p2.y(), p2.z()+1 );
+//                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+//                            glVertex3f( p2.x(), p2.y(), p2.z()-1 );
+//                    }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
                     glEnd();
                     verts++;
