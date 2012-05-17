@@ -951,7 +951,7 @@ void GLWidget::paintGL()
                     if( areaExit )
                         glLineWidth(1);//1/mScale+2);
                     else
-                        glLineWidth(5);//1/mScale);
+                        glLineWidth(1);//1/mScale);
                     if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
@@ -974,33 +974,33 @@ void GLWidget::paintGL()
                                   ebenenColor2[ef][3])*/;
                     }
                     glBegin(GL_LINES);
-                   // if( ! areaExit )
+                    if( ! areaExit )
                     {
                         glVertex3f( p1.x(), p1.y(), p1.z() );
                     }
-//                    else
-//                    {
-//                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
-//                            glVertex3f( p2.x(), p2.y()+1, p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
-//                            glVertex3f( p2.x(), p2.y()-1, p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
-//                            glVertex3f( p2.x()-1, p2.y(), p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
-//                            glVertex3f( p2.x()+1, p2.y(), p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
-//                            glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
-//                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
-//                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
-//                            glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
-//                            glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-//                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
-//                            glVertex3f( p2.x(), p2.y(), p2.z()-1 );
-//                    }
+                    else
+                    {
+                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                            glVertex3f( p2.x(), p2.y()+1, p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                            glVertex3f( p2.x(), p2.y()-1, p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                            glVertex3f( p2.x()-1, p2.y(), p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                            glVertex3f( p2.x()+1, p2.y(), p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                            glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                            glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                            glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
+                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+                            glVertex3f( p2.x(), p2.y(), p2.z()+1 );
+                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+                            glVertex3f( p2.x(), p2.y(), p2.z()-1 );
+                    }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
                     glEnd();
                     verts++;
