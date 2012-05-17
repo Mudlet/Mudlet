@@ -176,7 +176,7 @@ public slots:
    void                          slot_show_help_dialog_irc();
    void                          slot_show_help_dialog_download();
    void                          slot_open_mappingscripts_page();
-
+   void                          slot_module_clicked(QTableWidgetItem*);
    void                          slot_multi_view();
    void                          slot_stopAllTriggers();
    void                          slot_userToolBar_hovered( QAction* pA );
@@ -197,7 +197,6 @@ public slots:
    void                          slot_uninstall_module();
    void                          slot_install_module();
    void                          slot_module_manager();
-   void                          slot_ok_module();
    void                          layoutModules();
 
 protected:

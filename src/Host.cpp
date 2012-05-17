@@ -366,12 +366,12 @@ void Host::saveModules(int sync){
             QMapIterator<int, QStringList> it4(moduleOrder);
             while(it4.hasNext()){
                 it4.next();
-                qDebug()<<"On priority "<<it4.key();
+                //qDebug()<<"On priority "<<it4.key();
                 QStringList moduleList = it4.value();
                 for(int i=0;i<moduleList.size();i++){
                     QString moduleName = moduleList[i];
                     if (modulesToSync.contains(moduleName)){
-                        qDebug()<<"synchronizing module:"<<moduleName<<" in profile:"<<host->mHostName;
+                        //qDebug()<<"synchronizing module:"<<moduleName<<" in profile:"<<host->mHostName;
                         host->reloadModule(moduleName);
                     }
                 }
@@ -1088,14 +1088,15 @@ bool Host::uninstallPackage( QString packageName, int module)
         mActiveModules.removeAll(packageName);
         return true;
     }
-    else if (module){
+    else if (module==1){
         //if module == 1, we actually uninstall it.
         QStringList entry = mInstalledModules[packageName];
+        qDebug()<<"removing"<<packageName;
         mInstalledModules.remove( packageName );
-        //reinstall the module if it was also removed.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
+        //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations){
-            //get the pre package list so we don't get duplicates
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
+            //get the pre package list so we don't get duplicates
             installPackage(entry[0], 0);
         }
     }

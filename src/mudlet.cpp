@@ -468,21 +468,26 @@ void mudlet::slot_module_manager(){
 
 }
 
-void mudlet::slot_ok_module(){
+void mudlet::slot_module_clicked(QTableWidgetItem* pItem){
+    int i = pItem->row();
     Host * pH = getActiveHost();
     QStringList moduleStringList;
-    for (int i=0;i<moduleTable->rowCount();i++){
-        QTableWidgetItem * entry = moduleTable->item(i,2);
-        QTableWidgetItem * checkStatus = moduleTable->item(i,0);
-        QTableWidgetItem * itemPriority = moduleTable->item(i,1);
-        moduleStringList = pH->mInstalledModules[entry->text()];
-        if (checkStatus->checkState() == Qt::Unchecked)
-            moduleStringList[1] = "0";
-        if (checkStatus->checkState() == Qt::Checked)
-            moduleStringList[1] = "1";
-        pH->mInstalledModules[entry->text()] = moduleStringList;
-        pH->mModulePriorities[entry->text()] = itemPriority->text().toInt();
+    QTableWidgetItem * entry = moduleTable->item(i,2);
+    QTableWidgetItem * checkStatus = moduleTable->item(i,0);
+    QTableWidgetItem * itemPriority = moduleTable->item(i,1);
+    if (!entry || !pH->mInstalledModules.contains(entry->text()))
+        return;
+    moduleStringList = pH->mInstalledModules[entry->text()];
+    if (checkStatus->checkState() == Qt::Unchecked){
+        moduleStringList[1] = "0";
+        checkStatus->setText("NO");
     }
+    if (checkStatus->checkState() == Qt::Checked){
+        moduleStringList[1] = "1";
+        checkStatus->setText("YES");
+    }
+    pH->mInstalledModules[entry->text()] = moduleStringList;
+    pH->mModulePriorities[entry->text()] = itemPriority->text().toInt();
 }
 
 void mudlet::slot_install_module()
@@ -516,7 +521,7 @@ void mudlet::slot_uninstall_module()
     Host * pH = getActiveHost();
     if( ! pH ) return;
     int cRow = moduleTable->currentRow();
-    QTableWidgetItem * pI = moduleTable->item(cRow, 1);
+    QTableWidgetItem * pI = moduleTable->item(cRow, 2);
     if( pI )
         pH->uninstallPackage( pI->text(), 1);
     for (int i=moduleTable->rowCount()-1; i >= 0; --i)
