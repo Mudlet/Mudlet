@@ -59,6 +59,8 @@ public:
     int      mRoomSelection;
     bool     mStartSpeedWalk;
     QMap<int, QPoint> mAreaExitList;
+    QMap<QString, QStringList> mUserActions; //string list: 0 is event name, 1 is menu it is under if it is
+    QMap<QString, QStringList> mUserMenus; //unique name, List:parent name ("" if null), display name
     QPoint   mMoveTarget;
     bool     mRoomBeingMoved;
     QPoint   mPHighlightMove;
@@ -147,6 +149,7 @@ public slots:
     void slot_setArea();
     void slot_setCustomLine();
     void slot_setCustomLine2();
+    void slot_userAction(QString);
     void slot_setCustomLine2B(QTreeWidgetItem*, int);
 };
 

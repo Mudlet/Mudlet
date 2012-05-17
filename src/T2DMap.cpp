@@ -20,6 +20,7 @@
 
 #include <QColorDialog>
 #include <QInputDialog>
+#include <QSignalMapper>
 
 #include "T2DMap.h"
 #include "TMap.h"
@@ -1900,6 +1901,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 //        mPick = true;
         //repaint();
 
+        QMenu * popup = new QMenu( this );
         if( ! mLabelHilite && mCustomLineSelectedRoom == 0 )
         {
             QAction * action = new QAction("move", this );
@@ -1958,7 +1960,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             connect( action16, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
 
             mPopupMenu = true;
-            QMenu * popup = new QMenu( this );
+//            QMenu * popup = new QMenu( this );
 
             popup->addAction( action );
             popup->addAction( action8 );
@@ -1992,7 +1994,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             action3->setStatusTip(tr("change label color"));
             connect( action3, SIGNAL(triggered()), this, SLOT(slot_editLabel()));
             mPopupMenu = true;
-            QMenu * popup = new QMenu( this );
+//            QMenu * popup = new QMenu( this );
 
             popup->addAction( action );
             popup->addAction( action2 );
@@ -2005,11 +2007,50 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             action2->setStatusTip(tr("delete"));
             connect( action2, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
             mPopupMenu = true;
-            QMenu * popup = new QMenu( this );
+//            QMenu * popup = new QMenu( this );
 
             popup->addAction( action2 );
             popup->popup( mapToGlobal( event->pos() ) );
         }
+        //this is placed at the end since it is likely someone will want to hook anywhere
+        QMap<QString, QMenu *> userMenus;
+        QMapIterator<QString, QStringList> it(mUserMenus);
+        while (it.hasNext()){
+            it.next();
+            QStringList menuInfo = it.value();
+            QString displayName = menuInfo[1];
+            QMenu * userMenu = new QMenu(displayName, this);
+            userMenus.insert(it.key(), userMenu);
+        }
+        it.toFront();
+        while (it.hasNext()){//take care of nested menus now since they're all made
+            it.next();
+            QStringList menuInfo = it.value();
+            QString menuParent = menuInfo[0];
+            if (menuParent == ""){//parentless
+                popup->addMenu(userMenus[it.key()]);
+            }
+            else{//has a parent
+                userMenus[menuParent]->addMenu(userMenus[it.key()]);
+            }
+        }
+        //add our actions
+        QMapIterator<QString, QStringList> it2(mUserActions);
+        QSignalMapper* mapper = new QSignalMapper(this);
+        while (it2.hasNext()){
+            it2.next();
+            QStringList actionInfo = it2.value();
+            QAction * action = new QAction(actionInfo[2], this );
+            if (actionInfo[1] == "")//no parent
+                popup->addAction(action);
+            else if (userMenus.contains(actionInfo[1]))
+                userMenus[actionInfo[1]]->addAction(action);
+            else
+                continue;
+            mapper->setMapping(action, it2.key());
+            connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
+        }
+        connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
         mLastMouseClick = event->posF();
     }
     update();
@@ -2167,6 +2208,39 @@ void T2DMap::slot_setPlayerLocation()
         QString f = "doRoomSet";
         QString n = "";
         LuaInt->call(f, n);
+    }
+}
+
+void T2DMap::slot_userAction(QString uniqueName){
+    TEvent event;
+    QStringList userEvent = mUserActions[uniqueName];
+    event.mArgumentList.append( userEvent[0] );
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(uniqueName );
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    QList<int> roomList = mMultiSelectionList;
+    if (roomList.size()){
+        QList<int> roomList = mMultiSelectionList;
+        QList<int>::iterator i;
+        for (i = roomList.begin();i != roomList.end(); ++i){
+            event.mArgumentList.append(QString::number(*i));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        }
+        mpHost->raiseEvent( & event );
+    }
+    else if (mRoomSelection){
+        event.mArgumentList.append(QString::number(mRoomSelection));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent( & event );
+    }
+    else{
+        event.mArgumentList.append(uniqueName);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        for (int i=0;i<userEvent.size();i++){
+            event.mArgumentList.append(userEvent[i]);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        }
+        mpHost->raiseEvent( & event );
     }
 }
 
