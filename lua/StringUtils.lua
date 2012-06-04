@@ -12,7 +12,7 @@
 ---   <pre>
 ---   string.cut("abcde", 3)
 ---   </pre>
---- @usage You can easily pad string to certain length. 
+--- @usage You can easily pad string to certain length.
 ---   Example bellow will print 'abcde     ' e.g. pad/cut string to 10 characters.
 ---   <pre>
 ---   local s = "abcde"
@@ -30,7 +30,6 @@ end
 
 
 --- Enclose string by long brackets. <br/>
---- <b><u>TODO</u></b> what is purpose of this function?
 function string.enclose(s, maxlevel)
 	s = "["..s.."]"
 	local level = 0
