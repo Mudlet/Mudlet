@@ -1,0 +1,11 @@
+file(GLOB SRCS "*.c" "*.cpp")
+file(GLOB PUBLIC_HEADERS "*.h")
+qt4_wrap_cpp(MOC_SRCS ${PUBLIC_HEADERS})
+set(SRCS ${SRCS} ${MOC_SRCS})
+
+add_library(quazip SHARED ${SRCS})
+set_target_properties(quazip PROPERTIES VERSION 1 SOVERSION 1.0.0)
+target_link_libraries(quazip ${QT_QTMAIN_LIBRARY} ${QT_QTCORE_LIBRARY} -lz)
+
+install(FILES ${PUBLIC_HEADERS} DESTINATION include/quazip)
+install(TARGETS quazip LIBRARY DESTINATION ${LIB_DESTINATION} ARCHIVE DESTINATION ${LIB_DESTINATION} RUNTIME DESTINATION ${LIB_DESTINATION})

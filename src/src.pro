@@ -21,10 +21,11 @@ unix:LIBS += -lpcre \
     -lGLU \
     -lzzip
 
-win32:LIBS += -L"c:\mudlet2_package" \
+win32:LIBS += -L"c:\mudlet3_package" \
     -llua51 \
     -lpcre \
     -lhunspell \
+    -lquazip \
     -lyajl
 
 unix:INCLUDEPATH += /usr/include/lua5.1
@@ -35,6 +36,7 @@ win32:INCLUDEPATH += "c:\mudlet_package_MINGW\Lua_src\include" \
     "c:\mudlet_package_MINGW\pcre-8.0-lib\include" \
     #"C:\mudlet_package_MSVC\lloyd-yajl-f4b2b1a\yajl-2.0.1\include" \
     "c:\mudlet2_package\src\yajl1-src\src\include" \
+    "C:\Users\heiko\mudlet\src\quazip\quazip-0.4.4\quazip" \
     "C:\mudlet_package_MINGW\hunspell-1.3.1\src"
 
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local

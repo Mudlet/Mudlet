@@ -1,0 +1,12 @@
+INPUT(
+./debug\unzip.o
+./debug\zip.o
+./debug\JlCompress.o
+./debug\qioapi.o
+./debug\quaadler32.o
+./debug\quacrc32.o
+./debug\quazip.o
+./debug\quazipfile.o
+./debug\quazipnewinfo.o
+./debug\moc_quazipfile.o
+);

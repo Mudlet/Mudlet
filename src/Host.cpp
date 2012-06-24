@@ -859,6 +859,9 @@ void Host::showUnpackingProgress( QString  txt )
 }
 
 #include <QtUiTools>
+#include "quazip.h"
+#include "JlCompress.h"
+
 bool Host::installPackage( QString fileName, int module )
 {
     if( fileName.isEmpty() ) return false;
@@ -914,8 +917,9 @@ bool Host::installPackage( QString fileName, int module )
 
 
 
-        QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
-        mLuaInterpreter.compileAndExecuteScript( _script );
+        //QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
+        //mLuaInterpreter.compileAndExecuteScript( _script );
+        JlCompress::extractDir(fileName, _dest );
 
         mpUnzipDialog->close();
         mpUnzipDialog = 0;
