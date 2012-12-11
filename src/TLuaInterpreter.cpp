@@ -9247,9 +9247,9 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
     if( error != 0 )
     {
         string e = "";
-        if(lua_isstring( L, 1) )
+        if(lua_isstring( L, -1) )
         {
-            e+=lua_tostring( L, 1 );
+            e+=lua_tostring( L, -1 );
         }
         QString _n = "event handler function";
         logError( e, _n, function );
