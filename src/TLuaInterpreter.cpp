@@ -9231,8 +9231,20 @@ bool TLuaInterpreter::callMulti( QString & function, QString & mName )
 bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
 {
     lua_State * L = pGlobalLua;
-    lua_getglobal( L, function.toLatin1().data() );
-    lua_getfield( L, LUA_GLOBALSINDEX, function.toLatin1().data() );
+    int error = luaL_dostring(L, QString("return " + function).toLatin1().data());
+    QString n;
+    if( error != 0 )
+    {
+        string e;
+        if( lua_isstring( L, 1 ) )
+        {
+            e = "Lua error:";
+            e += lua_tostring( L, 1 );
+        }
+        QString _n = "event handler function";
+        logError( e, _n, function );
+        return false;
+    }
     for( int i=0; i<pE->mArgumentList.size(); i++ )
     {
         if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
@@ -9244,7 +9256,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
             lua_pushstring( L, pE->mArgumentList[i].toLatin1().data() );
         }
     }
-    int error = lua_pcall( L, pE->mArgumentList.size(), LUA_MULTRET, 0 );
+    error = lua_pcall( L, pE->mArgumentList.size(), LUA_MULTRET, 0 );
     if( error != 0 )
     {
         string e = "";
