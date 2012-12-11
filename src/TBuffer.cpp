@@ -1423,7 +1423,6 @@ void TBuffer::translateToPlainText( std::string & s )
                 // sanity check
                 if( closeT > openT )
                 {
-                    //qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
                     closeT = 0;
                     openT = 0;
                     mAssemblingToken = false;
@@ -1620,7 +1619,8 @@ void TBuffer::translateToPlainText( std::string & s )
                                 {
                                     _rl1 << "HREF";
                                     int _cki1 = _tp.indexOf('\'', _ki1+1);
-                                    _rl2 << _tp.mid(_ki1+1, _cki1-1-(_ki1+1));
+                                    if( _cki1 > -1 )
+                                        _rl2 << _tp.mid(_ki1+1, _cki1-(_ki1+1));
                                 }
                             }
                             else if( ( _ki2 < _ki1 && _ki2 != -1 ) || ( _ki1 == -1 && _ki2 != -1 ) )
@@ -1629,15 +1629,16 @@ void TBuffer::translateToPlainText( std::string & s )
                                 {
                                     _rl1 << "HREF";
                                     int _cki2 = _tp.indexOf('\"', _ki2+1);
-                                    _rl2 << _tp.mid(_ki2+1, _cki2-1-(_ki2+1));
+                                    if( _cki2 > -1 )
+                                        _rl2 << _tp.mid(_ki2+1, _cki2-(_ki2+1));
                                 }
                             }
                         }
                         // parse parameters in the form var="val" or var='val' where val can be given in the form "foo'b'ar" or 'foo"b"ar'
                         if( _tp.contains("=\'") )
-                            _rex = QRegExp("\\b(\\w+)=[\\']([^\\\']*) ?");
+                            _rex = QRegExp("\\b(\\w+)=\\\'([^\\\']*) ?");
                         else
-                            _rex = QRegExp("\\b(\\w+)=[\\\"]([^\\\"]*) ?");
+                            _rex = QRegExp("\\b(\\w+)=\\\"([^\\\"]*) ?");
 
                         int _rpos = 0;
                         while( ( _rpos = _rex.indexIn( _tp, _rpos ) ) != -1 )
@@ -1666,6 +1667,15 @@ void TBuffer::translateToPlainText( std::string & s )
                                 }
                             }
                         }
+
+                        // handle print to prompt feature PROMPT
+                        bool _send_to_command_line = false;
+                        if( _t1.endsWith("PROMPT") )
+                        {
+                            _send_to_command_line = true;
+                        }
+
+
                         mMXP_LINK_MODE = true;
                         if( _t2.size() < 1 || _t2.contains( "&text;" ) ) mMXP_SEND_NO_REF_MODE = true;
                         mLinkID++;
@@ -1678,15 +1688,29 @@ void TBuffer::translateToPlainText( std::string & s )
                         {
                             //qDebug()<<i<<"."<<_tl[i];
                             _tl[i].replace( "|", "" );
-                            _tl[i] = "send([[" + _tl[i] + "]])";
-                            //qDebug()<<"->"<<_tl[i];
+                            if (! _send_to_command_line )
+                            {
+                                _tl[i] = "send([[" + _tl[i] + "]])";
+                            }
+                            else
+                            {
+                                _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
+                            }
+
                         }
 //                        if( mMXP_SEND_NO_REF_MODE )
 //                        {
 //                            _t1.clear();
 //                            _t2.clear();
 //                        }
+
                         mLinkStore[mLinkID] = _tl;
+
+                        _t3 = _t3.replace( "&quot;", "\"" );
+                        _t3 = _t3.replace( "&amp;", "&" );
+                        _t3 = _t3.replace( "&apos;", "'" );
+                        _t3 = _t3.replace( "&#34;", "\"" );
+
                         QStringList _tl2 = _t3.split('|');
                         _tl2.replaceInStrings("|", "");
                         if( _tl2.size() >= _tl.size()+1 )
@@ -1707,7 +1731,6 @@ void TBuffer::translateToPlainText( std::string & s )
             {
                 if( ch == '\n' )
                 {
-                    //qDebug()<<"MXP ERROR: more closing tag than open tags open="<<openT<<" close="<<closeT<<" current token:("<<currentToken.c_str()<<")";
                     closeT = 0;
                     openT = 0;
                     mAssemblingToken = false;
