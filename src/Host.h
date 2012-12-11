@@ -50,7 +50,7 @@ class TLuaInterpreter;
 #include "TArea.h"
 #include "TRoom.h"
 #include "TMap.h"
-#include <QListWidget>;
+#include <QListWidget>
 
 class dlgTriggerEditor;
 class TConsole;

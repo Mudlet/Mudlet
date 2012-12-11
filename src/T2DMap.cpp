@@ -66,6 +66,7 @@ T2DMap::T2DMap()
     mMultiSelectionListWidget.setRootIsDecorated(false);
     mMultiSelectionListWidget.setColumnWidth(0,90);
     mSizeLabel = false;
+    gridMapSizeChange = true;
 
     //setFocusPolicy( Qt::ClickFocus);
 }
@@ -109,6 +110,7 @@ T2DMap::T2DMap(QWidget * parent)
     mMultiSelectionListWidget.setRootIsDecorated(false);
     mMultiSelectionListWidget.setColumnWidth(0,90);
     mSizeLabel = false;
+    gridMapSizeChange = true;
     //setFocusPolicy( Qt::ClickFocus);
 }
 
@@ -119,6 +121,7 @@ void T2DMap::init()
     //setFocusPolicy( Qt::ClickFocus);
 
     if( ! mpMap ) return;
+    gridMapSizeChange = false;
     eSize = mpMap->mpHost->mLineSize;
     rSize = mpMap->mpHost->mRoomSize;
 
@@ -533,6 +536,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     if( pArea->gridMode )
     {
+        if( gridMapSizeChange ) init(); //NOTE: this is to prevent slow map widget resize
         int areaID = mpMap->rooms[mRID]->area;
 
         if( mGridPix.contains( mpMap->rooms[mRID]->area ) )

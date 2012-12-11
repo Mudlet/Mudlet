@@ -110,6 +110,7 @@ public:
     int mCustomLineSelectedPoint;
     QTreeWidget mMultiSelectionListWidget;
     bool mSizeLabel;
+    bool gridMapSizeChange;
 
 signals:
 

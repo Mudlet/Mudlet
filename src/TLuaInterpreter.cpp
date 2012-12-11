@@ -2253,6 +2253,7 @@ int TLuaInterpreter::createMapper( lua_State *L )
 }
 
 
+
 int TLuaInterpreter::createButton( lua_State *L )
 {
     string luaSendText="";
@@ -9630,7 +9631,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu );
     lua_register( pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu );
     lua_register( pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus );
-
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
