@@ -159,6 +159,7 @@ public:
    Phonon::MediaObject *         mpMusicBox2;
    Phonon::MediaObject *         mpMusicBox3;
    Phonon::MediaObject *         mpMusicBox4;
+   QTabBar *                     mpTabBar;
 
 
 
@@ -221,7 +222,7 @@ private:
 
    void                          goingDown() { mIsGoingDown = true; }
    QMap<QString, TConsole *>         mTabMap;
-   QTabBar *                     mpTabBar;
+   //QTabBar *                     mpTabBar;
    QWidget *                     mainPane;
 
    Host *                        mpDefaultHost;

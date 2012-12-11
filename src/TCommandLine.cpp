@@ -101,18 +101,54 @@ bool TCommandLine::event( QEvent * event )
                 mLastCompletion = "";
                 break;
 
-            case Qt::Key_Backtab:
-                handleTabCompletion( false );
-                ke->accept();
-                adjustHeight();
-                return true;
-                break;
 
-            case Qt::Key_Tab:
+        case Qt::Key_Backtab:
+            if( ke->modifiers() & Qt::ControlModifier )
+            {
+                    int currentIndex = mudlet::self()->mpTabBar->currentIndex();
+                    int count = mudlet::self()->mpTabBar->count();
+                    if( currentIndex-1 < 0 )
+                            mudlet::self()->mpTabBar->setCurrentIndex(count-1);
+                    else
+                            mudlet::self()->mpTabBar->setCurrentIndex(currentIndex-1);
+            }
+            else
+            {
+                    handleTabCompletion( false );
+                    adjustHeight();
+            }
+            ke->accept();
+            return true;
+            break;
+
+        case Qt::Key_Tab:
+            if( ke->modifiers() & Qt::ControlModifier )
+            {
+                int currentIndex = mudlet::self()->mpTabBar->currentIndex();
+                int count = mudlet::self()->mpTabBar->count();
+                if( currentIndex+1 < count )
+                    mudlet::self()->mpTabBar->setCurrentIndex(currentIndex+1);
+                else
+                    mudlet::self()->mpTabBar->setCurrentIndex(0);
+            }
+            else
                 handleTabCompletion( true );
-                ke->accept();
-                return true;
-                break;
+            ke->accept();
+            return true;
+            break;
+
+//            case Qt::Key_Backtab:
+//                handleTabCompletion( false );
+//                ke->accept();
+//                adjustHeight();
+//                return true;
+//                break;
+
+//            case Qt::Key_Tab:
+//                handleTabCompletion( true );
+//                ke->accept();
+//                return true;
+//                break;
 
             case Qt::Key_unknown:
                 qWarning()<<"ERROR: key unknown!";

@@ -2310,6 +2310,7 @@ TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width,
             return 0;
         }
         mSubConsoleMap[key] = pC;
+        pC->setFocusPolicy( Qt::NoFocus );
         pC->setUserWindow();
         pC->console->setIsMiniConsole();
         pC->console2->setIsMiniConsole();
