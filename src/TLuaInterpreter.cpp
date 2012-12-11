@@ -8548,7 +8548,7 @@ int TLuaInterpreter::sendRaw( lua_State * L )
     string luaSendText;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "sendRaw: wrong argument type" );
+        lua_pushfstring( L, "sendRaw: bad argument #1 (string expected, got %s)", luaL_typename(L, 1) );
         lua_error( L );
         return 1;
     }
@@ -8561,7 +8561,7 @@ int TLuaInterpreter::sendRaw( lua_State * L )
     {
         if( ! lua_isboolean( L, 2 ) )
         {
-            lua_pushstring( L, "sendRaw: wrong argument type" );
+            lua_pushfstring( L, "sendRaw: bad argument #2 (boolean expected, got %s)", luaL_typename(L, 2) );
             lua_error( L );
             return 1;
         }
