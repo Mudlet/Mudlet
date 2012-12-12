@@ -565,7 +565,7 @@ end
 --- @usage This will replace all occurrences of John with the word Doe.
 ---   <pre>
 ---   replaceAll("John", "Doe")
----   
+---
 ---   -- also handles recursive matches:
 ---   replaceAll("you", "you and me")
 ---   </pre>
@@ -638,13 +638,21 @@ end
 --- @usage Set background color to magenta.
 ---   <pre>
 ---   bg("magenta")
+---
+---   bg("my miniconsole", "blue")
 ---   </pre>
 ---
 --- @see fg
 --- @see showColors
-function bg(colorName)
+function bg(console, colorName)
+	local colorName = colorName or console
 	assert(color_table[colorName], "bg: no such colour name")
-	setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+
+	if console == colorName then
+		setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	else
+		setBgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	end
 end
 
 
@@ -658,9 +666,15 @@ end
 ---
 --- @see bg
 --- @see showColors
-function fg(colorName)
+function fg(console, colorName)
+	local colorName = colorName or console
 	assert(color_table[colorName], "fg: no such colour name")
-	setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+
+	if console == colorName then
+		setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	else
+		setFgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	end
 end
 
 
@@ -827,7 +841,7 @@ if rex then
 		local out, reset
 		local args = {...}
 		local n = #args
-		
+
 		if func == 'echoLink' then
 			if n < 3 then
 				error'Insufficient arguments, usage: ([window, ] string, command, hint)'
@@ -847,11 +861,11 @@ if rex then
 				str = args[1]
 			end
 		end
-		
+
 		out = function(...)
 			_G[func](...)
 		end
-		
+
 		if win then
 			reset = function()
 				resetFormat(win)
@@ -866,7 +880,7 @@ if rex then
 
 		deselect()
 		reset()
-		
+
 		for _, v in ipairs(t) do
 			if type(v) == 'table' then
 				if v.fg then
