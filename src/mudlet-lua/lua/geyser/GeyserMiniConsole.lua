@@ -92,6 +92,21 @@ function Geyser.MiniConsole:bg(color)
    bg(self.name, color)
 end
 
+--- inserts clickable text into the miniconsole at the end of the current line
+function Geyser.MiniConsole:echoLink(...)
+   echoLink(self.name, ...)
+end
+
+--- inserts clickable text into the miniconsole at the current cursor position
+function Geyser.MiniConsole:insertLink(...)
+   insertLink(self.name, ...)
+end
+
+--- turns selected text info clickable text into the miniconsole
+function Geyser.MiniConsole:setLink(...)
+   setLink(self.name, ...)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
