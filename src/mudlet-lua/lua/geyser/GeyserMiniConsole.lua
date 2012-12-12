@@ -33,7 +33,7 @@ function Geyser.MiniConsole:setWrap (wrapAt)
       self.wrapAt = wrapAt
    end
    setWindowWrap(self.name, self.wrapAt)
-end            
+end
 
 --- Sets the text format for this window. Note that the *echo()
 -- functions will override these settings.
@@ -57,7 +57,7 @@ end
 function Geyser.MiniConsole:setBold(bool)
    setBold(self.name, val)
 end
-                       
+
 --- Sets underline status for this miniconsole
 -- @param bool True for underlined
 function Geyser.MiniConsole:setUnderline(bool)
@@ -75,6 +75,12 @@ end
 function Geyser.MiniConsole:setFontSize(size)
    self.parent:setFontSize(size)
    setMiniConsoleFontSize(self.name, size)
+end
+
+--- Sets the font size for this miniconsole.
+-- @param size The font size.
+function Geyser.MiniConsole:appendBuffer()
+   appendBuffer(self.name)
 end
 
 -- Save a reference to our parent constructor
@@ -110,7 +116,7 @@ function Geyser.MiniConsole:new (cons, container)
       me:setFontSize(container.fontSize)
    else
       me:setFontSize(8)
-   end   
+   end
    --print("  New in " .. self.name .. " : " .. me.name)
    return me
 end
