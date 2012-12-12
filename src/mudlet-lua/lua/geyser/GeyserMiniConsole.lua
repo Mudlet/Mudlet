@@ -77,10 +77,19 @@ function Geyser.MiniConsole:setFontSize(size)
    setMiniConsoleFontSize(self.name, size)
 end
 
---- Sets the font size for this miniconsole.
--- @param size The font size.
+--- Appends copied selection to this miniconsole.
 function Geyser.MiniConsole:appendBuffer()
    appendBuffer(self.name)
+end
+
+--- sets the current foreground color of cursor in this miniconsole.
+function Geyser.MiniConsole:fg(color)
+   fg(self.name, color)
+end
+
+--- sets the current background color of cursor in this miniconsole.
+function Geyser.MiniConsole:bg(color)
+   bg(self.name, color)
 end
 
 -- Save a reference to our parent constructor
