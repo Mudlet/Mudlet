@@ -961,7 +961,7 @@ void TMap::initGraph()
                 int _id = it.key();
 
                 // FIXME: double check if the special exit id really exists in the room db as a workaround
-                if( room.contains( _id ) && !rooms[i]->hasSpecialExitLock( _id, it.value() ) )
+                if( rooms.contains( _id ) && !rooms[i]->hasSpecialExitLock( _id, it.value() ) )
                 {
                     edgeCount++;
                     edge_descriptor e;
