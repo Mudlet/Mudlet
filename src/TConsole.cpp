@@ -885,7 +885,7 @@ void TConsole::slot_toggleLogging()
     }
     else
     {
-        if( ! mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
+        if( mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
         mLogFile.close();
         QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
         printSystemMessage( message );
@@ -1094,6 +1094,14 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
             {
                 if( buffer.size() > mLastBufferLogLine + 1 )
                 {
+                    if( buffer.size() < mLastBufferLogLine)
+                    {
+                        mLastBufferLogLine -= buffer.mBatchDeleteSize;
+                        if( mLastBufferLogLine < 0 )
+                        {
+                            mLastBufferLogLine = 0;
+                        }
+                    }
                     for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
                     {
                         QPoint P1 = QPoint(0,i);
