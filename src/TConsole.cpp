@@ -1738,7 +1738,6 @@ bool TConsole::loadMap(QString location)
     if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
     mpHost->mpMap->restore(location);
     mpHost->mpMap->init( mpHost );
-    qDebug()<<"TConsle::loadMap() -> call T2DMap::init()";
     mpHost->mpMap->mpMapper->mp2dMap->init();
     mpHost->mpMap->mpMapper->show();
     // previous selections stay, so we need to clear it

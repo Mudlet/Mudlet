@@ -1607,8 +1607,9 @@ int TLuaInterpreter::saveMap( lua_State * L )
 }
 
 int TLuaInterpreter::setExitStub( lua_State * L  ){
-    //args:room id, direction (as given by the #define direction table), status (0 to disable, 1 to enable)
-    int roomId, dirType, status;
+    //args:room id, direction (as given by the #define direction table), status
+    int roomId, dirType;
+    bool status;
     if (!lua_isnumber(L,1)){
         lua_pushstring( L, "setExitStub: Need a room number as first argument" );
         lua_error( L );
@@ -1625,13 +1626,13 @@ int TLuaInterpreter::setExitStub( lua_State * L  ){
     else{
         dirType = lua_tonumber(L,2);
     }
-    if (!lua_isnumber(L,3)){
-        lua_pushstring( L, "setExitStub: Need a 0 or 1 for third argument" );
+    if (!lua_isboolean(L,3)){
+        lua_pushstring( L, "setExitStub: Need a true/false for third argument" );
         lua_error( L );
         return 1;
     }
     else{
-        status = lua_tonumber(L,3);
+        status = lua_toboolean(L,3);
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if (!pHost->mpMap->rooms.contains( roomId )){
@@ -6075,7 +6076,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
     int alpha;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_pushstring( L, "setCustomEnvColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -6086,7 +6087,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
 
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_pushstring( L, "setCustomEnvColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -6097,7 +6098,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
 
     if( ! lua_isnumber( L, 3 ) )
     {
-        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_pushstring( L, "setCustomEnvColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -6108,7 +6109,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
 
     if( ! lua_isnumber( L, 4 ) )
     {
-        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_pushstring( L, "setCustomEnvColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -6119,7 +6120,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
 
     if( ! lua_isnumber( L, 5 ) )
     {
-        lua_pushstring( L, "setRoomCoordinates: wrong argument type" );
+        lua_pushstring( L, "setCustomEnvColor: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -7716,82 +7717,52 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     return 0;
 }
 
+// params: [windowName,] "printWhat", "LuaScript", "hint", [boolean=true -> use current format else use standard link format]
 int TLuaInterpreter::insertLink( lua_State *L )
 {
-    string a1;
-    string a2;
-    string a3;
-    string a4;
+    QStringList sL;
     int n = lua_gettop( L );
     int s = 1;
-    if( ! lua_isstring( L, s ) )
+    bool b = false;
+    bool gotBool = false;
+    for( ; s<=n; s++ )
     {
-        lua_pushstring( L, "insertLink: wrong argument type" );
+        if( lua_isstring( L, s ) )
+        {
+            string _str = lua_tostring( L, s );
+            QString qs = _str.c_str();
+            sL << qs;
+        }
+        else if( lua_isboolean( L, s ) )
+        {
+            gotBool = true;
+            b = lua_toboolean( L, s );
+        }
+    }
+
+    if( sL.size() < 4 ) sL.prepend("main");
+    if( sL.size() < 4 )
+    {
+        lua_pushstring( L, "insertLink: wrong number of params or wrong type of params" );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        a1 = lua_tostring( L, s );
-        s++;
-    }
-    QString _name( a1.c_str() );
 
-    if( n > 1 )
-    {
-        if( ! lua_isstring( L, s ) )
-        {
-            lua_pushstring( L, "insertLink: wrong argument type" );
-            lua_error( L );
-            return 1;
-        }
-        else
-        {
-            a2 = lua_tostring( L, s );
-            s++;
-        }
-    }
-    if( n > 2 )
-    {
-        if( ! lua_isstring( L, s ) )
-        {
-            lua_pushstring( L, "insertLink: wrong argument type" );
-            lua_error( L );
-            return 1;
-        }
-        else
-        {
-            a3 = lua_tostring( L, s );
-        }
-    }
-    if( n > 3 )
-    {
-        if( ! lua_isstring( L, s ) )
-        {
-            lua_pushstring( L, "insertLink: wrong argument type" );
-            lua_error( L );
-            return 1;
-        }
-        else
-        {
-            a4 = lua_tostring( L, s );
-        }
-    }
+    QString _name( sL[0] );
+    QString printScreen = sL[1];
     QStringList command;
     QStringList hint;
+    command << sL[2];
+    hint << sL[3];
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( n == 3 )
+    if( _name == "main" )
     {
-        command << a2.c_str();
-        hint << a3.c_str();
-        pHost->mpConsole->insertLink( QString(a1.c_str()), command, hint );
+        pHost->mpConsole->insertLink( printScreen, command, hint, b );
     }
     else
     {
-        command << a3.c_str();
-        hint << a4.c_str();
-        mudlet::self()->insertLink( pHost, _name, QString( a2.c_str() ), command, hint );
+        mudlet::self()->insertLink( pHost, _name, printScreen, command, hint, b );
     }
 
     return 0;
