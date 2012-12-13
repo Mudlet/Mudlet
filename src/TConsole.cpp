@@ -608,7 +608,10 @@ void TConsole::resizeEvent( QResizeEvent * event )
     }
     int x = event->size().width();
     int y = event->size().height();
-    mpMainFrame->resize( x, y );
+    //mpMainFrame->resize( x, y );
+    mpBaseVFrame->resize(x, y);
+    x = mpBaseVFrame->width()-mpLeftToolBar->width()-mpRightToolBar->width();
+    y = mpBaseVFrame->height()-mpTopToolBar->height();
     if( ! mIsSubConsole && ! mIsDebugConsole )
     {
         mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
@@ -629,7 +632,8 @@ void TConsole::resizeEvent( QResizeEvent * event )
     }
     else
     {
-        layerCommandLine->move(0,mpMainFrame->height()-layerCommandLine->height());
+        //layerCommandLine->move(0,mpMainFrame->height()-layerCommandLine->height());
+        layerCommandLine->move(0, mpBaseVFrame->height()-layerCommandLine->height());
     }
 
     QWidget::resizeEvent( event );
@@ -645,9 +649,11 @@ void TConsole::resizeEvent( QResizeEvent * event )
         me.mArgumentList.append( "sysWindowResizeEvent" );
         me.mArgumentList.append( QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth) );
         me.mArgumentList.append( QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()) );
+        me.mArgumentList.append( mConsoleName );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         mpHost->raiseEvent( &me );
     }
 }
@@ -2744,7 +2750,6 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
-    qDebug()<<"CALLED!!!";
     QSize consoleSize = size();
     int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     int toolbarHeight = mpTopToolBar->height();
