@@ -992,6 +992,10 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 {
     if( (mFontWidth == 0) | (mFontHeight == 0) ) return;
     int x = event->x() / mFontWidth;// bugfix by BenH (used to be mFontWidth-1)
+    if( mShowTimeStamps )
+    {
+        x -= 13;
+    }
     int y = ( event->y() / mFontHeight ) + imageTopLine();
     //qDebug()<<"Mouse: x()="<<event->x()<<" y()="<<event->y()<< "x="<<x<<" y="<<y;
     if( x < 0 ) x = 0;
@@ -1243,6 +1247,10 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     if( event->button() == Qt::LeftButton )
     {
         int x = event->x() / mFontWidth;
+        if( mShowTimeStamps )
+        {
+            x -= 13;
+        }
         int y = ( event->y() / mFontHeight ) + imageTopLine();
         if( x < 0 ) x = 0;
         if( y < 0 ) y = 0;
@@ -1283,6 +1291,10 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     if( event->button() == Qt::RightButton )
     {
         int x = event->x() / mFontWidth;
+        if( mShowTimeStamps )
+        {
+            x -= 13;
+        }
         int y = ( event->y() / mFontHeight ) + imageTopLine();
         if( y < static_cast<int>(mpBuffer->buffer.size()) )
         {
