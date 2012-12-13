@@ -123,7 +123,7 @@ void TEasyButtonBar::addButton( TFlipButton * pB )
         pB->move( pB->mpTAction->mPosX, pB->mpTAction->mPosY );
     }
 
-    connect( pB, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
+    connect( pB, SIGNAL(released()), this, SLOT(slot_pressed()) );
     mButtonList.push_back( pB );
     pB->setChecked( (pB->mpTAction->mButtonState==2) );
 
@@ -186,7 +186,7 @@ void TEasyButtonBar::clear()
        typedef std::list<TFlipButton *>::iterator IT;
     for( IT it = mButtonList.begin(); it != mButtonList.end(); it++ )
     {
-        disconnect( *it, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
+        disconnect( *it, SIGNAL(released()), this, SLOT(slot_pressed()) );
     }
     mButtonList.clear();
     mpWidget->deleteLater();
