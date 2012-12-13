@@ -531,11 +531,11 @@ void cTelnet::processTelnetCommand( const string & command )
               if( ! mpHost->mFORCE_MXP_NEGOTIATION_OFF )
               {
                 sendTelnetOption( TN_DO, 91 );
-                mpHost->mpConsole->print("\n<MXP enabled>\n");
+                //mpHost->mpConsole->print("\n<MXP enabled>\n");
                 break;
               }
-              else
-                  mpHost->mpConsole->print("\n<MXP declined because of user setting: force MXP off>");
+              //else
+                  //mpHost->mpConsole->print("\n<MXP declined because of user setting: force MXP off>");
           }
 
           //option = command[2];
@@ -579,7 +579,7 @@ void cTelnet::processTelnetCommand( const string & command )
                            //MCCP v2...
                            sendTelnetOption( TN_DONT, option );
                            hisOptionState[idxOption] = false;
-                           cout << "Rejecting MCCP v1, because v2 has already been negotiated." << endl;
+                           //cout << "Rejecting MCCP v1, because v2 has already been negotiated." << endl;
                        }
                        else
                        {
@@ -590,13 +590,13 @@ void cTelnet::processTelnetCommand( const string & command )
                            {
                                mMCCP_version_1 = true;
                                //MCCP->setMCCP1(true);
-                               cout << "MCCP v1 negotiated." << endl;
+                               //cout << "MCCP v1 negotiated." << endl;
                            }
                            else
                            {
                                mMCCP_version_2 = true;
                                //MCCP->setMCCP2( true );
-                               cout << "MCCP v2 negotiated!" << endl;
+                               //cout << "MCCP v2 negotiated!" << endl;
                            }
                        }
                    }
@@ -640,7 +640,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
-                      cout << "MCCP v1 disabled !" << endl;
+                      //cout << "MCCP v1 disabled !" << endl;
                   }
                   if( ( option == OPT_COMPRESS2 ) )
                   {
@@ -1625,12 +1625,12 @@ void cTelnet::handle_socket_signal_readyRead()
                                 cout << "checking mccp start seq..." << endl;
                                 if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) && ( buffer[i+1] == TN_WILL ) && ( buffer[i+2] == TN_SE ) )
                                 {
-                                    cout << "MCCP version 2 starting sequence" << endl;
+                                    //cout << "MCCP version 2 starting sequence" << endl;
                                     _compress = true;
                                 }
                                 if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) && ( buffer[i+1] == TN_IAC ) && ( buffer[i+2] == TN_SE ) )
                                 {
-                                    cout << "MCCP version 1 starting sequence" << endl;
+                                    //cout << "MCCP version 1 starting sequence" << endl;
                                     _compress = true;
                                 }
                                 cout << (int)buffer[i-2]<<","<<(int)buffer[i-1]<<","<<(int)buffer[i]<<","<<(int)buffer[i+1]<<","<<(int)buffer[i+2]<<endl;
@@ -1640,7 +1640,7 @@ void cTelnet::handle_socket_signal_readyRead()
                                 mNeedDecompression = true;
                                 // from this position in stream onwards, data will be compressed by zlib
                                 gotRest( cleandata );
-                                mpHost->mpConsole->print("\n<starting MCCP data compression>\n");
+                                //mpHost->mpConsole->print("\n<starting MCCP data compression>\n");
                                 cleandata = "";
                                 initStreamDecompressor();
                                 pBuffer += i + 3;//bugfix: BenH

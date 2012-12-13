@@ -31,3 +31,8 @@ _CPack_Packages
 install_manifest.txt
 src/doc/sapi.h
 src/sapi/
+*.patch
+*.txt
+*.dll
+*.diff
+src/tmp/*
