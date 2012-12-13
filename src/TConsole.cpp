@@ -1735,7 +1735,7 @@ bool TConsole::loadMap(QString location)
     {
         mudlet::self()->slot_mapper();
     }
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return;
+    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
     mpHost->mpMap->restore(location);
     mpHost->mpMap->init( mpHost );
     qDebug()<<"TConsle::loadMap() -> call T2DMap::init()";

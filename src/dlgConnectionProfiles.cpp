@@ -1169,11 +1169,11 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( needsGenericPackagesInstall )
     {
         //install generic mapper script
-        if( pHost->getUrl() == "aetolia.com" ||
-            pHost->getUrl() == "achaea.com" ||
-            pHost->getUrl() == "lusternia.com" ||
-            pHost->getUrl() == "midkemiaonline.com" ||
-            pHost->getUrl() == "imperian.com" )
+        if( pHost->getUrl().toLower().contains( "aetolia.com" ) ||
+            pHost->getUrl().toLower().contains( "achaea.com" ) ||
+            pHost->getUrl().toLower().contains( "lusternia.com" ) ||
+            pHost->getUrl().toLower().contains( "midkemiaonline.com" ) ||
+            pHost->getUrl().toLower().contains( "imperian.com" ) )
         {
            pHost->installPackage(":/mudlet-mapper.xml", 0);
         }

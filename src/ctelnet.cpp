@@ -188,6 +188,11 @@ void cTelnet::connectIt(const QString &address, int port)
 void cTelnet::disconnect ()
 {
     socket.disconnectFromHost();
+    TEvent me;
+    me.mArgumentList.append( "sysDisconnectionEvent" );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( &me );
+
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -220,6 +225,11 @@ void cTelnet::handle_socket_signal_connected()
     if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
     sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
+    TEvent me;
+    me.mArgumentList.append( "sysConnectionEvent" );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( &me );
+
 }
 
 void cTelnet::handle_socket_signal_disconnected()

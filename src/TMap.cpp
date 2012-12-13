@@ -1455,11 +1455,11 @@ bool TMap::restore(QString location)
     {
         QMessageBox msgBox;
 
-        if( mpHost->mUrl == "achaea.com"
-            || mpHost->mUrl == "aetolia.com"
-            || mpHost->mUrl == "imperian.com"
-            || mpHost->mUrl == "midkemiaonline.com"
-            || mpHost->mUrl == "lusternia.com" )
+        if( mpHost->mUrl.toLower().contains( "achaea.com" )
+            || mpHost->mUrl.toLower().contains( "aetolia.com" )
+            || mpHost->mUrl.toLower().contains( "imperian.com" )
+            || mpHost->mUrl.toLower().contains( "midkemiaonline.com" )
+            || mpHost->mUrl.toLower().contains( "lusternia.com" ) )
         {
             msgBox.setText("No map found. Would you like to download the map or start your own?");
             QPushButton *yesButton = msgBox.addButton("Download the map", QMessageBox::ActionRole);
@@ -1467,9 +1467,7 @@ bool TMap::restore(QString location)
             msgBox.exec();
             init( mpHost );
             if (msgBox.clickedButton() == yesButton) {
-                qDebug()<<"--trace before map download";
                 mpMapper->downloadMap();
-                qDebug()<<"--trace after map download";
             }
         }
         else
