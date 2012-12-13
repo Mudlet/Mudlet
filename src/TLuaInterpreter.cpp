@@ -141,6 +141,8 @@ void TLuaInterpreter::replyFinished(QNetworkReply * reply )
         e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
         e->mArgumentList << reply->errorString();
         e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        e->mArgumentList << name;
+        e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
     }
 
     mpHost->raiseEvent( e );
