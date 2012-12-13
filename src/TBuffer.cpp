@@ -3719,7 +3719,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
         if( lineBuffer[y][x] == '<' )
             s.append("&lt;");
         else if( lineBuffer[y][x] == '>' )
-            s.append("&rt;");
+            s.append("&gt;");
         else
             s.append(lineBuffer[y][x]);
     }
