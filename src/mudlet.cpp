@@ -97,13 +97,13 @@ mudlet::mudlet()
 , mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
 , mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
 #ifdef Q_OS_LINUX,
-    , version( "Mudlet 2.0-test4 10-25-2011" )
+    , version( "Mudlet 2.0-test5 12-12-2012" )
 #endif
 #ifdef Q_OS_MAC
-    , version( "Mudlet 2.0-test4 10-25-2011" )
+    , version( "Mudlet 2.0-test5 12-12-2012" )
 #endif
 #ifdef Q_OS_WIN
-    , version( "Mudlet 2.0-test4 10-25-2011" )
+    , version( "Mudlet 2.0-test5 12-12-2012" )
 #endif
 {
     setupUi(this);
@@ -1663,7 +1663,9 @@ void mudlet::show_options_dialog()
 
 void mudlet::show_help_dialog()
 {
-    QDesktopServices::openUrl(QUrl("http://mudlet.sourceforge.net/wordpress/?page_id=40"));
+    QString p = qApp->applicationDirPath();
+    p.append("/Mudlet_API_Reference_HTML.html");
+    QDesktopServices::openUrl(QUrl::fromLocalFile(p));//("file://./Mudlet_API_Reference_HTML.html"));//"http://mudlet.sourceforge.net/wordpress/?page_id=40"));
 }
 
 void mudlet::slot_show_help_dialog_video()
@@ -1983,6 +1985,19 @@ void mudlet::slot_send_pass()
 }
 //////////////////////////////////////////////////////////////////////////////
 
+
+
+void mudlet::processEventLoopHack()
+{
+    QTimer::singleShot(1, this, SLOT(processEventLoopHack_timerRun()));
+}
+
+void mudlet::processEventLoopHack_timerRun()
+{
+    Host * pH = getActiveHost();
+    if( !pH ) return;
+    pH->mpConsole->refresh();
+}
 
 void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion )
 {

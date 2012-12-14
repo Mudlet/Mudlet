@@ -437,6 +437,7 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         (*it)->mpEasyButtonBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
+
     return mEasyButtonBarList;
 }
 
@@ -575,8 +576,9 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
         case 3: mpHost->mpConsole->mpRightToolBar->layout()->addWidget( pTB ); break;
     }
 
-    pTB->show();
     pTB->setStyleSheet( pTB->mpTAction->css );
+    pTB->show();
+
 }
 
 

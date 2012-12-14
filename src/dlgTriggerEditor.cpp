@@ -3564,6 +3564,7 @@ void dlgTriggerEditor::saveAction()
         }
     }
     mpHost->getActionUnit()->updateToolbar();
+    mudlet::self()->processEventLoopHack();
 }
 
 
@@ -6511,7 +6512,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
 
-    QColor color = QColorDialog::getColor( pT->getFgColor(), this );
+    QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonFgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
     {
         QPalette palette;
@@ -6530,7 +6531,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
 
-    QColor color = QColorDialog::getColor( pT->getBgColor(), this );
+    QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonBgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
     {
         QPalette palette;

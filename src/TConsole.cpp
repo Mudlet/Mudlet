@@ -599,6 +599,7 @@ void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
 
 void TConsole::resizeEvent( QResizeEvent * event )
 {
+    qDebug()<<"TConsole::resizeEvent() size:"<<event->size()<<" THREAD:"<<thread();
     if( ! mIsDebugConsole && ! mIsSubConsole )
     {
         mMainFrameTopHeight = mpHost->mBorderTopHeight;
@@ -610,6 +611,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
     int y = event->size().height();
     //mpMainFrame->resize( x, y );
     mpBaseVFrame->resize(x, y);
+    mpBaseHFrame->resize(x, y);
     x = mpBaseVFrame->width()-mpLeftToolBar->width()-mpRightToolBar->width();
     y = mpBaseVFrame->height()-mpTopToolBar->height();
     if( ! mIsSubConsole && ! mIsDebugConsole )
@@ -667,11 +669,20 @@ void TConsole::refresh()
         mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
         mMainFrameRightWidth = mpHost->mBorderRightWidth;
     }
-    int x = mpMainFrame->size().width();
-    int y = mpMainFrame->size().height();
-    mpMainFrame->resize( x, y );
-    mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth - 15,
-                           y - mMainFrameTopHeight - mMainFrameBottomHeight );
+
+    int x = width();
+    int y = height();
+    qDebug()<<"TConsole::refresh() x="<<x<<" y="<<y<<" LeftTB-width="<<mpLeftToolBar->width();
+    mpBaseVFrame->resize( x, y );
+    mpBaseHFrame->resize( x, y );
+    x = mpBaseVFrame->width()-mpLeftToolBar->width()-mpRightToolBar->width();
+    y = mpBaseVFrame->height()-mpTopToolBar->height();
+
+    mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
+                           y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
+
+    //mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth - 15,
+    //                       y - mMainFrameTopHeight - mMainFrameBottomHeight );
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
 }
 

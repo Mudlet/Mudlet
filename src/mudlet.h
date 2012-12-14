@@ -122,6 +122,7 @@ public:
    void                          readSettings();
    void                          writeSettings();
    void                          showUnzipProgress( QString txt );
+   void                          processEventLoopHack();
    static TConsole *             mpDebugConsole;
    static QMainWindow *          mpDebugArea;
    static bool                   debugMode;
@@ -165,6 +166,7 @@ public:
 
 public slots:
 
+   void                          processEventLoopHack_timerRun();
    void                          slot_mapper();
    void                          slot_replayTimeChanged();
    void                          slot_replaySpeedUp();
