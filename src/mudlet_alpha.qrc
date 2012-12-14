@@ -37,7 +37,6 @@
         <file>icons/folder-downloads.png</file>
         <file>icons/folder-green-locked.png</file>
         <file>icons/folder-green.png</file>
-        <file>icons/folder-grey.png</file>
         <file>icons/folder-lightblue-locked.png</file>
         <file>icons/folder-new.png</file>
         <file>icons/folder-orange-locked.png</file>
@@ -119,5 +118,11 @@
         <file>ui/custom_lines.ui</file>
         <file>generic_mapper_script.xml</file>
         <file>mudlet-mapper.xml</file>
+        <file>icons/filter-grey.png</file>
+        <file>icons/filter-grey-locked.png</file>
+        <file>icons/folder-grey.png</file>
+        <file>icons/folder-grey-locked.png</file>
+        <file>icons/tag_checkbox_checked_grey.png</file>
+        <file>icons/tag_checkbox-grey.png</file>
     </qresource>
 </RCC>

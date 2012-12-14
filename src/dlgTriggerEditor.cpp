@@ -1820,7 +1820,7 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
     }
     else
     {
-        if( pT->isActive() )
+        if( pT->isActive() && pT->ancestorsActive() )
         {
             icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
         }
@@ -1829,6 +1829,8 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
             icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
         }
     }
+
+    //pItem->setDisabled(!pT->ancestorsActive());
 
     if( pT->state() )
     {
@@ -4402,7 +4404,7 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isFilterChain() )
             {
-                if( pT->isActive() )
+                if( pT->isActive() && pT->ancestorsActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
                 }
@@ -4415,7 +4417,7 @@ void dlgTriggerEditor::fillout_form()
             {
                 if( ! pT->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( pT->isActive() && pT->ancestorsActive() )
                     {
                         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
                     }
@@ -4424,18 +4426,22 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                     }
                 }
-                else if( pT->isActive() )
+                else if( pT->isActive() && pT->ancestorsActive() )
                 {
+
+
+
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                 }
                 else
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue-locked.png"),0,Qt::MonoOnly), QIcon::Normal, QIcon::Off);
                 }
             }
             else
             {
-                if( pT->isActive() )
+                if( pT->isActive() && pT->ancestorsActive() )
                 {
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 }
@@ -4444,6 +4450,10 @@ void dlgTriggerEditor::fillout_form()
                     icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 }
             }
+
+            //pItem->setDisabled(!pT->ancestorsActive());
+
+
             pItem->setIcon(0, icon);
         }
         else
@@ -4888,35 +4898,79 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
             {
                 if( pT->isActive() )
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->ancestorsActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
                 else
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->ancestorsActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
             }
             else if( pT->isFolder() )
             {
                 if( pT->isActive() )
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->ancestorsActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
                 else
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->ancestorsActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                    }
                 }
             }
             else
             {
                 if( pT->isActive() )
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->ancestorsActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    }
+
                 }
                 else
                 {
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    if( pT->ancestorsActive() )
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png"),0,Qt::MonoOnly), QIcon::Normal, QIcon::Off);
+                    }
+                    else
+                    {
+                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox-grey.png"),0,Qt::MonoOnly), QIcon::Normal, QIcon::Off);
+                    }
                 }
             }
+            //pItem->setDisabled(!pT->ancestorsActive());
             pItem->setIcon(0, icon);
         }
         else
