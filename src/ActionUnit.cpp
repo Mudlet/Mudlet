@@ -471,6 +471,7 @@ void ActionUnit::showToolBar( QString & name )
             updateToolbar();
         }
     }
+    mpHost->mpConsole->mpCommandLine->setFocus();
 }
 
 void ActionUnit::hideToolBar( QString & name )
