@@ -72,6 +72,18 @@ function enableModule(user,module)
     addUser(user,module)
 end
 
+
+-- Send the module list again on reconnect, so activated modules stay enabled during
+--   a session unless explicitly disabled
+function gmod.reenableModules()
+    local list = {}
+    for module, users in pairs(registeredModules) do
+        list[#list+1] = module.." 1"
+    end
+    sendGMCP("Core.Supports.Set "..yajl.to_string(list))
+end
+registerAnonymousEventHandler("sysConnectionEvent", "gmod.reenableModules")
+
 -- Remove a user from a module's user list. Disable the module if nobody is using it.
 function disableModule(user,module)
     registerUser(user)
