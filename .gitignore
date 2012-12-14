@@ -36,3 +36,7 @@ src/sapi/
 *.dll
 *.diff
 src/tmp/*
+src/filter-grey.PNG
+src/folder-grey-locked.png
+src/folder-grey.PNG
+src/ui/list.ui
