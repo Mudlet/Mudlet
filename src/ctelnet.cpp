@@ -1056,6 +1056,8 @@ void cTelnet::setGMCPVariables( QString & msg )
         return;
     }
     arg.remove( '\n' );
+    // remove \r's from the data, as yajl doesn't like it
+    arg.remove(QChar('\r'));
     mpHost->mLuaInterpreter.setGMCPTable( var, arg );
 }
 

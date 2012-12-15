@@ -9126,10 +9126,9 @@ bool TLuaInterpreter::callConditionFunction( std::string & function, QString & m
     int returnValues = lua_gettop( L );
     if( returnValues > 0 )
     {
-        if( lua_isboolean( L, 1 ) )
-        {
-            ret = lua_toboolean( L, 1 );
-        }
+        // Lua docs: Like all tests in Lua, lua_toboolean returns 1 for any Lua value different from false and nil; otherwise it returns 0
+        // This means trigger patterns don't have to strictly return true or false, as it is accepted in Lua */
+        ret = lua_toboolean( L, 1 );
     }
     lua_pop( L, returnValues );
     if( (error == 0) && (ret>0) )
@@ -9689,7 +9688,7 @@ void TLuaInterpreter::initLuaGlobals()
         gSysErrors << msg;
     }
 
-    error = luaL_dostring( pGlobalLua, "require \"luasql.sqlite3\"" );
+    error = luaL_dostring( pGlobalLua, "luasql = require \"luasql.sqlite3\"" );
 
     if( error != 0 )
     {

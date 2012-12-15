@@ -68,7 +68,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         }
 
         mpHost->mDisplayFont.setFixedPitch(true);
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         p.setFont(mpHost->mDisplayFont);
@@ -89,7 +89,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         p.setFont(mDisplayFont);
@@ -191,7 +191,7 @@ void TTextEdit::initDefaultSettings()
     mBgColor = QColor(0,0,0);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
 //    mDisplayFont.setWordSpacing( 0 );
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         p.setFont(mDisplayFont);
@@ -247,7 +247,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics( mDisplayFont ).descent();
         mFontAscent = QFontMetrics( mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( 2000,600 );
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -270,7 +270,7 @@ void TTextEdit::updateScreenView()
         mFontHeight = mFontAscent + mFontDescent;
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -292,7 +292,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics( mDisplayFont ).descent();
         mFontAscent = QFontMetrics( mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -467,7 +467,7 @@ inline void TTextEdit::drawCharacters( QPainter & painter,
         font.setBold( isBold );
         font.setUnderline( isUnderline );
         font.setItalic( isItalics );
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
 #endif
         painter.setFont( font );
@@ -476,7 +476,7 @@ inline void TTextEdit::drawCharacters( QPainter & painter,
     {
         painter.setPen( fgColor );
     }
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
     QPointF _p(rect.x(), rect.bottom()-mFontDescent);
     painter.drawText( _p, text );
 #else

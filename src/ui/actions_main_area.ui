@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>900</width>
-    <height>205</height>
+    <height>351</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+   <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -19,13 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>0</width>
-    <height>200</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>16777215</width>
-    <height>205</height>
+    <height>0</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -41,7 +35,7 @@
    <item>
     <widget class="QWidget" name="widget" native="true">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -50,13 +44,22 @@
       <property name="spacing">
        <number>9</number>
       </property>
-      <property name="margin">
+      <property name="leftMargin">
+       <number>6</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
        <widget class="QLabel" name="label_action_name">
         <property name="text">
-         <string>Button Name:</string>
+         <string>Button name:</string>
         </property>
        </widget>
       </item>
@@ -66,7 +69,7 @@
       <item>
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Command on Button Down</string>
+         <string>Command on button down:</string>
         </property>
        </widget>
       </item>
@@ -85,34 +88,28 @@
       </sizepolicy>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <property name="spacing">
-       <number>9</number>
+      <property name="leftMargin">
+       <number>6</number>
       </property>
-      <property name="margin">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
        <widget class="QLabel" name="label_action_name_4">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>70</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>77</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="text">
-         <string>Button CSS Style Sheet</string>
+         <string>Button stylesheet:</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -121,18 +118,30 @@
       </item>
       <item>
        <widget class="QPlainTextEdit" name="css">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="font">
          <font>
           <family>Bitstream Vera Sans Mono</family>
           <pointsize>8</pointsize>
          </font>
         </property>
+        <property name="tabChangesFocus">
+         <bool>false</bool>
+        </property>
+        <property name="backgroundVisible">
+         <bool>false</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QWidget" name="widget_3" native="true">
         <property name="enabled">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
@@ -140,46 +149,47 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <item>
           <widget class="QPushButton" name="pushButton_chose_icon">
+         <property name="geometry">
+          <rect>
+           <x>9</x>
+           <y>21</y>
+           <width>80</width>
+           <height>27</height>
+          </rect>
+         </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>80</width>
-             <height>16777215</height>
-            </size>
            </property>
            <property name="text">
             <string>Choose Icon</string>
            </property>
           </widget>
-         </item>
-         <item>
           <widget class="QPushButton" name="pushButton_color">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="geometry">
+          <rect>
+           <x>9</x>
+           <y>66</y>
+           <width>80</width>
+           <height>27</height>
+          </rect>
+         </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>80</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="text">
             <string>Color</string>
            </property>
           </widget>
-         </item>
-        </layout>
        </widget>
       </item>
      </layout>
@@ -201,7 +211,7 @@
    <item>
     <widget class="QWidget" name="optionsArea" native="true">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -266,13 +276,13 @@
          <item row="1" column="0">
           <widget class="QLabel" name="label_action_name_6">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Number of columns or rows</string>
+            <string>Number of columns or rows:</string>
            </property>
           </widget>
          </item>
@@ -341,7 +351,7 @@
         <property name="title">
          <string>Button Appearance</string>
         </property>
-        <layout class="QFormLayout" name="formLayout">
+        <layout class="QGridLayout" name="gridLayout_3">
          <item row="0" column="0">
           <widget class="QLabel" name="label_action_name_5">
            <property name="text">
@@ -383,10 +393,13 @@
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Push Down Button</string>
+            <string>Push down button</string>
            </property>
            <property name="checkable">
             <bool>true</bool>
+           </property>
+           <property name="checked">
+            <bool>false</bool>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_4">
             <property name="spacing">
@@ -398,13 +411,13 @@
             <item>
              <widget class="QLabel" name="label_2">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Command on Button Up:</string>
+               <string>Command on button up:</string>
               </property>
               <property name="scaledContents">
                <bool>true</bool>
@@ -417,7 +430,7 @@
             <item>
              <widget class="QLineEdit" name="lineEdit_action_button_up">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -454,7 +467,7 @@
          <bool>false</bool>
         </property>
         <property name="title">
-         <string>use custom layout</string>
+         <string>Use custom layout</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -462,12 +475,15 @@
         <property name="checked">
          <bool>false</bool>
         </property>
-        <layout class="QGridLayout" name="gridLayout_2">
+        <layout class="QFormLayout" name="formLayout">
+         <property name="horizontalSpacing">
+          <number>0</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>0</number>
+         </property>
          <property name="margin">
           <number>5</number>
-         </property>
-         <property name="spacing">
-          <number>0</number>
          </property>
          <item row="0" column="0">
           <widget class="QLabel" name="label_action_name_7">
