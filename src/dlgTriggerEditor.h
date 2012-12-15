@@ -77,6 +77,9 @@ public:
     void                        focusInEvent( QFocusEvent * );
     void                        focusOutEvent( QFocusEvent * );
     void                        enterEvent( QEvent * pE );
+    void                        children_icon_triggers( QTreeWidgetItem * pWidgetItemParent );
+    void                        children_icon_alias( QTreeWidgetItem * pWidgetItemParent );
+    void                        children_icon_key( QTreeWidgetItem * pWidgetItemParent );
     void                        doCleanReset();
     QToolBar *                  toolBar;
     QToolBar *                  toolBar2;
