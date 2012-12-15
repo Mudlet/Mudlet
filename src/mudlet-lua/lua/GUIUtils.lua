@@ -1086,3 +1086,15 @@ else
 
 end
 
+do
+	local oldreplace = replace
+	function replace(text, keep_color)
+		local text = text or ""
+
+		if keep_color then
+			setBgColor(getBgColor())
+			setFgColor(getFgColor())
+		end
+		oldreplace(text)
+	end
+end
