@@ -540,68 +540,76 @@ end
 
 
 do
-local oldsetExit = setExit
+	local oldsetExit = setExit
 
-local exitmap = {
-  n = 1,
-  ne = 2,
-  nw = 3,
-  e = 4,
-  w = 5,
-  s = 6,
-  se = 7,
-  sw = 8,
-  u = 9,
-  d = 10,
-  ["in"] = 11,
-  out = 12
-}
+	local exitmap = {
+	  n = 1,
+	  ne = 2,
+	  nw = 3,
+	  e = 4,
+	  w = 5,
+	  s = 6,
+	  se = 7,
+	  sw = 8,
+	  u = 9,
+	  d = 10,
+	  ["in"] = 11,
+	  out = 12
+	}
 
-function setExit(from, to, direction)
-  if type(direction) == "string" and not exitmap[direction] then return false end
+	function setExit(from, to, direction)
+	  if type(direction) == "string" and not exitmap[direction] then return false end
 
-  return oldsetExit(from, to, type(direction) == "string" and exitmap[direction] or direction)
-end
+	  return oldsetExit(from, to, type(direction) == "string" and exitmap[direction] or direction)
+	end
 end
 
 do
-local oldlockExit = lockExit
-local oldhasExitLock = hasExitLock
+	local oldlockExit = lockExit
+	local oldhasExitLock = hasExitLock
 
-local exitmap = {
-  n = 1,
-  north = 1,
-  ne = 2,
-  northeast = 2,
-  nw = 3,
-  northwest = 3,
-  e = 4,
-  east = 4,
-  w = 5,
-  west = 5,
-  s = 6,
-  south = 6,
-  se = 7,
-  southeast = 7,
-  sw = 8,
-  southwest = 8,
-  u = 9,
-  up = 9,
-  d = 10,
-  down = 10,
-  ["in"] = 11,
-  out = 12
-}
+	local exitmap = {
+	  n = 1,
+	  north = 1,
+	  ne = 2,
+	  northeast = 2,
+	  nw = 3,
+	  northwest = 3,
+	  e = 4,
+	  east = 4,
+	  w = 5,
+	  west = 5,
+	  s = 6,
+	  south = 6,
+	  se = 7,
+	  southeast = 7,
+	  sw = 8,
+	  southwest = 8,
+	  u = 9,
+	  up = 9,
+	  d = 10,
+	  down = 10,
+	  ["in"] = 11,
+	  out = 12
+	}
 
-function lockExit(from, direction, status)
-  if type(direction) == "string" and not exitmap[direction] then return false end
+	function lockExit(from, direction, status)
+	  if type(direction) == "string" and not exitmap[direction] then return false end
 
-  return oldlockExit(from, type(direction) == "string" and exitmap[direction] or direction, status)
+	  return oldlockExit(from, type(direction) == "string" and exitmap[direction] or direction, status)
+	end
+
+	function hasExitLock(from, direction)
+	  if type(direction) == "string" and not exitmap[direction] then return false end
+
+	  return oldhasExitLock(from, type(direction) == "string" and exitmap[direction] or direction)
+	end
 end
 
-function hasExitLock(from, direction)
-  if type(direction) == "string" and not exitmap[direction] then return false end
-
-  return oldhasExitLock(from, type(direction) == "string" and exitmap[direction] or direction)
-end
+function print(...)
+  local t, echo, tostring = {...}, echo, tostring
+  for i = 1, #t do
+    echo((tostring(t[i]) or '?').."    ")
+  end
+  echo("\n")
 end
