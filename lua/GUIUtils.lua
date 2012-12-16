@@ -900,8 +900,8 @@ if rex then
 						moveCursor(window or "main", getColumnNumber() + string.len(v), getLineNumber())
 					end
 				else
-					if win then setUnderline(win, true) else setUnderline(true) end
-					if win then out(win, v, cmd, hint, true) else out(v, cmd, hint, true) end
+					-- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
+					if win then out(win, v, cmd, hint, fmt) else out(v, cmd, hint, fmt) end
 				end
 			end
 		end
