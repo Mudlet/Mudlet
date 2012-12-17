@@ -858,7 +858,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             {
                 int direction = pR->exitStubs[k];
                 QVector3D uDirection = unitVectors[direction];
-                p.drawLine((int)pR->x*tx+_rx, (int)pR->y*ty*-1+_ry,(int)pR->x*tx+_rx+(int)uDirection.x()*tx, (int)pR->y*ty*-1+_ry+uDirection.y()*ty);
+                p.drawLine(rx+rSize*(int)uDirection.x()/2, ry+rSize*(int)uDirection.y(),rx+(int)uDirection.x()*(rSize*3/4*tx), ry+uDirection.y()*(rSize*3/4*ty));
             }
 
             QPen __pen;
@@ -1267,6 +1267,33 @@ void T2DMap::paintEvent( QPaintEvent * e )
         pen.setCapStyle( Qt::RoundCap );
         pen.setJoinStyle( Qt::RoundJoin );
         p.setPen( pen );
+
+        //#FIXME
+        //redo exit stubs here since the room will draw over up/down stubs -- its repetitive though
+        QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
+        for( int k=0; k<pR->exitStubs.size(); k++ )
+        {
+            int direction = pR->exitStubs[k];
+            QVector3D uDirection = unitVectors[direction];
+            if (direction > 8)
+            {
+                float rx = pR->x*tx+_rx;
+                float ry = pR->y*-1*ty+_ry;
+                QPolygonF _poly;
+                QPointF _pt;
+                _pt = QPointF( rx, ry+(ty*rSize)*uDirection.z()/20 );
+                _poly.append( _pt );
+                _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)*uDirection.z()/3.1);
+                _poly.append(_pt);
+                _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)*uDirection.z()/3.1 );
+                _poly.append( _pt );
+                QBrush brush = p.brush();
+                brush.setColor( QColor(0, 0 ,0) );
+                brush.setStyle( Qt::NoBrush );
+                p.setBrush( brush );
+                p.drawPolygon(_poly);
+           }
+        }
 
         if( pR->up > 0 )
         {
