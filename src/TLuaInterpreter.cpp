@@ -3877,6 +3877,23 @@ int TLuaInterpreter::getAreaTable( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::getAreaTableSwap( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QMapIterator<int, QString> it( pHost->mpMap->areaNamesMap );
+    lua_newtable(L);
+    while( it.hasNext() )
+    {
+        it.next();
+        int roomID = it.key();
+        QString name = it.value();
+        lua_pushnumber( L, roomID );
+        lua_pushstring( L, name.toLatin1().data() );
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
 int TLuaInterpreter::getAreaRooms( lua_State *L )
 {
     int area;
@@ -9533,6 +9550,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "searchRoom", TLuaInterpreter::searchRoom );
     lua_register( pGlobalLua, "clearCmdLine", TLuaInterpreter::clearCmdLine );
     lua_register( pGlobalLua, "getAreaTable", TLuaInterpreter::getAreaTable );
+    lua_register( pGlobalLua, "getAreaTableSwap", TLuaInterpreter::getAreaTableSwap );
     lua_register( pGlobalLua, "getAreaRooms", TLuaInterpreter::getAreaRooms );
     lua_register( pGlobalLua, "getPath", TLuaInterpreter::getPath );
     lua_register( pGlobalLua, "centerview", TLuaInterpreter::centerview );

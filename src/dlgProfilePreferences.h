@@ -88,6 +88,10 @@ public slots:
     void setBgColor2();
     void resetColors();
     void downloadMap();
+    void loadMap();
+    void saveMap();
+    void copyMap();
+    void hideActionLabel();
     void slot_save_and_exit();
 
 private:

@@ -1755,13 +1755,17 @@ bool TConsole::loadMap(QString location)
         mudlet::self()->slot_mapper();
     }
     if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
-    mpHost->mpMap->restore(location);
-    mpHost->mpMap->init( mpHost );
-    mpHost->mpMap->mpMapper->mp2dMap->init();
-    mpHost->mpMap->mpMapper->show();
-    // previous selections stay, so we need to clear it
-    //mpHost->mpMap->mpMapper->mp2dMap->deselect();
-    return true;
+
+    if ( mpHost->mpMap->restore(location) ) {
+        mpHost->mpMap->init( mpHost );
+        mpHost->mpMap->mpMapper->mp2dMap->init();
+        mpHost->mpMap->mpMapper->show();
+        // previous selections stay, so we need to clear it
+        //mpHost->mpMap->mpMapper->mp2dMap->deselect();
+        return true;
+    }
+
+    return false;
 }
 
 bool TConsole::deleteLine( int y )

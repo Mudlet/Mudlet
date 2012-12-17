@@ -97,7 +97,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>25</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -266,7 +266,7 @@
     <string>Package manager</string>
    </property>
    <property name="shortcut">
-    <string>Alt+P</string>
+    <string>Alt+O</string>
    </property>
   </action>
   <action name="actionTest1">

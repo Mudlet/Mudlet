@@ -75,11 +75,12 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         }
     }
 
-    if( pH->mUrl == "achaea.com" || pH->mUrl == "aetolia.com" || pH->mUrl == "imperian.com" || pH->mUrl == "midkemiaonline.com" || pH->mUrl == "lusternia.com" )
+    if( pH->mUrl.toLower().contains("achaea.com") || pH->mUrl.toLower().contains("aetolia.com") || pH->mUrl.toLower().contains("imperian.com") || pH->mUrl.toLower().contains("midkemiaonline.com") || pH->mUrl.toLower().contains("lusternia.com") )
     {
         downloadMapOptions->setVisible( true );
         connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
-    }
+    } else
+        downloadMapOptions->setVisible( false );
 
 
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
@@ -404,6 +405,29 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         //encoding->setCurrentIndex( pHost->mEncoding );
         mFORCE_SAVE_ON_EXIT->setChecked( pHost->mFORCE_SAVE_ON_EXIT );
         mEnableGMCP->setChecked( pHost->mEnableGMCP );
+
+        // load profiles into mappers "copy map to profile" combobox
+        // this feature should worm seamlessly both for online and offline profiles
+        QStringList mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Time); // sort by profile "hotness"
+        for( int i=0; i<mProfileList.size(); i++ )
+        {
+            QString s = mProfileList[i];
+            if( s.size() < 1 )
+                continue;
+            if( (mProfileList[i] == ".") || (mProfileList[i] == ".." ) )
+                continue;
+
+            mapper_profiles_combobox->addItem( mProfileList[i] );
+        }
+
+        connect(copy_map_profile, SIGNAL(clicked()), this, SLOT(copyMap()));
+
+        // label to show on sucessful map file action
+        map_file_action->hide();
+
+        connect(load_map_button, SIGNAL(clicked()), this, SLOT(loadMap()));
+        connect(save_map_button, SIGNAL(clicked()), this, SLOT(saveMap()));
+
     }
 }
 
@@ -1302,6 +1326,133 @@ void dlgProfilePreferences::downloadMap()
     if( ! mpHost->mpMap->mpMapper ) mudlet::self()->slot_mapper();
 
     mpHost->mpMap->mpMapper->downloadMap();
+}
+
+#include <QFileDialog>
+
+void dlgProfilePreferences::loadMap()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) return;
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet map"),
+                                                    QDir::homePath(), "Mudlet map (*.dat);;Any file (*)");
+    if( fileName.isEmpty() ) return;
+
+    map_file_action->show();
+    map_file_action->setText("Loading map...");
+
+    if ( mpHost->mpConsole->loadMap(fileName) ) {
+        map_file_action->setText("Loaded map from "+fileName);
+        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    } else {
+        map_file_action->setText("Couldn't load map from "+fileName);
+        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    }
+}
+
+void dlgProfilePreferences::saveMap()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) return;
+
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Mudlet map"),
+                                                    QDir::homePath(), "Mudlet map (*.dat)");
+    if( fileName.isEmpty() ) return;
+
+    if ( ! fileName.endsWith(".dat", Qt::CaseInsensitive) )
+        fileName.append(".dat");
+
+    map_file_action->show();
+    map_file_action->setText("Saving map...");
+
+    if ( mpHost->mpConsole->saveMap(fileName) ) {
+        map_file_action->setText("Saved map to "+fileName);
+        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    } else {
+        map_file_action->setText("Couldn't save map to "+fileName);
+        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    }
+}
+
+void dlgProfilePreferences::hideActionLabel()
+{
+    map_file_action->hide();
+}
+
+void dlgProfilePreferences::copyMap()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) return;
+
+    QString toProfile = mapper_profiles_combobox->itemText(mapper_profiles_combobox->currentIndex());
+
+    // at first, save our current map
+    map_file_action->show();
+    map_file_action->setText("Copying map...");
+    if ( ! mpHost->mpConsole->saveMap("") ) {
+        map_file_action->setText("Couldn't copy the map - saving it failed.");
+        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+        return;
+    }
+
+    // then copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
+    QDir dir_map;
+    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+toProfile+"/map";
+    if( ! dir_map.exists( directory_map ) )
+    {
+        dir_map.mkpath( directory_map );
+    }
+
+    // work out which map is latest
+    QFile latestMap;
+    QString toMapFolder(QDir::homePath()+"/.config/mudlet/profiles/"+pHost->getName()+"/map");
+    QStringList mProfileList = QDir(toMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    for( int i=0; i<mProfileList.size(); i++ )
+    {
+        QString s = mProfileList[i];
+        if( s.size() < 1 )
+            continue;
+
+        latestMap.setFileName(toMapFolder+"/"+mProfileList[i]);
+        break;
+    }
+
+    if ( latestMap.fileName() == "" ) {
+        map_file_action->setText("Couldn't copy the map - failed to work out which map file did we just save the map as.");
+        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+        return;
+    }
+
+    QFileInfo lm(latestMap.fileName());
+
+    if ( !latestMap.copy(directory_map+"/"+lm.fileName()) ) {
+        map_file_action->setText("Couldn't copy the map - couldn't copy the offline map file over.");
+        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+        return;
+    }
+    map_file_action->setText("Map copied successfully."); // don't mention offline here, would be a bit confusing
+
+    // then force that profile to reload it's latest map - this covers the online case
+    QMap<Host *, TConsole *> activeSessions = mudlet::self()->mConsoleMap;
+    QMapIterator<Host *, TConsole *> it2(activeSessions);
+    while (it2.hasNext()){
+        it2.next();
+        Host * host = it2.key();
+        if (host->mHostName != toProfile)
+            continue;
+
+        if ( host->mpConsole->loadMap(directory_map+"/"+lm.fileName()) ) {
+            map_file_action->setText("Map copied and reloaded on "+toProfile+".");
+            QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+        } else {
+            map_file_action->setText("Map copied, but couldn't be reloaded on "+toProfile+".");
+            QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+        }
+
+        return;
+    }
+
 }
 
 #include "dlgIRC.h"

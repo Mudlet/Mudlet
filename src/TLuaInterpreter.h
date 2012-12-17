@@ -179,6 +179,7 @@ public:
     static int tempExactMatchTrigger( lua_State * );
     static int centerview( lua_State *L );
     static int getAreaTable( lua_State *L );
+    static int getAreaTableSwap( lua_State *L );
     static int getPath( lua_State * );
     static int getAreaRooms( lua_State * );
     static int clearCmdLine( lua_State * );
