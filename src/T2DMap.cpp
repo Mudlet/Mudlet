@@ -898,7 +898,52 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 QVector3D p2( rx, ry, rz );
                 if( ! areaExit )
                 {
-                   p.drawLine( (int)p1.x(), (int)p1.y(), (int)p2.x(), (int)p2.y() );
+                    // one way exit or 2 way exit?
+                    if( pE->hasExit( pR->id ) )
+                    {
+                        p.drawLine( (int)p1.x(), (int)p1.y(), (int)p2.x(), (int)p2.y() );
+                    }
+                    else
+                    {
+                        // one way exit draw arrow
+
+                        QLineF l0 = QLineF( p2.x(), p2.y(), p1.x(), p1.y() );
+                        QLineF k0 = l0;
+                        k0.setLength( (l0.length()-wegBreite*5)*0.5 );
+                        qreal dx = k0.dx(); qreal dy = k0.dy();
+                        QPen _tp = p.pen();
+                        QPen _tp2 = _tp;
+                        _tp2.setStyle(Qt::DotLine);
+                        p.setPen(_tp2);
+                        p.drawLine( l0 );
+                        p.setPen(_tp);
+                        l0.setLength(wegBreite*5);
+                        QPointF _p1 = l0.p2();
+                        QPointF _p2 = l0.p1();
+                        QLineF l1 = QLineF( l0 );
+                        qreal w1 = l1.angle()-90.0;
+                        QLineF l2;
+                        l2.setP1(_p2);
+                        l2.setAngle(w1);
+                        l2.setLength(wegBreite*2);
+                        QPointF _p3 = l2.p2();
+                        l2.setAngle( l2.angle()+180.0 );
+                        QPointF _p4 = l2.p2();
+                        QPolygonF _poly;
+                        _poly.append( _p1 );
+                        _poly.append( _p3 );
+                        _poly.append( _p4 );
+
+                        QBrush brush = p.brush();
+                        brush.setColor( QColor(255,100,100) );
+                        brush.setStyle( Qt::SolidPattern );
+                        QPen arrowPen = p.pen();
+                        arrowPen.setCosmetic( mMapperUseAntiAlias );
+                        arrowPen.setStyle(Qt::SolidLine);
+                        p.setPen( arrowPen );
+                        p.setBrush( brush );
+                        p.drawPolygon(_poly.translated(dx,dy));
+                    }
                 }
                 else
                 {
@@ -1268,8 +1313,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         pen.setJoinStyle( Qt::RoundJoin );
         p.setPen( pen );
 
-        //#FIXME
-        //redo exit stubs here since the room will draw over up/down stubs -- its repetitive though
+        //FIXME: redo exit stubs here since the room will draw over up/down stubs -- its repetitive though
         QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
         for( int k=0; k<pR->exitStubs.size(); k++ )
         {
