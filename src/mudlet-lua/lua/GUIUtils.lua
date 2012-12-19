@@ -565,7 +565,7 @@ end
 --- @usage This will replace all occurrences of John with the word Doe.
 ---   <pre>
 ---   replaceAll("John", "Doe")
----   
+---
 ---   -- also handles recursive matches:
 ---   replaceAll("you", "you and me")
 ---   </pre>
@@ -638,13 +638,21 @@ end
 --- @usage Set background color to magenta.
 ---   <pre>
 ---   bg("magenta")
+---
+---   bg("my miniconsole", "blue")
 ---   </pre>
 ---
 --- @see fg
 --- @see showColors
-function bg(colorName)
+function bg(console, colorName)
+	local colorName = colorName or console
 	assert(color_table[colorName], "bg: no such colour name")
-	setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+
+	if console == colorName then
+		setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	else
+		setBgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	end
 end
 
 
@@ -658,9 +666,15 @@ end
 ---
 --- @see bg
 --- @see showColors
-function fg(colorName)
+function fg(console, colorName)
+	local colorName = colorName or console
 	assert(color_table[colorName], "fg: no such colour name")
-	setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+
+	if console == colorName then
+		setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	else
+		setFgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+	end
 end
 
 
@@ -755,28 +769,31 @@ if rex then
 				rex.new[[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
 				},
 			Decimal = {
-				[[(\x5c?<[0-9,:]+>)|(<r>)]],
+				-- [[(\x5c?<[0-9,:]+>)|(<r>)]],
+				[[(<[0-9,:]+>)|(<r>)]],
 				rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
 				},
 			Color = {
-				[[(\x5c?<[a-zA-Z_,:]+>)]],
+				[[(<[a-zA-Z_,:]+>)]],
 				rex.new[[<([a-zA-Z_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z_]+))?>]],
 				},
 			Ansi = {
-				[[(\x5c?<[0-9,:]+>)]],
+				[[(<[0-9,:]+>)]],
 				rex.new[[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
 				},
 			},
 		Process = function(str, style)
 			local t = {}
+			local tonumber = tonumber
+
 			for s, c, r in rex.split(str, _Echos.Patterns[style][1]) do
 				if c and (c:byte(1) == 92) then
 					c = c:sub(2)
 					if s then s = s .. c else s = c end
 					c = nil
 				end
-				if s then table.insert(t, s) end
-				if r then table.insert(t, "\27reset") end
+				if s then t[#t+1] = s end
+				if r then t[#t+1] = "\27reset" end
 				if c then
 					if style == 'Hex' or style == 'Decimal' then
 						local fr, fg, fb, br, bg, bb = _Echos.Patterns[style][2]:match(c)
@@ -787,18 +804,18 @@ if rex then
 						end
 						if fr and fg and fb then color.fg = { fr, fg, fb } end
 						if br and bg and bb then color.bg = { br, bg, bb } end
-						table.insert(t, color)
+						t[#t+1] = color
 					elseif style == 'Color' then
-						if c == "<reset>" then table.insert(t, "\27reset")
+						if c == "<reset>" then t[#t+1] = "\27reset"
 						else
 							local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
 							local color = {}
 							if fcolor and color_table[fcolor] then color.fg = color_table[fcolor] end
 							if bcolor and color_table[bcolor] then color.bg = color_table[bcolor] end
 							if color.fg or color.bg then
-								table.insert(t, color)
+								t[#t+1] = color
 							else
-								table.insert(t, c)
+								t[#t+1] = c
 							end
 						end
 					end
@@ -827,7 +844,7 @@ if rex then
 		local out, reset
 		local args = {...}
 		local n = #args
-		
+
 		if func == 'echoLink' then
 			if n < 3 then
 				error'Insufficient arguments, usage: ([window, ] string, command, hint)'
@@ -847,11 +864,11 @@ if rex then
 				str = args[1]
 			end
 		end
-		
+
 		out = function(...)
 			_G[func](...)
 		end
-		
+
 		if win then
 			reset = function()
 				resetFormat(win)
@@ -866,7 +883,7 @@ if rex then
 
 		deselect()
 		reset()
-		
+
 		for _, v in ipairs(t) do
 			if type(v) == 'table' then
 				if v.fg then
@@ -882,9 +899,12 @@ if rex then
 			else
 				if func == 'echo' or func == 'insertText' then
 					if win then out(win, v) else out(v) end
+					if func == 'insertText' then
+						moveCursor(window or "main", getColumnNumber() + string.len(v), getLineNumber())
+					end
 				else
-					if win then setUnderline(win, true) else setUnderline(true) end
-					if win then out(win, v, cmd, hint, true) else out(v, cmd, hint, true) end
+					-- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
+					if win then out(win, v, cmd, hint, fmt) else out(v, cmd, hint, fmt) end
 				end
 			end
 		end
@@ -1069,3 +1089,15 @@ else
 
 end
 
+do
+	local oldreplace = replace
+	function replace(text, keep_color)
+		local text = text or ""
+
+		if keep_color then
+			setBgColor(getBgColor())
+			setFgColor(getFgColor())
+		end
+		oldreplace(text)
+	end
+end

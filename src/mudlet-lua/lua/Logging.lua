@@ -282,7 +282,7 @@ end
 function logging:format_event(event, formatter)
 	local format = formatter or logging._formatters.default_file
 
-	local pattern = "(\${(.-)})"
+	local pattern = [[(\${(.-)})]]
 	local output = format:gsub(pattern,
 		function(complete, chunk)
 			local compound = {chunk:match("([^:]+):([^:]+):(.+)")}

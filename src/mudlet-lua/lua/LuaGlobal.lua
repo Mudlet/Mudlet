@@ -7,7 +7,9 @@ if package.loaded["rex_pcre"] then rex = require "rex_pcre" end
 if package.loaded["lpeg"] then lpeg = require "lpeg" end
 if package.loaded["zip"] then zip = require "zip" end
 if package.loaded["lfs"] then lfs = require "lfs" end
-if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
+
+-- TODO this is required by DB.lua, so we might load it all at one place
+--if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
 
 json_to_value = yajl.to_value
 gmcp = {}
@@ -20,10 +22,18 @@ function __gmcp_merge_gmcp_sub_tables( a, key )
 	a.__needMerge = nil
 end
 
-function unzip( what, dest )   
-	local z = zip.open( what )
+
+function unzip( what, dest )
+	cecho("\n<blue>unpacking package:<"..what.."< to <"..dest..">\n")
+	local z, err = zip.open( what )
+
+	if not z then
+		cecho("\nerror unpacking: "..err)
+		return
+	end
+
 	local createdDirs = {}
-	for file in z:files() do	
+	for file in z:files() do
 		local _f, err = z:open( file.filename )
 		local _data = _f:read("*a")
 		local _path = dest .. file.filename
@@ -35,24 +45,27 @@ function unzip( what, dest )
 				if not table.contains( createdDirs, created ) then
 					table.insert( createdDirs, created );
 					lfs.mkdir( created );
+					cecho("<red>--> creating dir:" .. created .. "\n");
 				end
 			elseif file.uncompressed_size == 0 then
 				if not table.contains( createdDirs, created ) then
+					cecho("<red>--> creating dir:" .. file.filename .. "\n")
 					table.insert( createdDirs, created );
 					lfs.mkdir( file.filename )
 				end
 			end
 		end
-		local _path = dest .. file.filename		
+		local _path = dest .. file.filename
   		if file.uncompressed_size > 0 then
 			local out = io.open( _path, "wb" )
 			if out then
+				cecho("<green>unpacking file:".._path.."\n")
 				out:write( _data )
 				out:close()
 			else
-				cecho("<red>ERROR: Package unzip: Can't write file:".._path.."\n")
+				echo("ERROR: can't write file:".._path.."\n")
 			end
-		end		
+		end
 		_f:close();
 	end
 	z:close()
@@ -93,9 +106,6 @@ local packages = {
 	"Other.lua",
 	"GMCP.lua",
 	}
-
---fix locale problems
-os.setlocale("C", "numeric")
 
 for _, package in ipairs(packages) do
 	local result = pcall(dofile, "./mudlet-lua/lua/" .. package) or echo("Error attempting to load file: " .. package .. "\n")

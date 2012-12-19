@@ -1588,8 +1588,6 @@ function setItalics(windowName, bool) end
 --- These parameters are then used in the callback. Thus you can associate data with the label/button.
 --- Check the forum for more information on how to use this. <b>FIXME</b>
 function setLabelClickCallback(labelName, luaFunctionName, ...) end
-function setLabelOnEnter(labelName, luaFunctionName, ...) end
-function setLabelOnLeave(labelName, luaFunctionName, ...) end
 
 
 
