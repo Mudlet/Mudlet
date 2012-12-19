@@ -111,6 +111,7 @@ public:
     QTreeWidget mMultiSelectionListWidget;
     bool mSizeLabel;
     bool gridMapSizeChange;
+    bool isCenterViewCall;
 
 signals:
 

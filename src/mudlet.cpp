@@ -97,13 +97,13 @@ mudlet::mudlet()
 , mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
 , mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
 #ifdef Q_OS_LINUX,
-    , version( "Mudlet 2.0-test5 12-12-2012" )
+    , version( "Mudlet 2.0-test7 12-12-2012" )
 #endif
 #ifdef Q_OS_MAC
-    , version( "Mudlet 2.0-test5 12-12-2012" )
+    , version( "Mudlet 2.0-test7 12-12-2012" )
 #endif
 #ifdef Q_OS_WIN
-    , version( "Mudlet 2.0-test5 12-12-2012" )
+    , version( "Mudlet 2.0-test7 12-12-2012" )
 #endif
 {
     setupUi(this);

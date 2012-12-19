@@ -67,7 +67,7 @@ T2DMap::T2DMap()
     mMultiSelectionListWidget.setColumnWidth(0,90);
     mSizeLabel = false;
     gridMapSizeChange = true;
-
+    isCenterViewCall = false;
     //setFocusPolicy( Qt::ClickFocus);
 }
 
@@ -111,12 +111,13 @@ T2DMap::T2DMap(QWidget * parent)
     mMultiSelectionListWidget.setColumnWidth(0,90);
     mSizeLabel = false;
     gridMapSizeChange = true;
+    isCenterViewCall = false;
     //setFocusPolicy( Qt::ClickFocus);
 }
 
 void T2DMap::init()
 {
-
+    isCenterViewCall = false;
     QTime _time; _time.start();
     //setFocusPolicy( Qt::ClickFocus);
 
@@ -477,6 +478,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     int px,py;
     QList<int> exitList;
+    QList<int> oneWayExits;
     if( ! mpMap->rooms.contains( mpMap->mRoomId ) )
     {
         p.drawText(_w/2,_h/2,"No map or no valid position.");
@@ -674,66 +676,216 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
             else
             {
-                if( ! (0<pR->min_x*tx+_rx || 0<pR->max_x*tx+_rx) && (_w>pR->min_x*tx+_rx || _w>pR->max_x*tx+_rx) ) continue;
-                if( ! (0<pR->min_y*ty+_ry || 0<pR->max_y*ty+_ry) && (_w>pR->min_y*ty+_ry || _w>pR->max_y*ty+_ry) ) continue;
+                float miny = pR->min_y*-1*ty+_ry;
+                float maxy = pR->max_y*-1*ty+_ry;
+                float minx = pR->min_x*tx+_rx;
+                float maxx = pR->max_x*tx+_rx;
+
+                if( !( (minx>0 || maxx>0) && (_w>minx || _w>maxx) ) ) continue;
+                if( !( (miny>0 || maxy>0) && (_h>miny || _h>maxy) ) ) continue;
             }
 
             pR->rendered = true;
 
             exitList.clear();
+            oneWayExits.clear();
             if( pR->customLines.size() > 0 )
             {
                 if( ! pR->customLines.contains("N") )
                 {
                     exitList.push_back( pR->north );
+                    if( mpMap->rooms.contains(pR->north) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->north];
+                        if( pER->south != pR->id )
+                        {
+                            oneWayExits.push_back( pR->north );
+                        }
+                    }
                 }
                 if( !pR->customLines.contains("NW") )
                 {
                     exitList.push_back( pR->northwest );
+                    if( mpMap->rooms.contains(pR->northwest) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->northwest];
+                        if( pER->southeast != pR->id )
+                        {
+                            oneWayExits.push_back( pR->northwest );
+                        }
+                    }
                 }
                 if( !pR->customLines.contains("E") )
                 {
                     exitList.push_back( pR->east );
+                    if( mpMap->rooms.contains(pR->east) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->east];
+                        if( pER->west != pR->id )
+                        {
+                            oneWayExits.push_back( pR->east );
+                        }
+                    }
                 }
                 if( !pR->customLines.contains("SE") )
                 {
                     exitList.push_back( pR->southeast );
+                    if( mpMap->rooms.contains(pR->southeast) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->southeast];
+                        if( pER->northwest != pR->id )
+                        {
+                            oneWayExits.push_back( pR->southeast );
+                        }
+                    }
                 }
                 if( !pR->customLines.contains("S") )
                 {
                     exitList.push_back( pR->south );
+                    if( mpMap->rooms.contains(pR->south) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->south];
+                        if( pER->north != pR->id )
+                        {
+                            oneWayExits.push_back( pR->south );
+                        }
+                    }
                 }
                 if( !pR->customLines.contains("SW") )
                 {
                     exitList.push_back( pR->southwest );
+                    if( mpMap->rooms.contains(pR->southwest) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->southwest];
+                        if( pER->northeast != pR->id )
+                        {
+                            oneWayExits.push_back( pR->southwest );
+                        }
+                    }
                 }
                 if( !pR->customLines.contains("W") )
                 {
                     exitList.push_back( pR->west );
+                    if( mpMap->rooms.contains(pR->west) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->west];
+                        if( pER->east != pR->id )
+                        {
+                            oneWayExits.push_back( pR->west );
+                        }
+                    }
                 }
                 if( !pR->customLines.contains("NE") )
                 {
                     exitList.push_back( pR->northeast );
+                    if( mpMap->rooms.contains(pR->northeast) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->northeast];
+                        if( pER->southwest != pR->id )
+                        {
+                            oneWayExits.push_back( pR->northeast );
+                        }
+                    }
                 }
             }
             else
             {
                 if( pR->north > 0 )
+                {
                     exitList.push_back( pR->north );
+                    if( mpMap->rooms.contains(pR->north) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->north];
+                        if( pER->south != pR->id )
+                        {
+                            oneWayExits.push_back( pR->north );
+                        }
+                    }
+                }
                 if( pR->northwest > 0 )
+                {
                     exitList.push_back( pR->northwest );
+                    if( mpMap->rooms.contains(pR->northwest) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->northwest];
+                        if( pER->southeast != pR->id )
+                        {
+                            oneWayExits.push_back( pR->northwest );
+                        }
+                    }
+                }
                 if( pR->east > 0 )
+                {
                     exitList.push_back( pR->east );
+                    if( mpMap->rooms.contains(pR->east) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->east];
+                        if( pER->west != pR->id )
+                        {
+                            oneWayExits.push_back( pR->east );
+                        }
+                    }
+                }
                 if( pR->southeast > 0 )
+                {
                     exitList.push_back( pR->southeast );
+                    if( mpMap->rooms.contains(pR->southeast) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->southeast];
+                        if( pER->northwest != pR->id )
+                        {
+                            oneWayExits.push_back( pR->southeast );
+                        }
+                    }
+                }
                 if( pR->south > 0 )
+                {
                     exitList.push_back( pR->south );
+                    if( mpMap->rooms.contains(pR->south) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->south];
+                        if( pER->north != pR->id )
+                        {
+                            oneWayExits.push_back( pR->south );
+                        }
+                    }
+                }
                 if( pR->southwest > 0 )
+                {
                     exitList.push_back( pR->southwest );
+                    if( mpMap->rooms.contains(pR->southwest) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->southwest];
+                        if( pER->northeast != pR->id )
+                        {
+                            oneWayExits.push_back( pR->southwest );
+                        }
+                    }
+                }
                 if( pR->west > 0 )
+                {
                     exitList.push_back( pR->west );
+                    if( mpMap->rooms.contains(pR->west) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->west];
+                        if( pER->east != pR->id )
+                        {
+                            oneWayExits.push_back( pR->west );
+                        }
+                    }
+                }
                 if( pR->northeast > 0 )
+                {
                     exitList.push_back( pR->northeast );
+                    if( mpMap->rooms.contains(pR->northeast) )
+                    {
+                        TRoom * pER = mpMap->rooms[pR->northeast];
+                        if( pER->southwest != pR->id )
+                        {
+                            oneWayExits.push_back( pR->northeast );
+                        }
+                    }
+                }
             }
 
             if( pR->customLines.size() > 0 )
@@ -870,10 +1022,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 bool areaExit;
 
                 TRoom * pE = mpMap->rooms[rID];
-//                if( ! mpMap->rooms.contains( exitList[k] ) )
-//                {
-//                    continue;
-//                }
+
                 if( pE->area != mAID )
                 {
                     areaExit = true;
@@ -883,23 +1032,13 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 float ex = pE->x*tx+_rx;
                 float ey = pE->y*ty*-1+_ry;
                 int ez = pE->z;
-//                if( ez != zEbene || e != ez ) continue;
-
-                //p.setPen(QPen( mpHost->mFgColor_2) );
-//                pen = p.pen();
-//                pen.setColor( mpHost->mFgColor_2 );
-//                pen.setWidthF( wegBreite );
-//                pen.setJoinStyle( Qt::RoundJoin );
-//                pen.setCapStyle( Qt::RoundCap );
-//                pen.setCosmetic( mMapperUseAntiAlias );
-//                p.setPen( pen );
 
                 QVector3D p1( ex, ey, ez );
                 QVector3D p2( rx, ry, rz );
                 if( ! areaExit )
                 {
                     // one way exit or 2 way exit?
-                    if( pE->hasExit( pR->id ) )
+                    if( ! oneWayExits.contains( rID ) )
                     {
                         p.drawLine( (int)p1.x(), (int)p1.y(), (int)p2.x(), (int)p2.y() );
                     }
@@ -1513,34 +1652,28 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     if( mShowInfo )
     {
-        p.fillRect( 0,0,width(), 5*mFontHeight, QColor(150,150,150,80) );
+        p.fillRect( 0,0,width(), 3*mFontHeight, QColor(150,150,150,80) );
         QString text;
-
-        //if( mpMap->rooms.contains( mRoomSelection ) && __Pick )
-        //{
         int __rid = mRID;
-        if( mRoomSelection > 0 && mpMap->rooms.contains( mRoomSelection ) )
+        if( !isCenterViewCall && mMultiSelectionList.size() == 1 )
         {
-            __rid = mRoomSelection;
+            if( mpMap->rooms.contains( mMultiSelectionList[0] ) )
+            {
+                __rid = mMultiSelectionList[0];
+            }
         }
         if( mpMap->areaNamesMap.contains(__rid))
         {
             text = QString("Area: %1 ID:%2 x:%3-%4 y:%5-%6").arg(mpMap->areaNamesMap[mpMap->rooms[__rid]->area]).arg(mpMap->rooms[__rid]->area).arg(mpMap->areas[mpMap->rooms[__rid]->area]->min_x).arg(mpMap->areas[mpMap->rooms[__rid]->area]->max_x).arg(mpMap->areas[mpMap->rooms[__rid]->area]->min_y).arg(mpMap->areas[mpMap->rooms[__rid]->area]->max_y);
             p.drawText( 10, mFontHeight, text );
         }
-        text = QString("Room Name: %1").arg(mpMap->rooms[__rid]->name);
-        p.drawText( 10, 2*mFontHeight, text );
-        text = QString("Room ID: %1 Position on Map: (%2/%3/%4)").arg(QString::number(__rid)).arg(QString::number(mpMap->rooms[__rid]->x)).arg(QString::number(mpMap->rooms[__rid]->y)).arg(QString::number(mpMap->rooms[__rid]->z));
-        p.drawText( 10, 3*mFontHeight, text );
-//        else
-//        {
-//            text = QString("Area: %1 ID:%2").arg(mpMap->areaNamesMap[mpMap->rooms[mRID]->area]).arg(mpMap->rooms[mRID]->area);
-//            p.drawText( 10, mFontHeight, text );
-//            text = QString("Room Name: %1").arg(mpMap->rooms[mRID]->name);
-//            p.drawText( 10, 2*mFontHeight, text );
-//            text = QString("Room ID: %1 Position on Map: (%2/%3/%4)").arg(QString::number(mRID)).arg(QString::number(mpMap->rooms[mRID]->x)).arg(QString::number(mpMap->rooms[mRID]->y)).arg(QString::number(mpMap->rooms[mRID]->z));
-//            p.drawText( 10, 3*mFontHeight, text );
-//        }
+        if( mpMap->rooms.contains( __rid ) )
+        {
+            text = QString("Room Name: %1").arg(mpMap->rooms[__rid]->name);
+            p.drawText( 10, 2*mFontHeight, text );
+            text = QString("Room ID: %1 Position on Map: (%2/%3/%4)").arg(QString::number(__rid)).arg(QString::number(mpMap->rooms[__rid]->x)).arg(QString::number(mpMap->rooms[__rid]->y)).arg(QString::number(mpMap->rooms[__rid]->z));
+            p.drawText( 10, 3*mFontHeight, text );
+        }
     }
 
     if( mMapInfoRect == QRect(0,0,0,0) ) mMapInfoRect = QRect(0,0,width(),height()/10);
@@ -1969,12 +2102,10 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         if( mCustomLinesRoomFrom > 0 )
         {
             mCustomLinesRoomFrom = 0;
+            if( mMultiSelectionList.size()>0)
+                if( mpMap->rooms.contains(mCustomLineSelectedRoom) )
+                    mpMap->rooms[mCustomLineSelectedRoom]->calcRoomDimensions();
         }
-//        int x = event->x();
-//        int y = event->y();
-//        mPHighlight = QPoint(x,y);
-//        mPick = true;
-        //repaint();
 
         QMenu * popup = new QMenu( this );
         if( ! mLabelHilite && mCustomLineSelectedRoom == 0 )
