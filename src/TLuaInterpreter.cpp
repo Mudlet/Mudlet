@@ -1047,7 +1047,9 @@ int TLuaInterpreter::centerview( lua_State * L )
         }
         if( pHost->mpMap->mpM )
         {
+            pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
             pHost->mpMap->mpMapper->mp2dMap->update();
+            pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
         }
 
     }
@@ -6427,9 +6429,11 @@ int TLuaInterpreter::getRoomCoordinates( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost->mpMap->rooms.contains( id ) )
     {
-        lua_pushstring( L, "getRoomCoordinates: room ID does not exist");
-        lua_error( L );
-        return 1;
+        lua_pushnil( L );
+        lua_pushnil( L );
+        lua_pushnil( L );
+
+        return 3;
     }
     lua_pushnumber( L, pHost->mpMap->rooms[id]->x );
     lua_pushnumber( L, pHost->mpMap->rooms[id]->y );
