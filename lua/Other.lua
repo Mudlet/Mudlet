@@ -613,3 +613,8 @@ function print(...)
   end
   echo("\n")
 end
+
+function deleteFull()
+	deleteLine()
+	tempLineTrigger(1,1, [[if isPrompt() then deleteLine() end]])
+end
