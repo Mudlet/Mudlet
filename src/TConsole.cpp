@@ -599,7 +599,6 @@ void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
 
 void TConsole::resizeEvent( QResizeEvent * event )
 {
-    qDebug()<<"TConsole::resizeEvent() size:"<<event->size()<<" THREAD:"<<thread();
     if( ! mIsDebugConsole && ! mIsSubConsole )
     {
         mMainFrameTopHeight = mpHost->mBorderTopHeight;
@@ -609,20 +608,22 @@ void TConsole::resizeEvent( QResizeEvent * event )
     }
     int x = event->size().width();
     int y = event->size().height();
-    //mpMainFrame->resize( x, y );
-    mpBaseVFrame->resize(x, y);
-    mpBaseHFrame->resize(x, y);
-    x = mpBaseVFrame->width()-mpLeftToolBar->width()-mpRightToolBar->width();
-    y = mpBaseVFrame->height()-mpTopToolBar->height();
+
+
     if( ! mIsSubConsole && ! mIsDebugConsole )
     {
+        mpMainFrame->resize(x,y);
+        mpBaseVFrame->resize(x, y);
+        mpBaseHFrame->resize(x, y);
+        x = x-mpLeftToolBar->width()-mpRightToolBar->width();
+        y = y-mpTopToolBar->height();
         mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
                                y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
     }
     else
     {
-        mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
-                               y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpMainFrame->resize( x, y );
+        mpMainDisplay->resize( x,y);//x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
 
     }
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
@@ -672,7 +673,7 @@ void TConsole::refresh()
 
     int x = width();
     int y = height();
-    qDebug()<<"TConsole::refresh() x="<<x<<" y="<<y<<" LeftTB-width="<<mpLeftToolBar->width();
+
     mpBaseVFrame->resize( x, y );
     mpBaseHFrame->resize( x, y );
     x = mpBaseVFrame->width()-mpLeftToolBar->width()-mpRightToolBar->width();
@@ -681,9 +682,12 @@ void TConsole::refresh()
     mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
                            y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
 
-    //mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth - 15,
-    //                       y - mMainFrameTopHeight - mMainFrameBottomHeight );
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
+    x = width();
+    y = height();
+    QSize s = QSize(x,y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent( this, &event);
 }
 
 
