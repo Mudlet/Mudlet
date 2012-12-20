@@ -650,7 +650,37 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( ! ( ( 0<_lx || 0<_lx+_lw ) && (_w>_lx || _w>_lx+_lw ) ) ) continue;
             if( ! ( ( 0<_ly || 0<_ly+_lh ) && (_h>_ly || _h>_ly+_lh ) ) ) continue;
             QRectF _drawRect = QRect(it.value().pos.x()*tx+_rx, it.value().pos.y()*ty*-1+_ry, _lw, _lh);
-            p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+            if ( !it.value().pix.isNull() )
+            {
+                p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+            } else {
+                if( it.value().text.length() < 1 )
+                {
+                    mpMap->mapLabels[mAID][it.key()].text = "no text";
+                }
+                QRectF lr = QRectF( 0, 0, 1000, 100 );
+                QPixmap pix( lr.size().toSize() );
+                pix.fill(QColor(0,0,0,0));
+                QPainter lp( &pix );
+
+                if( it.value().hilite )
+                {
+                    lp.fillRect( lr, QColor(255,155,55) );
+                }
+                else
+                {
+                    lp.fillRect( lr, it.value().bgColor );
+                }
+                QPen lpen;
+                lpen.setColor( it.value().fgColor );
+                lp.setPen( lpen );
+                QRectF br;
+                lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
+                QPointF lpos;
+                lpos.setX( it.value().pos.x()*tx+_rx );
+                lpos.setY( it.value().pos.y()*ty*-1+_ry );
+                p.drawPixmap( lpos, pix, br.toRect() );
+            }
             if( it.value().hilite )
             {
                 p.fillRect(_drawRect, QColor(255, 155, 55, 190));
@@ -1725,8 +1755,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     if( mShowInfo )
     {
-        p.setPen(QColor(0,255,0,90));
-        p.fillRect(mMultiRect,QColor(190,190,190,60));
+//        p.setPen(QColor(0,255,0,90));
+//        p.fillRect(mMultiRect,QColor(190,190,190,60));
 
         QString text = QString("render time:%1ms mOx:%2 mOy:%3 mOz:%4").arg(QString::number(__time.elapsed())).arg(QString::number(mOx)).arg(QString::number(mOy)).arg(QString::number(mOz));
         p.setPen(QColor(255,255,255));
