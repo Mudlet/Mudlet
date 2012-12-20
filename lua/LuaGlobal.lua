@@ -83,7 +83,7 @@ end
 local packages = {
 	"StringUtils.lua",
 	"TableUtils.lua",
-	"Logging.lua",
+	-- "Logging.lua", -- never documented and fails to load now
 	"DebugTools.lua",
 	"DB.lua",
 	"geyser/Geyser.lua",
