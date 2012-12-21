@@ -46,7 +46,7 @@ T2DMap::T2DMap()
     gzoom = 20;
     mPick = false;
     mTarget = 0;
-    mRoomSelection = 0;
+    //mRoomSelection = 0;
     mStartSpeedWalk = false;
     mRoomBeingMoved = false;
     mPHighlightMove = QPoint(width()/2, height()/2);
@@ -88,7 +88,7 @@ T2DMap::T2DMap(QWidget * parent)
     gzoom = 20;
     mPick = false;
     mTarget = 0;
-    mRoomSelection = 0;
+    //mRoomSelection = 0;
     mStartSpeedWalk = false;
     mRoomBeingMoved = false;
     mPHighlightMove = QPoint(width()/2, height()/2);
@@ -112,6 +112,7 @@ T2DMap::T2DMap(QWidget * parent)
     mSizeLabel = false;
     gridMapSizeChange = true;
     isCenterViewCall = false;
+    mCurrentLineColor = QColor(255,255,100);
     //setFocusPolicy( Qt::ClickFocus);
 }
 
@@ -706,13 +707,23 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
             else
             {
-                float miny = pR->min_y*-1*ty+_ry;
-                float maxy = pR->max_y*-1*ty+_ry;
-                float minx = pR->min_x*tx+_rx;
-                float maxx = pR->max_x*tx+_rx;
+                float miny = pR->min_y*-1*ty+(float)_ry;
+                float maxy = pR->max_y*-1*ty+(float)_ry;
+                float minx = pR->min_x*tx+(float)_rx;
+                float maxx = pR->max_x*tx+(float)_rx;
 
-                if( !( (minx>0 || maxx>0) && (_w>minx || _w>maxx) ) ) continue;
-                if( !( (miny>0 || maxy>0) && (_h>miny || _h>maxy) ) ) continue;
+                if( !( (minx>0.0 || maxx>0.0) && ((float)_w>minx || (float)_w>maxx) ) )
+                {
+                    cout<<"SKIP1 custom exit line:"<<pR->id<<endl;
+                    cout<<"-->x:"<<minx<<"-"<<maxx<<" y:"<<miny<<"-"<<maxy<<"bei("<<_w<<"/"<<_h<<")"<<endl;
+                    continue;
+                }
+                if( !( (miny>0.0 || maxy>0.0) && ((float)_h>miny || (float)_h>maxy) ) )
+                {
+                    cout<<"SKIP2 custom exit line:"<<pR->id<<endl;
+                    cout<<"-->x:"<<minx<<"-"<<maxx<<" y:"<<miny<<"-"<<maxy<<"bei("<<_w<<"/"<<_h<<")"<<endl;
+                    continue;
+                }
             }
 
             pR->rendered = true;
@@ -1380,10 +1391,12 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     }
                 }
             }
-            else
-            {
-                mRoomSelection = pArea->rooms[i];
-            }
+//            else
+//            {
+//                //mRoomSelection = pArea->rooms[i];
+//                mMultiSelectionList.clear();
+//                //mMultiSelectionList.pop_back(pArea->rooms[i]);
+//            }
         }
         else
         {
@@ -1682,7 +1695,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     if( mShowInfo )
     {
-        p.fillRect( 0,0,width(), 3*mFontHeight, QColor(150,150,150,80) );
+        //p.fillRect( 0,0,width(), 3*mFontHeight, QColor(150,150,150,80) );
         QString text;
         int __rid = mRID;
         if( !isCenterViewCall && mMultiSelectionList.size() == 1 )
@@ -1755,12 +1768,22 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     if( mShowInfo )
     {
-//        p.setPen(QColor(0,255,0,90));
-//        p.fillRect(mMultiRect,QColor(190,190,190,60));
-
         QString text = QString("render time:%1ms mOx:%2 mOy:%3 mOz:%4").arg(QString::number(__time.elapsed())).arg(QString::number(mOx)).arg(QString::number(mOy)).arg(QString::number(mOz));
         p.setPen(QColor(255,255,255));
         p.drawText( 10, 4*mFontHeight, text );
+    }
+
+    if( mHelpMsg.size() > 0 )
+    {
+        p.setPen(QColor(255,155,50));
+        QFont _f = p.font();
+        QFont _f2 = _f;
+        _f.setPointSize(20);
+        _f.setBold(true);
+        p.setFont(_f);
+        QRect _r = QRect(0,0,_w,_h);
+        p.drawText( _r, mHelpMsg );
+        p.setFont(_f2);
     }
 
 }
@@ -1923,6 +1946,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 
         if( mCustomLinesRoomFrom > 0 )
         {
+            mHelpMsg = "left click to add point, right click when done";
             if( mpMap->rooms.contains( mCustomLinesRoomFrom ) )
             {
                 float mx = event->pos().x()/mTX + mOx;
@@ -2131,10 +2155,14 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
     {
         if( mCustomLinesRoomFrom > 0 )
         {
+            mHelpMsg = "";
             mCustomLinesRoomFrom = 0;
             if( mMultiSelectionList.size()>0)
                 if( mpMap->rooms.contains(mCustomLineSelectedRoom) )
                     mpMap->rooms[mCustomLineSelectedRoom]->calcRoomDimensions();
+
+            update();
+            return;
         }
 
         QMenu * popup = new QMenu( this );
@@ -2205,12 +2233,13 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             popup->addAction( action10 );
             //popup->addAction( action11 );
             popup->addAction( action4 );
+            popup->addAction( action9 );
             //popup->addAction( action5 );
             popup->addAction( action6 );
             popup->addAction( action7 );
             popup->addAction( action2 );
             popup->addAction( action12 );
-            popup->addAction( action9 );
+
             popup->addAction( action13 );
 
             popup->addAction( action15 );
@@ -2455,24 +2484,29 @@ void T2DMap::slot_userAction(QString uniqueName){
     event.mArgumentList.append(uniqueName );
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     QList<int> roomList = mMultiSelectionList;
-    if (roomList.size()){
+    if( roomList.size() )
+    {
         QList<int> roomList = mMultiSelectionList;
         QList<int>::iterator i;
-        for (i = roomList.begin();i != roomList.end(); ++i){
+        for (i = roomList.begin();i != roomList.end(); ++i)
+        {
             event.mArgumentList.append(QString::number(*i));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         }
         mpHost->raiseEvent( & event );
     }
-    else if (mRoomSelection){
-        event.mArgumentList.append(QString::number(mRoomSelection));
+    else if( mMultiSelectionList.size() > 0 )
+    {
+        event.mArgumentList.append(QString::number(mMultiSelectionList[0]));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent( & event );
     }
-    else{
+    else
+    {
         event.mArgumentList.append(uniqueName);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        for (int i=0;i<userEvent.size();i++){
+        for (int i=0;i<userEvent.size();i++)
+        {
             event.mArgumentList.append(userEvent[i]);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         }
@@ -2491,21 +2525,12 @@ void T2DMap::slot_movePosition()
     QLineEdit * pLEy = new QLineEdit(pD);
     QLineEdit * pLEz = new QLineEdit(pD);
 
-//    connect(pLW, SIGNAL(itemDoubleClicked(QListWidgetItem*)), pD, SLOT(accept()));
-//    connect(pLW, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_selectRoomColor(QListWidgetItem*)));
+    if( mMultiSelectionList.size() < 1 ) return;
+    if( ! mpHost->mpMap->rooms.contains( mMultiSelectionList[0] ) ) return;
 
-    if( mMultiSelection )
-    {
-        int tLC = getTopLeftSelection();
-        if( tLC < 0 ) return;
-        mRoomSelection = mMultiSelectionList[tLC];
-    }
-
-    if( ! mpHost->mpMap->rooms.contains( mRoomSelection ) ) return;
-
-    pLEx->setText(QString::number(mpHost->mpMap->rooms[mRoomSelection]->x));
-    pLEy->setText(QString::number(mpHost->mpMap->rooms[mRoomSelection]->y));
-    pLEz->setText(QString::number(mpHost->mpMap->rooms[mRoomSelection]->z));
+    pLEx->setText(QString::number(mpHost->mpMap->rooms[mMultiSelectionList[0]]->x));
+    pLEy->setText(QString::number(mpHost->mpMap->rooms[mMultiSelectionList[0]]->y));
+    pLEz->setText(QString::number(mpHost->mpMap->rooms[mMultiSelectionList[0]]->z));
     QLabel * pLa1 = new QLabel("x coordinate");
     QLabel * pLa2 = new QLabel("y coordinate");
     QLabel * pLa3 = new QLabel("z coordinate");
@@ -2539,36 +2564,27 @@ void T2DMap::slot_movePosition()
     y = pLEy->text().toInt();
     z = pLEz->text().toInt();
 
-    if( mMultiSelection )
+    if( mMultiSelectionList.size() < 1 ) return;
+    int topLeftCorner = getTopLeftSelection();
+    if( topLeftCorner < 0 ) return;
+
+    if( ! mpMap->rooms.contains( mMultiSelectionList[topLeftCorner] ) ) return;
+
+    int dx,dy;
+
+    dx = x - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->x;
+    dy = y - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->y;
+    int dz = z - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->z;
+
+    mMultiRect = QRect(0,0,0,0);
+    for( int j=0; j<mMultiSelectionList.size(); j++ )
     {
-        if( mMultiSelectionList.size() < 1 ) return;
-        int topLeftCorner = getTopLeftSelection();
-        if( topLeftCorner < 0 ) return;
-
-        if( ! mpMap->rooms.contains( mMultiSelectionList[topLeftCorner] ) ) return;
-
-        int dx,dy;
-
-        dx = x - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->x;
-        dy = y - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->y;
-        int dz = z - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->z;
-
-        mMultiRect = QRect(0,0,0,0);
-        for( int j=0; j<mMultiSelectionList.size(); j++ )
+        if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
         {
-            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
-            {
-                mpMap->rooms[mMultiSelectionList[j]]->x+=dx;
-                mpMap->rooms[mMultiSelectionList[j]]->y+=dy;
-                mpMap->rooms[mMultiSelectionList[j]]->z+=dz;
-            }
+            mpMap->rooms[mMultiSelectionList[j]]->x+=dx;
+            mpMap->rooms[mMultiSelectionList[j]]->y+=dy;
+            mpMap->rooms[mMultiSelectionList[j]]->z+=dz;
         }
-    }
-    else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
-    {
-        mpHost->mpMap->rooms[mRoomSelection]->x = x;
-        mpHost->mpMap->rooms[mRoomSelection]->y = y;
-        mpHost->mpMap->rooms[mRoomSelection]->z = z;
     }
     repaint();
 }
@@ -2585,11 +2601,12 @@ void T2DMap::slot_moveRoom()
 
 void T2DMap::slot_setCharacter()
 {
-    if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+    if( mMultiSelectionList.size() < 1 ) return;
+    if( mpHost->mpMap->rooms.contains( mMultiSelectionList[0] ) )
     {
         QString s = QInputDialog::getText(this,"enter marker letter","letter");
         if( s.size() < 1 ) return;
-        mpHost->mpMap->rooms[mRoomSelection]->c = s[0].toAscii();
+        mpHost->mpMap->rooms[mMultiSelectionList[0]]->c = s[0].toAscii();
         repaint();
     }
 }
@@ -2687,83 +2704,120 @@ void T2DMap::slot_changeColor()
     }
 
     pD->exec();
-    if( mMultiSelection )
-    {
-        if( mMultiSelectionList.size() < 1 )
-        {
-            mMultiSelectionList.push_back( mRoomSelection );
-        }
 
-        mMultiRect = QRect(0,0,0,0);
-        for( int j=0; j<mMultiSelectionList.size(); j++ )
+    mMultiRect = QRect(0,0,0,0);
+    for( int j=0; j<mMultiSelectionList.size(); j++ )
+    {
+        if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
         {
-            if( mpMap->rooms.contains( mMultiSelectionList[j] ) )
+            if( mpMap->customEnvColors.contains( mChosenRoomColor) )
             {
-                if( mpMap->customEnvColors.contains( mChosenRoomColor) )
-                {
-                    mpHost->mpMap->rooms[mMultiSelectionList[j]]->environment = mChosenRoomColor;
-                }
+                mpHost->mpMap->rooms[mMultiSelectionList[j]]->environment = mChosenRoomColor;
             }
         }
-
-        if( mMultiSelectionList.size() == 1 )
-            if( mMultiSelectionList[0] == mRoomSelection )
-                mMultiSelectionList.clear();
-
     }
-    else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
-    {
-        if( mpMap->customEnvColors.contains( mChosenRoomColor) )
-        {
-            mpHost->mpMap->rooms[mRoomSelection]->environment = mChosenRoomColor;
-        }
-    }
+
     update();
 }
 
 void T2DMap::slot_spread()
 {
-    int _spread = QInputDialog::getInt(this, "set grid","grid:",5);
-    if( mMultiSelection )
+    int spread = QInputDialog::getInt(this, "spread out selected rooms","spread out selected rooms by:",5);
+    if( spread == 0 ) return;
+    mMultiRect = QRect(0,0,0,0);
+    if( mMultiSelectionList.size() < 2 ) return;
+    int lid = getTopLeftSelection();
+    int id;
+    if( lid > -1 )
+        id = mMultiSelectionList[lid];
+    else
     {
-        mMultiRect = QRect(0,0,0,0);
-        if( mMultiSelectionList.size() < 1 ) return;
-        int _x = mpMap->rooms[mMultiSelectionList[0]]->x;
-        int _y = mpMap->rooms[mMultiSelectionList[0]]->y;
-        for( int j=0; j<mMultiSelectionList.size(); j++ )
-        {
-            TRoom * pR = mpHost->mpMap->rooms[mMultiSelectionList[j]];
-            pR->x *= _spread;
-            pR->y *= _spread;
-        }
+        return;
     }
+    if( !mpHost->mpMap->rooms.contains(id) ) return;
+    int x = mpMap->rooms[id]->x;
+    int y = mpMap->rooms[id]->y;
+    int dx = x - x*spread;
+    int dy = y - y*spread;
+    for( int j=0; j<mMultiSelectionList.size(); j++ )
+    {
+        TRoom * pR = mpHost->mpMap->rooms[mMultiSelectionList[j]];
+        pR->x *= spread;
+        pR->y *= spread;
+        pR->x += dx;
+        pR->y += dy;
+        QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mMultiSelectionList[j]]->customLines);
+        QMap<QString, QList<QPointF> > newMap;
+        while( itk.hasNext() )
+        {
+            itk.next();
+            QList<QPointF> _pL = itk.value();
+            for( int pk=0; pk<_pL.size(); pk++ )
+            {
+                QPointF op = _pL[pk];
+                _pL[pk].setX( (float)(op.x()*spread+dx) );
+                _pL[pk].setY( (float)(op.y()*spread+dy) );
+            }
+            newMap.insert(itk.key(), _pL );
+        }
+        mpMap->rooms[mMultiSelectionList[j]]->customLines = newMap;
+    }
+    repaint();
 }
 
 void T2DMap::slot_shrink()
 {
-    int _spread = QInputDialog::getInt(this, "shrink grid",":",3);
-    if( mMultiSelection )
+    int spread = QInputDialog::getInt(this, "spread out selected rooms","spread out selected rooms by:",5);
+    if( spread == 0 ) return;
+    mMultiRect = QRect(0,0,0,0);
+    if( mMultiSelectionList.size() < 2 ) return;
+    int lid = getTopLeftSelection();
+    int id;
+    if( lid > -1 )
+        id = mMultiSelectionList[lid];
+    else
     {
-        mMultiRect = QRect(0,0,0,0);
-        if( mMultiSelectionList.size() < 1 ) return;
-        int _x = mpMap->rooms[mMultiSelectionList[0]]->x;
-        int _y = mpMap->rooms[mMultiSelectionList[0]]->y;
-        for( int j=0; j<mMultiSelectionList.size(); j++ )
-        {
-            TRoom * pR = mpHost->mpMap->rooms[mMultiSelectionList[j]];
-            pR->x /= _spread;
-            pR->y /= _spread;
-        }
+        return;
     }
+    if( !mpHost->mpMap->rooms.contains(id) ) return;
+    int x = mpMap->rooms[id]->x;
+    int y = mpMap->rooms[id]->y;
+    int dx = x - x/spread;
+    int dy = y - y/spread;
+    for( int j=0; j<mMultiSelectionList.size(); j++ )
+    {
+        TRoom * pR = mpHost->mpMap->rooms[mMultiSelectionList[j]];
+        pR->x /= spread;
+        pR->y /= spread;
+        pR->x += dx;
+        pR->y += dy;
+        QMapIterator<QString, QList<QPointF> > itk(mpMap->rooms[mMultiSelectionList[j]]->customLines);
+        QMap<QString, QList<QPointF> > newMap;
+        while( itk.hasNext() )
+        {
+            itk.next();
+            QList<QPointF> _pL = itk.value();
+            for( int pk=0; pk<_pL.size(); pk++ )
+            {
+                QPointF op = _pL[pk];
+                _pL[pk].setX( (float)(op.x()/spread+dx) );
+                _pL[pk].setY( (float)(op.y()/spread+dy) );
+            }
+            newMap.insert(itk.key(), _pL );
+        }
+        mpMap->rooms[mMultiSelectionList[j]]->customLines = newMap;
+    }
+    repaint();
 }
 
 #include "dlgRoomExits.h"
 void T2DMap::slot_setExits()
 {
-    if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+    if( mMultiSelectionList.size() < 1 ) return;
+    if( mpHost->mpMap->rooms.contains( mMultiSelectionList[0] ) )
     {
         dlgRoomExits * pD = new dlgRoomExits( mpHost, this );
-        pD->init( mRoomSelection );
+        pD->init( mMultiSelectionList[0] );
         pD->show();
         pD->raise();
     }
@@ -2777,8 +2831,8 @@ void T2DMap::slot_setUserData()
 
 void T2DMap::slot_lockRoom()
 {
-    if( mMultiSelection )
-    {
+//    if( mMultiSelection )
+//    {
         mMultiRect = QRect(0,0,0,0);
         for( int j=0; j<mMultiSelectionList.size(); j++ )
         {
@@ -2788,12 +2842,12 @@ void T2DMap::slot_lockRoom()
                 mpHost->mpMap->mMapGraphNeedsUpdate = true;
             }
         }
-    }
-    else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
-    {
-        mpHost->mpMap->rooms[mRoomSelection]->isLocked = true;
-        mpHost->mpMap->mMapGraphNeedsUpdate = true;
-    }
+//    }
+//    else if( mpHost->mpMap->rooms.contains( mRoomSelection ) )
+//    {
+//        mpHost->mpMap->rooms[mRoomSelection]->isLocked = true;
+//        mpHost->mpMap->mMapGraphNeedsUpdate = true;
+//    }
 }
 
 
@@ -2820,16 +2874,16 @@ void T2DMap::slot_setRoomWeight()
         }
         //repaint();
     }
-    else
-    {
-        if( mpHost->mpMap->rooms.contains(mRoomSelection) )
-        {
-            int _w = mpHost->mpMap->rooms[mRoomSelection]->weight;
-            int w = QInputDialog::getInt(this, "Enter a room weight (= travel time).","room weight:",_w);
-            mpHost->mpMap->rooms[mRoomSelection]->weight = w;
-            mpHost->mpMap->mMapGraphNeedsUpdate = true;
-        }
-    }
+//    else
+//    {
+//        if( mpHost->mpMap->rooms.contains(mRoomSelection) )
+//        {
+//            int _w = mpHost->mpMap->rooms[mRoomSelection]->weight;
+//            int w = QInputDialog::getInt(this, "Enter a room weight (= travel time).","room weight:",_w);
+//            mpHost->mpMap->rooms[mRoomSelection]->weight = w;
+//            mpHost->mpMap->mMapGraphNeedsUpdate = true;
+//        }
+//    }
 
 }
 
@@ -2862,8 +2916,8 @@ void T2DMap::slot_setArea()
     int w = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
 
 
-    if( mMultiSelection )
-    {
+//    if( mMultiSelection )
+//    {
         //int w = QInputDialog::getInt(this,"Enter the area ID:", "area ID:", 1);
 
         mMultiRect = QRect(0,0,0,0);
@@ -2876,16 +2930,16 @@ void T2DMap::slot_setArea()
             }
         }
         repaint();
-    }
-    else
-    {
-        if( mpMap->rooms.contains(mRoomSelection) )
-        {
-            //int _w = mpHost->mpMap->rooms[mRoomSelection]->area;
-            //int w = QInputDialog::getInt(this, "Enter area ID:","area ID:",_w);
-            mpMap->setRoomArea( mRoomSelection, w );
-        }
-    }
+//    }
+//    else
+//    {
+//        if( mpMap->rooms.contains(mRoomSelection) )
+//        {
+//            //int _w = mpHost->mpMap->rooms[mRoomSelection]->area;
+//            //int w = QInputDialog::getInt(this, "Enter area ID:","area ID:",_w);
+//            mpMap->setRoomArea( mRoomSelection, w );
+//        }
+//    }
 }
 
 
@@ -3090,10 +3144,10 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
 
         int dx,dy;
 
-        if( mMultiSelectionList.size() < 1 )
-        {
-            mMultiSelectionList.push_back( mRoomSelection );
-        }
+//        if( mMultiSelectionList.size() < 1 )
+//        {
+//            mMultiSelectionList.push_back( mRoomSelection );
+//        }
         int topLeftCorner = getTopLeftSelection();
         if( topLeftCorner < 0 ) return;
         dx = mx - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->x;
@@ -3131,7 +3185,8 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
 int T2DMap::getTopLeftSelection()
 {
     int min_x, min_y, id;
-    if( mMultiSelectionList.size() < 1 ) return -1;
+    id = -1;
+    if( mMultiSelectionList.size() < 2 ) return -1;
     min_x = mpMap->rooms[mMultiSelectionList[0]]->x;
     min_y = mpMap->rooms[mMultiSelectionList[0]]->y;
     for( int j=0; j<mMultiSelectionList.size(); j++ )
@@ -3225,7 +3280,8 @@ void T2DMap::setExitSize( double f )
 
 void T2DMap::slot_setCustomLine()
 {
-    if( ! mpHost->mpMap->rooms.contains( mRoomSelection ) ) return;
+    if( mMultiSelectionList.size() < 1 ) return;
+    if( ! mpHost->mpMap->rooms.contains( mMultiSelectionList[0] ) ) return;
     QUiLoader loader;
 
     QFile file(":/ui/custom_lines.ui");
@@ -3234,9 +3290,9 @@ void T2DMap::slot_setCustomLine()
     file.close();
     if( ! d ) return;
     mpCustomLinesDialog = d;
-    TRoom * pR = mpHost->mpMap->rooms[mRoomSelection];
+    TRoom * pR = mpHost->mpMap->rooms[mMultiSelectionList[0]];
 
-    mCustomLinesRoomFrom = mRoomSelection;
+    mCustomLinesRoomFrom = mMultiSelectionList[0];
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit = "";
     QPushButton * b_ = d->findChild<QPushButton*>("nw");
@@ -3331,11 +3387,12 @@ void T2DMap::slot_setCustomLine()
     }
 
     QStringList _lineStyles;
-    _lineStyles << "solid line" << "dot line" << "dash line" << " dash dot line" << "dash dot dot line";
+    _lineStyles << "dot line" << "solid line" << "dash line" << " dash dot line" << "dash dot dot line";
     mpCurrentLineStyle->addItems(_lineStyles);
     connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem *,int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
     connect( mpCurrentLineColor, SIGNAL(pressed()), this, SLOT(slot_customLineColor()));
-
+    mpCurrentLineArrow->setChecked(true);
+    mpCurrentLineColor->setStyleSheet("background-color:red");
     d->show();
     d->raise();
 }
@@ -3350,11 +3407,9 @@ void T2DMap::slot_customLineColor()
         palette.setColor( QPalette::Button, color );
         mpCurrentLineColor->setPalette( palette );
         palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
+        QString styleSheet = QString("background-color:"+color.name());
         mpCurrentLineColor->setStyleSheet( styleSheet );
     }
-    else
-        mCurrentLineColor = mpHost->mFgColor_2;
 }
 
 #include "TRoom.h"
@@ -3370,10 +3425,12 @@ void T2DMap::slot_setCustomLine2()
     QList<QPointF> _list;
     mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLines[exit] = _list;
     QList<int> _colorList;
+    cout << "set2: color:"<<mCurrentLineColor.red()<<","<<mCurrentLineColor.green()<<","<<mCurrentLineColor.blue()<<endl;
     _colorList << mCurrentLineColor.red() << mCurrentLineColor.green() << mCurrentLineColor.blue();
     mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesColor[exit] = _colorList;
     mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesStyle[exit] = mpCurrentLineStyle->currentText();
     mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesArrow[exit] = mpCurrentLineArrow->isChecked();
+
     qDebug()<<"exit="<<exit;
 }
 

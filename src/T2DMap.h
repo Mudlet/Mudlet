@@ -56,7 +56,7 @@ public:
     QPoint   mPHighlight;
     bool     mPick;
     int      mTarget;
-    int      mRoomSelection;
+    //int      mRoomSelection;
     bool     mStartSpeedWalk;
     QMap<int, QPoint> mAreaExitList;
     QMap<QString, QStringList> mUserActions; //string list: 0 is event name, 1 is menu it is under if it is
@@ -112,6 +112,7 @@ public:
     bool mSizeLabel;
     bool gridMapSizeChange;
     bool isCenterViewCall;
+    QString mHelpMsg;
 
 signals:
 

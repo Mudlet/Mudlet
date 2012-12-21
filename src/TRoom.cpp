@@ -228,8 +228,8 @@ void TRoom::calcRoomDimensions()
         }
         for( int i=0; i<_pL.size(); i++ )
         {
-            int _x = _pL[i].x();
-            int _y = _pL[i].y();
+            qreal _x = _pL[i].x();
+            qreal _y = _pL[i].y();
             if( min_x > _x )
                 min_x = _x;
             if( max_x < _x )
