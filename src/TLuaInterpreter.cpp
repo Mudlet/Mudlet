@@ -211,6 +211,7 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( pE );
+    delete pE;
     return 0;
 }
 
@@ -8444,6 +8445,25 @@ int TLuaInterpreter::appendCmdLine( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::installPackage( lua_State * L )
+{
+    string event;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "installPackage(): wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        event = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString package = event.c_str();
+    if( pHost )
+        pHost->installPackage( package, 0 );
+}
+
 int TLuaInterpreter::registerAnonymousEventHandler( lua_State * L )
 {
     string event;
@@ -9637,6 +9657,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu );
     lua_register( pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu );
     lua_register( pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus );
+    lua_register( pGlobalLua, "installPackage", TLuaInterpreter::installPackage );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
