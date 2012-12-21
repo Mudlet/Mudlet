@@ -705,14 +705,16 @@ void Host::raiseEvent( TEvent * pE )
     if( pE->mArgumentList.size() < 1 ) return;
     if( mEventHandlerMap.contains( pE->mArgumentList[0] ) )
     {
-        QList<TScript *> scriptList = mEventHandlerMap.value( pE->mArgumentList[0] );
+        qDebug()<<"event:"<<pE->mArgumentList;
+        QList<TScript *> scriptList = mEventHandlerMap[pE->mArgumentList[0]];
         for( int i=0; i<scriptList.size(); i++ )
         {
-            scriptList.value( i )->callEventHandler( pE );
+            scriptList[i]->callEventHandler( pE );
         }
     }
     if( mAnonymousEventHandlerFunctions.contains( pE->mArgumentList[0] ) )
     {
+        qDebug()<<"event:"<<pE->mArgumentList;
         QStringList funList = mAnonymousEventHandlerFunctions[pE->mArgumentList[0]];
         for( int i=0; i<funList.size(); i++ )
         {
