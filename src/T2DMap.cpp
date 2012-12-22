@@ -978,6 +978,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     QPen customLinePen = p.pen();
                     customLinePen.setCosmetic(mMapperUseAntiAlias);
                     customLinePen.setColor( _color );
+                    customLinePen.setCapStyle( Qt::RoundCap );
+                    customLinePen.setJoinStyle( Qt::RoundJoin );
+
                     if( _style == "solid line" )
                         customLinePen.setStyle( Qt::SolidLine );
                     else if( _style == "dot line" )
@@ -1954,6 +1957,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                 mx = mx - xspan/2;
                 my = yspan/2 - my;
                 mpMap->rooms[mCustomLinesRoomFrom]->customLines[mCustomLinesRoomExit].push_back( QPointF( mx, my ) );
+                mpMap->rooms[mCustomLinesRoomFrom]->calcRoomDimensions();
                 repaint();
                 return;
             }
@@ -3403,10 +3407,10 @@ void T2DMap::slot_customLineColor()
     if ( color.isValid() )
     {
         mCurrentLineColor = color;
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        mpCurrentLineColor->setPalette( palette );
-        palette.setColor( QPalette::Button, color );
+//        QPalette palette;
+//        palette.setColor( QPalette::Button, color );
+//        mpCurrentLineColor->setPalette( palette );
+//        palette.setColor( QPalette::Button, color );
         QString styleSheet = QString("background-color:"+color.name());
         mpCurrentLineColor->setStyleSheet( styleSheet );
     }
@@ -3429,6 +3433,7 @@ void T2DMap::slot_setCustomLine2()
     _colorList << mCurrentLineColor.red() << mCurrentLineColor.green() << mCurrentLineColor.blue();
     mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesColor[exit] = _colorList;
     mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesStyle[exit] = mpCurrentLineStyle->currentText();
+    qDebug()<<"LINES: set line style:"<<mpCurrentLineStyle->currentText();
     mpHost->mpMap->rooms[mCustomLinesRoomFrom]->customLinesArrow[exit] = mpCurrentLineArrow->isChecked();
 
     qDebug()<<"exit="<<exit;

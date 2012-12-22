@@ -665,7 +665,10 @@ void Host::registerEventHandler( QString name, TScript * pScript )
 {
     if( mEventHandlerMap.contains( name ) )
     {
-        mEventHandlerMap[name].append( pScript );
+        if( ! mEventHandlerMap[name].contains( pScript ) )
+        {
+            mEventHandlerMap[name].append( pScript );
+        }
     }
     else
     {
