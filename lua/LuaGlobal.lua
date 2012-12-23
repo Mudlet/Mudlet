@@ -24,7 +24,7 @@ end
 
 
 function unzip( what, dest )
-	cecho("\n<blue>unpacking package:<"..what.."< to <"..dest..">\n")
+	-- cecho("\n<blue>unpacking package:<"..what.."< to <"..dest..">\n")
 	local z, err = zip.open( what )
 
 	if not z then
@@ -45,11 +45,11 @@ function unzip( what, dest )
 				if not table.contains( createdDirs, created ) then
 					table.insert( createdDirs, created );
 					lfs.mkdir( created );
-					cecho("<red>--> creating dir:" .. created .. "\n");
+					-- cecho("<red>--> creating dir:" .. created .. "\n");
 				end
 			elseif file.uncompressed_size == 0 then
 				if not table.contains( createdDirs, created ) then
-					cecho("<red>--> creating dir:" .. file.filename .. "\n")
+					-- cecho("<red>--> creating dir:" .. file.filename .. "\n")
 					table.insert( createdDirs, created );
 					lfs.mkdir( file.filename )
 				end
@@ -59,11 +59,11 @@ function unzip( what, dest )
   		if file.uncompressed_size > 0 then
 			local out = io.open( _path, "wb" )
 			if out then
-				cecho("<green>unpacking file:".._path.."\n")
+				-- cecho("<green>unpacking file:".._path.."\n")
 				out:write( _data )
 				out:close()
 			else
-				echo("ERROR: can't write file:".._path.."\n")
+				cecho("<red>ERROR: can't write file:".._path.."\n")
 			end
 		end
 		_f:close();
