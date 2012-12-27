@@ -606,6 +606,7 @@ do
 	end
 end
 
+ioprint = print
 function print(...)
   local t, echo, tostring = {...}, echo, tostring
   for i = 1, #t do
