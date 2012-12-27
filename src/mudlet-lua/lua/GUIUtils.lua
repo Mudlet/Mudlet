@@ -854,12 +854,15 @@ if rex then
 				str, cmd, hint, fmt = ...
 			elseif n >= 4 and type(args[4]) == 'string' then
 				win, str, cmd, hint = ...
+				if win == "main" then win = nil end
 			else
 				error'Improper arguments, usage: ([window, ] string, command, hint)'
 			end
 		else
-			if args[1] and args[2] then
+			if args[1] and args[2] and args[1] ~= "main" then
 				win, str = args[1], args[2]
+			elseif args[1] and args[2] and args[1] == "main" then
+				str = args[2]
 			else
 				str = args[1]
 			end
