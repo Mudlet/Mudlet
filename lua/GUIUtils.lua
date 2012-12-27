@@ -1021,6 +1021,8 @@ else
 	function cecho(window, text)
        local win = text and window
        local s = text or window
+       if win == "main" then win = nil end
+
        if win then
             resetFormat(win)
        else
@@ -1057,6 +1059,7 @@ else
 	function decho(window, text)
 		local win = text and window
 		local s = text or window
+		if win == "main" then win = nil end
 		local reset
 		if win then
 			reset = function() resetFormat(win) end
