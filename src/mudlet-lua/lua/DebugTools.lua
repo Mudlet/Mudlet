@@ -198,5 +198,5 @@ function prettywrite (tbl,space,not_clever)
 end
 
 function display(what)
-    echo(prettywrite(what, '  ')..'\n')
+    echo((prettywrite(what, '  ') or 'nil')..'\n')
 end
