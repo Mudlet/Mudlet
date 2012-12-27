@@ -907,7 +907,7 @@ if rex then
 					end
 				else
 					-- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
-					if win then out(win, v, cmd, hint, fmt) else out(v, cmd, hint, fmt) end
+					if win then out(win, v, cmd, hint, (fmt == true and true or false)) else out(v, cmd, hint, (fmt == true and true or false)) end
 				end
 			end
 		end
