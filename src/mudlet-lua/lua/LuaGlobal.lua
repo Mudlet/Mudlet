@@ -108,6 +108,7 @@ local packages = {
 	}
 
 for _, package in ipairs(packages) do
-	local result = pcall(dofile, "./mudlet-lua/lua/" .. package) or echo("Error attempting to load file: " .. package .. "\n")
+	local result, msg = pcall(dofile, "./mudlet-lua/lua/" .. package)
+	if not result then echo("Error attempting to load file: " .. package .. ": "..msg.."\n") end
 end
 
