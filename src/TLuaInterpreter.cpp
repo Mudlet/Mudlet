@@ -6864,6 +6864,27 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::setMapZoom( lua_State * L )
+{
+    int zoom = 3;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        zoom = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap )
+        if( pHost->mpMap->mpMapper )
+            if( pHost->mpMap->mpMapper->mp2dMap )
+                pHost->mpMap->mpMapper->mp2dMap->setMapZoom( zoom );
+    return 0;
+}
+
 //SYNTAX: int labelID = createMapImageLabel( int area, string filePath, float posx, float posy, float posz, float width, float height, float zoom, bool showOnTop=true )
 int TLuaInterpreter::createMapImageLabel( lua_State * L )
 {
@@ -9752,6 +9773,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "installPackage", TLuaInterpreter::installPackage );
     lua_register( pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage );
     lua_register( pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel );
+    lua_register( pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom );
+
+
+
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

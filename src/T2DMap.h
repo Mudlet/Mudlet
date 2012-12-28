@@ -34,6 +34,7 @@ public:
     T2DMap();
     explicit T2DMap( QWidget *parent = 0);
     void     paintMap();
+    void     setMapZoom( int zoom );
     QColor   getColor( int id );
     QColor   _getColor( int id );
     void     init();

@@ -2141,15 +2141,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             QAction * action2 = new QAction("delete", this );
             action2->setStatusTip(tr("delete label"));
             connect( action2, SIGNAL(triggered()), this, SLOT(slot_deleteLabel()));
-            QAction * action3 = new QAction("color", this );
-            action3->setStatusTip(tr("change label color"));
-            connect( action3, SIGNAL(triggered()), this, SLOT(slot_editLabel()));
             mPopupMenu = true;
-//            QMenu * popup = new QMenu( this );
-
             popup->addAction( action );
             popup->addAction( action2 );
-            popup->addAction( action3 );
             popup->popup( mapToGlobal( event->pos() ) );
         }
         else
@@ -2158,8 +2152,6 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             action2->setStatusTip(tr("delete"));
             connect( action2, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
             mPopupMenu = true;
-//            QMenu * popup = new QMenu( this );
-
             popup->addAction( action2 );
             popup->popup( mapToGlobal( event->pos() ) );
         }
@@ -2258,55 +2250,6 @@ void T2DMap::slot_deleteLabel()
 
 void T2DMap::slot_editLabel()
 {
-//    // select labels
-//    if( mpMap->mapLabels.contains( mAID ) )
-//    {
-//        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
-//        while( it.hasNext() )
-//        {
-//            it.next();
-//            if( it.value().pos.z() != mOz ) continue;
-
-//            QRectF lr = QRectF( 0, 0, 1000, 100 );
-//            QPixmap pix( lr.size().toSize() );
-//            pix.fill(QColor(0,0,0,0));
-//            QPainter lp( &pix );
-
-//            lp.fillRect( lr, QColor(255,0,0) );
-//            QPen lpen;
-//            lpen.setColor( it.value().fgColor );
-//            lp.setPen( lpen );
-//            QRectF br;
-//            lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
-//            QPointF lpos;
-//            lpos.setX( it.value().pos.x()*mTX+_rx );
-//            lpos.setY( it.value().pos.y()*mTY*-1+_ry );
-//            int mx = event->pos().x();
-//            int my = event->pos().y();
-//            int mz = mOz;
-//            QPoint click = QPoint(mx,my);
-//            br.moveTopLeft(lpos);
-//            if( br.contains( click ))
-//            {
-//                if( ! it.value().hilite )
-//                {
-//                    mLabelHilite = true;
-//                    mpMap->mapLabels[mAID][it.key()].hilite = true;
-//                    update();
-//                    return;
-//                }
-//                else
-//                {
-//                    mpMap->mapLabels[mAID][it.key()].hilite = false;
-//                    mLabelHilite = false;
-//                }
-//            }
-//        }
-//    }
-
-//    mLabelHilite = false;
-//    update();
-//}
 }
 
 //FIXME:
@@ -3068,54 +3011,28 @@ void T2DMap::exportAreaImage( int id )
 
 void T2DMap::wheelEvent ( QWheelEvent * e )
 {
+    if( ! mpMap->rooms.contains(mRID) ) return;
+    if( ! mpMap->areas.contains(mAID) ) return;
     int delta = e->delta() / 8 / 15;
-    if( delta < 0 )//e->delta() < 0 )
+    if( delta < 0 )
     {
         mPick = false;
-        if( ! mpMap->rooms.contains(mRID) ) return;
-        if( ! mpMap->areas.contains(mAID) ) return;
-        if( mpMap->areas[mAID]->gridMode )
+        xzoom += delta;
+        yzoom += delta;
+        if( yzoom < 3 || xzoom < 3 )
         {
-            gzoom += delta;
-            if( gzoom < 1 ) gzoom = 1;
-            cout<<"ZOOMING: delta:"<<delta<<" calling init()"<<endl;
-            init();
-            cout<<"zooming: after init() call"<<endl;
+            xzoom = 3;
+            yzoom = 3;
         }
-        else
-        {
-            xzoom += delta;
-            yzoom += delta;
-
-            if( yzoom < 3 || xzoom < 3 )
-            {
-                xzoom = 3;
-                yzoom = 3;
-            }
-        }
-
         update();
         e->accept();
         return;
     }
-    if( delta > 0 )//e->delta() > 0 )
+    if( delta > 0 )
     {
-        if( ! mpMap->rooms.contains(mRID) ) return;
-        if( ! mpMap->areas.contains(mAID) ) return;
-        if( mpMap->areas[mAID]->gridMode )
-        {
-            gzoom += delta;
-            if( gzoom >= 25 ) gzoom = 25;
-            cout<<"ZOOMING: delta:"<<delta<<" calling init()"<<endl;
-            init();
-            cout<<"zooming: after init() call"<<endl;
-        }
-        else
-        {
-            mPick = false;
-            xzoom += delta;
-            yzoom += delta;
-        }
+        mPick = false;
+        xzoom += delta;
+        yzoom += delta;
         e->accept();
         update();
         return;
@@ -3124,6 +3041,16 @@ void T2DMap::wheelEvent ( QWheelEvent * e )
     return;
 }
 
+void T2DMap::setMapZoom( int zoom )
+{
+    xzoom = zoom;
+    yzoom = zoom;
+    if( yzoom < 3 || xzoom < 3 )
+    {
+        xzoom = 3;
+        yzoom = 3;
+    }
+}
 
 void T2DMap::setRoomSize( double f )
 {
