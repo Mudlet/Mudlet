@@ -276,7 +276,7 @@ void TArea::calcSpan()
         int id = rooms[0];
         min_x = mpMap->rooms[id]->x;
         max_x = min_x;
-        min_y = mpMap->rooms[id]->y;
+        min_y = mpMap->rooms[id]->y*-1;
         max_y = min_y;
         min_z = mpMap->rooms[id]->z;
         max_z = min_z;
@@ -294,7 +294,7 @@ void TArea::calcSpan()
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->y;
+        int _m = mpMap->rooms[id]->y*-1;
         if( _m < min_y )
         {
             min_y = _m;
@@ -321,7 +321,7 @@ void TArea::calcSpan()
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->y;
+        int _m = mpMap->rooms[id]->y*-1;
         if( _m > max_y )
         {
             max_y = _m;
@@ -355,7 +355,7 @@ void TArea::calcSpan()
             int id = rooms[0];
             _min_x = mpMap->rooms[id]->x;
             _max_x = _min_x;
-            _min_y = mpMap->rooms[id]->y;
+            _min_y = mpMap->rooms[id]->y*-1;
             _max_y = _min_y;
             _min_z = mpMap->rooms[id]->z;
             _max_z = _min_z;
@@ -370,7 +370,7 @@ void TArea::calcSpan()
             {
                 _min_x = _m;
             }
-            _m = mpMap->rooms[id]->y;
+            _m = mpMap->rooms[id]->y*-1;
             if( _m < _min_y )
             {
                 _min_y = _m;
@@ -385,7 +385,7 @@ void TArea::calcSpan()
             {
                 _max_x = _m;
             }
-            _m = mpMap->rooms[id]->y;
+            _m = mpMap->rooms[id]->y*-1;
             if( _m > _max_y )
             {
                 _max_y = _m;

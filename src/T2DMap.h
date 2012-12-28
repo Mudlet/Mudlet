@@ -33,9 +33,11 @@ public:
 
     T2DMap();
     explicit T2DMap( QWidget *parent = 0);
+    void     paintMap();
     QColor   getColor( int id );
     QColor   _getColor( int id );
     void     init();
+    void     exportAreaImage( int );
     void     paintEvent( QPaintEvent * );
     void     mousePressEvent(QMouseEvent * );
     void     mouseDoubleClickEvent ( QMouseEvent * event );
@@ -79,7 +81,7 @@ public:
     int      mFontHeight;
     bool     mShowRoomID;
     QMap<int,QPixmap> mPixMap;
-    QMap<int, QPixmap *> mGridPix;
+//    QMap<int, QPixmap > mGridPix;
     int      gzoom;
     double   rSize;
     double   eSize;

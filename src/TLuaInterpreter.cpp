@@ -7612,6 +7612,15 @@ int TLuaInterpreter::setGridMode( lua_State * L )
     else
     {
         pHost->mpMap->areas[area]->gridMode = gridMode;
+        pHost->mpMap->areas[area]->calcSpan();
+        if( pHost->mpMap->mpMapper )
+        {
+            if( pHost->mpMap->mpMapper->mp2dMap )
+            {
+                pHost->mpMap->mpMapper->mp2dMap->init();
+                cout << "NEW GRID MAP: init" << endl;
+            }
+        }
     }
     lua_pushboolean( L, true );
     return 1;
@@ -8236,6 +8245,18 @@ int TLuaInterpreter::pasteWindow( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString name( luaName.c_str());
     mudlet::self()->pasteWindow( pHost, name );
+    return 0;
+}
+
+int TLuaInterpreter::exportAreaImage( lua_State *L )
+{
+    int areaID;
+    if( lua_isnumber( L, 1 ) )
+    {
+        areaID = lua_tointeger( L, 1 );
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        pHost->mpMap->mpMapper->mp2dMap->exportAreaImage( areaID );
+    }
     return 0;
 }
 
@@ -9658,6 +9679,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu );
     lua_register( pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus );
     lua_register( pGlobalLua, "installPackage", TLuaInterpreter::installPackage );
+    lua_register( pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
