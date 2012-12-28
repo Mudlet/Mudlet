@@ -6864,6 +6864,121 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     return 1;
 }
 
+//SYNTAX: int labelID = createMapImageLabel( int area, string filePath, float posx, float posy, float posz, float width, float height, float zoom, bool showOnTop=true )
+int TLuaInterpreter::createMapImageLabel( lua_State * L )
+{
+    int area;
+    float posx, posy, posz, width, height, zoom;
+    string text;
+    bool showOnTop = true;
+
+    int args = lua_gettop(L);
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        text = lua_tostring( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        posx = lua_tonumber( L, 3 );
+    }
+
+    if( ! lua_isnumber( L, 4 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        posy = lua_tonumber( L, 4 );
+    }
+
+    if( ! lua_isnumber( L, 5 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        posz = lua_tonumber( L, 5 );
+    }
+
+    if( ! lua_isnumber( L, 6 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        width = lua_tonumber( L, 6 );
+    }
+
+    if( ! lua_isnumber( L, 7 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        height = lua_tonumber( L, 7 );
+    }
+
+    if( ! lua_isnumber( L, 8 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        zoom = lua_tonumber( L, 8 );
+    }
+
+    if( ! lua_isboolean( L, 9 ) )
+    {
+        lua_pushstring( L, "createMapLabel: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        showOnTop = lua_toboolean( L, 9 );
+    }
+
+    QString _text = text.c_str();
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_pushinteger( L, pHost->mpMap->createMapImageLabel( area, _text, posx, posy, posz, width, height, zoom, showOnTop, false ) );
+    return 1;
+}
+
+
 int TLuaInterpreter::deleteMapLabel( lua_State * L )
 {
     int area, labelID;
@@ -9587,7 +9702,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRoomEnv", TLuaInterpreter::getRoomEnv );
     lua_register( pGlobalLua, "getRoomUserData", TLuaInterpreter::getRoomUserData );
     lua_register( pGlobalLua, "setRoomUserData", TLuaInterpreter::setRoomUserData );
-        lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
+    lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
     lua_register( pGlobalLua, "getRoomsByPosition", TLuaInterpreter::getRoomsByPosition );
     //lua_register( pGlobalLua, "dumpRoomUserData", TLuaInterpreter::dumpRoomUserData );
     lua_register( pGlobalLua, "clearRoomUserData", TLuaInterpreter::clearRoomUserData );
@@ -9636,6 +9751,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus );
     lua_register( pGlobalLua, "installPackage", TLuaInterpreter::installPackage );
     lua_register( pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage );
+    lua_register( pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

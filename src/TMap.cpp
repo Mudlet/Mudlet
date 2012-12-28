@@ -1479,7 +1479,6 @@ bool TMap::restore(QString location)
 }
 
 
-// called from scripts
 int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize )
 {
     if( ! areas.contains( area ) ) return -1;
@@ -1527,12 +1526,75 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     }
     else
     {
-        labelID = mapLabels[area].size();
-        mapLabels[area].insert(labelID, label);
+        labelID = createMapLabelID( area );
+        if( labelID > -1 )
+        {
+            mapLabels[area].insert(labelID, label);
+        }
     }
 
     if( mpMapper ) mpMapper->mp2dMap->update();
     return labelID;
+}
+
+int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling )
+{
+    if( ! areas.contains( area ) ) return -1;
+
+    TMapLabel label;
+    label.size = QSizeF(width, height);
+    label.pos = QVector3D( x, y, z);
+    label.showOnTop = showOnTop;
+    label.noScaling = noScaling;
+
+    QRectF drawRect = QRectF( 0, 0, width*zoom, height*zoom );
+    QPixmap imagePixmap = QPixmap(imagePath);
+    QPixmap pix = QPixmap( drawRect.size().toSize() );
+    pix.fill(QColor(0,0,0,0));
+    QPainter lp( &pix );
+    lp.drawPixmap(QPoint(0,0), imagePixmap.scaled(drawRect.size().toSize()));
+    label.size = QSizeF(width, height);
+    label.pix = pix;
+    //QSizeF s = QSizeF(label.size.width()/zoom, label.size.height()/zoom);
+    //label.size = s;
+    if( !areas.contains(area) ) return -1;
+    int labelID;
+    if( !mapLabels.contains( area ) )
+    {
+        QMap<int, TMapLabel> m;
+        m[0] = label;
+        mapLabels[area] = m;
+    }
+    else
+    {
+        labelID = createMapLabelID( area );
+        if( labelID > -1 )
+        {
+            mapLabels[area].insert(labelID, label);
+        }
+    }
+
+    if( mpMapper ) mpMapper->mp2dMap->update();
+    return labelID;
+}
+
+
+int TMap::createMapLabelID(int area )
+{
+    if( mapLabels.contains( area ) )
+    {
+        QList<int> idList = mapLabels[area].keys();
+        int id = 0;
+        while( id >= 0 )
+        {
+            if( !idList.contains( id ) )
+            {
+                return id;
+            }
+            id++;
+        }
+    }
+    return -1;
 }
 
 void TMap::deleteMapLabel(int area, int labelID )
