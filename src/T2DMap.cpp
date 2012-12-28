@@ -516,42 +516,18 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( ! ( ( 0<_lx || 0<_lx+_lw ) && (_w>_lx || _w>_lx+_lw ) ) ) continue;
             if( ! ( ( 0<_ly || 0<_ly+_lh ) && (_h>_ly || _h>_ly+_lh ) ) ) continue;
             QRectF _drawRect = QRect(it.value().pos.x()*tx+_rx, it.value().pos.y()*ty*-1+_ry, _lw, _lh);
-            if ( !it.value().pix.isNull() )
+            if( ! it.value().showOnTop )
             {
-                p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
-            } else {
-                if( it.value().text.length() < 1 )
-                {
-                    mpMap->mapLabels[mAID][it.key()].text = "no text";
-                }
-                QRectF lr = QRectF( 0, 0, 1000, 100 );
-                QPixmap pix( lr.size().toSize() );
-                pix.fill(QColor(0,0,0,0));
-                QPainter lp( &pix );
-
-                if( it.value().hilite )
-                {
-                    lp.fillRect( lr, QColor(255,155,55) );
-                }
+                if( ! it.value().noScaling )
+                    p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
                 else
-                {
-                    lp.fillRect( lr, it.value().bgColor );
-                }
-                QPen lpen;
-                lpen.setColor( it.value().fgColor );
-                lp.setPen( lpen );
-                QRectF br;
-                lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
-                QPointF lpos;
-                lpos.setX( it.value().pos.x()*tx+_rx );
-                lpos.setY( it.value().pos.y()*ty*-1+_ry );
-                p.drawPixmap( lpos, pix, br.toRect() );
+                    p.drawPixmap( lpos, it.value().pix );
             }
+
             if( it.value().hilite )
             {
                 p.fillRect(_drawRect, QColor(255, 155, 55, 190));
             }
-
         }
     }
 
@@ -1548,6 +1524,44 @@ void T2DMap::paintEvent( QPaintEvent * e )
         }
     }
 
+    if( mpMap->mapLabels.contains( mAID ) )
+    {
+        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
+        while( it.hasNext() )
+        {
+            it.next();
+            if( it.value().pos.z() != mOz ) continue;
+            if( it.value().text.length() < 1 )
+            {
+                mpMap->mapLabels[mAID][it.key()].text = "no text";
+            }
+            QPointF lpos;
+            int _lx = it.value().pos.x()*tx+_rx;
+            int _ly = it.value().pos.y()*ty*-1+_ry;
+
+            lpos.setX( _lx );
+            lpos.setY( _ly );
+            int _lw = abs(it.value().size.width())*tx;
+            int _lh = abs(it.value().size.height())*ty;
+
+            if( ! ( ( 0<_lx || 0<_lx+_lw ) && (_w>_lx || _w>_lx+_lw ) ) ) continue;
+            if( ! ( ( 0<_ly || 0<_ly+_lh ) && (_h>_ly || _h>_ly+_lh ) ) ) continue;
+            QRectF _drawRect = QRect(it.value().pos.x()*tx+_rx, it.value().pos.y()*ty*-1+_ry, _lw, _lh);
+            if( it.value().showOnTop )
+            {
+                if( ! it.value().noScaling )
+                    p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+                else
+                    p.drawPixmap( lpos, it.value().pix );
+            }
+
+            if( it.value().hilite )
+            {
+                p.fillRect(_drawRect, QColor(255, 155, 55, 190));
+            }
+        }
+    }
+
     QColor infoCol = mpHost->mBgColor_2;
     QColor _infoCol;
     if( infoCol.red()+infoCol.green()+infoCol.blue() > 200 )
@@ -1747,6 +1761,11 @@ void T2DMap::createLabel( QRectF labelRect )
 
 void T2DMap::mouseReleaseEvent(QMouseEvent * e )
 {
+    if( mMoveLabel )
+    {
+        mMoveLabel = false;
+    }
+
     //move map with left mouse button + ALT (->
     if( mpMap->mLeftDown )
     {
@@ -2211,62 +2230,30 @@ void T2DMap::slot_deleteCustomExitLine()
 
 void T2DMap::slot_moveLabel()
 {
-    qDebug()<<"SLOT: moveLabel#1";
-
     mMoveLabel = true;
 }
 
 void T2DMap::slot_deleteLabel()
 {
-//    // select labels
-//    if( mpMap->mapLabels.contains( mAID ) )
-//    {
-//        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
-//        while( it.hasNext() )
-//        {
-//            it.next();
-//            if( it.value().pos.z() != mOz ) continue;
-
-//            QRectF lr = QRectF( 0, 0, 1000, 100 );
-//            QPixmap pix( lr.size().toSize() );
-//            pix.fill(QColor(0,0,0,0));
-//            QPainter lp( &pix );
-
-//            lp.fillRect( lr, QColor(255,0,0) );
-//            QPen lpen;
-//            lpen.setColor( it.value().fgColor );
-//            lp.setPen( lpen );
-//            QRectF br;
-//            lp.drawText( lr, Qt::AlignLeft, it.value().text, &br );
-//            QPointF lpos;
-//            lpos.setX( it.value().pos.x()*mTX+_rx );
-//            lpos.setY( it.value().pos.y()*mTY*-1+_ry );
-//            int mx = event->pos().x();
-//            int my = event->pos().y();
-//            int mz = mOz;
-//            QPoint click = QPoint(mx,my);
-//            br.moveTopLeft(lpos);
-//            if( br.contains( click ))
-//            {
-//                if( ! it.value().hilite )
-//                {
-//                    mLabelHilite = true;
-//                    mpMap->mapLabels[mAID][it.key()].hilite = true;
-//                    update();
-//                    return;
-//                }
-//                else
-//                {
-//                    mpMap->mapLabels[mAID][it.key()].hilite = false;
-//                    mLabelHilite = false;
-//                }
-//            }
-//        }
-//    }
-
-//    mLabelHilite = false;
-//    update();
-//}
+    if( mpMap->mapLabels.contains( mAID ) )
+    {
+        QList<int> deleteList;
+        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
+        while( it.hasNext() )
+        {
+            it.next();
+            if( it.value().pos.z() != mOz ) continue;
+            if( it.value().hilite )
+            {
+                deleteList.push_back(it.key());
+            }
+        }
+        for( int i=0; i<deleteList.size(); i++ )
+        {
+            mpMap->mapLabels[mAID].remove(deleteList[i]);
+        }
+    }
+    update();
 }
 
 void T2DMap::slot_editLabel()

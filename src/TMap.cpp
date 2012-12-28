@@ -1480,9 +1480,10 @@ bool TMap::restore(QString location)
 
 
 // called from scripts
-int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg )
+int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize )
 {
     if( ! areas.contains( area ) ) return -1;
+
     TMapLabel label;
     label.text = text;
     label.bgColor = bg;
@@ -1490,11 +1491,35 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     label.fgColor = fg;
     label.size = QSizeF(100,100);
     label.pos = QVector3D( x, y, z);
-        //label.posz = z;
-//    int labelID = areas[area]->labelMap.size();
-//    areas[area]->labelMap[labelID] = label;
+    label.showOnTop = showOnTop;
+    label.noScaling = noScaling;
+
+    if( label.text.length() < 1 )
+    {
+        return -1;
+    }
+    QRectF lr = QRectF( 0, 0, 1000, 1000 );
+    QPixmap pix( lr.size().toSize() );
+    pix.fill(QColor(0,0,0,0));
+    QPainter lp( &pix );
+    lp.fillRect( lr, label.bgColor );
+    QPen lpen;
+    lpen.setColor( label.fgColor );
+    QFont font;
+    font.setPointSize(fontSize); //good: font size = 50, zoom = 30.0
+    lp.setRenderHint(QPainter::TextAntialiasing, true);
+    lp.setPen( lpen );
+    lp.setFont(font);
+    QRectF br;
+    lp.drawText( lr, Qt::AlignLeft|Qt::AlignTop, label.text, &br );
+
+    label.size = br.normalized().size();
+    label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
+    QSizeF s = QSizeF(label.size.width()/zoom, label.size.height()/zoom);
+    label.size = s;
+    if( !areas.contains(area) ) return -1;
     int labelID;
-    if( ! mapLabels.contains( area ) )
+    if( !mapLabels.contains( area ) )
     {
         QMap<int, TMapLabel> m;
         m[0] = label;

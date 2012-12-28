@@ -335,8 +335,6 @@ public:
     static int getExitStubs( lua_State * L  );
     static int getModulePriority( lua_State * L  );
     static int setModulePriority( lua_State * L  );
-    static int getMapVar( lua_State * L  );
-    static int setMapVar( lua_State * L  );
     static int updateMap(lua_State * L);
     static int addMapEvent(lua_State * L);
     static int removeMapEvent(lua_State * L);

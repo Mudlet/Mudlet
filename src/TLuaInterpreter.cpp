@@ -6519,106 +6519,6 @@ int TLuaInterpreter::createRoomID( lua_State * L )
     return 1;
 }
 
-int TLuaInterpreter::getMapVar( lua_State * L )
-{
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString name;
-    QMap<QString, mVarTypes> mapVars = pHost->mpMap->mVars;
-    if (!lua_objlen(L,1)){
-        //return all variables and their current values
-        QMapIterator<QString,mVarTypes> it(mapVars);
-        lua_newtable(L);
-        while( it.hasNext() )
-        {
-            it.next();
-            lua_pushstring( L, it.key().toLatin1().data() );
-            switch (it.value().c[8]){
-            case 'B':
-                lua_pushboolean( L, *(it.value().b) );
-                break;
-            case 'I':
-                lua_pushnumber( L, *(it.value().i) );
-                break;
-            case 'F':
-                lua_pushnumber( L, *(it.value().f) );
-                break;
-            }
-            lua_settable(L, -3);
-        }
-        return 1;
-    }
-    else if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "getMapVar: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        name = lua_tostring( L, 1 );
-    }
-    if (mapVars.contains(name))
-        switch (mapVars[name].c[8]){
-        case 'B':
-            lua_pushboolean( L, *(mapVars[name].b) );
-            break;
-        case 'I':
-            lua_pushnumber( L, *(mapVars[name].i) );
-            break;
-        case 'F':
-            lua_pushnumber( L, *(mapVars[name].f) );
-            break;
-        }
-//        lua_pushnumber(L, *(mapVars[name].i));
-    else{
-        lua_pushstring( L, "getMapVar: Variable doesn't exist" );
-        lua_error( L );
-    }
-    return 1;
-}
-
-int TLuaInterpreter::setMapVar( lua_State * L )
-{
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString name;
-    int value;
-    QMap<QString, mVarTypes> mapVars = pHost->mpMap->mVars;
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setMapVar: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        name = lua_tostring( L, 1 );
-    }
-    if (mapVars.contains(name)){
-        switch (mapVars[name].c[8]){
-        case 'B':
-            if (lua_isboolean(L,2))
-                *(mapVars[name].b)=lua_toboolean(L,2);
-            break;
-        case 'I':
-            if (lua_isnumber(L,2))
-                *(mapVars[name].i)=lua_tonumber(L,2);
-            break;
-        case 'F':
-            if (lua_isnumber(L,2))
-                *(mapVars[name].f)=lua_tonumber(L,2);
-            break;
-        default:
-            lua_pushstring( L, "setMapVar: Wrong argument type for variable" );
-            lua_error( L );
-        }
-    }
-    else{
-        lua_pushstring( L, "setMapVar: Variable doesn't exist" );
-        lua_error( L );
-    }
-    return 1;
-}
-
 int TLuaInterpreter::unHighlightRoom( lua_State * L )
 {
     int id;
@@ -6771,12 +6671,18 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
 }
 
 
-// labelID = createMapLabel( area, text, posx, posy, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue )
+//SYNTAX: int labelID = createMapLabel( int area, string text, float posx, float posy, int fgRed, int fgGreen, int fgBlue, bgRed, int bgGreen, int bgBlue, bool showOnTop=true, bool noScaling=true )
 int TLuaInterpreter::createMapLabel( lua_State * L )
 {
     int area, fgr, fgg, fgb, bgr, bgg, bgb;
     float posx, posy, posz;
+    int fontSize = 50;
+    float zoom = 30.0;
     string text;
+    bool showOnTop = true;
+    bool noScaling = true;
+
+    int args = lua_gettop(L);
     if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "createMapLabel: wrong argument type" );
@@ -6898,11 +6804,63 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
         bgb = lua_tointeger( L, 11 );
     }
 
+    if( args > 11 )
+    {
+        if( ! lua_isnumber( L, 12 ) )
+        {
+            lua_pushstring( L, "createMapLabel: wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            zoom = lua_tonumber( L, 12 );
+        }
+        if( ! lua_isnumber( L, 13 ) )
+        {
+            lua_pushstring( L, "createMapLabel: wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            fontSize = lua_tointeger( L, 13 );
+        }
+        if( args > 13 )
+        {
+            if( ! lua_isboolean( L, 14 ) )
+            {
+                lua_pushstring( L, "createMapLabel: wrong argument type" );
+                lua_error( L );
+                return 1;
+            }
+            else
+            {
+                showOnTop = lua_toboolean( L, 14 );
+            }
+
+        }
+        if( args > 14 )
+        {
+            if( ! lua_isboolean( L, 15 ) )
+            {
+                lua_pushstring( L, "createMapLabel: wrong argument type" );
+                lua_error( L );
+                return 1;
+            }
+            else
+            {
+                noScaling = lua_toboolean( L, 15 );
+            }
+
+        }
+    }
+
     QString _text = text.c_str();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QColor fg = QColor(fgr,fgg,fgb);
     QColor bg = QColor(bgr, bgg, bgb);
-    lua_pushinteger( L, pHost->mpMap->createMapLabel( area, _text, posx, posy, posz, fg, bg ) );
+    lua_pushinteger( L, pHost->mpMap->createMapLabel( area, _text, posx, posy, posz, fg, bg, showOnTop, noScaling, zoom, fontSize ) );
     return 1;
 }
 
@@ -9669,8 +9627,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getExitStubs", TLuaInterpreter::getExitStubs );
     lua_register( pGlobalLua, "setModulePriority", TLuaInterpreter::setModulePriority );
     lua_register( pGlobalLua, "getModulePriority", TLuaInterpreter::getModulePriority );
-    lua_register( pGlobalLua, "getMapVar", TLuaInterpreter::getMapVar );
-    lua_register( pGlobalLua, "setMapVar", TLuaInterpreter::setMapVar );
     lua_register( pGlobalLua, "updateMap", TLuaInterpreter::updateMap );
     lua_register( pGlobalLua, "addMapEvent", TLuaInterpreter::addMapEvent );
     lua_register( pGlobalLua, "removeMapEvent", TLuaInterpreter::removeMapEvent );
