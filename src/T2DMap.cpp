@@ -1713,6 +1713,20 @@ void T2DMap::createLabel( QRectF labelRect )
         imagePath = QFileDialog::getOpenFileName( 0, "Select image");
     }
 
+    QMessageBox msgBox2;
+    msgBox2.setText("Draw label as background or on top of everything?");
+    QPushButton *textButton2 = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
+    QPushButton *imageButton2 = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
+    msgBox2.exec();
+    bool showOnTop = false;
+    if( msgBox2.clickedButton() == textButton2)
+    {
+        showOnTop = false;
+    }
+    else
+        showOnTop = true;
+
+    label.showOnTop = showOnTop;
     QPixmap pix( abs(labelRect.width()), abs(labelRect.height()) );
     QRect drawRect = labelRect.normalized().toRect();
     drawRect.moveTo(0,0);
@@ -2105,9 +2119,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             action15->setStatusTip(tr("Create labels to show text or images."));
             connect( action15, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
 
-            QAction * action16 = new QAction("Set Location Here", this );
-            action16->setStatusTip(tr("Set player location here."));
-            connect( action16, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
+//            QAction * action16 = new QAction("Set Location Here", this );
+//            action16->setStatusTip(tr("Set player location here."));
+//            connect( action16, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
 
             mPopupMenu = true;
 //            QMenu * popup = new QMenu( this );
@@ -2129,7 +2143,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             popup->addAction( action13 );
 
             popup->addAction( action15 );
-            popup->addAction( action16 );
+            //popup->addAction( action16 );
 
             popup->popup( mapToGlobal( event->pos() ) );
         }

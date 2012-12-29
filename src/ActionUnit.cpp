@@ -471,6 +471,7 @@ void ActionUnit::showToolBar( QString & name )
             updateToolbar();
         }
     }
+    mudlet::self()->processEventLoopHack();
     mpHost->mpConsole->mpCommandLine->setFocus();
 }
 
@@ -485,6 +486,8 @@ void ActionUnit::hideToolBar( QString & name )
             updateToolbar();
         }
     }
+    mudlet::self()->processEventLoopHack();
+
 }
 
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )

@@ -676,8 +676,13 @@ void TConsole::refresh()
 
     mpBaseVFrame->resize( x, y );
     mpBaseHFrame->resize( x, y );
-    x = mpBaseVFrame->width()-mpLeftToolBar->width()-mpRightToolBar->width();
-    y = mpBaseVFrame->height()-mpTopToolBar->height();
+
+    x = mpBaseVFrame->width();
+    if( !mpLeftToolBar->isHidden() ) x -= mpLeftToolBar->width();
+    if( !mpRightToolBar->isHidden() ) x -= mpRightToolBar->width();
+
+    y = mpBaseVFrame->height();
+    if( !mpTopToolBar->isHidden() ) y -= mpTopToolBar->height();
 
     mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
                            y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );

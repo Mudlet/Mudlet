@@ -348,6 +348,34 @@ void TMap::init( Host * pH )
     }
     qDebug()<<" TMap::init() initialize area rooms: run time:"<<_time.elapsed();
     auditRooms();
+    // convert old style labels
+    QMapIterator<int, TArea *> it( areas );
+    while( it.hasNext() )
+    {
+        it.next();
+        TArea * pA = it.value();
+        int areaID = it.key();
+        if( mapLabels.contains(areaID) )
+        {
+            QList<int> labelIDList = mapLabels[areaID].keys();
+            for( int i=0; i<labelIDList.size(); i++ )
+            {
+                TMapLabel l = mapLabels[areaID][labelIDList[i]];
+                if( l.pix.isNull() )
+                {
+                    int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false );
+                    if( newID > -1 )
+                    {
+                        cout << "CONVERTING: old style label areaID:"<<areaID<<" labelID:"<< labelIDList[i]<<endl;
+                        mapLabels[areaID][labelIDList[i]] = mapLabels[areaID][newID];
+                        deleteMapLabel( areaID, newID );
+                    }
+                    else
+                        cout << "ERROR: cannot convert old style label areaID:"<<areaID<<" labelID:"<< labelIDList[i]<<endl;
+                }
+            }
+        }
+    }
 }
 
 void TMap::auditRooms()
@@ -1120,7 +1148,7 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    version = 14;
+    version = 15;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
@@ -1186,6 +1214,8 @@ bool TMap::serialize( QDataStream & ofs )
             ofs << label.fgColor;
             ofs << label.bgColor;
             ofs << label.pix;
+            ofs << label.noScaling;
+            ofs << label.showOnTop;
         }
     }
     QMapIterator<int, TRoom *> it( rooms );
@@ -1361,6 +1391,11 @@ bool TMap::restore(QString location)
                     ifs >> label.fgColor;
                     ifs >> label.bgColor;
                     ifs >> label.pix;
+                    if( version >= 15 )
+                    {
+                        ifs >> label.noScaling;
+                        ifs >> label.showOnTop;
+                    }
                     _map.insert( labelID, label );
                     labelCount++;
                 }
