@@ -185,6 +185,13 @@ bool XMLexport::writeModuleXML( QIODevice * device, QString moduleName){
     if (!nodesWritten)
         writeEndElement(); //end trigger package tag
     nodesWritten=0;
+    writeStartElement("HelpPackage");
+    if (mpHost->moduleHelp.contains(moduleName) && mpHost->moduleHelp[moduleName].contains("helpURL"))
+        writeTextElement( "helpURL", mpHost->moduleHelp[moduleName]["helpURL"]);
+    else
+        writeTextElement( "helpURL", "");
+    writeEndElement(); //end trigger package tag
+
     writeEndElement();//end hostpackage
     writeEndElement();//MudletPackage
     writeEndDocument();
@@ -248,6 +255,7 @@ bool XMLexport::writeHost( Host * pT )
         qDebug()<<"installed module being done";
         writeStartElement( "mInstalledModules" );
         QMapIterator<QString, QStringList> it(pT->mInstalledModules);
+        pT->modulesToWrite.clear();
         while( it.hasNext() )
         {
             it.next();

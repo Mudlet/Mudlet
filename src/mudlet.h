@@ -122,6 +122,7 @@ public:
    void                          readSettings();
    void                          writeSettings();
    void                          showUnzipProgress( QString txt );
+   bool                          openWebPage(QString path);
    void                          processEventLoopHack();
    static TConsole *             mpDebugConsole;
    static QMainWindow *          mpDebugArea;
@@ -180,6 +181,7 @@ public slots:
    void                          slot_show_help_dialog_download();
    void                          slot_open_mappingscripts_page();
    void                          slot_module_clicked(QTableWidgetItem*);
+   void                          slot_module_changed(QTableWidgetItem*);
    void                          slot_multi_view();
    void                          slot_stopAllTriggers();
    void                          slot_userToolBar_hovered( QAction* pA );
@@ -201,6 +203,7 @@ public slots:
    void                          slot_install_module();
    void                          slot_module_manager();
    void                          layoutModules();
+   void                          slot_help_module();
 
 protected:
 
@@ -254,6 +257,7 @@ private:
    QTableWidget *                 moduleTable;
    QPushButton *                 moduleUninstallButton;
    QPushButton *                 moduleInstallButton;
+   QPushButton *                 moduleHelpButton;
 
 };
 

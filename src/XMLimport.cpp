@@ -457,6 +457,10 @@ void XMLimport::readPackage()
                 readKeyPackage();
                 continue;
             }
+            else if(name() == "HelpPackage"){
+                readHelpPackage();
+                continue;
+            }
             else
             {
                 readUnknownPackage();
@@ -465,6 +469,27 @@ void XMLimport::readPackage()
     }
     qDebug()<<"reading package end";
 }
+
+void XMLimport::readHelpPackage(){
+    while( ! atEnd() )
+    {
+        readNext();
+        if(isEndElement())
+        {
+            break;
+        }
+        if( isStartElement() )
+        {
+            if( name() == "helpURL" )
+            {
+                QString contents = readElementText();
+                mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
+                continue;
+            }
+        }
+    }
+}
+
 
 void XMLimport::readUnknownPackage()
 {

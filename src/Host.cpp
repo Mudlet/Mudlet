@@ -879,7 +879,7 @@ bool Host::installPackage( QString fileName, int module )
         return false;
     }
 
-    QString packageName = fileName.section("/",-1 );
+    QString packageName = fileName.section(QDir::separator(),-1 );
     packageName.replace( ".zip" , "" );
     packageName.replace( "trigger", "" );
     packageName.replace( "xml", "" );

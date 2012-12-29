@@ -284,6 +284,7 @@ public:
     QMap<QString, QStringList> mInstalledModules;
     QMap<QString, int> mModulePriorities;
     QMap<QString, QStringList> modulesToWrite;
+    QMap<QString, QMap<QString, QString> > moduleHelp;
     QStringList        mActiveModules;
     bool               mModuleSaveBlock;
 
