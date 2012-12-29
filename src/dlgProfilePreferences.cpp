@@ -1342,13 +1342,19 @@ void dlgProfilePreferences::loadMap()
     map_file_action->show();
     map_file_action->setText("Loading map...");
 
-    if ( mpHost->mpConsole->loadMap(fileName) ) {
+    if ( mpHost->mpConsole->loadMap(fileName) )
+    {
         map_file_action->setText("Loaded map from "+fileName);
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
-    } else {
+    }
+    else
+    {
         map_file_action->setText("Couldn't load map from "+fileName);
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
     }
+    if( mpHost->mpMap )
+        if( mpHost->mpMap->mpMapper )
+            mpHost->mpMap->mpMapper->updateAreaComboBox();
 }
 
 void dlgProfilePreferences::saveMap()

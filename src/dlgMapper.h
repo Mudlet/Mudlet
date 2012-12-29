@@ -39,10 +39,9 @@ class dlgMapper : public QWidget , public Ui::mapper
 Q_OBJECT
 
 public:
-
-        void downloadMap();
-
         dlgMapper( QWidget *, Host *, TMap * );
+        void downloadMap();
+        void updateAreaComboBox();
         TMap * mpMap;
         Host * mpHost;
         QNetworkAccessManager * mpDownloader;

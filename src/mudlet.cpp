@@ -1635,6 +1635,10 @@ void mudlet::readSettings()
         else
             mpMainToolBar->show();
     }
+    if( settings.value("maximized", false).toBool() )
+    {
+        showMaximized();
+    }
 }
 
 
@@ -1660,6 +1664,7 @@ void mudlet::writeSettings()
     settings.setValue("tefoldericonsize",mTEFolderIconSize);
     settings.setValue("showMenuBar", mShowMenuBar );
     settings.setValue("showToolbar", mShowToolbar );
+    settings.setValue("maximized", isMaximized());
 }
 
 void mudlet::connectToServer()

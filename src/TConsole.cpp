@@ -1765,10 +1765,14 @@ bool TConsole::loadMap(QString location)
     }
     if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
 
-    if ( mpHost->mpMap->restore(location) ) {
+    if ( mpHost->mpMap->restore(location) )
+    {
         mpHost->mpMap->init( mpHost );
         mpHost->mpMap->mpMapper->mp2dMap->init();
         mpHost->mpMap->mpMapper->show();
+        if( mpHost->mpMap )
+            if( mpHost->mpMap->mpMapper )
+                mpHost->mpMap->mpMapper->updateAreaComboBox();
         // previous selections stay, so we need to clear it
         //mpHost->mpMap->mpMapper->mp2dMap->deselect();
         return true;

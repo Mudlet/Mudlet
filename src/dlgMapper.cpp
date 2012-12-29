@@ -36,20 +36,20 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
     QMapIterator<int, QString> it( mpMap->areaNamesMap );
-	//sort them alphabetically (case sensitive)
-	QMap <QString, QString> areaNames;
+    //sort them alphabetically (case sensitive)
+    QMap <QString, QString> areaNames;
     while( it.hasNext() )
     {
         it.next();
         QString name = it.value();
-		areaNames.insert(name.toLower(), name);
+        areaNames.insert(name.toLower(), name);
     }
-	//areaNames.sort();
-	QMapIterator<QString, QString> areaIt( areaNames );
-	while( areaIt.hasNext() )
+    //areaNames.sort();
+    QMapIterator<QString, QString> areaIt( areaNames );
+    while( areaIt.hasNext() )
     {
         areaIt.next();
-		showArea->addItem( areaIt.value() );
+        showArea->addItem( areaIt.value() );
     }
     grid->setChecked( true );
     bubbles->setChecked( mpHost->mBubbleMode );
@@ -122,6 +122,27 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
     qDebug()<<"dlgMapper constructor -> call T2DMap::init()";
     mp2dMap->init();
+}
+
+void dlgMapper::updateAreaComboBox()
+{
+    QMapIterator<int, QString> it( mpMap->areaNamesMap );
+    //sort them alphabetically (case sensitive)
+    QMap <QString, QString> areaNames;
+    while( it.hasNext() )
+    {
+        it.next();
+        QString name = it.value();
+        areaNames.insert(name.toLower(), name);
+    }
+    //areaNames.sort();
+    QMapIterator<QString, QString> areaIt( areaNames );
+    showArea->clear();
+    while( areaIt.hasNext() )
+    {
+        areaIt.next();
+        showArea->addItem( areaIt.value() );
+    }
 }
 
 void dlgMapper::slot_toggleShowRoomIDs(int s)
@@ -211,6 +232,16 @@ void dlgMapper::replyFinished( QNetworkReply * reply )
 
     mpHost->mpMap->init( mpHost );
     glWidget->updateGL();
+
+    if( mpHost->mpMap )
+        if( mpHost->mpMap->mpMapper )
+            mpHost->mpMap->mpMapper->updateAreaComboBox();
+
+    TEvent mapDownloadEvent;
+    mapDownloadEvent.mArgumentList.append( "sysMapDownloadEvent" );
+    mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent( & mapDownloadEvent );
+
 }
 
 void dlgMapper::choseRoom(QListWidgetItem * pT )
