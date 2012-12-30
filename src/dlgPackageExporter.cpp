@@ -2,8 +2,13 @@
 #include "ui_dlgPackageExporter.h"
 #include "Host.h"
 #include <QFileDialog>
+#include <QInputDialog>
 #include "XMLexport.h"
-
+#ifdef Q_OS_WIN
+    #include "quazip.h"
+    #include "JlCompress.h"
+#endif
+#include <QDesktopServices>
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::dlgPackageExporter)
@@ -18,12 +23,49 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     mpHost = host;
     ui->setupUi(this);
     treeWidget = ui->treeWidget;
-    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(slot_browse_button()));
 
     closeButton = ui->buttonBox->addButton (QDialogButtonBox::Close);
-
     exportButton = new QPushButton(tr("&Export"));
+
+//
+//HEIKO: added ability to make fully fledged Mudlet packages including a package
+//       name config file and arbitray additional package content selection.
+//       However, this feature is currently restricted to windows only
+//       until quazip is part of the other Mudlet builds
+#ifdef Q_OS_WIN
+    ui->browseButton->hide();
+    ui->filePath->hide();
+    ui->textLabel1->hide();
+    packageName = QInputDialog::getText(0,"Package Name", "Package Name");
+    QString packagePath = QFileDialog::getExistingDirectory(0,"Where do you want to save the package?","Where do you want to save the package?");
+    tempDir = QDir::homePath()+"/.config/mudlet/"+mpHost->getName()+"/tmp/";
+    packagePath.replace("\\", "/");
+    tempDir = tempDir + "/" + packageName;
+    QDir packageDir = QDir(tempDir);
+    if ( !packageDir.exists() ){
+        packageDir.mkpath(tempDir);
+    }
+    zip = packagePath + "/" + packageName + ".zip";
+    filePath = tempDir + "/" + packageName + ".xml";
+
+    QString luaConfig = tempDir + "/config.lua";
+    QFile configFile(luaConfig);
+    QStringList strings;
+    if (configFile.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        QTextStream out(&configFile);
+        out << "mpackage = \"" << packageName << "\"\n";
+        out.flush();
+        configFile.close();
+    }
+    connect(ui->addFiles, SIGNAL(clicked()), this, SLOT(slot_addFiles()));
+#else
+    ui->addFiles->hide();
+    ui->textLabel1_2->hide();
+    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(slot_browse_button()));
     exportButton->setDisabled(true); // disabled by default until the user selects a location
+#endif
+
     ui->buttonBox->addButton(exportButton, QDialogButtonBox::ResetRole);
     connect(exportButton, SIGNAL(clicked()), this, SLOT(slot_export_package()));
 
@@ -46,8 +88,12 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem * pItem, QList<QTreeWidgetI
         recurseTree(pItem->child(i), treeList);
 }
 
+
+
 void dlgPackageExporter::slot_export_package(){
-    QString filePath = ui->filePath->text();
+#ifndef Q_OS_WIN
+    filePath; = ui->filePath->text();
+#endif
     QFile file_xml( filePath );
     if( file_xml.open( QIODevice::WriteOnly ) )
     {
@@ -156,9 +202,19 @@ void dlgPackageExporter::slot_export_package(){
         }
 
         ui->infoLabel->setText("Exported package to "+filePath);
+        JlCompress::compressDir(zip, tempDir );
     } else {
         ui->infoLabel->setText("Failed to export - couldn't open "+filePath+" for writing in. Do you have the necessary permissions to write to that folder?");
     }
+
+
+
+
+}
+
+void dlgPackageExporter::slot_addFiles(){
+    QString _pn = "file:///"+tempDir;
+    QDesktopServices::openUrl(QUrl(_pn, QUrl::TolerantMode));
 }
 
 void dlgPackageExporter::slot_browse_button(){

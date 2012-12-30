@@ -41,7 +41,12 @@ private:
     QTreeWidget * treeWidget;
     QPushButton *exportButton;
     QPushButton *closeButton;
+    QString filePath;
+    QString tempDir;
+    QString packageName;
+    QString zip;
 public slots:
+    void slot_addFiles();
     void slot_browse_button();
     void slot_export_package();
 };
