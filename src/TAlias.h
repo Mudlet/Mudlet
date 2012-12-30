@@ -86,6 +86,7 @@ public:
     bool                  mModuleMember;
     bool            mModuleMasterFolder;
     QString          mFuncName;
+    bool             exportItem;
 };
 
 #endif

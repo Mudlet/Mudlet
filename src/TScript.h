@@ -71,7 +71,7 @@ public:
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()                             { return mEventHandlerList; }
     bool             isClone(TScript &b) const;
-
+    bool             exportItem;
 
 private:
 

@@ -131,7 +131,7 @@ public:
     QString          css;
     QColor           mButtonColor;
     Host *           mpHost;
-
+    bool             exportItem;
 private:
 
     TAction(){};

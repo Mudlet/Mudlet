@@ -518,7 +518,7 @@ bool XMLexport::exportTrigger( QIODevice * device )
 
 bool XMLexport::writeTrigger( TTrigger * pT )
 {
-    if (!pT->mModuleMasterFolder){
+    if (!pT->mModuleMasterFolder && pT->exportItem){
     //qDebug()<<"trigger written"<<pT->mModuleMember;
     QString tag;
     if( pT->mIsFolder )
@@ -577,7 +577,8 @@ bool XMLexport::writeTrigger( TTrigger * pT )
       //  if (pChild->mModuleMember) continue;
         writeTrigger( pChild );
     }
-    writeEndElement();
+    if (pT->exportItem)
+        writeEndElement();
 
     return true;
 }
@@ -604,7 +605,7 @@ bool XMLexport::exportAlias( QIODevice * device )
 
 bool XMLexport::writeAlias( TAlias * pT )
 {
-    if (!pT->mModuleMasterFolder){
+    if (!pT->mModuleMasterFolder && pT->exportItem){
     QString tag;
     if( pT->mIsFolder )
     {
@@ -632,7 +633,8 @@ bool XMLexport::writeAlias( TAlias * pT )
         TAlias * pChild = *it;
         writeAlias( pChild );
     }
-    writeEndElement();
+    if (pT->exportItem)
+        writeEndElement();
 
     return true;
 }
@@ -658,7 +660,7 @@ bool XMLexport::exportAction( QIODevice * device )
 
 bool XMLexport::writeAction( TAction * pT )
 {
-    if (!pT->mModuleMasterFolder){
+    if (!pT->mModuleMasterFolder && pT->exportItem){
     QString tag;
     if( pT->mIsFolder )
     {
@@ -701,7 +703,8 @@ bool XMLexport::writeAction( TAction * pT )
         TAction * pChild = *it;
         writeAction( pChild );
     }
-    writeEndElement();
+    if (pT->exportItem)
+        writeEndElement();
 
     return true;
 }
@@ -728,7 +731,7 @@ bool XMLexport::exportTimer( QIODevice * device )
 
 bool XMLexport::writeTimer( TTimer * pT )
 {
-    if (!pT->mModuleMasterFolder){
+    if (!pT->mModuleMasterFolder && pT->exportItem){
     QString tag;
     if( pT->mIsFolder )
     {
@@ -758,7 +761,8 @@ bool XMLexport::writeTimer( TTimer * pT )
         TTimer * pChild = *it;
         writeTimer( pChild );
     }
-    writeEndElement();
+    if (pT->exportItem)
+        writeEndElement();
 
     return true;
 }
@@ -785,7 +789,7 @@ bool XMLexport::exportScript( QIODevice * device )
 
 bool XMLexport::writeScript( TScript * pT )
 {
-    if (!pT->mModuleMasterFolder){
+    if (!pT->mModuleMasterFolder && pT->exportItem){
     QString tag;
     if( pT->mIsFolder )
     {
@@ -818,7 +822,8 @@ bool XMLexport::writeScript( TScript * pT )
         TScript * pChild = *it;
         writeScript( pChild );
     }
-    writeEndElement();
+    if (pT->exportItem)
+        writeEndElement();
 
     return true;
 }
@@ -845,7 +850,7 @@ bool XMLexport::exportKey( QIODevice * device )
 
 bool XMLexport::writeKey( TKey * pT )
 {
-    if (!pT->mModuleMasterFolder){
+    if (!pT->mModuleMasterFolder && pT->exportItem){
     QString tag;
     if( pT->mIsFolder )
     {
@@ -874,7 +879,8 @@ bool XMLexport::writeKey( TKey * pT )
         TKey * pChild = *it;
         writeKey( pChild );
     }
-    writeEndElement();
+    if (pT->exportItem)
+        writeEndElement();
 
 
     return true;

@@ -42,6 +42,7 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
+, exportItem(true)
 , mIsTempAlias( false )
 {
 }
@@ -53,6 +54,7 @@ TAlias::TAlias( QString name, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
+, exportItem(true)
 , mIsTempAlias( false )
 {
 }

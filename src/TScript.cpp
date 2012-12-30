@@ -43,6 +43,7 @@ TScript::TScript( TScript * parent, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
+, exportItem(true)
 {
 }
 
@@ -53,6 +54,7 @@ TScript::TScript( QString name, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
+, exportItem(true)
 {
 }
 

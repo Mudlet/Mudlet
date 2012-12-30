@@ -199,6 +199,7 @@ public slots:
    void                          slot_uninstall_package();
    void                          slot_install_package();
    void                          slot_package_manager();
+   void                          slot_package_exporter();
    void                          slot_uninstall_module();
    void                          slot_install_module();
    void                          slot_module_manager();

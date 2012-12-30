@@ -43,6 +43,7 @@ TKey::TKey( TKey * parent, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
+, exportItem(true)
 {
 }
 
@@ -53,6 +54,7 @@ TKey::TKey( QString name, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
+, exportItem(true)
 {
 }
 

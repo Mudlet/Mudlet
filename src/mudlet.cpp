@@ -32,6 +32,7 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgTriggerEditor.h"
+#include "dlgPackageExporter.h"
 #include "dlgAboutDialog.h"
 #include "TCommandLine.h"
 #include "EAction.h"
@@ -360,6 +361,7 @@ mudlet::mudlet()
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
+    connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -683,6 +685,14 @@ void mudlet::slot_uninstall_package()
     packageList->clear();
     packageList->addItems( pH->mInstalledPackages );
 }
+
+void mudlet::slot_package_exporter(){
+    Host * pH = getActiveHost();
+    if( ! pH ) return;
+    dlgPackageExporter *d = new dlgPackageExporter(this, pH);
+    d->show();
+}
+
 
 void mudlet::slot_close_profile_requested( int tab )
 {
