@@ -14,7 +14,10 @@
 ---   end
 ---   </pre>
 function table.is_empty(tbl)
-	if next(tbl) == nil then return true else return false end
+	for k, v in pairs(tbl) do
+		return false
+	end
+	return true
 end
 
 
@@ -45,7 +48,7 @@ end
 --- There are currently 3 functions with similar behaviour.
 ---
 --- @see display
---- @see printTable
+--- @see printTable 
 function listPrint( map )
 	echo("-------------------------------------------------------\n");
 	for k,v in ipairs( map ) do

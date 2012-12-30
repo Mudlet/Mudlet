@@ -267,7 +267,7 @@
     <string>Package manager</string>
    </property>
    <property name="shortcut">
-    <string>Alt+P</string>
+    <string>Alt+O</string>
    </property>
   </action>
   <action name="actionTest1">

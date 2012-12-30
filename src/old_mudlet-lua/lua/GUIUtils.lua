@@ -854,15 +854,12 @@ if rex then
 				str, cmd, hint, fmt = ...
 			elseif n >= 4 and type(args[4]) == 'string' then
 				win, str, cmd, hint = ...
-				if win == "main" then win = nil end
 			else
 				error'Improper arguments, usage: ([window, ] string, command, hint)'
 			end
 		else
-			if args[1] and args[2] and args[1] ~= "main" then
+			if args[1] and args[2] then
 				win, str = args[1], args[2]
-			elseif args[1] and args[2] and args[1] == "main" then
-				str = args[2]
 			else
 				str = args[1]
 			end
@@ -907,7 +904,7 @@ if rex then
 					end
 				else
 					-- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
-					if win then out(win, v, cmd, hint, (fmt == true and true or false)) else out(v, cmd, hint, (fmt == true and true or false)) end
+					if win then out(win, v, cmd, hint, fmt) else out(v, cmd, hint, fmt) end
 				end
 			end
 		end
@@ -1021,8 +1018,6 @@ else
 	function cecho(window, text)
        local win = text and window
        local s = text or window
-       if win == "main" then win = nil end
-
        if win then
             resetFormat(win)
        else
@@ -1059,7 +1054,6 @@ else
 	function decho(window, text)
 		local win = text and window
 		local s = text or window
-		if win == "main" then win = nil end
 		local reset
 		if win then
 			reset = function() resetFormat(win) end

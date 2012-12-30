@@ -606,16 +606,10 @@ do
 	end
 end
 
-ioprint = print
 function print(...)
   local t, echo, tostring = {...}, echo, tostring
   for i = 1, #t do
     echo((tostring(t[i]) or '?').."    ")
   end
   echo("\n")
-end
-
-function deleteFull()
-	deleteLine()
-	tempLineTrigger(1,1, [[if isPrompt() then deleteLine() end]])
 end

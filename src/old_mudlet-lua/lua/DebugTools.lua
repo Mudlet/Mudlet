@@ -78,7 +78,7 @@ end
 
 local function quote (s)
     if type(s) == 'table' then
-        return prettywrite(s,'')
+        return pretty.write(s,'')
     else
         return ('%q'):format(tostring(s))
     end
@@ -102,7 +102,7 @@ end
 --  @return a string
 --  @return a possible error message
 local append = table.insert
-function prettywrite (tbl,space,not_clever)
+function display (tbl,space,not_clever)
     if type(tbl) ~= 'table' then
         echo(tostring(tbl)..'\n')
         return
@@ -194,9 +194,6 @@ function prettywrite (tbl,space,not_clever)
     end
     writeit(tbl,'',space)
     eat_last_comma()
-    return table.concat(lines,#space > 0 and '\n' or '')
+    echo(table.concat(lines,#space > 0 and '\n' or '')..'\n')
 end
 
-function display(what)
-    echo((prettywrite(what, '  ') or 'nil')..'\n')
-end
