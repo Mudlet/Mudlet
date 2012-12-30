@@ -609,6 +609,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "realmsofdespair.com";
         if( profile_name == "ZombieMUD" )
             val = "zombiemud.org";
+        if( profile_name == "3Scapes")
+            val = "3k.org";
+        if( profile_name == "3Kingdoms")
+            val = "3k.org";
     }
     host_name_entry->setText( val );
     item = "port";
@@ -639,6 +643,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "4000";
         if( profile_name == "ZombieMUD" )
             val = "23";
+        if( profile_name == "3Scapes")
+            val = "3200";
+        if( profile_name == "3Kingdoms")
+            val = "3000";
     }
     port_entry->setText( val );
     item = "password";
@@ -664,6 +672,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         val = "Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with players logging in from all over the globe to test their skill in our medieval role-playing environment. With 15 separate guilds and 41 races to choose from, as a player the only limitation to your achievements on the game is your own imagination and will to succeed.";
     else if( profile_name == "God Wars II" )
         val = "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to new situations. Take on the role of a godlike supernatural being in a fight for supremacy.\n\nRoomless world. Manual combat. Endless possibilities.";
+    else if( profile_name == "3Scapes")
+        val = "3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but unique and twisted in so many ways.  3Scapes offers a faster pace of play, along with an assortment of new guilds, features, and areas.";
+    else if ( profile_name == "3Kingdoms")
+        val = "Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms is a colossal adventure through which many years of active and continued development by its dedicated coding staff.  Based around the mighty town of Pinnacle, three main realms beckon the player to explore. These kingdoms are known as: Fantasy, a vast medieval realm full of orcs, elves, dragons, and a myriad of other creatures; Science, a post-apocalyptic, war-torn world set in the not-so-distant future; and Chaos, a transient realm where the enormous realities of Fantasy and Science collide to produce creatures so bizarre that they have yet to be categorized.  During their exploration of the realms, players have the opportunity to join any of well over a dozen different guilds, which grant special, unique powers to the player, furthering their abilities as they explore the vast expanses of each realm. Add in the comprehensive skill system that 3K offers and you are able to extensively customize your characters.";
     else
         val = readProfileData( profile, item );
     mud_description_textedit->clear();
@@ -696,6 +708,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "<center><a href='http://www.lusternia.com/'>http://www.lusternia.com</a></center>";;
         if( profile_name == "Imperian" )
             val = "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>";;
+        if( profile_name == "3Scapes" )
+            val = "<center><a href='http://www.3scapes.org/'>http://www.3scapes.org</a></center>";;
+        if( profile_name == "3Kingdoms" )
+            val = "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>";;
     }
     website_entry->setText( val );
 
@@ -818,14 +834,6 @@ void dlgConnectionProfiles::fillout_form()
     QListWidgetItem * pM;
     QIcon mi;
 
-    muds = "God Wars II";
-    pM = new QListWidgetItem( muds );
-    pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/gw2.png" );
-    pM->setIcon(mi);
-    muds.clear();
 
     muds = "Avalon.de";
     pM = new QListWidgetItem( muds );
@@ -846,6 +854,27 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
+    muds = "3Kingdoms";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem(pM);
+    QPixmap pd(":/icons/3klogo.png");
+    QPixmap pd1 = pd.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
+    QIcon mi5(pd1);
+    pM->setIcon(mi5);
+
+    muds = "3Scapes";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem(pM);
+    QPixmap pc(":/icons/3slogo.png");
+    QPixmap pc1 = pc.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
+    QIcon mi4(pc1);
+    pM->setIcon(mi4);
+    muds.clear();
+
     muds = "Midkemia";
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
@@ -855,6 +884,16 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
+
+
+    muds = "God Wars II";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( ":/icons/gw2.png" );
+    pM->setIcon(mi);
+    muds.clear();
 
 
     muds = "Realms of Despair";
@@ -941,6 +980,8 @@ void dlgConnectionProfiles::fillout_form()
     muds.clear();
     QDateTime test_date;
     QListWidgetItem * toselect = 0;
+
+    muds.clear();
     for( int i=0; i<mProfileList.size(); i++ )
     {
         QString s = mProfileList[i];
@@ -970,6 +1011,10 @@ void dlgConnectionProfiles::fillout_form()
         if( mProfileList[i] == "Realms of Despair" )
             continue;
         if( mProfileList[i] == "ZombieMUD" )
+            continue;
+        if( mProfileList[i] == "3Scapes" )
+            continue;
+        if( mProfileList[i] == "3Kingdoms" )
             continue;
         QString sList;
         sList = mProfileList[i];
