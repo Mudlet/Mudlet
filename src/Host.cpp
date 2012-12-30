@@ -878,8 +878,7 @@ bool Host::installPackage( QString fileName, int module )
     {
         return false;
     }
-
-    QString packageName = fileName.section(QDir::separator(),-1 );
+    QString packageName = fileName.section("/", -1);
     packageName.replace( ".zip" , "" );
     packageName.replace( "trigger", "" );
     packageName.replace( "xml", "" );
@@ -887,6 +886,7 @@ bool Host::installPackage( QString fileName, int module )
     packageName.replace( '/' , "" );
     packageName.replace( '\\' , "" );
     packageName.replace( '.' , "" );
+
     if (module){
         if( mActiveModules.contains( packageName ) ){
             uninstallPackage(packageName, 2);
@@ -894,7 +894,9 @@ bool Host::installPackage( QString fileName, int module )
     }
     else{
         if( mInstalledPackages.contains( packageName ) )
+        {
             return false;
+        }
     }
     if( mpEditorDialog )
     {
@@ -930,7 +932,6 @@ bool Host::installPackage( QString fileName, int module )
         #else
             JlCompress::extractDir(fileName, _dest );
         #endif
-
         mpUnzipDialog->close();
         mpUnzipDialog = 0;
 
@@ -947,7 +948,6 @@ bool Host::installPackage( QString fileName, int module )
         {
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
             readPackageConfig(_dir.absoluteFilePath("config.lua"), packageName);
-
             // now that the packageName changed, redo relevant checks to make sure it's still valid
             if (module)
             {
@@ -962,17 +962,14 @@ bool Host::installPackage( QString fileName, int module )
                 {
                     // cleanup and quit if already installed
                     removeDir( _dir.absolutePath(),_dir.absolutePath() );
-
                     return false;
                 }
             }
-
             // continuing, so update the folder name on disk
             QString newpath(QString( "%1/%2/").arg( _home ).arg( packageName ));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir( newpath );
         }
-
         QStringList _filterList;
         _filterList << "*.xml" << "*.trigger";
         QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );

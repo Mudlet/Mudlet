@@ -119,6 +119,7 @@ SOURCES += TConsole.cpp \
     dlgIRC.cpp \
     T2DMap.cpp \
     dlgRoomExits.cpp \
+    dlgPackageExporter.cpp \
     exitstreewidget.cpp
 
 
@@ -195,6 +196,7 @@ HEADERS += mudlet.h \
     dlgIRC.h \
     T2DMap.h \
     dlgRoomExits.h \
+    dlgPackageExporter.h \
     exitstreewidget.h
 
 FORMS += ui/connection_profiles.ui \
@@ -228,6 +230,7 @@ FORMS += ui/connection_profiles.ui \
     ui/package_manager.ui \
     ui/module_manager.ui \
     ui/package_manager_unpack.ui \
+    ui/dlgPackageExporter.ui \
     ui/custom_lines.ui
 
 #win32: {
