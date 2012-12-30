@@ -1222,6 +1222,10 @@ void dlgConnectionProfiles::slot_connectToServer()
         {
            pHost->installPackage(":/mudlet-mapper.xml", 0);
         }
+        else if (pHost->getUrl().toLower().contains("3scapes.org") ||
+                 pHost->getUrl().toLower().contains("3k.org")){
+            pHost->installPackage(":/3k-mapper.xml",0);
+        }
         else
            pHost->installPackage(":/generic_mapper_script.xml", 0);
 

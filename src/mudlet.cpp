@@ -1822,6 +1822,10 @@ void mudlet::slot_mapper()
     addDockWidget(Qt::RightDockWidgetArea, pDock);
 
     check_for_mappingscript();
+    TEvent mapOpenEvent;
+    mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
+    mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent( & mapOpenEvent );
 }
 
 void mudlet::check_for_mappingscript()

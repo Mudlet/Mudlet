@@ -126,5 +126,6 @@
         <file>icons/tag_checkbox-grey.png</file>
         <file>icons/3klogo.png</file>
         <file>icons/3slogo.png</file>
+        <file>3k-mapper.xml</file>
     </qresource>
 </RCC>
