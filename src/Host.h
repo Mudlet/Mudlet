@@ -306,6 +306,7 @@ public:
     QColor             mCommandLineBgColor;
     bool               mMapperUseAntiAlias;
     bool               mFORCE_MXP_NEGOTIATION_OFF;
+    bool               mHaveMapperScript;
 
 private:
     Host();

@@ -151,6 +151,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mAcceptServerGUI     ( true )
 , mModuleSaveBlock(false)
 , mFORCE_MXP_NEGOTIATION_OFF( false )
+, mHaveMapperScript( false )
 {
    // mLogStatus = mudlet::self()->mAutolog;
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
@@ -279,6 +280,7 @@ Host::Host()
 , mServerGUI_Package_name( "nothing" )
 , mAcceptServerGUI     ( true )
 , mFORCE_MXP_NEGOTIATION_OFF( false )
+, mHaveMapperScript( false )
 {
 
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
@@ -459,7 +461,12 @@ void Host::assemblePath()
 
 int Host::check_for_mappingscript()
 {
-   return mLuaInterpreter.check_for_mappingscript();
+    // the mapper script reminder is only shown once
+    // because it is too difficult and error prone (->proper script sequence)
+    // to disable this message
+    bool ret = (mLuaInterpreter.check_for_mappingscript() || mHaveMapperScript);
+    mHaveMapperScript = true;
+    return ret;
 }
 
 void Host::startSpeedWalk()
