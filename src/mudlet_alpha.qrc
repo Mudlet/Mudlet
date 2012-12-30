@@ -124,5 +124,7 @@
         <file>icons/folder-grey-locked.png</file>
         <file>icons/tag_checkbox_checked_grey.png</file>
         <file>icons/tag_checkbox-grey.png</file>
+        <file>icons/3klogo.png</file>
+        <file>icons/3slogo.png</file>
     </qresource>
 </RCC>
