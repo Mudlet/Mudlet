@@ -8579,6 +8579,25 @@ int TLuaInterpreter::installPackage( lua_State * L )
         pHost->installPackage( package, 0 );
 }
 
+int TLuaInterpreter::uninstallPackage( lua_State * L )
+{
+    string event;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "installPackage(): wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        event = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString package = event.c_str();
+    if( pHost )
+        pHost->uninstallPackage( package, 0 );
+}
+
 int TLuaInterpreter::registerAnonymousEventHandler( lua_State * L )
 {
     string event;
@@ -9774,7 +9793,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage );
     lua_register( pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel );
     lua_register( pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom );
-
+    lua_register( pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage );
 
 
 

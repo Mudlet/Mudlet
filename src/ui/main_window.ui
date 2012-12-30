@@ -287,7 +287,7 @@
   </action>
   <action name="actionPackage_Exporter">
    <property name="text">
-    <string>Package exporter</string>
+    <string>Package exporter (experimental)</string>
    </property>
   </action>
  </widget>
