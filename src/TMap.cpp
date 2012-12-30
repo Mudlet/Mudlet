@@ -363,7 +363,7 @@ void TMap::init( Host * pH )
                 TMapLabel l = mapLabels[areaID][labelIDList[i]];
                 if( l.pix.isNull() )
                 {
-                    int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false );
+                    int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50 );
                     if( newID > -1 )
                     {
                         cout << "CONVERTING: old style label areaID:"<<areaID<<" labelID:"<< labelIDList[i]<<endl;
