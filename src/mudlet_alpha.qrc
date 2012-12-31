@@ -130,6 +130,6 @@
         <file>deleteOldProfiles.zip</file>
         <file>echo.xml</file>
         <file>run-lua-code-v4.xml</file>
-        <file>Vyzor.zip</file>
+        <file>vyzor.mpackage</file>
     </qresource>
 </RCC>

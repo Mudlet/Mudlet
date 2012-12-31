@@ -2923,6 +2923,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
 
     if( mRoomBeingMoved && !mSizeLabel && mMultiSelectionList.size() > 0 )
     {
+        mHelpMsg = "MOVING rooms";
         mMultiRect = QRect(0,0,0,0);
         int _roomID = mRID;
         if( ! mpMap->rooms.contains( _roomID ) ) return;
@@ -2948,12 +2949,12 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
 
         int dx,dy;
 
-//        if( mMultiSelectionList.size() < 1 )
-//        {
-//            mMultiSelectionList.push_back( mRoomSelection );
-//        }
         int topLeftCorner = getTopLeftSelection();
-        if( topLeftCorner < 0 ) return;
+        if( topLeftCorner < 0 )
+        {
+            return;
+        }
+
         dx = mx - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->x;
         dy = my - mpMap->rooms[mMultiSelectionList[topLeftCorner]]->y;
         for( int j=0; j<mMultiSelectionList.size(); j++ )
@@ -2990,7 +2991,7 @@ int T2DMap::getTopLeftSelection()
 {
     int min_x, min_y, id;
     id = -1;
-    if( mMultiSelectionList.size() < 2 ) return -1;
+    if( mMultiSelectionList.size() < 1 ) return -1;
     if( ! mpMap->rooms.contains(mMultiSelectionList[0])) return -1;
     min_x = mpMap->rooms[mMultiSelectionList[0]]->x;
     min_y = mpMap->rooms[mMultiSelectionList[0]]->y;
