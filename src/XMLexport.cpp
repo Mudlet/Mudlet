@@ -241,6 +241,11 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mAcceptServerGUI", pT->mAcceptServerGUI ? "yes" : "no" );
     writeAttribute( "mMapperUseAntiAlias", pT->mMapperUseAntiAlias ? "yes" : "no" );
     writeAttribute( "mFORCE_MXP_NEGOTIATION_OFF", pT->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no" );
+    writeAttribute( "mRoomSize", QString::number(pT->mRoomSize));
+    writeAttribute( "mLineSize", QString::number(pT->mLineSize));
+    writeAttribute( "mBubbleMode", pT->mBubbleMode ? "yes" : "no");
+    writeAttribute( "mShowRoomIDs", pT->mShowRoomID ? "yes" : "no");
+    writeAttribute( "mShowPanel", pT->mShowPanel ? "yes" : "no");
     writeAttribute( "mHaveMapperScript", pT->mHaveMapperScript ? "yes" : "no");
 
     writeTextElement( "name", pT->mHostName );

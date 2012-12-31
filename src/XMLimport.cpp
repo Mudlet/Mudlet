@@ -726,6 +726,15 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mAcceptServerGUI = ( attributes().value("mAcceptServerGUI") == "yes" );
     pT->mMapperUseAntiAlias = ( attributes().value("mMapperUseAntiAlias") == "yes" );
     pT->mFORCE_MXP_NEGOTIATION_OFF = ( attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes" );
+    pT->mRoomSize = attributes().value("mRoomSize").toString().toInt();
+    if (!pT->mRoomSize)
+        pT->mRoomSize=3;
+    pT->mLineSize = attributes().value("mLineSize").toString().toInt();
+    if (!pT->mLineSize)
+        pT->mLineSize=1;
+    pT->mBubbleMode = ( attributes().value("mBubbleMode") == "yes" );
+    pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
+    pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
     pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
 
     while( ! atEnd() )

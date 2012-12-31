@@ -55,7 +55,6 @@ T2DMap::T2DMap()
     rSize = 0.5;
     mShiftMode = false;
     mShowInfo = true;
-    mShowGrid = false;
     mBubbleMode = false;
     mMapperUseAntiAlias = true;
     mMoveLabel = false;
@@ -99,7 +98,6 @@ T2DMap::T2DMap(QWidget * parent)
     eSize = 3.0;
     mShiftMode = false;
     mShowInfo = true;
-    mShowGrid = false;
     mBubbleMode = false;
     mMapperUseAntiAlias = true;
     mMoveLabel = false;
@@ -343,11 +341,6 @@ void T2DMap::shiftZdown()
     update();
 }
 
-void T2DMap::showInfo()
-{
-    mShowInfo = !mShowInfo;
-    update();
-}
 
 void T2DMap::switchArea(QString name)
 {

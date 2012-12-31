@@ -97,7 +97,7 @@ mudlet::mudlet()
 , mpMusicBox2(Phonon::createPlayer(Phonon::MusicCategory) )
 , mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
 , mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
-#ifdef Q_OS_LINUX,
+#ifdef Q_OS_LINUX
     , version( "Mudlet 2.0 12-30-2012" )
 #endif
 #ifdef Q_OS_MAC
