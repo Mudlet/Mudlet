@@ -1226,8 +1226,11 @@ void dlgConnectionProfiles::slot_connectToServer()
                  pHost->getUrl().toLower().contains("3k.org")){
             pHost->installPackage(":/3k-mapper.xml",0);
         }
-        else
-           pHost->installPackage(":/generic_mapper_script.xml", 0);
+
+        pHost->installPackage(":/deleteOldProfiles.zip", 0);
+        //pHost->installPackage(":/Vyzor.zip", 0);
+        pHost->installPackage(":/echo.xml", 0);
+        pHost->installPackage(":/run-lua-code-v4.xml", 0);
 
     }
 

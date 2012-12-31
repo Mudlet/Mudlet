@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.0">
+    <AliasPackage>
+        <Alias isActive="yes" isFolder="no">
+            <name>run lua code</name>
+            <script>local f,e = loadstring(&quot;return &quot;..matches[2])
+if not f then
+	f,e = assert(loadstring(matches[2]))
+end
+
+local r = f()
+if r ~= nil then display(r) end</script>
+            <command></command>
+            <packageName></packageName>
+            <regex>^lua (.*)$</regex>
+        </Alias>
+    </AliasPackage>
+</MudletPackage>

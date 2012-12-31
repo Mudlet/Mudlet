@@ -3253,8 +3253,10 @@ void T2DMap::slot_createLabel()
 {
     if( ! mpMap->areas.contains( mAID ) ) return;
 
+    mHelpMsg = "Left-click and drag a square for the size and position of your label";
     mSizeLabel = true;
     mMultiSelection = true;
+    update();
     return;
 
 

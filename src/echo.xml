@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.0">
+    <AliasPackage>
+        <Alias isActive="yes" isFolder="no">
+            <name>`echo</name>
+            <script>local s = matches[2]
+
+s = string.gsub(s, &quot;%$&quot;, &quot;\n&quot;)
+feedTriggers(&quot;\n&quot; .. s .. &quot;\n&quot;)
+echo(&quot;\n&quot;)</script>
+            <command></command>
+            <regex>`echo (.+)</regex>
+        </Alias>
+    </AliasPackage>
+</MudletPackage>
