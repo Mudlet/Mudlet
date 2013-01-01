@@ -3287,23 +3287,7 @@ bool TBuffer::deleteLines( int from, int to )
             dirty.removeAt( i );
         }
 
-        int i = (int)buffer.size();
-        // we do reverse lookup as the wanted lines are usually at the end of the buffer
-        // std::reverse_iterator is not defined for usage in erase()
-
-        typedef std::deque<std::deque<TChar> >::iterator IT;
-        for( IT it=buffer.end(); it!=buffer.begin(); )
-        {
-            it--;
-            i--;
-            if( i > to )
-                continue;
-
-            if( --delta >= 0 )
-                buffer.erase( it );
-            else
-                break;
-        }
+        buffer.erase( buffer.begin() + from, buffer.begin() + to + 1 );
         return true;
     }
     else
