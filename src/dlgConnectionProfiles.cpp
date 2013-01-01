@@ -1228,7 +1228,7 @@ void dlgConnectionProfiles::slot_connectToServer()
             mudlet::self()->packagesToInstallList.append(":/3k-mapper.xml");
         }
 
-        mudlet::self()->packagesToInstallList.append(":/deleteOldProfiles.zip");
+        mudlet::self()->packagesToInstallList.append(":/deleteOldProfiles.xml");
         mudlet::self()->packagesToInstallList.append(":/echo.xml");
         mudlet::self()->packagesToInstallList.append(":/run-lua-code-v4.xml");
 

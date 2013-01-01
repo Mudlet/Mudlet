@@ -38,7 +38,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     ui->textLabel1->hide();
     packageName = QInputDialog::getText(0,"Package Name", "Package Name");
     QString packagePath = QFileDialog::getExistingDirectory(0,"Where do you want to save the package?","Where do you want to save the package?");
-    tempDir = QDir::homePath()+"/.config/mudlet/"+mpHost->getName()+"/tmp/";
+    tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/tmp/";
     packagePath.replace("\\", "/");
     tempDir = tempDir + "/" + packageName;
     QDir packageDir = QDir(tempDir);

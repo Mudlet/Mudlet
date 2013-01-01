@@ -127,9 +127,9 @@
         <file>icons/3klogo.png</file>
         <file>icons/3slogo.png</file>
         <file>3k-mapper.xml</file>
-        <file>deleteOldProfiles.zip</file>
         <file>echo.xml</file>
         <file>run-lua-code-v4.xml</file>
         <file>vyzor.mpackage</file>
+        <file>deleteOldProfiles.xml</file>
     </qresource>
 </RCC>
