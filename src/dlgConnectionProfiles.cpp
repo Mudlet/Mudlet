@@ -1220,32 +1220,19 @@ void dlgConnectionProfiles::slot_connectToServer()
             pHost->getUrl().toLower().contains( "midkemiaonline.com" ) ||
             pHost->getUrl().toLower().contains( "imperian.com" ) )
         {
-           pHost->installPackage(":/mudlet-mapper.xml", 0);
+           mudlet::self()->packagesToInstallList.append(":/mudlet-mapper.xml");
         }
-        else if (pHost->getUrl().toLower().contains("3scapes.org") ||
-                 pHost->getUrl().toLower().contains("3k.org")){
-            pHost->installPackage(":/3k-mapper.xml",0);
+        else if( pHost->getUrl().toLower().contains("3scapes.org") ||
+                 pHost->getUrl().toLower().contains("3k.org"))
+        {
+            mudlet::self()->packagesToInstallList.append(":/3k-mapper.xml");
         }
 
-        pHost->installPackage(":/deleteOldProfiles.zip", 0);
-        //pHost->installPackage(":/Vyzor.zip", 0);
-        pHost->installPackage(":/echo.xml", 0);
-        pHost->installPackage(":/run-lua-code-v4.xml", 0);
+        mudlet::self()->packagesToInstallList.append(":/deleteOldProfiles.zip");
+        mudlet::self()->packagesToInstallList.append(":/echo.xml");
+        mudlet::self()->packagesToInstallList.append(":/run-lua-code-v4.xml");
 
     }
-
-    //take care of modules
-    /*qDebug()<<"loading modules now";
-    QMapIterator<QString, QStringList > it (pHost->mInstalledModules);
-    while( it.hasNext() ){
-        it.next();
-        QStringList entry = it.value();
-        pHost->installPackage(entry[0],1);
-        qDebug()<<entry[0]<<","<<entry[1];
-        //we repeat this step here b/c we use the same installPackage method for initial loading,
-        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-        pHost->mInstalledModules[it.key()] = entry;
-    }*/
 
     emit signal_establish_connection( profile_name, 0 );
 }

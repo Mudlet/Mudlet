@@ -92,7 +92,7 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem * pItem, QList<QTreeWidgetI
 
 void dlgPackageExporter::slot_export_package(){
 #ifndef Q_OS_WIN
-    filePath; = ui->filePath->text();
+    filePath = ui->filePath->text();
 #endif
     QFile file_xml( filePath );
     if( file_xml.open( QIODevice::WriteOnly ) )
@@ -201,15 +201,15 @@ void dlgPackageExporter::slot_export_package(){
             }
         }
 
-        ui->infoLabel->setText("Exported package to "+filePath);
-        JlCompress::compressDir(zip, tempDir );
+
+        #ifdef Q_OS_WIN
+            JlCompress::compressDir(zip, tempDir );
+        #else
+            ui->infoLabel->setText("Exported package to "+filePath);
+        #endif
     } else {
         ui->infoLabel->setText("Failed to export - couldn't open "+filePath+" for writing in. Do you have the necessary permissions to write to that folder?");
     }
-
-
-
-
 }
 
 void dlgPackageExporter::slot_addFiles(){

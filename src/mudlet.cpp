@@ -2150,6 +2150,14 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
         }
     }
 
+    // install default packages
+    for( int i=0; i< packagesToInstallList.size(); i++ )
+    {
+        pHost->installPackage( packagesToInstallList[i], 0 );
+    }
+
+    packagesToInstallList.clear();
+
     TEvent event;
     event.mArgumentList.append( "sysLoadEvent" );
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);

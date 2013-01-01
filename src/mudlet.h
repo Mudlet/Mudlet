@@ -162,6 +162,7 @@ public:
    Phonon::MediaObject *         mpMusicBox3;
    Phonon::MediaObject *         mpMusicBox4;
    QTabBar *                     mpTabBar;
+   QStringList                   packagesToInstallList;
 
 
 

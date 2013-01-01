@@ -2923,7 +2923,6 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
 
     if( mRoomBeingMoved && !mSizeLabel && mMultiSelectionList.size() > 0 )
     {
-        mHelpMsg = "MOVING rooms";
         mMultiRect = QRect(0,0,0,0);
         int _roomID = mRID;
         if( ! mpMap->rooms.contains( _roomID ) ) return;
