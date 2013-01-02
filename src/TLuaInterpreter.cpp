@@ -6999,6 +6999,180 @@ int TLuaInterpreter::createMapImageLabel( lua_State * L )
     return 1;
 }
 
+//SYNTAX: setDoor( roomID, exitCommand, doorStatus ) status: 0=no door, 1=open, 2=closed, 3=locked
+int TLuaInterpreter::setDoor( lua_State * L )
+{
+    int roomID;
+    int doorStatus; //0= no door, 1=open, 2=closed, 3=locked
+    string exitCmd;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setDoor: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        roomID = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setDoor: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        exitCmd = lua_tostring( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "roomID: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        doorStatus = lua_tonumber( L, 3 );
+    }
+
+    QString exit = exitCmd.c_str();
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap )
+    {
+        if( pHost->mpMap->rooms.contains(roomID) )
+        {
+            TRoom * pR = pHost->mpMap->rooms[roomID];
+            pR->doors[exit] = doorStatus;
+        }
+    }
+    return 0;
+}
+
+//SYNTAX: doors table = getDoors( roomID )
+int TLuaInterpreter::getDoors( lua_State * L )
+{
+    int roomID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setDoor: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        roomID = lua_tointeger( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap )
+    {
+        if( pHost->mpMap->rooms.contains(roomID) )
+        {
+            TRoom * pR = pHost->mpMap->rooms[roomID];
+            lua_newtable(L);
+            QStringList keys = pR->doors.keys();
+            for( int i=0; i<keys.size(); i++ )
+            {
+                lua_pushstring( L, keys[i].toLatin1().data() );
+                lua_pushnumber( L, pR->doors[keys[i]] );
+                lua_settable(L, -3);
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+//SYNTAX: setExitWeight( roomID, exitCommand, exitWeight )
+int TLuaInterpreter::setExitWeight( lua_State * L )
+{
+    int roomID;
+    int weight;
+    string text;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "setExitWeight: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        roomID = lua_tointeger( L, 1 );
+    }
+
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setExitWeight: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        text = lua_tostring( L, 2 );
+    }
+
+    if( ! lua_isnumber( L, 3 ) )
+    {
+        lua_pushstring( L, "setExitWeight: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        weight = lua_tonumber( L, 3 );
+    }
+
+    QString _text = text.c_str();
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap )
+    {
+        if( pHost->mpMap->rooms.contains(roomID) )
+        {
+            TRoom * pR = pHost->mpMap->rooms[roomID];
+            pR->exitWeights[_text] = weight;
+        }
+    }
+    return 0;
+}
+
+//SYNTAX: exit weight table = getExitWeights( roomID )
+int TLuaInterpreter::getExitWeights( lua_State * L )
+{
+    int roomID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getExitWeights: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        roomID = lua_tointeger( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mpMap )
+    {
+        if( pHost->mpMap->rooms.contains(roomID) )
+        {
+            TRoom * pR = pHost->mpMap->rooms[roomID];
+            lua_newtable(L);
+            QStringList keys = pR->exitWeights.keys();
+            for( int i=0; i<keys.size(); i++ )
+            {
+                lua_pushstring( L, keys[i].toLatin1().data() );
+                lua_pushnumber( L, pR->exitWeights[keys[i]] );
+                lua_settable(L, -3);
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
 
 int TLuaInterpreter::deleteMapLabel( lua_State * L )
 {
@@ -9794,7 +9968,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel );
     lua_register( pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom );
     lua_register( pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage );
-
+    lua_register( pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight );
+    lua_register( pGlobalLua, "setDoor", TLuaInterpreter::setDoor );
+    lua_register( pGlobalLua, "getDoors", TLuaInterpreter::getDoors );
+    lua_register( pGlobalLua, "getExitWeights", TLuaInterpreter::getExitWeights );
 
 
     luaopen_yajl(pGlobalLua);

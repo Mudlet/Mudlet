@@ -115,6 +115,10 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int setDoor( lua_State * );
+    static int getDoors( lua_State * );
+    static int setExitWeight( lua_State * );
+    static int getExitWeights( lua_State * );
     static int uninstallPackage( lua_State * );
     static int setMapZoom( lua_State * L );
     static int createMapImageLabel( lua_State * );

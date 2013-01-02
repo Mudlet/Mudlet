@@ -822,6 +822,7 @@ void TMap::initGraph()
         l.z = rooms[i]->z;
         locations.push_back( l );
 
+
         if( rooms[i]->north != -1 && rooms.contains( rooms[i]->north ) && !rooms[rooms[i]->north]->isLocked )
         {
             if( ! rooms[i]->hasExitLock( DIR_NORTH ) )
@@ -832,8 +833,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->north,
                                              g );
-                weightmap[e] = rooms[rooms[i]->north]->weight;
-
+                if( rooms[i]->exitWeights.contains("n"))
+                    weightmap[e] = rooms[i]->exitWeights["n"];
+                else
+                    weightmap[e] = rooms[rooms[i]->north]->weight;
             }
         }
         if( rooms[i]->south != -1 && rooms.contains( rooms[i]->south ) && !rooms[rooms[i]->south]->isLocked )
@@ -846,7 +849,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->south,
                                              g );
-                weightmap[e] = rooms[rooms[i]->south]->weight;
+                if( rooms[i]->exitWeights.contains("s"))
+                    weightmap[e] = rooms[i]->exitWeights["s"];
+                else
+                    weightmap[e] = rooms[rooms[i]->south]->weight;
             }
         }
         if( rooms[i]->northeast != -1 && rooms.contains( rooms[i]->northeast ) && !rooms[rooms[i]->northeast]->isLocked )
@@ -859,7 +865,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                             rooms[i]->northeast,
                                             g );
-                weightmap[e] = rooms[rooms[i]->northeast]->weight;
+                if( rooms[i]->exitWeights.contains("ne"))
+                    weightmap[e] = rooms[i]->exitWeights["ne"];
+                else
+                    weightmap[e] = rooms[rooms[i]->northeast]->weight;
 
             }
         }
@@ -873,7 +882,10 @@ void TMap::initGraph()
                tie(e, inserted) = add_edge( i,
                                             rooms[i]->east,
                                             g );
-               weightmap[e] = rooms[rooms[i]->east]->weight;
+               if( rooms[i]->exitWeights.contains("e"))
+                   weightmap[e] = rooms[i]->exitWeights["e"];
+               else
+                   weightmap[e] = rooms[rooms[i]->east]->weight;
             }
         }
         if( rooms[i]->west != -1 && rooms.contains( rooms[i]->west ) && !rooms[rooms[i]->west]->isLocked )
@@ -886,7 +898,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->west,
                                              g );
-                weightmap[e] = rooms[rooms[i]->west]->weight;
+                if( rooms[i]->exitWeights.contains("w"))
+                    weightmap[e] = rooms[i]->exitWeights["w"];
+                else
+                    weightmap[e] = rooms[rooms[i]->west]->weight;
             }
         }
         if( rooms[i]->southwest != -1 && rooms.contains( rooms[i]->southwest ) && !rooms[rooms[i]->southwest]->isLocked )
@@ -899,7 +914,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->southwest,
                                              g );
-                weightmap[e] = rooms[rooms[i]->southwest]->weight;
+                if( rooms[i]->exitWeights.contains("sw"))
+                    weightmap[e] = rooms[i]->exitWeights["sw"];
+                else
+                    weightmap[e] = rooms[rooms[i]->southwest]->weight;
             }
         }
         if( rooms[i]->southeast != -1 && rooms.contains( rooms[i]->southeast ) && !rooms[rooms[i]->southeast]->isLocked )
@@ -912,7 +930,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->southeast,
                                              g );
-                weightmap[e] = rooms[rooms[i]->southeast]->weight;
+                if( rooms[i]->exitWeights.contains("se"))
+                    weightmap[e] = rooms[i]->exitWeights["se"];
+                else
+                    weightmap[e] = rooms[rooms[i]->southeast]->weight;
             }
         }
         if( rooms[i]->northwest != -1 && rooms.contains( rooms[i]->northwest ) && !rooms[rooms[i]->northwest]->isLocked )
@@ -925,7 +946,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->northwest,
                                              g );
-                weightmap[e] = rooms[rooms[i]->northwest]->weight;
+                if( rooms[i]->exitWeights.contains("nw"))
+                    weightmap[e] = rooms[i]->exitWeights["nw"];
+                else
+                    weightmap[e] = rooms[rooms[i]->northwest]->weight;
             }
         }
         if( rooms[i]->up != -1 && rooms.contains( rooms[i]->up ) && !rooms[rooms[i]->up]->isLocked )
@@ -938,7 +962,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->up,
                                              g );
-                weightmap[e] = rooms[rooms[i]->up]->weight;
+                if( rooms[i]->exitWeights.contains("up"))
+                    weightmap[e] = rooms[i]->exitWeights["up"];
+                else
+                    weightmap[e] = rooms[rooms[i]->up]->weight;
             }
         }
         if( rooms[i]->down != -1 && rooms.contains( rooms[i]->down ) && !rooms[rooms[i]->down]->isLocked )
@@ -951,7 +978,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->down,
                                              g );
-                weightmap[e] = rooms[rooms[i]->down]->weight;
+                if( rooms[i]->exitWeights.contains("down"))
+                    weightmap[e] = rooms[i]->exitWeights["down"];
+                else
+                    weightmap[e] = rooms[rooms[i]->down]->weight;
             }
         }
         if( rooms[i]->in != -1 && rooms.contains( rooms[i]->in ) && !rooms[rooms[i]->in]->isLocked )
@@ -964,7 +994,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              rooms[i]->in,
                                              g );
-                weightmap[e] = rooms[rooms[i]->in]->weight;
+                if( rooms[i]->exitWeights.contains("in"))
+                    weightmap[e] = rooms[i]->exitWeights["in"];
+                else
+                    weightmap[e] = rooms[rooms[i]->in]->weight;
             }
         }
         if( rooms[i]->out != -1 && rooms.contains( rooms[i]->out ) && !rooms[rooms[i]->out]->isLocked )
@@ -977,7 +1010,10 @@ void TMap::initGraph()
                  tie(e, inserted) = add_edge( i,
                                               rooms[i]->out,
                                               g );
-                 weightmap[e] = rooms[rooms[i]->out]->weight;
+                 if( rooms[i]->exitWeights.contains("out"))
+                     weightmap[e] = rooms[i]->exitWeights["out"];
+                 else
+                     weightmap[e] = rooms[rooms[i]->out]->weight;
             }
         }
         if( rooms[i]->other.size() > 0 )
@@ -987,6 +1023,7 @@ void TMap::initGraph()
             {
                 it.next();
                 int _id = it.key();
+                QString _cmd = it.value();
 
                 // FIXME: double check if the special exit id really exists in the room db as a workaround
                 if( rooms.contains( _id ) && !rooms[i]->hasSpecialExitLock( _id, it.value() ) )
@@ -997,7 +1034,10 @@ void TMap::initGraph()
                     tie(e, inserted) = add_edge( i,
                                                  _id,
                                                  g );
-                    weightmap[e] = rooms[_id]->weight;
+                    if( rooms[i]->exitWeights.contains(_cmd))
+                        weightmap[e] = rooms[i]->exitWeights[_cmd];
+                    else
+                        weightmap[e] = rooms[_id]->weight;
                 }
             }
         }
@@ -1148,7 +1188,7 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    version = 15;
+    version = 16;
     ofs << version;
     ofs << envColors;
     ofs << areaNamesMap;
@@ -1258,6 +1298,8 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << rooms[i]->customLinesStyle;
         ofs << rooms[i]->exitLocks;
         ofs << rooms[i]->exitStubs;
+        ofs << rooms[i]->exitWeights;
+        ofs << rooms[i]->doors;
     }
 
     return true;
@@ -1462,6 +1504,11 @@ bool TMap::restore(QString location)
             {
                 ifs >> rooms[i]->exitStubs;
             }
+            if( version >= 16 )
+            {
+                ifs >> rooms[i]->exitWeights;
+                ifs >> rooms[i]->doors;
+            }
             rooms[i]->calcRoomDimensions();
         }
         customEnvColors[257] = mpHost->mRed_2;
@@ -1590,8 +1637,6 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     lp.drawPixmap(QPoint(0,0), imagePixmap.scaled(drawRect.size().toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
-    //QSizeF s = QSizeF(label.size.width()/zoom, label.size.height()/zoom);
-    //label.size = s;
     if( !areas.contains(area) ) return -1;
     int labelID;
     if( !mapLabels.contains( area ) )

@@ -210,6 +210,7 @@ void dlgPackageExporter::slot_export_package(){
     } else {
         ui->infoLabel->setText("Failed to export - couldn't open "+filePath+" for writing in. Do you have the necessary permissions to write to that folder?");
     }
+    close();
 }
 
 void dlgPackageExporter::slot_addFiles(){

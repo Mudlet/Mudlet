@@ -30,6 +30,8 @@ public:
     bool hasSpecialExitLock( int, QString );
     void removeSpecialExit( int to, QString cmd );
     void addSpecialExit( int to, QString cmd );
+    void setExitWeight( QString cmd, int weight );
+    void setDoor( QString cmd, int doorStatus );//0=no door, 1=open door, 2=closed, 3=locked
     int hasExitStub(int direction);
     void setExitStub(int direction, int status);
     void calcRoomDimensions();
@@ -75,6 +77,8 @@ public:
     QColor highlightColor2;
     float highlightRadius;
     bool rendered;
+    QMap<QString, int> doors; //0=no door 1=open 2=closed 3=locked
+    QMap<QString, int> exitWeights;
 };
 
 #endif // TROOM_H
