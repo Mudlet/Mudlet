@@ -7000,6 +7000,7 @@ int TLuaInterpreter::createMapImageLabel( lua_State * L )
 }
 
 //SYNTAX: setDoor( roomID, exitCommand, doorStatus ) status: 0=no door, 1=open, 2=closed, 3=locked
+//        to remove a door set doorStatus = 0
 int TLuaInterpreter::setDoor( lua_State * L )
 {
     int roomID;
@@ -7039,13 +7040,20 @@ int TLuaInterpreter::setDoor( lua_State * L )
     }
 
     QString exit = exitCmd.c_str();
+    exit = exit.toLower();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( pHost->mpMap )
     {
         if( pHost->mpMap->rooms.contains(roomID) )
         {
             TRoom * pR = pHost->mpMap->rooms[roomID];
-            pR->doors[exit] = doorStatus;
+            if( doorStatus == 0 )
+                pR->doors.remove( exit );
+            else
+                pR->doors[exit] = doorStatus;
+            if( pHost->mpMap->mpMapper )
+                if( pHost->mpMap->mpMapper->mp2dMap )
+                    pHost->mpMap->mpMapper->mp2dMap->update();
         }
     }
     return 0;

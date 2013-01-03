@@ -957,6 +957,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                         p.setBrush( brush );
                         p.drawPolygon(_poly.translated(dx,dy));
                     }
+
                 }
                 else
                 {
@@ -1084,6 +1085,69 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     p.setBrush( brush );
                     p.drawPolygon(_poly);
                     p.setPen( __pen );
+                }
+                // doors
+                if( pR->doors.size() > 0 )
+                {
+                    int doorStatus = 0;
+                    if( pR->south == rID && pR->doors.contains("s") )
+                    {
+                        doorStatus = pR->doors["s"];
+                    }
+                    else if( pR->north == rID && pR->doors.contains("n") )
+                    {
+                        doorStatus = pR->doors["n"];
+                    }
+                    else if( pR->southwest == rID && pR->doors.contains("sw") )
+                    {
+                        doorStatus = pR->doors["sw"];
+                    }
+                    else if( pR->southeast == rID && pR->doors.contains("se") )
+                    {
+                        doorStatus = pR->doors["se"];
+                    }
+                    else if( pR->northeast == rID && pR->doors.contains("ne") )
+                    {
+                        doorStatus = pR->doors["ne"];
+                    }
+                    else if( pR->northwest == rID && pR->doors.contains("nw") )
+                    {
+                        doorStatus = pR->doors["nw"];
+                    }
+                    else if( pR->west == rID && pR->doors.contains("w") )
+                    {
+                        doorStatus = pR->doors["w"];
+                    }
+                    else if( pR->east == rID && pR->doors.contains("e") )
+                    {
+                        doorStatus = pR->doors["e"];
+                    }
+                    if( doorStatus > 0 )
+                    {
+                        QLineF k0 = QLineF( p2.x(), p2.y(), p1.x(), p1.y() );
+                        k0.setLength( (k0.length())*0.5 );
+                        QRectF rect;
+                        rect.setWidth(0.25*mTX);
+                        rect.setHeight(0.25*mTY);
+                        rect.moveCenter(k0.p2());
+                        QPen arrowPen = p.pen();
+                        QPen _tp = p.pen();
+                        arrowPen.setCosmetic( mMapperUseAntiAlias );
+                        arrowPen.setStyle(Qt::SolidLine);
+                        if( doorStatus == 1 ) //open door
+                            arrowPen.setColor(QColor(10,155,10));
+                        else if( doorStatus == 2 ) //closed door
+                            arrowPen.setColor(QColor(155,155,10));
+                        else //locked door
+                            arrowPen.setColor(QColor(155,10,10));
+                        QBrush brush;
+                        QBrush oldBrush;
+                        p.setPen( arrowPen );
+                        p.setBrush(brush);
+                        p.drawRect(rect);
+                        p.setBrush(oldBrush);
+                        p.setPen(_tp);
+                    }
                 }
             }
         }
@@ -1224,12 +1288,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     }
                 }
             }
-//            else
-//            {
-//                //mRoomSelection = pArea->rooms[i];
-//                mMultiSelectionList.clear();
-//                //mMultiSelectionList.pop_back(pArea->rooms[i]);
-//            }
         }
         else
         {
@@ -1668,7 +1726,6 @@ void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
     mPHighlight = QPoint(x,y);
     mPick = true;
     mStartSpeedWalk = true;
-    std::cout << "double click x="<<x<<" y="<<y<<endl;
     repaint();
 }
 
@@ -1682,6 +1739,8 @@ void T2DMap::createLabel( QRectF labelRect )
     QFont _font;
     QString t = "no text";
     QString imagePath ;
+
+    mHelpMsg.clear();
 
     QMessageBox msgBox;
     msgBox.setText("Text label or image label?");
@@ -1705,6 +1764,10 @@ void T2DMap::createLabel( QRectF labelRect )
         label.text = "";
         imagePath = QFileDialog::getOpenFileName( 0, "Select image");
     }
+    else
+    {
+        return;
+    }
 
     QMessageBox msgBox2;
     msgBox2.setText("Draw label as background or on top of everything?");
@@ -1712,12 +1775,18 @@ void T2DMap::createLabel( QRectF labelRect )
     QPushButton *imageButton2 = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
     msgBox2.exec();
     bool showOnTop = false;
-    if( msgBox2.clickedButton() == textButton2)
+    if( msgBox2.clickedButton() == textButton2 )
     {
         showOnTop = false;
     }
-    else
+    else if( msgBox2.clickedButton() == imageButton2 )
+    {
         showOnTop = true;
+    }
+    else
+    {
+        return;
+    }
 
     label.showOnTop = showOnTop;
     QPixmap pix( abs(labelRect.width()), abs(labelRect.height()) );
