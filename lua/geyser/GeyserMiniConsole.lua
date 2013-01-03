@@ -47,8 +47,6 @@ end
 -- @param underline The underlined status. 1 is underlined, 0 is normal.
 -- @param italics The italicized status. 1 is italicized, 0 is normal.
 function Geyser.MiniConsole:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underline, italics)
-   self.fgColor:set(r1,g1,b1)
-   self.bgColor:set(r2,b2,g2)
    setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
 end
 
