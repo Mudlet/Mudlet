@@ -7135,6 +7135,7 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     }
 
     QString _text = text.c_str();
+    _text = _text.toLower();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( pHost->mpMap )
     {
