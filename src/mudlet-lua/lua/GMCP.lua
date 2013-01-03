@@ -57,7 +57,7 @@ function enableModule(user,module)
     if not isRegisteredModule(module) then
         local addString = nil
         local ttlString = ""
-        for _,mod in pairs(module:split(".")) do
+        for _,mod in pairs(module:split("%.")) do
             if not addString then addString = mod
             else addString = string.format("%s.%s",addString,mod)
             end
