@@ -265,6 +265,7 @@ void dlgPackageExporter::listTriggers()
     for(it = tList.begin(); it != tList.end(); it++)
     {
         TTrigger * pChild = *it;
+        if( pChild->isTempTrigger() ) continue;
         QStringList sl;
         sl << pChild->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
@@ -306,6 +307,8 @@ void dlgPackageExporter::listAliases()
     for(it = tList.begin(); it != tList.end(); it++)
     {
         TAlias * pChild = *it;
+        if (pChild->isTempAlias())
+            continue;
         QStringList sl;
         sl << pChild->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
@@ -464,6 +467,8 @@ void dlgPackageExporter::listTimers()
     for(it = tList.begin(); it != tList.end(); it++)
     {
         TTimer * pChild = *it;
+        if (pChild->isTempTimer())
+            continue;
         QStringList sl;
         sl << pChild->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);

@@ -1746,6 +1746,7 @@ void T2DMap::createLabel( QRectF labelRect )
     msgBox.setText("Text label or image label?");
     QPushButton *textButton = msgBox.addButton(tr("Text Label"), QMessageBox::ActionRole);
     QPushButton *imageButton = msgBox.addButton(tr("Image Label"), QMessageBox::ActionRole);
+    msgBox.setStandardButtons(QMessageBox::Cancel);
     msgBox.exec();
     if( msgBox.clickedButton() == textButton)
     {
@@ -1770,6 +1771,7 @@ void T2DMap::createLabel( QRectF labelRect )
     }
 
     QMessageBox msgBox2;
+    msgBox2.setStandardButtons(QMessageBox::Cancel);
     msgBox2.setText("Draw label as background or on top of everything?");
     QPushButton *textButton2 = msgBox2.addButton(tr("Background"), QMessageBox::ActionRole);
     QPushButton *imageButton2 = msgBox2.addButton(tr("Foreground"), QMessageBox::ActionRole);
