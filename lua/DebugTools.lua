@@ -104,8 +104,11 @@ end
 local append = table.insert
 function prettywrite (tbl,space,not_clever)
     if type(tbl) ~= 'table' then
-        echo(tostring(tbl)..'\n')
-        return
+        if type(tbl) == "string" then
+            return string.format("\"%s\"\n", tostring(tbl))
+        else
+            return string.format("%s\n", tostring(tbl))
+        end
     end
     if not keywords then
         keywords = get_keywords()
