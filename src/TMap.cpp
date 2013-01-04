@@ -1024,6 +1024,7 @@ void TMap::initGraph()
                 it.next();
                 int _id = it.key();
                 QString _cmd = it.value();
+                if( _cmd.size()>0 ) _cmd.remove(0,1);//strip special exit lock information
 
                 // FIXME: double check if the special exit id really exists in the room db as a workaround
                 if( rooms.contains( _id ) && !rooms[i]->hasSpecialExitLock( _id, it.value() ) )
@@ -1035,9 +1036,13 @@ void TMap::initGraph()
                                                  _id,
                                                  g );
                     if( rooms[i]->exitWeights.contains(_cmd))
+                    {
                         weightmap[e] = rooms[i]->exitWeights[_cmd];
+                    }
                     else
+                    {
                         weightmap[e] = rooms[_id]->weight;
+                    }
                 }
             }
         }

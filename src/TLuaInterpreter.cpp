@@ -7143,6 +7143,7 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
         {
             TRoom * pR = pHost->mpMap->rooms[roomID];
             pR->exitWeights[_text] = weight;
+            pHost->mpMap->mMapGraphNeedsUpdate = true;
         }
     }
     return 0;
