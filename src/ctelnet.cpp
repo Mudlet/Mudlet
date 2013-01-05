@@ -235,6 +235,10 @@ void cTelnet::handle_socket_signal_connected()
 void cTelnet::handle_socket_signal_disconnected()
 {
     postData();
+    TEvent me;
+    me.mArgumentList.append( "sysDisconnectionEvent" );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( &me );
     QString msg;
     QTime timeDiff(0,0,0,0);
     msg = QString("[ INFO ]  -  connection time: %1\n").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));

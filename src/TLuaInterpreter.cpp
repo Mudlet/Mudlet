@@ -7065,7 +7065,7 @@ int TLuaInterpreter::getDoors( lua_State * L )
     int roomID;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "setDoor: wrong argument type" );
+        lua_pushfstring( L, "getDoors: bad argument #1 (room ID as number expected, got %s)", luaL_typename(L, 1) );
         lua_error( L );
         return 1;
     }
