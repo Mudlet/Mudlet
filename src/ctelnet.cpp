@@ -67,7 +67,6 @@ cTelnet::cTelnet( Host * pH )
 , mpComposer( 0 )
 
 {
-
     mIsTimerPosting = false;
     mNeedDecompression = false;
     mWaitingForCompressedStreamToStart = false;
@@ -598,6 +597,11 @@ void cTelnet::processTelnetCommand( const string & command )
                            }
                        }
                    }
+                   else if( supportedTelnetOptions.contains( option ) )
+                   {
+                       sendTelnetOption( TN_DO, option );
+                       hisOptionState[idxOption] = true;
+                   }
                    else
                    {
                        sendTelnetOption( TN_DONT, option );
@@ -724,7 +728,7 @@ void cTelnet::processTelnetCommand( const string & command )
           }
           if( option == OPT_NAWS )
           {
-                                        //NAWS
+              //NAWS
               setDisplayDimensions();
           }
           break;

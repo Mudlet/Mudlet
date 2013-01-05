@@ -115,6 +115,7 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int addSupportedTelnetOption( lua_State * );
     static int setDoor( lua_State * );
     static int getDoors( lua_State * );
     static int setExitWeight( lua_State * );

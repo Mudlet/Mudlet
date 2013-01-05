@@ -8242,6 +8242,24 @@ int TLuaInterpreter::insertHTML( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::addSupportedTelnetOption( lua_State *L )
+{
+    int option;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "addSupportedTelnetOption: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        option = lua_tointeger( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.supportedTelnetOptions[option] = true;
+    return 0;
+}
+
 int TLuaInterpreter::Echo( lua_State *L )
 {
     string a1;
@@ -9982,7 +10000,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setDoor", TLuaInterpreter::setDoor );
     lua_register( pGlobalLua, "getDoors", TLuaInterpreter::getDoors );
     lua_register( pGlobalLua, "getExitWeights", TLuaInterpreter::getExitWeights );
-
+    lua_register( pGlobalLua, "addSupportedTelnetOption", TLuaInterpreter::addSupportedTelnetOption );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );

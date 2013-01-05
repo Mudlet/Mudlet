@@ -728,6 +728,7 @@ void Host::raiseEvent( TEvent * pE )
         QStringList funList = mAnonymousEventHandlerFunctions[pE->mArgumentList[0]];
         for( int i=0; i<funList.size(); i++ )
         {
+            qDebug()<<"--> calling anonymous handler:"<<funList[i];
             mLuaInterpreter.callEventHandler( funList[i], pE );
         }
     }

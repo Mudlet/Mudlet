@@ -106,6 +106,7 @@ public:
 
   bool                socketOutRaw(std::string & data);
 
+  QMap<int,bool>      supportedTelnetOptions;
   bool                mResponseProcessed;
   double              networkLatency;
   QTime               networkLatencyTime;
