@@ -74,7 +74,7 @@ cTelnet::cTelnet( Host * pH )
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
-    termType = "Mudlet 2.0.1";
+    termType = "Mudlet 2.1.0";
     iac = iac2 = insb = false;
 
     command = "";
@@ -456,7 +456,7 @@ void cTelnet::processTelnetCommand( const string & command )
   case 254: _type = "DONT"; break;
   default: _type = QString::number((quint8)ch);
   };
-  qDebug()<<"SERVER send telnet signal:"<<_type<<" + "<<(quint8)command[2];
+  qDebug()<<"SERVER sends telnet signal:"<<_type<<" + "<<(quint8)command[2];
 #endif
 
   char option;
@@ -521,22 +521,6 @@ void cTelnet::processTelnetCommand( const string & command )
               _h += TN_SE;
 
               socketOutRaw( _h );
-
-              /*if ((mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0)) {
-                _h = TN_IAC;
-                _h += TN_SB;
-                _h += GMCP;
-                _h += "Char.Login { \"name\": \"";
-                _h += mpHost->getLogin().toLatin1().data();
-                _h += "\", \"password\": \"";
-                _h += mpHost->getPass().toLatin1().data();
-                _h += "\" }";
-                _h += TN_IAC;
-                _h += TN_SE;
-
-                cout << "  sending: " << _h << endl;
-                socketOutRaw( _h );
-              }*/
               break;
           }
 
@@ -621,6 +605,8 @@ void cTelnet::processTelnetCommand( const string & command )
                    }
                }
           }
+
+
           break;
       }
 
@@ -832,7 +818,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   mpProgressDialog->show();
 
               }
-
               return;
           }
 
@@ -843,7 +828,6 @@ void cTelnet::processTelnetCommand( const string & command )
               if( command.size() < 6 ) return;
               _m = _m.mid( 3, command.size()-5 );
               setGMCPVariables( _m );
-
               return;
           }
 
@@ -922,7 +906,23 @@ void cTelnet::processTelnetCommand( const string & command )
           };//end switch 2
           //other commands are simply ignored (NOP and such, see .h file for list)
       }
+
   };//end switch 1
+  // raise sysTelnetEvent for all unhandled protocols
+  unsigned char type = static_cast<unsigned char>(command[1]);
+  unsigned char telnetOption = static_cast<unsigned char>(command[2]);
+  QString msg = command.c_str();
+  if( command.size() >= 6 ) msg = msg.mid( 3, command.size()-5 );
+  TEvent me;
+  me.mArgumentList.append( "sysTelnetEvent" );
+  me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+  me.mArgumentList.append( QString::number(type) );
+  me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+  me.mArgumentList.append( QString::number(telnetOption) );
+  me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+  me.mArgumentList.append( msg );
+  me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+  mpHost->raiseEvent( &me );
 }
 
 void cTelnet::setATCPVariables( QString & msg )
