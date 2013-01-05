@@ -203,7 +203,7 @@
   </action>
   <action name="dactionHelp">
    <property name="text">
-    <string>Manual</string>
+    <string>API Reference</string>
    </property>
   </action>
   <action name="dactionForum_2">
