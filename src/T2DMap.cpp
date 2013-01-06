@@ -534,7 +534,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
             float ry = pR->y*-1*ty+_ry;
             int rz = pR->z;
 
-            if( rz != zEbene && !mMultiSelectionList.contains(i)) continue;
+            if( rz != zEbene ) continue;
+
             if( pR->customLines.size() == 0 )
             {
                 if( rx < 0 || ry < 0 || rx > _w || ry > _h ) continue;
@@ -1831,7 +1832,7 @@ void T2DMap::createLabel( QRectF labelRect )
     }
     else
     {
-        labelID = mpMap->mapLabels[mAID].size();
+        labelID = mpMap->createMapLabelID( mAID );
         mpMap->mapLabels[mAID].insert(labelID, label);
     }
     update();
@@ -2312,7 +2313,8 @@ void T2DMap::slot_deleteLabel()
         while( it.hasNext() )
         {
             it.next();
-            if( it.value().pos.z() != mOz ) continue;
+            int _zlevel = static_cast<int>(it.value().pos.z());
+            if( _zlevel != mOz ) continue;
             if( it.value().hilite )
             {
                 deleteList.push_back(it.key());
