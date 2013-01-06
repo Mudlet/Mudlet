@@ -89,24 +89,31 @@ local function index (numkey,key)
     return '['..key..']'
 end
 
----	Create a string representation of a Lua table. (From Steve Donovans Penlight library)
+--- Create a string representation of a Lua table. (From Steve Donovans Penlight library)
 --  This function never fails, but may complain by returning an
 --  extra value. Normally puts out one item per line, using
 --  the provided indent; set the second parameter to '' if
 --  you want output on one line.
---	@param tbl {table} Table to serialize to a string.
---	@param space {string} (optional) The indent to use.
---		Defaults to two spaces; make it the empty string for no indentation
---	@param not_clever {bool} (optional) Use for plain output, e.g {['key']=1}.
---		Defaults to false.
+--  @param tbl {table} Table to serialize to a string.
+--  @param space {string} (optional) The indent to use.
+--  Defaults to two spaces; make it the empty string for no indentation
+--  @param not_clever {bool} (optional) Use for plain output, e.g {['key']=1}.
+--  Defaults to false.
 --  @return a string
 --  @return a possible error message
 local append = table.insert
 function prettywrite (tbl,space,not_clever)
     if type(tbl) ~= 'table' then
-        echo(tostring(tbl)..'\n')
-        return
+        if type(tbl) == "string" then
+            return string.format("\"%s\"\n", tostring(tbl))
+        else
+            return string.format("%s\n", tostring(tbl))
+        end
     end
+
+    -- return a nice {} instead of {\n} on blanks
+    if not next(tbl) then return '{}' end
+
     if not keywords then
         keywords = get_keywords()
     end
@@ -186,6 +193,7 @@ function prettywrite (tbl,space,not_clever)
                     end
                 end
             end
+            tables[t] = nil
             eat_last_comma()
             putln(oldindent..'},')
         else
