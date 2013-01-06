@@ -181,6 +181,9 @@
           <pointsize>30</pointsize>
          </font>
         </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;hour&lt;/span&gt; interval that the timer will go off at&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
@@ -309,6 +312,9 @@
           <pointsize>30</pointsize>
          </font>
         </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;minute&lt;/span&gt; interval that the timer will go off at&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
@@ -426,6 +432,9 @@
          <font>
           <pointsize>30</pointsize>
          </font>
+        </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;second&lt;/span&gt; interval that the timer will go off at&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -545,6 +554,9 @@
           <pointsize>30</pointsize>
          </font>
         </property>
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;milisecond&lt;/span&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
@@ -565,6 +577,13 @@
         </property>
         <property name="displayFormat">
          <string>z</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(hours &lt;span style=&quot; font-weight:600;&quot;&gt;:&lt;/span&gt; minutes &lt;span style=&quot; font-weight:600;&quot;&gt;:&lt;/span&gt; seconds &lt;span style=&quot; font-weight:600;&quot;&gt;:&lt;/span&gt; miliseconds)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>

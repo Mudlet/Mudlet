@@ -97,7 +97,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -118,6 +118,7 @@
      <string>Options</string>
     </property>
     <addaction name="dactionOptions"/>
+    <addaction name="dactionMultiView"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -288,6 +289,14 @@
   <action name="actionPackage_Exporter">
    <property name="text">
     <string>Package exporter (experimental)</string>
+   </property>
+  </action>
+  <action name="dactionMultiView">
+   <property name="text">
+    <string>MultiView</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+V</string>
    </property>
   </action>
  </widget>
