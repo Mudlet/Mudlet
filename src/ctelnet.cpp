@@ -910,23 +910,26 @@ void cTelnet::processTelnetCommand( const string & command )
           };//end switch 2
           //other commands are simply ignored (NOP and such, see .h file for list)
       }
-
   };//end switch 1
   // raise sysTelnetEvent for all unhandled protocols
-  unsigned char type = static_cast<unsigned char>(command[1]);
-  unsigned char telnetOption = static_cast<unsigned char>(command[2]);
-  QString msg = command.c_str();
-  if( command.size() >= 6 ) msg = msg.mid( 3, command.size()-5 );
-  TEvent me;
-  me.mArgumentList.append( "sysTelnetEvent" );
-  me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-  me.mArgumentList.append( QString::number(type) );
-  me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-  me.mArgumentList.append( QString::number(telnetOption) );
-  me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-  me.mArgumentList.append( msg );
-  me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-  mpHost->raiseEvent( &me );
+  // EXCEPT TN_GA (performance)
+  if( command[1] != TN_GA )
+  {
+      unsigned char type = static_cast<unsigned char>(command[1]);
+      unsigned char telnetOption = static_cast<unsigned char>(command[2]);
+      QString msg = command.c_str();
+      if( command.size() >= 6 ) msg = msg.mid( 3, command.size()-5 );
+      TEvent me;
+      me.mArgumentList.append( "sysTelnetEvent" );
+      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+      me.mArgumentList.append( QString::number(type) );
+      me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+      me.mArgumentList.append( QString::number(telnetOption) );
+      me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+      me.mArgumentList.append( msg );
+      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+      mpHost->raiseEvent( &me );
+  }
 }
 
 void cTelnet::setATCPVariables( QString & msg )

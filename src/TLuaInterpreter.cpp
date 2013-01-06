@@ -8525,6 +8525,29 @@ int TLuaInterpreter::echoLink( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setMergeTables( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
+    QStringList modulesList;
+    int n = lua_gettop(L);
+    for (int i = 1; i <= n; i++)
+    {
+        if (!lua_isstring(L, i))
+        {
+            lua_pushfstring( L, "setMergeTables: bad argument #%d (string expected, got %s)", i, luaL_typename(L, 1) );
+            lua_error(L);
+            return 1;
+        }
+        modulesList << QString(lua_tostring(L, i));
+    }
+
+    pHost->mGMCP_merge_table_keys = pHost->mGMCP_merge_table_keys + modulesList;
+    pHost->mGMCP_merge_table_keys.removeDuplicates();
+
+    return 0;
+}
+
 int TLuaInterpreter::pasteWindow( lua_State *L )
 {
     string luaName;
@@ -10001,6 +10024,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getDoors", TLuaInterpreter::getDoors );
     lua_register( pGlobalLua, "getExitWeights", TLuaInterpreter::getExitWeights );
     lua_register( pGlobalLua, "addSupportedTelnetOption", TLuaInterpreter::addSupportedTelnetOption );
+    lua_register( pGlobalLua, "setMergeTables", TLuaInterpreter::setMergeTables );
+
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
