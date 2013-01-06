@@ -613,6 +613,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "3k.org";
         if( profile_name == "3Kingdoms")
             val = "3k.org";
+        if( profile_name == "Slothmud")
+            val = "slothmud.org";
     }
     host_name_entry->setText( val );
     item = "port";
@@ -647,6 +649,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "3200";
         if( profile_name == "3Kingdoms")
             val = "3000";
+        if( profile_name == "Slothmud")
+            val = "6101";
     }
     port_entry->setText( val );
     item = "password";
@@ -676,6 +680,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         val = "3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but unique and twisted in so many ways.  3Scapes offers a faster pace of play, along with an assortment of new guilds, features, and areas.";
     else if ( profile_name == "3Kingdoms")
         val = "Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms is a colossal adventure through which many years of active and continued development by its dedicated coding staff.  Based around the mighty town of Pinnacle, three main realms beckon the player to explore. These kingdoms are known as: Fantasy, a vast medieval realm full of orcs, elves, dragons, and a myriad of other creatures; Science, a post-apocalyptic, war-torn world set in the not-so-distant future; and Chaos, a transient realm where the enormous realities of Fantasy and Science collide to produce creatures so bizarre that they have yet to be categorized.  During their exploration of the realms, players have the opportunity to join any of well over a dozen different guilds, which grant special, unique powers to the player, furthering their abilities as they explore the vast expanses of each realm. Add in the comprehensive skill system that 3K offers and you are able to extensively customize your characters.";
+    else if( profile_name == "Slothmud" )
+        val = "SlothMUD... the ultimate in DIKUMUD! The most active, intricate, exciting FREE MUD of its kind. This text based multiplayer free online rpg game and is enjoyed continuously by players worldwide. With over 27,500 uniquely described rooms, 9,300 distinct creatures, 14,200 characters, and 87,100 pieces of equipment, charms, trinkets and other items, our online rpg world is absolutely enormous and ready to explore.";
     else
         val = readProfileData( profile, item );
     mud_description_textedit->clear();
@@ -712,6 +718,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = "<center><a href='http://www.3scapes.org/'>http://www.3scapes.org</a></center>";;
         if( profile_name == "3Kingdoms" )
             val = "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>";;
+        if( profile_name == "Slothmud" )
+            val = "<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>";
     }
     website_entry->setText( val );
 
@@ -884,7 +892,25 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
+    muds = "Lusternia";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( ":/icons/lusternia_120_30.png" );
+    pM->setIcon(mi);
+    muds.clear();
 
+    muds = "BatMUD";
+    QPixmap pb(":/icons/batmud_mud.png");
+    QPixmap pb1 = pb.scaled(QSize(120,30)).copy();
+    mi = QIcon( pb1 );
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    pM->setIcon(mi);
+    muds.clear();
 
     muds = "God Wars II";
     pM = new QListWidgetItem( muds );
@@ -895,24 +921,21 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
-
-    muds = "Realms of Despair";
+    muds = "Slothmud";
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/120x30RoDLogo.png" );
+    mi = QIcon( ":/icons/Slothmud.png" );
     pM->setIcon(mi);
     muds.clear();
 
-
-
-    muds = "Lusternia";
+    muds = "Aardwolf";
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/lusternia_120_30.png" );
+    mi = QIcon(":/icons/aardwolf_mud.png");
     pM->setIcon(mi);
     muds.clear();
 
@@ -922,6 +945,15 @@ void dlgConnectionProfiles::fillout_form()
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( ":/materiaMagicaIcon" );
+    pM->setIcon(mi);
+    muds.clear();
+
+    muds = "Realms of Despair";
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( ":/icons/120x30RoDLogo.png" );
     pM->setIcon(mi);
     muds.clear();
 
@@ -943,8 +975,6 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
-
-
     muds = "Imperian";
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
@@ -955,29 +985,6 @@ void dlgConnectionProfiles::fillout_form()
     muds.clear();
 
 
-
-    muds = "BatMUD";
-    QPixmap pb(":/icons/batmud_mud.png");
-    QPixmap pb1 = pb.scaled(QSize(120,30)).copy();
-    mi = QIcon( pb1 );
-    pM = new QListWidgetItem( muds );
-    pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM );
-    pM->setIcon(mi);
-    muds.clear();
-
-    QString muds3;
-    muds3 = "Aardwolf";
-    QListWidgetItem * pM3 = new QListWidgetItem( muds3 );
-    pM3->setFont(font);
-    pM3->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM3 );
-    QPixmap pa(":/icons/aardwolf_mud.png");
-    QPixmap pa1 = pa.scaled(QSize(120,30)).copy();
-    QIcon mi3( pa1 );
-    pM3->setIcon(mi3);
-    muds.clear();
     QDateTime test_date;
     QListWidgetItem * toselect = 0;
 

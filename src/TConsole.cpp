@@ -2406,6 +2406,11 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpMapper->mpHost = mpHost;
         mpHost->mpMap->restore("");
         mpHost->mpMap->init( mpHost );
+
+        TEvent mapOpenEvent;
+        mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
+        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent( & mapOpenEvent );
     }
     mpMapper->resize( width, height );
     mpMapper->move( x, y );
