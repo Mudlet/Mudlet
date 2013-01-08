@@ -717,26 +717,48 @@ end
 ---
 --- @see color_table
 function showColors(...)
-	local cols = ... or 3
-	local i = 1
-	for k,v in pairs(color_table) do
-		local fg
-		local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
-		if luminosity > 0.5 then
-			fg = "black"
-		else
-			fg = "white"
-		end
-		cecho(string.format("<%s:%s>%s%s", fg, k, k, string.rep(" ", 23-k:len())))
-		echo"  "
-		if i == cols then
-			echo"\n"
-			i = 1
-		else
-			i = i + 1
-		end
-	end
+   local args = {...}
+   local n = #args
+   local cols, search
+   if n > 1 then
+      cols, search = args[1], args[2]
+   elseif n == 1 and type(args[1]) == "string" then
+      search = args[1]
+   elseif n == 1 and type(args[1]) == "number" then
+      cols = args[1]
+   elseif n == 0 then
+      cols = 4
+      search = ""
+   else
+      error("showColors: Improper usage. Use showColors(columns, search)")
+   end
+   cols = cols or 4
+   search = search and search:lower() or ""
+   local i = 1
+   for k,v in pairs(color_table) do
+      if k:lower():find(search) then
+         local fgc
+         local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
+         if luminosity > 0.5 then
+            fgc = "black"
+         else
+            fgc = "white"
+         end
+         fg(fgc)
+         bg(k)
+         echoLink(k..string.rep(" ", 23-k:len()),[[printCmdLine("]]..k..[[")]],v[1] ..", "..v[2]..", "..v[3],true)
+         resetFormat()
+         echo("  ")
+         if i == cols then
+            echo"\n"
+            i = 1
+         else
+            i = i + 1
+         end
+      end
+   end
 end
+
 
 
 
