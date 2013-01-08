@@ -646,9 +646,11 @@ end
 --- @see showColors
 function bg(console, colorName)
 	local colorName = colorName or console
-	assert(color_table[colorName], "bg: no such colour name")
+	if not color_table[colorName] then
+		error(string.format("bg: '%s' color doesn't exist - see showColors()", colorName))
+	end
 
-	if console == colorName then
+	if console == colorName or console == "main" then
 		setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 	else
 		setBgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
@@ -668,9 +670,11 @@ end
 --- @see showColors
 function fg(console, colorName)
 	local colorName = colorName or console
-	assert(color_table[colorName], "fg: no such colour name")
+	if not color_table[colorName] then
+		error(string.format("fg: '%s' color doesn't exist - see showColors()", colorName))
+	end
 
-	if console == colorName then
+	if console == colorName or console == "main" then
 		setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 	else
 		setFgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
