@@ -217,6 +217,9 @@ function Geyser.Container:flash (time)
    local time = time or 1.0
    local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
    local name = self.name .. "_dimensions_flash"
+   if self.callback then
+     setLabelClickCallback(name, self.callback, self.args)
+   end
    createLabel(name, x, y, width, height, 1)
    resizeWindow(name, width, height)
    moveWindow(name, x, y)
