@@ -70,6 +70,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setClickCallback (func, ...)
    setLabelClickCallback(self.name, func, ...)
+   self.callback = func
+   self.args = ...
 end
 
 --- Sets the style sheet of the label
