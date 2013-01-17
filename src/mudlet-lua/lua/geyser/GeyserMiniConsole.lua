@@ -80,6 +80,10 @@ function Geyser.MiniConsole:appendBuffer()
    appendBuffer(self.name)
 end
 
+function Geyser.MiniConsole:clear()
+  clearWindow(self.name)
+end
+
 --- sets the current foreground color of cursor in this miniconsole.
 function Geyser.MiniConsole:fg(color)
    fg(self.name, color)
