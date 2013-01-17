@@ -75,7 +75,7 @@ end
 function Geyser.Label:setClickCallback (func, ...)
    setLabelClickCallback(self.name, func, ...)
    self.callback = func
-   self.args = ...
+   self.args = {...}
 end
 
 --- Sets the style sheet of the label
@@ -110,7 +110,7 @@ function Geyser.Label:new (cons, container)
 
    -- Set up the callback if we have one
    if me.callback then
-      me:setClickCallback(me.callback, me.args)
+      me:setClickCallback(me.callback, unpack(me.args))
    end
 
    --print("  New in " .. self.name .. " : " .. me.name)
