@@ -222,7 +222,7 @@ function Geyser.Container:flash (time)
    moveWindow(name, x, y)
    setBackgroundColor(name, 190, 190, 190, 128)
    if self.callback then
-     setLabelClickCallback(name, self.callback, self.args)
+     setLabelClickCallback(name, self.callback, unpack(self.args))
    end
    showWindow(name)
    tempTimer(time, "hideWindow(\"" .. name .. "\")")
