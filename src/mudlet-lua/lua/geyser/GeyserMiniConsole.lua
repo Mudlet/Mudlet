@@ -53,19 +53,19 @@ end
 --- Sets bold status for this miniconsole
 -- @param bool True for bolded
 function Geyser.MiniConsole:setBold(bool)
-   setBold(self.name, val)
+   setBold(self.name, bool)
 end
 
 --- Sets underline status for this miniconsole
 -- @param bool True for underlined
 function Geyser.MiniConsole:setUnderline(bool)
-   setUnderline(self.name, val)
+   setUnderline(self.name, bool)
 end
 
 --- Sets italics status for this miniconsole
 -- @param bool True for italicized
 function Geyser.MiniConsole:setItalics(bool)
-   setItalics(self.name, val)
+   setItalics(self.name, bool)
 end
 
 --- Sets the font size for this miniconsole.
