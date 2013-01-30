@@ -24,6 +24,7 @@
 #include <QString>
 #include <QRegExp>
 #include <QNetworkAccessManager>
+#include <QSslConfiguration>
 #include <QDesktopServices>
 #include "TLuaInterpreter.h"
 #include "TForkedProcess.h"
@@ -7684,8 +7685,13 @@ int TLuaInterpreter::downloadFile( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString _url = url.c_str();
     QString _path = path.c_str();
-
-    QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( QNetworkRequest( QUrl( _url ) ) );
+    QNetworkRequest request = QNetworkRequest( QUrl( _url ) );
+    if ( _path.contains("https") )
+    {
+        QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
+        request.setSslConfiguration( config );
+    }
+    QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( request );
     pHost->mLuaInterpreter.downloadMap[reply] = _path;
     return 0;
 
