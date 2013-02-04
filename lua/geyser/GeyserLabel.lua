@@ -53,6 +53,10 @@ function Geyser.Label:setFormat(format)
    self:echo(nil,nil,format)
 end
 
+function Geyser.Label:clear()
+   echo(self.name, "")
+end
+
 --- Sets a background image for this label.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
@@ -70,6 +74,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setClickCallback (func, ...)
    setLabelClickCallback(self.name, func, ...)
+   self.callback = func
+   self.args = {...}
 end
 
 --- Sets the style sheet of the label
@@ -104,7 +110,7 @@ function Geyser.Label:new (cons, container)
 
    -- Set up the callback if we have one
    if me.callback then
-      me:setClickCallback(me.callback, me.args)
+      me:setClickCallback(me.callback, unpack(me.args))
    end
 
    --print("  New in " .. self.name .. " : " .. me.name)
