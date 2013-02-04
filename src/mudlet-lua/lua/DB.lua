@@ -1046,8 +1046,8 @@ end
 ---   db:set(mydb.eggs.last_found, nil)
 ---   </pre>
 function db:set(field, value, query)
-   local db_name = sheet._db_name
-   local s_name = sheet._sht_name
+   local db_name = field.database
+   local s_name = field.sheet
 
    local conn = db.__conn[db_name]
 
