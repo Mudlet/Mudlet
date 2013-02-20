@@ -983,7 +983,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                 if( --mLineDelta <= 0 )
                 {
                     deactivate();
-                    mpHost->getTriggerUnit()->mCleanupList.push_back( this );
+                    mpHost->getTriggerUnit()->markCleanup( this );
                 }
                 return true;
             }
