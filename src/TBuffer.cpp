@@ -3030,7 +3030,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
                         queue.push( newLine );
                         tempList.append( lineText );
                     }
-                    break;
+                    goto OPT_OUT_CLEAN;
                 }
                 newLine.push_back( buffer[i][i2] );
                 lineText.append( lineBuffer[i].at(i2) );
@@ -3039,7 +3039,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
             queue.push( newLine );
             tempList.append( lineText );
 
-            newLine.clear();
+            OPT_OUT_CLEAN: newLine.clear();
             lineText.clear();
             indent = 0;
         }

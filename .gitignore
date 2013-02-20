@@ -88,3 +88,13 @@ src/mudlet-lua_2_0/mudlet-lua-doc/luadoc.css
 src/mudlet-lua_2_0/mudlet-lua-doc/modules/.gitignore
 src/mudlet-lua_2_0/README
 src/mudlet-lua_2_0/TODO
+src-build-*
+src/include_opengl*
+src/quazip/quazip-build*
+*.pdb
+*.orig
+
+src/glext.h
+src/glxext.h
+src/quazip/quazip-0.4.4/quazip.pro.user
+src/wglext.h
