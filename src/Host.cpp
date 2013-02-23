@@ -390,7 +390,7 @@ void Host::reloadModule(QString moduleName){
         QStringList entry = it.value();
         if (it.key() == moduleName){
             uninstallPackage(it.key(),2);
-            installPackage(entry[0],1);
+            installPackage(entry[0],2);
         }
     }
     //iterate through mInstalledModules again and reset the entry flag to be correct.
@@ -879,6 +879,16 @@ void Host::showUnpackingProgress( QString  txt )
 
 bool Host::installPackage( QString fileName, int module )
 {
+
+//     Module notes:
+//     For the module install, a module flag of 0 is a package, a flag
+//     of 1 means the module is being installed for the first time via
+//     the UI, a flag of 2 means the module is being synced (so it's "installed"
+//     already), a flag of 3 means the module is being installed from
+//     a script.  This separation is necessary to be able to reuse code
+//     while avoiding infinite loops from script installations.
+
+    qDebug()<<"in install package"<<fileName;
     if( fileName.isEmpty() ) return false;
 
     QFile file(fileName);
@@ -894,23 +904,35 @@ bool Host::installPackage( QString fileName, int module )
     packageName.replace( '/' , "" );
     packageName.replace( '\\' , "" );
     packageName.replace( '.' , "" );
+    qDebug()<<"package name"<<packageName;
+    qDebug()<<module;
 
-    if (module){
-        if( mActiveModules.contains( packageName ) ){
+    if ( module )
+    {
+        if( (module == 2) && (mActiveModules.contains( packageName ) ))
+        {
             uninstallPackage(packageName, 2);
         }
+        else if ( (module == 3) && ( mActiveModules.contains(packageName) ) )
+        {
+            qDebug()<<"module already installed, leaving";
+            return false;//we're already installed
+        }
     }
-    else{
+    else
+    {
         if( mInstalledPackages.contains( packageName ) )
         {
             return false;
         }
     }
-    if( mpEditorDialog )
+    //the extra module check is needed here to prevent infinite loops from script loaded modules
+    if( mpEditorDialog && module != 3 )
     {
         mpEditorDialog->doCleanReset();
     }
     QFile file2;
+    qDebug()<<"zip check";
     if( fileName.endsWith(".zip") || fileName.endsWith(".mpackage") )
     {
         QString _home = QDir::homePath();
@@ -1027,9 +1049,10 @@ bool Host::installPackage( QString fileName, int module )
         setLogin( login );
         setPass( pass );
     }
+    qDebug()<<"here";
     if( mpEditorDialog )
     {
-        mpEditorDialog->doCleanReset();
+       mpEditorDialog->doCleanReset();
     }
     if (!module){
         QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
@@ -1082,6 +1105,11 @@ bool Host::removeDir( const QString dirName, QString originalPath )
 
 bool Host::uninstallPackage( QString packageName, int module)
 {
+
+//     As with the installPackage, the module codes are:
+//     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
+//     3=uninstall from a script
+
     if (module){
         if( ! mInstalledModules.contains( packageName ) ) return false;
     }
@@ -1091,7 +1119,9 @@ bool Host::uninstallPackage( QString packageName, int module)
     int dualInstallations=0;
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName))
         dualInstallations=1;
-    if( mpEditorDialog )
+    //we check for the module=3 because if we reset the editor, we will re-execute the
+    //module uninstall, thus creating an infinite loop.
+    if( mpEditorDialog && module != 3 )
     {
         mpEditorDialog->doCleanReset();
     }
@@ -1101,19 +1131,19 @@ bool Host::uninstallPackage( QString packageName, int module)
     mActionUnit.uninstall( packageName );
     mScriptUnit.uninstall( packageName );
     mKeyUnit.uninstall( packageName );
-    if (module==2){
+    qDebug()<<"all uninstall steps complete";
+    if (module){
         //if module == 2, this is a temporary uninstall for reloading so we exit here
+        QStringList entry = mInstalledModules[packageName];
         mInstalledModules.remove( packageName );
         mActiveModules.removeAll(packageName);
-        return true;
-    }
-    else if (module==1){
-        //if module == 1, we actually uninstall it.
-        QStringList entry = mInstalledModules[packageName];
-        qDebug()<<"removing"<<packageName;
-        mInstalledModules.remove( packageName );
+        if ( module == 2 )
+            return true;
+        //if module == 1/3, we actually uninstall it.
+        qDebug()<<"removing module"<<packageName;
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations){
+            qDebug()<<"we're a dual install, reinstalling package";
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
             installPackage(entry[0], 0);
@@ -1128,7 +1158,7 @@ bool Host::uninstallPackage( QString packageName, int module)
             mInstalledModules[packageName] = entry;
         }
     }
-    if( mpEditorDialog )
+    if( mpEditorDialog && module != 3 )
     {
         mpEditorDialog->doCleanReset();
     }
@@ -1150,10 +1180,18 @@ bool Host::uninstallPackage( QString packageName, int module)
     QFile file_xml( filename_xml );
     if ( file_xml.open( QIODevice::WriteOnly ) )
     {
+        qDebug()<<"writing new host to file";
         XMLexport writer( this );
         writer.exportHost( & file_xml );
         file_xml.close();
+        qDebug()<<"done writing host";
     }
+    //NOW we reset if we're uninstalling a module
+    if( mpEditorDialog && module == 3 )
+    {
+        mpEditorDialog->doCleanReset();
+    }
+    qDebug()<<"finished uninstall";
     return true;
 }
 

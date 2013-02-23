@@ -1759,7 +1759,28 @@ int TLuaInterpreter::getExitStubs( lua_State * L  ){
     return 1;
 }
 
-int TLuaInterpreter::getModulePriority( lua_State * L  ){
+int TLuaInterpreter::getModulePath( lua_State *L )
+{
+    QString moduleName;
+    if (!lua_isstring(L,1)){
+        lua_pushstring(L, "getModulePath: Module be be a string");
+        lua_error(L);
+        return 1;
+    }
+    else
+        moduleName = lua_tostring( L, 1 );
+    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+    QMap<QString, QStringList> modules = mpHost->mInstalledModules;
+    if (modules.contains(moduleName)){
+        QString modPath = modules[moduleName][0];
+        lua_pushstring( L, modPath.toLatin1().data() );
+        return 1;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::getModulePriority( lua_State * L  )
+{
     QString moduleName;
     if (!lua_isstring(L,1)){
         lua_pushstring(L, "getModulePriority: Module be be a string");
@@ -8829,6 +8850,63 @@ int TLuaInterpreter::uninstallPackage( lua_State * L )
         pHost->uninstallPackage( package, 0 );
 }
 
+int TLuaInterpreter::installModule( lua_State * L)
+{
+    string modName;
+    if ( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "installModule: wrong first argument (should be a path to module)");
+        lua_error( L );
+        return 1;
+    }
+    else
+        modName = lua_tostring( L, 1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString module = QDir::fromNativeSeparators(modName.c_str());
+    qDebug()<<module<<"to install";
+    if( pHost )
+        if ( pHost->installPackage( module, 3 ) && mudlet::self()->moduleTableVisible() )
+            mudlet::self()->layoutModules();
+    return 0;
+}
+
+int TLuaInterpreter::uninstallModule( lua_State * L)
+{
+    string modName;
+    if ( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "uninstallModule: wrong first argument (should be a module name)");
+        lua_error( L );
+        return 1;
+    }
+    else
+        modName = lua_tostring( L, 1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString module = modName.c_str();
+    if( pHost )
+        if ( pHost->uninstallPackage( module, 3 ) && mudlet::self()->moduleTableVisible() )
+            mudlet::self()->layoutModules();
+    return 1;
+}
+
+int TLuaInterpreter::reloadModule( lua_State * L)
+{
+    string modName;
+    if ( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "installModule(): wrong first argument (should be a module name)");
+        lua_error( L );
+        return 1;
+    }
+    else
+        modName = lua_tostring( L, 1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString module = modName.c_str();
+    if( pHost )
+        pHost->reloadModule( module );
+    return 0;
+}
+
 int TLuaInterpreter::registerAnonymousEventHandler( lua_State * L )
 {
     string event;
@@ -10021,6 +10099,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu );
     lua_register( pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus );
     lua_register( pGlobalLua, "installPackage", TLuaInterpreter::installPackage );
+    lua_register( pGlobalLua, "installModule", TLuaInterpreter::installModule );
+    lua_register( pGlobalLua, "uninstallModule", TLuaInterpreter::uninstallModule );
+    lua_register( pGlobalLua, "reloadModule", TLuaInterpreter::reloadModule );
     lua_register( pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage );
     lua_register( pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel );
     lua_register( pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom );
@@ -10031,6 +10112,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getExitWeights", TLuaInterpreter::getExitWeights );
     lua_register( pGlobalLua, "addSupportedTelnetOption", TLuaInterpreter::addSupportedTelnetOption );
     lua_register( pGlobalLua, "setMergeTables", TLuaInterpreter::setMergeTables );
+    lua_register( pGlobalLua, "getModulePath", TLuaInterpreter::getModulePath );
 
 
     luaopen_yajl(pGlobalLua);

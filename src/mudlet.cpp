@@ -404,6 +404,13 @@ mudlet::mudlet()
 
 }
 
+bool mudlet::moduleTableVisible()
+{
+    if (moduleTable)
+        return moduleTable->isVisible();
+    return false;
+}
+
 void mudlet::layoutModules(){
     Host * pH = getActiveHost();
     QMapIterator<QString, QStringList > it (pH->mInstalledModules);
@@ -415,6 +422,9 @@ void mudlet::layoutModules(){
     moduleTable->horizontalHeader()->setResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
+    //clear everything
+    for(int i=0;i<=moduleTable->rowCount();i++)
+        moduleTable->removeRow(i);
     //order modules by priority and then alphabetically
     QMap<int, QStringList> mOrder;
     while( it.hasNext() ){
@@ -1797,7 +1807,10 @@ void mudlet::slot_mapper()
     if( ! pHost ) return;
     if( pHost->mpMap->mpMapper )
     {
-        pHost->mpMap->mpMapper->setVisible( ! pHost->mpMap->mpMapper->isVisible() );
+        bool visStatus = pHost->mpMap->mpMapper->isVisible();
+        if ( pHost->mpMap->mpMapper->parentWidget()->inherits("QDockWidget") )
+            pHost->mpMap->mpMapper->parentWidget()->setVisible( !visStatus );
+        pHost->mpMap->mpMapper->setVisible( !visStatus );
         return;
     }
 
