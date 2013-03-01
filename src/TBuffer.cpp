@@ -2695,6 +2695,22 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
     return 0;
 }
 
+inline int TBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
+{
+    int offset = 0;
+    int i_end = lineBuffer[i].size();
+    QChar space = ' ';
+    while( i2 < i_end )
+    {
+        if( lineBuffer[i][i2] == space )
+            offset++;
+        else
+            break;
+        i2++;
+    }
+    return offset;
+}
+
 inline int TBuffer::wrap( int startLine )
 {
     if( static_cast<int>(buffer.size()) < startLine ) return 0;
@@ -2790,6 +2806,7 @@ inline int TBuffer::wrap( int startLine )
             newLine.clear();
             lineText = "";
             indent = 0;
+            i2 += skipSpacesAtBeginOfLine( i, i2 );
         }
         lineCount++;
     }
