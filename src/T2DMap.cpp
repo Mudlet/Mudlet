@@ -523,20 +523,28 @@ void T2DMap::paintEvent( QPaintEvent * e )
             lpos.setY( _ly );
             int _lw = abs(it.value().size.width())*tx;
             int _lh = abs(it.value().size.height())*ty;
-
             if( ! ( ( 0<_lx || 0<_lx+_lw ) && (_w>_lx || _w>_lx+_lw ) ) ) continue;
             if( ! ( ( 0<_ly || 0<_ly+_lh ) && (_h>_ly || _h>_ly+_lh ) ) ) continue;
             QRectF _drawRect = QRect(it.value().pos.x()*tx+_rx, it.value().pos.y()*ty*-1+_ry, _lw, _lh);
             if( ! it.value().showOnTop )
             {
                 if( ! it.value().noScaling )
+                {
                     p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(_drawRect.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(_drawRect.height());
+                }
                 else
+                {
                     p.drawPixmap( lpos, it.value().pix );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(it.value().pix.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(it.value().pix.height());
+                }
             }
 
             if( it.value().hilite )
             {
+                _drawRect.setSize(it.value().clickSize);
                 p.fillRect(_drawRect, QColor(255, 155, 55, 190));
             }
         }
@@ -1576,13 +1584,21 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( it.value().showOnTop )
             {
                 if( ! it.value().noScaling )
+                {
                     p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(_drawRect.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(_drawRect.height());
+                }
                 else
+                {
                     p.drawPixmap( lpos, it.value().pix );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(it.value().pix.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(it.value().pix.height());
+                }
             }
-
             if( it.value().hilite )
             {
+                _drawRect.setSize(it.value().clickSize);
                 p.fillRect(_drawRect, QColor(255, 155, 55, 190));
             }
         }
@@ -2039,21 +2055,21 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                         int my = event->pos().y();
                         int mz = mOz;
                         QPoint click = QPoint(mx,my);
-                        QRectF br = QRect(_lx, _ly, it.value().size.width()*mTX, it.value().size.height()*mTY);
+                        QRectF br = QRect(_lx, _ly, it.value().clickSize.width(), it.value().clickSize.height());
                         if( br.contains( click ))
                         {
                             if( ! it.value().hilite )
                             {
                                 mLabelHilite = true;
                                 mpMap->mapLabels[mAID][it.key()].hilite = true;
-                                update();
-                                return;
                             }
                             else
                             {
                                 mpMap->mapLabels[mAID][it.key()].hilite = false;
                                 mLabelHilite = false;
                             }
+                            update();
+                            return;
                         }
                     }
                 }

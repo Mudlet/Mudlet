@@ -51,6 +51,7 @@ public:
     QVector3D pos;
     QPointF pointer;
     QSizeF size;
+    QSizeF clickSize;
     QString text;
     QColor fgColor;
     QColor bgColor;
