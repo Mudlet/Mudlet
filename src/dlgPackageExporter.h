@@ -30,11 +30,17 @@ public:
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
     QMap<QTreeWidgetItem *, TTrigger*> triggerMap;
+    QMap<QTreeWidgetItem *, TTrigger*> modTriggerMap;
     QMap<QTreeWidgetItem *, TAlias*> aliasMap;
+    QMap<QTreeWidgetItem *, TAlias*> modAliasMap;
     QMap<QTreeWidgetItem *, TScript*> scriptMap;
+    QMap<QTreeWidgetItem *, TScript*> modScriptMap;
     QMap<QTreeWidgetItem *, TKey*> keyMap;
+    QMap<QTreeWidgetItem *, TKey*> modKeyMap;
     QMap<QTreeWidgetItem *, TAction*> actionMap;
+    QMap<QTreeWidgetItem *, TAction*> modActionMap;
     QMap<QTreeWidgetItem *, TTimer*> timerMap;
+    QMap<QTreeWidgetItem *, TTimer*> modTimerMap;
 private:
     Ui::dlgPackageExporter *ui;
     Host* mpHost;

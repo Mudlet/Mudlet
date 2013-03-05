@@ -108,6 +108,10 @@ void dlgPackageExporter::slot_export_package(){
             if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)){
                 triggerMap[item]->exportItem = false;
             }
+            else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder){
+                triggerMap[item]->mModuleMasterFolder=false;
+                modTriggerMap.insert(item, triggerMap[item]);
+            }
         }
         items = treeWidget->findItems(QString("Timers"), Qt::MatchExactly, 0);
         top = items.first();
@@ -117,6 +121,10 @@ void dlgPackageExporter::slot_export_package(){
             QTreeWidgetItem * item = timerList.at(i);
             if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)){
                 timerMap[item]->exportItem = false;
+            }
+            else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder){
+                timerMap[item]->mModuleMasterFolder=false;
+                modTimerMap.insert(item, timerMap[item]);
             }
         }
         items = treeWidget->findItems(QString("Aliases"), Qt::MatchExactly, 0);
@@ -128,6 +136,10 @@ void dlgPackageExporter::slot_export_package(){
             if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)){
                 aliasMap[item]->exportItem = false;
             }
+            else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder){
+                aliasMap[item]->mModuleMasterFolder=false;
+                modAliasMap.insert(item, aliasMap[item]);
+            }
         }
         items = treeWidget->findItems(QString("Buttons"), Qt::MatchExactly, 0);
         top = items.first();
@@ -138,6 +150,10 @@ void dlgPackageExporter::slot_export_package(){
             if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)){
                 actionMap[item]->exportItem = false;
             }
+            else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder){
+                actionMap[item]->mModuleMasterFolder=false;
+                modActionMap.insert(item, actionMap[item]);
+            }
         }
         items = treeWidget->findItems(QString("Scripts"), Qt::MatchExactly, 0);
         top = items.first();
@@ -146,8 +162,11 @@ void dlgPackageExporter::slot_export_package(){
         for (int i=0;i<scriptList.size();i++){
             QTreeWidgetItem * item = scriptList.at(i);
             if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)){
-                qDebug()<<"not writing"<<scriptMap[item]->getName();
                 scriptMap[item]->exportItem = false;
+            }
+            else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder){
+                scriptMap[item]->mModuleMasterFolder=false;
+                modScriptMap.insert(item, scriptMap[item]);
             }
         }
         items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
@@ -159,6 +178,10 @@ void dlgPackageExporter::slot_export_package(){
             if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)){
                 keyMap[item]->exportItem = false;
             }
+            else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder){
+                keyMap[item]->mModuleMasterFolder=false;
+                modKeyMap.insert(item, keyMap[item]);
+            }
         }
         writer.exportGenericPackage(&file_xml);
         file_xml.close();
@@ -169,11 +192,17 @@ void dlgPackageExporter::slot_export_package(){
             if (triggerMap.contains(item)){
                 triggerMap[item]->exportItem = true;
             }
+            if (modTriggerMap.contains(item)){
+                modTriggerMap[item]->mModuleMasterFolder = true;
+            }
         }
         for (int i=0;i<timerList.size();i++){
             QTreeWidgetItem * item = timerList.at(i);
             if (timerMap.contains(item)){
                 timerMap[item]->exportItem = true;
+            }
+            if (modTimerMap.contains(item)){
+                modTimerMap[item]->mModuleMasterFolder = true;
             }
         }
         for (int i=0;i<actionList.size();i++){
@@ -181,11 +210,17 @@ void dlgPackageExporter::slot_export_package(){
             if (actionMap.contains(item)){
                 actionMap[item]->exportItem = true;
             }
+            if (modActionMap.contains(item)){
+                modActionMap[item]->mModuleMasterFolder = true;
+            }
         }
         for (int i=0;i<scriptList.size();i++){
             QTreeWidgetItem * item = scriptList.at(i);
             if (scriptMap.contains(item)){
                 scriptMap[item]->exportItem = true;
+            }
+            if (modScriptMap.contains(item)){
+                modScriptMap[item]->mModuleMasterFolder = true;
             }
         }
         for (int i=0;i<keyList.size();i++){
@@ -193,11 +228,17 @@ void dlgPackageExporter::slot_export_package(){
             if (keyMap.contains(item)){
                 keyMap[item]->exportItem = true;
             }
+            if (modKeyMap.contains(item)){
+                modKeyMap[item]->mModuleMasterFolder = true;
+            }
         }
         for (int i=0;i<aliasList.size();i++){
             QTreeWidgetItem * item = aliasList.at(i);
             if (aliasMap.contains(item)){
                 aliasMap[item]->exportItem = true;
+            }
+            if (modAliasMap.contains(item)){
+                modAliasMap[item]->mModuleMasterFolder = true;
             }
         }
 
