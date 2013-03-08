@@ -3899,6 +3899,7 @@ void T2DMap::paintMap()
 
                 QVector3D p1( ex, ey, ez );
                 QVector3D p2( rx, ry, rz );
+                QLine _line;
                 if( ! areaExit )
                 {
                     // one way exit or 2 way exit?
@@ -4074,6 +4075,72 @@ void T2DMap::paintMap()
                     p.setBrush( brush );
                     p.drawPolygon(_poly);
                     p.setPen( __pen );
+                }
+                if( pR->doors.size() > 0 )
+                {
+                    int doorStatus = 0;
+                    if( pR->south == rID && pR->doors.contains("s") )
+                    {
+                        doorStatus = pR->doors["s"];
+                    }
+                    else if( pR->north == rID && pR->doors.contains("n") )
+                    {
+                        doorStatus = pR->doors["n"];
+                    }
+                    else if( pR->southwest == rID && pR->doors.contains("sw") )
+                    {
+                        doorStatus = pR->doors["sw"];
+                    }
+                    else if( pR->southeast == rID && pR->doors.contains("se") )
+                    {
+                        doorStatus = pR->doors["se"];
+                    }
+                    else if( pR->northeast == rID && pR->doors.contains("ne") )
+                    {
+                        doorStatus = pR->doors["ne"];
+                    }
+                    else if( pR->northwest == rID && pR->doors.contains("nw") )
+                    {
+                        doorStatus = pR->doors["nw"];
+                    }
+                    else if( pR->west == rID && pR->doors.contains("w") )
+                    {
+                        doorStatus = pR->doors["w"];
+                    }
+                    else if( pR->east == rID && pR->doors.contains("e") )
+                    {
+                        doorStatus = pR->doors["e"];
+                    }
+                    if( doorStatus > 0 )
+                    {
+                        QLineF k0;
+                        QRectF rect;
+                        rect.setWidth(0.25*mTX);
+                        rect.setHeight(0.25*mTY);
+                        if ( areaExit )
+                            k0 = QLineF(_line);
+                        else
+                            k0 = QLineF( p2.x(), p2.y(), p1.x(), p1.y() );
+                        k0.setLength( (k0.length())*0.5 );
+                        rect.moveCenter(k0.p2());
+                        QPen arrowPen = p.pen();
+                        QPen _tp = p.pen();
+                        arrowPen.setCosmetic( mMapperUseAntiAlias );
+                        arrowPen.setStyle(Qt::SolidLine);
+                        if( doorStatus == 1 ) //open door
+                            arrowPen.setColor(QColor(10,155,10));
+                        else if( doorStatus == 2 ) //closed door
+                            arrowPen.setColor(QColor(155,155,10));
+                        else //locked door
+                            arrowPen.setColor(QColor(155,10,10));
+                        QBrush brush;
+                        QBrush oldBrush;
+                        p.setPen( arrowPen );
+                        p.setBrush(brush);
+                        p.drawRect(rect);
+                        p.setBrush(oldBrush);
+                        p.setPen(_tp);
+                    }
                 }
             }
         }
