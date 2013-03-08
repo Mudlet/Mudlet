@@ -218,7 +218,7 @@ function db:_sql_convert(value)
 
    if value == nil then
       return "NULL"
-   elseif t == "TEXT" then
+   elseif t == "TEXT" and type(value) == "string" then
       return '"'..value:gsub("'", "''")..'"'
    elseif t == "NULL" then
       return "NULL"
@@ -435,17 +435,17 @@ function db:create(db_name, sheets)
    for s_name, sht in pairs(sheets) do
       options = {}
 
-      if sht[1] ~= nil then
-         t = {}
+      if sht[1] ~= nil then         -- in case the sheet was provided in the sheet = {"column1", "column2"} format:
+         local t = {}               --   assume field types are text, and should default to ""
          for k, v in pairs(sht) do
-            t[v] = nil
+            t[v] = ""
          end
          sht = t
-      else
+      else                          -- sheet provided in the sheet = {"colun1" = default} format
          for k, v in pairs(sht) do
             if string.starts(k, "_") then
                options[k] = v
-               sht[k] = nil
+               sht[k] = ""
             end
          end
       end
@@ -621,11 +621,14 @@ function db:add(sheet, ...)
 
       local sql = sql_insert:format(db.__schema[db_name][s_name].options._violations, s_name, db:_sql_fields(t), db:_sql_values(t))
       db:echo_sql(sql)
-      assert(conn:execute(sql), "Failed to add item: this is probably a violation of a UNIQUE index or other constraint.")
+
+      local result, msg = conn:execute(sql)
+      if not result then return nil, msg end
    end
    if db.__autocommit[db_name] then
       conn:commit()
    end
+   return true
 end
 
 
@@ -912,6 +915,8 @@ end
 ---
 ---   The db:merge_unique function will change the 'city' values for all the people who we previously fetched, but then add a new record as well.
 function db:merge_unique(sheet, tables)
+   assert(type(tables) == "table", "db:merge_unique: missing the required table of data to merge")
+
    local db_name = sheet._db_name
    local s_name = sheet._sht_name
 
