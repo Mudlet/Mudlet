@@ -270,7 +270,7 @@ function db:_index_valid(sheet_columns, index_columns)
    else
       for _, v in ipairs(index_columns) do
          if sheet_columns[v] == nil then
-            echo("\n--> Bad index "..v)
+            db:echo_sql("\n--> Bad index "..v)
             return false
          end
       end
@@ -511,6 +511,9 @@ function db:_migrate(db_name, s_name)
             sql = sql_column:format(key:lower(), db:_sql_type(value))
          else
             sql = sql_column_default:format(key:lower(), db:_sql_type(value), db:_sql_convert(value))
+         end
+         if table.contains(schema.options._unique, key) then
+            sql = sql .. " UNIQUE"
          end
          sql_chunks[#sql_chunks+1] = sql
       end
