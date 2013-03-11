@@ -80,6 +80,20 @@ TMap::TMap( Host * pH )
     int mViewArea = 0;
 }
 
+void TMap::mapClear()
+{
+    rooms.clear();
+    areas.clear();
+    areaNamesMap.clear();
+    mRoomId = 0;
+    pixNameTable.clear();
+    pixTable.clear();
+    hashTable.clear();
+    envColors.clear();
+    customEnvColors.clear();
+    mapLabels.clear();
+}
+
 #include <QFileDialog>
 void TMap::exportMapToDatabase()
 {

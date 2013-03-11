@@ -1765,6 +1765,8 @@ bool TConsole::loadMap(QString location)
     }
     if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
 
+    mpHost->mpMap->mapClear();
+
     if ( mpHost->mpMap->restore(location) )
     {
         mpHost->mpMap->init( mpHost );
