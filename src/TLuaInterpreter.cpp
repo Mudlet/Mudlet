@@ -9105,7 +9105,9 @@ bool TLuaInterpreter::compileAndExecuteScript( QString & code )
             e+=lua_tostring( L, 1 );
         }
         if( mudlet::debugMode ) qDebug()<<"LUA ERROR: code did not compile: ERROR:"<<e.c_str();
-        emit signalEchoMessage( mHostID, QString( e.c_str() ) );
+        QString _n = "error in Lua code";
+        QString _n2 = "no debug data available";
+        logError(e, _n,_n2);
     }
 
     lua_pop( L, lua_gettop( L ) );
