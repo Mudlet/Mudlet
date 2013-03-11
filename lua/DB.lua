@@ -482,7 +482,7 @@ function db:_migrate(db_name, s_name)
       local row = cur:fetch({}, "a")
 
       while row do
-         current_columns[row.name:lower()] = row.type
+         current_columns[row.name] = row.type
          row = cur:fetch({}, "a")
       end
       cur:close()
@@ -508,9 +508,9 @@ function db:_migrate(db_name, s_name)
       for key, value in pairs(schema.columns) do
          local sql = ""
          if value == nil then
-            sql = sql_column:format(key:lower(), db:_sql_type(value))
+            sql = sql_column:format(key, db:_sql_type(value))
          else
-            sql = sql_column_default:format(key:lower(), db:_sql_type(value), db:_sql_convert(value))
+            sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
          end
          if table.contains(schema.options._unique, key) then
             sql = sql .. " UNIQUE"
@@ -532,7 +532,6 @@ function db:_migrate(db_name, s_name)
       local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
 
       for k, v in pairs(schema.columns) do
-         k = k:lower()
          t = db:_sql_type(v)
          v = db:_sql_convert(v)
 
@@ -1483,7 +1482,7 @@ db.__SheetMT = {
 
       local db_name = rawget(t, "_db_name")
       local sht_name = rawget(t, "_sht_name")
-      local f_name = k:lower()
+      local f_name = k
 
       local errormsg = "Attempt to access field %s in sheet %s in database %s that does not exist."
 
@@ -1518,8 +1517,8 @@ db.__DatabaseMT = {
       end
 
       local db_name = rawget(t, "_db_name")
-      if assert(db.__schema[db_name][k:lower()], "Attempt to access sheet '"..k:lower().."'in db '"..db_name.."' that does not exist.") then
-         rt = setmetatable({_db_name = db_name, _sht_name = k:lower()}, db.__SheetMT)
+      if assert(db.__schema[db_name][k], "Attempt to access sheet '"..k.."'in db '"..db_name.."' that does not exist.") then
+         rt = setmetatable({_db_name = db_name, _sht_name = k}, db.__SheetMT)
          rawset(t,k,rt)
          return rt
       end
