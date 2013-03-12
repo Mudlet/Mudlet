@@ -148,6 +148,7 @@ public:
    //QString                       readProfileData( QString profile, QString item );
    void                          doAutoLogin( QString & );
    void                          deselect( Host * pHost, QString & name );
+   void                          stopSounds();
    void                          playSound( QString s );
    QTime                         mReplayTime;
    int                           mReplaySpeed;

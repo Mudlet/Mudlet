@@ -4174,6 +4174,13 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::stopSounds( lua_State *L )
+{
+    //doesn't take an argument
+    mudlet::self()->stopSounds();
+    return 0;
+}
+
 int TLuaInterpreter::moveCursorEnd( lua_State *L )
 {
     string luaWindowName="";
@@ -9969,6 +9976,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempColorTrigger", TLuaInterpreter::tempColorTrigger );
     lua_register( pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor );
     lua_register( pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor );
+    lua_register( pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds );
     lua_register( pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile );
     lua_register( pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop );
     lua_register( pGlobalLua, "setBorderBottom", TLuaInterpreter::setBorderBottom );

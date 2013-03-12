@@ -307,6 +307,7 @@ public:
     static int tempColorTrigger( lua_State * );
     static int isAnsiFgColor( lua_State * );
     static int isAnsiBgColor( lua_State * );
+    static int stopSounds (lua_State * );
     static int playSoundFile( lua_State * );
     static int setBorderTop( lua_State * );
     static int setBorderBottom( lua_State * );
