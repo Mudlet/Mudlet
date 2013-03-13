@@ -875,6 +875,9 @@ void Host::showUnpackingProgress( QString  txt )
 #ifdef Q_OS_WIN
     #include "quazip.h"
     #include "JlCompress.h"
+#else
+    #include <quazip/quazip.h>
+    #include <quazip/JlCompress.h>
 #endif
 
 bool Host::installPackage( QString fileName, int module )
@@ -934,12 +937,12 @@ bool Host::installPackage( QString fileName, int module )
 
         // At the moment, QuaZip is for Windows only - OSX and Linux use LuaZip as it is more commonly available
         // In the future, QuaZip will be the preferred option with LuaZip as a fallback
-        #ifndef Q_OS_WIN
-            QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
-            mLuaInterpreter.compileAndExecuteScript( _script );
-        #else
+//        #ifndef Q_OS_WIN
+//            QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
+//            mLuaInterpreter.compileAndExecuteScript( _script );
+//        #else
             JlCompress::extractDir(fileName, _dest );
-        #endif
+//        #endif
         mpUnzipDialog->close();
         mpUnzipDialog = 0;
 

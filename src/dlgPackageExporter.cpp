@@ -7,6 +7,9 @@
 #ifdef Q_OS_WIN
     #include "quazip.h"
     #include "JlCompress.h"
+#else
+    #include <quazip/quazip.h>
+    #include <quazip/JlCompress.h>
 #endif
 #include <QDesktopServices>
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
@@ -32,7 +35,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
 //       name config file and arbitray additional package content selection.
 //       However, this feature is currently restricted to windows only
 //       until quazip is part of the other Mudlet builds
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
     ui->browseButton->hide();
     ui->filePath->hide();
     ui->textLabel1->hide();
@@ -59,12 +62,12 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
         configFile.close();
     }
     connect(ui->addFiles, SIGNAL(clicked()), this, SLOT(slot_addFiles()));
-#else
-    ui->addFiles->hide();
-    ui->textLabel1_2->hide();
-    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(slot_browse_button()));
-    exportButton->setDisabled(true); // disabled by default until the user selects a location
-#endif
+//#else
+//    ui->addFiles->hide();
+//    ui->textLabel1_2->hide();
+//    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(slot_browse_button()));
+//    exportButton->setDisabled(true); // disabled by default until the user selects a location
+//#endif
 
     ui->buttonBox->addButton(exportButton, QDialogButtonBox::ResetRole);
     connect(exportButton, SIGNAL(clicked()), this, SLOT(slot_export_package()));
@@ -91,9 +94,9 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem * pItem, QList<QTreeWidgetI
 
 
 void dlgPackageExporter::slot_export_package(){
-#ifndef Q_OS_WIN
-    filePath = ui->filePath->text();
-#endif
+//#ifndef Q_OS_WIN
+//    filePath = ui->filePath->text();
+//#endif
     QFile file_xml( filePath );
     if( file_xml.open( QIODevice::WriteOnly ) )
     {
@@ -202,11 +205,11 @@ void dlgPackageExporter::slot_export_package(){
         }
 
 
-        #ifdef Q_OS_WIN
+        //#ifdef Q_OS_WIN
             JlCompress::compressDir(zip, tempDir );
-        #else
-            ui->infoLabel->setText("Exported package to "+filePath);
-        #endif
+//        #else
+//            ui->infoLabel->setText("Exported package to "+filePath);
+//        #endif
     } else {
         ui->infoLabel->setText("Failed to export - couldn't open "+filePath+" for writing in. Do you have the necessary permissions to write to that folder?");
     }
