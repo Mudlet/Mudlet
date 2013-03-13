@@ -24,6 +24,7 @@
 #include <QString>
 #include <QRegExp>
 #include <QNetworkAccessManager>
+#include <QSslConfiguration>
 #include <QDesktopServices>
 #include "TLuaInterpreter.h"
 #include "TForkedProcess.h"
@@ -1758,7 +1759,28 @@ int TLuaInterpreter::getExitStubs( lua_State * L  ){
     return 1;
 }
 
-int TLuaInterpreter::getModulePriority( lua_State * L  ){
+int TLuaInterpreter::getModulePath( lua_State *L )
+{
+    QString moduleName;
+    if (!lua_isstring(L,1)){
+        lua_pushstring(L, "getModulePath: Module be be a string");
+        lua_error(L);
+        return 1;
+    }
+    else
+        moduleName = lua_tostring( L, 1 );
+    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+    QMap<QString, QStringList> modules = mpHost->mInstalledModules;
+    if (modules.contains(moduleName)){
+        QString modPath = modules[moduleName][0];
+        lua_pushstring( L, modPath.toLatin1().data() );
+        return 1;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::getModulePriority( lua_State * L  )
+{
     QString moduleName;
     if (!lua_isstring(L,1)){
         lua_pushstring(L, "getModulePriority: Module be be a string");
@@ -4149,6 +4171,13 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
         sound.replace('\\', "/");
     }
     mudlet::self()->playSound( sound );
+    return 0;
+}
+
+int TLuaInterpreter::stopSounds( lua_State *L )
+{
+    //doesn't take an argument
+    mudlet::self()->stopSounds();
     return 0;
 }
 
@@ -7684,8 +7713,13 @@ int TLuaInterpreter::downloadFile( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString _url = url.c_str();
     QString _path = path.c_str();
-
-    QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( QNetworkRequest( QUrl( _url ) ) );
+    QNetworkRequest request = QNetworkRequest( QUrl( _url ) );
+    if ( _path.contains("https") )
+    {
+        QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
+        request.setSslConfiguration( config );
+    }
+    QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( request );
     pHost->mLuaInterpreter.downloadMap[reply] = _path;
     return 0;
 
@@ -8823,6 +8857,63 @@ int TLuaInterpreter::uninstallPackage( lua_State * L )
         pHost->uninstallPackage( package, 0 );
 }
 
+int TLuaInterpreter::installModule( lua_State * L)
+{
+    string modName;
+    if ( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "installModule: wrong first argument (should be a path to module)");
+        lua_error( L );
+        return 1;
+    }
+    else
+        modName = lua_tostring( L, 1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString module = QDir::fromNativeSeparators(modName.c_str());
+    qDebug()<<module<<"to install";
+    if( pHost )
+        if ( pHost->installPackage( module, 3 ) && mudlet::self()->moduleTableVisible() )
+            mudlet::self()->layoutModules();
+    return 0;
+}
+
+int TLuaInterpreter::uninstallModule( lua_State * L)
+{
+    string modName;
+    if ( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "uninstallModule: wrong first argument (should be a module name)");
+        lua_error( L );
+        return 1;
+    }
+    else
+        modName = lua_tostring( L, 1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString module = modName.c_str();
+    if( pHost )
+        if ( pHost->uninstallPackage( module, 3 ) && mudlet::self()->moduleTableVisible() )
+            mudlet::self()->layoutModules();
+    return 1;
+}
+
+int TLuaInterpreter::reloadModule( lua_State * L)
+{
+    string modName;
+    if ( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "installModule(): wrong first argument (should be a module name)");
+        lua_error( L );
+        return 1;
+    }
+    else
+        modName = lua_tostring( L, 1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString module = modName.c_str();
+    if( pHost )
+        pHost->reloadModule( module );
+    return 0;
+}
+
 int TLuaInterpreter::registerAnonymousEventHandler( lua_State * L )
 {
     string event;
@@ -9021,7 +9112,9 @@ bool TLuaInterpreter::compileAndExecuteScript( QString & code )
             e+=lua_tostring( L, 1 );
         }
         if( mudlet::debugMode ) qDebug()<<"LUA ERROR: code did not compile: ERROR:"<<e.c_str();
-        emit signalEchoMessage( mHostID, QString( e.c_str() ) );
+        QString _n = "error in Lua code";
+        QString _n2 = "no debug data available";
+        logError(e, _n,_n2);
     }
 
     lua_pop( L, lua_gettop( L ) );
@@ -9883,6 +9976,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempColorTrigger", TLuaInterpreter::tempColorTrigger );
     lua_register( pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor );
     lua_register( pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor );
+    lua_register( pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds );
     lua_register( pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile );
     lua_register( pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop );
     lua_register( pGlobalLua, "setBorderBottom", TLuaInterpreter::setBorderBottom );
@@ -10015,6 +10109,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu );
     lua_register( pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus );
     lua_register( pGlobalLua, "installPackage", TLuaInterpreter::installPackage );
+    lua_register( pGlobalLua, "installModule", TLuaInterpreter::installModule );
+    lua_register( pGlobalLua, "uninstallModule", TLuaInterpreter::uninstallModule );
+    lua_register( pGlobalLua, "reloadModule", TLuaInterpreter::reloadModule );
     lua_register( pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage );
     lua_register( pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel );
     lua_register( pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom );
@@ -10025,6 +10122,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getExitWeights", TLuaInterpreter::getExitWeights );
     lua_register( pGlobalLua, "addSupportedTelnetOption", TLuaInterpreter::addSupportedTelnetOption );
     lua_register( pGlobalLua, "setMergeTables", TLuaInterpreter::setMergeTables );
+    lua_register( pGlobalLua, "getModulePath", TLuaInterpreter::getModulePath );
 
 
     luaopen_yajl(pGlobalLua);

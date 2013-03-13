@@ -30,7 +30,7 @@
 #include "Host.h"
 #include "TLuaInterpreter.h"
 
-
+#include <QMapIterator>
 #include <QDebug>
 #include "ScriptUnit.h"
 
@@ -221,7 +221,12 @@ void ScriptUnit::addScript( TScript * pT )
 void ScriptUnit::removeScript( TScript * pT )
 {
     if( ! pT ) return;
-
+    QMapIterator<QString, QList<TScript *> > it(mpHost->mEventHandlerMap);
+    while( it.hasNext() )
+    {
+        it.next();
+        mpHost->mEventHandlerMap[it.key()].removeAll(pT);
+    }
     mScriptMap.remove(pT->getID());
 }
 

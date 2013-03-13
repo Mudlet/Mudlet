@@ -26,6 +26,7 @@
 #include <QWidget>
 #include <QPainter>
 #include <QClipboard>
+#include <QTime>
 #include "mudlet.h"
 #include "TDebug.h"
 #include "TTextEdit.h"
@@ -55,7 +56,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mpHost( pH )
 , mpScrollBar( 0 )
 {
-
+    mLastClickTimer.start();
     if( ! mIsDebugConsole )
     {
         mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
@@ -1271,21 +1272,53 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                 }
             }
         }
-        mMouseTracking = true;
-        //int x = event->x() / mFontWidth;
-        //int y = ( event->y() / mFontHeight ) + imageTopLine();
         unHighlight( mSelectedRegion );
         mSelectedRegion = QRegion( 0, 0, 0, 0 );
-        qDebug()<<"x="<<x<<" y="<<y;
-        if( y >= mpBuffer->size() )
+        if ( mLastClickTimer.elapsed() < 300 )
         {
+            int xind=x;
+            int yind=y;
+            while( xind < static_cast<int>( mpBuffer->buffer[yind].size() ) )
+            {
+                QString c = mpBuffer->lineBuffer[yind].at(xind);
+                if (c == " ")
+                    break;
+                xind++;
+            }
+            mPB.setX ( xind-1 );
+            mPB.setY ( yind );
+            for( xind=x-1; xind>0; xind--)
+            {
+                QString c = mpBuffer->lineBuffer[yind].at(xind);
+                if (c == " ")
+                    break;
+            }
+            if ( xind > 0)
+                mPA.setX ( xind+1 );
+            else
+                mPA.setX ( xind );
+            mPA.setY ( yind );
+            highlight();
+            event->accept();
             return;
         }
-        mPA.setX( x );
-        mPA.setY( y );
-        mPB = mPA;
-        event->accept();
-        return;
+        else
+        {
+            mLastClickTimer.start();
+            mMouseTracking = true;
+            //int x = event->x() / mFontWidth;
+            //int y = ( event->y() / mFontHeight ) + imageTopLine();
+            qDebug()<<"x="<<x<<" y="<<y;
+            if( y >= mpBuffer->size() )
+            {
+                return;
+            }
+            mPA.setX( x );
+            mPA.setY( y );
+            mPB = mPA;
+            event->accept();
+            return;
+        }
     }
 
     if( event->button() == Qt::RightButton )

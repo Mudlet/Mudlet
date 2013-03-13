@@ -126,6 +126,10 @@ public:
     static int createMapImageLabel( lua_State * );
     static int exportAreaImage( lua_State * );
     static int installPackage( lua_State * );
+    static int installModule( lua_State * L);
+    static int uninstallModule( lua_State * L );
+    static int getModulePath (lua_State * L );
+    static int reloadModule( lua_State * L );
     static int lockExit( lua_State * );
     static int lockSpecialExit( lua_State * );
     static int hasExitLock( lua_State * );
@@ -303,6 +307,7 @@ public:
     static int tempColorTrigger( lua_State * );
     static int isAnsiFgColor( lua_State * );
     static int isAnsiBgColor( lua_State * );
+    static int stopSounds (lua_State * );
     static int playSoundFile( lua_State * );
     static int setBorderTop( lua_State * );
     static int setBorderBottom( lua_State * );

@@ -31,6 +31,7 @@
 #include <QMap>
 #include <QString>
 #include <QScrollBar>
+#include <QTime>
 #include "mudlet.h"
 #include "TBuffer.h"
 
@@ -153,6 +154,7 @@ private:
     bool              mScrollUp;
     int               mTopMargin;
     bool              mUpdateSlice;
+    QTime             mLastClickTimer;
 
 };
 

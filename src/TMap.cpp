@@ -80,6 +80,20 @@ TMap::TMap( Host * pH )
     int mViewArea = 0;
 }
 
+void TMap::mapClear()
+{
+    rooms.clear();
+    areas.clear();
+    areaNamesMap.clear();
+    mRoomId = 0;
+    pixNameTable.clear();
+    pixTable.clear();
+    hashTable.clear();
+    envColors.clear();
+    customEnvColors.clear();
+    mapLabels.clear();
+}
+
 #include <QFileDialog>
 void TMap::exportMapToDatabase()
 {
@@ -372,6 +386,14 @@ void TMap::init( Host * pH )
                     }
                     else
                         cout << "ERROR: cannot convert old style label areaID:"<<areaID<<" labelID:"<< labelIDList[i]<<endl;
+                }
+                if ( ( l.size.width() > std::numeric_limits<qreal>::max() ) || ( l.size.width() < -std::numeric_limits<qreal>::max() ) )
+                {
+                    mapLabels[areaID][labelIDList[i]].size.setWidth(l.pix.width());
+                }
+                if ( ( l.size.height() > std::numeric_limits<qreal>::max() ) || ( l.size.height() < -std::numeric_limits<qreal>::max() ) )
+                {
+                    mapLabels[areaID][labelIDList[i]].size.setHeight(l.pix.height());
                 }
             }
         }
@@ -1603,6 +1625,7 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     label.pix = pix.copy(br.normalized().topLeft().x(), br.normalized().topLeft().y(), br.normalized().width(), br.normalized().height());
     QSizeF s = QSizeF(label.size.width()/zoom, label.size.height()/zoom);
     label.size = s;
+    label.clickSize = s;
     if( !areas.contains(area) ) return -1;
     int labelID;
     if( !mapLabels.contains( area ) )

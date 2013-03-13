@@ -358,9 +358,27 @@ void T2DMap::switchArea(QString name)
             mpMap->areas[areaID]->calcSpan();
             if( ! mpMap->areas[areaID]->xminEbene.contains(mOz) )
             {
-                mOx = 0;
-                mOy = 0;
-                mOz = 0;
+                //find the first room of the area, which will usually
+                //be the entrance and go there if it exists.
+                QList<int> rooms = mpMap->areas[areaID]->rooms;
+                if ( !rooms.isEmpty() )
+                {
+                    TRoom * room = mpMap->rooms[rooms.first()];
+                    mOz = room->z;
+                    int x_min = mpMap->areas[areaID]->xminEbene[mOz];
+                    int y_min = mpMap->areas[areaID]->yminEbene[mOz];
+                    int x_max = mpMap->areas[areaID]->xmaxEbene[mOz];
+                    int y_max = mpMap->areas[areaID]->ymaxEbene[mOz];
+                    mOx = x_min + ( abs( x_max - x_min ) / 2 );
+                    mOy = ( y_min + ( abs( y_max - y_min ) / 2 ) );
+                }
+                else
+                {
+                    //no rooms, go to 0,0,0
+                    mOx = 0;
+                    mOy = 0;
+                    mOz = 0;
+                }
             }
             else
             {
@@ -505,20 +523,28 @@ void T2DMap::paintEvent( QPaintEvent * e )
             lpos.setY( _ly );
             int _lw = abs(it.value().size.width())*tx;
             int _lh = abs(it.value().size.height())*ty;
-
             if( ! ( ( 0<_lx || 0<_lx+_lw ) && (_w>_lx || _w>_lx+_lw ) ) ) continue;
             if( ! ( ( 0<_ly || 0<_ly+_lh ) && (_h>_ly || _h>_ly+_lh ) ) ) continue;
             QRectF _drawRect = QRect(it.value().pos.x()*tx+_rx, it.value().pos.y()*ty*-1+_ry, _lw, _lh);
             if( ! it.value().showOnTop )
             {
                 if( ! it.value().noScaling )
+                {
                     p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(_drawRect.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(_drawRect.height());
+                }
                 else
+                {
                     p.drawPixmap( lpos, it.value().pix );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(it.value().pix.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(it.value().pix.height());
+                }
             }
 
             if( it.value().hilite )
             {
+                _drawRect.setSize(it.value().clickSize);
                 p.fillRect(_drawRect, QColor(255, 155, 55, 190));
             }
         }
@@ -910,6 +936,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
                 QVector3D p1( ex, ey, ez );
                 QVector3D p2( rx, ry, rz );
+                QLine _line;
                 if( ! areaExit )
                 {
                     // one way exit or 2 way exit?
@@ -963,103 +990,54 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 else
                 {
                     __pen = p.pen();
-                    QLine _line;
+                    QPoint _p;
+                    pen = p.pen();
+                    pen.setWidthF(wegBreite);
+                    pen.setCosmetic( mMapperUseAntiAlias );
+                    pen.setColor(getColor(exitList[k]));
+                    p.setPen( pen );
                     if( pR->south == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine( p2.x(), p2.y()+ty,p2.x(), p2.y() );
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x(), p2.y()+ty/2);
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x(), p2.y()+ty/2);
                     }
                     else if( pR->north == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine( p2.x(), p2.y()-ty, p2.x(), p2.y() );
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x(), p2.y()-ty/2);
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x(), p2.y()-ty/2);
                     }
                     else if( pR->west == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine(p2.x()-tx, p2.y(),p2.x(), p2.y() );
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x()-tx/2, p2.y());
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x()-tx/2, p2.y());
                     }
                     else if( pR->east == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine(p2.x()+tx, p2.y(),p2.x(), p2.y() );
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x()+tx/2, p2.y());
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x()+tx/2, p2.y());
                     }
                     else if( pR->northwest == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine(p2.x()-tx, p2.y()-ty,p2.x(), p2.y() );
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x()-tx/2, p2.y()-ty/2);
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x()-tx/2, p2.y()-ty/2);
                     }
                     else if( pR->northeast == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine(p2.x()+tx, p2.y()-ty,p2.x(), p2.y());
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x()+tx/2, p2.y()-ty/2);
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x()+tx/2, p2.y()-ty/2);
                     }
                     else if( pR->southeast == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine(p2.x()+tx, p2.y()+ty, p2.x(), p2.y());
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x()+tx/2, p2.y()+ty/2);
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x()+tx/2, p2.y()+ty/2);
                     }
                     else if( pR->southwest == rID )
                     {
-                        pen = p.pen();
-                        pen.setWidthF(wegBreite);
-                        pen.setCosmetic( mMapperUseAntiAlias );
-                        pen.setColor(getColor(exitList[k]));
-                        p.setPen( pen );
                         _line = QLine(p2.x()-tx, p2.y()+ty, p2.x(), p2.y());
-                        p.drawLine( _line );
-                        QPoint _p = QPoint(p2.x()-tx/2, p2.y()+ty/2);
-                        mAreaExitList[exitList[k]] = _p;
+                        _p = QPoint(p2.x()-tx/2, p2.y()+ty/2);
                     }
+                    p.drawLine( _line );
+                    mAreaExitList[exitList[k]] = _p;
                     QLineF l0 = QLineF( _line );
                     l0.setLength(wegBreite*5);
                     QPointF _p1 = l0.p1();
@@ -1125,11 +1103,15 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     }
                     if( doorStatus > 0 )
                     {
-                        QLineF k0 = QLineF( p2.x(), p2.y(), p1.x(), p1.y() );
-                        k0.setLength( (k0.length())*0.5 );
+                        QLineF k0;
                         QRectF rect;
                         rect.setWidth(0.25*mTX);
                         rect.setHeight(0.25*mTY);
+                        if ( areaExit )
+                            k0 = QLineF(_line);
+                        else
+                            k0 = QLineF( p2.x(), p2.y(), p1.x(), p1.y() );
+                        k0.setLength( (k0.length())*0.5 );
                         rect.moveCenter(k0.p2());
                         QPen arrowPen = p.pen();
                         QPen _tp = p.pen();
@@ -1602,13 +1584,21 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( it.value().showOnTop )
             {
                 if( ! it.value().noScaling )
+                {
                     p.drawPixmap( lpos, it.value().pix.scaled(_drawRect.size().toSize()) );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(_drawRect.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(_drawRect.height());
+                }
                 else
+                {
                     p.drawPixmap( lpos, it.value().pix );
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setWidth(it.value().pix.width());
+                    mpMap->mapLabels[mAID][it.key()].clickSize.setHeight(it.value().pix.height());
+                }
             }
-
             if( it.value().hilite )
             {
+                _drawRect.setSize(it.value().clickSize);
                 p.fillRect(_drawRect, QColor(255, 155, 55, 190));
             }
         }
@@ -2065,21 +2055,21 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                         int my = event->pos().y();
                         int mz = mOz;
                         QPoint click = QPoint(mx,my);
-                        QRectF br = QRect(_lx, _ly, it.value().size.width()*mTX, it.value().size.height()*mTY);
+                        QRectF br = QRect(_lx, _ly, it.value().clickSize.width(), it.value().clickSize.height());
                         if( br.contains( click ))
                         {
                             if( ! it.value().hilite )
                             {
                                 mLabelHilite = true;
                                 mpMap->mapLabels[mAID][it.key()].hilite = true;
-                                update();
-                                return;
                             }
                             else
                             {
                                 mpMap->mapLabels[mAID][it.key()].hilite = false;
                                 mLabelHilite = false;
                             }
+                            update();
+                            return;
                         }
                     }
                 }
@@ -3909,6 +3899,7 @@ void T2DMap::paintMap()
 
                 QVector3D p1( ex, ey, ez );
                 QVector3D p2( rx, ry, rz );
+                QLine _line;
                 if( ! areaExit )
                 {
                     // one way exit or 2 way exit?
@@ -4084,6 +4075,72 @@ void T2DMap::paintMap()
                     p.setBrush( brush );
                     p.drawPolygon(_poly);
                     p.setPen( __pen );
+                }
+                if( pR->doors.size() > 0 )
+                {
+                    int doorStatus = 0;
+                    if( pR->south == rID && pR->doors.contains("s") )
+                    {
+                        doorStatus = pR->doors["s"];
+                    }
+                    else if( pR->north == rID && pR->doors.contains("n") )
+                    {
+                        doorStatus = pR->doors["n"];
+                    }
+                    else if( pR->southwest == rID && pR->doors.contains("sw") )
+                    {
+                        doorStatus = pR->doors["sw"];
+                    }
+                    else if( pR->southeast == rID && pR->doors.contains("se") )
+                    {
+                        doorStatus = pR->doors["se"];
+                    }
+                    else if( pR->northeast == rID && pR->doors.contains("ne") )
+                    {
+                        doorStatus = pR->doors["ne"];
+                    }
+                    else if( pR->northwest == rID && pR->doors.contains("nw") )
+                    {
+                        doorStatus = pR->doors["nw"];
+                    }
+                    else if( pR->west == rID && pR->doors.contains("w") )
+                    {
+                        doorStatus = pR->doors["w"];
+                    }
+                    else if( pR->east == rID && pR->doors.contains("e") )
+                    {
+                        doorStatus = pR->doors["e"];
+                    }
+                    if( doorStatus > 0 )
+                    {
+                        QLineF k0;
+                        QRectF rect;
+                        rect.setWidth(0.25*mTX);
+                        rect.setHeight(0.25*mTY);
+                        if ( areaExit )
+                            k0 = QLineF(_line);
+                        else
+                            k0 = QLineF( p2.x(), p2.y(), p1.x(), p1.y() );
+                        k0.setLength( (k0.length())*0.5 );
+                        rect.moveCenter(k0.p2());
+                        QPen arrowPen = p.pen();
+                        QPen _tp = p.pen();
+                        arrowPen.setCosmetic( mMapperUseAntiAlias );
+                        arrowPen.setStyle(Qt::SolidLine);
+                        if( doorStatus == 1 ) //open door
+                            arrowPen.setColor(QColor(10,155,10));
+                        else if( doorStatus == 2 ) //closed door
+                            arrowPen.setColor(QColor(155,155,10));
+                        else //locked door
+                            arrowPen.setColor(QColor(155,10,10));
+                        QBrush brush;
+                        QBrush oldBrush;
+                        p.setPen( arrowPen );
+                        p.setBrush(brush);
+                        p.drawRect(rect);
+                        p.setBrush(oldBrush);
+                        p.setPen(_tp);
+                    }
                 }
             }
         }

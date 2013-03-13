@@ -74,6 +74,7 @@ public:
     //bool             restore( QDataStream & fs, bool );
     bool             isClone( TKey & ) const;
     bool             exportItem;
+    bool            mModuleMasterFolder;
 private:
 
                      TKey(){};
@@ -98,7 +99,7 @@ private:
     Host *           mpHost;
     bool             mNeedsToBeCompiled;
     bool                  mModuleMember;
-    bool            mModuleMasterFolder;
+
 };
 
 #endif

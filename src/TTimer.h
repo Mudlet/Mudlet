@@ -86,6 +86,7 @@ public:
     bool             isOffsetTimer();
     bool             mRegisteredAnonymousLuaFunction;
     bool             exportItem;
+    bool            mModuleMasterFolder;
 private:
 
                        TTimer(){};
@@ -101,7 +102,6 @@ private:
     QMutex             mLock;
     QTimer *           mpTimer;
     bool                  mModuleMember;
-    bool            mModuleMasterFolder;
     //TLuaInterpreter *  mpLua;
 
 };
