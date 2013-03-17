@@ -88,50 +88,51 @@ void dlgRoomExits::save()
             mpHost->mpMap->rooms[mRoomID]->other.insertMulti( key, value );
         }
     }
-    if( n->text().size() > 0 )
+
+    if( n->text().size() > 0 && n->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->north = n->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->north = -1;
-    if( s->text().size() > 0 )
+    if( s->text().size() > 0 && s->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->south = s->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->south = -1;
-    if( w->text().size() > 0 )
+    if( w->text().size() > 0 && w->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->west = w->text().toInt();
     else mpHost->mpMap->rooms[mRoomID]->west = -1;
-    if( e->text().size() > 0 )
+    if( e->text().size() > 0 && e->text().toInt() > 0)
         mpHost->mpMap->rooms[mRoomID]->east = e->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->east = -1;
-    if( ne->text().size() > 0 )
+    if( ne->text().size() > 0 && ne->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->northeast = ne->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->northeast = -1;
-    if( nw->text().size() > 0 )
+    if( nw->text().size() > 0 && nw->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->northwest = nw->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->northwest = -1;
-    if( se->text().size() > 0 )
+    if( se->text().size() > 0 && se->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->southeast = se->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->southeast = -1;
-    if( sw->text().size() > 0 )
+    if( sw->text().size() > 0 && sw->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->southwest = sw->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->southwest = -1;
-    if( up->text().size() > 0 )
+    if( up->text().size() > 0 && up->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->up = up->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->up = -1;
-    if( down->text().size() > 0 )
+    if( down->text().size() > 0 && down->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->down = down->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->down = -1;
-    if( in->text().size() > 0 )
+    if( in->text().size() > 0 && in->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->in = in->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->in = -1;
-    if( out->text().size() > 0 )
+    if( out->text().size() > 0 && out->text().toInt() > 0 )
         mpHost->mpMap->rooms[mRoomID]->out = out->text().toInt();
     else
         mpHost->mpMap->rooms[mRoomID]->out = -1;
