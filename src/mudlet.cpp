@@ -981,8 +981,16 @@ bool mudlet::createMiniConsole( Host * pHost, QString & name, int x, int y, int 
         if( pC )
         {
             dockWindowConsoleMap[name] = pC;
+            std::string _n = name.toStdString();
+            pC->setMiniConsoleFontSize( _n, 12 );
             return true;
         }
+    }
+    else
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->resize( width, height );
+        pC->move( x, y );
     }
     return false;
 }
