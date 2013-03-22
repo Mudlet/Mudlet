@@ -120,7 +120,8 @@ SOURCES += TConsole.cpp \
     T2DMap.cpp \
     dlgRoomExits.cpp \
     dlgPackageExporter.cpp \
-    exitstreewidget.cpp
+    exitstreewidget.cpp \
+    TRoomDB.cpp
 
 
 HEADERS += mudlet.h \
@@ -197,7 +198,8 @@ HEADERS += mudlet.h \
     T2DMap.h \
     dlgRoomExits.h \
     dlgPackageExporter.h \
-    exitstreewidget.h
+    exitstreewidget.h \
+    TRoomDB.h
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \

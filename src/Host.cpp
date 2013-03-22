@@ -826,7 +826,7 @@ bool Host::serialize()
         QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
     }
 
-    if( mpMap->rooms.size() > 10 )
+    if( mpMap->mpRoomDB->size() > 10 )
     {
         QFile file_map( filename_map );
         if ( file_map.open( QIODevice::WriteOnly ) )

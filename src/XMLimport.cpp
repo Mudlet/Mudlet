@@ -190,7 +190,7 @@ void XMLimport::readMap()
 
             if( name() == "areas" )
             {
-                mpHost->mpMap->areaNamesMap.clear();
+                mpHost->mpMap->mpRoomDB->clearMapDB();
                 readAreas();
             }
             else if( name() == "rooms" )
@@ -250,7 +250,7 @@ void XMLimport::readAreaNames()
 {
     int id = attributes().value("id").toString().toInt();
     QString name = attributes().value("name").toString();
-    mpHost->mpMap->areaNamesMap[id] = name;
+    mpHost->mpMap->mpRoomDB->addArea( id, name );
 }
 
 void XMLimport::readRooms()
@@ -281,7 +281,7 @@ void XMLimport::readRooms()
 
 void XMLimport::readRoom()
 {
-    TRoom * pT = new TRoom;
+    TRoom * pT = new TRoom( mpHost->mpMap->mpRoomDB );
     pT->id = attributes().value("id").toString().toInt();
     pT->area = attributes().value("area").toString().toInt();
     pT->name = attributes().value("title").toString();
@@ -362,7 +362,7 @@ void XMLimport::readRoom()
     }
     if( pT->id != 0 )
     {
-        mpHost->mpMap->rooms[pT->id] = pT;
+        mpHost->mpMap->mpRoomDB->addRoom( pT->id, pT );
         maxRooms++;
     }
     else

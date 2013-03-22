@@ -1039,7 +1039,7 @@ int TLuaInterpreter::centerview( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap && pHost->mpMap->rooms.contains( roomid ) )
+    if( pHost->mpMap && pHost->mpMap->mpRoomDB->getRoom( roomid ) )
     {
         pHost->mpMap->mRoomId = roomid;
         pHost->mpMap->mNewMove = true;
@@ -1627,38 +1627,45 @@ int TLuaInterpreter::setExitStub( lua_State * L  ){
         lua_error( L );
         return 1;
     }
-    else{
+    else
+    {
         dirType = lua_tonumber(L,2);
     }
-    if (!lua_isboolean(L,3)){
+    if (!lua_isboolean(L,3))
+    {
         lua_pushstring( L, "setExitStub: Need a true/false for third argument" );
         lua_error( L );
         return 1;
     }
-    else{
+    else
+    {
         status = lua_toboolean(L,3);
     }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (!pHost->mpMap->rooms.contains( roomId )){
+    if( !pHost->mpMap ) return 0;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    if( !pR )
+    {
         lua_pushstring( L, "setExitStub: RoomId doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if (dirType>10 || dirType < 1){
+    if(dirType>10 || dirType < 1)
+    {
         lua_pushstring( L, "setExitStub: dirType must be between 1 and 10" );
         lua_error( L );
         return 1;
     }
-    if (status){
-        if (pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType))
-            return 1;
-        pHost->mpMap->rooms[roomId]->setExitStub(dirType, 1);
-        }
-    else{
-        if (pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType))
-            pHost->mpMap->rooms[roomId]->setExitStub(dirType, 0);
-        }
-    return 1;
+    if(status)
+    {
+        pR->setExitStub(dirType, 1);
+    }
+    else
+    {
+        pR->setExitStub(dirType, 0);
+    }
+    return 0;
 }
 
 int TLuaInterpreter::connectExitStub( lua_State * L  ){
@@ -1688,24 +1695,32 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     if (!lua_isnumber(L,3) && !lua_isstring(L,3)){
         roomsGiven = 0;
     }
-    else{
+    else
+    {
         roomsGiven = 1;
         toRoom = lua_tonumber(L,2);
         dirType = lua_tonumber(L,3);
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (!pHost->mpMap->rooms.contains( roomId )){
-        lua_pushstring( L, "connectExitStubs: RoomId doesn't exist" );
+    if( !pHost->mpMap ) return 0;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
+    if( !pR )
+    {
+        lua_pushstring( L, "connectExitStub: RoomId doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if (!pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType)){
+    if(!pR->exitStubs.contains(dirType))
+    {
         lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if (roomsGiven){
-        if (!pHost->mpMap->rooms.contains( toRoom )){
+    if (roomsGiven)
+    {
+        if (!pR_to)
+        {
             lua_pushstring( L, "connectExitStubs: toRoom doesn't exist" );
             lua_error( L );
             return 1;
@@ -1716,8 +1731,10 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
         //setExit( toRoom, roomId, pHost->mpMap->reverseDirections[dirType]);
         //pHost->mpMap->rooms[toRoom]->setExitStub(pHost->mpMap->reverseDirections[dirType], 0);
     }
-    else{
-        if (!pHost->mpMap->rooms[roomId]->exitStubs.contains(dirType)){
+    else
+    {
+        if (!pR->exitStubs.contains(dirType))
+        {
             lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
             lua_error( L );
             return 1;
@@ -1731,7 +1748,8 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
 int TLuaInterpreter::getExitStubs( lua_State * L  ){
     //args:room id
     int roomId;
-    if (!lua_isnumber(L,1)){
+    if (!lua_isnumber(L,1))
+    {
         lua_pushstring( L, "getExitStubs: Need a room number as first argument" );
         lua_error( L );
         return 1;
@@ -1739,16 +1757,22 @@ int TLuaInterpreter::getExitStubs( lua_State * L  ){
     else
         roomId = lua_tonumber(L,1);
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (!pHost->mpMap->rooms.contains( roomId )){
+    if( !pHost->mpMap ) return 0;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    if(!pR)
+    {
         lua_pushstring( L, "getExitStubs: RoomId doesn't exist" );
         lua_error( L );
         return 1;
     }
-    else{
-        QList<int> stubs = pHost->mpMap->rooms[roomId]->exitStubs;
-        if (stubs.size()){
+    else
+    {
+        QList<int> stubs = pR->exitStubs;
+        if (stubs.size())
+        {
             lua_newtable(L);
-            for(int i=0;i<stubs.size();i++){
+            for(int i=0;i<stubs.size();i++)
+            {
                 int exitType = stubs[i];
                 lua_pushnumber( L, i );
                 lua_pushnumber( L, exitType );
@@ -3185,9 +3209,10 @@ int TLuaInterpreter::setRoomEnv( lua_State *L )
         env = lua_tonumber( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( pR )
     {
-        pHost->mpMap->rooms[id]->environment = env;
+        pR->environment = env;
     }
 
     return 0;
@@ -3219,9 +3244,10 @@ int TLuaInterpreter::setRoomName( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString _name = name.c_str();
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        pHost->mpMap->rooms[id]->name = _name;
+        pR->name = _name;
     }
 
     return 0;
@@ -3241,9 +3267,10 @@ int TLuaInterpreter::getRoomName( lua_State *L )
         id = lua_tonumber( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        lua_pushstring(L, pHost->mpMap->rooms[id]->name.toLatin1().data() );
+        lua_pushstring(L, pR->name.toLatin1().data() );
     }
 
     return 1;
@@ -3274,9 +3301,10 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
         w = lua_tonumber( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        pHost->mpMap->rooms[id]->weight = w;
+        pR->weight = w;
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -3339,7 +3367,7 @@ int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
         hash = lua_tostring( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpMap->hashTable[QString(hash.c_str())] = id;
+    pHost->mpMap->mpRoomDB->hashTable[QString(hash.c_str())] = id;
     return 0;
 }
 
@@ -3359,9 +3387,9 @@ int TLuaInterpreter::getRoomIDbyHash( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     int retID = -1;
     QString _hash = hash.c_str();
-    if( pHost->mpMap->hashTable.contains( _hash ) )
+    if( pHost->mpMap->mpRoomDB->hashTable.contains( _hash ) )
     {
-        retID = pHost->mpMap->hashTable[_hash];
+        retID = pHost->mpMap->mpRoomDB->hashTable[_hash];
         lua_pushnumber( L, retID );
     }
     else
@@ -3372,33 +3400,6 @@ int TLuaInterpreter::getRoomIDbyHash( lua_State *L )
 
 int TLuaInterpreter::solveRoomCollisions( lua_State *L )
 {
-    int id;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "solveRoomCollisions() wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        id = lua_tonumber( L, 1 );
-    }
-    int creationDirection=0;
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "solveRoomCollisons() wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        creationDirection = lua_tonumber( L, 2 );
-    }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
-    {
-        pHost->mpMap->solveRoomCollision( id, creationDirection );
-    }
     return 0;
 }
 
@@ -3417,9 +3418,10 @@ int TLuaInterpreter::roomLocked( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        bool r = pHost->mpMap->rooms[id]->isLocked;
+        bool r = pR->isLocked;
         lua_pushboolean( L, r );
     }
     else
@@ -3455,9 +3457,10 @@ int TLuaInterpreter::lockRoom( lua_State *L )
         b = lua_toboolean( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        pHost->mpMap->rooms[id]->isLocked = b;
+        pR->isLocked = b;
         pHost->mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     }
@@ -3507,9 +3510,10 @@ int TLuaInterpreter::lockExit( lua_State *L )
         b = lua_toboolean( L, 3 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        pHost->mpMap->rooms[id]->setExitLock( dir, b );
+        pR->setExitLock( dir, b );
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -3564,10 +3568,11 @@ int TLuaInterpreter::lockSpecialExit( lua_State *L )
         b = lua_toboolean( L, 4 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
         QString _dir = dir.c_str();
-        pHost->mpMap->rooms[id]->setSpecialExitLock( to, _dir, b );
+        pR->setSpecialExitLock( to, _dir, b );
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -3611,10 +3616,11 @@ int TLuaInterpreter::hasSpecialExitLock( lua_State *L )
         dir = lua_tostring( L, 3 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
         QString _dir = dir.c_str();
-        lua_pushboolean( L, pHost->mpMap->rooms[id]->hasSpecialExitLock( to, _dir ) );
+        lua_pushboolean( L, pR->hasSpecialExitLock( to, _dir ) );
         return 1;
     }
     return 0;
@@ -3648,9 +3654,10 @@ int TLuaInterpreter::hasExitLock( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        lua_pushboolean( L, pHost->mpMap->rooms[id]->hasExitLock(dir) );
+        lua_pushboolean( L, pR->hasExitLock(dir) );
         return 1;
     }
     return 0;
@@ -3671,9 +3678,10 @@ int TLuaInterpreter::isLockedRoom( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
-        lua_pushboolean( L, pHost->mpMap->rooms[id]->isLocked );
+        lua_pushboolean( L, pR->isLocked );
     }
     else
     {
@@ -3698,79 +3706,80 @@ int TLuaInterpreter::getRoomExits( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR )
     {
         lua_newtable(L);
-        if( pHost->mpMap->rooms[id]->north != -1 )
+        if( pR->getNorth() != -1 )
         {
             lua_pushstring( L, "north" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->north );
+            lua_pushnumber( L, pR->getNorth() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->northwest != -1 )
+        if( pR->getNorthwest() != -1 )
         {
             lua_pushstring( L, "northwest" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->northwest );
+            lua_pushnumber( L, pR->getNorthwest() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->northeast != -1 )
+        if( pR->getNortheast() != -1 )
         {
             lua_pushstring( L, "northeast" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->northeast );
+            lua_pushnumber( L, pR->getNortheast() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->south != -1 )
+        if( pR->getSouth() != -1 )
         {
             lua_pushstring( L, "south" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->south );
+            lua_pushnumber( L, pR->getSouth() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->southwest != -1 )
+        if( pR->getSouthwest() != -1 )
         {
             lua_pushstring( L, "southwest" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->southwest );
+            lua_pushnumber( L, pR->getSouthwest() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->southeast != -1 )
+        if( pR->getSoutheast() != -1 )
         {
             lua_pushstring( L, "southeast" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->southeast );
+            lua_pushnumber( L, pR->getSoutheast() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->west != -1 )
+        if( pR->getWest() != -1 )
         {
             lua_pushstring( L, "west" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->west );
+            lua_pushnumber( L, pR->getWest() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->east != -1 )
+        if( pR->getEast() != -1 )
         {
             lua_pushstring( L, "east" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->east );
+            lua_pushnumber( L, pR->getEast() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->up != -1 )
+        if( pR->getUp() != -1 )
         {
             lua_pushstring( L, "up" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->up );
+            lua_pushnumber( L, pR->getUp() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->down != -1 )
+        if( pR->getDown() != -1 )
         {
             lua_pushstring( L, "down" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->down );
+            lua_pushnumber( L, pR->getDown() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->in != -1 )
+        if( pR->getIn() != -1 )
         {
             lua_pushstring( L, "in" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->in );
+            lua_pushnumber( L, pR->getIn() );
             lua_settable(L, -3);
         }
-        if( pHost->mpMap->rooms[id]->out != -1 )
+        if( pR->getOut() != -1 )
         {
             lua_pushstring( L, "out" );
-            lua_pushnumber( L, pHost->mpMap->rooms[id]->out );
+            lua_pushnumber( L, pR->getOut() );
             lua_settable(L, -3);
         }
         return 1;
@@ -3803,9 +3812,10 @@ int TLuaInterpreter::searchRoom( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( gotRoomID )
     {
-        if( pHost->mpMap->rooms.contains( room_id ) )
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(room_id);
+        if( pR )
         {
-            lua_pushstring( L, pHost->mpMap->rooms[room_id]->name.toLatin1().data() );
+            lua_pushstring( L, pR->name.toLatin1().data() );
             return 1;
         }
         else
@@ -3816,16 +3826,15 @@ int TLuaInterpreter::searchRoom( lua_State *L )
     }
     else
     {
-        QMapIterator<int, TRoom *> it( pHost->mpMap->rooms );
+        QList<TRoom *> roomList = pHost->mpMap->mpRoomDB->getRoomPtrList();
         lua_newtable(L);
-        while( it.hasNext() )
+        for( int i=0; i<roomList.size();i++ )
         {
-            it.next();
-            int i = it.key();
-            if( pHost->mpMap->rooms[i]->name.contains( QString(room.c_str()), Qt::CaseInsensitive ) )
+            TRoom * pR = roomList[i];
+            if( pR->name.contains( QString(room.c_str()), Qt::CaseInsensitive ) )
             {
-                QString name = pHost->mpMap->rooms[i]->name;
-                int roomID = pHost->mpMap->rooms[i]->id;
+                QString name = pR->name;
+                int roomID = pR->getId();
                 lua_pushnumber( L, roomID );
                 lua_pushstring( L, name.toLatin1().data() );
                 lua_settable(L, -3);
@@ -3833,14 +3842,15 @@ int TLuaInterpreter::searchRoom( lua_State *L )
         }
         return 1;
     }
+    return 0;
 }
 
 int TLuaInterpreter::searchRoomUserData( lua_State *L )
 {
-        //basically stolen from searchRoom
-        //if we have, searchUserData(key, value)
-        //we look through all room ids in a given field for the string and
-        //return a table of roomids matching
+    //basically stolen from searchRoom
+    //if we have, searchUserData(key, value)
+    //we look through all room ids in a given field for the string and
+    //return a table of roomids matching
     string key, value;
     if( lua_isstring( L, 1 ) )
     {
@@ -3863,32 +3873,32 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
         return 1;
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        QMapIterator<int, TRoom *> it( pHost->mpMap->rooms );
-        lua_newtable(L);
-        while( it.hasNext() )
-        {
-                it.next();
-                int i = it.key();
-                QString _key = key.c_str();
+    lua_newtable(L);
+    QList<TRoom*> roomList = pHost->mpMap->mpRoomDB->getRoomPtrList();
+    for( int i=0; i<roomList.size(); i++ )
+    {
+        QString _key = key.c_str();
         QString _value = value.c_str();
-                if (pHost->mpMap->rooms[i]->userData.contains( _key ))
-                {
-                        QString _keyValue = pHost->mpMap->rooms[i]->userData[_key];
-                        if (_keyValue.contains(_value))
-                        {
-                                lua_pushnumber( L, i );
-                                lua_pushstring( L, _keyValue.toLatin1().data() );
-                                lua_settable(L, -3);
-                        }
-                }
+        TRoom * pR = roomList[i];
+        if(pR->userData.contains( _key ))
+        {
+            QString _keyValue = pR->userData[_key];
+            if(_keyValue.contains(_value))
+            {
+                lua_pushnumber( L, i );
+                lua_pushstring( L, _keyValue.toLatin1().data() );
+                lua_settable(L, -3);
+            }
         }
-        return 1;
+    }
+    return 1;
 }
 
 int TLuaInterpreter::getAreaTable( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QMapIterator<int, QString> it( pHost->mpMap->areaNamesMap );
+
+    QMapIterator<int, QString> it( pHost->mpMap->mpRoomDB->getAreaNamesMap() );
     lua_newtable(L);
     while( it.hasNext() )
     {
@@ -3905,7 +3915,7 @@ int TLuaInterpreter::getAreaTable( lua_State *L )
 int TLuaInterpreter::getAreaTableSwap( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QMapIterator<int, QString> it( pHost->mpMap->areaNamesMap );
+    QMapIterator<int, QString> it( pHost->mpMap->mpRoomDB->getAreaNamesMap() );
     lua_newtable(L);
     while( it.hasNext() )
     {
@@ -3933,15 +3943,17 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
         area = lua_tonumber( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->areas.contains( area ) )
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    if( !pA )
     {
         lua_pushnil(L);
         return 1;
     }
     lua_newtable(L);
-    for( int i=0; i<pHost->mpMap->areas[area]->rooms.size(); i++ )
+    const QList<int> areaRooms = pA->getAreaRooms();
+    for( int i=0; i<areaRooms.size(); i++ )
     {
-        int roomID = pHost->mpMap->areas[area]->rooms.at( i );
+        int roomID = areaRooms.at( i );
         lua_pushnumber( L, i );
         lua_pushnumber( L, roomID );
         lua_settable(L, -3);
@@ -3953,7 +3965,7 @@ int TLuaInterpreter::getRooms( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     lua_newtable(L);
-    QMapIterator<int,TRoom*> it(pHost->mpMap->rooms);
+    QMapIterator<int,TRoom*> it(pHost->mpMap->mpRoomDB->getRoomMap());
     while( it.hasNext() )
     {
         it.next();
@@ -3969,12 +3981,33 @@ int TLuaInterpreter::getRooms( lua_State *L )
 int TLuaInterpreter::getRoomWeight( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( pHost->mpMap->mRoomId ) )
+    int roomId;
+    if( lua_gettop( L ) > 0 )
     {
-        lua_pushnumber( L, pHost->mpMap->rooms[pHost->mpMap->mRoomId]->weight );
+        if( ! lua_isnumber( L, 1 ) )
+        {
+            lua_pushstring( L, "getRoomWeight: wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            roomId = lua_tonumber( L, 1 );
+        }
     }
+    else
+        roomId = pHost->mpMap->mRoomId;
 
-    return 1;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    if( pR )
+    {
+        lua_pushnumber( L, pR->weight );
+        return 1;
+    }
+    else
+        return 0;
+
+
 }
 
 int TLuaInterpreter::gotoRoom( lua_State *L )
@@ -6212,7 +6245,7 @@ int TLuaInterpreter::setAreaName( lua_State *L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString _name = name.c_str();
-    pHost->mpMap->areaNamesMap[id] = _name;
+    pHost->mpMap->mpRoomDB->setAreaName( id, _name );
     return 0;
 }
 
@@ -6244,7 +6277,7 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( gotString )
     {
-        QList<int> idList = pHost->mpMap->areaNamesMap.keys( _name );
+        QList<int> idList = pHost->mpMap->mpRoomDB->getAreaNamesMap().keys( _name );
         if( idList.size() > 0 )
         {
             lua_pushnumber( L, idList[0] );
@@ -6258,9 +6291,9 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
     }
     else
     {
-        if( pHost->mpMap->areaNamesMap.contains( id ) )
+        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( id ) )
         {
-            lua_pushstring( L, pHost->mpMap->areaNamesMap[id].toLatin1().data() );
+            lua_pushstring( L, pHost->mpMap->mpRoomDB->getAreaNamesMap().value(id).toLatin1().data() );
         }
         else
             lua_pushnumber( L, -1 );
@@ -6286,21 +6319,15 @@ int TLuaInterpreter::addAreaName( lua_State *L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString _name = name.c_str();
-    id = pHost->mpMap->areaNamesMap.size()+1;
 
-
-    if( ! pHost->mpMap->areaNamesMap.values().contains( _name ) )
+    int newAreaID = pHost->mpMap->mpRoomDB->addArea( _name );
+    lua_pushnumber( L, newAreaID );
+    if( newAreaID > -1 )
     {
-        while( pHost->mpMap->areaNamesMap.contains( id ) )
-        {
-            id++;
-        }
-        pHost->mpMap->areaNamesMap[id] = _name;
-        pHost->mpMap->buildAreas();
         if( pHost->mpMap->mpMapper )
         {
             pHost->mpMap->mpMapper->showArea->clear();
-            QMapIterator<int, QString> it( pHost->mpMap->areaNamesMap );
+            QMapIterator<int, QString> it( pHost->mpMap->mpRoomDB->getAreaNamesMap() );
             //sort them alphabetically (case sensitive)
             QMap <QString, QString> areaNames;
             while( it.hasNext() )
@@ -6317,11 +6344,10 @@ int TLuaInterpreter::addAreaName( lua_State *L )
                 pHost->mpMap->mpMapper->showArea->addItem( areaIt.value() );
             }
         }
-        lua_pushnumber( L, id );
     }
-    else
-        lua_pushnumber( L, -1 );
     return 1;
+
+
 }
 
 int TLuaInterpreter::deleteArea( lua_State *L )
@@ -6332,7 +6358,6 @@ int TLuaInterpreter::deleteArea( lua_State *L )
     if( lua_isnumber( L, 1 ) )
     {
         id = lua_tonumber( L, 1 );
-        if( id == -1 ) return 0;
     }
     else if( lua_isstring( L, 1 ) )
     {
@@ -6349,28 +6374,14 @@ int TLuaInterpreter::deleteArea( lua_State *L )
     if( id == -1 )
     {
         QString _name = name.c_str();
-        if( pHost->mpMap->areaNamesMap.values().contains( _name ) )
-        {
-            pHost->mpMap->deleteArea( pHost->mpMap->areaNamesMap.key(_name) );
-            pHost->mpMap->mMapGraphNeedsUpdate = false;
-            pHost->mpMap->areaNamesMap.remove( pHost->mpMap->areaNamesMap.key(_name) );
-        }
-        else
-            pHost->mpMap->areaNamesMap.remove( pHost->mpMap->areaNamesMap.key(_name) );
+        lua_pushboolean( L, pHost->mpMap->mpRoomDB->removeArea( _name ) );
     }
     else
     {
-        if( pHost->mpMap->areas.contains( id ) )
-        {
-            pHost->mpMap->deleteArea( id );
-            pHost->mpMap->mMapGraphNeedsUpdate = false;
-            pHost->mpMap->areaNamesMap.remove( id );
-        }
-        else
-            pHost->mpMap->areaNamesMap.remove( id );
+        lua_pushboolean( L, pHost->mpMap->mpRoomDB->removeArea( id ) );
     }
 
-    return 0;
+    return 1;
 }
 
 int TLuaInterpreter::deleteRoom( lua_State *L )
@@ -6390,12 +6401,8 @@ int TLuaInterpreter::deleteRoom( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
-    {
-       pHost->mpMap->deleteRoom( id );
-       pHost->mpMap->mMapGraphNeedsUpdate = false;
-    }
-    return 0;
+    lua_pushboolean( L, pHost->mpMap->mpRoomDB->removeRoom( id ) );
+    return 1;
 }
 
 
@@ -6457,18 +6464,21 @@ int TLuaInterpreter::getRoomCoordinates( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( !pR )
     {
         lua_pushnil( L );
         lua_pushnil( L );
         lua_pushnil( L );
-
         return 3;
     }
-    lua_pushnumber( L, pHost->mpMap->rooms[id]->x );
-    lua_pushnumber( L, pHost->mpMap->rooms[id]->y );
-    lua_pushnumber( L, pHost->mpMap->rooms[id]->z );
-    return 3;
+    else
+    {
+        lua_pushnumber( L, pR->x );
+        lua_pushnumber( L, pR->y );
+        lua_pushnumber( L, pR->z );
+        return 3;
+    }
 }
 
 int TLuaInterpreter::getRoomArea( lua_State * L )
@@ -6486,12 +6496,15 @@ int TLuaInterpreter::getRoomArea( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( !pR )
     {
         lua_pushnil(L);
-        return 1;
     }
-    lua_pushnumber( L, pHost->mpMap->rooms[id]->area );
+    else
+    {
+        lua_pushnumber( L, pR->getArea() );
+    }
     return 1;
 }
 
@@ -6511,12 +6524,11 @@ int TLuaInterpreter::roomExists( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id ) )
-    {
-        lua_pushboolean( L, 1 );
-        return 1;
-    }
-    lua_pushboolean( L, 0 );
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( pR )
+        lua_pushboolean( L, true );
+    else
+        lua_pushboolean( L, false );
     return 1;
 }
 
@@ -6562,12 +6574,18 @@ int TLuaInterpreter::unHighlightRoom( lua_State * L )
         id = lua_tointeger( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->rooms.contains( id ) ) return 0;
-    pHost->mpMap->rooms[id]->highlight = false;
-    if( pHost->mpMap )
-        if( pHost->mpMap->mpMapper )
-            pHost->mpMap->mpMapper->mp2dMap->update();
-    return 0;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( pR )
+    {
+        pR->highlight = false;
+        if( pHost->mpMap )
+            if( pHost->mpMap->mpMapper )
+                pHost->mpMap->mpMapper->mp2dMap->update();
+        lua_pushboolean( L, true );
+    }
+    else
+        lua_pushboolean( L, false );
+    return 1;
 }
 
 // highlightRoom( roomID, colorRed, colorGreen, colorBlue, col2Red, col2Green, col2Blue, (float)highlightRadius, alphaColor1, alphaColor2 )
@@ -6684,19 +6702,24 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( !pHost->mpMap ) return 0;
-    if( ! pHost->mpMap->rooms.contains( id ) ) return 0;
-    QColor fg = QColor(fgr,fgg,fgb,alpha1);
-    QColor bg = QColor(bgr,bgg,bgb,alpha2);
-    pHost->mpMap->rooms[id]->highlight = true;
-    pHost->mpMap->rooms[id]->highlightColor = fg;
-    pHost->mpMap->rooms[id]->highlightColor2 = bg;
-    pHost->mpMap->rooms[id]->highlightRadius = radius;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( pR )
+    {
+        QColor fg = QColor(fgr,fgg,fgb,alpha1);
+        QColor bg = QColor(bgr,bgg,bgb,alpha2);
+        pR->highlight = true;
+        pR->highlightColor = fg;
+        pR->highlightColor2 = bg;
+        pR->highlightRadius = radius;
 
-    if( pHost->mpMap->mpMapper )
-        if( pHost->mpMap->mpMapper->mp2dMap )
-            pHost->mpMap->mpMapper->mp2dMap->update();
-    return 0;
+        if( pHost->mpMap->mpMapper )
+            if( pHost->mpMap->mpMapper->mp2dMap )
+                pHost->mpMap->mpMapper->mp2dMap->update();
+        lua_pushboolean( L, true );
+    }
+    else
+        lua_pushboolean( L, false );
+    return 1;
 }
 
 
@@ -7071,21 +7094,25 @@ int TLuaInterpreter::setDoor( lua_State * L )
     QString exit = exitCmd.c_str();
     exit = exit.toLower();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    if( pR )
     {
-        if( pHost->mpMap->rooms.contains(roomID) )
+        if( doorStatus == 0 )
         {
-            TRoom * pR = pHost->mpMap->rooms[roomID];
-            if( doorStatus == 0 )
-                pR->doors.remove( exit );
-            else
-                pR->doors[exit] = doorStatus;
+            pR->doors.remove( exit );
+        }
+        else
+        {
+            pR->doors[exit] = doorStatus;
             if( pHost->mpMap->mpMapper )
                 if( pHost->mpMap->mpMapper->mp2dMap )
                     pHost->mpMap->mpMapper->mp2dMap->update();
         }
+        lua_pushboolean( L, true );
     }
-    return 0;
+    else
+        lua_pushboolean( L, false );
+    return 1;
 }
 
 //SYNTAX: doors table = getDoors( roomID )
@@ -7104,23 +7131,19 @@ int TLuaInterpreter::getDoors( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap )
+    lua_newtable(L);
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    if( pR )
     {
-        if( pHost->mpMap->rooms.contains(roomID) )
+        QStringList keys = pR->doors.keys();
+        for( int i=0; i<keys.size(); i++ )
         {
-            TRoom * pR = pHost->mpMap->rooms[roomID];
-            lua_newtable(L);
-            QStringList keys = pR->doors.keys();
-            for( int i=0; i<keys.size(); i++ )
-            {
-                lua_pushstring( L, keys[i].toLatin1().data() );
-                lua_pushnumber( L, pR->doors[keys[i]] );
-                lua_settable(L, -3);
-            }
-            return 1;
+            lua_pushstring( L, keys[i].toLatin1().data() );
+            lua_pushnumber( L, pR->doors[keys[i]] );
+            lua_settable(L, -3);
         }
     }
-    return 0;
+    return 1;
 }
 
 
@@ -7166,14 +7189,11 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     QString _text = text.c_str();
     _text = _text.toLower();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    if( pR )
     {
-        if( pHost->mpMap->rooms.contains(roomID) )
-        {
-            TRoom * pR = pHost->mpMap->rooms[roomID];
-            pR->exitWeights[_text] = weight;
-            pHost->mpMap->mMapGraphNeedsUpdate = true;
-        }
+        pR->exitWeights[_text] = weight;
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -7194,23 +7214,19 @@ int TLuaInterpreter::getExitWeights( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    lua_newtable(L);
+    if( pR )
     {
-        if( pHost->mpMap->rooms.contains(roomID) )
+        QStringList keys = pR->exitWeights.keys();
+        for( int i=0; i<keys.size(); i++ )
         {
-            TRoom * pR = pHost->mpMap->rooms[roomID];
-            lua_newtable(L);
-            QStringList keys = pR->exitWeights.keys();
-            for( int i=0; i<keys.size(); i++ )
-            {
-                lua_pushstring( L, keys[i].toLatin1().data() );
-                lua_pushnumber( L, pR->exitWeights[keys[i]] );
-                lua_settable(L, -3);
-            }
-            return 1;
+            lua_pushstring( L, keys[i].toLatin1().data() );
+            lua_pushnumber( L, pR->exitWeights[keys[i]] );
+            lua_settable(L, -3);
         }
     }
-    return 0;
+    return 1;
 }
 
 int TLuaInterpreter::deleteMapLabel( lua_State * L )
@@ -7420,21 +7436,20 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
     }
     QString _dir = dir.c_str();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id_from ) )
+    TRoom * pR_from = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( id_to );
+    if( pR_from && pR_to )
     {
-        if( pHost->mpMap->rooms.contains( id_to ) )
-        {
-            pHost->mpMap->rooms[id_from]->addSpecialExit( id_to, _dir );
-            pHost->mpMap->rooms[id_from]->setSpecialExitLock( id_to, _dir, false );
-            pHost->mpMap->mMapGraphNeedsUpdate = true;
-        }
+        pR_from->addSpecialExit( id_to, _dir );
+        pR_from->setSpecialExitLock( id_to, _dir, false );
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
 
 int TLuaInterpreter::clearRoomUserData( lua_State * L )
 {
-    int id_from;
+    int id;
     if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "clearRoomUserData: wrong argument type" );
@@ -7443,12 +7458,13 @@ int TLuaInterpreter::clearRoomUserData( lua_State * L )
     }
     else
     {
-        id_from = lua_tointeger( L, 1 );
+        id = lua_tointeger( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id_from ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( pR )
     {
-        pHost->mpMap->rooms[id_from]->userData.clear();
+        pR->userData.clear();
     }
     return 0;
 }
@@ -7467,9 +7483,10 @@ int TLuaInterpreter::clearSpecialExits( lua_State * L )
         id_from = lua_tointeger( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id_from ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    if( pR )
     {
-        pHost->mpMap->rooms[id_from]->other.clear();
+        pR->clearSpecialExits();
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -7489,9 +7506,10 @@ int TLuaInterpreter::getSpecialExits( lua_State * L )
         id_from = lua_tointeger( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id_from ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    if( pR )
     {
-        QMapIterator<int, QString> it(pHost->mpMap->rooms[id_from]->other);
+        QMapIterator<int, QString> it(pR->getOtherMap());
         lua_newtable(L);
         while( it.hasNext() )
         {
@@ -7535,9 +7553,10 @@ int TLuaInterpreter::getSpecialExitsSwap( lua_State * L )
         id_from = lua_tointeger( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( id_from ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    if( pR )
     {
-        QMapIterator<int, QString> it(pHost->mpMap->rooms[id_from]->other);
+        QMapIterator<int, QString> it(pR->getOtherMap());
         lua_newtable(L);
         while( it.hasNext() )
         {
@@ -7580,9 +7599,10 @@ int TLuaInterpreter::getRoomEnv( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( roomID ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    if( pR )
     {
-        lua_pushnumber( L, pHost->mpMap->rooms[roomID]->environment );
+        lua_pushnumber( L, pR->environment );
         return 1;
     }
     return 0;
@@ -7613,12 +7633,13 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
         key = lua_tostring( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( roomID ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    if( pR )
     {
         QString _key = key.c_str();
-        if( pHost->mpMap->rooms[roomID]->userData.contains( _key ) )
+        if( pR->userData.contains( _key ) )
         {
-            lua_pushstring( L, pHost->mpMap->rooms[roomID]->userData[_key].toLatin1().data() );
+            lua_pushstring( L, pR->userData[_key].toLatin1().data() );
             return 1;
         }
         else
@@ -7670,11 +7691,12 @@ int TLuaInterpreter::setRoomUserData( lua_State * L )
         value = lua_tostring( L, 3 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->rooms.contains( roomID ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    if( pR )
     {
         QString _key = key.c_str();
         QString _value = value.c_str();
-        pHost->mpMap->rooms[roomID]->userData[_key] = _value;
+        pR->userData[_key] = _value;
         lua_pushboolean( L, true );
         return 1;
     }
@@ -7780,7 +7802,8 @@ int TLuaInterpreter::setRoomChar( lua_State * L )
         c = lua_tostring( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( !pR )
     {
         lua_pushstring( L, "setRoomArea: room ID does not exist");
         lua_error( L );
@@ -7790,7 +7813,7 @@ int TLuaInterpreter::setRoomChar( lua_State * L )
     {
         if( c.size() >= 1 )
         {
-            pHost->mpMap->rooms[id]->c = c[0];
+            pR->c = c[0];
         }
     }
     return 0;
@@ -7810,7 +7833,8 @@ int TLuaInterpreter::getRoomChar( lua_State * L )
         id = lua_tointeger( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->rooms.contains( id ) )
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( !pR )
     {
         lua_pushstring( L, "getRoomChar: room ID does not exist");
         lua_error( L );
@@ -7818,7 +7842,7 @@ int TLuaInterpreter::getRoomChar( lua_State * L )
     }
     else
     {
-        QString c = (QString)pHost->mpMap->rooms[id]->c;
+        QString c = (QString)pR->c;
         lua_pushstring( L, c.toLatin1().data() );
         return 1;
     }
@@ -7872,12 +7896,14 @@ int TLuaInterpreter::getRoomsByPosition( lua_State * L )
 
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->areas.contains( area ) )
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    if( !pA )
     {
         lua_pushnil( L );
         return 1;
     }
-    QList<int> rL = pHost->mpMap->areas[area]->getRoomsByPosition( x, y, z);
+
+    QList<int> rL = pA->getRoomsByPosition( x, y, z);
     lua_newtable( L );
     for( int i=0; i<rL.size(); i++ )
     {
@@ -7916,15 +7942,16 @@ int TLuaInterpreter::setGridMode( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost->mpMap->areas.contains( area ) )
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    if( !pA )
     {
         lua_pushboolean( L, false);
         return 1;
     }
     else
     {
-        pHost->mpMap->areas[area]->gridMode = gridMode;
-        pHost->mpMap->areas[area]->calcSpan();
+        pA->gridMode = gridMode;
+        pA->calcSpan();
         if( pHost->mpMap->mpMapper )
         {
             if( pHost->mpMap->mpMapper->mp2dMap )

@@ -1827,7 +1827,7 @@ void mudlet::slot_mapper()
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
 
-    if( pHost->mpMap->rooms.size() < 1 )
+    if( pHost->mpMap->mpRoomDB->getRoomIDList().size() < 1 )
     {
         pHost->mpMap->restore("");
         pHost->mpMap->init( pHost );

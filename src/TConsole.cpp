@@ -755,7 +755,7 @@ void TConsole::closeEvent( QCloseEvent *event )
                 mpHost->saveModules(0);
 
             }
-            if( mpHost->mpMap->rooms.size() > 0 )
+            if( mpHost->mpMap->mpRoomDB->size() > 0 )
             {
                 QDir dir_map;
                 QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
@@ -806,7 +806,7 @@ void TConsole::closeEvent( QCloseEvent *event )
                 writer.exportHost( & file_xml );
                 file_xml.close();
                 mpHost->saveModules(0);
-                if( mpHost->mpMap->rooms.size() > 0 )
+                if( mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0 )
                 {
                     QDir dir_map;
                     QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";

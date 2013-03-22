@@ -148,8 +148,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpActionsMainArea = new dlgActionMainArea( mainArea );
     //QSizePolicy sizePolicy8(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpActionsMainArea->setSizePolicy( sizePolicy8 );
-    connect( mpActionsMainArea->pushButton_chose_icon, SIGNAL( pressed()), this, SLOT(slot_chose_action_icon()));
-    connect( mpActionsMainArea->pushButton_color, SIGNAL(pressed()), this, SLOT(slot_choseButtonColor()));
+    //connect( mpActionsMainArea->pushButton_chose_icon, SIGNAL( pressed()), this, SLOT(slot_chose_action_icon()));
+    //connect( mpActionsMainArea->pushButton_color, SIGNAL(pressed()), this, SLOT(slot_choseButtonColor()));
     pVB1->addWidget( mpActionsMainArea );
 
 
@@ -642,7 +642,7 @@ void dlgTriggerEditor::slot_choseButtonColor()
      QColor color = QColorDialog::getColor();
      QPalette palette;
      palette.setColor( QPalette::Button, color );
-     mpActionsMainArea->pushButton_color->setPalette( palette );
+     //mpActionsMainArea->pushButton_color->setPalette( palette );
 }
 
 void dlgTriggerEditor::closeEvent(QCloseEvent *event)
@@ -2937,8 +2937,8 @@ void dlgTriggerEditor::addAction( bool isFolder )
     }
     pNewItem->setIcon( 0, icon );
     if( pParent ) pParent->setExpanded( true );
-    mpActionsMainArea->lineEdit_action_button_down->clear();
-    mpActionsMainArea->lineEdit_action_button_up->clear();
+//    mpActionsMainArea->lineEdit_action_button_down->clear();
+//    mpActionsMainArea->lineEdit_action_button_up->clear();
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
     mpSourceEditorArea->editor->clear();
@@ -3794,15 +3794,15 @@ void dlgTriggerEditor::saveAction()
     if( ! pItem ) return;
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
-    QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
-    QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
+    //QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
+    //QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
     QString script = mpSourceEditorArea->editor->toPlainText();
-    QColor color = mpActionsMainArea->pushButton_color->palette().color(QPalette::Button);
-    int sizeX = mpActionsMainArea->buttonSizeX->text().toInt();
-    int sizeY = mpActionsMainArea->buttonSizeY->text().toInt();
-    int posX = mpActionsMainArea->buttonPosX->text().toInt();
-    int posY = mpActionsMainArea->buttonPosY->text().toInt();
+    //QColor color = mpActionsMainArea->pushButton_color->palette().color(QPalette::Button);
+//    int sizeX = mpActionsMainArea->buttonSizeX->text().toInt();
+//    int sizeY = mpActionsMainArea->buttonSizeY->text().toInt();
+//    int posX = mpActionsMainArea->buttonPosX->text().toInt();
+//    int posY = mpActionsMainArea->buttonPosY->text().toInt();
     int rotation = mpActionsMainArea->buttonRotation->currentIndex();
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
     //bool flatButton = mpActionsMainArea->buttonFlat->isChecked();
@@ -3812,7 +3812,7 @@ void dlgTriggerEditor::saveAction()
     if( location > 0 ) location++;
 
     int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
-    bool useCustomLayout = mpActionsMainArea->useCustomLayout->isChecked();
+    bool useCustomLayout = false;//mpActionsMainArea->useCustomLayout->isChecked();
     if( pItem )
     {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -3820,23 +3820,23 @@ void dlgTriggerEditor::saveAction()
         if( pT )
         {
             pT->setName( name );
-            pT->setCommandButtonDown( cmdDown );
-            pT->setCommandButtonUp( cmdUp );
+            //pT->setCommandButtonDown( cmdDown );
+            //pT->setCommandButtonUp( cmdUp );
             pT->setIcon( icon );
             pT->setScript( script );
             pT->setIsPushDownButton( isChecked );
             pT->mLocation = location;
             pT->mOrientation = orientation;
             pT->setIsActive( pT->shouldBeActive() );
-            pT->setButtonColor( color );
+            // pT->setButtonColor( color );
             pT->setButtonRotation( rotation );
             pT->setButtonColumns( columns );
       //      pT->setButtonFlat( flatButton );
-            pT->mUseCustomLayout = useCustomLayout;
-            pT->mPosX = posX;
-            pT->mPosY = posY;
-            pT->mSizeX = sizeX;
-            pT->mSizeY = sizeY;
+            pT->mUseCustomLayout = false;//useCustomLayout;
+//            pT->mPosX = posX;
+//            pT->mPosY = posY;
+//            pT->mSizeX = sizeX;
+//            pT->mSizeY = sizeY;
             pT->css = mpActionsMainArea->css->toPlainText();
             QIcon icon;
             if( pT->isFolder() )
@@ -4562,23 +4562,23 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
     mpSourceEditorArea->editor->show();
 
     mpSystemMessageArea->hide();
-    mpActionsMainArea->lineEdit_action_button_down->clear();
+    //mpActionsMainArea->lineEdit_action_button_down->clear();
     mpSourceEditorArea->editor->setPlainText( "" );
 
-    mpActionsMainArea->lineEdit_action_button_up->clear();
+    //mpActionsMainArea->lineEdit_action_button_up->clear();
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
     mpActionsMainArea->buttonColumns->clear();
     //mpActionsMainArea->isLabel->setChecked(false);
-    mpActionsMainArea->useCustomLayout->setChecked(false);
-    mpActionsMainArea->buttonPosX->setText("0");
-    mpActionsMainArea->buttonPosY->setText("0");
-    mpActionsMainArea->buttonSizeX->setText("80");
-    mpActionsMainArea->buttonSizeY->setText("25");
+    //mpActionsMainArea->useCustomLayout->setChecked(false);
+//    mpActionsMainArea->buttonPosX->setText("0");
+//    mpActionsMainArea->buttonPosY->setText("0");
+//    mpActionsMainArea->buttonSizeX->setText("80");
+//    mpActionsMainArea->buttonSizeY->setText("25");
     //mpActionsMainArea->buttonFlat->setChecked(false);
     //mpActionsMainArea->isLabel->setChecked(false);
-    mpActionsMainArea->useCustomLayout->setChecked(false);
+    //mpActionsMainArea->useCustomLayout->setChecked(false);
     mpActionsMainArea->css->clear();
     if( (pItem == 0) || (column != 0) )
     {
@@ -4591,8 +4591,8 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
     {
         mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
         mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
-        mpActionsMainArea->lineEdit_action_button_down->setText( pT->getCommandButtonDown() );
-        mpActionsMainArea->lineEdit_action_button_up->setText( pT->getCommandButtonUp() );
+        //mpActionsMainArea->lineEdit_action_button_down->setText( pT->getCommandButtonDown() );
+        //mpActionsMainArea->lineEdit_action_button_up->setText( pT->getCommandButtonUp() );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
         mpSourceEditorArea->editor->setPlainText( pT->getScript() );
         // location = 1 = location = bottom is no longer supported
@@ -4603,18 +4603,18 @@ void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
         QColor color = pT->getButtonColor();
         QPalette palette;
         palette.setColor( QPalette::Button, color );
-        mpActionsMainArea->pushButton_color->setPalette( palette );
+        //mpActionsMainArea->pushButton_color->setPalette( palette );
         mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
-        mpActionsMainArea->buttonColumns->setText( QString::number(pT->getButtonColumns()) );
+        mpActionsMainArea->buttonColumns->setValue( pT->getButtonColumns() );
       //  mpActionsMainArea->buttonFlat->setChecked( pT->getButtonFlat() );
-        mpActionsMainArea->buttonSizeX->setText(QString::number(pT->getSizeX()) );
-        mpActionsMainArea->buttonSizeY->setText(QString::number(pT->getSizeY()) );
+//        mpActionsMainArea->buttonSizeX->setText(QString::number(pT->getSizeX()) );
+//        mpActionsMainArea->buttonSizeY->setText(QString::number(pT->getSizeY()) );
         //mpActionsMainArea->isLabel->setChecked( pT->mIsLabel );
-        mpActionsMainArea->useCustomLayout->setChecked( pT->mUseCustomLayout );
-        mpActionsMainArea->buttonPosX->setText( QString::number(pT->mPosX) );
-        mpActionsMainArea->buttonPosY->setText( QString::number(pT->mPosY) );
-        mpActionsMainArea->buttonSizeX->setText( QString::number(pT->mSizeX) );
-        mpActionsMainArea->buttonSizeY->setText( QString::number(pT->mSizeY) );
+        //mpActionsMainArea->useCustomLayout->setChecked( pT->mUseCustomLayout );
+//        mpActionsMainArea->buttonPosX->setText( QString::number(pT->mPosX) );
+//        mpActionsMainArea->buttonPosY->setText( QString::number(pT->mPosY) );
+//        mpActionsMainArea->buttonSizeX->setText( QString::number(pT->mSizeX) );
+//        mpActionsMainArea->buttonSizeY->setText( QString::number(pT->mSizeY) );
         mpActionsMainArea->css->clear();
         mpActionsMainArea->css->setPlainText( pT->css );
         if( ! pT->getParent() )

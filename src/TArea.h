@@ -30,16 +30,21 @@
 #include <QColor>
 #include <QPixmap>
 #include <QVector3D>
+#include "TRoomDB.h"
 
 class TMap;
-
+class TRoomDB;
 
 
 class TArea
 {
 public:
 
-    TArea( TMap * );
+    TArea( TMap *, TRoomDB * );
+    ~TArea();
+    int getAreaID();
+    void addRoom( int id );
+    const QList<int> & getAreaRooms() const { return rooms; }
     void calcSpan();
     void fast_calcSpan(int);
     void fast_ausgaengeBestimmen(int);
@@ -64,10 +69,11 @@ public:
     QMap<int, int> zminEbene;
     QMap<int, int> zmaxEbene;
     QList<int> ebenen;
-    TMap * mpMap;
     bool gridMode;
     bool isZone;
     int zoneAreaRef;
+    TRoomDB * mpRoomDB;
+
     //QMap<int, TMapLabel> labelMap;
 
 };

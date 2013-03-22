@@ -55,7 +55,7 @@ class TLuaInterpreter;
 class dlgTriggerEditor;
 class TConsole;
 class dlgNotepad;
-
+class TMap;
 
 
 

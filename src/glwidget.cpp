@@ -316,7 +316,7 @@ void GLWidget::initializeGL()
 void GLWidget::showArea(QString name)
 {
     if( !mpMap ) return;
-    QMapIterator<int, QString> it( mpMap->areaNamesMap );
+    QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
     while( it.hasNext() )
     {
         it.next();
@@ -349,7 +349,8 @@ void GLWidget::paintGL()
 
 
         mRID = mpMap->mRoomId;
-        if( ! mpMap->rooms.contains( mRID ) )
+        TRoom * pRID = mpMap->mpRoomDB->getRoom( mRID );
+        if( !pRID  )
         {
             glClearDepth(1.0);
             glDepthFunc(GL_LESS);
@@ -361,10 +362,10 @@ void GLWidget::paintGL()
             glFlush();
             return;
         }
-        mAID = mpMap->rooms[mRID]->area;
-        ox = mpMap->rooms[mRID]->x;
-        oy = mpMap->rooms[mRID]->y;
-        oz = mpMap->rooms[mRID]->z;
+        mAID = pRID->getArea();
+        ox = pRID->x;
+        oy = pRID->y;
+        oz = pRID->z;
         mOx = ox;
         mOy = oy;
         mOz = oz;
@@ -379,8 +380,7 @@ void GLWidget::paintGL()
     px = static_cast<float>(ox);//mpMap->rooms[mpMap->mRoomId]->x);
     py = static_cast<float>(oy);//mpMap->rooms[mpMap->mRoomId]->y);
     pz = static_cast<float>(oz);//mpMap->rooms[mpMap->mRoomId]->z);
-    if( ! mpMap->areas.contains(mAID) ) return;
-    TArea * pArea = mpMap->areas[mAID];//mpMap->rooms[mpMap->mRoomId]->area];
+    TArea * pArea = mpMap->mpRoomDB->getArea(mAID);
     if( ! pArea ) return;
     if( pArea->gridMode )
     {
@@ -402,7 +402,6 @@ void GLWidget::paintGL()
     GLfloat diffuseLight2[] = {0.501, 0.901, 0.501, 1.0};
     GLfloat ambientLight[] = {0.403, 0.403, 0.403, 1.0};
     GLfloat ambientLight2[] = {0.4501, 0.4501, 0.4501, 1.0};
-    if( !mpMap->rooms.contains(mRID) ) return;
 
     //GLfloat specularLight[] = {.01, .01, .01, 1.};//TODO: fuer ich-sphere
     GLfloat light0Pos[] = {5000.0, 4000.0, 1000.0, 0};
@@ -421,10 +420,6 @@ void GLWidget::paintGL()
 
     dehnung = 4.0;
 
-    if( ! mpMap )
-    {
-        return;
-    }
     glDisable( GL_FOG );
     glEnable(GL_BLEND);
     glEnable( GL_LIGHTING );
@@ -523,26 +518,28 @@ void GLWidget::paintGL()
         }
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
-            float rx = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->x);
-            float ry = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->y);
-            float rz = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->z);
+            TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
+            if( !pR ) continue;
+            float rx = static_cast<float>(pR->x);
+            float ry = static_cast<float>(pR->y);
+            float rz = static_cast<float>(pR->z);
             if( rz != zEbene ) continue;
             if( rz > pz )
                 if( abs(rz-pz) > mShowTopLevels ) continue;
             if( rz < pz )
                 if( abs(rz-pz) > mShowBottomLevels ) continue;
             QList<int> exitList;
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->north );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->east );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southeast );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->south );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->southwest );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->west );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->northwest );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->up );
-            exitList.push_back( mpMap->rooms[pArea->rooms[i]]->down );
-            int e = mpMap->rooms[pArea->rooms[i]]->z;
+            exitList.push_back( pR->getNorth() );
+            exitList.push_back( pR->getNorthwest() );
+            exitList.push_back( pR->getEast() );
+            exitList.push_back( pR->getSoutheast() );
+            exitList.push_back( pR->getSouth() );
+            exitList.push_back( pR->getSouthwest() );
+            exitList.push_back( pR->getWest() );
+            exitList.push_back( pR->getNorthwest() );
+            exitList.push_back( pR->getUp() );
+            exitList.push_back( pR->getDown() );
+            int e = pR->z;
             int ef;
             ef = abs(e%26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
@@ -574,11 +571,12 @@ void GLWidget::paintGL()
                 {
                     bool areaExit = false;
                     if( exitList[k] == -1 ) continue;
-                    if( ! mpMap->rooms.contains( exitList[k] ) )
+                    TRoom * pExit = mpMap->mpRoomDB->getRoom( exitList[k] );
+                    if( !pExit )
                     {
                         continue;
                     }
-                    if( mpMap->rooms[exitList[k]]->area != mAID )// mpMap->rooms[mRID]->area )
+                    if( pExit->getArea() != mAID )
                     {
                         areaExit = true;
                     }
@@ -586,9 +584,9 @@ void GLWidget::paintGL()
                     {
                         areaExit = false;
                     }
-                    float ex = static_cast<float>(mpMap->rooms[exitList[k]]->x);
-                    float ey = static_cast<float>(mpMap->rooms[exitList[k]]->y);
-                    float ez = static_cast<float>(mpMap->rooms[exitList[k]]->z);
+                    float ex = static_cast<float>(pExit->x);
+                    float ey = static_cast<float>(pExit->y);
+                    float ez = static_cast<float>(pExit->z);
                     QVector3D p1( ex, ey, ez );
                     QVector3D p2( rx, ry, rz );
                     glLoadIdentity();
@@ -625,25 +623,25 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                        if( pR->getNorth() == exitList[k] )
                             glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                        else if( pR->getSouth() == exitList[k] )
                             glVertex3f( p2.x(), p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                        else if( pR->getWest() == exitList[k] )
                             glVertex3f( p2.x()-1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                        else if( pR->getEast() == exitList[k] )
                             glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                        else if( pR->getSouthwest() == exitList[k] )
                             glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                        else if( pR->getSoutheast() == exitList[k] )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                        else if( pR->getNortheast() == exitList[k] )
                             glVertex3f( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                        else if( pR->getNorthwest() == exitList[k] )
                             glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+                        else if( pR->getUp() == exitList[k] )
                             glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+                        else if( pR->getDown() == exitList[k] )
                             glVertex3f( p2.x(), p2.y(), p2.z()-1 );
                     }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
@@ -661,25 +659,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.1, 0.1, 0.1);
-                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                        if( pR->getNorth() == exitList[k] )
                             glTranslatef( p2.x(), p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                        else if( pR->getSouth() == exitList[k] )
                             glTranslatef( p2.x(), p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                        else if( pR->getWest() == exitList[k] )
                             glTranslatef( p2.x()-1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                        else if( pR->getEast() == exitList[k] )
                             glTranslatef( p2.x()+1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                        else if( pR->getSouthwest() == exitList[k] )
                             glTranslatef( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                        else if( pR->getSoutheast() == exitList[k] )
                             glTranslatef( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                        else if( pR->getNortheast() == exitList[k] )
                             glTranslatef( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                        else if( pR->getNorthwest() == exitList[k] )
                             glTranslatef( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+                        else if( pR->getUp() == exitList[k] )
                             glTranslatef( p2.x(), p2.y(), p2.z()+1 );
-                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+                        else if( pR->getDown() == exitList[k] )
                             glTranslatef( p2.x(), p2.y(), p2.z()-1 );
 
                         float mc6[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 0.0 };
@@ -745,7 +743,7 @@ void GLWidget::paintGL()
                         glEnd();
                         //drauf
                         float mc3[] = { 0.2, 0.2, 0.6, 1.0 };
-                        int env = mpMap->rooms[exitList[k]]->environment;
+                        int env = pExit->environment;
                         if( mpMap->envColors.contains(env) )
                             env = mpMap->envColors[env];
                         else
@@ -839,25 +837,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.05, 0.05, 0.020);
-                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                        if( pR->getNorth() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                        else if( pR->getSouth() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                        else if( pR->getWest() == exitList[k] )
                             glTranslatef( 2*(p2.x()-1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                        else if( pR->getEast() == exitList[k] )
                             glTranslatef( 2*(p2.x()+1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                        else if( pR->getSouthwest() == exitList[k] )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                        else if( pR->getSoutheast() == exitList[k] )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                        else if( pR->getNortheast() == exitList[k] )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                        else if( pR->getNorthwest() == exitList[k] )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+                        else if( pR->getUp() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()+1+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+                        else if( pR->getDown() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()-1+0.25) );
 
                         glBegin( GL_QUADS );
@@ -921,17 +919,16 @@ void GLWidget::paintGL()
             }
             else
             {
-
-
                 for( int k=0; k<exitList.size(); k++ )
                 {
                     bool areaExit = false;
                     if( exitList[k] == -1 ) continue;
-                    if( ! mpMap->rooms.contains( exitList[k] ) )
+                    TRoom * pExit = mpMap->mpRoomDB->getRoom( exitList[k] );
+                    if( !pExit )
                     {
                         continue;
                     }
-                    if( mpMap->rooms[exitList[k]]->area != mAID )
+                    if( pExit->getArea() != mAID )
                     {
                         areaExit = true;
                     }
@@ -940,9 +937,9 @@ void GLWidget::paintGL()
                         areaExit = true;
                     }
 
-                    float ex = static_cast<float>(mpMap->rooms[exitList[k]]->x);
-                    float ey = static_cast<float>(mpMap->rooms[exitList[k]]->y);
-                    float ez = static_cast<float>(mpMap->rooms[exitList[k]]->z);
+                    float ex = static_cast<float>(pExit->x);
+                    float ey = static_cast<float>(pExit->y);
+                    float ez = static_cast<float>(pExit->z);
                     QVector3D p1( ex, ey, ez );
                     QVector3D p2( rx, ry, rz );
                     glLoadIdentity();
@@ -980,25 +977,25 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                        if( pR->getNorth() == exitList[k] )
                             glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                        else if( pR->getSouth() == exitList[k] )
                             glVertex3f( p2.x(), p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                        else if( pR->getWest() == exitList[k] )
                             glVertex3f( p2.x()-1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                        else if( pR->getEast() == exitList[k] )
                             glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                        else if( pR->getSouthwest() == exitList[k] )
                             glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                        else if( pR->getSoutheast() == exitList[k] )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                        else if( pR->getNortheast() == exitList[k] )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                        else if( pR->getNorthwest() == exitList[k] )
                             glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+                        else if( pR->getUp() == exitList[k] )
                             glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+                        else if( pR->getDown() == exitList[k] )
                             glVertex3f( p2.x(), p2.y(), p2.z()-1 );
                     }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
@@ -1016,25 +1013,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.1, 0.1, 0.1);
-                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                        if( pR->getNorth() == exitList[k] )
                             glTranslatef( p2.x(), p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                        else if( pR->getSouth() == exitList[k] )
                             glTranslatef( p2.x(), p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                        else if( pR->getWest() == exitList[k] )
                             glTranslatef( p2.x()-1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                        else if( pR->getEast() == exitList[k] )
                             glTranslatef( p2.x()+1, p2.y(), p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                        else if( pR->getSouthwest() == exitList[k] )
                             glTranslatef( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                        else if( pR->getSoutheast() == exitList[k] )
                             glTranslatef( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                        else if( pR->getNortheast() == exitList[k] )
                             glTranslatef( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                        else if( pR->getNorthwest() == exitList[k] )
                             glTranslatef( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+                        else if( pR->getUp() == exitList[k] )
                             glTranslatef( p2.x(), p2.y(), p2.z()+1 );
-                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+                        else if( pR->getDown() == exitList[k] )
                             glTranslatef( p2.x(), p2.y(), p2.z()-1 );
 
                         glLoadName( exitList[k] );
@@ -1097,7 +1094,7 @@ void GLWidget::paintGL()
 
                         //drauf
                         float mc3[] = { 0.2, 0.2, 0.6, 0.2 };
-                        int env = mpMap->rooms[exitList[k]]->environment;
+                        int env = pExit->environment;
                         if( mpMap->envColors.contains(env) )
                             env = mpMap->envColors[env];
                         else
@@ -1191,25 +1188,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.05, 0.05, 0.020);
-                        if( mpMap->rooms[pArea->rooms[i]]->north == exitList[k] )
+                        if( pR->getNorth() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->south == exitList[k] )
+                        else if( pR->getSouth() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->west == exitList[k] )
+                        else if( pR->getWest() == exitList[k] )
                             glTranslatef( 2*(p2.x()-1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->east == exitList[k] )
+                        else if( pR->getEast() == exitList[k] )
                             glTranslatef( 2*(p2.x()+1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southwest == exitList[k] )
+                        else if( pR->getSouthwest() == exitList[k] )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->southeast == exitList[k] )
+                        else if( pR->getSoutheast() == exitList[k] )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northeast == exitList[k] )
+                        else if( pR->getNortheast() == exitList[k] )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->northwest == exitList[k] )
+                        else if( pR->getNorthwest() == exitList[k] )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->up == exitList[k] )
+                        else if( pR->getUp() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()+1+0.25) );
-                        else if( mpMap->rooms[pArea->rooms[i]]->down == exitList[k] )
+                        else if( pR->getDown() == exitList[k] )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()-1+0.25) );
 
                         glBegin( GL_QUADS );
@@ -1301,9 +1298,11 @@ void GLWidget::paintGL()
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
             glDisable(GL_LIGHT1);
-            float rx = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->x);
-            float ry = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->y);
-            float rz = static_cast<float>(mpMap->rooms[pArea->rooms[i]]->z);
+            TRoom * pR = mpMap->mpRoomDB->getRoom( pArea->rooms[i] );
+            if( !pR ) continue;
+            float rx = static_cast<float>(pR->x);
+            float ry = static_cast<float>(pR->y);
+            float rz = static_cast<float>(pR->z);
             if( rz != zEbene ) continue;
 
             if( rz > pz )
@@ -1311,7 +1310,7 @@ void GLWidget::paintGL()
             if( rz < pz )
                 if( abs(rz-pz) > mShowBottomLevels ) continue;
 
-            int e = mpMap->rooms[pArea->rooms[i]]->z;
+            int e = pR->z;
             int ef = abs(e%26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 36);//gut:96
@@ -1433,7 +1432,7 @@ void GLWidget::paintGL()
                 glEnd();
 
                 float mc3[] = { 0.2, 0.2, 0.6, 0.2 };
-                int env = mpMap->rooms[pArea->rooms[i]]->environment;
+                int env = pR->environment;
                 if( mpMap->envColors.contains(env) )
                     env = mpMap->envColors[env];
                 else
@@ -1679,7 +1678,7 @@ void GLWidget::paintGL()
 
             glEnd();
 
-            int env = mpMap->rooms[pArea->rooms[i]]->environment;
+            int env = pR->environment;
             if( mpMap->envColors.contains(env) )
                 env = mpMap->envColors[env];
             else
@@ -1859,13 +1858,13 @@ void GLWidget::paintGL()
 
             glBegin( GL_TRIANGLES );
 
-            if( mpMap->rooms[pArea->rooms[i]]->down > -1 )
+            if( pR->getDown() > -1 )
             {
                 glVertex3f( 0.0, -0.95/dehnung, 0.0);
                 glVertex3f(0.95/dehnung, -0.25/dehnung, 0.0);
                 glVertex3f( -0.95/dehnung, -0.25/dehnung, 0.0);
             }
-            if( mpMap->rooms[pArea->rooms[i]]->up > -1 )
+            if( pR->getUp() > -1 )
             {
                 glVertex3f( 0.0, 0.95/dehnung, 0.0);
                 glVertex3f(-0.95/dehnung, 0.25/dehnung, 0.0);
@@ -1965,7 +1964,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
         gluPerspective( 60*mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
         glMatrixMode(GL_MODELVIEW);
         updateGL();
-        if( mpMap->rooms.contains(mTarget) )
+        if( mpMap->mpRoomDB->getRoom(mTarget) )
         {
             mpMap->mTargetID = mTarget;
             if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
