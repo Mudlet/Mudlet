@@ -7236,6 +7236,34 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
                 lua_error( L );
                 return 1;
             }
+                validExit = true;
+            else if ( _text == "u" && pR->up )
+                validExit = true;
+            else if ( _text == "d" && pR->down )
+                validExit = true;
+            else if ( _text == "in" && pR->in )
+                validExit = true;
+            else if ( _text == "out" && pR->out )
+                validExit = true;
+            else
+            {
+                QMapIterator< int, QString > it(pR->other);
+                while(it.hasNext())
+                {
+                    it.next();
+                    if ( it.value() == "0"+_text  || it.value() == "1"+_text )
+                    {
+                        validExit = true;
+                        break;
+                    }
+                }
+            }
+            if ( !validExit )
+            {
+                lua_pushstring( L, "setExitWeight: Invalid direction.");
+                lua_error( L );
+                return 1;
+            }
         pR->exitWeights[_text] = weight;
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
