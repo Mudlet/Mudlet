@@ -7171,6 +7171,50 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
         if( pHost->mpMap->rooms.contains(roomID) )
         {
             TRoom * pR = pHost->mpMap->rooms[roomID];
+            bool validExit = false;
+            if ( _text == "n" && pR->north )
+                validExit = true;
+            else if ( _text == "s" && pR->south )
+                validExit = true;
+            else if ( _text == "e" && pR->east )
+                validExit = true;
+            else if ( _text == "w" && pR->west )
+                validExit = true;
+            else if ( _text == "ne" && pR->northeast )
+                validExit = true;
+            else if ( _text == "nw" && pR->northwest )
+                validExit = true;
+            else if ( _text == "sw" && pR->southwest )
+                validExit = true;
+            else if ( _text == "se" && pR->southeast )
+                validExit = true;
+            else if ( _text == "u" && pR->up )
+                validExit = true;
+            else if ( _text == "d" && pR->down )
+                validExit = true;
+            else if ( _text == "in" && pR->in )
+                validExit = true;
+            else if ( _text == "out" && pR->out )
+                validExit = true;
+            else
+            {
+                QMapIterator< int, QString > it(pR->other);
+                while(it.hasNext())
+                {
+                    it.next();
+                    if ( it.value() == "0"+_text  || it.value() == "1"+_text )
+                    {
+                        validExit = true;
+                        break;
+                    }
+                }
+            }
+            if ( !validExit )
+            {
+                lua_pushstring( L, "setExitWeight: Invalid direction.");
+                lua_error( L );
+                return 1;
+            }
             pR->exitWeights[_text] = weight;
             pHost->mpMap->mMapGraphNeedsUpdate = true;
         }
