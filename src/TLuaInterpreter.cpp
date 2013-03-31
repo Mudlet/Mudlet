@@ -1756,7 +1756,7 @@ int TLuaInterpreter::getExitStubs( lua_State * L  ){
             }
         }
     }
-    return 1;
+    return 0;
 }
 
 int TLuaInterpreter::getModulePath( lua_State *L )
