@@ -340,7 +340,7 @@ void Host::saveModules(int sync){
         QString zip;
         if ( filename_xml.endsWith( "mpackage" ) || filename_xml.endsWith( "zip" ) )
         {
-            tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/tmp/";
+            tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
             tempDir = tempDir + "/" + moduleName;
             QDir packageDir = QDir(tempDir);
             if ( !packageDir.exists() ){
@@ -1001,6 +1001,7 @@ bool Host::installPackage( QString fileName, int module )
 //        #else
             JlCompress::extractDir(fileName, _dest );
 //        #endif
+        QString xmlPath = _dest+packageName+".xml";
         mpUnzipDialog->close();
         mpUnzipDialog = 0;
 
@@ -1063,6 +1064,7 @@ bool Host::installPackage( QString fileName, int module )
             setName( profileName );
             setLogin( login );
             setPass( pass );
+            file2.close();
         }
     }
     else
@@ -1087,8 +1089,8 @@ bool Host::installPackage( QString fileName, int module )
         setName( profileName );
         setLogin( login );
         setPass( pass );
+        file2.close();
     }
-    qDebug()<<"here";
     if( mpEditorDialog )
     {
        mpEditorDialog->doCleanReset();
