@@ -44,6 +44,15 @@ extern "C" {
     #include "lauxlib.h"
 }
 
+#include <QtUiTools>
+#ifdef Q_OS_WIN
+    #include "quazip.h"
+    #include "JlCompress.h"
+#else
+    #include <quazip/quazip.h>
+    #include <quazip/JlCompress.h>
+#endif
+
 Host::Host( int port, QString hostname, QString login, QString pass, int id )
 : mTelnet( this )
 , mpConsole( 0 )
@@ -325,15 +334,44 @@ void Host::saveModules(int sync){
         QString filename_xml = entry[0];
         QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         //move the old file, use the key (module name) as the file
-        savePath.rename(filename_xml,dirName+it.key()+time);
+        QString moduleName = it.key();
+        savePath.rename(filename_xml,dirName+moduleName+time);
+        QString tempDir;
+        QString zip;
+        if ( filename_xml.endsWith( "mpackage" ) || filename_xml.endsWith( "zip" ) )
+        {
+            tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/tmp/";
+            tempDir = tempDir + "/" + moduleName;
+            QDir packageDir = QDir(tempDir);
+            if ( !packageDir.exists() ){
+                packageDir.mkpath(tempDir);
+            }
+            zip = tempDir + "/" + moduleName + ".zip";
+            filename_xml = tempDir + "/" + moduleName + ".xml";
+            QString luaConfig = tempDir + "/config.lua";
+            QFile configFile(luaConfig);
+            if (configFile.open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                QTextStream out(&configFile);
+                out << "mpackage = \"" << moduleName << "\"\n";
+                out.flush();
+                configFile.close();
+            }
+            if ( filename_xml.endsWith( "mpackage" ) )
+                filename_xml = filename_xml.left(filename_xml.size()-9)+"xml";
+            else
+                filename_xml = filename_xml.left(filename_xml.size()-3)+"xml";
+            qDebug()<<"zipping it up to"<<filename_xml<<"in"<<zip;
+        }
         QFile file_xml( filename_xml );
         qDebug()<<"writing module xml for:"<<entry[0];
         if ( file_xml.open( QIODevice::WriteOnly ) )
         {
             XMLexport writer(this);
             qDebug()<<"successfully wrote module xml for:"<<entry[0];
-            writer.writeModuleXML( & file_xml, it.key());
+            writer.writeModuleXML( & file_xml, it.key() );
             file_xml.close();
+
             if (entry[1].toInt())
                 modulesToSync << it.key();
         }
@@ -344,6 +382,13 @@ void Host::saveModules(int sync){
             mModuleSaveBlock = true;
             return;
         }
+        if (!zip.isEmpty())
+        {
+            JlCompress::compressDir(zip, tempDir );
+            QFile z(zip);
+            z.rename(entry[0]);
+        }
+
     }
     modulesToWrite.clear();
     if (sync){
@@ -870,15 +915,6 @@ void Host::showUnpackingProgress( QString  txt )
     packageList->update();
     QApplication::sendPostedEvents();
 }
-
-#include <QtUiTools>
-#ifdef Q_OS_WIN
-    #include "quazip.h"
-    #include "JlCompress.h"
-#else
-    #include <quazip/quazip.h>
-    #include <quazip/JlCompress.h>
-#endif
 
 bool Host::installPackage( QString fileName, int module )
 {

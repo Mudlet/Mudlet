@@ -459,13 +459,13 @@ void mudlet::layoutModules(){
             }
 
             masterModule->setToolTip(QString("Checking this box will cause the module to be saved & resync'd across all open sessions."));
-            if (moduleInfo[0].endsWith(".zip") || moduleInfo[0].endsWith(".mpackage")){
-                masterModule->setCheckState(Qt::Unchecked);
-                masterModule->setFlags(Qt::NoItemFlags);
-                masterModule->setText("don't sync");
-                moduleInfo[1] = "0";
-                masterModule->setToolTip(QString("mpackage and zip packages are currently unabled to be synced across packages."));
-            }
+//            if (moduleInfo[0].endsWith(".zip") || moduleInfo[0].endsWith(".mpackage")){
+//                masterModule->setCheckState(Qt::Unchecked);
+//                masterModule->setFlags(Qt::NoItemFlags);
+//                masterModule->setText("don't sync");
+//                moduleInfo[1] = "0";
+//                masterModule->setToolTip(QString("mpackage and zip packages are currently unabled to be synced across packages."));
+//            }
             QString moduleName = pModules[i];
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
@@ -563,11 +563,11 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem){
         moduleHelpButton->setDisabled((!pH->moduleHelp[entry->text()].contains("helpURL") || pH->moduleHelp[entry->text()]["helpURL"].isEmpty()));
     else
         moduleHelpButton->setDisabled(true);
-    if (itemPath->text().endsWith(".zip") || itemPath->text().endsWith(".mpackage")){
-        checkStatus->setCheckState(Qt::Unchecked);
-        checkStatus->setFlags(Qt::NoItemFlags);
-        checkStatus->setText("don't sync");
-    }
+//    if (itemPath->text().endsWith(".zip") || itemPath->text().endsWith(".mpackage")){
+//        checkStatus->setCheckState(Qt::Unchecked);
+//        checkStatus->setFlags(Qt::NoItemFlags);
+//        checkStatus->setText("don't sync");
+//    }
 
 }
 
