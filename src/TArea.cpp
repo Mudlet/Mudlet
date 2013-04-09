@@ -40,8 +40,9 @@
 #define UP 13
 #define DOWN 14
 
-TArea::TArea( TMap * map )
-: min_x(0)
+TArea::TArea(TMap * map , TRoomDB * pRDB )
+: mpRoomDB( pRDB )
+, min_x(0)
 , min_y(0)
 , min_z(0)
 , max_x(0)
@@ -51,18 +52,33 @@ TArea::TArea( TMap * map )
 , isZone( false )
 , zoneAreaRef( 0 )
 {
-    mpMap = map;
+}
+
+TArea::~TArea()
+{
+    if( mpRoomDB )
+        mpRoomDB->removeArea( (TArea*)this );
+    else
+        qDebug()<<"ERROR: TArea instance has no mpRoomDB";
+}
+
+int TArea::getAreaID()
+{
+    if( mpRoomDB )
+        return mpRoomDB->getAreaID( this );
 }
 
 QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
 {
     QMap<int,QMap<int,QMultiMap<int,int> > > kS;
-    for( int i=0; i<rooms.size(); i++ )
+    QList<TRoom*> roomList = mpRoomDB->getRoomPtrList();
+    for( int i=0; i<roomList.size(); i++ )
     {
-        int id = rooms[i];
-        int x = mpMap->rooms[rooms[i]]->x;
-        int y = mpMap->rooms[rooms[i]]->y;
-        int z = mpMap->rooms[rooms[i]]->z;
+        TRoom * pR = roomList[i];
+        int id = pR->getId();
+        int x = pR->x;
+        int y = pR->y;
+        int z = pR->z;
         QMap<int,QMultiMap<int,int> > _y;
         QMultiMap<int,int> _z;
         if( ! kS.contains( x ) )
@@ -82,12 +98,14 @@ QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
 QList<int> TArea::getRoomsByPosition( int x, int y, int z )
 {
     QList<int> dL;
-    for( int i=0; i<rooms.size(); i++ )
+    QList<TRoom*> roomList = mpRoomDB->getRoomPtrList();
+    for( int i=0; i<roomList.size(); i++ )
     {
-        int id = rooms[i];
-        int _x = mpMap->rooms[rooms[i]]->x;
-        int _y = mpMap->rooms[rooms[i]]->y;
-        int _z = mpMap->rooms[rooms[i]]->z;
+        TRoom * pR = roomList[i];
+        int id = pR->getId();
+        int _x = pR->x;
+        int _y = pR->y;
+        int _z = pR->z;
         if( _x == x && _y == y && _z == z )
         {
             dL.push_back( id );
@@ -137,55 +155,57 @@ QList<int> TArea::getCollisionNodes()
 
 void TArea::fast_ausgaengeBestimmen( int id )
 {
-    if( ! mpMap->rooms.contains(( id ) ) ) return;
-    if( ! mpMap->areas.contains( mpMap->rooms[id]->area ) ) return;
+    TRoom * pR = mpRoomDB->getRoom(id);
+    if( !pR ) return;
+    TArea * pA = mpRoomDB->getArea( pR->getArea() );
+    if( !pA ) return;
 
-    if( ! rooms.indexOf( mpMap->rooms[id]->north ) )
+    if( ! rooms.indexOf( pR->getNorth() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTH);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->northeast ) )
+    if( ! rooms.indexOf( pR->getNortheast() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTHEAST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->east ) )
+    if( ! rooms.indexOf( pR->getEast() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, EAST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->southeast ) )
+    if( ! rooms.indexOf( pR->getSoutheast() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, SOUTHEAST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->south ) )
+    if( ! rooms.indexOf( pR->getSouth() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, SOUTH);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->southwest ) )
+    if( ! rooms.indexOf( pR->getSouthwest() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, SOUTHWEST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->west ) )
+    if( ! rooms.indexOf( pR->getWest() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, WEST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->northwest ) )
+    if( ! rooms.indexOf( pR->getNorthwest() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTHWEST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->up ) )
+    if( ! rooms.indexOf( pR->getUp() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, UP);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( mpMap->rooms[id]->down ) )
+    if( ! rooms.indexOf( pR->getDown() ) )
     {
         QPair<int, int> p = QPair<int,int>(id, DOWN);
         exits.insertMulti( id, p );
@@ -197,53 +217,55 @@ void TArea::ausgaengeBestimmen()
     exits.clear();
     for( int i=0; i<rooms.size(); i++ )
     {
-        int id = rooms[i];
-        if( ! rooms.indexOf( mpMap->rooms[id]->north ) )
+        TRoom * pR = mpRoomDB->getRoom(rooms[i]);
+        if( ! pR ) continue;
+        int id = pR->getId();
+        if( ! rooms.indexOf( pR->getNorth() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, NORTH);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->northeast ) )
+        if( ! rooms.indexOf( pR->getNortheast() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, NORTHEAST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->east ) )
+        if( ! rooms.indexOf( pR->getEast() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, EAST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->southeast ) )
+        if( ! rooms.indexOf( pR->getSoutheast() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, SOUTHEAST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->south ) )
+        if( ! rooms.indexOf( pR->getSouth() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, SOUTH);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->southwest ) )
+        if( ! rooms.indexOf( pR->getSouthwest() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, SOUTHWEST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->west ) )
+        if( ! rooms.indexOf( pR->getWest() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, WEST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->northwest ) )
+        if( ! rooms.indexOf( pR->getNorthwest() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, NORTHWEST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->up ) )
+        if( ! rooms.indexOf( pR->getUp() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, UP);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( mpMap->rooms[id]->down ) )
+        if( ! rooms.indexOf( pR->getDown() ) )
         {
             QPair<int, int> p = QPair<int,int>(id, DOWN);
             exits.insertMulti( id, p );
@@ -255,12 +277,12 @@ void TArea::ausgaengeBestimmen()
 void TArea::fast_calcSpan( int id )
 {
 
-    if( ! mpMap->rooms.contains(( id ) ) ) return;
-    if( ! mpMap->areas.contains( mpMap->rooms[id]->area ) ) return;
+    TRoom * pR = mpRoomDB->getRoom(id);
+    if( !pR ) return;
 
-    int x = mpMap->rooms[id]->x;
-    int y = mpMap->rooms[id]->y;
-    int z = mpMap->rooms[id]->z;
+    int x = pR->x;
+    int y = pR->y;
+    int z = pR->z;
     if( x > max_x ) max_x = x;
     if( x < min_x ) min_x = x;
     if( y > max_y ) max_y = y;
@@ -269,23 +291,39 @@ void TArea::fast_calcSpan( int id )
     if( z < min_z ) min_z = z;
 }
 
+void TArea::addRoom( int id )
+{
+    TRoom * pR = mpRoomDB->getRoom( id );
+    if( pR )
+    {
+        if( !rooms.contains( id ) )
+        {
+            rooms.append( id );
+        }
+    }
+}
+
 void TArea::calcSpan()
 {
     if( rooms.size() > 0 )
     {
         int id = rooms[0];
-        min_x = mpMap->rooms[id]->x;
+        TRoom * pR = mpRoomDB->getRoom( id );
+        if( !pR ) return;
+        min_x = pR->x;
         max_x = min_x;
-        min_y = mpMap->rooms[id]->y*-1;
+        min_y = pR->y*-1;
         max_y = min_y;
-        min_z = mpMap->rooms[id]->z;
+        min_z = pR->z;
         max_z = min_z;
     }
 
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->x;
+        TRoom * pR = mpRoomDB->getRoom( id );
+        if( !pR ) continue;
+        int _m = pR->x;
         if( _m < min_x )
         {
             min_x = _m;
@@ -294,7 +332,9 @@ void TArea::calcSpan()
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->y*-1;
+        TRoom * pR = mpRoomDB->getRoom( id );
+        if( !pR ) continue;
+        int _m = pR->y*-1;
         if( _m < min_y )
         {
             min_y = _m;
@@ -303,7 +343,9 @@ void TArea::calcSpan()
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->z;
+        TRoom * pR = mpRoomDB->getRoom( id );
+        if( !pR ) continue;
+        int _m = pR->z;
         if( _m < min_z )
         {
             min_z = _m;
@@ -312,7 +354,9 @@ void TArea::calcSpan()
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->x;
+        TRoom * pR = mpRoomDB->getRoom( id );
+        if( !pR ) continue;
+        int _m = pR->x;
         if( _m > max_x )
         {
             max_x = _m;
@@ -321,7 +365,9 @@ void TArea::calcSpan()
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->y*-1;
+        TRoom * pR = mpRoomDB->getRoom( id );
+        if( !pR ) continue;
+        int _m = pR->y*-1;
         if( _m > max_y )
         {
             max_y = _m;
@@ -330,7 +376,9 @@ void TArea::calcSpan()
     for( int i=0; i<rooms.size(); i++ )
     {
         int id = rooms[i];
-        int _m = mpMap->rooms[id]->z;
+        TRoom * pR = mpRoomDB->getRoom( id );
+        if( !pR ) continue;
+        int _m = pR->z;
         if( _m > max_z )
         {
             max_z = _m;
@@ -353,44 +401,48 @@ void TArea::calcSpan()
         if( rooms.size() > 0 )
         {
             int id = rooms[0];
-            _min_x = mpMap->rooms[id]->x;
+            TRoom * pR = mpRoomDB->getRoom( id );
+            if( !pR ) continue;
+            _min_x = pR->x;
             _max_x = _min_x;
-            _min_y = mpMap->rooms[id]->y*-1;
+            _min_y = pR->y*-1;
             _max_y = _min_y;
-            _min_z = mpMap->rooms[id]->z;
+            _min_z = pR->z;
             _max_z = _min_z;
         }
 
         for( int i=0; i<rooms.size(); i++ )
         {
             int id = rooms[i];
-            if( mpMap->rooms[id]->z != ebenen[k]) continue;
-            int _m = mpMap->rooms[id]->x;
+            TRoom * pR = mpRoomDB->getRoom( id );
+            if( !pR ) continue;
+            if( pR->z != ebenen[k]) continue;
+            int _m = pR->x;
             if( _m < _min_x )
             {
                 _min_x = _m;
             }
-            _m = mpMap->rooms[id]->y*-1;
+            _m = pR->y*-1;
             if( _m < _min_y )
             {
                 _min_y = _m;
             }
-            _m = mpMap->rooms[id]->z;
+            _m = pR->z;
             if( _m < _min_z )
             {
                 _min_z = _m;
             }
-            _m = mpMap->rooms[id]->x;
+            _m = pR->x;
             if( _m > _max_x )
             {
                 _max_x = _m;
             }
-            _m = mpMap->rooms[id]->y*-1;
+            _m = pR->y*-1;
             if( _m > _max_y )
             {
                 _max_y = _m;
             }
-            _m = mpMap->rooms[id]->z;
+            _m = pR->z;
             if( _m > _max_z )
             {
                 _max_z = _m;

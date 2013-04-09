@@ -35,7 +35,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     glWidget->mpMap = pM;
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
-    QMapIterator<int, QString> it( mpMap->areaNamesMap );
+    QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
     //sort them alphabetically (case sensitive)
     QMap <QString, QString> areaNames;
     while( it.hasNext() )
@@ -128,7 +128,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 void dlgMapper::updateAreaComboBox()
 {
-    QMapIterator<int, QString> it( mpMap->areaNamesMap );
+    QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
     //sort them alphabetically (case sensitive)
     QMap <QString, QString> areaNames;
     while( it.hasNext() )
@@ -252,12 +252,14 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
 {
     QString txt = pT->text();
 
-    QMapIterator<int, TRoom *> it( mpMap->rooms );
+    QMapIterator<int, TRoom *> it( mpMap->mpRoomDB->getRoomMap() );
     while( it.hasNext() )
     {
         it.next();
         int i = it.key();
-        if( mpMap->rooms[i]->name == txt )
+        TRoom * pR = mpMap->mpRoomDB->getRoom(i);
+        if( !pR ) continue;
+        if( pR->name == txt )
         {
             qDebug()<<"found room id="<<i;
             mpMap->mTargetID = i;

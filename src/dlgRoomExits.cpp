@@ -64,14 +64,14 @@ void dlgRoomExits::slot_addSpecialExit()
 
 }
 
+#include "TRoom.h"
+
 void dlgRoomExits::save()
 {
-    if( !mpHost->mpMap->rooms.contains(mRoomID) ) return;
-
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
-
-    mpHost->mpMap->rooms[mRoomID]->other.clear();
-
+    TRoom * pR = mpHost->mpMap->mpRoomDB->getRoom(mRoomID);
+    if( !pR ) return;
+    pR->clearSpecialExits();
     for( int i=0; i<specialExits->topLevelItemCount(); i++ )
     {
         QTreeWidgetItem * pI = specialExits->topLevelItem(i);
@@ -85,106 +85,71 @@ void dlgRoomExits::save()
             else
                 value = value.prepend( '1' );
             //qDebug()<<"setting: key="<<key<<" val="<<value;
-            mpHost->mpMap->rooms[mRoomID]->other.insertMulti( key, value );
+            pR->addSpecialExit( key, value );
         }
     }
 
-    if( n->text().size() > 0 && n->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->north = n->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->north = -1;
-    if( s->text().size() > 0 && s->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->south = s->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->south = -1;
-    if( w->text().size() > 0 && w->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->west = w->text().toInt();
-    else mpHost->mpMap->rooms[mRoomID]->west = -1;
-    if( e->text().size() > 0 && e->text().toInt() > 0)
-        mpHost->mpMap->rooms[mRoomID]->east = e->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->east = -1;
-    if( ne->text().size() > 0 && ne->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->northeast = ne->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->northeast = -1;
-    if( nw->text().size() > 0 && nw->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->northwest = nw->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->northwest = -1;
-    if( se->text().size() > 0 && se->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->southeast = se->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->southeast = -1;
-    if( sw->text().size() > 0 && sw->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->southwest = sw->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->southwest = -1;
-    if( up->text().size() > 0 && up->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->up = up->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->up = -1;
-    if( down->text().size() > 0 && down->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->down = down->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->down = -1;
-    if( in->text().size() > 0 && in->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->in = in->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->in = -1;
-    if( out->text().size() > 0 && out->text().toInt() > 0 )
-        mpHost->mpMap->rooms[mRoomID]->out = out->text().toInt();
-    else
-        mpHost->mpMap->rooms[mRoomID]->out = -1;
+    pR->setExit(n->text().toInt(), DIR_NORTH );
+    pR->setExit(nw->text().toInt(), DIR_NORTHWEST );
+    pR->setExit(ne->text().toInt(), DIR_NORTHEAST );
+    pR->setExit(s->text().toInt(), DIR_SOUTH );
+    pR->setExit(sw->text().toInt(), DIR_SOUTHWEST );
+    pR->setExit(se->text().toInt(), DIR_SOUTHEAST );
+    pR->setExit(e->text().toInt(), DIR_EAST );
+    pR->setExit(w->text().toInt(), DIR_WEST );
+    pR->setExit(up->text().toInt(), DIR_UP );
+    pR->setExit(down->text().toInt(), DIR_DOWN );
+    pR->setExit(in->text().toInt(), DIR_IN );
+    pR->setExit(out->text().toInt(), DIR_OUT );
 
     if( !n->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_NORTH, true);
+        pR->setExitLock(DIR_NORTH, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_NORTH, false);
+        pR->setExitLock(DIR_NORTH, false);
     if( !ne->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_NORTHEAST, true);
+        pR->setExitLock(DIR_NORTHEAST, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_NORTHEAST, false);
+        pR->setExitLock(DIR_NORTHEAST, false);
     if( !nw->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_NORTHWEST, true);
+        pR->setExitLock(DIR_NORTHWEST, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_NORTHWEST, false);
+        pR->setExitLock(DIR_NORTHWEST, false);
     if( !w->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_WEST, true);
+        pR->setExitLock(DIR_WEST, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_WEST, false);
+        pR->setExitLock(DIR_WEST, false);
     if( !e->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_EAST, true);
+        pR->setExitLock(DIR_EAST, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_EAST, false);
+        pR->setExitLock(DIR_EAST, false);
     if( !s->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_SOUTH, true);
+        pR->setExitLock(DIR_SOUTH, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_SOUTH, false);
+        pR->setExitLock(DIR_SOUTH, false);
     if( !se->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_SOUTHEAST, true);
+        pR->setExitLock(DIR_SOUTHEAST, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_SOUTHEAST, false);
+        pR->setExitLock(DIR_SOUTHEAST, false);
     if( !sw->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_SOUTHWEST, true);
+        pR->setExitLock(DIR_SOUTHWEST, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_SOUTHWEST, false);
+        pR->setExitLock(DIR_SOUTHWEST, false);
     if( !up->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_UP, true);
+        pR->setExitLock(DIR_UP, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_UP, false);
+        pR->setExitLock(DIR_UP, false);
     if( !down->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_DOWN, true);
+        pR->setExitLock(DIR_DOWN, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_DOWN, false);
+        pR->setExitLock(DIR_DOWN, false);
     if( !in->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_IN, true);
+        pR->setExitLock(DIR_IN, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_IN, false);
+        pR->setExitLock(DIR_IN, false);
     if( !out->isEnabled() )
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_OUT, true);
+        pR->setExitLock(DIR_OUT, true);
     else
-        mpHost->mpMap->rooms[mRoomID]->setExitLock(DIR_OUT, false);
+        pR->setExitLock(DIR_OUT, false);
 
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
     close();
@@ -192,9 +157,10 @@ void dlgRoomExits::save()
 
 void dlgRoomExits::init( int id )
 {
-    if( !mpHost->mpMap->rooms.contains(id) ) return;
+    TRoom * pR = mpHost->mpMap->mpRoomDB->getRoom( id );
+    if( !pR ) return;
 
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_NORTH) )
+    if( pR->hasExitLock(DIR_NORTH) )
     {
         n->setDisabled(true);
         ln->setChecked(true);
@@ -204,7 +170,7 @@ void dlgRoomExits::init( int id )
         n->setDisabled(false);
         ln->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_NORTHEAST) )
+    if( pR->hasExitLock(DIR_NORTHEAST) )
     {
         ne->setDisabled(true);
         lne->setChecked(true);
@@ -214,7 +180,7 @@ void dlgRoomExits::init( int id )
         ne->setDisabled(false);
         le->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_NORTHWEST) )
+    if( pR->hasExitLock(DIR_NORTHWEST) )
     {
         nw->setDisabled(true);
         lnw->setChecked(true);
@@ -224,7 +190,7 @@ void dlgRoomExits::init( int id )
         nw->setDisabled(false);
         lnw->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_SOUTH) )
+    if( pR->hasExitLock(DIR_SOUTH) )
     {
         s->setDisabled(true);
         ls->setChecked(true);
@@ -234,7 +200,7 @@ void dlgRoomExits::init( int id )
         s->setDisabled(false);
         ls->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_SOUTHEAST) )
+    if( pR->hasExitLock(DIR_SOUTHEAST) )
     {
         se->setDisabled(true);
         lse->setChecked(true);
@@ -244,7 +210,7 @@ void dlgRoomExits::init( int id )
         se->setDisabled(false);
         lse->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_SOUTHWEST) )
+    if( pR->hasExitLock(DIR_SOUTHWEST) )
     {
         sw->setDisabled(true);
         lsw->setChecked(true);
@@ -254,7 +220,7 @@ void dlgRoomExits::init( int id )
         sw->setDisabled(false);
         lsw->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_WEST) )
+    if( pR->hasExitLock(DIR_WEST) )
     {
         w->setDisabled(true);
         lw->setChecked(true);
@@ -264,7 +230,7 @@ void dlgRoomExits::init( int id )
         w->setDisabled(false);
         lw->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_EAST) )
+    if( pR->hasExitLock(DIR_EAST) )
     {
         e->setDisabled(true);
         le->setChecked(true);
@@ -274,7 +240,7 @@ void dlgRoomExits::init( int id )
         e->setDisabled(false);
         le->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_UP) )
+    if( pR->hasExitLock(DIR_UP) )
     {
         up->setDisabled(true);
         lup->setChecked(true);
@@ -284,7 +250,7 @@ void dlgRoomExits::init( int id )
         up->setDisabled(false);
         lup->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_DOWN) )
+    if( pR->hasExitLock(DIR_DOWN) )
     {
         down->setDisabled(true);
         ldown->setChecked(true);
@@ -294,7 +260,7 @@ void dlgRoomExits::init( int id )
         down->setDisabled(false);
         ldown->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_IN) )
+    if( pR->hasExitLock(DIR_IN) )
     {
         in->setDisabled(true);
         lin->setChecked(true);
@@ -304,7 +270,7 @@ void dlgRoomExits::init( int id )
         in->setDisabled(false);
         lin->setChecked(false);
     }
-    if( mpHost->mpMap->rooms[id]->hasExitLock(DIR_OUT) )
+    if( pR->hasExitLock(DIR_OUT) )
     {
         out->setDisabled(true);
         lout->setChecked(true);
@@ -315,32 +281,32 @@ void dlgRoomExits::init( int id )
         lout->setChecked(false);
     }
 
-    if( mpHost->mpMap->rooms[id]->north > 0 )
-        n->setText(QString::number(mpHost->mpMap->rooms[id]->north));
-    if( mpHost->mpMap->rooms[id]->south > 0 )
-        s->setText(QString::number(mpHost->mpMap->rooms[id]->south));
-    if( mpHost->mpMap->rooms[id]->west > 0 )
-        w->setText(QString::number(mpHost->mpMap->rooms[id]->west));
-    if( mpHost->mpMap->rooms[id]->east > 0 )
-        e->setText(QString::number(mpHost->mpMap->rooms[id]->east));
-    if( mpHost->mpMap->rooms[id]->northwest > 0 )
-        nw->setText(QString::number(mpHost->mpMap->rooms[id]->northwest));
-    if( mpHost->mpMap->rooms[id]->northeast > 0 )
-        ne->setText(QString::number(mpHost->mpMap->rooms[id]->northeast));
-    if( mpHost->mpMap->rooms[id]->southwest > 0 )
-        sw->setText(QString::number(mpHost->mpMap->rooms[id]->southwest));
-    if( mpHost->mpMap->rooms[id]->southeast > 0 )
-        se->setText(QString::number(mpHost->mpMap->rooms[id]->southeast));
-    if( mpHost->mpMap->rooms[id]->up > 0 )
-        up->setText(QString::number(mpHost->mpMap->rooms[id]->up));
-    if( mpHost->mpMap->rooms[id]->down > 0 )
-        down->setText(QString::number(mpHost->mpMap->rooms[id]->down));
-    if( mpHost->mpMap->rooms[id]->in > 0 )
-        in->setText(QString::number(mpHost->mpMap->rooms[id]->in));
-    if( mpHost->mpMap->rooms[id]->out > 0 )
-        out->setText(QString::number(mpHost->mpMap->rooms[id]->out));
+    if( pR->getNorth() > 0 )
+        n->setText(QString::number(pR->getNorth()));
+    if( pR->getSouth() > 0 )
+        s->setText(QString::number(pR->getSouth()));
+    if( pR->getWest() > 0 )
+        w->setText(QString::number(pR->getWest()));
+    if( pR->getEast() > 0 )
+        e->setText(QString::number(pR->getEast()));
+    if( pR->getNorthwest() > 0 )
+        nw->setText(QString::number(pR->getNorthwest()));
+    if( pR->getNortheast() > 0 )
+        ne->setText(QString::number(pR->getNortheast()));
+    if( pR->getSouthwest() > 0 )
+        sw->setText(QString::number(pR->getSouthwest()));
+    if( pR->getSoutheast() > 0 )
+        se->setText(QString::number(pR->getSoutheast()));
+    if( pR->getUp() > 0 )
+        up->setText(QString::number(pR->getUp()));
+    if( pR->getDown() > 0 )
+        down->setText(QString::number(pR->getDown()));
+    if( pR->getIn() > 0 )
+        in->setText(QString::number(pR->getIn()));
+    if( pR->getOut() > 0 )
+        out->setText(QString::number(pR->getOut()));
 
-    QMapIterator<int, QString> it(mpHost->mpMap->rooms[id]->other);
+    QMapIterator<int, QString> it(pR->getOtherMap());
     while( it.hasNext() )
     {
         it.next();
@@ -349,7 +315,7 @@ void dlgRoomExits::init( int id )
         if( dir.size() < 1 )
             continue;
         QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
-        if( mpHost->mpMap->rooms[id]->hasSpecialExitLock( id_to, dir ) )
+        if( pR->hasSpecialExitLock( id_to, dir ) )
             pI->setCheckState( 0, Qt::Checked );
         else
             pI->setCheckState( 0, Qt::Unchecked );
