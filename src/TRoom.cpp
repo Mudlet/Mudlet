@@ -39,7 +39,7 @@ TRoom::TRoom(TRoomDB * pRDB )
 
 TRoom::~TRoom()
 {
-    mpRoomDB->removeRoom( id );
+    mpRoomDB->__removeRoom( id );
 }
 
 int TRoom::hasExitStub(int direction){
@@ -127,31 +127,31 @@ void TRoom::setArea( int area )
     pA->fast_calcSpan(id);
 }
 
-bool TRoom::hasExit( int id )
+bool TRoom::hasExit( int _id )
 {
-    if( north == id )
+    if( north == _id )
         return true;
-    else if( south == id )
+    else if( south == _id )
         return true;
-    else if( northwest == id )
+    else if( northwest == _id )
         return true;
-    else if( northeast == id )
+    else if( northeast == _id )
         return true;
-    else if( southwest == id )
+    else if( southwest == _id )
         return true;
-    else if( southeast == id )
+    else if( southeast == _id )
         return true;
-    else if( east == id )
+    else if( east == _id )
         return true;
-    else if( west == id )
+    else if( west == _id )
         return true;
-    else if( up == id )
+    else if( up == _id )
         return true;
-    else if( down == id )
+    else if( down == _id )
         return true;
-    else if( out == id )
+    else if( out == _id )
         return true;
-    else if( in == id )
+    else if( in == _id )
         return true;
     else
         return false;
@@ -292,14 +292,17 @@ void TRoom::removeSpecialExit( int to, QString cmd )
     }
 }
 
-void TRoom::removeAllSpecialExitsToRoom( int id )
+void TRoom::removeAllSpecialExitsToRoom( int _id )
 {
     QList<int> keyList = other.keys();
     QList<QString> valList = other.values();
     for( int i=0; i<keyList.size(); i++ )
     {
-        // guaranteed to be in synch according to Qt docs
-        other.remove(keyList[i], valList[i]);
+        if( keyList[i] == _id )
+        {
+            // guaranteed to be in synch according to Qt docs
+            other.remove(keyList[i], valList[i]);
+        }
     }
 }
 

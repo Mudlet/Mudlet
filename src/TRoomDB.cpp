@@ -65,14 +65,11 @@ bool TRoomDB::addRoom( int id, TRoom * pR )
 
 bool TRoomDB::__removeRoom( int id )
 {
-}
-
-
-
-bool TRoomDB::removeRoom( int id )
-{
     if( rooms.contains(id ) && id > 0 )
     {
+
+        TRoom * pR = getRoom( id );
+        if( !pR ) return false;
         QMapIterator<int, TRoom *> it( rooms );
         while( it.hasNext() )
         {
@@ -92,17 +89,11 @@ bool TRoomDB::removeRoom( int id )
             if( r->getOut() == id ) r->setOut(-1);
             r->removeAllSpecialExitsToRoom( id );
         }
-        TRoom * pR = rooms[id];
         int areaID = pR->getArea();
-        if( areas.contains(areaID) )
-        {
-            TArea * pA = areas[areaID];
-
-            pA->rooms.removeAll( id );
-        }
-        rooms.remove( id );
+        TArea * pA = getArea( areaID );
+        if( !pA ) return false;
+        pA->rooms.removeAll( id );
         mpMap->mMapGraphNeedsUpdate = true;
-        delete pR;
     }
     QList<QString> keyList = hashTable.keys();
     QList<int> valueList = hashTable.values();
@@ -112,6 +103,18 @@ bool TRoomDB::removeRoom( int id )
         {
             hashTable.remove( keyList[i] );
         }
+    }
+    return true;
+}
+
+
+// called by TRoom destructor
+bool TRoomDB::removeRoom( int id )
+{
+    if( rooms.contains(id ) && id > 0 )
+    {
+        TRoom * pR = getRoom( id );
+        delete pR;
     }
 }
 
@@ -332,10 +335,13 @@ void TRoomDB::initAreasForOldMaps()
 
 void TRoomDB::clearMapDB()
 {
-    QList<TRoom*> roomList = getRoomPtrList();
-    for( int i=0; i<roomList.size(); i++ )
+    QList<TRoom*> rPtrL = getRoomPtrList();
+    rooms.clear();
+    areaNamesMap.clear();
+    hashTable.clear();
+    for(int i=0; i<rPtrL.size(); i++ )
     {
-        delete roomList[i];
+        delete rPtrL[i];
     }
     assert( rooms.size() == 0 );
 
@@ -346,8 +352,7 @@ void TRoomDB::clearMapDB()
     }
     assert( areas.size() == 0 );
 
-    areaNamesMap.clear();
-    hashTable.clear();
+
 }
 
 
