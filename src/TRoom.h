@@ -29,14 +29,14 @@ public:
     TRoom(TRoomDB* pRDB);
     ~TRoom();
     bool setExit( int to , int dir);
-    bool hasExit( int );
+    bool hasExit(int _id);
     void setWeight( int );
     void setExitLock( int, bool );
     void setSpecialExitLock(int to, QString cmd, bool doLock);
     bool hasExitLock(int to);
     bool hasSpecialExitLock( int, QString );
     void removeSpecialExit( int to, QString cmd );
-    void removeAllSpecialExitsToRoom( int id );
+    void removeAllSpecialExitsToRoom(int _id );
     void addSpecialExit( int to, QString cmd );
     void clearSpecialExits() { other.clear(); }
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
@@ -119,7 +119,7 @@ private:
     int in;
     int out;
 
-    QMultiMap<int, QString> other; // es können mehrere exits zum gleichen raum verlaufen
+    QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
                                    //verbotene exits werden mit 0 geprefixed, offene mit 1
 
     TRoomDB * mpRoomDB;
