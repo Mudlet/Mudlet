@@ -35,6 +35,10 @@ function Geyser.MiniConsole:setWrap (wrapAt)
    setWindowWrap(self.name, self.wrapAt)
 end
 
+function Geyser.MiniConsole:resetFormat()
+  resetFormat(self.name)
+end
+
 --- Sets the text format for this window. Note that the *echo()
 -- functions will override these settings.
 -- @param r1 The red foreground component.
