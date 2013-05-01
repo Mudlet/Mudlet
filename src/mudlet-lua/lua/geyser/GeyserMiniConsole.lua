@@ -71,7 +71,7 @@ end
 --- Sets the font size for this miniconsole.
 -- @param size The font size.
 function Geyser.MiniConsole:setFontSize(size)
-   self.parent:setFontSize(size)
+   self.parent.setFontSize(self, size)
    setMiniConsoleFontSize(self.name, size)
 end
 
