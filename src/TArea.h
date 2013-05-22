@@ -45,6 +45,7 @@ public:
     int getAreaID();
     void addRoom( int id );
     const QList<int> & getAreaRooms() const { return rooms; }
+    const QList<int> getAreaExits() const { return exits.uniqueKeys(); }
     void calcSpan();
     void fast_calcSpan(int);
     void fast_ausgaengeBestimmen(int);

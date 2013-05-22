@@ -76,6 +76,7 @@ public:
     //void deleteRoom( int id );
     void deleteArea( int id );
     int  createNewRoomID();
+    void logError(QString &msg);
     bool fixExits2(int);
     void tidyMap( int area );
     void getConnectedNodesGreaterThanX( int id, int x );

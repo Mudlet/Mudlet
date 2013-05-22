@@ -28,6 +28,7 @@ class TRoom
 public:
     TRoom(TRoomDB* pRDB);
     ~TRoom();
+    void setId(int);
     bool setExit( int to , int dir);
     bool hasExit(int _id);
     void setWeight( int );
@@ -46,7 +47,7 @@ public:
     int hasExitStub(int direction);
     void setExitStub(int direction, int status);
     void calcRoomDimensions();
-    void setArea( int );
+    void setArea(int _areaID);
     int getNorth() { return north; }
     void setNorth( int id ) { north=id; }
     int getNorthwest() { return northwest; }
@@ -60,7 +61,7 @@ public:
     int getSoutheast() { return southeast; }
     void setSoutheast( int id ) { southeast=id; }
     int getWest() { return west; }
-    void setWest( int id ) { southwest=id; }
+    void setWest( int id ) { west=id; }
     int getEast() { return east; }
     void setEast( int id ) { east=id; }
     int getUp() { return up; }

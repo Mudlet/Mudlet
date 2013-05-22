@@ -92,6 +92,20 @@ void TMap::mapClear()
     mapLabels.clear();
 }
 
+#include "TConsole.h"
+void TMap::logError( QString & msg )
+{
+    QColor orange = QColor(255,128,0);
+    QColor black = QColor(0,0,0);
+    QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
+    if( mpHost->mpEditorDialog )
+    {
+        mpHost->mpEditorDialog->mpErrorConsole->printDebug(orange, black, s1 );
+    }
+}
+
+
+
 #include <QFileDialog>
 void TMap::exportMapToDatabase()
 {
@@ -110,7 +124,13 @@ void TMap::importMapFromDatabase()
 void TMap::setRoomArea( int id, int area )
 {
     TRoom * pR = mpRoomDB->getRoom( id );
-    if( !pR ) return;
+
+    if( !pR )
+    {
+        QString msg = QString("roomID=%1 does not exist, can't set area=%2 of nonexisting room").arg(id).arg(area);
+        logError(msg);
+        return;
+    }
 
     pR->setArea( area );
 

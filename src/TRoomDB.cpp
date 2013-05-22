@@ -39,13 +39,19 @@ TRoom * TRoomDB::getRoom( int id )
 
 bool TRoomDB::addRoom( int id )
 {
-    if( !rooms.contains( id ) && id )
+    if( !rooms.contains( id ) && id > 0 )
     {
         rooms[id] = new TRoom( this );
+        rooms[id]->setId(id);
         return true;
     }
     else
     {
+        if( id <= 0 )
+        {
+            QString error = QString("illegal room id=%1. roomID must be > 0").arg(id);
+            mpMap->logError(error);
+        }
         return false;
     }
 }
@@ -55,6 +61,7 @@ bool TRoomDB::addRoom( int id, TRoom * pR )
     if( !rooms.contains( id ) && id > 0 && pR )
     {
         rooms[id] = pR;
+        pR->setId(id);
         return true;
     }
     else
@@ -63,6 +70,7 @@ bool TRoomDB::addRoom( int id, TRoom * pR )
     }
 }
 
+// this is call by TRoom destructor only
 bool TRoomDB::__removeRoom( int id )
 {
     if( rooms.contains(id ) && id > 0 )
@@ -93,6 +101,7 @@ bool TRoomDB::__removeRoom( int id )
         TArea * pA = getArea( areaID );
         if( !pA ) return false;
         pA->rooms.removeAll( id );
+        pA->exits.remove( id ); //note: this removes *all* keys=id
         mpMap->mMapGraphNeedsUpdate = true;
     }
     QList<QString> keyList = hashTable.keys();
@@ -238,6 +247,8 @@ bool TRoomDB::addArea( int id )
     }
     else
     {
+        QString error = QString("can't create area with ID=%1").arg(id);
+        mpMap->logError(error);
         return false;
     }
 }
@@ -264,6 +275,7 @@ int TRoomDB::addArea( QString name )
     if( addArea( areaID ) )
     {
         areaNamesMap[areaID] = name;
+        return areaID;
     }
     else
         return -1; //fail

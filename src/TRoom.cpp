@@ -112,14 +112,25 @@ bool TRoom::setExit( int to, int dir )
     return true;
 }
 
-void TRoom::setArea( int area )
+void TRoom::setId( int _id )
 {
+    id = _id;
+}
+
+void TRoom::setArea( int _areaID )
+{
+    area = _areaID;
     TArea * pA = mpRoomDB->getArea( area );
     if( !pA )
     {
         mpRoomDB->addArea( area );
         pA = mpRoomDB->getArea( area );
-        assert( pA );
+        if( !pA )
+        {
+            QString error = "TRoom::setArea(): No area created! requested area ID=%1. Note: area IDs must be > 0";
+            mpRoomDB->mpMap->logError(error);
+            return;
+        }
     }
 
     pA->addRoom( id );
