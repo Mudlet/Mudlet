@@ -819,6 +819,7 @@ inline int TBuffer::lookupColor( QString & s, int pos )
 
 void TBuffer::translateToPlainText( std::string & s )
 {
+    //cout << "TRANSLATE<"<<s<<">"<<endl;
     speedAppend = 0;
     speedTP = 0;
     int numCodes=0;
@@ -1906,6 +1907,27 @@ void TBuffer::translateToPlainText( std::string & s )
         if( ch != '\t' )
         {
             mMudLine.append( ch );
+            TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
+                     ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                     ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                     bgColorR,
+                     bgColorG,
+                     bgColorB,
+                     mIsDefaultColor ? mBold : false,
+                     mItalics,
+                     mUnderline );
+
+            if( mMXP_LINK_MODE )
+            {
+                c.link = mLinkID;
+    //            c.fgR = 0;
+    //            c.fgG = 0;
+    //            c.fgB = 255;
+                c.underline = true;
+            }
+
+
+            mMudBuffer.push_back( c );
         }
         else
         {
@@ -1914,31 +1936,19 @@ void TBuffer::translateToPlainText( std::string & s )
             for( int spi=0; spi<spaces; spi++ )
             {
                 tab.append( ' ' );
+                TChar tab_c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
+                         ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                         ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                         bgColorR,
+                         bgColorG,
+                         bgColorB,
+                         mIsDefaultColor ? mBold : false,
+                         mItalics,
+                         mUnderline );
+                mMudBuffer.push_back(tab_c);
             }
             mMudLine.append( tab );
-
         }
-        TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
-                 ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
-                 ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
-                 bgColorR,
-                 bgColorG,
-                 bgColorB,
-                 mIsDefaultColor ? mBold : false,
-                 mItalics,
-                 mUnderline );
-
-        if( mMXP_LINK_MODE )
-        {
-            c.link = mLinkID;
-//            c.fgR = 0;
-//            c.fgG = 0;
-//            c.fgB = 255;
-            c.underline = true;
-        }
-
-
-        mMudBuffer.push_back( c );
         msPos++;
     }
 }
