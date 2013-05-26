@@ -39,6 +39,7 @@ TRoom * TRoomDB::getRoom( int id )
 
 bool TRoomDB::addRoom( int id )
 {
+    qDebug()<<"addRoom("<<id<<")";
     if( !rooms.contains( id ) && id > 0 )
     {
         rooms[id] = new TRoom( this );
@@ -124,7 +125,9 @@ bool TRoomDB::removeRoom( int id )
     {
         TRoom * pR = getRoom( id );
         delete pR;
+        return true;
     }
+    return false;
 }
 
 bool TRoomDB::removeArea( int id )

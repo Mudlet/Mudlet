@@ -56,60 +56,76 @@ void TRoom::setExitStub(int direction, int status){
         exitStubs.removeOne(direction);
 }
 
+int TRoom::getExitWeight( QString cmd )
+{
+    if( exitWeights.contains( cmd ) )
+    {
+        return exitWeights[cmd];
+    }
+    else
+        return weight; // NOTE: if no exit weight has been set: exit weight = room weight
+}
+
 void TRoom::setWeight( int w )
 {
+    if( w < 1 ) w = 1;
     weight = w;
 }
 
-bool TRoom::setExit( int to, int dir )
+//bool TRoom::setExit( int to, int dir )
+//{
+//    TRoom * pR_to = mpRoomDB->getRoom( to );
+//    if( !pR_to )
+//    {
+//        to = -1;
+//    }
+//    switch( dir )
+//    {
+//        case DIR_NORTH:
+//            north = to;
+//            break;
+//        case DIR_NORTHEAST:
+//            northeast = to;
+//            break;
+//        case DIR_NORTHWEST:
+//            northwest = to;
+//            break;
+//        case DIR_SOUTH:
+//            south = to;
+//            break;
+//        case DIR_SOUTHEAST:
+//            southeast = to;
+//            break;
+//        case DIR_SOUTHWEST:
+//            southwest = to;
+//            break;
+//        case DIR_EAST:
+//            east = to;
+//            break;
+//        case DIR_WEST:
+//            west = to;
+//            break;
+//        case DIR_UP:
+//            up = to;
+//            break;
+//        case DIR_DOWN:
+//            down = to;
+//            break;
+//        case DIR_IN:
+//            in = to;
+//            break;
+//        case DIR_OUT:
+//            out = to;
+//            break;
+//        default:
+//            return false;
+//    }
+//    return true;
+//}
+
+void TRoom::setExitWeight(QString cmd, int w)
 {
-    TRoom * pR_to = mpRoomDB->getRoom( to );
-    if( !pR_to )
-    {
-        to = -1;
-    }
-    switch( dir )
-    {
-        case DIR_NORTH:
-            north = to;
-            break;
-        case DIR_NORTHEAST:
-            northeast = to;
-            break;
-        case DIR_NORTHWEST:
-            northwest = to;
-            break;
-        case DIR_SOUTH:
-            south = to;
-            break;
-        case DIR_SOUTHEAST:
-            southeast = to;
-            break;
-        case DIR_SOUTHWEST:
-            southwest = to;
-            break;
-        case DIR_EAST:
-            east = to;
-            break;
-        case DIR_WEST:
-            west = to;
-            break;
-        case DIR_UP:
-            up = to;
-            break;
-        case DIR_DOWN:
-            down = to;
-            break;
-        case DIR_IN:
-            in = to;
-            break;
-        case DIR_OUT:
-            out = to;
-            break;
-        default:
-            return false;
-    }
-    return true;
+    exitWeights[cmd] = w;
 }
 
 void TRoom::setId( int _id )
@@ -249,7 +265,7 @@ bool TRoom::hasSpecialExitLock(int to, QString cmd)
 
 void TRoom::addSpecialExit( int to, QString cmd )
 {
-
+    QString _cmd;
     // replace if this special exit exists, otherwise add
     QMapIterator<int, QString> it( other );
     while(it.hasNext() )
@@ -270,11 +286,11 @@ void TRoom::addSpecialExit( int to, QString cmd )
             }
 
             other.replace( to, _cmd );
-            return;
+            goto UPDATE_AREAS;
         }
     }
     // it doesnt exit -> add
-    QString _cmd;
+
     if( cmd.startsWith('0') || cmd.startsWith('1') )
     {
         _cmd = cmd;
@@ -285,6 +301,10 @@ void TRoom::addSpecialExit( int to, QString cmd )
         _cmd.append( cmd );
     }
     other.insertMulti( to, _cmd );
+
+UPDATE_AREAS: TArea * pA = mpRoomDB->getArea( getArea() );
+    pA->fast_ausgaengeBestimmen(getId());
+
 }
 
 
@@ -374,6 +394,13 @@ bool TRoom::restore( QDataStream & ifs, int i, int version )
     ifs >> out;
     ifs >> environment;
     ifs >> weight;
+
+    // force room weight >= 1 otherwise pathfinding choses random pathes.
+    if( weight < 1 )
+    {
+        weight = 1;
+    }
+
     if( version < 8 )
     {
         float f1,f2,f3,f4;

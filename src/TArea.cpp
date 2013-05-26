@@ -160,6 +160,7 @@ void TArea::fast_ausgaengeBestimmen( int id )
 {
     TRoom * pR = mpRoomDB->getRoom(id);
     if( ! pR ) return;
+    exits.remove(id);
     if( pR->getNorth() > 0 && rooms.indexOf( pR->getNorth() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTH);

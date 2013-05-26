@@ -29,7 +29,7 @@ public:
     TRoom(TRoomDB* pRDB);
     ~TRoom();
     void setId(int);
-    bool setExit( int to , int dir);
+    //bool setExit( int to , int dir);
     bool hasExit(int _id);
     void setWeight( int );
     void setExitLock( int, bool );
@@ -41,13 +41,16 @@ public:
     void addSpecialExit( int to, QString cmd );
     void clearSpecialExits() { other.clear(); }
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
-
-    void setExitWeight( QString cmd, int weight );
+    const QMap<QString, int> & getExitWeights() const { return exitWeights; }
+    void setExitWeight(QString cmd, int w );
     void setDoor( QString cmd, int doorStatus );//0=no door, 1=open door, 2=closed, 3=locked
     int hasExitStub(int direction);
     void setExitStub(int direction, int status);
     void calcRoomDimensions();
     void setArea(int _areaID);
+    int getExitWeight(QString cmd);
+
+    int getWeight() { return weight; }
     int getNorth() { return north; }
     void setNorth( int id ) { north=id; }
     int getNorthwest() { return northwest; }
@@ -80,7 +83,7 @@ public:
     int y;
     int z;
     int environment;
-    int weight;
+
     bool isLocked;
     qreal min_x;
     qreal min_y;
@@ -102,11 +105,13 @@ public:
     float highlightRadius;
     bool rendered;
     QMap<QString, int> doors; //0=no door 1=open 2=closed 3=locked
-    QMap<QString, int> exitWeights;
+
 
 private:
     int id;
     int area;
+    int weight;
+    QMap<QString, int> exitWeights;
     int north;
     int northeast;
     int east;

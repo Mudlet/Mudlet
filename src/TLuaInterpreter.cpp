@@ -3304,7 +3304,7 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
-        pR->weight = w;
+        pR->setWeight(w);
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -4043,7 +4043,7 @@ int TLuaInterpreter::getRoomWeight( lua_State *L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( pR )
     {
-        lua_pushnumber( L, pR->weight );
+        lua_pushnumber( L, pR->getWeight() );
         return 1;
     }
     else
@@ -7234,7 +7234,7 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
     if( pR )
     {
-        pR->exitWeights[_text] = weight;
+        pR->setExitWeight(_text, weight );
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -7260,11 +7260,11 @@ int TLuaInterpreter::getExitWeights( lua_State * L )
     lua_newtable(L);
     if( pR )
     {
-        QStringList keys = pR->exitWeights.keys();
+        QStringList keys = pR->getExitWeights().keys();
         for( int i=0; i<keys.size(); i++ )
         {
             lua_pushstring( L, keys[i].toLatin1().data() );
-            lua_pushnumber( L, pR->exitWeights[keys[i]] );
+            lua_pushnumber( L, pR->getExitWeight(keys[i]) );
             lua_settable(L, -3);
         }
     }
