@@ -98,6 +98,7 @@ public:
     void clearCaptureGroups();
     bool callEventHandler( QString & function, TEvent * pE );
 
+
     int startTempTimer( double, QString & );
     int startTempAlias( QString &, QString & );
     int startTempTrigger( QString &, QString & );
@@ -115,6 +116,8 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int auditAreas( lua_State * );
+    static int getAreaExits(lua_State * );
     static int setMergeTables(lua_State * L);
     static int addSupportedTelnetOption( lua_State * );
     static int setDoor( lua_State * );
