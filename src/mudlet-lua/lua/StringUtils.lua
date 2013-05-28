@@ -162,6 +162,7 @@ end
 ---   test = string.title(test)
 ---   </pre>
 function string:title()
+	assert(type(self) == "string", "string.title(): no word given to capitalize")
 	self = self:gsub("^%l", string.upper, 1)
 	return self
 end
