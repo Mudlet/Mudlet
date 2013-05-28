@@ -89,18 +89,19 @@ void dlgRoomExits::save()
         }
     }
 
-    pR->setExit(n->text().toInt(), DIR_NORTH );
-    pR->setExit(nw->text().toInt(), DIR_NORTHWEST );
-    pR->setExit(ne->text().toInt(), DIR_NORTHEAST );
-    pR->setExit(s->text().toInt(), DIR_SOUTH );
-    pR->setExit(sw->text().toInt(), DIR_SOUTHWEST );
-    pR->setExit(se->text().toInt(), DIR_SOUTHEAST );
-    pR->setExit(e->text().toInt(), DIR_EAST );
-    pR->setExit(w->text().toInt(), DIR_WEST );
-    pR->setExit(up->text().toInt(), DIR_UP );
-    pR->setExit(down->text().toInt(), DIR_DOWN );
-    pR->setExit(in->text().toInt(), DIR_IN );
-    pR->setExit(out->text().toInt(), DIR_OUT );
+    int id = pR->getId();
+    mpHost->mpMap->setExit(id, n->text().toInt(), DIR_NORTH );
+    mpHost->mpMap->setExit(id, nw->text().toInt(), DIR_NORTHWEST );
+    mpHost->mpMap->setExit(id, ne->text().toInt(), DIR_NORTHEAST );
+    mpHost->mpMap->setExit(id, s->text().toInt(), DIR_SOUTH );
+    mpHost->mpMap->setExit(id, sw->text().toInt(), DIR_SOUTHWEST );
+    mpHost->mpMap->setExit(id, se->text().toInt(), DIR_SOUTHEAST );
+    mpHost->mpMap->setExit(id, e->text().toInt(), DIR_EAST );
+    mpHost->mpMap->setExit(id, w->text().toInt(), DIR_WEST );
+    mpHost->mpMap->setExit(id, up->text().toInt(), DIR_UP );
+    mpHost->mpMap->setExit(id, down->text().toInt(), DIR_DOWN );
+    mpHost->mpMap->setExit(id, in->text().toInt(), DIR_IN );
+    mpHost->mpMap->setExit(id, out->text().toInt(), DIR_OUT );
 
     if( !n->isEnabled() )
         pR->setExitLock(DIR_NORTH, true);
