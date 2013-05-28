@@ -20,6 +20,7 @@
 
 #include "XMLimport.h"
 #include "mudlet.h"
+#include "TRoom.h"
 #include <QStringList>
 #include <QDebug>
 
