@@ -476,7 +476,7 @@ function db:_migrate(db_name, s_name)
    -- The PRAGMA table_info command is a query which returns all of the columns currently
    -- defined in the specified table. The purpose of this section is to see if any new columns
    -- have been added.
-   local cur = conn:execute("PRAGMA table_info('"..s_name.."')")
+   local cur = conn:execute("PRAGMA table_info('"..s_name.."')") -- currently broken - LuaSQL bug, needs to be upgraded for new sqlite API
 
    if cur ~= 0 then
       local row = cur:fetch({}, "a")
@@ -550,6 +550,12 @@ function db:_migrate(db_name, s_name)
    -- function creating a unique index.
    --
    -- Note that in no situation will an existing index be deleted.
+
+   -- make up current_columns, as pragma_info currently does not populate it, due to luasql bug
+   for key, value in pairs(schema.columns) do
+      current_columns[key] =  db:_sql_type(value)
+   end
+
    db:_migrate_indexes(conn, s_name, schema, current_columns)
    db:echo_sql("COMMIT")
    conn:commit()
