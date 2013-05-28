@@ -346,17 +346,19 @@ function table.n_complement(set1, set2)
 end
 
 
-
---- <b><u>TODO</u></b> table:update(t1, t2)
-function table:update(t1, t2)
-	for k,v in pairs(t2) do
-		if type(v) == "table" then
-			t1[k] = self.update(t1[k] or {}, v)
-		else
-			t1[k] = v
-		end
-	end
-	return t1
+function table.update(t1, t2)
+        local tbl = {}
+        for k,v in pairs(t1) do
+                tbl[k] = v
+        end
+        for k,v in pairs(t2) do
+                if type(v) == "table" then
+                        tbl[k] = table.update(tbl[k] or {}, v)
+                else
+                        tbl[k] = v
+                end
+        end
+        return tbl
 end
 
 ---Returns the index of the value in a table
