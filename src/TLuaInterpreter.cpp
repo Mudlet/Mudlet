@@ -1780,7 +1780,7 @@ int TLuaInterpreter::getExitStubs( lua_State * L  ){
             }
         }
     }
-    return 1;
+    return 0;
 }
 
 int TLuaInterpreter::getModulePath( lua_State *L )
@@ -7192,6 +7192,50 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
     if( pR )
     {
+            bool validExit = false;
+            if ( _text == "n" && pR->getNorth() )
+                validExit = true;
+            else if ( _text == "s" && pR->getSouth() )
+                validExit = true;
+            else if ( _text == "e" && pR->getEast() )
+                validExit = true;
+            else if ( _text == "w" && pR->getWest() )
+                validExit = true;
+            else if ( _text == "ne" && pR->getNortheast() )
+                validExit = true;
+            else if ( _text == "nw" && pR->getNorthwest() )
+                validExit = true;
+            else if ( _text == "sw" && pR->getSouthwest() )
+                validExit = true;
+            else if ( _text == "se" && pR->getSoutheast() )
+                validExit = true;
+            else if ( _text == "u" && pR->getUp() )
+                validExit = true;
+            else if ( _text == "d" && pR->getDown() )
+                validExit = true;
+            else if ( _text == "in" && pR->getIn() )
+                validExit = true;
+            else if ( _text == "out" && pR->getOut() )
+                validExit = true;
+            else
+            {
+                QMapIterator< int, QString > it(pR->getOtherMap());
+                while(it.hasNext())
+                {
+                    it.next();
+                    if ( it.value() == "0"+_text  || it.value() == "1"+_text )
+                    {
+                        validExit = true;
+                        break;
+                    }
+                }
+            }
+            if ( !validExit )
+            {
+                lua_pushstring( L, "setExitWeight: Invalid direction.");
+                lua_error( L );
+                return 1;
+            }
         pR->exitWeights[_text] = weight;
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
