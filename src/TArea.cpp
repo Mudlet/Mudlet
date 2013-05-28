@@ -39,6 +39,9 @@
 #define NORTHWEST 10
 #define UP 13
 #define DOWN 14
+#define IN 15
+#define OUT 16
+#define OTHER 17
 
 TArea::TArea(TMap * map , TRoomDB * pRDB )
 : mpRoomDB( pRDB )
@@ -156,59 +159,83 @@ QList<int> TArea::getCollisionNodes()
 void TArea::fast_ausgaengeBestimmen( int id )
 {
     TRoom * pR = mpRoomDB->getRoom(id);
-    if( !pR ) return;
-    TArea * pA = mpRoomDB->getArea( pR->getArea() );
-    if( !pA ) return;
-
-    if( ! rooms.indexOf( pR->getNorth() ) )
+    if( ! pR ) return;
+    exits.remove(id);
+    if( pR->getNorth() > 0 && rooms.indexOf( pR->getNorth() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTH);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getNortheast() ) )
+    if( pR->getNortheast() > 0 && rooms.indexOf( pR->getNortheast() )  < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTHEAST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getEast() ) )
+    if( pR->getEast() > 0 && rooms.indexOf( pR->getEast() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, EAST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getSoutheast() ) )
+    if( pR->getSoutheast() > 0 && rooms.indexOf( pR->getSoutheast() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, SOUTHEAST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getSouth() ) )
+    if( pR->getSouth() > 0 && rooms.indexOf( pR->getSouth() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, SOUTH);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getSouthwest() ) )
+    if( pR->getSouthwest() > 0 && rooms.indexOf( pR->getSouthwest() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, SOUTHWEST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getWest() ) )
+    if( pR->getWest() > 0 && rooms.indexOf( pR->getWest() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, WEST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getNorthwest() ) )
+    if( pR->getNorthwest() > 0 && rooms.indexOf( pR->getNorthwest() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTHWEST);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getUp() ) )
+    if( pR->getUp() > 0 && rooms.indexOf( pR->getUp() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, UP);
         exits.insertMulti( id, p );
     }
-    if( ! rooms.indexOf( pR->getDown() ) )
+    if( pR->getDown() > 0 && rooms.indexOf( pR->getDown() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, DOWN);
         exits.insertMulti( id, p );
+    }
+    if( pR->getIn() > 0 && rooms.indexOf( pR->getIn() ) < 0 )
+    {
+        QPair<int, int> p = QPair<int,int>(id, IN);
+        exits.insertMulti( id, p );
+    }
+    if( pR->getOut() > 0 && rooms.indexOf( pR->getOut() ) < 0 )
+    {
+        QPair<int, int> p = QPair<int,int>(id, OUT);
+        exits.insertMulti( id, p );
+    }
+    const QMap<int, QString> otherMap = pR->getOtherMap();
+    QMapIterator<int,QString> it( otherMap );
+    while( it.hasNext() )
+    {
+        it.next();
+        int _exit = it.key();
+        TRoom * pO = mpRoomDB->getRoom(_exit);
+        if( pO )
+        {
+            if( pO->getArea() != getAreaID() )
+            {
+                QPair<int, int> p = QPair<int,int>(pO->getId(), OTHER);
+                exits.insertMulti( pO->getId(), p );
+            }
+        }
     }
 }
 
@@ -220,55 +247,81 @@ void TArea::ausgaengeBestimmen()
         TRoom * pR = mpRoomDB->getRoom(rooms[i]);
         if( ! pR ) continue;
         int id = pR->getId();
-        if( ! rooms.indexOf( pR->getNorth() ) )
+        if( pR->getNorth() > 0 && rooms.indexOf( pR->getNorth() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, NORTH);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getNortheast() ) )
+        if( pR->getNortheast() > 0 && rooms.indexOf( pR->getNortheast() )  < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, NORTHEAST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getEast() ) )
+        if( pR->getEast() > 0 && rooms.indexOf( pR->getEast() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, EAST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getSoutheast() ) )
+        if( pR->getSoutheast() > 0 && rooms.indexOf( pR->getSoutheast() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, SOUTHEAST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getSouth() ) )
+        if( pR->getSouth() > 0 && rooms.indexOf( pR->getSouth() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, SOUTH);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getSouthwest() ) )
+        if( pR->getSouthwest() > 0 && rooms.indexOf( pR->getSouthwest() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, SOUTHWEST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getWest() ) )
+        if( pR->getWest() > 0 && rooms.indexOf( pR->getWest() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, WEST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getNorthwest() ) )
+        if( pR->getNorthwest() > 0 && rooms.indexOf( pR->getNorthwest() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, NORTHWEST);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getUp() ) )
+        if( pR->getUp() > 0 && rooms.indexOf( pR->getUp() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, UP);
             exits.insertMulti( id, p );
         }
-        if( ! rooms.indexOf( pR->getDown() ) )
+        if( pR->getDown() > 0 && rooms.indexOf( pR->getDown() ) < 0 )
         {
             QPair<int, int> p = QPair<int,int>(id, DOWN);
             exits.insertMulti( id, p );
+        }
+        if( pR->getIn() > 0 && rooms.indexOf( pR->getIn() ) < 0 )
+        {
+            QPair<int, int> p = QPair<int,int>(id, IN);
+            exits.insertMulti( id, p );
+        }
+        if( pR->getOut() > 0 && rooms.indexOf( pR->getOut() ) < 0 )
+        {
+            QPair<int, int> p = QPair<int,int>(id, OUT);
+            exits.insertMulti( id, p );
+        }
+        const QMap<int, QString> otherMap = pR->getOtherMap();
+        QMapIterator<int,QString> it( otherMap );
+        while( it.hasNext() )
+        {
+            it.next();
+            int _exit = it.key();
+            TRoom * pO = mpRoomDB->getRoom(_exit);
+            if( pO )
+            {
+                if( pO->getArea() != getAreaID() )
+                {
+                    QPair<int, int> p = QPair<int,int>(pO->getId(), OTHER);
+                    exits.insertMulti( pO->getId(), p );
+                }
+            }
         }
     }
     //qDebug()<<"exits:"<<exits.size();
@@ -300,6 +353,14 @@ void TArea::addRoom( int id )
         {
             rooms.append( id );
         }
+        else
+        {
+            qDebug()<<"TArea::addRoom("<<id<<") No creation! room already exists";
+        }
+    }
+    else
+    {
+        QString error = QString("roomID=%1 does not exist, can't set properties of non-existent rooms").arg(id);
     }
 }
 

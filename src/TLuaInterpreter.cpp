@@ -3304,7 +3304,7 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
-        pR->weight = w;
+        pR->setWeight(w);
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -3951,6 +3951,7 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
     }
     lua_newtable(L);
     const QList<int> areaRooms = pA->getAreaRooms();
+    qDebug()<<"getAreaRooms()"<<areaRooms;
     for( int i=0; i<areaRooms.size(); i++ )
     {
         int roomID = areaRooms.at( i );
@@ -3976,7 +3977,48 @@ int TLuaInterpreter::getRooms( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::getAreaExits( lua_State *L )
+{
+    qDebug()<<"getAreaExits() enter";
+    int area;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getAreaExits: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        area = lua_tonumber( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
 
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    qDebug()<<"pA="<<pA;
+    if( !pA )
+    {
+        qDebug()<<"no area found";
+        lua_pushnil(L);
+        return 1;
+    }
+    QList<int> areaExits = pA->getAreaExits();
+    qDebug()<<"areaExits="<<areaExits;
+    lua_newtable(L);
+    for( int i=0; i<areaExits.size(); i++ )
+    {
+        lua_pushnumber( L, i );
+        lua_pushnumber( L, areaExits[i] );
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
+int TLuaInterpreter::auditAreas( lua_State * L )
+{
+    Host * pH = TLuaInterpreter::luaInterpreterMap[L];
+    pH->mpMap->mpRoomDB->initAreasForOldMaps();
+    return 0;
+}
 
 int TLuaInterpreter::getRoomWeight( lua_State *L )
 {
@@ -4001,7 +4043,7 @@ int TLuaInterpreter::getRoomWeight( lua_State *L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( pR )
     {
-        lua_pushnumber( L, pR->weight );
+        lua_pushnumber( L, pR->getWeight() );
         return 1;
     }
     else
@@ -7192,7 +7234,7 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
     if( pR )
     {
-            bool validExit = false;
+        pR->setExitWeight(_text, weight );
             if ( _text == "n" && pR->getNorth() )
                 validExit = true;
             else if ( _text == "s" && pR->getSouth() )
@@ -7236,7 +7278,6 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
                 lua_error( L );
                 return 1;
             }
-        pR->exitWeights[_text] = weight;
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -7262,11 +7303,11 @@ int TLuaInterpreter::getExitWeights( lua_State * L )
     lua_newtable(L);
     if( pR )
     {
-        QStringList keys = pR->exitWeights.keys();
+        QStringList keys = pR->getExitWeights().keys();
         for( int i=0; i<keys.size(); i++ )
         {
             lua_pushstring( L, keys[i].toLatin1().data() );
-            lua_pushnumber( L, pR->exitWeights[keys[i]] );
+            lua_pushnumber( L, pR->getExitWeight(keys[i]) );
             lua_settable(L, -3);
         }
     }
@@ -8679,7 +8720,8 @@ int TLuaInterpreter::exportAreaImage( lua_State *L )
     {
         areaID = lua_tointeger( L, 1 );
         Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        pHost->mpMap->mpMapper->mp2dMap->exportAreaImage( areaID );
+        if( pHost->mpMap->mpMapper )
+            pHost->mpMap->mpMapper->mp2dMap->exportAreaImage( areaID );
     }
     return 0;
 }
@@ -10194,6 +10236,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "addSupportedTelnetOption", TLuaInterpreter::addSupportedTelnetOption );
     lua_register( pGlobalLua, "setMergeTables", TLuaInterpreter::setMergeTables );
     lua_register( pGlobalLua, "getModulePath", TLuaInterpreter::getModulePath );
+    lua_register( pGlobalLua, "getAreaExits", TLuaInterpreter::getAreaExits );
+    lua_register( pGlobalLua, "auditAreas", TLuaInterpreter::auditAreas );
 
 
     luaopen_yajl(pGlobalLua);
@@ -10655,7 +10699,7 @@ int TLuaInterpreter::startPermRegexTrigger( QString & name, QString & parent, QS
     pT->setScript( function );
     //pT->setName( name );
     int id = pT->getID();
-    pT->setName( QString::number( id ) );
+    pT->setName( name );
     mpHost->mpEditorDialog->mNeedUpdateData = true;
     //return 1;
     return id;
@@ -10690,7 +10734,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger( QString & name, QString 
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
-    pT->setName( QString::number( id ) );
+    pT->setName( name );
     mpHost->mpEditorDialog->mNeedUpdateData = true;
     //return 1;
     return id;
@@ -10725,7 +10769,7 @@ int TLuaInterpreter::startPermSubstringTrigger( QString & name, QString & parent
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
-    pT->setName( QString::number( id ) );
+    pT->setName( name );
     mpHost->mpEditorDialog->mNeedUpdateData = true;
     //return 1;
     return id;

@@ -114,7 +114,6 @@ void TScript::callEventHandler( TEvent * pE )
     // Only call this event handler if this script and all its ancestors are active:
     if(isActive() && ancestorsActive())
     {
-        qDebug()<<"-->calling:"<<mName;
         mpHost->mLuaInterpreter.callEventHandler( mName, pE );
     }
 }

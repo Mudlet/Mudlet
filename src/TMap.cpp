@@ -92,6 +92,20 @@ void TMap::mapClear()
     mapLabels.clear();
 }
 
+#include "TConsole.h"
+void TMap::logError( QString & msg )
+{
+    QColor orange = QColor(255,128,0);
+    QColor black = QColor(0,0,0);
+    QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
+    if( mpHost->mpEditorDialog )
+    {
+        mpHost->mpEditorDialog->mpErrorConsole->printDebug(orange, black, s1 );
+    }
+}
+
+
+
 #include <QFileDialog>
 void TMap::exportMapToDatabase()
 {
@@ -110,7 +124,13 @@ void TMap::importMapFromDatabase()
 void TMap::setRoomArea( int id, int area )
 {
     TRoom * pR = mpRoomDB->getRoom( id );
-    if( !pR ) return;
+
+    if( !pR )
+    {
+        QString msg = QString("roomID=%1 does not exist, can't set area=%2 of nonexisting room").arg(id).arg(area);
+        logError(msg);
+        return;
+    }
 
     pR->setArea( area );
 
@@ -227,6 +247,8 @@ int TMap::createNewRoomID()
 
 bool TMap::setExit( int from, int to, int dir )
 {
+
+    qDebug()<<"setExit("<<from<<", "<<to<<" dir="<<dir;
     TRoom * pR = mpRoomDB->getRoom( from );
     TRoom * pR_to = mpRoomDB->getRoom( to );
 
@@ -235,6 +257,7 @@ bool TMap::setExit( int from, int to, int dir )
     if( to < 1 ) to = -1;
 
     mPlausaOptOut = 0;
+    bool ret = true;
 
     switch( dir )
     {
@@ -275,11 +298,13 @@ bool TMap::setExit( int from, int to, int dir )
             pR->setOut(to);
             break;
         default:
-            return false;
+            ret = false;
     }
     pR->setExitStub(dir, 0);
     mMapGraphNeedsUpdate = true;
-    return true;
+    TArea * pA = mpRoomDB->getArea( pR->getArea() );
+    pA->fast_ausgaengeBestimmen(pR->getId());
+    return ret;
 }
 
 void TMap::init( Host * pH )
@@ -467,6 +492,8 @@ void TMap::initGraph()
         TRoom * pOUT = mpRoomDB->getRoom( pR->getOut() );
 
 
+        QMap<QString, int> exitWeights = pR->getExitWeights();
+
         if( pN && !pN->isLocked )
         {
             if( !pR->hasExitLock( DIR_NORTH ) )
@@ -477,10 +504,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getNorth(),
                                              g );
-                if( pR->exitWeights.contains("n"))
-                    weightmap[e] = pR->exitWeights["n"];
+                if( exitWeights.contains("n"))
+                    weightmap[e] = pR->getExitWeight("n");
                 else
-                    weightmap[e] = pN->weight;
+                    weightmap[e] = pN->getWeight();
             }
         }
         if( pS && !pS->isLocked )
@@ -493,10 +520,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getSouth(),
                                              g );
-                if( pR->exitWeights.contains("s"))
-                    weightmap[e] = pR->exitWeights["s"];
+                if( exitWeights.contains("s"))
+                    weightmap[e] = pR->getExitWeight("s");
                 else
-                    weightmap[e] = pS->weight;
+                    weightmap[e] = pS->getWeight();
             }
         }
         if( pNE && !pNE->isLocked )
@@ -509,10 +536,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getNortheast(),
                                             g );
-                if( pR->exitWeights.contains("ne"))
-                    weightmap[e] = pR->exitWeights["ne"];
+                if( exitWeights.contains("ne"))
+                    weightmap[e] = pR->getExitWeight("ne");
                 else
-                    weightmap[e] = pNE->weight;
+                    weightmap[e] = pNE->getWeight();
 
             }
         }
@@ -526,10 +553,10 @@ void TMap::initGraph()
                tie(e, inserted) = add_edge( i,
                                             pR->getEast(),
                                             g );
-               if( pR->exitWeights.contains("e"))
-                   weightmap[e] = pR->exitWeights["e"];
+               if( exitWeights.contains("e"))
+                   weightmap[e] = pR->getExitWeight("e");
                else
-                   weightmap[e] = pE->weight;
+                   weightmap[e] = pE->getWeight();
             }
         }
         if( pW && !pW->isLocked )
@@ -542,10 +569,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getWest(),
                                              g );
-                if( pR->exitWeights.contains("w"))
-                    weightmap[e] = pR->exitWeights["w"];
+                if( exitWeights.contains("w"))
+                    weightmap[e] = pR->getExitWeight("w");
                 else
-                    weightmap[e] = pW->weight;
+                    weightmap[e] = pW->getWeight();
             }
         }
         if( pSW && !pSW->isLocked )
@@ -558,10 +585,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getSouthwest(),
                                              g );
-                if( pR->exitWeights.contains("sw"))
-                    weightmap[e] = pR->exitWeights["sw"];
+                if( exitWeights.contains("sw"))
+                    weightmap[e] = pR->getExitWeight("sw");
                 else
-                    weightmap[e] = pSW->weight;
+                    weightmap[e] = pSW->getWeight();
             }
         }
         if( pSE && !pSE->isLocked )
@@ -574,10 +601,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getSoutheast(),
                                              g );
-                if( pR->exitWeights.contains("se"))
-                    weightmap[e] = pR->exitWeights["se"];
+                if( exitWeights.contains("se"))
+                    weightmap[e] = pR->getExitWeight("se");
                 else
-                    weightmap[e] = pSE->weight;
+                    weightmap[e] = pSE->getWeight();
             }
         }
         if( pNW && !pNW->isLocked )
@@ -590,10 +617,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getNorthwest(),
                                              g );
-                if( pR->exitWeights.contains("nw"))
-                    weightmap[e] = pR->exitWeights["nw"];
+                if( exitWeights.contains("nw"))
+                    weightmap[e] = pR->getExitWeight("nw");
                 else
-                    weightmap[e] = pNW->weight;
+                    weightmap[e] = pNW->getWeight();
             }
         }
         if( pUP && !pUP->isLocked )
@@ -606,10 +633,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getUp(),
                                              g );
-                if( pR->exitWeights.contains("up"))
-                    weightmap[e] = pR->exitWeights["up"];
+                if( exitWeights.contains("up"))
+                    weightmap[e] = pR->getExitWeight("up");
                 else
-                    weightmap[e] = pUP->weight;
+                    weightmap[e] = pUP->getWeight();
             }
         }
         if( pDOWN && !pDOWN->isLocked )
@@ -622,10 +649,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getDown(),
                                              g );
-                if( pR->exitWeights.contains("down"))
-                    weightmap[e] = pR->exitWeights["down"];
+                if( exitWeights.contains("down"))
+                    weightmap[e] = pR->getExitWeight("down");
                 else
-                    weightmap[e] = pDOWN->weight;
+                    weightmap[e] = pDOWN->getWeight();
             }
         }
         if( pIN && !pIN->isLocked )
@@ -638,10 +665,10 @@ void TMap::initGraph()
                 tie(e, inserted) = add_edge( i,
                                              pR->getIn(),
                                              g );
-                if( pR->exitWeights.contains("in"))
-                    weightmap[e] = pR->exitWeights["in"];
+                if( exitWeights.contains("in"))
+                    weightmap[e] = pR->getExitWeight("in");
                 else
-                    weightmap[e] = pIN->weight;
+                    weightmap[e] = pIN->getWeight();
             }
         }
         if( pOUT && !pOUT->isLocked )
@@ -654,10 +681,10 @@ void TMap::initGraph()
                  tie(e, inserted) = add_edge( i,
                                               pR->getOut(),
                                               g );
-                 if( pR->exitWeights.contains("out"))
-                     weightmap[e] = pR->exitWeights["out"];
+                 if( exitWeights.contains("out"))
+                     weightmap[e] = pR->getExitWeight("out");
                  else
-                     weightmap[e] = pOUT->weight;
+                     weightmap[e] = pOUT->getWeight();
             }
         }
         if( pR->getOtherMap().size() > 0 )
@@ -680,13 +707,13 @@ void TMap::initGraph()
                     tie(e, inserted) = add_edge( i,
                                                  _id,
                                                  g );
-                    if( pR->exitWeights.contains(_cmd))
+                    if( exitWeights.contains(_cmd))
                     {
-                        weightmap[e] = pR->exitWeights[_cmd];
+                        weightmap[e] = pR->getExitWeight(_cmd);
                     }
                     else
                     {
-                        weightmap[e] = pSpecial->weight;
+                        weightmap[e] = pSpecial->getWeight();
                     }
                 }
             }
@@ -945,7 +972,7 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pR->getIn();
         ofs << pR->getOut();
         ofs << pR->environment;
-        ofs << pR->weight;
+        ofs << pR->getWeight();
 //        ofs << rooms[i]->xRot;
 //        ofs << rooms[i]->yRot;
 //        ofs << rooms[i]->zRot;
@@ -961,7 +988,7 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pR->customLinesStyle;
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
-        ofs << pR->exitWeights;
+        ofs << pR->getExitWeights();
         ofs << pR->doors;
     }
 
