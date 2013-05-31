@@ -23,12 +23,14 @@ unix:LIBS += -lpcre \
     -lquazip \
     -lzzip
 
-win32:LIBS += -L"c:\mudlet3_package" \
+win32:LIBS += \
     -llua51 \
     -lpcre \
     -lhunspell \
     -lquazip \
-    -lyajl
+    -lyajl \
+    -L "c:\mingw\msys\lib" \
+    -llibzip
 
 unix:INCLUDEPATH += /usr/include/lua5.1
 

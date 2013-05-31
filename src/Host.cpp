@@ -37,6 +37,8 @@
 #include "TEvent.h"
 #include <QMessageBox>
 #include "dlgNotepad.h"
+#include "C:\mingw\msys\include\zip.h"
+#include "C:\mingw\msys\include\zipconf.h"
 
 extern "C" {
     #include "lua.h"
@@ -333,42 +335,56 @@ void Host::saveModules(int sync){
         QStringList entry = it.value();
         QString filename_xml = entry[0];
         QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        //move the old file, use the key (module name) as the file
         QString moduleName = it.key();
-        savePath.rename(filename_xml,dirName+moduleName+time);
         QString tempDir;
-        QString zip;
+        QString zipName;
+        zip* zipFile;
+        bool zipOpened;
         if ( filename_xml.endsWith( "mpackage" ) || filename_xml.endsWith( "zip" ) )
         {
             tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
-            tempDir = tempDir + "/" + moduleName;
+            filename_xml = tempDir + "/" + moduleName + ".xml";
+            qDebug()<<"attempting to open zip archive"<<entry[0];
+            int err;
+            zipFile = zip_open( entry[0].toStdString().c_str(), 0, &err);
+            qDebug()<<"zip error status"<<err;
+            /*if ( ! zipOpened )
+            {
+                qDebug()<<"could not open archive, recreating it";
+                zip = tempDir + "/" + moduleName + ".zip";
+                QString luaConfig = tempDir + "/config.lua";
+                QFile configFile(luaConfig);
+                if ( !configFile.exists() && configFile.open(QIODevice::WriteOnly | QIODevice::Text) )
+                {
+                    QTextStream out(&configFile);
+                    out << "mpackage = \"" << moduleName << "\"\n";
+                    out.flush();
+                    configFile.close();
+                }
+                if ( filename_xml.endsWith( "mpackage" ) )
+                    filename_xml = filename_xml.left(filename_xml.size()-8)+"xml";
+                else
+                    filename_xml = filename_xml.left(filename_xml.size()-3)+"xml";
+                qDebug()<<"zipping up to"<<tempDir;
+            }
+            else
+            {
+                zipName = filename_xml;
+            }*/
+            zipName = filename_xml;
             QDir packageDir = QDir(tempDir);
             if ( !packageDir.exists() ){
                 packageDir.mkpath(tempDir);
             }
-            zip = tempDir + "/" + moduleName + ".zip";
-            filename_xml = tempDir + "/" + moduleName + ".xml";
-            QString luaConfig = tempDir + "/config.lua";
-            QFile configFile(luaConfig);
-            if (configFile.open(QIODevice::WriteOnly | QIODevice::Text))
-            {
-                QTextStream out(&configFile);
-                out << "mpackage = \"" << moduleName << "\"\n";
-                out.flush();
-                configFile.close();
-            }
-            if ( filename_xml.endsWith( "mpackage" ) )
-                filename_xml = filename_xml.left(filename_xml.size()-9)+"xml";
-            else
-                filename_xml = filename_xml.left(filename_xml.size()-3)+"xml";
-            qDebug()<<"zipping it up to"<<filename_xml<<"in"<<zip;
         }
+        else
+            savePath.rename(filename_xml,dirName+moduleName+time);//move the old file, use the key (module name) as the file
         QFile file_xml( filename_xml );
         qDebug()<<"writing module xml for:"<<entry[0];
         if ( file_xml.open( QIODevice::WriteOnly ) )
         {
             XMLexport writer(this);
-            qDebug()<<"successfully wrote module xml for:"<<entry[0];
+            qDebug()<<"successfully wrote module xml for:"<<entry[0]<<"to"<<filename_xml;
             writer.writeModuleXML( & file_xml, it.key() );
             file_xml.close();
 
@@ -382,13 +398,18 @@ void Host::saveModules(int sync){
             mModuleSaveBlock = true;
             return;
         }
-        if (!zip.isEmpty())
+        if (!zipName.isEmpty())
         {
-            JlCompress::compressDir(zip, tempDir );
-            QFile z(zip);
-            z.rename(entry[0]);
+            struct zip_source *s = zip_source_file( zipFile, filename_xml.toStdString().c_str(), 0, 0 );
+            QTime t;
+            t.start();
+            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+            qDebug()<<"added file error"<<err;
+            qDebug()<<"time to add"<<t.elapsed();
+            err = zip_close( zipFile );
+            qDebug()<<"close file error"<<err;
+            qDebug()<<"time to close"<<t.elapsed();
         }
-
     }
     modulesToWrite.clear();
     if (sync){
