@@ -7,17 +7,24 @@ VarUnit::VarUnit()
 }
 
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var ){
-    QStringList sl;
-    sl << var->getName();
-    QTreeWidgetItem * pItem = new QTreeWidgetItem(p, sl);
-    if (var->getValueType() == 5){
-        QListIterator<TVar *> it(var->getChildren());
-        while(it.hasNext()){
-            TVar * child = it.next();
-            if (child->getValueType() == 5)
-                buildVarTree( pItem, child );
-        }
+    //we start here with the global namespace
+    QList< QTreeWidgetItem * > cList;
+    QListIterator<TVar *> it(var->getChildren());
+    while(it.hasNext()){
+        TVar * child = it.next();
+        QStringList s1;
+        s1 << child->getName();
+        QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
+        wVars.insert( pItem, child );
+        cList.append( pItem );
+        if ( child->getValueType() == 5 )
+            buildVarTree( pItem, child );
     }
+    p->addChildren( cList );
+}
+
+TVar * VarUnit::getWVar( QTreeWidgetItem * p ){
+    return wVars[p];
 }
 
 QStringList * VarUnit::varName(TVar * var){
@@ -39,7 +46,10 @@ QStringList * VarUnit::varName(TVar * var){
 
 void VarUnit::addVariable(TVar * var){
     varList.insert(varName(var));
-    vars.insert(var);
+}
+
+void VarUnit::removeVariable(TVar * var){
+    varList.remove(varName(var));
 }
 
 bool VarUnit::varExists(TVar * var){
@@ -60,9 +70,6 @@ void VarUnit::setBase(TVar * t){
 }
 
 void VarUnit::clear(){
-    QSetIterator<TVar *> i(vars);
-    while (i.hasNext())
-        delete i.next();
-    vars.clear();
+    wVars.clear();
     varList.clear();
 }

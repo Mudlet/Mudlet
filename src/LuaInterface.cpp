@@ -10,8 +10,56 @@ LuaInterface::LuaInterface(Host * pH)
     mHostID = mpHost->getHostID();
 }
 
-VarUnit * LuaInterface::getVarUnit(int host){
-    return varMapping[host];
+VarUnit * LuaInterface::getVarUnit(){
+    return varUnit;
+}
+
+QStringList LuaInterface::varName(TVar * var){
+    QStringList names;
+    if (var->getName() == "_G"){
+        names << "";
+        return names;
+    }
+    names << var->getName();
+    TVar * p = var->getParent();
+    while (p && p->getName() != "_G"){
+        names.insert(0,p->getName());
+        p = p->getParent();
+    }
+    return names;
+}
+
+QString LuaInterface::getValue( TVar * var ){
+    //let's find it.
+    L = interpreter->pGlobalLua;
+    QStringList names = varName(var);
+    qDebug()<<"trying to find";
+    qDebug()<<names;
+    int stackSize = lua_gettop(L);
+    if (names.empty())
+        return "";
+    lua_getglobal(L, names[0].toLatin1().data());
+    int i=1;
+    for( ; i<names.size(); i++ )
+    {
+        qDebug()<<"grabbing"<<names[i];
+        for (int i=1;i<=lua_gettop(L);i++){
+            qDebug()<<i<<":"<<lua_type(L,i*-1);
+        }
+        lua_getfield(L, -1, names[i].toLatin1().data());
+        for (int i=1;i<=lua_gettop(L);i++){
+            qDebug()<<i<<":"<<lua_type(L,i*-1);
+        }
+    }
+    int vType = lua_type(L, -1);
+    QString value = "";
+    if (vType == LUA_TBOOLEAN)
+        value = lua_toboolean(L, -1) == 0 ? "false" : "true";
+    else if (vType == LUA_TNUMBER || vType == LUA_TSTRING)
+        value = lua_tostring(L, -1);
+    lua_settop(L, stackSize);
+    qDebug()<<"our value was"<<value;
+    return value;
 }
 
 void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar){
@@ -31,16 +79,15 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar){
         TVar * var = new TVar();
         var->setName(keyName, kType);
         var->setValueType(vType);
-        VarUnit * vu = varMapping[mHostID];
         var->setParent(tVar);
         tVar->addChild(var);
-        if (vu->varExists(var)){
+        if (varUnit->varExists(var)){
             lua_pop(L, 1);
             tVar->removeChild(var);
             delete var;
             continue;
         }
-        vu->addVariable(var);
+        varUnit->addVariable(var);
         if (vType == LUA_TTABLE){
             if (depth<=5){
                 //put the table on top
@@ -65,7 +112,9 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar){
             var->setValue(valueName);
         }
         else{
-
+            tVar->removeChild(var);
+            varUnit->removeVariable(var);
+            delete var;
         }
         lua_pop(L, 1);
     }
@@ -81,12 +130,9 @@ void LuaInterface::getVars(){
     TVar * g = new TVar();
     g->setName("_G", LUA_TSTRING);
     g->setValue("_table", 5);
-    VarUnit * vars = new VarUnit();
-    vars->setBase(g);
-    vars->addVariable(g);
-    if (varMapping.contains(mHostID))
-        varMapping[mHostID]->clear();
-    varMapping.insert( mHostID, vars );
+    varUnit = new VarUnit();
+    varUnit->setBase(g);
+    varUnit->addVariable(g);
     iterateTable(L, LUA_GLOBALSINDEX, g);
     qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }

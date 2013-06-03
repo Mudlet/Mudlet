@@ -14,14 +14,16 @@ public:
     QStringList * varName(TVar * var);
     bool varExists(TVar *);
     void addVariable(TVar *);
+    void removeVariable(TVar *);
     void setBase(TVar *);
     TVar * getBase();
     void clear();
     void buildVarTree( QTreeWidgetItem *, TVar * );
+    TVar * getWVar( QTreeWidgetItem * );
 private:
-    QSet< TVar * > vars;
     TVar * base;
     QSet< QStringList * > varList;
+    QMap< QTreeWidgetItem *, TVar * > wVars;
 };
 
 #endif // VARUNIT_H

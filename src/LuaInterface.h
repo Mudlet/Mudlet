@@ -24,7 +24,9 @@ public:
     LuaInterface( Host * );
     void iterateTable(lua_State *, int, TVar *);
     void getVars();
-    VarUnit * getVarUnit(int);
+    QStringList varName(TVar * var);
+    QString getValue( TVar * );
+    VarUnit * getVarUnit();
 private:
     Host * mpHost;
     int mHostID;
@@ -32,7 +34,7 @@ private:
     TLuaInterpreter *interpreter;
     lua_State *L;
     QSet<TVar> hiddenVars;
-    QMap< int, VarUnit * > varMapping;
+    VarUnit * varUnit;
 };
 
 #endif // LUAINTERFACE_H

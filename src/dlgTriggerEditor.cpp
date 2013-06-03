@@ -4910,6 +4910,32 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         return;
     }
     mpCurrentVarItem = pItem; //remember what has been clicked to save it
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * var = vu->getWVar(pItem);
+    int varType = var->getValueType();
+    int keyType = var->getKeyType();
+    if (keyType == 4)
+        mpVarsMainArea->key_type->setCurrentIndex(1);
+    else if (keyType == 3)
+        mpVarsMainArea->key_type->setCurrentIndex(2);
+    if (varType == LUA_TTABLE){
+        mpVarsMainArea->lineEdit_var_value->setReadOnly(true);
+        mpVarsMainArea->var_type->setDisabled(true);
+        mpVarsMainArea->var_type->setCurrentIndex(4);
+    }
+    else{
+        mpVarsMainArea->lineEdit_var_value->setReadOnly(false);
+        mpVarsMainArea->var_type->setEnabled(true);
+        if (varType == 4)
+            mpVarsMainArea->var_type->setCurrentIndex(1);
+        else if (varType == 3)
+            mpVarsMainArea->var_type->setCurrentIndex(2);
+        else if (varType == 1)
+            mpVarsMainArea->var_type->setCurrentIndex(3);
+    }
+    mpVarsMainArea->lineEdit_var_name->setText(var->getName());
+    mpVarsMainArea->lineEdit_var_value->setText(lI->getValue( var ));
 }
 
 void dlgTriggerEditor::slot_action_clicked( QTreeWidgetItem *pItem, int column )
@@ -5695,9 +5721,9 @@ void dlgTriggerEditor::repopulateVars()
     mCurrentVar = 0;
     treeWidget_vars->insertTopLevelItem( 0, mpVarBaseItem );
     mpVarBaseItem->setExpanded( true );
-    LuaInterface * lI = new LuaInterface(mpHost);
+    LuaInterface * lI = mpHost->getLuaInterface();
     lI->getVars();
-    VarUnit * vu = lI->getVarUnit(mpHost->getHostID());
+    VarUnit * vu = lI->getVarUnit();
     vu->buildVarTree(mpVarBaseItem, vu->getBase());
     mpVarBaseItem->setExpanded( true );
     treeWidget_vars->sortItems(1,Qt::AscendingOrder);
