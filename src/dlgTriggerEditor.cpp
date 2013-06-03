@@ -6300,9 +6300,8 @@ void dlgTriggerEditor::focusOutEvent( QFocusEvent * pE )
     saveOpenChanges();
 }
 
-void dlgTriggerEditor::slot_show_timers()
+void dlgTriggerEditor::changeView( int view )
 {
-
     saveOpenChanges();
 
     if( mNeedUpdateData )
@@ -6313,11 +6312,12 @@ void dlgTriggerEditor::slot_show_timers()
         treeWidget_scripts->clear();
         treeWidget_actions->clear();
         treeWidget_keys->clear();
+        treeWidget_vars->clear();
         fillout_form();
         mNeedUpdateData = false;
     }
 
-    mCurrentView = cmTimerView;
+    mCurrentView = view;
 
     mpTriggersMainArea->hide();
     mpTimersMainArea->hide();
@@ -6325,6 +6325,7 @@ void dlgTriggerEditor::slot_show_timers()
     mpAliasMainArea->hide();
     mpActionsMainArea->hide();
     mpKeysMainArea->hide();
+    mpVarsMainArea->hide();
 
     mpSystemMessageArea->hide();
     mpOptionsAreaTriggers->hide();
@@ -6340,7 +6341,12 @@ void dlgTriggerEditor::slot_show_timers()
     treeWidget_scripts->hide();
     treeWidget_actions->hide();
     treeWidget_keys->hide();
+    treeWidget_vars->hide();
+}
 
+void dlgTriggerEditor::slot_show_timers()
+{
+    changeView( cmTimerView );
     QTreeWidgetItem * pI = treeWidget_timers->topLevelItem( 0 );
     if( pI )
     {
@@ -6367,44 +6373,7 @@ void dlgTriggerEditor::slot_show_timers()
 
 void dlgTriggerEditor::slot_show_triggers()
 {
-    saveOpenChanges();
-
-    if( mNeedUpdateData )
-    {
-        treeWidget->clear();
-        treeWidget_alias->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-    }
-
-    mCurrentView = cmTriggerView;
-
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-
-    mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-    treeWidget->hide();
-    treeWidget_alias->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_actions->hide();
-    treeWidget_keys->hide();
-
-
+    changeView( cmTriggerView );
     QTreeWidgetItem * pI = treeWidget->topLevelItem( 0 );
     if( pI )
     {
@@ -6431,45 +6400,7 @@ void dlgTriggerEditor::slot_show_triggers()
 
 void dlgTriggerEditor::slot_show_scripts()
 {
-    saveOpenChanges();
-
-    if( mNeedUpdateData )
-    {
-        treeWidget->clear();
-        treeWidget_alias->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-    }
-
-    mCurrentView = cmScriptView;
-
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-
-    mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-    treeWidget->hide();
-    treeWidget_alias->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_actions->hide();
-    mpScriptsMainArea->hide();
-    treeWidget_keys->hide();
-
-
+    changeView( cmScriptView );
     QTreeWidgetItem * pI = treeWidget_scripts->topLevelItem( 0 );
     if( pI )
     {
@@ -6496,44 +6427,7 @@ void dlgTriggerEditor::slot_show_scripts()
 
 void dlgTriggerEditor::slot_show_keys()
 {
-    saveOpenChanges();
-
-    if( mNeedUpdateData )
-    {
-        treeWidget->clear();
-        treeWidget_alias->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-    }
-
-    mCurrentView = cmKeysView;
-
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-
-    mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-    treeWidget->hide();
-    treeWidget_alias->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_actions->hide();
-    treeWidget_keys->hide();
-
-
+    changeView( cmKeysView );
     QTreeWidgetItem * pI = treeWidget_keys->topLevelItem( 0 );
     if( pI )
     {
@@ -6561,48 +6455,10 @@ void dlgTriggerEditor::slot_show_keys()
 
 void dlgTriggerEditor::slot_show_vars()
 {
-    saveOpenChanges();
-
-    if( mNeedUpdateData )
-    {
-        treeWidget->clear();
-        treeWidget_alias->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        treeWidget_vars->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-    }
-
-    mCurrentView = cmVarsView;
-
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-
-    mpSourceEditorArea->hide();
-
-    mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-    treeWidget->hide();
-    treeWidget_alias->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_actions->hide();
-    treeWidget_keys->hide();
+    changeView( cmVarsView );
     repopulateVars();
-    mCurrentView = cmVarsView;
     mCurrentVar = 0;
+    mpSourceEditorArea->hide();
     QTreeWidgetItem * pI = treeWidget_vars->topLevelItem( 0 );
     if( pI )
     {
@@ -6614,13 +6470,11 @@ void dlgTriggerEditor::slot_show_vars()
         else
         {
             mpVarsMainArea->hide();
-            mpSourceEditorArea->hide();
             mpSystemMessageArea->show();
             mpSystemMessageArea->notificationAreaIconLabelInformation->show();
             mpSystemMessageArea->notificationAreaIconLabelError->hide();
             mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
             QString msg = "To make a new variable click on the 'Add Item' icon above.\nTo add a table click 'Add Group'.";
-            qDebug()<<"did this hit";
             mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
         }
     }
@@ -6631,45 +6485,7 @@ void dlgTriggerEditor::slot_show_vars()
 
 void dlgTriggerEditor::slot_show_aliases()
 {
-    saveOpenChanges();
-
-    if( mNeedUpdateData )
-    {
-        treeWidget->clear();
-        treeWidget_alias->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-    }
-
-    mCurrentView = cmAliasView;
-
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-
-    mpSourceEditorArea->hide();
-
-    mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-    treeWidget->hide();
-    treeWidget_alias->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_actions->hide();
-    treeWidget_keys->hide();
-
+    changeView( cmAliasView );
     QTreeWidgetItem * pI = treeWidget_alias->topLevelItem( 0 );
     if( pI )
     {
@@ -6724,30 +6540,7 @@ void dlgTriggerEditor::showWarning( QString error )
 
 void dlgTriggerEditor::slot_show_actions()
 {
-    saveOpenChanges();
-
-    mCurrentView = cmActionView;
-
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-    mpSourceEditorArea->hide();
-
-    mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-    treeWidget->hide();
-    treeWidget_alias->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_keys->hide();
+    changeView( cmActionView );
     QTreeWidgetItem * pI = treeWidget_actions->topLevelItem( 0 );
     if( pI )
     {

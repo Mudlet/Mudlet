@@ -93,6 +93,7 @@ public:
     bool                        showHiddenVars;
     TConsole *                  mpErrorConsole;
     void                        toggleHiddenVars();
+    void                        changeView( int );
 
 signals:
 
