@@ -42,6 +42,7 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 #include "dlgNotepad.h"
+#include "LuaInterface.h"
 
 //#ifdef Q_CC_GNU
     #include "dlgIRC.h"
@@ -399,6 +400,10 @@ mudlet::mudlet()
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
+
+    //LuaInterface * li = new LuaInterface(getActiveHost());
+    //li->getVars();
+
 
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
 
@@ -2043,6 +2048,8 @@ void mudlet::doAutoLogin( QString & profile_name )
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     //for( int i=0;i<entries.size(); i++ )
     //    qDebug()<<i<<"#"<<entries[i];
+    LuaInterface * lI = new LuaInterface(pHost);
+    lI->getVars();
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+entries[0]);

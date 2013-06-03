@@ -45,11 +45,23 @@ TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
     mIsAliasTree = false;
     mIsActionTree = false;
     mIsKeyTree = false;
+    mIsVarTree = false;
 }
 
 void TTreeWidget::setIsAliasTree()
 {
     mIsAliasTree = true;
+    mIsTriggerTree = false;
+    mIsScriptTree = false;
+    mIsTimerTree = false;
+    mIsActionTree = false;
+    mIsKeyTree = false;
+}
+
+void TTreeWidget::setIsVarTree()
+{
+    mIsVarTree = true;
+    mIsAliasTree = false;
     mIsTriggerTree = false;
     mIsScriptTree = false;
     mIsTimerTree = false;

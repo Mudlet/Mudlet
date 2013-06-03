@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
+ *   Copyright (C) 2008 by Heiko Koehn   *
  *   KoehnHeiko@googlemail.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -18,56 +18,26 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef TTREE_WIDGET_H
-#define TTREE_WIDGET_H
+#ifndef dlg_varsmainarea_h
+#define dlg_varsmainarea_h
 
-#include <QTreeWidget>
-#include <QDebug>
+#include "ui_vars_main_area.h"
+#include <QWidget>
 
-class Host;
 
-class TTreeWidget : public QTreeWidget
+class dlgVarsMainArea : public QWidget , public Ui::vars_main_area
 {
-Q_OBJECT
+    Q_OBJECT
         
-public:
-        TTreeWidget( QWidget * pW );
-    Qt::DropActions supportedDropActions() const;
-    void dragEnterEvent( QDragEnterEvent * event );
-    void dragMoveEvent( QDragMoveEvent * event );
-    void dropEvent( QDropEvent * event );
-    void startDrag( Qt::DropActions supportedActions ); 
-    bool dropMimeData( QTreeWidgetItem * parent, int index, const QMimeData * data, Qt::DropAction action );
-    void rowsAboutToBeRemoved ( const QModelIndex & parent, int start, int end );   
-    void rowsInserted( const QModelIndex & parent, int start, int end );
-    void setHost( Host * pH );
-    void setIsScriptTree();
-    void setIsTimerTree();
-    void setIsTriggerTree();
-    void setIsAliasTree();
-    void setIsActionTree();
-    void setIsVarTree();
-    void setIsKeyTree();
-    void beginInsertRows ( const QModelIndex & parent, int first, int last );
-    
-private:
-    
-    bool mIsDropAction;
-    Host * mpHost;
-    int  mOldParentID;
-    int  mChildID;
-    bool mIsTriggerTree;
-    bool mIsAliasTree;
-    bool mIsScriptTree;
-    bool mIsTimerTree;
-    bool mIsKeyTree;
-    bool mIsVarTree;
-    bool mIsActionTree;
-    
+        public:
+        
+        dlgVarsMainArea(QWidget*);
     
 signals:
     
+    
 public slots:
+    
     
 };
 

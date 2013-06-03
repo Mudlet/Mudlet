@@ -121,7 +121,11 @@ SOURCES += TConsole.cpp \
     dlgRoomExits.cpp \
     dlgPackageExporter.cpp \
     exitstreewidget.cpp \
-    TRoomDB.cpp
+    TRoomDB.cpp \
+    TVar.cpp \
+    LuaInterface.cpp \
+    VarUnit.cpp \
+    dlgVarsMainArea.cpp
 
 
 HEADERS += mudlet.h \
@@ -199,7 +203,11 @@ HEADERS += mudlet.h \
     dlgRoomExits.h \
     dlgPackageExporter.h \
     exitstreewidget.h \
-    TRoomDB.h
+    TRoomDB.h \
+    TVar.h \
+    LuaInterface.h \
+    VarUnit.h \
+    dlgVarsMainArea.h
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \
@@ -233,7 +241,8 @@ FORMS += ui/connection_profiles.ui \
     ui/module_manager.ui \
     ui/package_manager_unpack.ui \
     ui/dlgPackageExporter.ui \
-    ui/custom_lines.ui
+    ui/custom_lines.ui \
+    ui/vars_main_area.ui
 
 #win32: {
 #    SOURCES += lua_yajl.c
