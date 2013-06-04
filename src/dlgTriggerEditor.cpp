@@ -1767,40 +1767,25 @@ void dlgTriggerEditor::slot_deleteAction()
 
 void dlgTriggerEditor::slot_deleteVar()
 {
-//    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_vars->currentItem();
-//    if( ! pItem ) return;
-//    QTreeWidgetItem * pParent = (QTreeWidgetItem *)pItem->parent();
-//    luaInterface * lI = new luaInterface(mpHost);
-//    //QString dName = mpVarsMainArea->lineEdit_var_name->text();
-//    lI->deleteVar(pItem);
-//    QStringList itemInfo = pItem->data(0, Qt::UserRole).toStringList();
-//    QString varName;
-//    QMap<QString, QTreeWidgetItem *> varsToChange;
-//    int itemType = itemInfo[1].toInt();
-//    for (int i=3;i<itemInfo.size();i++){
-//        varName+=itemInfo[i];
-//    }
-//    if (itemType != LUA_TTABLE){
-//        varName+=itemInfo[0]+pItem->text(0);
-//    }
-//    if (mpHost->savedVariables.contains(varName)){
-//        recurseVarTree(pItem, varsToChange);
-//        QMapIterator<QString, QTreeWidgetItem *> it(varsToChange);
-//        while (it.hasNext()){
-//            it.next();
-//            if (mpHost->savedVariables.contains(it.key()))
-//                mpHost->savedVariables.remove(it.key());
-//        }
-//    }
-//    if( pParent )
-//    {
-//        pParent->removeChild( pItem );
-//    }
-//    else
-//    {
-//        qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteAction() child to be deleted doesnt have a parent";
-//    }
-//    mCurrentVar = 0;
+    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_vars->currentItem();
+    if( ! pItem ) return;
+    QTreeWidgetItem * pParent = (QTreeWidgetItem *)pItem->parent();
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * var = vu->getWVar( pItem );
+    if ( var )
+    {
+        lI->deleteVar( var );
+    }
+    if( pParent )
+    {
+        pParent->removeChild( pItem );
+    }
+    else
+    {
+        qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteAction() child to be deleted doesnt have a parent";
+    }
+    mCurrentVar = 0;
 }
 
 void dlgTriggerEditor::slot_deleteScript()
@@ -2751,152 +2736,73 @@ void dlgTriggerEditor::addTimer( bool isFolder )
 }
 
 void dlgTriggerEditor::addVar( bool isFolder ){
-//    saveVar();
-//    QString name;
-//    mpVarsMainArea->key_type->setCurrentIndex(0);
-//    if (isFolder){
-//        mpVarsMainArea->lineEdit_var_value->setReadOnly(true);
-//        mpVarsMainArea->var_type->setDisabled(true);
-//        mpVarsMainArea->var_type->setCurrentIndex(4);
-//        mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
-//        mpVarsMainArea->lineEdit_var_value->setText("NewTable");
-//        name="";
-//    }
-//    else{
-//        mpVarsMainArea->lineEdit_var_value->setReadOnly(false);
-//        mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Variable name...");
-////        mpVarsMainArea->lineEdit_var_value->setPlaceholderText("Enter Value Here");
-//        mpVarsMainArea->var_type->setDisabled(false);
-//        mpVarsMainArea->var_type->setCurrentIndex(0);
-////        mpVarsMainArea->lineEdit_var_name->setText("");
-////        mpVarsMainArea->lineEdit_var_value->setText("Enter Value Here");
-//        name = "";
-//    }
-//    QStringList nameL;
-//    nameL << name;
-//    QTreeWidgetItem * cItem = (QTreeWidgetItem*)treeWidget_vars->currentItem();
-//    QTreeWidgetItem * pParent = cItem->parent();
-//    QStringList pData;
-//    if (pParent)
-//        pData = pParent->data(0, Qt::UserRole).toStringList();//use lua types to set the first stringlist field to type
-//    if (!pData.size())
-//        pParent = 0;
-//    QTreeWidgetItem * pNewItem = 0;
-////    qDebug()<<"in here"<<pData;
-//    if( pParent )
-//    {
-//        //goto ROOT_KEY;
-//        qDebug()<<"in pParent with"<<pData;
-//        QStringList cData = cItem->data(0, Qt::UserRole).toStringList();
-//        if (cData.size() && (QString(cData[1]).toInt()==LUA_TTABLE)){
-//            pParent=cItem;
-//            pData=cData;
-//        }
-//        if (!pData.size()){
-//            //at root
-//            pData<<QString::number(LUA_TNONE);
-//            if (isFolder)
-//                pData << QString::number(LUA_TTABLE);
-//            else
-//                pData << QString::number(LUA_TNONE);
-//            pData << "";
-//            pData << "";
-//        }
-//        int pType = QString(pData[1]).toInt();
-//        //check if we have a table parent, we want to nest this new varaible under this table
-//        if( pType == LUA_TTABLE){
-//            pNewItem = new QTreeWidgetItem( pParent, nameL );
-//            pNewItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-//            pNewItem->setCheckState(0, Qt::Unchecked);
-//            pNewItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-//            pData[0] = QString::number(LUA_TNONE); //we can only add string keys
-//            if (isFolder)
-//                pData[1] = QString::number(LUA_TTABLE);
-//            else
-//                pData[1] = QString::number(LUA_TNONE);
-//            pData[2] = "NewTable";
-//            pNewItem->setData( 0, Qt::UserRole, pData);
-//            pParent->insertChild( 0, pNewItem );
-//        }
-//        else if (pType){
-//            //we selected a variable, so we just add the variable at our current level, which is the same as above
-//            pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
-//            pNewItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-//            pNewItem->setCheckState(0, Qt::Unchecked);
-//            pNewItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-//            pData[0] = QString::number(LUA_TNONE); //we can only add string keys
-//            pData[1] = QString::number(LUA_TNONE);
-//            pData[2] = "";
-//            pNewItem->setData( 0, Qt::UserRole, pData);
-//            pParent->insertChild( 0, pNewItem );
-//        }
-//        else
-//            goto ROOT_KEY;
-//    }
-//    else if (cItem){
-//        pData = cItem->data(0, Qt::UserRole).toStringList();//use lua types to set the first stringlist field to type
-//        qDebug()<<"current item doesn't have a parent"<<pData;
-//        if (!pData.size()){
-//            //at root
-//            pData<<QString::number(LUA_TSTRING); //we can only add string keys
-//            if (isFolder)
-//                pData << QString::number(LUA_TTABLE);
-//            else
-//                pData << QString::number(LUA_TNONE);
-//            pData << "";
-//            pData << "";
-//        }
-//        int pType = QString(pData[1]).toInt();
-//        //check if we have a table parent, we want to nest this new varaible under this table
-//        if( pType == LUA_TTABLE){
-//            qDebug()<<"table parent";
-//            pNewItem = new QTreeWidgetItem( cItem, nameL );
-//            pNewItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-//            pNewItem->setCheckState(0, Qt::Unchecked);
-//            pNewItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-//            pData[0] = QString::number(LUA_TNONE); //we can only add string keys
-//            if (isFolder)
-//                pData[1] = QString::number(LUA_TTABLE);
-//            else
-//                pData[1] = QString::number(LUA_TNONE);
-//            pData[2] = "NewTable";
-//            pNewItem->setData( 0, Qt::UserRole, pData);
-//            cItem->insertChild( 0, pNewItem );
-//        }
-//        else
-//            goto ROOT_KEY;
-//    }
-//    else{
-//        //insert a new root item
-//    ROOT_KEY:
-//        pData.clear();
-//        pData << QString::number(LUA_TNONE); //we can only add string keys
-//        if (isFolder){
-//            pData << QString::number(LUA_TTABLE);
-//            pData << "NewTable";
-//        }
-//        else{
-//            pData << QString::number(LUA_TNONE);
-//            pData << "";
-//        }
-//        qDebug()<<"base item"<<mpVarBaseItem;
-//        pNewItem = new QTreeWidgetItem( mpVarBaseItem, nameL );
-//        pNewItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-//        pNewItem->setCheckState(0, Qt::Unchecked);
-//        pNewItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-//        //pNewItem->
-//        pData << "";
-//        pNewItem->setData(0, Qt::UserRole, pData);
-//        mpVarBaseItem->insertChild(0, pNewItem);
-////        treeWidget_vars->insertTopLevelItem( 0, pNewItem );
-//    }
-//    qDebug()<<"ne witem"<<pNewItem;
-//    if (pNewItem){
-//        treeWidget_vars->setCurrentItem( pNewItem );
-//        mCurrentVar = (QTreeWidgetItem*)pNewItem;
-//        showInfo( msgInfoAddVar );
-//        slot_var_clicked( (QTreeWidgetItem*)treeWidget_vars->currentItem(), 0 );
-//    }
+    saveVar();
+    QString name;
+    mpVarsMainArea->key_type->setCurrentIndex(0);
+    if (isFolder){
+        mpVarsMainArea->lineEdit_var_value->setReadOnly(true);
+        mpVarsMainArea->var_type->setDisabled(true);
+        mpVarsMainArea->var_type->setCurrentIndex(4);
+        mpVarsMainArea->lineEdit_var_name->setText("");
+        mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
+        mpVarsMainArea->lineEdit_var_value->setText("NewTable");
+        name="";
+    }
+    else{
+        mpVarsMainArea->lineEdit_var_value->setReadOnly(false);
+        mpVarsMainArea->lineEdit_var_name->setText("");
+        mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Variable name...");
+        mpVarsMainArea->var_type->setDisabled(false);
+        mpVarsMainArea->var_type->setCurrentIndex(0);
+        name = "";
+    }
+    QStringList nameL;
+    nameL << name;
+    QTreeWidgetItem * cItem = (QTreeWidgetItem*)treeWidget_vars->currentItem();
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * cVar = vu->getWVar( cItem );
+    QTreeWidgetItem * pParent;
+    QTreeWidgetItem * newItem;
+    if ( cVar && cVar->getValueType() == LUA_TTABLE )
+        pParent = cItem;
+    else
+        pParent = cItem->parent();
+    TVar * newVar = new TVar();
+    if (pParent)
+    {
+        //we're nested under something, or going to be.  This HAS to be a table
+        TVar * parent = vu->getWVar(pParent);
+        if ( parent && parent->getValueType() == LUA_TTABLE )
+        {
+            //create it under the parent
+            newItem = new QTreeWidgetItem( pParent, nameL );
+            newVar->setParent( parent );
+        }
+        else
+        {
+            newItem = new QTreeWidgetItem( mpVarBaseItem, nameL );
+            newVar->setParent( vu->getBase() );
+        }
+    }
+    else
+    {
+        newItem = new QTreeWidgetItem( mpVarBaseItem, nameL );
+        newVar->setParent( vu->getBase() );
+    }
+    if (isFolder)
+    {
+        newVar->setValue( "", LUA_TTABLE);
+    }
+    else
+        newVar->setValueType(LUA_TNONE);
+    vu->addTempVar( newItem, newVar );
+    if (newItem){
+        treeWidget_vars->setCurrentItem( newItem );
+        mCurrentVar = (QTreeWidgetItem*)newItem;
+        showInfo( msgInfoAddVar );
+        slot_var_clicked( (QTreeWidgetItem*)treeWidget_vars->currentItem(), 0 );
+    }
 }
 
 void dlgTriggerEditor::addKey( bool isFolder )
@@ -4410,105 +4316,131 @@ void dlgTriggerEditor::slot_saveKeyAfterEdit()
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int valueType){
-//    //basic checks, return 1 if we can recast, 2 if no need to recast, 0 if we can't recast
-//    QStringList pInfo = pItem->data(0, Qt::UserRole).toStringList();
-//    if (!pInfo.size())
-//        return 0;
-//    int cNameType = QString(pInfo[0]).toInt();
-//    int cValueType = QString(pInfo[1]).toInt();
-//    QString cName = mpVarsMainArea->lineEdit_var_name->text();
-//    QString cValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
-//    qDebug()<<"attempting to recast variable"<<cName<<":"<<cValue<<"to "<<nameType<<","<<valueType<<"from"<<cNameType<<","<<cValueType;
-//    if ((cNameType == nameType) && ((cValueType == LUA_TTABLE) || (cValueType == valueType)))
-//        return 2;
-//    if (nameType != cNameType && (nameType == LUA_TNUMBER && !cName.toInt())) //can we cast the key to an int, we dont care about str->int?
-//        return 0;
-//    if (valueType != cValueType && (valueType == LUA_TNUMBER && !cValue.toInt())) //can we cast the value to an int, we dont' care about str->xx?
-//        return 0;
-//    else if (valueType == LUA_TBOOLEAN && (cValue.toLower() != "true" && cValue.toLower() != "false")) //can we cast to bool?
-//        return 0;
-//    return 1;
+    //basic checks, return 1 if we can recast, 2 if no need to recast, 0 if we can't recast
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * var = vu->getWVar( pItem );
+    if (!var)
+        return 2;
+    int cNameType = var->getKeyType();
+    int cValueType = var->getValueType();
+    QString cName = mpVarsMainArea->lineEdit_var_name->text();
+    QString cValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
+    qDebug()<<"attempting to recast variable"<<cName<<":"<<cValue<<"to "<<nameType<<","<<valueType<<"from"<<cNameType<<","<<cValueType;
+    if ((cNameType == nameType) && ((cValueType == LUA_TTABLE) || (cValueType == valueType)))
+        return 2;
+    if (nameType != cNameType && (nameType == LUA_TNUMBER && !cName.toInt())) //can we cast the key to an int, we dont care about str->int?
+        return 0;
+    if (valueType != cValueType && (valueType == LUA_TNUMBER && !cValue.toInt())) //can we cast the value to an int, we dont' care about str->xx?
+        return 0;
+    else if (valueType == LUA_TBOOLEAN && (cValue.toLower() != "true" && cValue.toLower() != "false")) //can we cast to bool?
+        return 0;
+    return 1;
 }
 
 void dlgTriggerEditor::saveVar(){
-//    if (!mCurrentVar)
-//        return;
-//    QTreeWidgetItem * pItem = (QTreeWidgetItem*)mCurrentVar;
-//    if (!pItem)
-//        return;
-//    luaInterface * lI = new luaInterface(mpHost);
-//    QString newName = mpVarsMainArea->lineEdit_var_name->text();
-//    QString newValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
-//    if (newName == "")
-//        newName = "NewVariable";
-////        qDebug()<<"no name";
-////        slot_var_clicked(pItem,0);
-////        return;
-//    int nameType = mpVarsMainArea->key_type->itemData(mpVarsMainArea->key_type->currentIndex(), Qt::UserRole).toInt();
-//    int valueType = mpVarsMainArea->var_type->itemData(mpVarsMainArea->var_type->currentIndex(), Qt::UserRole).toInt();
-//    if (newValue == ""){
-//        newValue = "empty";
-//    }
-//    //check variable recasting
-//    int varRecast = canRecast(pItem,nameType,valueType);
-//    qDebug()<<"var recast status of"<<newName<<varRecast<<nameType<<valueType;
-//    int forceSave = 0;
-//    if (varRecast == 2){
-//        //qDebug()<<"it works out";
-//    }
-//    else if (varRecast == 1){
-//        //qDebug()<<"rcast it";
-//        QStringList pInfo = pItem->data(0,Qt::UserRole).toStringList();
-//        if (valueType != LUA_TTABLE){
-//            qDebug()<<"deleting";
-//            if (!lI->deleteVar(pItem)){
-//                qDebug()<<"dvar broke";
-//                return;//something broke!
-//            }
-//            qDebug()<<"done deleting";
-//            if (!pInfo.size()){
-//                pInfo<<QString::number(nameType);
-//                pInfo<<QString::number(valueType);
-//                pInfo<<newValue;
-//                pInfo<<"";
-//            }
-//            else{
-//                pInfo[0]=QString::number(nameType);
-//                pInfo[1]=QString::number(valueType);
-//            }
-//            forceSave = 1;
-//        }
-//        else{
-//            pInfo[0]=QString::number(nameType);
-//            forceSave=2;
-//        }
-//        pItem->setData(0, Qt::UserRole,pInfo);
-//    }
-////    else{
-////        if (newName == "NewVariable" && nameType == -1 && valueType == -1){
-////            //it never lived!
-////            qDebug()<<"killing it";
-////            QTreeWidgetItem * pParent = (QTreeWidgetItem *)pItem->parent();
-////            if( pParent )
-////            {
-////                pParent->removeChild( pItem );
-////            }
-////            else
-////            {
-//////                delete pItem;
-////                qDebug()<<"ERROR: dlgTriggerEditor::saveVar() child to be deleted doesnt have a parent";
-////            }
-////        }
-////        return;
-////    }
-//    if (varRecast){
-//        qDebug()<<"saving new var";
-//        if (!lI->saveVar(pItem,newName, newValue, forceSave)){
-//            qDebug()<<"var not saved";
-//        }
-//    }
-//    mpHost->setHiddenVariable(pItem, mpVarsMainArea->hideVariable->isChecked());
-//    slot_var_clicked(pItem,0);
+    qDebug()<<"we want to save"<<mCurrentVar;
+    if (!mCurrentVar)
+        return;
+    QTreeWidgetItem * pItem = (QTreeWidgetItem*)mCurrentVar;
+    if (!pItem || !pItem->parent() )
+        return;
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * var = vu->getWVar(pItem);
+    QString newName = mpVarsMainArea->lineEdit_var_name->text();
+    QString newValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
+    qDebug()<<"our new name"<<newName;
+    if (newName == ""){
+        qDebug()<<"no name";
+        slot_var_clicked(pItem,0);
+        return;
+    }
+    int nameType = mpVarsMainArea->key_type->itemData(mpVarsMainArea->key_type->currentIndex(), Qt::UserRole).toInt();
+    int valueType = mpVarsMainArea->var_type->itemData(mpVarsMainArea->var_type->currentIndex(), Qt::UserRole).toInt();
+    //check variable recasting
+    qDebug()<<"check cast";
+    int varRecast = canRecast(pItem,nameType,valueType);
+    qDebug()<<"var recast status of"<<newName<<varRecast<<nameType<<valueType;
+    int forceSave = 0;
+    if ( nameType == -1 )
+    {
+        if ( QString( newName ).toInt() )
+            nameType = LUA_TNUMBER;
+        else
+            nameType = LUA_TSTRING;
+    }
+    if ( valueType == -1 )
+    {
+        if ( QString( newValue ).toInt() )
+            valueType = LUA_TNUMBER;
+        else if ( newValue.toLower() == "true" || newValue.toLower() == "false" )
+            valueType = LUA_TBOOLEAN;
+        else
+            valueType = LUA_TSTRING;
+    }
+    if (varRecast == 2){
+        //qDebug()<<"it works out";
+        if ( var ){
+            if ( newName == var->getName() && newValue == var->getValue() )
+            {
+                qDebug()<<"no change";
+            }
+        }
+        if ( ! var )
+        {
+            //we're making this var
+            var = vu->getTVar( pItem );
+            qDebug()<<var;
+            if ( ! var )
+                var = new TVar();
+            qDebug()<<"new variable, set it up";
+            qDebug()<<newName<<nameType;
+            var->setName( newName, nameType );
+            qDebug()<<"name set";
+            qDebug()<<newValue<<valueType;
+            var->setValue( newValue, valueType );
+            qDebug()<<"value set";
+            lI->createVar( var );
+            qDebug()<<"created in lua";
+            vu->addVariable(var);
+            vu->addTreeItem( pItem, var );
+            vu->removeTempVar( pItem );
+            pItem->setText( 0, newName );
+            pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
+            pItem->setCheckState(0, Qt::Unchecked);
+            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+        }
+    }
+    else if (varRecast == 1){
+        qDebug()<<"rcast it";
+        TVar * var = vu->getWVar(pItem);
+        qDebug()<<var;
+        if ( ! var )
+        {
+            //we're making this var
+            qDebug()<<"new variable, set it up";
+            var = vu->getTVar( pItem );
+            var->setName( newName, nameType );
+            var->setValue( newValue, valueType );
+            lI->createVar( var );
+            vu->addVariable(var);
+            vu->addTreeItem( pItem, var );
+            pItem->setText( 0, newName );
+            pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
+            pItem->setCheckState(0, Qt::Unchecked);
+            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+        }
+        else
+        {
+            //we're recasting/renaming
+            var->setNewName( newName, nameType );
+            var->setValue( newValue, valueType );
+            lI->renameVar( var );
+            lI->setValue( var );
+        }
+    }
+    slot_var_clicked(pItem,0);
 }
 
 void dlgTriggerEditor::saveKey()
@@ -4913,6 +4845,26 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     TVar * var = vu->getWVar(pItem);
+    qDebug()<<"current var"<<var;
+    if (!var)
+    {
+        mpVarsMainArea->lineEdit_var_name->setText("");
+        mpVarsMainArea->lineEdit_var_value->setText("");
+        //check for temp item
+        var = vu->getTVar( pItem );
+        if ( var && var->getValueType() == LUA_TTABLE )
+        {
+            mpVarsMainArea->var_type->setDisabled(true);
+            mpVarsMainArea->var_type->setCurrentIndex(4);
+        }
+        else
+        {
+            mpVarsMainArea->var_type->setDisabled(false);
+            mpVarsMainArea->var_type->setCurrentIndex(0);
+        }
+        mpVarsMainArea->key_type->setCurrentIndex(0);
+        return;
+    }
     int varType = var->getValueType();
     int keyType = var->getKeyType();
     if (keyType == 4)

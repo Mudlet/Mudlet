@@ -41,8 +41,30 @@ int TVar::getKeyType(){
     return kType;
 }
 
+QString TVar::getValue(){
+    return value;
+}
+
 int TVar::getValueType(){
     return vType;
+}
+
+void TVar::setNewName(QString n){
+    nName = n;
+}
+
+void TVar::setNewName(QString n, int t){
+    nName = n;
+    nkType = t;
+}
+
+QString TVar::getNewName(){
+    return nName;
+}
+
+void TVar::clearNewName(){
+    nName = "";
+    nkType = 0;
 }
 
 bool TVar::setValue(QString val){

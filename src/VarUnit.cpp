@@ -4,6 +4,7 @@
 
 VarUnit::VarUnit()
 {
+    wVars.setInsertInOrder(true);
 }
 
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var ){
@@ -15,6 +16,10 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var ){
         QStringList s1;
         s1 << child->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
+        pItem->setText( 0, child->getName() );
+        pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
+        pItem->setCheckState(0, Qt::Unchecked);
+        pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
         wVars.insert( pItem, child );
         cList.append( pItem );
         if ( child->getValueType() == 5 )
@@ -23,8 +28,29 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var ){
     p->addChildren( cList );
 }
 
+void VarUnit::addTreeItem( QTreeWidgetItem * p, TVar * var ){
+    wVars.insert( p, var );
+}
+
+void VarUnit::addTempVar( QTreeWidgetItem * p, TVar * var ){
+    tVars.insert( p, var );
+}
+
+void VarUnit::removeTempVar( QTreeWidgetItem * p ){
+    tVars.remove( p );
+}
+
+TVar * VarUnit::getTVar( QTreeWidgetItem * p ){
+    qDebug()<<tVars;
+    if (tVars.contains(p))
+        return tVars[p];
+    return 0;
+}
+
 TVar * VarUnit::getWVar( QTreeWidgetItem * p ){
-    return wVars[p];
+    if (wVars.contains(p))
+        return wVars[p];
+    return 0;
 }
 
 QStringList * VarUnit::varName(TVar * var){
@@ -49,6 +75,8 @@ void VarUnit::addVariable(TVar * var){
 }
 
 void VarUnit::removeVariable(TVar * var){
+    TVar * parent = var->getParent();
+    parent->removeChild(var);
     varList.remove(varName(var));
 }
 

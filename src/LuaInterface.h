@@ -26,6 +26,10 @@ public:
     void getVars();
     QStringList varName(TVar * var);
     QString getValue( TVar * );
+    bool setValue( TVar * );
+    void deleteVar( TVar * );
+    void renameVar( TVar * );
+    void createVar( TVar * );
     VarUnit * getVarUnit();
 private:
     Host * mpHost;

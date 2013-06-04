@@ -20,10 +20,14 @@ public:
     bool    setKeyType(int);
     bool    setName(QString);
     bool    setName(QString, int);
+    void    setNewName(QString, int);
+    void    setNewName(QString);
     QList<TVar *>  getChildren();
     TVar *  getParent();
     QString getValue();
     QString getName();
+    QString getNewName();
+    void clearNewName();
     int     getKeyType();
     int     getValueType();
 private:
@@ -33,6 +37,10 @@ private:
     int         kType;
     QString     value;
     int         vType;
+    int         nkType;
+    int         nvType;
+    QString     nName;
+    QString     nValue;
 };
 
 #endif // TVAR_H
