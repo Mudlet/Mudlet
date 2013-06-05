@@ -303,25 +303,16 @@ void TRoom::addSpecialExit( int to, QString cmd )
     other.insertMulti( to, _cmd );
 
 UPDATE_AREAS: TArea * pA = mpRoomDB->getArea( getArea() );
-    pA->fast_ausgaengeBestimmen(getId());
+    if( pA )
+    {
+        pA->fast_ausgaengeBestimmen(getId());
+    }
 
 }
 
 
 
-//FIXME: check
-void TRoom::removeSpecialExit( int to, QString cmd )
-{
-    if( cmd.startsWith('0') || cmd.startsWith('1') )
-    {
-        other.remove(to, cmd);
-    }
-    else
-    {
-        other.remove(to, cmd.prepend("0"));
-        other.remove(to, cmd.prepend("1"));
-    }
-}
+
 
 void TRoom::removeAllSpecialExitsToRoom( int _id )
 {

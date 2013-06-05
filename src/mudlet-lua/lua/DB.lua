@@ -218,7 +218,7 @@ function db:_sql_convert(value)
 
    if value == nil then
       return "NULL"
-   elseif t == "TEXT" then
+   elseif t == "TEXT" and type(value) == "string" then
       return '"'..value:gsub("'", "''")..'"'
    elseif t == "NULL" then
       return "NULL"
@@ -270,7 +270,7 @@ function db:_index_valid(sheet_columns, index_columns)
    else
       for _, v in ipairs(index_columns) do
          if sheet_columns[v] == nil then
-            echo("\n--> Bad index "..v)
+            db:echo_sql("\n--> Bad index "..v)
             return false
          end
       end
@@ -435,17 +435,17 @@ function db:create(db_name, sheets)
    for s_name, sht in pairs(sheets) do
       options = {}
 
-      if sht[1] ~= nil then
-         t = {}
+      if sht[1] ~= nil then         -- in case the sheet was provided in the sheet = {"column1", "column2"} format:
+         local t = {}               --   assume field types are text, and should default to ""
          for k, v in pairs(sht) do
-            t[v] = nil
+            t[v] = ""
          end
          sht = t
-      else
+      else                          -- sheet provided in the sheet = {"colun1" = default} format
          for k, v in pairs(sht) do
             if string.starts(k, "_") then
                options[k] = v
-               sht[k] = nil
+               sht[k] = ""
             end
          end
       end
@@ -476,13 +476,13 @@ function db:_migrate(db_name, s_name)
    -- The PRAGMA table_info command is a query which returns all of the columns currently
    -- defined in the specified table. The purpose of this section is to see if any new columns
    -- have been added.
-   local cur = conn:execute("PRAGMA table_info('"..s_name.."')")
+   local cur = conn:execute("PRAGMA table_info('"..s_name.."')") -- currently broken - LuaSQL bug, needs to be upgraded for new sqlite API
 
    if cur ~= 0 then
       local row = cur:fetch({}, "a")
 
       while row do
-         current_columns[row.name:lower()] = row.type
+         current_columns[row.name] = row.type
          row = cur:fetch({}, "a")
       end
       cur:close()
@@ -508,9 +508,12 @@ function db:_migrate(db_name, s_name)
       for key, value in pairs(schema.columns) do
          local sql = ""
          if value == nil then
-            sql = sql_column:format(key:lower(), db:_sql_type(value))
+            sql = sql_column:format(key, db:_sql_type(value))
          else
-            sql = sql_column_default:format(key:lower(), db:_sql_type(value), db:_sql_convert(value))
+            sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
+         end
+         if table.contains(schema.options._unique, key) then
+            sql = sql .. " UNIQUE"
          end
          sql_chunks[#sql_chunks+1] = sql
       end
@@ -529,7 +532,6 @@ function db:_migrate(db_name, s_name)
       local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
 
       for k, v in pairs(schema.columns) do
-         k = k:lower()
          t = db:_sql_type(v)
          v = db:_sql_convert(v)
 
@@ -548,6 +550,12 @@ function db:_migrate(db_name, s_name)
    -- function creating a unique index.
    --
    -- Note that in no situation will an existing index be deleted.
+
+   -- make up current_columns, as pragma_info currently does not populate it, due to luasql bug
+   for key, value in pairs(schema.columns) do
+      current_columns[key] =  db:_sql_type(value)
+   end
+
    db:_migrate_indexes(conn, s_name, schema, current_columns)
    db:echo_sql("COMMIT")
    conn:commit()
@@ -621,11 +629,14 @@ function db:add(sheet, ...)
 
       local sql = sql_insert:format(db.__schema[db_name][s_name].options._violations, s_name, db:_sql_fields(t), db:_sql_values(t))
       db:echo_sql(sql)
-      assert(conn:execute(sql), "Failed to add item: this is probably a violation of a UNIQUE index or other constraint.")
+
+      local result, msg = conn:execute(sql)
+      if not result then return nil, msg end
    end
    if db.__autocommit[db_name] then
       conn:commit()
    end
+   return true
 end
 
 
@@ -912,6 +923,8 @@ end
 ---
 ---   The db:merge_unique function will change the 'city' values for all the people who we previously fetched, but then add a new record as well.
 function db:merge_unique(sheet, tables)
+   assert(type(tables) == "table", "db:merge_unique: missing the required table of data to merge")
+
    local db_name = sheet._db_name
    local s_name = sheet._sht_name
 
@@ -1046,8 +1059,8 @@ end
 ---   db:set(mydb.eggs.last_found, nil)
 ---   </pre>
 function db:set(field, value, query)
-   local db_name = sheet._db_name
-   local s_name = sheet._sht_name
+   local db_name = field.database
+   local s_name = field.sheet
 
    local conn = db.__conn[db_name]
 
@@ -1475,7 +1488,7 @@ db.__SheetMT = {
 
       local db_name = rawget(t, "_db_name")
       local sht_name = rawget(t, "_sht_name")
-      local f_name = k:lower()
+      local f_name = k
 
       local errormsg = "Attempt to access field %s in sheet %s in database %s that does not exist."
 
@@ -1510,8 +1523,8 @@ db.__DatabaseMT = {
       end
 
       local db_name = rawget(t, "_db_name")
-      if assert(db.__schema[db_name][k:lower()], "Attempt to access sheet '"..k:lower().."'in db '"..db_name.."' that does not exist.") then
-         rt = setmetatable({_db_name = db_name, _sht_name = k:lower()}, db.__SheetMT)
+      if assert(db.__schema[db_name][k], "Attempt to access sheet '"..k.."'in db '"..db_name.."' that does not exist.") then
+         rt = setmetatable({_db_name = db_name, _sht_name = k}, db.__SheetMT)
          rawset(t,k,rt)
          return rt
       end

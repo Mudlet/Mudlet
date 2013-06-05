@@ -82,6 +82,7 @@ public:
     void expandLine( int y, int count, TChar & );
     int wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
+    void log( int, int );
     int skipSpacesAtBeginOfLine( int i, int i2 );
     void addLink( bool, QString & text, QStringList & command, QStringList & hint, TChar format );
 //    void appendLink( QString & text,

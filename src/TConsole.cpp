@@ -1106,36 +1106,44 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     mTriggerEngineMode = true;
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = false;
-    if( mLogToLogFile )
-    {
-        if( ! mIsDebugConsole )
-        {
-            if( mpHost->mRawStreamDump )
-            {
-                if( buffer.size() > mLastBufferLogLine + 1 )
-                {
-                    if( buffer.size() < mLastBufferLogLine)
-                    {
-                        mLastBufferLogLine -= buffer.mBatchDeleteSize;
-                        if( mLastBufferLogLine < 0 )
-                        {
-                            mLastBufferLogLine = 0;
-                        }
-                    }
-                    for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
-                    {
-                        QPoint P1 = QPoint(0,i);
-                        QPoint P2 = QPoint( buffer.buffer[i].size(), i);
-                        QString toLog = buffer.bufferToHtml(P1, P2);
-                        mLastBufferLogLine++;
-                        mLogStream << toLog;
-                    }
-                    mLastBufferLogLine--;
-                }
-                mLogStream.flush();
-            }
-        }
-    }
+//    if( mLogToLogFile )
+//    {
+//        if( ! mIsDebugConsole )
+//        {
+//            if( buffer.size() < mLastBufferLogLine )
+//            {
+//                mLastBufferLogLine -= buffer.mBatchDeleteSize;
+//                qDebug()<<"---> RESETTING mLastBufferLogLine";
+//                if( mLastBufferLogLine < 0 )
+//                {
+//                    mLastBufferLogLine = 0;
+//                }
+//            }
+//            if( buffer.size() > mLastBufferLogLine + 1 )
+//            {
+//                for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
+//                {
+//                    QString toLog;
+//                    if( mpHost->mRawStreamDump )
+//                    {
+//                        QPoint P1 = QPoint(0,i);
+//                        QPoint P2 = QPoint( buffer.buffer[i].size(), i);
+//                        toLog = buffer.bufferToHtml(P1, P2);
+//                    }
+//                    else
+//                    {
+//                        toLog = buffer.lineBuffer[i];
+//                        toLog.append("\n");
+//                    }
+//                    mLogStream << toLog;
+//                    qDebug()<<"LOG:"<<i<<" lastLogLine="<<mLastBufferLogLine<<" size="<<buffer.size()<<" toLog<"<<toLog<<">";
+//                    mLastBufferLogLine++;
+//                }
+//                mLastBufferLogLine--;
+//            }
+//            mLogStream.flush();
+//        }
+//    }
     double processT = mProcessingTime.elapsed();
     if( mpHost->mTelnet.mGA_Driver )
     {
@@ -1158,17 +1166,7 @@ void TConsole::runTriggers( int line )
     mCurrentLine = buffer.line( line );
     mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
     mCurrentLine.append('\n');
-    if( mLogToLogFile )
-    {
-        if( ! mIsDebugConsole )
-        {
-            if( ! mpHost->mRawStreamDump )
-            {
-                mCurrentLine.replace(QChar(255), '\n');
-                mLogStream << mCurrentLine;
-            }
-        }
-    }
+
     if( mudlet::debugMode )
     {
         TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;

@@ -158,9 +158,12 @@ QList<int> TArea::getCollisionNodes()
 
 void TArea::fast_ausgaengeBestimmen( int id )
 {
+    qDebug()<<"trace#0";
     TRoom * pR = mpRoomDB->getRoom(id);
     if( ! pR ) return;
+    qDebug()<<"trace#1";
     exits.remove(id);
+    qDebug()<<"trace#1";
     if( pR->getNorth() > 0 && rooms.indexOf( pR->getNorth() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTH);
@@ -221,22 +224,31 @@ void TArea::fast_ausgaengeBestimmen( int id )
         QPair<int, int> p = QPair<int,int>(id, OUT);
         exits.insertMulti( id, p );
     }
+    qDebug()<<"trace#2";
     const QMap<int, QString> otherMap = pR->getOtherMap();
+    qDebug()<<"trace#3";
     QMapIterator<int,QString> it( otherMap );
+    qDebug()<<"trace#4";
     while( it.hasNext() )
     {
+        qDebug()<<"trace#5";
         it.next();
+        qDebug()<<"trace#6";
         int _exit = it.key();
         TRoom * pO = mpRoomDB->getRoom(_exit);
+        qDebug()<<"trace#7 pO="<<pO;
         if( pO )
         {
+            qDebug()<<"trace#8";
             if( pO->getArea() != getAreaID() )
             {
+                qDebug()<<"trace#9";
                 QPair<int, int> p = QPair<int,int>(pO->getId(), OTHER);
                 exits.insertMulti( pO->getId(), p );
             }
         }
     }
+    qDebug()<<"trace#10-OKexit";
 }
 
 void TArea::ausgaengeBestimmen()

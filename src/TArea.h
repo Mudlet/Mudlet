@@ -75,6 +75,8 @@ public:
     int zoneAreaRef;
     TRoomDB * mpRoomDB;
 
+private:
+    TArea(){qFatal("FATAL: illegal default constructor use of TArea()");};
     //QMap<int, TMapLabel> labelMap;
 
 };
