@@ -616,21 +616,6 @@ end
 
 
 
---- Clears the current selection in the main window or miniConsole window. <br/>
---- (Note: <i>deselect(windowName)</i> is implemented in Core Mudlet.)
----
---- @usage Clear selection in main window.
----   <pre>
----   deselect()
----   </pre>
---- @usage Clear selection in myMiniConsole window.
----   <pre>
----   deselect("myMiniConsole")
----   </pre>
-function deselect()
-	selectString("", 1)
-end
-
 
 
 --- Sets current background color to a named color.
@@ -646,9 +631,11 @@ end
 --- @see showColors
 function bg(console, colorName)
 	local colorName = colorName or console
-	assert(color_table[colorName], "bg: no such colour name")
+	if not color_table[colorName] then
+		error(string.format("bg: '%s' color doesn't exist - see showColors()", colorName))
+	end
 
-	if console == colorName then
+	if console == colorName or console == "main" then
 		setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 	else
 		setBgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
@@ -668,9 +655,11 @@ end
 --- @see showColors
 function fg(console, colorName)
 	local colorName = colorName or console
-	assert(color_table[colorName], "fg: no such colour name")
+	if not color_table[colorName] then
+		error(string.format("fg: '%s' color doesn't exist - see showColors()", colorName))
+	end
 
-	if console == colorName then
+	if console == colorName or console == "main" then
 		setFgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
 	else
 		setFgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
@@ -713,26 +702,48 @@ end
 ---
 --- @see color_table
 function showColors(...)
-	local cols = ... or 3
-	local i = 1
-	for k,v in pairs(color_table) do
-		local fg
-		local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
-		if luminosity > 0.5 then
-			fg = "black"
-		else
-			fg = "white"
-		end
-		cecho(string.format("<%s:%s>%s%s", fg, k, k, string.rep(" ", 23-k:len())))
-		echo"  "
-		if i == cols then
-			echo"\n"
-			i = 1
-		else
-			i = i + 1
-		end
-	end
+   local args = {...}
+   local n = #args
+   local cols, search
+   if n > 1 then
+      cols, search = args[1], args[2]
+   elseif n == 1 and type(args[1]) == "string" then
+      search = args[1]
+   elseif n == 1 and type(args[1]) == "number" then
+      cols = args[1]
+   elseif n == 0 then
+      cols = 4
+      search = ""
+   else
+      error("showColors: Improper usage. Use showColors(columns, search)")
+   end
+   cols = cols or 4
+   search = search and search:lower() or ""
+   local i = 1
+   for k,v in pairs(color_table) do
+      if k:lower():find(search) then
+         local fgc
+         local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
+         if luminosity > 0.5 then
+            fgc = "black"
+         else
+            fgc = "white"
+         end
+         fg(fgc)
+         bg(k)
+         echoLink(k..string.rep(" ", 23-k:len()),[[printCmdLine("]]..k..[[")]],v[1] ..", "..v[2]..", "..v[3],true)
+         resetFormat()
+         echo("  ")
+         if i == cols then
+            echo"\n"
+            i = 1
+         else
+            i = i + 1
+         end
+      end
+   end
 end
+
 
 
 
@@ -1095,15 +1106,3 @@ else
 
 end
 
-do
-	local oldreplace = replace
-	function replace(text, keep_color)
-		local text = text or ""
-
-		if keep_color then
-			setBgColor(getBgColor())
-			setFgColor(getFgColor())
-		end
-		oldreplace(text)
-	end
-end
