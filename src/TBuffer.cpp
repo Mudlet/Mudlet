@@ -127,8 +127,8 @@ TChar::TChar( const TChar & copy )
 
 TBuffer::TBuffer( Host * pH )
 : mLinkID            ( 0 )
-, mLinesLimit        ( 10000 )
-, mBatchDeleteSize   ( 1000 )
+, mLinesLimit        ( 1000 )
+, mBatchDeleteSize   ( 100 )
 , mUntriggered       ( 0 )
 , mWrapAt            ( 99999999 )
 , mWrapIndent        ( 0 )
@@ -1993,6 +1993,7 @@ void TBuffer::append( QString & text,
     {
         if( text.at(i) == '\n' )
         {
+            log(size()-1, size()-1);
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back( QString() );
@@ -2869,6 +2870,7 @@ inline int TBuffer::wrap( int startLine )
         dirty.push_back( true );
     }
 
+    log(startLine, startLine+tempList.size());
     //qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     //Q_ASSERT(!(lineBuffer.size() == promptBuffer.size() == timeBuffer.size() == dirty.size() ));
     return insertedLines > 0 ? insertedLines : 0;
@@ -2993,6 +2995,48 @@ int TBuffer::wrap( int startLine, int screenWidth, int indentSize, TChar & forma
     return insertedLines > 0 ? insertedLines : 0;
 }
 
+void TBuffer::log( int from, int to )
+{
+
+    TBuffer * pB = &mpHost->mpConsole->buffer;
+    if( pB == this )
+    {
+        if( mpHost->mpConsole->mLogToLogFile )
+        {
+            if( from >= size() || from < 0 )
+            {
+                return;
+            }
+            if( to >= size() )
+            {
+                to = size()-1;
+            }
+            if( to < 0 )
+            {
+                return;
+            }
+            for( int i=from; i<=to; i++ )
+            {
+
+                QString toLog;
+                if( mpHost->mRawStreamDump )
+                {
+                    QPoint P1 = QPoint(0,i);
+                    QPoint P2 = QPoint( buffer[i].size(), i);
+                    toLog = bufferToHtml(P1, P2);
+                }
+                else
+                {
+                    toLog = lineBuffer[i];
+                    toLog.append("\n");
+                }
+                mpHost->mpConsole->mLogStream << toLog;
+            }
+            mpHost->mpConsole->mLogStream.flush();
+        }
+    }
+}
+
 // returns how many new lines have been inserted by the wrapping action
 int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & format )
 {
@@ -3091,6 +3135,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
 
     if( lineCount < 1 )
     {
+        log( startLine, startLine );
         return 0;
     }
 
@@ -3118,6 +3163,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         promptBuffer.insert( startLine+i, isPrompt );
         dirty.insert( startLine+i, true );
     }
+    log( startLine, startLine+tempList.size()-1 );
     //Q_ASSERT(!((lineBuffer.size()==promptBuffer.size()) && (lineBuffer.size()==timeBuffer.size()) && (lineBuffer.size() == dirty.size()) ));
     //qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     return insertedLines > 0 ? insertedLines : 0;
