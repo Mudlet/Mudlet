@@ -206,5 +206,10 @@ function prettywrite (tbl,space,not_clever)
 end
 
 function display(what)
+    echo((prettywrite(what, '  ', true ) or 'nil')..'\n')
+end
+
+function display2(what)
     echo((prettywrite(what, '  ') or 'nil')..'\n')
 end
+

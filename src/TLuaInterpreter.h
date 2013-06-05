@@ -70,7 +70,10 @@ Q_OBJECT
 public:
 
     TLuaInterpreter( Host * mpHost, int id );
+    void setMSDPTable(QString & key, QString & string_data);
+    void parseJSON(QString & key, QString & string_data, QString protocol);
     void startLuaExecThread();
+    void msdp2Lua(char *src, int srclen);
     void threadLuaInterpreterExec( std::string code );
     void initLuaGlobals();
     bool call( QString & function, QString & mName );
@@ -117,6 +120,7 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int sendMSDP( lua_State * );
     static int auditAreas( lua_State * );
     static int getAreaExits(lua_State * );
     static int setMergeTables(lua_State * L);
