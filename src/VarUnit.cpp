@@ -7,23 +7,32 @@ VarUnit::VarUnit()
     wVars.setInsertInOrder(true);
 }
 
+bool VarUnit::isHidden( TVar * var ){
+    if ( var->getName() == "_G" )//we never hide global
+        return false;
+//    qDebug()<<"checking"<<var->getName()<<shortVarName(var).join(".");
+    return hidden.contains(shortVarName(var).join("."));
+}
+
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var ){
-    //we start here with the global namespace
     QList< QTreeWidgetItem * > cList;
     QListIterator<TVar *> it(var->getChildren());
     while(it.hasNext()){
         TVar * child = it.next();
-        QStringList s1;
-        s1 << child->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
-        pItem->setText( 0, child->getName() );
-        pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-        pItem->setCheckState(0, Qt::Unchecked);
-        pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-        wVars.insert( pItem, child );
-        cList.append( pItem );
-        if ( child->getValueType() == 5 )
-            buildVarTree( pItem, child );
+//        qDebug()<<child->getName()<<isHidden(child);
+        if ( !isHidden( child ) ){
+            QStringList s1;
+            s1 << child->getName();
+            QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
+            pItem->setText( 0, child->getName() );
+            pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
+            pItem->setCheckState(0, Qt::Unchecked);
+            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+            wVars.insert( pItem, child );
+            cList.append( pItem );
+            if ( child->getValueType() == 5 )
+                buildVarTree( pItem, child );
+        }
     }
     p->addChildren( cList );
 }
@@ -56,12 +65,12 @@ TVar * VarUnit::getWVar( QTreeWidgetItem * p ){
 QStringList * VarUnit::varName(TVar * var){
     QStringList names;
     names << "_G";
-    if (var == base){
+    if (var == base || ! var ){
         return &names;
     }
     names << var->getName();
     TVar * p = var->getParent();
-    while (p != base){
+    while (p && p != base){
         names.insert(1,p->getName());
         if (p == base)
             break;
@@ -70,13 +79,32 @@ QStringList * VarUnit::varName(TVar * var){
     return &names;
 }
 
+QStringList VarUnit::shortVarName(TVar * var){
+    QStringList names;
+    if (var->getName() == "_G"){
+        names << "";
+        return names;
+    }
+    names << var->getName();
+    TVar * p = var->getParent();
+    while (p && p->getName() != "_G"){
+        names.insert(0,p->getName());
+        p = p->getParent();
+    }
+    return names;
+}
+
 void VarUnit::addVariable(TVar * var){
-    varList.insert(varName(var));
+    QStringList * n = varName(var);
+    varList.insert(n);
+    if ( var->hidden ){
+        hidden.insert(shortVarName(var).join("."));
+    }
 }
 
 void VarUnit::removeVariable(TVar * var){
-    TVar * parent = var->getParent();
-    parent->removeChild(var);
+//    TVar * parent = var->getParent();
+//    parent->removeChild(var);
     varList.remove(varName(var));
 }
 
@@ -98,6 +126,8 @@ void VarUnit::setBase(TVar * t){
 }
 
 void VarUnit::clear(){
+    delete base;
+    tVars.clear();
     wVars.clear();
     varList.clear();
 }

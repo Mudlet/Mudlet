@@ -30,6 +30,8 @@ public:
     void clearNewName();
     int     getKeyType();
     int     getValueType();
+public:
+    bool    hidden;
 private:
     QList<TVar *> children;
     TVar * parent;

@@ -4324,18 +4324,47 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
         return 2;
     int cNameType = var->getKeyType();
     int cValueType = var->getValueType();
-    QString cName = mpVarsMainArea->lineEdit_var_name->text();
-    QString cValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
-    qDebug()<<"attempting to recast variable"<<cName<<":"<<cValue<<"to "<<nameType<<","<<valueType<<"from"<<cNameType<<","<<cValueType;
-    if ((cNameType == nameType) && ((cValueType == LUA_TTABLE) || (cValueType == valueType)))
+    QString newName = mpVarsMainArea->lineEdit_var_name->text();
+    QString newValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
+    QString cName = var->getName();
+    QString cValue = var->getValue();
+    //most anything is ok to do.  We just want to enforce these rules:
+    //you cannot change the type of a table that has children
+    //you cannot change anything to a table that isn't a table already
+    if ( cValueType == LUA_TTABLE && valueType != LUA_TTABLE )
+    {
+        //trying to change a table to something else
+        if ( ( var->getChildren() ).size() )
+        {
+            return 0;
+        }
+        //no children, we can do this without bad things happening
+        qDebug()<<"can change table";
+        return 1;
+    }
+    if ( valueType == LUA_TTABLE && cValueType != LUA_TTABLE )
+        return 0;
+    if ( cNameType == nameType && cValueType == valueType )
         return 2;
-    if (nameType != cNameType && (nameType == LUA_TNUMBER && !cName.toInt())) //can we cast the key to an int, we dont care about str->int?
-        return 0;
-    if (valueType != cValueType && (valueType == LUA_TNUMBER && !cValue.toInt())) //can we cast the value to an int, we dont' care about str->xx?
-        return 0;
-    else if (valueType == LUA_TBOOLEAN && (cValue.toLower() != "true" && cValue.toLower() != "false")) //can we cast to bool?
-        return 0;
     return 1;
+//    qDebug()<<"attempting to recast variable"<<cName<<":"<<cValue<<"to "<<nameType<<","<<valueType<<"from"<<cNameType<<","<<cValueType;
+//    if ((cNameType == nameType) && ((cValueType == LUA_TTABLE) || (cValueType == valueType))){
+//        //this means we're not changing any types, let's see if this is true
+//        //this happens when the user doesn't adjust any of the pulldown boxes to be type explicit
+//        if ( cValueType == LUA_TNUMBER && ! cName.toInt() )
+//            return 1;//means we're compatible, but need to redo types
+//        if ( cValueType == LUA_TBOOLEAN && ( cName.toLower() != "false" || cName.toLower() != "true" ) )
+//            return 1;
+//        return 2;
+//    }
+//    //the user changed a type explicitly, let's see if it works
+//    if (nameType != cNameType && (nameType == LUA_TNUMBER && !cName.toInt())) //can we cast the key to an int, we dont care about str->int?
+//        return 0;
+//    if (valueType != cValueType && (valueType == LUA_TNUMBER && !cValue.toInt())) //can we cast the value to an int, we dont' care about str->xx?
+//        return 0;
+//    else if (valueType == LUA_TBOOLEAN && (cValue.toLower() != "true" && cValue.toLower() != "false")) //can we cast to bool?
+//        return 0;
+//    return 1;
 }
 
 void dlgTriggerEditor::saveVar(){
@@ -4363,16 +4392,17 @@ void dlgTriggerEditor::saveVar(){
     int varRecast = canRecast(pItem,nameType,valueType);
     qDebug()<<"var recast status of"<<newName<<varRecast<<nameType<<valueType;
     int forceSave = 0;
-    if ( nameType == -1 )
+    if ( ( nameType == -1 ) || ( var && nameType != var->getKeyType() ) )
     {
         if ( QString( newName ).toInt() )
             nameType = LUA_TNUMBER;
         else
             nameType = LUA_TSTRING;
     }
-    if ( valueType == -1 )
+    if ( ( valueType != LUA_TTABLE ) &&
+         ( ( valueType == -1 ) || ( var && valueType != var->getValueType() ) ) )
     {
-        if ( QString( newValue ).toInt() )
+        if ( newValue.toInt() )
             valueType = LUA_TNUMBER;
         else if ( newValue.toLower() == "true" || newValue.toLower() == "false" )
             valueType = LUA_TBOOLEAN;
@@ -4381,15 +4411,41 @@ void dlgTriggerEditor::saveVar(){
     }
     if (varRecast == 2){
         //qDebug()<<"it works out";
+        //we sometimes get in here from new variables
         if ( var ){
-            if ( newName == var->getName() && newValue == var->getValue() )
+            if ( newName == var->getName() && ( var->getValueType() == LUA_TTABLE && newValue == var->getValue() ) )
             {
                 qDebug()<<"no change";
             }
+            else
+            {
+                //we're trying to rename it
+                qDebug()<<"we're renaming/recasting";
+                bool change = false;
+                if ( newName != var->getName() || nameType != var->getKeyType() )
+                {
+                    var->setNewName( newName, nameType );
+                    change = true;
+                }
+                if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
+                {
+                    var->setValue( newValue, valueType );
+                    change = true;
+                }
+                if ( change )
+                {
+                    lI->renameVar( var );
+                    if ( var->getValueType() != LUA_TTABLE )
+                        lI->setValue( var );
+                    pItem->setText( 0, newName );
+                    mCurrentVar = 0;
+                }
+            }
         }
-        if ( ! var )
+        else if ( ! var )
         {
             //we're making this var
+            qDebug()<<"its a new variable";
             var = vu->getTVar( pItem );
             qDebug()<<var;
             if ( ! var )
@@ -4410,6 +4466,7 @@ void dlgTriggerEditor::saveVar(){
             pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
             pItem->setCheckState(0, Qt::Unchecked);
             pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+            mCurrentVar = 0;
         }
     }
     else if (varRecast == 1){
@@ -4430,14 +4487,31 @@ void dlgTriggerEditor::saveVar(){
             pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
             pItem->setCheckState(0, Qt::Unchecked);
             pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+            mCurrentVar = 0;
         }
         else
         {
-            //we're recasting/renaming
-            var->setNewName( newName, nameType );
-            var->setValue( newValue, valueType );
-            lI->renameVar( var );
-            lI->setValue( var );
+            //we're trying to rename it
+            qDebug()<<"we're renaming/recasting2";
+            bool change = false;
+            if ( newName != var->getName() || nameType != var->getKeyType() )
+            {
+                var->setNewName( newName, nameType );
+                change = true;
+            }
+            if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
+            {
+                var->setValue( newValue, valueType );
+                change = true;
+            }
+            if ( change )
+            {
+                lI->renameVar( var );
+                if ( var->getValueType() != LUA_TTABLE )
+                    lI->setValue( var );
+                pItem->setText( 0, newName );
+                mCurrentVar = 0;
+            }
         }
     }
     slot_var_clicked(pItem,0);
@@ -4834,7 +4908,7 @@ void dlgTriggerEditor::slot_key_clicked( QTreeWidgetItem *pItem, int column )
 }
 
 void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
-    if( ! pItem ) return;
+    if( ! pItem || pItem == mCurrentVar) return;
     mCurrentVar = pItem;
     mpVarsMainArea->show();
     if( (pItem == 0) || (column != 0) )
@@ -5674,7 +5748,7 @@ void dlgTriggerEditor::repopulateVars()
     treeWidget_vars->insertTopLevelItem( 0, mpVarBaseItem );
     mpVarBaseItem->setExpanded( true );
     LuaInterface * lI = mpHost->getLuaInterface();
-    lI->getVars();
+    lI->getVars( false );
     VarUnit * vu = lI->getVarUnit();
     vu->buildVarTree(mpVarBaseItem, vu->getBase());
     mpVarBaseItem->setExpanded( true );

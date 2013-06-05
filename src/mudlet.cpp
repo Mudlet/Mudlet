@@ -2048,8 +2048,8 @@ void mudlet::doAutoLogin( QString & profile_name )
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     //for( int i=0;i<entries.size(); i++ )
     //    qDebug()<<i<<"#"<<entries[i];
-    LuaInterface * lI = new LuaInterface(pHost);
-    lI->getVars();
+    LuaInterface * lI = pHost->getLuaInterface();
+    lI->getVars( true );
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+entries[0]);

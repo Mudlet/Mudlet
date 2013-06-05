@@ -22,9 +22,10 @@ class LuaInterface
 {
 public:
     LuaInterface( Host * );
-    void iterateTable(lua_State *, int, TVar *);
-    void getVars();
+    void iterateTable(lua_State *, int, TVar *, bool );
+    void getVars( bool );
     QStringList varName(TVar * var);
+    QList<TVar *> varOrder(TVar * var);
     QString getValue( TVar * );
     bool setValue( TVar * );
     void deleteVar( TVar * );

@@ -8,6 +8,7 @@ LuaInterface::LuaInterface(Host * pH)
 {
     interpreter = mpHost->getLuaInterpreter();
     mHostID = mpHost->getHostID();
+    varUnit = new VarUnit();
 }
 
 VarUnit * LuaInterface::getVarUnit(){
@@ -29,6 +30,20 @@ QStringList LuaInterface::varName(TVar * var){
     return names;
 }
 
+QList<TVar *> LuaInterface::varOrder(TVar * var){
+    QList<TVar *> vars;
+    if (var->getName() == "_G"){
+        return vars;
+    }
+    vars << var;
+    TVar * p = var->getParent();
+    while (p && p->getName() != "_G"){
+        vars.insert(0,p);
+        p = p->getParent();
+    }
+    return vars;
+}
+
 void LuaInterface::createVar( TVar * var ){
     setValue( var );
 }
@@ -36,28 +51,41 @@ void LuaInterface::createVar( TVar * var ){
 bool LuaInterface::setValue( TVar * var ){
     //This function assumes the var has been modified and then called
     L = interpreter->pGlobalLua;
-    QString cheat = varName(var).join(".");
+    QStringList names = varName( var );
+    //if our outer most name is a number, we need to use [] notation
+    QString toDo;
+    if (var->getKeyType() == LUA_TNUMBER){
+        names.pop_back();
+        toDo = names.join(".");
+        toDo.append(QString("["+var->getName()+"]"));
+    }
+    else
+        toDo = names.join(".");
     qDebug()<<var->getValueType();
     switch ( var->getValueType() ){
     case LUA_TSTRING:
-        cheat.append(QString(" = \""+var->getValue()+"\""));
+        toDo.append(QString(" = \""+var->getValue()+"\""));
         break;
     case LUA_TNUMBER:
-        cheat.append(QString(" = "+var->getValue()));
+        toDo.append(QString(" = "+var->getValue()));
         break;
     case LUA_TBOOLEAN:
-        cheat.append(QString(" = "+var->getValue()));
+        toDo.append(QString(" = "+var->getValue()));
         break;
     case LUA_TTABLE:
-        cheat.append(QString(" = {}"));
+        toDo.append(QString(" = {}"));
         break;
     default:
         return false;
     }
-    qDebug()<<cheat;
-    int error = luaL_dostring(L, cheat.toLatin1().data());
-    if (error)
-        return false;
+    qDebug()<<toDo;
+    luaL_loadstring(L, toDo.toLatin1().data());
+    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error){
+        QString emsg = lua_tostring(L, -1);
+        qDebug()<<"error msg"<<emsg;
+    }
+    qDebug()<<"setvalue success";
     return true;
 }
 
@@ -66,41 +94,68 @@ void LuaInterface::deleteVar( TVar * var ){
     QString cheat = varName(var).join(".");
     cheat.append(QString(" = nil"));
     int error = luaL_dostring(L, cheat.toLatin1().data());
+    qDebug()<<cheat;
     qDebug()<<"deleted"<<var->getName()<<"with error"<<error;
+    TVar * parent = var->getParent();
+    if (parent)
+        parent->removeChild(var);
     varUnit->removeVariable(var);
     delete var;
 }
 
 void LuaInterface::renameVar( TVar * var ){
+    //this assumes anything like reparenting has been done
     L = interpreter->pGlobalLua;
     QStringList names = varName(var);
     QString oldName = names.join(".");
+    QStringList tNames;
+    for(int i=0;i<names.size();i++){
+        tNames << names[i];
+    }
     names.removeLast();
-    QString toAdd = QString(names.join(".")+"."+var->getNewName());
+    QString toAdd;
+    if (names.empty())
+        toAdd = QString(var->getNewName());
+    else
+        toAdd = QString(names.join(".")+"."+var->getNewName());
     QString addString = QString(toAdd+" = "+oldName);
     int error = luaL_dostring(L, addString.toLatin1().data());
+    qDebug()<<addString;
     qDebug()<<"reassigned"<<var->getName()<<"to"<<var->getNewName()<<"with error"<<error;
-    oldName.append(" = nil");
-    error = luaL_dostring(L, oldName.toLatin1().data());
+    //delete it
+    oldName.append(QString(" = nil"));
+    luaL_loadstring(L, oldName.toLatin1().data());
+    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error){
+        QString emsg = lua_tostring(L, -1);
+        qDebug()<<"error msg"<<emsg;
+    }
+    qDebug()<<oldName;
     qDebug()<<"deleted"<<var->getName()<<"with error"<<error;
     var->clearNewName();
-    varUnit->removeVariable(var);
 }
 
 QString LuaInterface::getValue( TVar * var ){
     //let's find it.
     L = interpreter->pGlobalLua;
-    QStringList names = varName(var);
-    if (names.empty())
+    QList<TVar *> vars = varOrder(var);
+    //QStringList names = varName(var);
+    if (vars.empty())
         return "";
-    int pCount = names.size();//how many things we need to pop at the end
-    lua_getglobal(L, names[0].toLatin1().data());
-    int i=1;
-    for( ; i<names.size()-1; i++ )
-        lua_getfield(L, -1, names[i].toLatin1().data());
-    if (names.size()>1){
+    int pCount = vars.size();//how many things we need to pop at the end
+    //lua_getglobal(L, names[0].toLatin1().data());
+    int i=0;
+    for( ; i<vars.size()-1; i++ ){
+        if ( vars[0]->getKeyType() == LUA_TNUMBER ){
+            lua_pushnumber(L, QString(vars[i]->getName()).toInt());
+            lua_gettable(L, -2);
+        }
+        else
+            lua_getfield(L, -1, QString(vars[i]->getName()).toLatin1().data());
+    }
+    if (vars.size()>1){
         if ( var->getKeyType() == LUA_TSTRING ){
-            lua_getfield(L, -1, names[i].toLatin1().data());
+            lua_getfield(L, -1, QString(vars[i]->getName()).toLatin1().data());
         }
         else if ( var->getKeyType() == LUA_TNUMBER ){
             lua_pushnumber(L, var->getName().toInt());
@@ -127,7 +182,7 @@ QString LuaInterface::getValue( TVar * var ){
     return value;
 }
 
-void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar){
+void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide){
     depth++;
     while(lua_next(L, index)){
         int vType = lua_type(L, -1);
@@ -145,6 +200,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar){
         var->setName(keyName, kType);
         var->setValueType(vType);
         var->setParent(tVar);
+        var->hidden = hide;
         tVar->addChild(var);
         if (varUnit->varExists(var)){
             lua_pop(L, 1);
@@ -162,7 +218,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar){
 //                for (int i=1;i<=lua_gettop(L);i++){
 //                    qDebug()<<i<<":"<<lua_type(L,i*-1);
 //                }
-                iterateTable(L, -2, var);
+                iterateTable(L, -2, var, hide);
                 depth--;
             }
         }
@@ -181,11 +237,12 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar){
             varUnit->removeVariable(var);
             delete var;
         }
+//        qDebug()<<"var added"<<var->getName();
         lua_pop(L, 1);
     }
 }
 
-void LuaInterface::getVars(){
+void LuaInterface::getVars( bool hide ){
     //returns the base item
     QTime t;
     t.start();
@@ -195,9 +252,9 @@ void LuaInterface::getVars(){
     TVar * g = new TVar();
     g->setName("_G", LUA_TSTRING);
     g->setValue("{}", LUA_TTABLE);
-    varUnit = new VarUnit();
+    varUnit->clear();
     varUnit->setBase(g);
     varUnit->addVariable(g);
-    iterateTable(L, LUA_GLOBALSINDEX, g);
+    iterateTable( L, LUA_GLOBALSINDEX, g, hide );
     qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }

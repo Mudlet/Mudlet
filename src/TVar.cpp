@@ -2,11 +2,13 @@
 
 TVar::TVar()
 {
+    hidden = false;
 }
 
 TVar::TVar(TVar * p)
 {
     parent = p;
+    hidden = false;
 }
 
 TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){
@@ -15,6 +17,7 @@ TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){
     kType = kt;
     value = val;
     vType = vt;
+    hidden = false;
 }
 
 void TVar::addChild(TVar * c){
@@ -63,6 +66,8 @@ QString TVar::getNewName(){
 }
 
 void TVar::clearNewName(){
+    name = nName;
+    kType = nkType;
     nName = "";
     nkType = 0;
 }
