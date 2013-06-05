@@ -50,6 +50,7 @@ const char TN_WONT = 252;
 const char TN_DO = 253;
 const char TN_DONT = 254;
 const char TN_IAC = 255;
+const char TN_EOR = 239;
 
 const char GMCP = 201; /* GMCP */
 const char MXP = 91; //MXP
@@ -59,6 +60,7 @@ const char OPT_SUPPRESS_GA = 3;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
+const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;

@@ -36,7 +36,6 @@ public:
     void setSpecialExitLock(int to, QString cmd, bool doLock);
     bool hasExitLock(int to);
     bool hasSpecialExitLock( int, QString );
-    void removeSpecialExit( int to, QString cmd );
     void removeAllSpecialExitsToRoom(int _id );
     void addSpecialExit( int to, QString cmd );
     void clearSpecialExits() { other.clear(); }

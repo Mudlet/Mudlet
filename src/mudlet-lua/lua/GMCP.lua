@@ -76,11 +76,13 @@ end
 -- Send the module list again on reconnect, so activated modules stay enabled during
 --   a session unless explicitly disabled
 function gmod.reenableModules()
+    if not next(gmcp) then return end
+
     local list = {}
     for module, users in pairs(registeredModules) do
         list[#list+1] = module.." 1"
     end
-    sendGMCP("Core.Supports.Set "..yajl.to_string(list))
+    if list[1] then sendGMCP("Core.Supports.Add "..yajl.to_string(list)) end
 end
 registerAnonymousEventHandler("sysConnectionEvent", "gmod.reenableModules")
 

@@ -39,7 +39,7 @@
 
 
 
-//#define DEBUG
+#define DEBUG
 
 extern QStringList gSysErrors;
 
@@ -73,7 +73,7 @@ cTelnet::cTelnet( Host * pH )
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
-    termType = "Mudlet 2.1.0";
+    termType = "Mudlet 3.0.0dev";
     iac = iac2 = insb = false;
 
     command = "";
@@ -223,7 +223,7 @@ void cTelnet::handle_socket_signal_connected()
         mTimerLogin->start(2000);
     if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
-    sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
+    //sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
     TEvent me;
     me.mArgumentList.append( "sysConnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -462,9 +462,10 @@ void cTelnet::processTelnetCommand( const string & command )
   switch( ch )
   {
       case TN_GA:
+      case TN_EOR:
       {
           #ifdef DEBUG
-            cout << "cTelnet::processTelnetCommand() command = TN_GA"<<endl;
+            cout << "cTelnet::processTelnetCommand() command = TN_GA/TN_EOR"<<endl;
           #endif
           recvdGA = true;
           break;
@@ -474,6 +475,32 @@ void cTelnet::processTelnetCommand( const string & command )
           //server wants to enable some option (or he sends a timing-mark)...
           option = command[2];
           int idxOption = static_cast<int>(option);
+
+          if( option == static_cast<char>(25) ) //EOR support (END OF RECORD=TN_GA
+          {
+              cout << "EOR enabled" << endl;
+              sendTelnetOption( TN_DO, 25 );
+              break;
+          }
+
+          if( option == static_cast<char>(69) ) //MSDP support
+          {
+              sendTelnetOption( TN_DO, 69 );
+              //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+              //NOTE: MSDP does not need quotes for string/vals
+              string _h;
+              _h += TN_IAC;
+              _h += TN_SB;
+              _h += 69; //MSDP
+              _h += 1; //MSDP_VAR
+              _h += "LIST";
+              _h += 2; //MSDP_VAL
+              _h += "COMMANDS";
+              _h += TN_IAC;
+              _h += TN_SE;
+              socketOutRaw( _h );
+              break;
+          }
           if( option == static_cast<char>(200) ) // ATCP support
           {
               //FIXME: this is a bug, some muds offer both atcp + gmcp
@@ -496,7 +523,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
           if( option == GMCP )
           {
-              if( !mpHost->mEnableGMCP ) break;
+              //if( !mpHost->mEnableGMCP ) break;
 
               enableGMCP = true;
               sendTelnetOption( TN_DO, GMCP );
@@ -661,11 +688,19 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_DO:
       {
 #ifdef DEBUG
-      cout << "telnet: sever wants us to enable option:"<< (quint8)command[2]<<endl;
+      cout << "telnet: server wants us to enable option:"<< (quint8)command[2]<<endl;
 #endif
           //server wants us to enable some option
           option = command[2];
           int idxOption = static_cast<int>(option);
+          if( option == static_cast<char>(69) ) // MSDP support
+          {
+            cout << "TELNET IAC DO MSDP" << endl;
+            sendTelnetOption( TN_WILL, 69 );
+
+
+            break;
+          }
           if( option == static_cast<char>(200) ) // ATCP support
           {
             cout << "TELNET IAC DO ATCP" << endl;
@@ -753,6 +788,15 @@ void cTelnet::processTelnetCommand( const string & command )
       {
           option = command[2];
 
+          // MSDP
+          if( option == static_cast<char>(69) )
+          {
+              QString _m = command.c_str();
+              if( command.size() < 6 ) return;
+              _m = _m.mid( 3, command.size()-5 );
+              mpHost->mLuaInterpreter.msdp2Lua( _m.toLocal8Bit().data(), _m.length() );
+              return;
+          }
           // ATCP
           if( option == static_cast<char>(200) )
           {
@@ -1706,7 +1750,7 @@ void cTelnet::handle_socket_signal_readyRead()
         }
         else
         {
-            if( ch != '\r' ) cleandata += ch;
+            if( ch != '\r' && ch != 0 ) cleandata += ch;
         }
 MAIN_LOOP_END: ;
         if( recvdGA )

@@ -4789,6 +4789,43 @@ int TLuaInterpreter::sendGMCP( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::sendMSDP( lua_State *L )
+{
+    string msg;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "sendMSDP: what do you want to send?" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        msg = lua_tostring( L, 1 );
+    }
+
+    string what;
+    if( lua_isstring( L, 2 ) )
+    {
+        what = lua_tostring( L, 2 );
+    }
+    string _h;
+    _h += TN_IAC;
+    _h += TN_SB;
+    _h += 69; //MSDP
+    _h += msg;
+    if( what != "" )
+    {
+        _h += " ";
+        _h += what;
+    }
+    _h += TN_IAC;
+    _h += TN_SE;
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    pHost->mTelnet.socketOutRaw( _h );
+    return 0;
+}
+
 int TLuaInterpreter::sendTelnetChannel102( lua_State *L )
 {
     string msg;
@@ -9394,11 +9431,40 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
     lua_getglobal(L, "gmcp");   //defined in Lua init
     if( !lua_istable(L, -1) )
     {
-        qDebug()<<"ERROR: gmcp not defined -> error in LuaGlobal.lua";
-        return;
+        lua_newtable(L);
+        lua_setglobal(L, "gmcp");
+        lua_getglobal(L, "gmcp");
+        if( !lua_istable(L, -1) )
+        {
+            qDebug()<<"ERROR: msdp table not defined";
+            return;
+        }
     }
-    // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appriate
+    parseJSON(key, string_data, "gmcp");
+}
+void TLuaInterpreter::setMSDPTable(QString & key, QString & string_data)
+{
+    lua_State * L = pGlobalLua;
+    lua_getglobal(L, "msdp");
+    if( !lua_istable(L, -1) )
+    {
+        lua_newtable(L);
+        lua_setglobal(L, "msdp");
+        lua_getglobal(L, "msdp");
+        if( !lua_istable(L, -1) )
+        {
+            qDebug()<<"ERROR: msdp table not defined";
+            return;
+        }
+    }
 
+    parseJSON(key, string_data, "msdp");
+}
+
+void TLuaInterpreter::parseJSON( QString & key, QString & string_data, QString protocol )
+{
+    // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
+    lua_State * L = pGlobalLua;
     QStringList tokenList = key.split(".");
     if( ! lua_checkstack( L, tokenList.size()+5 ) ) return;
     int i = 0;
@@ -9471,8 +9537,12 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
     // events: for key "foo.bar.top" we raise: gmcp.foo, gmcp.foo.bar and gmcp.foo.bar.top
     // with the actual key given as parameter e.g. event=gmcp.foo, param="gmcp.foo.bar"
 
-    QString token = "gmcp";
-    key.prepend("gmcp.");
+    QString token = protocol;
+    if( protocol == "msdp" )
+        key.prepend("msdp.");
+    else
+        key.prepend("gmcp.");
+
     for( int k=0; k<tokenList.size(); k++ )
     {
         TEvent event;
@@ -9485,9 +9555,9 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
         Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
         if( mudlet::debugMode )
         {
-            QString msg = "\nGMCP event <";
+            QString msg = QString("\n%1 event <").arg(protocol);
             msg.append( token );
-            msg.append("> display(gmcp) to see the full content\n");
+            msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
             pHost->mpConsole->printSystemMessage(msg);
         }
         pHost->raiseEvent( &event );
@@ -9510,6 +9580,124 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
         }
     }
     lua_pop( L, lua_gettop( L ) );
+}
+
+#define    MSDP_VAR              1
+#define    MSDP_VAL              2
+#define    MSDP_TABLE_OPEN      3
+#define    MSDP_TABLE_CLOSE      4
+#define    MSDP_ARRAY_OPEN      5
+#define    MSDP_ARRAY_CLOSE      6
+#define    IAC 255
+#define    SB 250
+#define    SE 240
+#define BUFFER_SIZE 20000
+void TLuaInterpreter::msdp2Lua(char *src, int srclen)
+{
+    QStringList varList;
+    QString lastVar;
+    int i, nest, last;
+    nest = last = 0;
+    i = 0;
+    QString script;// = "{";
+    while (i < srclen)
+    {
+        switch (src[i])
+        {
+            case MSDP_TABLE_OPEN:
+                script.append("{");
+                nest++;
+                last = MSDP_TABLE_OPEN;
+                break;
+            case MSDP_TABLE_CLOSE:
+                if (last == MSDP_VAL || last == MSDP_VAR)
+                {
+                    script.append("\"");
+                }
+                if (nest)
+                {
+                    nest--;
+                }
+                script.append("}");
+                last = MSDP_TABLE_CLOSE;
+                break;
+            case MSDP_ARRAY_OPEN:
+                script.append("[");
+                nest++;
+                last = MSDP_ARRAY_OPEN;
+                break;
+            case MSDP_ARRAY_CLOSE:
+                if (last == MSDP_VAL || last == MSDP_VAR)
+                {
+                    script.append("\"");
+                }
+                if (nest)
+                {
+                    nest--;
+                }
+                script.append("]");
+                last = MSDP_ARRAY_CLOSE;
+                break;
+            case MSDP_VAR:
+                if (nest)
+                {
+                    if (last == MSDP_VAL || last == MSDP_VAR)
+                    {
+                        script.append("\"");
+                    }
+                    if (last == MSDP_VAL || last == MSDP_VAR || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE)
+                    {
+                        script.append(",");
+                    }
+                    script.append("\"");
+                }
+                else
+                {
+                   script.append("\"");
+                }
+                last = MSDP_VAR;
+                lastVar.clear();
+                break;
+
+            case MSDP_VAL:
+                if (last == MSDP_VAR)
+                {
+                    script.append("\":");
+                }
+                if (last == MSDP_VAL)
+                {
+                    script.append("\",");
+                }
+                if (src[i+1] != MSDP_TABLE_OPEN && src[i+1] != MSDP_ARRAY_OPEN)
+                {
+                    script.append("\"");
+                }
+                varList.append(lastVar);
+                last = MSDP_VAL;
+                break;
+            case '\\':
+                script.append("\\\\");
+                break;
+            case '"':
+                script.append("\\\"");
+                break;
+            default:
+                script.append(src[i]);
+                lastVar.append(src[i]);
+                break;
+        }
+        i++;
+    }
+    if( last != MSDP_ARRAY_CLOSE && last != MSDP_TABLE_CLOSE )
+    {
+        script.append("\"");
+    }
+    if( varList.size() )
+    {
+        script = script.replace(0,varList.front().size()+3,"");
+        QString token = varList.front();
+        setMSDPTable(token, script);
+    }
 }
 
 void TLuaInterpreter::setChannel102Table( int & var, int & arg )
@@ -10195,6 +10383,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getModulePath", TLuaInterpreter::getModulePath );
     lua_register( pGlobalLua, "getAreaExits", TLuaInterpreter::getAreaExits );
     lua_register( pGlobalLua, "auditAreas", TLuaInterpreter::auditAreas );
+    lua_register( pGlobalLua, "sendMSDP", TLuaInterpreter::sendMSDP );
 
 
     luaopen_yajl(pGlobalLua);
@@ -10356,6 +10545,7 @@ void TLuaInterpreter::loadGlobal()
     {
         gSysErrors << "[  OK  ]  -  mudlet-lua API & Geyser Layout manager loaded.";
     }
+
 }
 
 void TLuaInterpreter::slotEchoMessage(int hostID, QString msg)
