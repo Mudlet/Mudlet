@@ -624,10 +624,10 @@ function getStopWatchTime(watchID) end
 ---   getTime(true, "hh:mm")
 ---   </pre>
 ---
---- @param returnType Takes a boolean value (in Lua anything but false or nil will translate to true). If true, 
+--- @param returnType Takes a boolean value (in Lua anything but false or nil will translate to true). If true,
 ---   the function will return a table in the following format: <br/>
 ---   { hour = #, min = #, sec = #, msec = # } <br/>
----   If false or nil, it will return the time as a string using a format passed to the second arg or the 
+---   If false or nil, it will return the time as a string using a format passed to the second arg or the
 ---   default of hh:mm:ss.zzz
 ---
 --- @param format Format expressions built from following elements:
@@ -1410,7 +1410,7 @@ function selectString(text, numberOfMatch) end
 
 --- This sends "command" directly to the network layer, skipping the alias matching. The optional
 --- second argument of type boolean (print) determines if the outgoing command is to be echoed on the screen.
---- Send honours command separator defined within Mudlet settings. If you want your command to be checked 
+--- Send honours command separator defined within Mudlet settings. If you want your command to be checked
 --- if it's an alias, use expandAlias() instead.
 ---
 --- @usage Echos the command on the screen.
@@ -1886,7 +1886,7 @@ function tempTrigger(string, luaCode) end
 ---   #wait 500
 ---   #send jump
 ---   </pre>
----   Since timers are created instantly, if you want two or more, or means the times 
+---   Since timers are created instantly, if you want two or more, or means the times
 ---   for consecutive timers should be to the starting point, unlike relatives times you do with waits.
 ---   <pre>
 ---   -- Mudlet code
