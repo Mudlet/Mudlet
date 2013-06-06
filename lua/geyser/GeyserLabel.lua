@@ -19,7 +19,7 @@ Geyser.Label = Geyser.Window:new({
 -- @param message The message to print. Can contain html formatting.
 -- @param color The color to use.
 -- @param format A format list to use. 'c' - center, 'b' - bold, 'i' - italics,
---               'u' - underline, '##' - font size.  For example, "cb18" 
+--               'u' - underline, '##' - font size.  For example, "cb18"
 --               specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
    message = message or self.message
@@ -28,7 +28,7 @@ function Geyser.Label:echo(message, color, format)
    self.format = format
    color = color or self.fgColor
    self.fgColor = color
-   
+
    local fs = ""
    -- check for formatting commands
    if format then
@@ -110,7 +110,13 @@ function Geyser.Label:new (cons, container)
 
    -- Set up the callback if we have one
    if me.callback then
-      me:setClickCallback(me.callback, unpack(me.args))
+      if type(me.args) == "" then
+         me:setClickCallback(me.callback, me.args)
+      elseif type(me.args) == "table" then
+         me:setClickCallback(me.callback, unpack(me.args))
+      else
+         me:setClickCallback(me.callback)
+      end
    end
 
    --print("  New in " .. self.name .. " : " .. me.name)
