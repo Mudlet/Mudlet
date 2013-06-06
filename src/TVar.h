@@ -29,6 +29,7 @@ public:
     QString getNewName();
     void clearNewName();
     int     getKeyType();
+    int     getNewKeyType();
     int     getValueType();
 public:
     bool    hidden;

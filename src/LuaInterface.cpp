@@ -106,21 +106,30 @@ void LuaInterface::deleteVar( TVar * var ){
 void LuaInterface::renameVar( TVar * var ){
     //this assumes anything like reparenting has been done
     L = interpreter->pGlobalLua;
-    QStringList names = varName(var);
-    QString oldName = names.join(".");
-    QStringList tNames;
-    for(int i=0;i<names.size();i++){
-        tNames << names[i];
+    QList<TVar *> vars = varOrder(var);
+    QString oldName = vars[0]->getName();
+    QString newName;
+    if (vars.size() > 1)
+        newName = vars[0]->getName();
+    for(int i=1;i<vars.size();i++){
+        if (vars[i]->getKeyType() == LUA_TNUMBER){
+            oldName.append("["+vars[i]->getName()+"]");
+            if (i < vars.size()-1 )
+                newName.append("["+vars[i]->getName()+"]");
+        }
+        else{
+            oldName.append("[\""+vars[i]->getName()+"\"]");
+            if (i < vars.size()-1 )
+                newName.append("[\""+vars[i]->getName()+"\"]");
+        }
     }
-    names.removeLast();
-    QString toAdd;
-    if (names.empty())
-        toAdd = QString(var->getNewName());
+    if (var->getNewKeyType() == LUA_TNUMBER)
+        newName.append("["+vars.back()->getNewName()+"]");
     else
-        toAdd = QString(names.join(".")+"."+var->getNewName());
-    QString addString = QString(toAdd+" = "+oldName);
-    int error = luaL_dostring(L, addString.toLatin1().data());
+        newName.append("[\""+vars.back()->getNewName()+"\"]");
+    QString addString = QString(newName+" = "+oldName);
     qDebug()<<addString;
+    int error = luaL_dostring(L, addString.toLatin1().data());
     qDebug()<<"reassigned"<<var->getName()<<"to"<<var->getNewName()<<"with error"<<error;
     //delete it
     oldName.append(QString(" = nil"));
@@ -143,15 +152,16 @@ QString LuaInterface::getValue( TVar * var ){
     if (vars.empty())
         return "";
     int pCount = vars.size();//how many things we need to pop at the end
-    //lua_getglobal(L, names[0].toLatin1().data());
-    int i=0;
+    lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
+    int i=1;
     for( ; i<vars.size()-1; i++ ){
-        if ( vars[0]->getKeyType() == LUA_TNUMBER ){
+        if ( vars[i]->getKeyType() == LUA_TNUMBER ){
             lua_pushnumber(L, QString(vars[i]->getName()).toInt());
             lua_gettable(L, -2);
         }
-        else
+        else{
             lua_getfield(L, -1, QString(vars[i]->getName()).toLatin1().data());
+        }
     }
     if (vars.size()>1){
         if ( var->getKeyType() == LUA_TSTRING ){

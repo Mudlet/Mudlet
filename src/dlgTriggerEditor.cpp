@@ -4424,14 +4424,30 @@ void dlgTriggerEditor::saveVar(){
                 bool change = false;
                 if ( newName != var->getName() || nameType != var->getKeyType() )
                 {
+                    //lets make sure the nametype works
+                    if ( var->getKeyType() == LUA_TNUMBER && newName.toInt() )
+                        nameType = LUA_TNUMBER;
+                    else
+                        nameType = LUA_TSTRING;
                     var->setNewName( newName, nameType );
                     change = true;
                 }
                 if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
                 {
+                    //lets check again
+                    if ( var->getValueType() == LUA_TTABLE ){
+                        valueType == LUA_TTABLE;
+                    }
+                    else if ( valueType == LUA_TNUMBER && newValue.toInt() )
+                        valueType = LUA_TNUMBER;
+                    else if ( valueType == LUA_TBOOLEAN && ( newValue.toLower() == "true" || newValue.toLower() == "false" ) )
+                        valueType = LUA_TBOOLEAN;
+                    else
+                        valueType = LUA_TSTRING;//nope, you don't agree, you lose your value
                     var->setValue( newValue, valueType );
                     change = true;
                 }
+                qDebug()<<"change status is"<<change;
                 if ( change )
                 {
                     lI->renameVar( var );
@@ -4496,11 +4512,26 @@ void dlgTriggerEditor::saveVar(){
             bool change = false;
             if ( newName != var->getName() || nameType != var->getKeyType() )
             {
+                //lets make sure the nametype works
+                if ( var->getKeyType() == LUA_TNUMBER && newName.toInt() )
+                    nameType = LUA_TNUMBER;
+                else
+                    nameType = LUA_TSTRING;
                 var->setNewName( newName, nameType );
                 change = true;
             }
             if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
             {
+                //lets check again
+                if ( var->getValueType() == LUA_TTABLE ){
+                    valueType == LUA_TTABLE;
+                }
+                else if ( valueType == LUA_TNUMBER && newValue.toInt() )
+                    valueType = LUA_TNUMBER;
+                else if ( valueType == LUA_TBOOLEAN && ( newValue.toLower() == "true" || newValue.toLower() == "false" ) )
+                    valueType = LUA_TBOOLEAN;
+                else
+                    valueType = LUA_TSTRING;//nope, you don't agree, you lose your value
                 var->setValue( newValue, valueType );
                 change = true;
             }

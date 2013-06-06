@@ -61,6 +61,10 @@ void TVar::setNewName(QString n, int t){
     nkType = t;
 }
 
+int TVar::getNewKeyType(){
+    return nkType;
+}
+
 QString TVar::getNewName(){
     return nName;
 }
