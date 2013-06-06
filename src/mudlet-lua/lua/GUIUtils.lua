@@ -1121,15 +1121,38 @@ else
 
 end
 
+-- improve replace to have a third argument, keepcolor
 do
 	local oldreplace = replace
-	function replace(text, keep_color)
-		local text = text or ""
+	function replace(arg1, arg2, arg3)
+		local windowname, text, keepcolor
 
-		if keep_color then
-			setBgColor(getBgColor())
-			setFgColor(getFgColor())
+		if arg1 and arg2 and arg3 ~= nil then
+			windowname, text, keepcolor = arg1, arg2, arg3
+		elseif arg1 and type(arg2) == "string" then
+			windowname, text = arg1, arg2
+		elseif arg1 and type(arg2) == "boolean" then
+			text, keepcolor = arg1, arg2
+		else
+			text = arg1
 		end
-		oldreplace(text)
+
+		text = text or ""
+
+		if keepcolor then
+			if not windowname then
+				setBgColor(getBgColor())
+				setFgColor(getFgColor())
+			else
+				setBgColor(windowname, getBgColor(windowname))
+				setFgColor(windowname, getFgColor(windowname))
+			end
+		end
+
+		if windowname then
+			oldreplace(windowname, text)
+		else
+			oldreplace(text)
+		end
 	end
 end
