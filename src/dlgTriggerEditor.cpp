@@ -159,7 +159,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     //connect( mpActionsMainArea->pushButton_color, SIGNAL(pressed()), this, SLOT(slot_choseButtonColor()));
     pVB1->addWidget( mpActionsMainArea );
 
-
     mpKeysMainArea = new dlgKeysMainArea( mainArea );
     mpKeysMainArea->setSizePolicy( sizePolicy8 );
     pVB1->addWidget( mpKeysMainArea );
@@ -329,7 +328,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     viewKeysAction->setEnabled( true );
     connect( viewKeysAction, SIGNAL(triggered()), this, SLOT( slot_show_keys()));
 
-    QAction * viewVarsAction = new QAction(QIcon(":/icons/preferences-desktop-keyboard.png"), tr("Variables"), this);
+    QAction * viewVarsAction = new QAction(QIcon(":/icons/variables.png"), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Variables"));
     viewVarsAction->setEnabled( true );
     connect( viewVarsAction, SIGNAL(triggered()), this, SLOT( slot_show_vars()));
@@ -507,11 +506,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar2 = new QToolBar();
     toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
-    QMenu * varMenu = new QMenu(toolBar2);
-    viewVarsAction->setMenu(varMenu);
-    QAction * toggleHiddenVariables = new QAction("Toggle Hidden Variables", varMenu);
-    varMenu->addAction(toggleHiddenVariables);
-    connect(toggleHiddenVariables, SIGNAL(triggered()), this, SLOT(toggleHiddenVars()));
+    connect(toggleHiddenVarsButton, SIGNAL(clicked()), this, SLOT(slot_toggleHiddenVars()));
+
+    connect(mpVarsMainArea->hideVariable, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar( bool )));
+//    QAction * toggleHiddenVariables = new QAction("Toggle Hidden Variables", toolBar2);
+//    varMenu->addAction(toggleHiddenVariables);
+//    connect(toggleHiddenVariables, SIGNAL(triggered()), this, SLOT(toggleHiddenVars()));
     toolBar2->addAction( viewTriggerAction );
     toolBar2->addAction( viewAliasAction );
     toolBar2->addAction( viewScriptsAction );
@@ -635,7 +635,20 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
 }
 
-void dlgTriggerEditor::toggleHiddenVars(){
+void dlgTriggerEditor::slot_toggleHiddenVar( bool status ){
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * var = vu->getWVar( mpCurrentVarItem );
+    if ( var )
+    {
+        if ( status )
+            vu->addHidden( var );
+        else
+            vu->removeHidden( var );
+    }
+}
+
+void dlgTriggerEditor::slot_toggleHiddenVars( ){
     showHiddenVars = !showHiddenVars;
     repopulateVars();
 }
@@ -4939,9 +4952,28 @@ void dlgTriggerEditor::slot_key_clicked( QTreeWidgetItem *pItem, int column )
 }
 
 void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
-    if( ! pItem || pItem == mCurrentVar) return;
-    mCurrentVar = pItem;
+    if( ! pItem ) return;
+    int state = pItem->checkState( column );
+    if ( state == Qt::Checked || state == Qt::PartiallyChecked )
+    {
+        LuaInterface * lI = mpHost->getLuaInterface();
+        VarUnit * vu = lI->getVarUnit();
+        TVar * var = vu->getWVar(pItem);
+        if ( var )
+            vu->addSavedVar( var );
+    }
+    else if ( state == Qt::Unchecked )
+    {
+        LuaInterface * lI = mpHost->getLuaInterface();
+        VarUnit * vu = lI->getVarUnit();
+        TVar * var = vu->getWVar(pItem);
+        if ( var )
+            vu->removeSavedVar( var );
+    }
     mpVarsMainArea->show();
+    if ( pItem == mpCurrentVarItem )
+        return;
+    mCurrentVar = pItem;
     if( (pItem == 0) || (column != 0) )
     {
         return;
@@ -4953,6 +4985,7 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     qDebug()<<"current var"<<var;
     if (!var)
     {
+        mpVarsMainArea->hideVariable->setChecked( false );
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_value->setText("");
         //check for temp item
@@ -4991,6 +5024,7 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         else if (varType == 1)
             mpVarsMainArea->var_type->setCurrentIndex(3);
     }
+    mpVarsMainArea->hideVariable->setChecked( vu->isHidden( var ) );
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
     mpVarsMainArea->lineEdit_var_value->setText(lI->getValue( var ));
 }
@@ -5781,7 +5815,7 @@ void dlgTriggerEditor::repopulateVars()
     LuaInterface * lI = mpHost->getLuaInterface();
     lI->getVars( false );
     VarUnit * vu = lI->getVarUnit();
-    vu->buildVarTree(mpVarBaseItem, vu->getBase());
+    vu->buildVarTree( mpVarBaseItem, vu->getBase(), showHiddenVars );
     mpVarBaseItem->setExpanded( true );
     treeWidget_vars->sortItems(1,Qt::AscendingOrder);
     //mpVarBaseItem->sortChildren(1, Qt::AscendingOrder);

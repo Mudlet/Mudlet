@@ -92,7 +92,6 @@ public:
     bool                        mNeedUpdateData;
     bool                        showHiddenVars;
     TConsole *                  mpErrorConsole;
-    void                        toggleHiddenVars();
     void                        changeView( int );
 
 signals:
@@ -102,6 +101,8 @@ signals:
     void                        update();
 
 public slots:
+    void                        slot_toggleHiddenVars();
+    void                        slot_toggleHiddenVar( bool );
     void                        slot_addVar();
     void                        slot_addVarGroup();
     void                        slot_saveVarAfterEdit();

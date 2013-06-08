@@ -14,13 +14,13 @@ bool VarUnit::isHidden( TVar * var ){
     return hidden.contains(shortVarName(var).join("."));
 }
 
-void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var ){
+void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
     QList< QTreeWidgetItem * > cList;
     QListIterator<TVar *> it(var->getChildren());
     while(it.hasNext()){
         TVar * child = it.next();
 //        qDebug()<<child->getName()<<isHidden(child);
-        if ( !isHidden( child ) ){
+        if ( showHidden || !isHidden( child ) ){
             QStringList s1;
             s1 << child->getName();
             QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
@@ -31,7 +31,7 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var ){
             wVars.insert( pItem, child );
             cList.append( pItem );
             if ( child->getValueType() == 5 )
-                buildVarTree( pItem, child );
+                buildVarTree( pItem, child, showHidden );
         }
     }
     p->addChildren( cList );
@@ -100,6 +100,26 @@ void VarUnit::addVariable(TVar * var){
     if ( var->hidden ){
         hidden.insert(shortVarName(var).join("."));
     }
+}
+
+void VarUnit::addHidden( TVar * var ){
+    var->hidden = true;
+    hidden.insert(shortVarName(var).join("."));
+}
+
+void VarUnit::removeHidden( TVar * var ){
+    hidden.remove(shortVarName(var).join("."));
+    var->hidden = false;
+}
+
+void VarUnit::addSavedVar(TVar * var){
+    QStringList * n = varName(var);
+    savedVars.insert(n);
+}
+
+void VarUnit::removeSavedVar(TVar * var){
+    QStringList * n = varName(var);
+    savedVars.remove(n);
 }
 
 void VarUnit::removeVariable(TVar * var){

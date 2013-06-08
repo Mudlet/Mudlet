@@ -154,7 +154,7 @@ public:
     cTelnet            mTelnet;
     TConsole *         mpConsole;
     TLuaInterpreter    mLuaInterpreter;
-    LuaInterface *      mLuaInterface;
+    LuaInterface *     mLuaInterface;
     TriggerUnit        mTriggerUnit;
     TimerUnit          mTimerUnit;
     ScriptUnit         mScriptUnit;

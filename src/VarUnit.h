@@ -11,8 +11,8 @@ class VarUnit
 {
 public:
     VarUnit();
-    QStringList * varName(TVar * var);
-    QStringList shortVarName(TVar * var);
+    QStringList * varName(TVar * );
+    QStringList shortVarName(TVar * );
     bool varExists(TVar *);
     void addVariable(TVar *);
     void addTempVar( QTreeWidgetItem * , TVar * );
@@ -22,12 +22,15 @@ public:
     TVar * getBase();
     void clear();
     void clearTemp();
-    void buildVarTree( QTreeWidgetItem *, TVar * );
+    void buildVarTree( QTreeWidgetItem *, TVar *, bool );
     TVar * getWVar( QTreeWidgetItem * );
     TVar * getTVar( QTreeWidgetItem * );
     void addTreeItem( QTreeWidgetItem *, TVar * );
-    void addHidden( TVar * var );
-    bool isHidden( TVar * var );
+    void addSavedVar( TVar * );
+    void removeSavedVar( TVar * );
+    void removeHidden( TVar * );
+    void addHidden( TVar * );
+    bool isHidden( TVar * );
 public:
     QSet< QString > hidden;
 private:
@@ -35,6 +38,7 @@ private:
     QSet< QStringList * > varList;
     QMap< QTreeWidgetItem *, TVar * > wVars;
     QMap< QTreeWidgetItem *, TVar * > tVars;
+    QSet< QStringList * > savedVars;
 };
 
 #endif // VARUNIT_H

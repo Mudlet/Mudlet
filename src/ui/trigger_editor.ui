@@ -464,6 +464,25 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QPushButton" name="toggleHiddenVarsButton">
+                   <property name="text">
+                    <string>Toggle Hidden Variables</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="autoDefault">
+                    <bool>false</bool>
+                   </property>
+                   <property name="default">
+                    <bool>false</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <widget class="QWidget" name="mpSearchArea" native="true">
                    <layout class="QVBoxLayout" name="verticalLayout_6">
                     <property name="spacing">
