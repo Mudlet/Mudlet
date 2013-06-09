@@ -433,9 +433,9 @@ bool XMLexport::writeVariable( TVar * var, LuaInterface * lI, VarUnit * vu )
         {
             writeStartElement( "VariableGroup" );
             writeTextElement( "name", var->getName() );
-            writeAttribute( "keyType", QString::number( var->getKeyType() ) );
+            writeTextElement( "keyType", QString::number( var->getKeyType() ) );
             writeTextElement( "value", lI->getValue( var ) );
-            writeAttribute( "valueType", QString::number( var->getValueType() ) );
+            writeTextElement( "valueType", QString::number( var->getValueType() ) );
             QListIterator<TVar *> it( var->getChildren() );
             while( it.hasNext() )
             {
@@ -451,9 +451,9 @@ bool XMLexport::writeVariable( TVar * var, LuaInterface * lI, VarUnit * vu )
         {
             writeStartElement( "Variable" );
             writeTextElement( "name", var->getName() );
-            writeAttribute( "keyType", QString::number( var->getKeyType() ) );
+            writeTextElement( "keyType", QString::number( var->getKeyType() ) );
             writeTextElement( "value", lI->getValue( var ) );
-            writeAttribute( "valueType", QString::number( var->getValueType() ) );
+            writeTextElement( "valueType", QString::number( var->getValueType() ) );
             writeEndElement();
         }
     }

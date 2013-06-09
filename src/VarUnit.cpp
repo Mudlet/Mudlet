@@ -4,6 +4,7 @@
 
 VarUnit::VarUnit()
 {
+    qDebug()<<"making new VarUnit";
     wVars.setInsertInOrder(true);
 }
 
@@ -120,12 +121,11 @@ void VarUnit::addSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
 //    qDebug()<<n;
     savedVars.insert(n);
-//    qDebug()<<"saved"<<savedVars;
 }
 
 void VarUnit::removeSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
-//    savedVars.remove(n);
+    savedVars.remove(n);
 //    qDebug()<<"removed"<<savedVars;
 }
 

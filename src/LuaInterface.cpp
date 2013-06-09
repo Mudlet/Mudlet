@@ -6,6 +6,7 @@
 LuaInterface::LuaInterface(Host * pH)
     :mpHost(pH)
 {
+    qDebug()<<"making new lua interface";
     interpreter = mpHost->getLuaInterpreter();
     mHostID = mpHost->getHostID();
     varUnit = new VarUnit();
@@ -51,41 +52,44 @@ void LuaInterface::createVar( TVar * var ){
 bool LuaInterface::setValue( TVar * var ){
     //This function assumes the var has been modified and then called
     L = interpreter->pGlobalLua;
-    QStringList names = varName( var );
+//    QStringList names = varName( var );
     //if our outer most name is a number, we need to use [] notation
-    QString toDo;
-    if (var->getKeyType() == LUA_TNUMBER){
-        names.pop_back();
-        toDo = names.join(".");
-        toDo.append(QString("["+var->getName()+"]"));
+//    QString toDo;
+
+    QList<TVar *> vars = varOrder(var);
+    QString newName = vars[0]->getName();
+    for(int i=1;i<vars.size();i++){
+        if (vars[i]->getKeyType() == LUA_TNUMBER){
+            newName.append("["+vars[i]->getName()+"]");
+        }
+        else{
+            newName.append("[\""+vars[i]->getName()+"\"]");
+        }
     }
-    else
-        toDo = names.join(".");
-    qDebug()<<var->getValueType();
     switch ( var->getValueType() ){
     case LUA_TSTRING:
-        toDo.append(QString(" = \""+var->getValue()+"\""));
+        newName.append(QString(" = \""+var->getValue()+"\""));
         break;
     case LUA_TNUMBER:
-        toDo.append(QString(" = "+var->getValue()));
+        newName.append(QString(" = "+var->getValue()));
         break;
     case LUA_TBOOLEAN:
-        toDo.append(QString(" = "+var->getValue()));
+        newName.append(QString(" = "+var->getValue()));
         break;
     case LUA_TTABLE:
-        toDo.append(QString(" = {}"));
+        newName.append(QString(" = {}"));
         break;
     default:
         return false;
     }
-    qDebug()<<toDo;
-    luaL_loadstring(L, toDo.toLatin1().data());
+    luaL_loadstring(L, newName.toLatin1().data());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
+        qDebug()<<newName;
         QString emsg = lua_tostring(L, -1);
         qDebug()<<"error msg"<<emsg;
+        return false;
     }
-    qDebug()<<"setvalue success";
     return true;
 }
 
@@ -137,10 +141,9 @@ void LuaInterface::renameVar( TVar * var ){
     error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
         QString emsg = lua_tostring(L, -1);
+        qDebug()<<oldName;
         qDebug()<<"error msg"<<emsg;
     }
-    qDebug()<<oldName;
-    qDebug()<<"deleted"<<var->getName()<<"with error"<<error;
     var->clearNewName();
 }
 

@@ -4442,9 +4442,9 @@ void dlgTriggerEditor::saveVar(){
                         nameType = LUA_TNUMBER;
                     else
                         nameType = LUA_TSTRING;
-                    var->setNewName( newName, nameType );
                     change = true;
                 }
+                var->setNewName( newName, nameType );
                 if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
                 {
                     //lets check again
@@ -4469,6 +4469,8 @@ void dlgTriggerEditor::saveVar(){
                     pItem->setText( 0, newName );
                     mCurrentVar = 0;
                 }
+                else
+                    var->clearNewName();
             }
         }
         else if ( ! var )
