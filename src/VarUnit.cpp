@@ -26,7 +26,11 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
             pItem->setText( 0, child->getName() );
             pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-            pItem->setCheckState(0, Qt::Unchecked);
+            if ( isSaved( child ) ){
+                pItem->setCheckState(0, Qt::Checked);
+            }
+            else
+                pItem->setCheckState(0, Qt::Unchecked);
             pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
             wVars.insert( pItem, child );
             cList.append( pItem );
@@ -113,13 +117,21 @@ void VarUnit::removeHidden( TVar * var ){
 }
 
 void VarUnit::addSavedVar(TVar * var){
-    QStringList * n = varName(var);
+    QString n = shortVarName(var).join(".");
+//    qDebug()<<n;
     savedVars.insert(n);
+//    qDebug()<<"saved"<<savedVars;
 }
 
 void VarUnit::removeSavedVar(TVar * var){
-    QStringList * n = varName(var);
-    savedVars.remove(n);
+    QString n = shortVarName(var).join(".");
+//    savedVars.remove(n);
+//    qDebug()<<"removed"<<savedVars;
+}
+
+bool VarUnit::isSaved( TVar * var ){
+    QString n = shortVarName(var).join(".");
+    return savedVars.contains(n);
 }
 
 void VarUnit::removeVariable(TVar * var){

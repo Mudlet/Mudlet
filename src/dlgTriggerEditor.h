@@ -93,6 +93,8 @@ public:
     bool                        showHiddenVars;
     TConsole *                  mpErrorConsole;
     void                        changeView( int );
+    void                        recurseVariablesUp( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesDown( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
 
 signals:
 

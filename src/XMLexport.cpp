@@ -410,7 +410,53 @@ bool XMLexport::writeHost( Host * pT )
     }
     writeEndElement();
 
+    writeStartElement("VariablePackage");
+    LuaInterface * lI = pT->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * base = vu->getBase();
+    QListIterator<TVar *> it7( base->getChildren() );
+    while( it7.hasNext() )
+    {
+        TVar * var = it7.next();
+        writeVariable( var, lI, vu );
+    }
+    writeEndElement();
+
     return ret;
+}
+
+bool XMLexport::writeVariable( TVar * var, LuaInterface * lI, VarUnit * vu )
+{
+    if ( var->getValueType() == LUA_TTABLE )
+    {
+        if ( vu->isSaved( var ) )
+        {
+            writeStartElement( "VariableGroup" );
+            writeTextElement( "name", var->getName() );
+            writeAttribute( "keyType", QString::number( var->getKeyType() ) );
+            writeTextElement( "value", lI->getValue( var ) );
+            writeAttribute( "valueType", QString::number( var->getValueType() ) );
+            QListIterator<TVar *> it( var->getChildren() );
+            while( it.hasNext() )
+            {
+                TVar * var = it.next();
+                writeVariable( var, lI, vu );
+            }
+            writeEndElement();
+        }
+    }
+    else
+    {
+        if ( vu->isSaved( var ) )
+        {
+            writeStartElement( "Variable" );
+            writeTextElement( "name", var->getName() );
+            writeAttribute( "keyType", QString::number( var->getKeyType() ) );
+            writeTextElement( "value", lI->getValue( var ) );
+            writeAttribute( "valueType", QString::number( var->getValueType() ) );
+            writeEndElement();
+        }
+    }
 }
 
 bool XMLexport::exportGenericPackage( QIODevice * device )

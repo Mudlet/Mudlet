@@ -4951,6 +4951,23 @@ void dlgTriggerEditor::slot_key_clicked( QTreeWidgetItem *pItem, int column )
     }
 }
 
+void dlgTriggerEditor::recurseVariablesUp( QTreeWidgetItem *pItem, QList< QTreeWidgetItem * > & list)
+{
+    QTreeWidgetItem * pParent = pItem->parent();
+    if ( pParent && pParent != mpVarBaseItem )
+    {
+        list.append( pParent );
+        recurseVariablesUp( pParent, list );
+    }
+}
+
+void dlgTriggerEditor::recurseVariablesDown( QTreeWidgetItem *pItem, QList< QTreeWidgetItem * > & list)
+{
+    list.append( pItem );
+    for(int i=0;i<pItem->childCount();++i)
+        recurseVariablesDown( pItem->child(i), list );
+}
+
 void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     if( ! pItem ) return;
     int state = pItem->checkState( column );
@@ -4961,6 +4978,24 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         TVar * var = vu->getWVar(pItem);
         if ( var )
             vu->addSavedVar( var );
+        QList< QTreeWidgetItem * > list;
+        recurseVariablesUp( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
+                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+                vu->addSavedVar( v );
+        }
+        list.clear();
+        recurseVariablesDown( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
+                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+                vu->addSavedVar( v );
+        }
     }
     else if ( state == Qt::Unchecked )
     {
@@ -4969,6 +5004,22 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         TVar * var = vu->getWVar(pItem);
         if ( var )
             vu->removeSavedVar( var );
+        QList< QTreeWidgetItem * > list;
+        recurseVariablesUp( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+                vu->removeSavedVar( v );
+        }
+        list.clear();
+        recurseVariablesDown( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+                vu->removeSavedVar( v );
+        }
     }
     mpVarsMainArea->show();
     if ( pItem == mpCurrentVarItem )

@@ -31,6 +31,7 @@ public:
     void removeHidden( TVar * );
     void addHidden( TVar * );
     bool isHidden( TVar * );
+    bool isSaved( TVar * );
 public:
     QSet< QString > hidden;
 private:
@@ -38,7 +39,7 @@ private:
     QSet< QStringList * > varList;
     QMap< QTreeWidgetItem *, TVar * > wVars;
     QMap< QTreeWidgetItem *, TVar * > tVars;
-    QSet< QStringList * > savedVars;
+    QSet< QString > savedVars;
 };
 
 #endif // VARUNIT_H
