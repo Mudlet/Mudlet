@@ -5,6 +5,7 @@
 #include "TTreeWidget.h"
 #include "Host.h"
 #include <QSet>
+#include <QTreeWidgetItem>
 #include <setjmp.h>
 #include "TVar.h"
 #include "VarUnit.h"
@@ -32,6 +33,9 @@ public:
     void renameVar( TVar * );
     void createVar( TVar * );
     VarUnit * getVarUnit();
+    bool reparentVariable( QTreeWidgetItem *, QTreeWidgetItem *, QTreeWidgetItem * );
+    bool validMove( QTreeWidgetItem * );
+    void getAllChildren( TVar * var, QList<TVar *> * list);
 private:
     Host * mpHost;
     int mHostID;

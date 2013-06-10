@@ -1789,6 +1789,11 @@ void dlgTriggerEditor::slot_deleteVar()
     if ( var )
     {
         lI->deleteVar( var );
+        TVar * parent = var->getParent();
+        if (parent)
+            parent->removeChild(var);
+        vu->removeVariable(var);
+        delete var;
     }
     if( pParent )
     {
@@ -5011,16 +5016,20 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) ){
+                qDebug()<<"up"<<v->getName();
                 vu->removeSavedVar( v );
+            }
         }
         list.clear();
         recurseVariablesDown( pItem, list );
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) ){
+                qDebug()<<"down"<<v->getName();
                 vu->removeSavedVar( v );
+            }
         }
     }
     mpVarsMainArea->show();

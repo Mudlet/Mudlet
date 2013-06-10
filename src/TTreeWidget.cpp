@@ -25,6 +25,8 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "TDebug.h"
+#include "LuaInterface.h"
+#include "VarUnit.h"
 
 TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
 {
@@ -126,6 +128,7 @@ void TTreeWidget::setHost( Host * pH )
 
 void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end )
 {
+    oldModel = parent;
     if( parent.isValid() )
     {
         mOldParentID = parent.data( Qt::UserRole ).toInt();
@@ -234,6 +237,20 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
             mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             mpHost->getActionUnit()->updateToolbar();
         }
+        if( mIsVarTree )
+        {
+            LuaInterface * lI = mpHost->getLuaInterface();
+            QTreeWidgetItem * newpItem = itemFromIndex(parent);
+            QTreeWidgetItem * cItem = itemFromIndex(child);
+            QTreeWidgetItem * oldpItem = itemFromIndex( oldModel );
+            lI->reparentVariable( newpItem, cItem, oldpItem );
+//            if ( ! lI->reparentVariable( newpItem, cItem, oldpItem ) )
+//            {
+//                QTreeWidget::rowsInserted( oldModel, start, end );
+//                return;
+//            }
+//            qDebug()<<start<<end;
+        }
 
         mChildID = 0;
         mOldParentID = 0;
@@ -268,6 +285,16 @@ void TTreeWidget::dropEvent(QDropEvent *event)
     {
         if( (dropIndicatorPosition() == QAbstractItemView::AboveItem )
          || (dropIndicatorPosition() == QAbstractItemView::BelowItem ) )
+        {
+            event->setDropAction( Qt::IgnoreAction );
+            event->ignore();
+        }
+    }
+
+    if ( mIsVarTree )
+    {
+        LuaInterface * lI = mpHost->getLuaInterface();
+        if ( ! lI->validMove( pItem ) )
         {
             event->setDropAction( Qt::IgnoreAction );
             event->ignore();

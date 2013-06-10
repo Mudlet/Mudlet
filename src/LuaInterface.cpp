@@ -31,6 +31,122 @@ QStringList LuaInterface::varName(TVar * var){
     return names;
 }
 
+bool LuaInterface::validMove(QTreeWidgetItem * p){
+    TVar * newParent = varUnit->getWVar(p);
+    if (newParent && newParent->getValueType() != LUA_TTABLE)
+        return false;
+    return true;
+}
+
+void LuaInterface::getAllChildren( TVar * var, QList<TVar *> * list){
+    QListIterator<TVar *> it(var->getChildren());
+    if (varUnit->isSaved(var))
+        list->append(var);
+    else
+        qDebug()<<"t"<<var->getName()<<"not saved";
+    while (it.hasNext()){
+        TVar * child = it.next();
+        if (child->getValueType() == LUA_TTABLE)
+            getAllChildren( child, list);
+        else if (varUnit->isSaved(child))
+            list->append(child);
+        else
+            qDebug()<<child->getName()<<"not saved";
+    }
+
+}
+
+bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cItem, QTreeWidgetItem * oldP){
+    //if oldParent doesn't exist:
+    //this means we were moved to a table from the global namespace
+    //if newParent doesn't exist:
+    //we were moved to the global namespace
+    //if both exist:
+    //this means we were moved from inside a table to inside another table
+    //and in both instances, this table was not _G
+    L = interpreter->pGlobalLua;
+    TVar * newParent = varUnit->getWVar(newP);
+    TVar * curVar = varUnit->getWVar(cItem);
+    TVar * oldParent = varUnit->getWVar(oldP);
+    qDebug()<<newParent<<curVar<<oldParent;
+    TVar * from = oldParent;
+    TVar * to = newParent;
+    if ( newParent && newParent->getValueType() != LUA_TTABLE ){
+        qDebug()<<"attempt to move to a non-table";
+        return false;
+    }
+    if ( !oldParent ){
+        from = varUnit->getBase();
+        to = newParent;
+    }
+    else if ( !newParent ){
+        from = oldParent;
+        to = varUnit->getBase();
+    }
+    bool isSaved = varUnit->isSaved(curVar);
+    if (isSaved){
+        QList<TVar *> list;
+        getAllChildren(curVar, &list);
+        QListIterator<TVar *> it(list);
+        while (it.hasNext()){
+            TVar * t = it.next();
+            qDebug()<<t->getName();
+            varUnit->removeSavedVar(t);
+        }
+    }
+    QList<TVar *> vars = varOrder(curVar);
+    QString oldName = vars[0]->getName();
+    for(int i=1;i<vars.size();i++){
+        if (vars[i]->getKeyType() == LUA_TNUMBER){
+            oldName.append("["+vars[i]->getName()+"]");
+        }
+        else{
+            oldName.append("[\""+vars[i]->getName()+"\"]");
+        }
+    }
+    from->removeChild(curVar);
+    curVar->setParent(to);
+    to->addChild(curVar);
+
+    vars = varOrder(curVar);
+    QString newName = vars[0]->getName();
+    for(int i=1;i<vars.size();i++){
+        if (vars[i]->getKeyType() == LUA_TNUMBER){
+            newName.append("["+vars[i]->getName()+"]");
+        }
+        else{
+            newName.append("[\""+vars[i]->getName()+"\"]");
+        }
+    }
+
+    QString addString = QString(newName+" = "+oldName);
+    qDebug()<<addString;
+    int error = luaL_dostring(L, addString.toLatin1().data());
+    qDebug()<<"reparented with"<<error;
+    //delete it
+    oldName.append(QString(" = nil"));
+    luaL_loadstring(L, oldName.toLatin1().data());
+    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error){
+        QString emsg = lua_tostring(L, -1);
+        qDebug()<<oldName;
+        qDebug()<<"error msg"<<emsg;
+        return false;
+    }
+    if (isSaved){
+        QList<TVar *> list;
+        list.append(to);
+        getAllChildren(curVar, &list);
+        QListIterator<TVar *> it(list);
+        while (it.hasNext()){
+            TVar * t = it.next();
+            qDebug()<<t->getName();
+            varUnit->addSavedVar(t);
+        }
+    }
+    return true;
+}
+
 QList<TVar *> LuaInterface::varOrder(TVar * var){
     QList<TVar *> vars;
     if (var->getName() == "_G"){
@@ -95,16 +211,25 @@ bool LuaInterface::setValue( TVar * var ){
 
 void LuaInterface::deleteVar( TVar * var ){
     L = interpreter->pGlobalLua;
-    QString cheat = varName(var).join(".");
-    cheat.append(QString(" = nil"));
-    int error = luaL_dostring(L, cheat.toLatin1().data());
-    qDebug()<<cheat;
-    qDebug()<<"deleted"<<var->getName()<<"with error"<<error;
-    TVar * parent = var->getParent();
-    if (parent)
-        parent->removeChild(var);
-    varUnit->removeVariable(var);
-    delete var;
+    QList<TVar *> vars = varOrder(var);
+    QString oldName = vars[0]->getName();
+    for(int i=1;i<vars.size();i++){
+        if (vars[i]->getKeyType() == LUA_TNUMBER){
+            oldName.append("["+vars[i]->getName()+"]");
+        }
+        else{
+            oldName.append("[\""+vars[i]->getName()+"\"]");
+        }
+    }
+    //delete it
+    oldName.append(QString(" = nil"));
+    luaL_loadstring(L, oldName.toLatin1().data());
+    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error){
+        QString emsg = lua_tostring(L, -1);
+        qDebug()<<oldName;
+        qDebug()<<"error msg"<<emsg;
+    }
 }
 
 void LuaInterface::renameVar( TVar * var ){
@@ -144,6 +269,8 @@ void LuaInterface::renameVar( TVar * var ){
         qDebug()<<oldName;
         qDebug()<<"error msg"<<emsg;
     }
+    else
+        qDebug()<<oldName;
     var->clearNewName();
 }
 

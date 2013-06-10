@@ -55,7 +55,6 @@ void VarUnit::removeTempVar( QTreeWidgetItem * p ){
 }
 
 TVar * VarUnit::getTVar( QTreeWidgetItem * p ){
-    qDebug()<<tVars;
     if (tVars.contains(p))
         return tVars[p];
     return 0;
@@ -121,12 +120,13 @@ void VarUnit::addSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
 //    qDebug()<<n;
     savedVars.insert(n);
+    qDebug()<<"added"<<n;
 }
 
 void VarUnit::removeSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
     savedVars.remove(n);
-//    qDebug()<<"removed"<<savedVars;
+    //qDebug()<<"removed"<<n;
 }
 
 bool VarUnit::isSaved( TVar * var ){
