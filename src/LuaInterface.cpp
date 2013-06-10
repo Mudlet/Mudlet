@@ -199,6 +199,7 @@ bool LuaInterface::setValue( TVar * var ){
         return false;
     }
     luaL_loadstring(L, newName.toLatin1().data());
+    qDebug()<<newName;
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
         qDebug()<<newName;
@@ -344,6 +345,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         tVar->addChild(var);
         if (varUnit->varExists(var)){
             lua_pop(L, 1);
+//            qDebug()<<"removing dup"<<keyName;
             tVar->removeChild(var);
             delete var;
             continue;
@@ -353,7 +355,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
             if (depth<=5){
                 //put the table on top
                 lua_pushnil(L);
-                var->setValue("{}");
+                var->setValue("{}", LUA_TTABLE);
 //                qDebug()<<"entering table"<<keyName;
 //                for (int i=1;i<=lua_gettop(L);i++){
 //                    qDebug()<<i<<":"<<lua_type(L,i*-1);

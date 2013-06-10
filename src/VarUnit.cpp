@@ -1,6 +1,7 @@
 #include "VarUnit.h"
 #include <QDebug>
 #include <QTreeWidgetItem>
+#include <QStringList>
 
 VarUnit::VarUnit()
 {
@@ -66,11 +67,11 @@ TVar * VarUnit::getWVar( QTreeWidgetItem * p ){
     return 0;
 }
 
-QStringList * VarUnit::varName(TVar * var){
+QStringList VarUnit::varName(TVar * var){
     QStringList names;
     names << "_G";
     if (var == base || ! var ){
-        return &names;
+        return names;
     }
     names << var->getName();
     TVar * p = var->getParent();
@@ -80,7 +81,7 @@ QStringList * VarUnit::varName(TVar * var){
             break;
         p = p->getParent();
     }
-    return &names;
+    return names;
 }
 
 QStringList VarUnit::shortVarName(TVar * var){
@@ -99,7 +100,7 @@ QStringList VarUnit::shortVarName(TVar * var){
 }
 
 void VarUnit::addVariable(TVar * var){
-    QStringList * n = varName(var);
+    QString n = varName(var).join(".");
     varList.insert(n);
     if ( var->hidden ){
         hidden.insert(shortVarName(var).join("."));
@@ -131,22 +132,28 @@ void VarUnit::removeSavedVar(TVar * var){
 
 bool VarUnit::isSaved( TVar * var ){
     QString n = shortVarName(var).join(".");
+//    qDebug()<<"checking isSaved"<<n;
     return savedVars.contains(n);
 }
 
 void VarUnit::removeVariable(TVar * var){
 //    TVar * parent = var->getParent();
 //    parent->removeChild(var);
-    varList.remove(varName(var));
+    varList.remove(varName(var).join("."));
 }
 
 bool VarUnit::varExists(TVar * var){
-    QStringList * names = varName(var);
+    QStringList names = varName(var);
     if (var->getValueType() == 5){
-        if (names->count(var->getName())>1)
+        QString name = var->getName();
+        if (names.count(name)>1)
             return true;
+//        for(int i=0;i<names.size();i++){
+//            if (name == names.at(i))
+//                return true;
+//        }
     }
-    return varList.contains(names);
+    return varList.contains(names.join("."));
 }
 
 TVar * VarUnit::getBase(){
@@ -158,7 +165,7 @@ void VarUnit::setBase(TVar * t){
 }
 
 void VarUnit::clear(){
-    delete base;
+    //delete base;
     tVars.clear();
     wVars.clear();
     varList.clear();

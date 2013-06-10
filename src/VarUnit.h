@@ -11,7 +11,7 @@ class VarUnit
 {
 public:
     VarUnit();
-    QStringList * varName(TVar * );
+    QStringList varName(TVar * );
     QStringList shortVarName(TVar * );
     bool varExists(TVar *);
     void addVariable(TVar *);
@@ -36,7 +36,7 @@ public:
     QSet< QString > hidden;
 private:
     TVar * base;
-    QSet< QStringList * > varList;
+    QSet< QString > varList;
     QMap< QTreeWidgetItem *, TVar * > wVars;
     QMap< QTreeWidgetItem *, TVar * > tVars;
     QSet< QString > savedVars;
