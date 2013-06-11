@@ -2815,6 +2815,7 @@ void dlgTriggerEditor::addVar( bool isFolder ){
     else
         newVar->setValueType(LUA_TNONE);
     vu->addTempVar( newItem, newVar );
+    newItem->setFlags(newItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled ));
     if (newItem){
         treeWidget_vars->setCurrentItem( newItem );
         mCurrentVar = (QTreeWidgetItem*)newItem;
@@ -6479,6 +6480,7 @@ void dlgTriggerEditor::changeView( int view )
     mpActionsMainArea->hide();
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
+    toggleHiddenVarsButton->hide();
 
     mpSystemMessageArea->hide();
     mpOptionsAreaTriggers->hide();
@@ -6612,6 +6614,7 @@ void dlgTriggerEditor::slot_show_vars()
     repopulateVars();
     mCurrentVar = 0;
     mpSourceEditorArea->hide();
+    toggleHiddenVarsButton->show();
     QTreeWidgetItem * pI = treeWidget_vars->topLevelItem( 0 );
     if( pI )
     {

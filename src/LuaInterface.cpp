@@ -184,7 +184,7 @@ bool LuaInterface::setValue( TVar * var ){
     }
     switch ( var->getValueType() ){
     case LUA_TSTRING:
-        newName.append(QString(" = \""+var->getValue()+"\""));
+        newName.append(QString(" = [["+var->getValue()+"]]"));
         break;
     case LUA_TNUMBER:
         newName.append(QString(" = "+var->getValue()));
