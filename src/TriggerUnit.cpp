@@ -261,6 +261,30 @@ void TriggerUnit::removeTrigger( TTrigger * pT )
     mTriggerMap.remove(pT->getID());
 }
 
+// trigger matching order is permantent trigger objects first, temporary objects second
+// after package import or module sync this order needs to be reset
+void TriggerUnit::reorderTriggersAfterPackageImport()
+{
+    QList<TTrigger *> tempList;
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        if( pChild->isTempTrigger() )
+        {
+            tempList.push_back( pChild );
+        }
+    }
+    for( int i=0; i<tempList.size(); i++ )
+    {
+        mTriggerRootNodeList.remove( tempList[i] );
+    }
+    for( int i=0; i<tempList.size(); i++ )
+    {
+        mTriggerRootNodeList.push_back( tempList[i] );
+    }
+
+}
 
 qint64 TriggerUnit::getNewID()
 {

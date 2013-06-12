@@ -770,11 +770,20 @@ int TLuaInterpreter::setMiniConsoleFontSize( lua_State * L )
 // returns current y position of the user cursor
 int TLuaInterpreter::getLineNumber( lua_State * L )
 {
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    int lineNumber = pHost->mpConsole->getLineNumber();
-    lua_pushnumber( L, lineNumber );
-    return 1;
+    if( lua_isstring( L, 1 ) )
+    {
+        string window = lua_tostring( L, 1 );
+        QString _window = window.c_str();
+        lua_pushnumber( L, mudlet::self()->getLineNumber( pHost, _window ) );
+        return 1;
+    }
+    else
+    {
+        lua_pushnumber( L, pHost->mpConsole->getLineNumber() );
+        return 1;
+    }
+    return 0;
 }
 
 int TLuaInterpreter::updateMap(lua_State * L){
@@ -1229,9 +1238,20 @@ int TLuaInterpreter::getLineCount( lua_State * L )
 int TLuaInterpreter::getColumnNumber( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    int lineNumber = pHost->mpConsole->getColumnNumber();
-    lua_pushnumber( L, lineNumber );
-    return 1;
+    if( lua_isstring( L, 1 ) )
+    {
+        string window = lua_tostring( L, 1 );
+        QString _window = window.c_str();
+        lua_pushnumber( L, mudlet::self()->getColumnNumber( pHost, _window ) );
+        return 1;
+    }
+    else
+    {
+        lua_pushnumber( L, pHost->mpConsole->getColumnNumber() );
+        return 1;
+    }
+    return 0;
+
 }
 
 int TLuaInterpreter::getStopWatchTime( lua_State * L )
@@ -4665,7 +4685,18 @@ int TLuaInterpreter::debug( lua_State *L )
     QString luaDebugText="";
     for (int i=0; i<nbargs; i++)
     {
-        luaDebugText += (nbargs > 1 ? " [" + QString::number(i) + "] " : " ") + lua_tostring( L, i+1 );
+        luaDebugText += (nbargs > 1 ? " (" + QString::number(i+1) + ") " : " ") + lua_tostring( L, i+1 );
+        QColor green = QColor(0,255,0);
+        QColor blue = QColor(0,0,255);
+        QColor black = QColor(0,0,0);
+        QString s1 = QString("[DEBUG:]");
+        QString s2 = QString("%1\n").arg(luaDebugText);
+        Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+        if( mpHost->mpEditorDialog )
+        {
+            mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
+            mpHost->mpEditorDialog->mpErrorConsole->printDebug(green, black, s2);
+        }
     }
     return 0;
 }
@@ -7272,10 +7303,235 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     if( pR )
     {
         pR->setExitWeight(_text, weight );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
+
+int TLuaInterpreter::addCustomLine( lua_State * L )
+{
+    //args: from id, id_to, direction, style, line color, arrow (bool)
+    int id_from, id_to, r=255, g=0, b=0;
+    QString line_style("solid line");
+    QString direction;
+    QList<qreal> x;
+    QList<qreal> y;
+    QList<int> z;
+    bool arrow = false;
+    if ( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "addCustomLine: First argument must be room number" );
+        lua_error( L );
+        return 1;
+    }
+    else
+        id_from = lua_tointeger( L, 1 );
+    if ( ! lua_isnumber( L, 2 ) && ! lua_istable( L, 2) )
+    {
+        lua_pushstring( L, "addCustomLine: Second argument must be room number or coordinate list" );
+        lua_error( L );
+        return 1;
+    }
+    else if ( lua_isnumber( L, 2 ) )
+    {
+        id_to = lua_tointeger( L, 2 );
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_to );
+        x.append((qreal)pR->x);
+        y.append((qreal)pR->y);
+        z.append(pR->z);
+    }
+    else if ( lua_istable( L, 2 ) )
+    {
+        lua_pushnil( L );
+        while ( lua_next( L, 2 ) != 0 )
+        {
+            if ( lua_type( L, -1 ) != LUA_TTABLE )
+            {
+                lua_pushstring( L, "addCustomLine: Coordinate list must be a table of tabled coordinates" );
+                lua_error( L );
+                return 1;
+            }
+            lua_pushnil( L );
+            int j=1;
+            while ( lua_next( L, -2 ) != 0 )
+            {
+                if ( lua_type( L, -1 ) != LUA_TNUMBER )
+                {
+                    lua_pushstring( L, "addCustomLine: Coordinates must be numeric." );
+                    lua_error( L );
+                    return 1;
+                }
+                if ( j==1 )
+                    x.append( lua_tonumber( L, -1 ) );
+                else if ( j==2 )
+                    y.append( lua_tonumber( L, -1 ) );
+                else if ( j==3 )
+                    z.append( lua_tonumber( L, -1 ) );
+                j++;
+                lua_pop( L, 1 );
+            }
+            lua_pop( L, 1 );
+        }
+    }
+    if ( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "addCustomLine: Third argument must be direction" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        //QStringList validDirections;
+        //validDirections << "NW" << "N" << "NE" << "E" << "SE" << "S" << "SW" << "W";
+
+        direction = QString(lua_tostring( L, 3 )); //note: special exits are case sensitive
+//        if ( ! validDirections.contains( direction ) )
+//        {
+//            lua_pushstring( L, "addCustomLine: Direction argument must be one of NW, N, NE, E, SE, S, SW, W or the special exit command string." );
+//            lua_error( L );
+//            return 1;
+//        }
+    }
+    if ( lua_isstring( L, 4 ) )
+    {
+        QStringList validLines;
+        validLines << "solid line" << "dot line" << "dash line";
+        line_style = QString(lua_tostring( L, 4 ));
+        if ( ! validLines.contains(line_style) )
+        {
+            lua_pushstring( L, "addCustomLine: Valid line styles: solid line, dot line, dash line" );
+            lua_error( L );
+            return 1;
+        }
+    }
+    if ( lua_istable( L, 5) )
+    {
+        lua_pushnil( L );
+        int tind = 0;
+        while ( lua_next( L, 5 ) != 0 )
+        {
+            if ( lua_type( L, -1 ) != LUA_TNUMBER )
+            {
+                lua_pushstring( L, "addCustomLine: Colors must be a number between 0 and 255" );
+                lua_error( L );
+                return 1;
+            }
+            if ( tind==0 )
+                r = lua_tonumber( L, -1 );
+            else if ( tind==1 )
+                g = lua_tonumber( L, -1 );
+            else if ( tind==2 )
+                b = lua_tonumber( L, -1 );
+            tind++;
+            lua_pop( L, 1 );
+        }
+    }
+    if ( lua_isboolean( L, 6 ) )
+    {
+        arrow = lua_toboolean( L, 6 );
+    }
+    int lz=0;
+    QList<QPointF> points;
+    for(int i=0;i<z.size();i++)
+    {
+        if (i==0)
+            lz=z.at(i);
+        else if (lz != z.at(i))
+        {
+            lua_pushstring( L, "addCustomLine: All z values must be on same level." );
+            lua_error( L );
+            return 1;
+        }
+        points.append(QPointF(x.at(i),y.at(i)));
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    if( pR ) //note: pR is 0 for non existing rooms
+    {
+        QList<int> colors;
+        colors.append(r);
+        colors.append(g);
+        colors.append(b);
+        //Heiko: direction/line relationship must be unique
+        pR->customLines[direction] = points;
+        pR->customLinesArrow[direction] = arrow;
+        pR->customLinesStyle[direction] = line_style;
+        pR->customLinesColor[direction] = colors;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::getCustomLines( lua_State * L )
+{
+    int roomID;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "getCustomLines: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        roomID = lua_tointeger( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    if( pR )
+    {
+        lua_newtable(L); //return table customLines[]
+        QStringList exits = pR->customLines.keys();
+        for( int i=0; i<exits.size(); i++ )
+        {
+            lua_pushstring(L, exits[i].toLocal8Bit().data());
+            lua_newtable(L);//customLines[direction]
+            lua_pushstring(L, "attributes");
+            lua_newtable(L); //customLines[attributes]
+            lua_pushstring(L, "style");
+            lua_pushstring(L,pR->customLinesStyle[exits[i]].toLocal8Bit().data());
+            lua_settable(L, -3);
+            lua_pushstring(L, "arrow");
+            lua_pushboolean(L,pR->customLinesArrow[exits[i]]);
+            lua_settable(L, -3);
+            lua_pushstring(L, "color");
+            lua_newtable(L);
+            lua_pushstring(L, "r");
+            lua_pushinteger(L, pR->customLinesColor[exits[i]][0]);
+            lua_settable(L, -3);
+            lua_pushstring(L, "g");
+            lua_pushinteger(L, pR->customLinesColor[exits[i]][1]);
+            lua_settable(L, -3);
+            lua_pushstring(L, "b");
+            lua_pushinteger(L, pR->customLinesColor[exits[i]][2]);
+            lua_settable(L, -3);
+            lua_settable(L, -3);//color
+            lua_settable(L, -3); //attributes
+            lua_pushstring(L,"points");
+            lua_newtable(L);//customLines[points]
+            QList<QPointF> pointL = pR->customLines[exits[i]];
+            for( int k=0; k<pointL.size(); k++ )
+            {
+                lua_pushnumber( L, k );
+                lua_newtable(L);
+                lua_pushstring(L, "x");
+                lua_pushnumber( L, pointL[k].x() );
+                lua_settable(L, -3);
+                lua_pushstring(L, "y");
+                lua_pushnumber( L, pointL[k].y() );
+                lua_settable(L, -3);
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);//customLines[direction][points]
+            lua_settable(L,-3);//customLines[direction]
+        }
+    }
+    else
+    {
+        lua_pushnil(L);//if the room doesnt exist return nil
+    }
+    return 1;
+}
+
 
 //SYNTAX: exit weight table = getExitWeights( roomID )
 int TLuaInterpreter::getExitWeights( lua_State * L )
@@ -9532,6 +9788,20 @@ void TLuaInterpreter::parseJSON( QString & key, QString & string_data, QString p
             lua_pcall(L, 2, 0, 0);
         }
     }
+    else
+    {
+        {
+            string e;
+            if( lua_isstring( L, 1 ) )
+            {
+                e = "Lua error:";
+                e += lua_tostring( L, 1 );
+            }
+            QString _n = "JSON decoder error:";
+            QString _f = "json_to_value";
+            logError( e, _n, _f );
+        }
+    }
     lua_settop(L, 0);
 
     // events: for key "foo.bar.top" we raise: gmcp.foo, gmcp.foo.bar and gmcp.foo.bar.top
@@ -9594,12 +9864,15 @@ void TLuaInterpreter::parseJSON( QString & key, QString & string_data, QString p
 #define BUFFER_SIZE 20000
 void TLuaInterpreter::msdp2Lua(char *src, int srclen)
 {
+    qDebug()<<"<MSDP><"<<src<<">";
     QStringList varList;
     QString lastVar;
     int i, nest, last;
     nest = last = 0;
     i = 0;
     QString script;// = "{";
+    bool isSet = false;
+    bool no_array_marker_bug = false;
     while (i < srclen)
     {
         switch (src[i])
@@ -9654,6 +9927,18 @@ void TLuaInterpreter::msdp2Lua(char *src, int srclen)
                 else
                 {
                    script.append("\"");
+
+                   if( varList.size() )
+                   {
+                       script = script.replace(0,varList.front().size()+3,"");
+                       QString token = varList.front();
+                       token = token.replace("\"","");
+                       //qDebug()<<"[SET]<Token><"<<token<<"><JSON><"<<script<<">";
+                       setMSDPTable(token, script);
+                       varList.clear();
+                       script.clear();
+                       isSet = true;
+                   }
                 }
                 last = MSDP_VAR;
                 lastVar.clear();
@@ -9666,6 +9951,7 @@ void TLuaInterpreter::msdp2Lua(char *src, int srclen)
                 }
                 if (last == MSDP_VAL)
                 {
+                    no_array_marker_bug = true;
                     script.append("\",");
                 }
                 if (src[i+1] != MSDP_TABLE_OPEN && src[i+1] != MSDP_ARRAY_OPEN)
@@ -9691,11 +9977,25 @@ void TLuaInterpreter::msdp2Lua(char *src, int srclen)
     if( last != MSDP_ARRAY_CLOSE && last != MSDP_TABLE_CLOSE )
     {
         script.append("\"");
+        if( !script.startsWith('"'))
+            script.prepend('"');
     }
     if( varList.size() )
     {
-        script = script.replace(0,varList.front().size()+3,"");
+        //qDebug()<<"<script>"<<script;
+        int startVal = script.indexOf(":")+1;
         QString token = varList.front();
+        token = token.replace("\"","");
+        script = script.replace(0,token.size()+3, "");
+        if( no_array_marker_bug )
+        {
+            if( !script.startsWith('['))
+            {
+                script.prepend('[');
+                script.append(']');
+            }
+        }
+        //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
         setMSDPTable(token, script);
     }
 }
@@ -10050,6 +10350,11 @@ QString TLuaInterpreter::get_lua_string( QString & stringName )
     return QString( lua_tostring( L, 1 ) );
 }
 
+int TLuaInterpreter::noop( lua_State * L )
+{
+    return 0;
+}
+
 int TLuaInterpreter::check_for_mappingscript()
 {
     lua_State * L = pGlobalLua;
@@ -10384,6 +10689,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getAreaExits", TLuaInterpreter::getAreaExits );
     lua_register( pGlobalLua, "auditAreas", TLuaInterpreter::auditAreas );
     lua_register( pGlobalLua, "sendMSDP", TLuaInterpreter::sendMSDP );
+    lua_register( pGlobalLua, "handleWindowResizeEvent", TLuaInterpreter::noop );
+    lua_register( pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine );
+    lua_register( pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines );
+
 
 
     luaopen_yajl(pGlobalLua);

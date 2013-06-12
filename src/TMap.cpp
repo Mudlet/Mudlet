@@ -247,8 +247,6 @@ int TMap::createNewRoomID()
 
 bool TMap::setExit( int from, int to, int dir )
 {
-
-    qDebug()<<"setExit("<<from<<", "<<to<<" dir="<<dir;
     TRoom * pR = mpRoomDB->getRoom( from );
     TRoom * pR_to = mpRoomDB->getRoom( to );
 

@@ -2308,6 +2308,7 @@ void T2DMap::slot_deleteCustomExitLine()
             mCustomLineSelectedRoom = 0;
             mCustomLineSelectedExit = "";
             mCustomLineSelectedPoint = -1;
+            pR->calcRoomDimensions();
         }
     }
 }
@@ -2655,6 +2656,7 @@ void T2DMap::slot_spread()
             newMap.insert(itk.key(), _pL );
         }
         pR->customLines = newMap;
+        pR->calcRoomDimensions();
     }
     repaint();
 }
@@ -2702,6 +2704,7 @@ void T2DMap::slot_shrink()
             newMap.insert(itk.key(), _pL );
         }
         pR->customLines = newMap;
+        pR->calcRoomDimensions();
     }
     repaint();
 }
@@ -2858,6 +2861,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                     my = yspan/2 - my;
                     QPointF pc = QPointF(mx,my);
                     pR->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
+                    pR->calcRoomDimensions();
                     repaint();
                     return;
                 }
@@ -3044,6 +3048,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                     newMap.insert(itk.key(), _pL );
                 }
                 pR->customLines = newMap;
+                pR->calcRoomDimensions();
             }
         }
         repaint();
@@ -3213,27 +3218,19 @@ void T2DMap::slot_setCustomLine()
 
     b_ = d->findChild<QPushButton*>("up");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getUp() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     b_ = d->findChild<QPushButton*>("down");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getDown() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     b_ = d->findChild<QPushButton*>("in");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getIn() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     b_ = d->findChild<QPushButton*>("out");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getOut() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     QMapIterator<int, QString> it(pR->getOtherMap());
     while( it.hasNext() )
@@ -3297,6 +3294,7 @@ void T2DMap::slot_setCustomLine2()
 
 void T2DMap::slot_setCustomLine2B(QTreeWidgetItem * special_exit, int column )
 {
+    qDebug()<<"setCustomLine2B() special exit chosen";
     if( ! special_exit ) return;
     QString exit = special_exit->text(1);
     mpCustomLinesDialog->close();

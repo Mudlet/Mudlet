@@ -1293,10 +1293,39 @@ bool mudlet::setLabelOnLeave( Host * pHost, QString & name, QString & func, TEve
         return false;
 }
 
+int mudlet::getLineNumber( Host * pHost, QString & name )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        return dockWindowConsoleMap[name]->getLineNumber();
+    }
+    else
+    {
+        TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesnt exit\n" >> 0;
+    }
+    return -1;
+}
+
+int mudlet::getColumnNumber( Host * pHost, QString & name )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        return dockWindowConsoleMap[name]->getColumnNumber();
+    }
+    else
+    {
+        TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesnt exit\n" >> 0;
+    }
+    return -1;
+}
+
+
 int mudlet::getLastLineNumber( Host * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     {
         return dockWindowConsoleMap[name]->getLastLineNumber();
     }

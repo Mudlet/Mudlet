@@ -1070,6 +1070,8 @@ bool Host::installPackage( QString fileName, int module )
             file_xml.close();
         }
     }
+    // reorder permanent and temporary triggers: perm first, temp second
+    mTriggerUnit.reorderTriggersAfterPackageImport();
     return true;
 }
 
