@@ -258,16 +258,14 @@ color_table = {
 ---   </pre>
 ---
 --- @see createGauge
-function moveGauge(gaugeName, newX, newY)
-	local newX, newY = newX, newY
-
-	assert(gaugesTable[gaugeName], "moveGauge: no such gauge exists.")
-	assert(newX and newY, "moveGauge: need to have both X and Y dimensions.")
-
-	moveWindow(gaugeName, newX, newY)
-	moveWindow(gaugeName .. "_back", newX, newY)
-
-	gaugesTable[gaugeName].xpos, gaugesTable[gaugeName].ypos = newX, newY
+function moveGauge(gaugeName, x, y)
+    assert(gaugesTable[gaugeName], "moveGauge: no such gauge exists.")
+    assert(x and y, "moveGauge: need to have both X and Y dimensions.")
+    moveWindow(gaugeName .. "_back", x, y)
+    moveWindow(gaugeName .. "_text", x, y)
+    -- save new values in table
+    gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
+    setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
 end
 
 
@@ -280,10 +278,10 @@ end
 ---
 --- @see createGauge, moveGauge, showGauge
 function hideGauge(gaugeName)
-	assert(gaugesTable[gaugeName], "hideGauge: no such gauge exists.")
-
-	hideWindow(gaugeName)
-	hideWindow(gaugeName .. "_back", newX)
+    assert(gaugesTable[gaugeName], "hideGauge: no such gauge exists.")
+    hideWindow(gaugeName .. "_back")
+    hideWindow(gaugeName .. "_front")
+    hideWindow(gaugeName .. "_text")
 end
 
 
@@ -297,9 +295,9 @@ end
 --- @see createGauge, moveGauge, hideGauge
 function showGauge(gaugeName)
 	assert(gaugesTable[gaugeName], "showGauge: no such gauge exists.")
-
-	showWindow(gaugeName)
-	showWindow(gaugeName .. "_back", newX)
+	showWindow(gaugeName .. "_back")
+	showWindow(gaugeName .. "_front")
+	showWindow(gaugeName .. "_text")
 end
 
 
@@ -321,33 +319,20 @@ end
 --- @param color3
 ---
 --- @see createGauge
-function setGaugeText(gaugeName, gaugeText, color1, color2, color3)
-	assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
-
-	local red,green,blue = 0,0,0
-	local l_labelText = gaugeText
-
-	if color1 ~= nil then
-		if color2 == nil then
-			red, green, blue = getRGB(color1)
-		else
-			red, green, blue = color1, color2, color3
-		end
-	end
-
-	-- Check to make sure we had a text to apply, if not, clear the text
-	if l_labelText == nil then
-		l_labelText = ""
-	end
-
-	local l__Echostring = [[<font color="#]] .. RGB2Hex(red,green,blue) .. [[">]] .. l_labelText .. [[</font>]]
-
-	echo(gaugeName, l__Echostring)
-	-- do not set the text for the back, because <center> tags mess with the alignment
-	--echo(gaugeName .. "_back", l__Echostring)
-
-	gaugesTable[gaugeName].text = l__Echostring
-	gaugesTable[gaugeName].color1, gaugesTable[gaugeName].color2, gaugesTable[gaugeName].color3 = color1, color2, color3
+function setGaugeText(gaugeName, gaugeText, r, g, b)
+        assert(gaugesTable[gaugeName], "setGaugeText: no such gauge exists.")
+        if r ~= nil then
+                if g == nil then
+                        r,g,b = getRGB(r)
+                end
+        else
+                r,g,b = 0,0,0
+        end
+        gaugeText = gaugeText or ""
+        local echoString = [[<font color="#]] .. RGB2Hex(r,g,b) .. [[">]] .. gaugeText .. [[</font>]]
+        echo(gaugeName .. "_text", echoString)
+        -- save new values in table
+        gaugesTable[gaugeName].text = echoString
 end
 
 
@@ -424,45 +409,44 @@ end
 ---   <pre>
 ---   createGauge("healthBar", 300, 20, 30, 300, nil, "green")
 ---   </pre>
---- @usage Finally we'll add some text to our gauche.
+--- @usage Finally we'll add some text to our gauge.
 ---   <pre>
 ---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green")
 ---   </pre>
-function createGauge(gaugeName, width, height, Xpos, Ypos, gaugeText, color1, color2, color3)
-	 -- make a nice background for our gauge
-	createLabel(gaugeName .. "_back",0,0,0,0,1)
-	if color2 == nil then
-		local red, green, blue = getRGB(color1)
-		setBackgroundColor(gaugeName .. "_back", red , green, blue, 100)
-	else
-		setBackgroundColor(gaugeName .. "_back", color1 ,color2, color3, 100)
-	end
-	moveWindow(gaugeName .. "_back", Xpos, Ypos)
-	resizeWindow(gaugeName .. "_back", width, height)
-	showWindow(gaugeName .. "_back")
+--- @usage You can add an orientation argument as well now:
+---   <pre>
+---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green", "horizontal, vertical, goofy, or batty")
+---   </pre>
+function createGauge(gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
+    gaugeText = gaugeText or ""
+    if type(r) == "string" then
+            orientation = g
+            r,g,b = getRGB(r)
+    elseif r == nil then
+            orientation = orientation or g
+            -- default colors
+            r,g,b = 128,128,128
+    end
 
-	-- make a nicer front for our gauge
-	createLabel(gaugeName,0,0,0,0,1)
-	if color2 == nil then
-		local red, green, blue = getRGB(color1)
-		setBackgroundColor(gaugeName, red , green, blue, 255)
-	else
-		setBackgroundColor(gaugeName, color1 ,color2, color3, 255)
-	end
-	moveWindow(gaugeName, Xpos, Ypos)
-	resizeWindow(gaugeName, width, height)
-	showWindow(gaugeName)
+    orientation = orientation or "horizontal"
+    assert(table.contains({"horizontal","vertical","goofy","batty"},orientation), "createGauge: orientation must be horizontal, vertical, goofy, or batty")
+    local tbl = {width = width, height = height, x = x, y = y, text = gaugeText, r = r, g = g, b = b, orientation = orientation, value = 1}
+    createLabel(gaugeName .. "_back", 0,0,0,0,1)
+    setBackgroundColor(gaugeName .. "_back", r, g, b, 100)
 
-	-- store important data in a table
-	gaugesTable[gaugeName] = {width = width, height = height, xpos = Xpos, ypos = Ypos,text = gaugeText, color1 = color1, color2 = color2, color3 = color3}
+    createLabel(gaugeName .. "_front", 0,0,0,0,1)
+    setBackgroundColor(gaugeName .. "_front", r, g, b, 255)
 
-	-- Set Gauge text (Defaults to black)
-	-- If no gaugeText was passed, we'll just leave it blank!
-	if gaugeText ~= nil then
-		setGaugeText(gaugeName, gaugeText, "black")
-	else
-		setGaugeText(gaugeName)
-	end
+    createLabel(gaugeName .. "_text", 0,0,0,0,1)
+    setBackgroundColor(gaugeName .. "_text", 0, 0, 0, 0)
+
+    -- save new values in table
+    gaugesTable[gaugeName] = tbl
+    display(gaugesTable[gaugeName])
+    resizeGauge(gaugeName, tbl.width, tbl.height)
+    moveGauge(gaugeName, tbl.x, tbl.y)
+    setGaugeText(gaugeName, gaugeText, "black")
+    showGauge(gaugeName)
 end
 
 
@@ -481,17 +465,30 @@ end
 ---   setGauge("healthBar", 200, 400, "some text")
 ---   </pre>
 function setGauge(gaugeName, currentValue, maxValue, gaugeText)
-	assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
-	assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
+    assert(gaugesTable[gaugeName], "setGauge: no such gauge exists.")
+    assert(currentValue and maxValue, "setGauge: need to have both current and max values.")
+    local value = currentValue / maxValue
+    -- save new values in table
+    gaugesTable[gaugeName].value = value
+    local info = gaugesTable[gaugeName]
+    local x,y,w,h = info.x, info.y, info.width, info.height
 
-	resizeWindow(gaugeName, gaugesTable[gaugeName].width/100*((100/maxValue)*currentValue), gaugesTable[gaugeName].height)
-
-	-- if we wanted to change the text, we do it
-	if gaugeText ~= nil then
-		echo(gaugeName .. "_back", gaugeText)
-		echo(gaugeName, gaugeText)
-		gaugesTable[gaugeName].text = gaugeText
-	end
+    if info.orientation == "horizontal" then
+    resizeWindow(gaugeName .. "_front", w * value, h)
+    moveWindow(gaugeName .. "_front", x, y)
+    elseif info.orientation == "vertical" then
+    resizeWindow(gaugeName .. "_front", w, h * value)
+    moveWindow(gaugeName .. "_front", x, y + h * (1 - value))
+    elseif info.orientation == "goofy" then
+    resizeWindow(gaugeName .. "_front", w * value, h)
+    moveWindow(gaugeName .. "_front", x + w * (1 - value), y)
+    elseif info.orientation == "batty" then
+    resizeWindow(gaugeName .. "_front", w, h * value)
+    moveWindow(gaugeName .. "_front", x, y)
+    end
+    if gaugeText then
+            setGaugeText(gaugeName, gaugeText)
+    end
 end
 
 
@@ -764,25 +761,24 @@ end
 
 --- <b><u>TODO</u></b> resizeGauge(gaugeName, width, height)
 function resizeGauge(gaugeName, width, height)
-	assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
-	assert(width and height, "resizeGauge: need to have both width and height.")
-
-	resizeWindow(gaugeName, width, height)
-	resizeWindow(gaugeName .. "_back", width, height)
-
-	-- save in the table
-	gaugesTable[gaugeName].width, gaugesTable[gaugeName].height = width, height
+    assert(gaugesTable[gaugeName], "resizeGauge: no such gauge exists.")
+    assert(width and height, "resizeGauge: need to have both width and height.")
+    resizeWindow(gaugeName .. "_back", width, height)
+    resizeWindow(gaugeName .. "_text", width, height)
+    -- save new values in table
+    gaugesTable[gaugeName].width, gaugesTable[gaugeName].height = width, height
+    setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
 end
 
 
 
 --- <b><u>TODO</u></b> setGaugeStyleSheet(gaugeName, css, cssback)
-function setGaugeStyleSheet(gaugeName, css, cssback)
-	if not setLabelStyleSheet then return end-- mudlet 1.0.5 and lower compatibility
-	assert(gaugesTable[gaugeName], "setGaugeStyleSheet: no such gauge exists.")
-
-	setLabelStyleSheet(gaugeName, css)
-	setLabelStyleSheet(gaugeName .. "_back", cssback or css)
+function setGaugeStyleSheet(gaugeName, css, cssback, csstext)
+    if not setLabelStyleSheet then return end -- mudlet 1.0.5 and lower compatibility
+    assert(gaugesTable[gaugeName], "setGaugeStyleSheet: no such gauge exists.")
+    setLabelStyleSheet(gaugeName .. "_back", cssback or css)
+    setLabelStyleSheet(gaugeName .. "_front", css)
+    setLabelStyleSheet(gaugeName .. "_text", csstext or "")
 end
 
 
