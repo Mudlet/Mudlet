@@ -60,7 +60,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( character_password_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_pass(const QString)));
     connect( mud_description_textedit, SIGNAL(textChanged()), this, SLOT(slot_update_description()));
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
-    connect( profiles_tree_widget, SIGNAL( itemClicked( QListWidgetItem * ) ), this, SLOT( slot_item_clicked( QListWidgetItem * )));
+    connect( profiles_tree_widget, SIGNAL( currentItemChanged( QListWidgetItem *, QListWidgetItem * ) ), this, SLOT( slot_item_clicked( QListWidgetItem * )));
     connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QListWidgetItem * ) ), this, SLOT ( accept() ) );
 
     // website_entry atm is only a label
