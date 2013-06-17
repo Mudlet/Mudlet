@@ -413,6 +413,14 @@ bool XMLexport::writeHost( Host * pT )
     writeStartElement("VariablePackage");
     LuaInterface * lI = pT->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
+    //do hidden variables first
+    writeStartElement("HiddenVariables");
+    QSetIterator<QString> it8( vu->hiddenByUser );
+    while( it8.hasNext() )
+    {
+        writeTextElement( "name", it8.next() );
+    }
+    writeEndElement();
     TVar * base = vu->getBase();
     QListIterator<TVar *> it7( base->getChildren() );
     while( it7.hasNext() )

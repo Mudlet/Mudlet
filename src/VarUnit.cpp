@@ -13,7 +13,9 @@ bool VarUnit::isHidden( TVar * var ){
     if ( var->getName() == "_G" )//we never hide global
         return false;
 //    qDebug()<<"checking"<<var->getName()<<shortVarName(var).join(".");
-    return hidden.contains(shortVarName(var).join("."));
+    if (hidden.contains(shortVarName(var).join(".")))
+        return true;
+    return hiddenByUser.contains(shortVarName(var).join("."));
 }
 
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
@@ -123,13 +125,22 @@ void VarUnit::addVariable(TVar * var){
     }
 }
 
-void VarUnit::addHidden( TVar * var ){
+void VarUnit::addHidden( TVar * var, int user ){
     var->hidden = true;
-    hidden.insert(shortVarName(var).join("."));
+    if ( user )
+        hiddenByUser.insert(shortVarName(var).join("."));
+    else
+        hidden.insert(shortVarName(var).join("."));
+}
+
+void VarUnit::addHidden( QString var ){
+    hiddenByUser.insert(var);
 }
 
 void VarUnit::removeHidden( TVar * var ){
-    hidden.remove(shortVarName(var).join("."));
+    QString n = shortVarName(var).join(".");
+    hidden.remove(n);
+    hiddenByUser.remove(n);
     var->hidden = false;
 }
 

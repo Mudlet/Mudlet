@@ -86,6 +86,7 @@ private:
     void      readScriptGroup( TScript * pParent );
     void      readKeyGroup( TKey * pParent );
     void      readVariableGroup( TVar * pParent );
+    void      readHiddenVariables();
 
 
     void      readStringList( QStringList & );

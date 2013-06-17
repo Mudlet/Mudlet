@@ -239,6 +239,27 @@ void XMLimport::readVariableGroup( TVar *pParent )
     }
 }
 
+void XMLimport::readHiddenVariables()
+{
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    while( ! atEnd() )
+    {
+        readNext();
+        if( isEndElement() ) break;
+
+        if( isStartElement() )
+        {
+            if( name() == "name" )
+            {
+                QString var = readElementText();
+                vu->addHidden( var );
+                continue;
+            }
+        }
+    }
+}
+
 void XMLimport::readVariablePackage()
 {
     qDebug()<<"importing variables";
@@ -257,6 +278,10 @@ void XMLimport::readVariablePackage()
             else if( name() == "Variable" )
             {
                 readVariableGroup( mpVar );
+            }
+            else if ( name() == "HiddenVariables")
+            {
+                readHiddenVariables( );
             }
         }
     }

@@ -643,7 +643,7 @@ void dlgTriggerEditor::slot_toggleHiddenVar( bool status ){
     if ( var )
     {
         if ( status )
-            vu->addHidden( var );
+            vu->addHidden( var, 1 );
         else
             vu->removeHidden( var );
     }

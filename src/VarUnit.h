@@ -29,11 +29,13 @@ public:
     void addSavedVar( TVar * );
     void removeSavedVar( TVar * );
     void removeHidden( TVar * );
-    void addHidden( TVar * );
+    void addHidden( TVar *, int );
+    void addHidden( QString );
     bool isHidden( TVar * );
     bool isSaved( TVar * );
 public:
     QSet< QString > hidden;
+    QSet< QString > hiddenByUser;
 private:
     TVar * base;
     QSet< QString > varList;
