@@ -540,6 +540,11 @@ p, li { white-space: pre-wrap; }
              <string>table</string>
             </property>
            </item>
+           <item>
+            <property name="text">
+             <string>function</string>
+            </property>
+           </item>
           </widget>
          </item>
         </layout>

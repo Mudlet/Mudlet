@@ -27,12 +27,28 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             s1 << child->getName();
             QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
             pItem->setText( 0, child->getName() );
-            pItem->setFlags(Qt::ItemIsTristate|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
+            pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
+            if (child->getValueType() != 6)//6 is lua_tfunction
+                pItem->setFlags(pItem->flags()|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
             if ( isSaved( child ) ){
                 pItem->setCheckState(0, Qt::Checked);
             }
-            else
+            else if (child->getValueType() != 6)
                 pItem->setCheckState(0, Qt::Unchecked);
+            pItem->setData( 0, Qt::UserRole, child->getValueType() );
+            QIcon icon;
+            switch (child->getValueType()){
+                case 5:
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+                    break;
+                case 6:
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+                    break;
+                default:
+                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+                    break;
+            }
+            pItem->setIcon( 0, icon );
             pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
             wVars.insert( pItem, child );
             cList.append( pItem );

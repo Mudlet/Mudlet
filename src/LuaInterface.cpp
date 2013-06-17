@@ -239,6 +239,7 @@ void LuaInterface::renameVar( TVar * var ){
     QList<TVar *> vars = varOrder(var);
     QString oldName = vars[0]->getName();
     QString newName;
+    qDebug()<<vars;
     if (vars.size() > 1)
         newName = vars[0]->getName();
     for(int i=1;i<vars.size();i++){
@@ -259,8 +260,14 @@ void LuaInterface::renameVar( TVar * var ){
         newName.append("[\""+vars.back()->getNewName()+"\"]");
     QString addString = QString(newName+" = "+oldName);
     qDebug()<<addString;
-    int error = luaL_dostring(L, addString.toLatin1().data());
-    qDebug()<<"reassigned"<<var->getName()<<"to"<<var->getNewName()<<"with error"<<error;
+    luaL_loadstring(L, addString.toLatin1().data());
+    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error){
+        QString emsg = lua_tostring(L, -1);
+        qDebug()<<"reassigned"<<var->getName()<<"to"<<var->getNewName()<<"with error"<<emsg;
+        var->clearNewName();
+        return;
+    }
     //delete it
     oldName.append(QString(" = nil"));
     luaL_loadstring(L, oldName.toLatin1().data());
@@ -373,6 +380,13 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         else if (vType == LUA_TBOOLEAN){
             valueName = lua_toboolean(L, -1) == 0 ? "false" : "true";
             var->setValue(valueName);
+        }
+        else if (vType == LUA_TFUNCTION &&
+                 (!keyName.startsWith("Alias") && !keyName.startsWith("Trigger"))){
+            lua_pushvalue(L,-1);
+            valueName = lua_tostring(L,-1);
+            var->setValue("function");
+            lua_pop(L,1);
         }
         else{
             tVar->removeChild(var);
