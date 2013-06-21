@@ -4355,8 +4355,8 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
     //most anything is ok to do.  We just want to enforce these rules:
     //you cannot change the type of a table that has children
     //you cannot change anything to a table that isn't a table already
-    if ( cValueType == LUA_TFUNCTION )
-        return 0;//no recasting functions
+    if ( cValueType == LUA_TFUNCTION || cNameType == LUA_TTABLE )
+        return 0;//no recasting functions or table keys
     if ( cValueType == LUA_TTABLE && valueType != LUA_TTABLE )
     {
         //trying to change a table to something else
@@ -4421,6 +4421,8 @@ void dlgTriggerEditor::saveVar(){
     }
     int nameType = mpVarsMainArea->key_type->itemData(mpVarsMainArea->key_type->currentIndex(), Qt::UserRole).toInt();
     int valueType = mpVarsMainArea->var_type->itemData(mpVarsMainArea->var_type->currentIndex(), Qt::UserRole).toInt();
+    if ( ( nameType == 3 || nameType == 4 ) && newVar )
+        nameType = -1;
     //check variable recasting
     qDebug()<<"check cast";
     int varRecast = canRecast(pItem,nameType,valueType);
@@ -5098,10 +5100,21 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     int varType = var->getValueType();
     int keyType = var->getKeyType();
     QIcon icon;
+    mpVarsMainArea->key_type->setDisabled(false);
     if (keyType == 4)
         mpVarsMainArea->key_type->setCurrentIndex(1);
     else if (keyType == 3)
         mpVarsMainArea->key_type->setCurrentIndex(2);
+    else if (keyType == 5)
+    {
+        mpVarsMainArea->key_type->setCurrentIndex(3);
+        mpVarsMainArea->key_type->setDisabled(true);
+    }
+    else if ( keyType == 6 )
+    {
+        mpVarsMainArea->key_type->setCurrentIndex(4);
+        mpVarsMainArea->key_type->setDisabled(true);
+    }
     if (varType == LUA_TTABLE || varType == LUA_TFUNCTION)
     {
         mpVarsMainArea->lineEdit_var_value->setReadOnly(true);

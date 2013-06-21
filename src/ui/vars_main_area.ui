@@ -363,6 +363,16 @@ p, li { white-space: pre-wrap; }
              <string>index (integer)</string>
             </property>
            </item>
+           <item>
+            <property name="text">
+             <string>table (cannot create from GUI)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>function (cannot create from GUI)</string>
+            </property>
+           </item>
           </widget>
          </item>
         </layout>
