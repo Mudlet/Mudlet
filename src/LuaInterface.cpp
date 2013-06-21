@@ -293,6 +293,7 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
     if (setjmp(buf) == 0){
         if ( !from && !to )//moving from global to global
             return true;
+        int stackSize = lua_gettop(L);
         bool isSaved = varUnit->isSaved(curVar);
         if (isSaved){
             QList<TVar *> list;
@@ -307,15 +308,14 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
         lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
         int i=1;
         for( ; i<vars.size(); i++ ){
-            qDebug()<<loadValue(L, vars[i], -2);
+            if (!loadValue(L, vars[i], -2))
+                return false;
         }
-        qDebug()<<"old parent with value on top of stack";
-        for (int j=1;j<=lua_gettop(L);j++){
-            qDebug()<<j<<":"<<lua_type(L,j*-1);
-        }
+//        for (int j=1;j<=lua_gettop(L);j++){
+//            qDebug()<<j<<":"<<lua_type(L,j*-1);
+//        }
 
         //redo the parenting in TVar
-        qDebug()<<"new parent is"<<to->getName();
         from->removeChild(curVar);
         curVar->setParent(to);
         to->addChild(curVar);
@@ -323,25 +323,23 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
         //do the actual reparenting part
         if (to == varUnit->getBase()){
             //we're going global
-            qDebug()<<"in here";
             lua_setglobal(L, curVar->getName().toLatin1().data());
         }
         else{
-            qDebug()<<"in here now";
             lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
             i=1;
             for( ; i<vars.size()-1; i++ ){
-                qDebug()<<"pushing"<<vars[i]->getName();
-                qDebug()<<loadValue(L, vars[i], -2);
-                qDebug()<<"removing"<<vars[i-1]->getName();
+                if (!loadValue(L, vars[i], -2))
+                    return false;
                 lua_remove(L, -2);
             }
-            qDebug()<<"new stack fully loaded";
-            for (int j=1;j<=lua_gettop(L);j++){
-                qDebug()<<j<<":"<<lua_type(L,j*-1);
-            }
+//            qDebug()<<"new stack fully loaded";
+//            for (int j=1;j<=lua_gettop(L);j++){
+//                qDebug()<<j<<":"<<lua_type(L,j*-1);
+//            }
             lua_insert(L, -2);
-            qDebug()<<loadKey(L, curVar);
+            if (!loadKey(L, curVar))
+                return false;
             lua_insert(L, -2);
             lua_settable(L, -3);
             lua_pop(L, 1);
@@ -352,49 +350,25 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
             lua_setglobal(L, curVar->getName().toLatin1().data());
         }
         else{
-            loadKey(L, curVar);
+            if (!loadKey(L, curVar))
+                return false;
             lua_pushnil(L);
             lua_settable(L, -3);
         }
-//        //what we want to do is have the new parent point to the
-//        //old parent
-//        int insertLocation = (vars.size()+1)*-1;
-//        lua_insert(L, insertLocation);
-//        lua_insert(L, insertLocation);
-//        lua_pop(L, vars.size()-2);
-//        qDebug()<<"getting ready to reparent";
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-//        lua_settable(L, -3);
-//        //iterate up the parent now setting tables
-////        for(int i=(vars.size()-2);i>0;i--){
-////            loadKey(L, vars[i]);
-////            lua_insert(L, -2);
-////            lua_settable(L, -3);
-////        }
-////        //set the last one globally now
-////        lua_setglobal(L, vars[0]->getName().toLatin1().data());
-////        qDebug()<<"reparented";
-////        for (int j=1;j<=lua_gettop(L);j++){
-////            qDebug()<<j<<":"<<lua_type(L,j*-1);
-////        }
-////        //delete the old value now
-////        loadKey(L, curVar);
-////        lua_pushnil(L);
-////        lua_settable(L, -3);
-//        if (isSaved){
-//            QList<TVar *> list;
-//            list.append(to);
-//            getAllChildren(curVar, &list);
-//            QListIterator<TVar *> it(list);
-//            while (it.hasNext()){
-//                TVar * t = it.next();
-//                qDebug()<<t->getName();
-//                varUnit->addSavedVar(t);
-//            }
-//        }
-//        lua_settop(L, startSize);
+        if (isSaved){
+            QList<TVar *> list;
+            list.append(to);
+            getAllChildren(curVar, &list);
+            QListIterator<TVar *> it(list);
+            while (it.hasNext()){
+                TVar * t = it.next();
+                varUnit->addSavedVar(t);
+            }
+        }
+        for (int j=1;j<=lua_gettop(L);j++){
+            qDebug()<<j<<":"<<lua_type(L,j*-1);
+        }
+        lua_settop(L, stackSize);
         return true;
     }
     else{
@@ -422,7 +396,11 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
         qDebug()<<"attempt to move to a non-table";
         return false;
     }
-    if ( !oldParent ){
+    if ( !newParent && !oldParent ){
+        //happens when we move from _G to _G
+        return false;
+    }
+    else if ( !oldParent ){
         from = varUnit->getBase();
         to = newParent;
     }
@@ -430,7 +408,7 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
         from = oldParent;
         to = varUnit->getBase();
     }
-    if ( (!oldParent && !newParent) || (!from && !to) )
+    if ( !from && !to )
         return false;
     return reparentCVariable( from, to, curVar);
     bool isSaved = varUnit->isSaved(curVar);

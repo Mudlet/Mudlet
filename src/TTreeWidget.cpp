@@ -128,7 +128,6 @@ void TTreeWidget::setHost( Host * pH )
 
 void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end )
 {
-    oldModel = parent;
     if( parent.isValid() )
     {
         mOldParentID = parent.data( Qt::UserRole ).toInt();
@@ -237,20 +236,6 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
             mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             mpHost->getActionUnit()->updateToolbar();
         }
-        if( mIsVarTree )
-        {
-            LuaInterface * lI = mpHost->getLuaInterface();
-            QTreeWidgetItem * newpItem = itemFromIndex(parent);
-            QTreeWidgetItem * cItem = itemFromIndex(child);
-            QTreeWidgetItem * oldpItem = itemFromIndex( oldModel );
-            lI->reparentVariable( newpItem, cItem, oldpItem );
-//            if ( ! lI->reparentVariable( newpItem, cItem, oldpItem ) )
-//            {
-//                QTreeWidget::rowsInserted( oldModel, start, end );
-//                return;
-//            }
-//            qDebug()<<start<<end;
-        }
 
         mChildID = 0;
         mOldParentID = 0;
@@ -293,9 +278,18 @@ void TTreeWidget::dropEvent(QDropEvent *event)
 
     if ( mIsVarTree )
     {
-        LuaInterface * lI = mpHost->getLuaInterface();
+        LuaInterface * lI = mpHost->getLuaInterface();        
         if ( ! lI->validMove( pItem ) )
         {
+            event->setDropAction( Qt::IgnoreAction );
+            event->ignore();
+        }
+        QTreeWidgetItem * newpItem = pItem;
+        QTreeWidgetItem * cItem = selectedItems().first();
+        QTreeWidgetItem * oldpItem = cItem->parent();
+        if ( ! lI->reparentVariable( newpItem, cItem, oldpItem ) )
+        {
+            qDebug()<<"reparent failed";
             event->setDropAction( Qt::IgnoreAction );
             event->ignore();
         }

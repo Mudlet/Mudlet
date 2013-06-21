@@ -3,12 +3,14 @@
 TVar::TVar()
 {
     hidden = false;
+    name = "";
 }
 
 TVar::TVar(TVar * p)
 {
     parent = p;
     hidden = false;
+    name = "";
 }
 
 TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){

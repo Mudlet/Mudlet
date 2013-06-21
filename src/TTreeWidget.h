@@ -63,7 +63,6 @@ private:
     bool mIsKeyTree;
     bool mIsVarTree;
     bool mIsActionTree;
-    QModelIndex oldModel;
     
 signals:
     

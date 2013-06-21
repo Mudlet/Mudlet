@@ -104,7 +104,7 @@ QStringList VarUnit::varName(TVar * var){
 
 QStringList VarUnit::shortVarName(TVar * var){
     QStringList names;
-    if (var->getName() == "_G"){
+    if (!var || var->getName() == "_G"){
         names << "";
         return names;
     }
