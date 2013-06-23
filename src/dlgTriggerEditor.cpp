@@ -280,6 +280,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_vars->hideColumn(1);
     treeWidget_vars->header()->hide();
     treeWidget_vars->setRootIsDecorated( false );
+    treeWidget_vars->setSortingEnabled( true );
 //    treeWidget_vars->setItemDelegate( new TTDelegate );
     connect( treeWidget_vars, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_itemClicked(QTreeWidgetItem*,int)) );
 
@@ -4348,16 +4349,13 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
         return 2;
     int cNameType = var->getKeyType();
     int cValueType = var->getValueType();
-    QString newName = mpVarsMainArea->lineEdit_var_name->text();
-    QString newValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
-    QString cName = var->getName();
-    QString cValue = var->getValue();
     //most anything is ok to do.  We just want to enforce these rules:
     //you cannot change the type of a table that has children
+    //rule removed to see if anything bad happens:
     //you cannot change anything to a table that isn't a table already
     if ( cValueType == LUA_TFUNCTION || cNameType == LUA_TTABLE )
         return 0;//no recasting functions or table keys
-    if ( cValueType == LUA_TTABLE && valueType != LUA_TTABLE )
+    if ( valueType == LUA_TTABLE && cValueType != LUA_TTABLE )
     {
         //trying to change a table to something else
         if ( ( var->getChildren() ).size() )
@@ -4369,28 +4367,10 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
         return 1;
     }
     if ( valueType == LUA_TTABLE && cValueType != LUA_TTABLE )
-        return 0;
+        return 1;//non-table to table
     if ( cNameType == nameType && cValueType == valueType )
         return 2;
     return 1;
-//    qDebug()<<"attempting to recast variable"<<cName<<":"<<cValue<<"to "<<nameType<<","<<valueType<<"from"<<cNameType<<","<<cValueType;
-//    if ((cNameType == nameType) && ((cValueType == LUA_TTABLE) || (cValueType == valueType))){
-//        //this means we're not changing any types, let's see if this is true
-//        //this happens when the user doesn't adjust any of the pulldown boxes to be type explicit
-//        if ( cValueType == LUA_TNUMBER && ! cName.toInt() )
-//            return 1;//means we're compatible, but need to redo types
-//        if ( cValueType == LUA_TBOOLEAN && ( cName.toLower() != "false" || cName.toLower() != "true" ) )
-//            return 1;
-//        return 2;
-//    }
-//    //the user changed a type explicitly, let's see if it works
-//    if (nameType != cNameType && (nameType == LUA_TNUMBER && !cName.toInt())) //can we cast the key to an int, we dont care about str->int?
-//        return 0;
-//    if (valueType != cValueType && (valueType == LUA_TNUMBER && !cValue.toInt())) //can we cast the value to an int, we dont' care about str->xx?
-//        return 0;
-//    else if (valueType == LUA_TBOOLEAN && (cValue.toLower() != "true" && cValue.toLower() != "false")) //can we cast to bool?
-//        return 0;
-//    return 1;
 }
 
 void dlgTriggerEditor::saveVar(){
@@ -4459,6 +4439,7 @@ void dlgTriggerEditor::saveVar(){
                 //we're trying to rename it
                 qDebug()<<"we're renaming/recasting";
                 int change = 0;
+                qDebug()<<newName<<var->getName();
                 if ( newName != var->getName() || nameType != var->getKeyType() )
                 {
                     //lets make sure the nametype works
@@ -4597,6 +4578,30 @@ void dlgTriggerEditor::saveVar(){
             }
         }
     }
+    //redo this here in case we changed type
+    pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
+    if (var->getValueType() != 6)//6 is lua_tfunction
+        pItem->setFlags(pItem->flags()|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
+    if ( vu->isSaved( var ) ){
+        pItem->setCheckState(0, Qt::Checked);
+    }
+    else if (var->getValueType() != 6)
+        pItem->setCheckState(0, Qt::Unchecked);
+    pItem->setData( 0, Qt::UserRole, var->getValueType() );
+    QIcon icon;
+    switch (var->getValueType()){
+        case 5:
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+            break;
+        case 6:
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+            break;
+        default:
+            icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+            break;
+    }
+    pItem->setIcon( 0, icon );
+    pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     slot_var_clicked(pItem,0);
 }
 
@@ -5919,7 +5924,8 @@ void dlgTriggerEditor::fillout_form()
 
 void dlgTriggerEditor::repopulateVars()
 {
-    treeWidget_vars->setUpdatesEnabled(false);
+    treeWidget_vars->setUpdatesEnabled( false );
+    treeWidget_vars->setSortingEnabled( false );
     QStringList sL7;
     sL7 << "Variables";
     mpVarBaseItem = new QTreeWidgetItem( sL7 );
@@ -5939,7 +5945,9 @@ void dlgTriggerEditor::repopulateVars()
     mpVarBaseItem->setExpanded( true );
     treeWidget_vars->sortItems(1,Qt::AscendingOrder);
     //mpVarBaseItem->sortChildren(1, Qt::AscendingOrder);
-    treeWidget_vars->setUpdatesEnabled(true);
+    treeWidget_vars->setUpdatesEnabled( true );
+    treeWidget_vars->setSortingEnabled( true );
+    treeWidget_vars->sortByColumn(0);
 }
 
 void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )

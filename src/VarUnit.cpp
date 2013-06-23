@@ -1,6 +1,7 @@
 #include "VarUnit.h"
 #include <QDebug>
 #include <QTreeWidgetItem>
+#include "TTreeWidget.h"
 #include <QStringList>
 
 VarUnit::VarUnit()
@@ -27,7 +28,7 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
         if ( showHidden || !isHidden( child ) ){
             QStringList s1;
             s1 << child->getName();
-            QTreeWidgetItem * pItem = new QTreeWidgetItem(s1);
+            SortedWidgetItem * pItem = new SortedWidgetItem(s1);
             pItem->setText( 0, child->getName() );
             pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
             if (child->getValueType() != 6)//6 is lua_tfunction
@@ -55,7 +56,7 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             wVars.insert( pItem, child );
             cList.append( pItem );
             if ( child->getValueType() == 5 )
-                buildVarTree( pItem, child, showHidden );
+                buildVarTree( (QTreeWidgetItem *)pItem, child, showHidden );
         }
     }
     p->addChildren( cList );
