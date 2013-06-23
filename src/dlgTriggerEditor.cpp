@@ -4404,11 +4404,9 @@ void dlgTriggerEditor::saveVar(){
     if ( ( nameType == 3 || nameType == 4 ) && newVar )
         nameType = -1;
     //check variable recasting
-    qDebug()<<"check cast";
     int varRecast = canRecast(pItem,nameType,valueType);
     qDebug()<<"var recast status of"<<newName<<varRecast;
     qDebug()<<nameType<<valueType<<var->getValueType();
-    int forceSave = 0;
     if ( ( nameType == -1 ) || ( var && nameType != var->getKeyType() ) )
     {
         if ( QString( newName ).toInt() )
@@ -4429,7 +4427,31 @@ void dlgTriggerEditor::saveVar(){
     if (varRecast == 2){
         //qDebug()<<"it works out";
         //we sometimes get in here from new variables
-        if ( var ){
+        if ( newVar )
+        {
+            //we're making this var
+            qDebug()<<"its a new variable";
+            var = vu->getTVar( pItem );
+            qDebug()<<var;
+            if ( ! var )
+                var = new TVar();
+            qDebug()<<"new variable, set it up";
+            qDebug()<<newName<<nameType;
+            var->setName( newName, nameType );
+            qDebug()<<"name set";
+            qDebug()<<newValue<<valueType;
+            var->setValue( newValue, valueType );
+            qDebug()<<"value set";
+            lI->createVar( var );
+            qDebug()<<"created in lua";
+            vu->addVariable(var);
+            vu->addTreeItem( pItem, var );
+            vu->removeTempVar( pItem );
+            pItem->setText( 0, newName );
+            mCurrentVar = 0;
+        }
+        else if ( var )
+        {
             if ( newName == var->getName() && ( var->getValueType() == LUA_TTABLE && newValue == var->getValue() ) )
             {
                 qDebug()<<"no change";
@@ -4439,7 +4461,6 @@ void dlgTriggerEditor::saveVar(){
                 //we're trying to rename it
                 qDebug()<<"we're renaming/recasting";
                 int change = 0;
-                qDebug()<<newName<<var->getName();
                 if ( newName != var->getName() || nameType != var->getKeyType() )
                 {
                     //lets make sure the nametype works
@@ -4482,42 +4503,12 @@ void dlgTriggerEditor::saveVar(){
                     var->clearNewName();
             }
         }
-        else if ( ! var )
-        {
-            //we're making this var
-            qDebug()<<"its a new variable";
-            var = vu->getTVar( pItem );
-            qDebug()<<var;
-            if ( ! var )
-                var = new TVar();
-            qDebug()<<"new variable, set it up";
-            qDebug()<<newName<<nameType;
-            var->setName( newName, nameType );
-            qDebug()<<"name set";
-            qDebug()<<newValue<<valueType;
-            var->setValue( newValue, valueType );
-            qDebug()<<"value set";
-            lI->createVar( var );
-            qDebug()<<"created in lua";
-            vu->addVariable(var);
-            vu->addTreeItem( pItem, var );
-            vu->removeTempVar( pItem );
-            pItem->setText( 0, newName );
-            pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-            if (valueType != 6)
-            {//6 is lua_tfunction
-                pItem->setFlags(pItem->flags()|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
-                pItem->setCheckState(0, Qt::Unchecked);
-            }
-            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-            mCurrentVar = 0;
-        }
     }
     else if (varRecast == 1){
         qDebug()<<"rcast it";
         TVar * var = vu->getWVar(pItem);
         qDebug()<<var;
-        if ( ! var )
+        if ( newVar )
         {
             //we're making this var
             qDebug()<<"new variable, set it up";
@@ -4528,19 +4519,12 @@ void dlgTriggerEditor::saveVar(){
             vu->addVariable(var);
             vu->addTreeItem( pItem, var );
             pItem->setText( 0, newName );
-            pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-            if (valueType != 6)
-            {//6 is lua_tfunction
-                pItem->setFlags(pItem->flags()|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
-                pItem->setCheckState(0, Qt::Unchecked);
-            }
-            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
             mCurrentVar = 0;
         }
-        else
+        else if ( var )
         {
             //we're trying to rename it
-            qDebug()<<"we're renaming/recasting2";
+            qDebug()<<"we're renaming/recasting1";
             int change = 0;
             if ( newName != var->getName() || nameType != var->getKeyType() )
             {
@@ -4552,12 +4536,11 @@ void dlgTriggerEditor::saveVar(){
                 var->setNewName( newName, nameType );
                 change = change|0x1;
             }
-            if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
+            if ( newValue != var->getValue() || valueType != var->getValueType() )
             {
                 //lets check again
-                if ( var->getValueType() == LUA_TTABLE ){
-                    valueType == LUA_TTABLE;
-                }
+                if ( valueType == LUA_TTABLE )
+                    newValue = "{}";
                 else if ( valueType == LUA_TNUMBER && newValue.toInt() )
                     valueType = LUA_TNUMBER;
                 else if ( valueType == LUA_TBOOLEAN && ( newValue.toLower() == "true" || newValue.toLower() == "false" ) )
@@ -4567,11 +4550,12 @@ void dlgTriggerEditor::saveVar(){
                 var->setValue( newValue, valueType );
                 change = change|0x2;
             }
+            qDebug()<<"change stauts"<<change;
             if ( change )
             {
                 if ( change&0x1 || newVar )
                     lI->renameVar( var );
-                if ( ( var->getValueType() != LUA_TTABLE && change&0x2 ) || newVar )
+                if ( change&0x2 || newVar )
                     lI->setValue( var );
                 pItem->setText( 0, newName );
                 mCurrentVar = 0;
@@ -5123,15 +5107,17 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     if (varType == LUA_TTABLE || varType == LUA_TFUNCTION)
     {
         mpVarsMainArea->lineEdit_var_value->setReadOnly(true);
-        mpVarsMainArea->var_type->setDisabled(true);
         if ( varType == LUA_TTABLE )
         {
+            if ( pItem->childCount() )
+                mpVarsMainArea->var_type->setDisabled(true);
             mpVarsMainArea->var_type->setCurrentIndex(4);
             icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/table.png")), QIcon::Normal, QIcon::Off);
         }
         else
         {
             mpVarsMainArea->var_type->setCurrentIndex(5);
+            mpVarsMainArea->var_type->setDisabled(true);
             icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/function.png")), QIcon::Normal, QIcon::Off);
         }
     }
