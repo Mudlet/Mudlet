@@ -84,7 +84,6 @@ void LuaInterface::getAllChildren( TVar * var, QList<TVar *> * list){
 bool LuaInterface::loadKey(lua_State * L, TVar * var){
     if (setjmp(buf) == 0){
         int kType = var->getKeyType();
-        qDebug()<<kType;
         if ( kType == LUA_TNUMBER ){
             lua_pushnumber(L, var->getName().toInt());
         }
@@ -97,6 +96,7 @@ bool LuaInterface::loadKey(lua_State * L, TVar * var){
         else{
             lua_pushstring(L, var->getName().toLatin1().data());
         }
+        qDebug()<<"key"<<var->getName()<<lua_type(L, -1)<<kType;
         return lua_type(L, -1) == kType;
     }
     qDebug()<<"panic in loadKey";
@@ -121,6 +121,7 @@ bool LuaInterface::loadValue(lua_State * L, TVar * var, int index){
         }
         else
             return false;
+        qDebug()<<"value"<<var->getName()<<lua_type(L, -1)<<var->getValueType();
         return lua_type(L, -1) == var->getValueType();
     }
     qDebug()<<"panic error in loadValue";
@@ -291,7 +292,7 @@ bool LuaInterface::loadValue(lua_State * L, TVar * var, int index){
 bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
     //get the old parent on the stack
     if (setjmp(buf) == 0){
-        if ( !from && !to )//moving from global to global
+        if ((!from && !to) || (from==to))//moving from global to global or nowhere
             return true;
         int stackSize = lua_gettop(L);
         bool isSaved = varUnit->isSaved(curVar);
@@ -306,10 +307,13 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
         }
         QList<TVar *> vars = varOrder(curVar);
         lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
+        qDebug()<<vars;
         int i=1;
         for( ; i<vars.size(); i++ ){
-            if (!loadValue(L, vars[i], -2))
+            if (!loadValue(L, vars[i], -2)){
+                lua_settop(L, stackSize);
                 return false;
+            }
         }
 //        for (int j=1;j<=lua_gettop(L);j++){
 //            qDebug()<<j<<":"<<lua_type(L,j*-1);
@@ -329,8 +333,10 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
             lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
             i=1;
             for( ; i<vars.size()-1; i++ ){
-                if (!loadValue(L, vars[i], -2))
+                if (!loadValue(L, vars[i], -2)){
+                    lua_settop(L, stackSize);
                     return false;
+                }
                 lua_remove(L, -2);
             }
 //            qDebug()<<"new stack fully loaded";
@@ -338,9 +344,15 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
 //                qDebug()<<j<<":"<<lua_type(L,j*-1);
 //            }
             lua_insert(L, -2);
-            if (!loadKey(L, curVar))
+            if (!loadKey(L, curVar)){
+                lua_settop(L, stackSize);
                 return false;
+            }
             lua_insert(L, -2);
+            if (!lua_istable(L,-3)){
+                lua_settop(L, stackSize);
+                return false;
+            }
             lua_settable(L, -3);
             lua_pop(L, 1);
         }
@@ -350,9 +362,15 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
             lua_setglobal(L, curVar->getName().toLatin1().data());
         }
         else{
-            if (!loadKey(L, curVar))
+            if (!loadKey(L, curVar)){
+                lua_settop(L, stackSize);
                 return false;
+            }
             lua_pushnil(L);
+            if (!lua_istable(L,-3)){
+                lua_settop(L, stackSize);
+                return false;
+            }
             lua_settable(L, -3);
         }
         if (isSaved){
@@ -501,21 +519,14 @@ bool LuaInterface::setCValue( QList<TVar *> vars ){
     //make the new stack
     TVar * var = vars.back();
     if (setjmp(buf) == 0){
+        int stackSize = lua_gettop(L);
         lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
         int i=1;
-        for( ; i<vars.size(); i++ ){
-            int kType = vars[i]->getKeyType();
-            if ( kType == LUA_TNUMBER ){
-                lua_pushnumber(L, QString(vars[i]->getName()).toInt());
+        for( ; i<vars.size()-1; i++ ){
+            if (!loadValue(L, vars[i], -2)){
+                lua_settop(L, stackSize);
+                return false;
             }
-            else if ( kType == LUA_TTABLE || kType == LUA_TFUNCTION){
-                lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-            }
-            else{
-                lua_pushstring(L, QString(vars[i]->getName()).toLatin1().data());
-            }
-            if (i<vars.size()-1)
-                lua_gettable(L, -2);
         }
         //push our value onto the stack
         switch ( var->getValueType() ){
@@ -532,9 +543,14 @@ bool LuaInterface::setCValue( QList<TVar *> vars ){
             lua_newtable(L);
             break;
         default:
+            lua_settop(L, stackSize);
             return false;
         }
         //set it up
+        if (lua_type(L, -1) != var->getValueType()){
+            lua_settop(L, stackSize);
+            return false;
+        }
         lua_settable(L, -3);
     }
     else{
