@@ -442,7 +442,6 @@ function createGauge(gaugeName, width, height, x, y, gaugeText, r, g, b, orienta
 
     -- save new values in table
     gaugesTable[gaugeName] = tbl
-    display(gaugesTable[gaugeName])
     resizeGauge(gaugeName, tbl.width, tbl.height)
     moveGauge(gaugeName, tbl.x, tbl.y)
     setGaugeText(gaugeName, gaugeText, "black")
