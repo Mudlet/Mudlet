@@ -181,13 +181,8 @@ end
 ---   </pre>
 ---
 --- @return true or false
-function io.exists(fileOfFolderName)
-	local f = io.open(fileOfFolderName)
-	if f then
-		io.close(f)
-		return true
-	end
-	return false
+function io.exists(item)
+	return lfs.attributes(item) and true or false
 end
 
 
