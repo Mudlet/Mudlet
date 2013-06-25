@@ -22,6 +22,7 @@ public:
     bool    setName(QString, int);
     void    setNewName(QString, int);
     void    setNewName(QString);
+    void    setReference(bool);
     QList<TVar *>  getChildren();
     TVar *  getParent();
     QString getValue();
@@ -31,9 +32,11 @@ public:
     int     getKeyType();
     int     getNewKeyType();
     int     getValueType();
+    int     isReference();
 public:
     bool    hidden;
 private:
+    bool        reference;
     QList<TVar *> children;
     TVar * parent;
     QString     name;

@@ -84,17 +84,22 @@ void LuaInterface::getAllChildren( TVar * var, QList<TVar *> * list){
 bool LuaInterface::loadKey(lua_State * L, TVar * var){
     if (setjmp(buf) == 0){
         int kType = var->getKeyType();
-        if ( kType == LUA_TNUMBER ){
-            lua_pushnumber(L, var->getName().toInt());
-        }
-        else if ( kType == LUA_TTABLE ){
+        if ( var->isReference() ){
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         }
-        else if ( kType == LUA_TBOOLEAN ){
-            lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0 );
-        }
         else{
-            lua_pushstring(L, var->getName().toLatin1().data());
+            if ( kType == LUA_TNUMBER ){
+                lua_pushnumber(L, var->getName().toInt());
+            }
+            else if ( kType == LUA_TTABLE ){
+
+            }
+            else if ( kType == LUA_TBOOLEAN ){
+                lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0 );
+            }
+            else{
+                lua_pushstring(L, var->getName().toLatin1().data());
+            }
         }
         qDebug()<<"key"<<var->getName()<<lua_type(L, -1)<<kType;
         return lua_type(L, -1) == kType;
@@ -443,12 +448,10 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
     QList<TVar *> vars = varOrder(curVar);
     QString oldName = vars[0]->getName();
     for(int i=1;i<vars.size();i++){
+        if (vars[i]->isReference())
+            return reparentCVariable( from, to, curVar);
         if (vars[i]->getKeyType() == LUA_TNUMBER){
             oldName.append("["+vars[i]->getName()+"]");
-        }
-        else if (vars[i]->getKeyType() == LUA_TTABLE){
-            //TODO: reparent c function
-            return reparentCVariable( from, to, curVar);
         }
         else{
             oldName.append("[\""+vars[i]->getName()+"\"]");
@@ -461,6 +464,8 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
     vars = varOrder(curVar);
     QString newName = vars[0]->getName();
     for(int i=1;i<vars.size();i++){
+        if (vars[i]->isReference())
+            return reparentCVariable( from, to, curVar);
         if (vars[i]->getKeyType() == LUA_TNUMBER){
             newName.append("["+vars[i]->getName()+"]");
         }
@@ -569,11 +574,10 @@ bool LuaInterface::setValue( TVar * var ){
     QList<TVar *> vars = varOrder(var);
     QString newName = vars[0]->getName();
     for(int i=1;i<vars.size();i++){
+        if (vars[i]->isReference())
+            return setCValue( vars );
         if (vars[i]->getKeyType() == LUA_TNUMBER){
             newName.append("["+vars[i]->getName()+"]");
-        }
-        else if (vars[i]->getKeyType() == LUA_TTABLE){
-            return setCValue(vars);
         }
         else{
             newName.append("[\""+vars[i]->getName()+"\"]");
@@ -978,13 +982,20 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         lua_pushvalue(L, -2);//we do this because looking at the type can change it
         QString keyName;
         QString valueName;
+        TVar * var = new TVar();
         if ( kType == LUA_TTABLE ){
             keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
-            qDebug()<<"table key"<<keyName;
             lrefs.append(keyName.toInt());
+            var->setReference(true);
         }
         else{
             keyName = lua_tostring(L, -1);
+            if ( kType == LUA_TFUNCTION && keyName.isEmpty() ){
+                //we lost the reference
+                keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
+                lrefs.append(keyName.toInt());
+                var->setReference(true);
+            }
             lua_pop(L, 1);
         }
 //        qDebug()<<"key type/value:"<<kType<<keyName;
@@ -992,7 +1003,6 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
 //        for (int i=1;i<=lua_gettop(L);i++){
 //            qDebug()<<i<<":"<<lua_type(L,i*-1);
 //        }
-        TVar * var = new TVar();
         var->setName(keyName, kType);
         var->setValueType(vType);
         var->setParent(tVar);
@@ -1031,10 +1041,11 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         }
         else if (vType == LUA_TFUNCTION &&
                  (!keyName.toLower().startsWith("alias") && !keyName.toLower().startsWith("trigger"))){
-            lua_pushvalue(L,-1);
-            valueName = lua_tostring(L,-1);
+            //functions are compiled to bytecode so there is no reference
+//            lua_pushvalue(L,-1);
+//            valueName = lua_tostring(L,-1);
             var->setValue("function");
-            lua_pop(L,1);
+//            lua_pop(L,1);
         }
         else{
             tVar->removeChild(var);

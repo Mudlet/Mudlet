@@ -4,6 +4,7 @@ TVar::TVar()
 {
     hidden = false;
     name = "";
+    reference = false;
 }
 
 TVar::TVar(TVar * p)
@@ -11,6 +12,7 @@ TVar::TVar(TVar * p)
     parent = p;
     hidden = false;
     name = "";
+    reference = false;
 }
 
 TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){
@@ -20,6 +22,11 @@ TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){
     value = val;
     vType = vt;
     hidden = false;
+    reference = false;
+}
+
+void TVar::setReference(bool s){
+    reference = s;
 }
 
 void TVar::addChild(TVar * c){
