@@ -49,7 +49,7 @@ end
 -- set too - otherwise alpha can't be set this way.  Second: by passing in
 -- distinct components as unsigned integers (e.g. 23 or 0xA7).  When using the
 -- second way, at least three values must be passed.  If only three are
--- passed, then alpha is 255.  Third: by passing in a table that has explicit 
+-- passed, then alpha is 255.  Third: by passing in a table that has explicit
 -- values for some, all or none of the keys r,g,b, and a.
 -- @param red Either a valid string representation or the red component.
 -- @param green The green component.
@@ -60,10 +60,9 @@ function Geyser.Color.parse(red, green, blue, alpha)
 
    -- have to have something to set, else can't do anything!
    if not red then
-      print("No color supplied.\n")
-      return
+      return nil, "No color supplied"
    end
-   
+
    -- function to return next number
    local next_num = nil
    local base = 10
@@ -73,12 +72,12 @@ function Geyser.Color.parse(red, green, blue, alpha)
                             r = tonumber(next_num(), base)
                             g = tonumber(next_num(), base)
                             b = tonumber(next_num(), base)
-                            local has_a = next_num() 
+                            local has_a = next_num()
                             if has_a then
                                a = tonumber(has_a, base)
                             end
                          end
-   
+
    -- Check if we were passed a string or table that needs to be parsed, i.e.,
    -- there is only a valid red value, and other params are nil.
    if not green or not blue then
@@ -101,7 +100,7 @@ function Geyser.Color.parse(red, green, blue, alpha)
             local pure_hex = string.sub(red, 3) -- strip format chars
             next_num = string.gmatch(pure_hex, "%w%w")
             base = 16
-            
+
             -- third case is a decimal string, of the format "<dd,dd,dd>"
          elseif string.find(red, "^<") then
             next_num = string.gmatch(red, "%d+")
@@ -115,7 +114,7 @@ function Geyser.Color.parse(red, green, blue, alpha)
                           if i <= n then return color_table[red][i]
                           else return nil end
                        end
-            
+
          else
             -- finally, no matches, do nothing
             return
