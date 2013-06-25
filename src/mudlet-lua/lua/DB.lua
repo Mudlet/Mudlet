@@ -512,7 +512,8 @@ function db:_migrate(db_name, s_name)
          else
             sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
          end
-         if table.contains(schema.options._unique, key) then
+         if (type(schema.options._unique) == "table" and table.contains(schema.options._unique, key))
+            or (type(schema.options._unique) == "string" and schema.options._unique == key) then
             sql = sql .. " UNIQUE"
          end
          sql_chunks[#sql_chunks+1] = sql
