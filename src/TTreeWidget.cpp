@@ -126,6 +126,47 @@ void TTreeWidget::setHost( Host * pH )
     mpHost = pH;
 }
 
+void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
+{
+    QModelIndex indexClicked = indexAt(event->pos());
+    if( mIsVarTree && indexClicked.isValid() )
+    {
+        QRect vrect = visualRect(indexClicked);
+        int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
+        QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation,
+                           vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
+        if(rect.contains(event->pos()))
+        {
+            QTreeWidgetItem * clicked = itemFromIndex( indexClicked );
+            if ( clicked->checkState( 0 ) == Qt::Unchecked )
+                clicked->setCheckState( 0, Qt::Checked );
+            else
+                clicked->setCheckState( 0, Qt::Unchecked );
+            return;
+        }
+    }
+    QTreeWidget::mouseReleaseEvent(event);
+}
+
+void TTreeWidget::mousePressEvent( QMouseEvent *event )
+{
+    QModelIndex indexClicked = indexAt(event->pos());
+    if( mIsVarTree && indexClicked.isValid() )
+    {
+        QRect vrect = visualRect(indexClicked);
+        int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
+        QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation,
+                           vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
+        if(rect.contains(event->pos()))
+        {
+            mClickedItem = indexClicked;
+            QTreeWidget::mousePressEvent(event);
+            return;
+        }
+    }
+    QTreeWidget::mousePressEvent(event);
+}
+
 void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end )
 {
     if( parent.isValid() )

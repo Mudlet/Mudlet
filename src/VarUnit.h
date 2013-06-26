@@ -33,6 +33,7 @@ public:
     void addHidden( QString );
     bool isHidden( TVar * );
     bool isSaved( TVar * );
+    void addPointer( const void* );
 public:
     QSet< QString > hidden;
     QSet< QString > hiddenByUser;
@@ -42,7 +43,7 @@ private:
     QMap< QTreeWidgetItem *, TVar * > wVars;
     QMap< QTreeWidgetItem *, TVar * > tVars;
     QSet< QString > savedVars;
-    QSet< const void* > pMap;
+    QSet<const void*> pointers;
 };
 
 #endif // VARUNIT_H

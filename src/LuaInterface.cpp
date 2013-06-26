@@ -66,7 +66,7 @@ bool LuaInterface::validMove(QTreeWidgetItem * p){
 
 void LuaInterface::getAllChildren( TVar * var, QList<TVar *> * list){
     QListIterator<TVar *> it(var->getChildren());
-    if (varUnit->isSaved(var))
+    if (varUnit->isSaved(var) || var->saved)
         list->append(var);
     else
         qDebug()<<"t"<<var->getName()<<"not saved";
@@ -74,7 +74,7 @@ void LuaInterface::getAllChildren( TVar * var, QList<TVar *> * list){
         TVar * child = it.next();
         if (child->getValueType() == LUA_TTABLE)
             getAllChildren( child, list);
-        else if (varUnit->isSaved(child))
+        else if (varUnit->isSaved(child) || var->saved)
             list->append(child);
         else
             qDebug()<<child->getName()<<"not saved";
@@ -979,7 +979,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
     while(lua_next(L, index)){
         int vType = lua_type(L, -1);
         int kType = lua_type(L, -2);
-        lua_pushvalue(L, -2);//we do this because looking at the type can change it
+        lua_pushvalue(L, -2);//we do this because extracting the key with tostring changes it
         QString keyName;
         QString valueName;
         TVar * var = new TVar();
@@ -1008,6 +1008,10 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         var->setParent(tVar);
         var->hidden = hide;
         tVar->addChild(var);
+        const void* kp = lua_topointer(L, -1);
+        var->kpointer = kp;
+        const void* vp = lua_topointer(L, -2);
+        var->vpointer = vp;
         if ( varUnit->varExists(var) || keyName == "_G" ){
             lua_pop(L, 1);
 //            qDebug()<<"removing dup"<<keyName;
@@ -1016,15 +1020,20 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
             continue;
         }
         varUnit->addVariable(var);
+        //lua_pushvalue(L, -1);
+
+        varUnit->addPointer(kp);
+//        lua_pop(L, 1);
+//        lua_pushvalue(L, -2);
+
+        varUnit->addPointer(vp);
+//        lua_pop(L, 1);
         if (vType == LUA_TTABLE){
-            lua_pushvalue(L, -1);
-            var->pointer = lua_topointer(L, -1);
-            lua_pop(L, 1);
-            if (depth<=25){
+            if (depth<=99 && lua_checkstack(L,3)){//depth is historical now
                 //put the table on top
                 lua_pushnil(L);
                 var->setValue("{}", LUA_TTABLE);
-//                qDebug()<<"entering table"<<keyName;
+//                qDebug()<<"entering table"<<keyName<<kp<<vp<<varUnit->varExists(var);
 //                for (int i=1;i<=lua_gettop(L);i++){
 //                    qDebug()<<i<<":"<<lua_type(L,i*-1);
 //                }

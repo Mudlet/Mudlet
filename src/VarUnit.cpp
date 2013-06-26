@@ -19,6 +19,10 @@ bool VarUnit::isHidden( TVar * var ){
     return hiddenByUser.contains(shortVarName(var).join("."));
 }
 
+void VarUnit::addPointer( const void *p ){
+    pointers.insert(p);
+}
+
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
     QList< QTreeWidgetItem * > cList;
     QListIterator<TVar *> it(var->getChildren());
@@ -31,7 +35,7 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             SortedWidgetItem * pItem = new SortedWidgetItem(s1);
             pItem->setText( 0, child->getName() );
             pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-            if (child->getValueType() != 6)//6 is lua_tfunction
+            if ( child->getValueType() != 6 && ( ( child->getParent() == base ) || p->flags()&Qt::ItemIsTristate ) )//6 is lua_tfunction, parent must be saveable as well if not global
                 pItem->setFlags(pItem->flags()|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
             if ( isSaved( child ) ){
                 pItem->setCheckState(0, Qt::Checked);
@@ -120,8 +124,7 @@ QStringList VarUnit::shortVarName(TVar * var){
 
 void VarUnit::addVariable(TVar * var){
     QString n = varName(var).join(".");
-    if (var->getValueType() == 5)
-        pMap.insert(var->pointer);
+//    pointers.insert(var->pointer);
     varList.insert(n);
     if ( var->hidden ){
         hidden.insert(shortVarName(var).join("."));
@@ -149,6 +152,7 @@ void VarUnit::removeHidden( TVar * var ){
 
 void VarUnit::addSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
+    var->saved = true;
 //    qDebug()<<n;
     savedVars.insert(n);
     qDebug()<<"added"<<n;
@@ -157,25 +161,27 @@ void VarUnit::addSavedVar(TVar * var){
 void VarUnit::removeSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
     savedVars.remove(n);
+    var->saved = false;
     //qDebug()<<"removed"<<n;
 }
 
 bool VarUnit::isSaved( TVar * var ){
     QString n = shortVarName(var).join(".");
 //    qDebug()<<"checking isSaved"<<n;
-    return savedVars.contains(n);
+    return (savedVars.contains(n) || var->saved);
 }
 
 void VarUnit::removeVariable(TVar * var){
 //    TVar * parent = var->getParent();
 //    parent->removeChild(var);
-    if (var->getValueType() == 5)
-        pMap.insert(var->pointer);
+//    if (var->getValueType() == 5)
+//        pointers.remove(var->pointer);
     varList.remove(varName(var).join("."));
 }
 
 bool VarUnit::varExists(TVar * var){
-    return (var->pointer && pMap.contains(var->pointer));
+    return ( (var->kpointer && pointers.contains(var->kpointer)) ||
+             (var->vpointer && pointers.contains(var->vpointer)));
 }
 
 TVar * VarUnit::getBase(){
@@ -191,5 +197,5 @@ void VarUnit::clear(){
     tVars.clear();
     wVars.clear();
     varList.clear();
-    pMap.clear();
+    pointers.clear();
 }

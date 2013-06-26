@@ -5,7 +5,9 @@ TVar::TVar()
     hidden = false;
     name = "";
     reference = false;
-    pointer = 0;
+    vpointer = 0;
+    kpointer = 0;
+    saved = false;
 }
 
 TVar::TVar(TVar * p)
@@ -14,7 +16,9 @@ TVar::TVar(TVar * p)
     hidden = false;
     name = "";
     reference = false;
-    pointer = 0;
+    vpointer = 0;
+    kpointer = 0;
+    saved = false;
 }
 
 TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){
@@ -25,7 +29,9 @@ TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){
     vType = vt;
     hidden = false;
     reference = false;
-    pointer = 0;
+    vpointer = 0;
+    kpointer = 0;
+    saved = false;
 }
 
 void TVar::setReference(bool s){
