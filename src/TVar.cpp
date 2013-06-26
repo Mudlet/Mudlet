@@ -41,6 +41,10 @@ QList<TVar *> TVar::getChildren(){
     return children;
 }
 
+bool TVar::isReference(){
+    return reference;
+}
+
 void TVar::setParent(TVar * t){
     parent = t;
 }

@@ -32,7 +32,7 @@ public:
     int     getKeyType();
     int     getNewKeyType();
     int     getValueType();
-    int     isReference();
+    bool    isReference();
 public:
     bool    hidden;
 private:
