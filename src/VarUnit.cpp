@@ -120,6 +120,8 @@ QStringList VarUnit::shortVarName(TVar * var){
 
 void VarUnit::addVariable(TVar * var){
     QString n = varName(var).join(".");
+    if (var->getValueType() == 5)
+        pMap.insert(var->pointer);
     varList.insert(n);
     if ( var->hidden ){
         hidden.insert(shortVarName(var).join("."));
@@ -167,21 +169,13 @@ bool VarUnit::isSaved( TVar * var ){
 void VarUnit::removeVariable(TVar * var){
 //    TVar * parent = var->getParent();
 //    parent->removeChild(var);
+    if (var->getValueType() == 5)
+        pMap.insert(var->pointer);
     varList.remove(varName(var).join("."));
 }
 
 bool VarUnit::varExists(TVar * var){
-    QStringList names = varName(var);
-    if (var->getValueType() == 5){
-        QString name = var->getName();
-        if (names.count(name)>1)
-            return true;
-//        for(int i=0;i<names.size();i++){
-//            if (name == names.at(i))
-//                return true;
-//        }
-    }
-    return varList.contains(names.join("."));
+    return (var->pointer && pMap.contains(var->pointer));
 }
 
 TVar * VarUnit::getBase(){
@@ -197,4 +191,5 @@ void VarUnit::clear(){
     tVars.clear();
     wVars.clear();
     varList.clear();
+    pMap.clear();
 }

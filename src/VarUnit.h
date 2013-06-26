@@ -42,6 +42,7 @@ private:
     QMap< QTreeWidgetItem *, TVar * > wVars;
     QMap< QTreeWidgetItem *, TVar * > tVars;
     QSet< QString > savedVars;
+    QSet< const void* > pMap;
 };
 
 #endif // VARUNIT_H

@@ -984,7 +984,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         QString valueName;
         TVar * var = new TVar();
         if ( kType == LUA_TTABLE ){
-            keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
+            keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));//this function pops the top item
             lrefs.append(keyName.toInt());
             var->setReference(true);
         }
@@ -1008,7 +1008,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         var->setParent(tVar);
         var->hidden = hide;
         tVar->addChild(var);
-        if (varUnit->varExists(var)){
+        if ( varUnit->varExists(var) || keyName == "_G" ){
             lua_pop(L, 1);
 //            qDebug()<<"removing dup"<<keyName;
             tVar->removeChild(var);
@@ -1017,7 +1017,10 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         }
         varUnit->addVariable(var);
         if (vType == LUA_TTABLE){
-            if (depth<=5){
+            lua_pushvalue(L, -1);
+            var->pointer = lua_topointer(L, -1);
+            lua_pop(L, 1);
+            if (depth<=25){
                 //put the table on top
                 lua_pushnil(L);
                 var->setValue("{}", LUA_TTABLE);

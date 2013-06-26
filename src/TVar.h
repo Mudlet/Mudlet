@@ -35,6 +35,7 @@ public:
     bool    isReference();
 public:
     bool    hidden;
+    const void*   pointer;
 private:
     bool        reference;
     QList<TVar *> children;
