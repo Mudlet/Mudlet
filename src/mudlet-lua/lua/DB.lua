@@ -1400,7 +1400,9 @@ function db:close()
    for _, c in pairs(db.__conn) do
       c:close()
    end
+   db.__conn = {}
    db.__env:close()
+   db.__env = nil
 end
 
 
