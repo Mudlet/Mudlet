@@ -333,7 +333,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QAction * viewVarsAction = new QAction(QIcon(":/icons/variables.png"), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Variables"));
     viewVarsAction->setEnabled( true );
-    connect( viewVarsAction, SIGNAL(triggered()), this, SLOT( slot_show_vars()));
+    connect( viewVarsAction, SIGNAL(triggered()), this, SLOT( slot_show_vars( )));
 
     QAction * toggleActiveAction = new QAction(QIcon(":/icons/document-encrypt.png"), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
@@ -866,6 +866,29 @@ void dlgTriggerEditor::slot_item_clicked_search_list(QTreeWidgetItem* pItem, int
         }
         return;
     }
+
+    if( pItem->text(0) == QString("Variable") )
+    {
+        LuaInterface * lI = mpHost->getLuaInterface();
+        VarUnit * vu = lI->getVarUnit();
+        QStringList varShort = pItem->data(0, Qt::UserRole).toStringList();
+        QList<QTreeWidgetItem *> list;
+        recurseVariablesDown( mpVarBaseItem, list );
+        QListIterator<QTreeWidgetItem *> it(list);
+        while( it.hasNext() )
+        {
+            QTreeWidgetItem * pI = it.next();
+            TVar * var = vu->getWVar( pI );
+            if ( vu->shortVarName( var ) == varShort )
+            {
+                treeWidget_vars->setCurrentItem( pI, 0 );
+                treeWidget_vars->scrollToItem( pI );
+                show_vars();
+                return;
+            }
+        }
+        return;
+    }
 }
 
 void dlgTriggerEditor::slot_search_triggers( const QString s )
@@ -1261,6 +1284,50 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
             }
 
             recursiveSearchKeys( pChild, s );
+        }
+    }
+
+    if( true )
+    {
+        if ( mCurrentView != cmVarsView )
+            repopulateVars();
+        LuaInterface * lI = mpHost->getLuaInterface();
+        VarUnit * vu = lI->getVarUnit();
+        TVar * base = vu->getBase();
+        QListIterator<TVar *> it(base->getChildren());
+        while( it.hasNext() )
+        {
+            TVar * var = it.next();
+            //recurse down this variable
+            QList< TVar * > list;
+            recurseVariablesDown( var, list );
+            QListIterator<TVar *> it2(list);
+            while( it2.hasNext() )
+            {
+                TVar * var2 = it2.next();
+                if ( ! showHiddenVars && vu->isHidden(var2) )
+                    continue;
+                QTreeWidgetItem * pItem2;
+                if ( ! var2->getName().isEmpty() && ( var2->getName().indexOf( s, 0, Qt::CaseInsensitive ) != -1 ) )
+                {
+                    QStringList sl;
+                    sl << "Variable" << var2->getName() << "name";
+                    pItem2 = new QTreeWidgetItem( sl );
+                    pItem2->setFirstColumnSpanned( false );
+                    pItem2->setData( 0, Qt::UserRole, vu->shortVarName(var2) );
+                    tree_widget_search_results_main->addTopLevelItem( pItem2 );
+                }
+                if ( ! var2->getValue().isEmpty() && ( var2->getValue().indexOf( s, 0, Qt::CaseInsensitive ) != -1 ) )
+                {
+                    QStringList sl;
+                    sl << "Variable" << var2->getName() << "value";
+                    pItem2 = new QTreeWidgetItem( sl );
+                    pItem2->setFirstColumnSpanned( false );
+                    pItem2->setData( 0, Qt::UserRole, vu->shortVarName(var2) );
+                    tree_widget_search_results_main->addTopLevelItem( pItem2 );
+                }
+            }
+
         }
     }
     mpSourceEditorArea->highlighter->setSearchPattern( s );
@@ -4996,6 +5063,14 @@ void dlgTriggerEditor::recurseVariablesDown( QTreeWidgetItem *pItem, QList< QTre
         recurseVariablesDown( pItem->child(i), list );
 }
 
+void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list)
+{
+    list.append( var );
+    QListIterator<TVar *> it(var->getChildren());
+    while (it.hasNext())
+        recurseVariablesDown( it.next(), list );
+}
+
 void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     if( ! pItem ) return;
     int state = pItem->checkState( column );
@@ -6659,7 +6734,7 @@ void dlgTriggerEditor::slot_show_keys()
     treeWidget_keys->show();
 }
 
-void dlgTriggerEditor::slot_show_vars()
+void dlgTriggerEditor::slot_show_vars( )
 {
     changeView( cmVarsView );
     repopulateVars();
@@ -6689,7 +6764,39 @@ void dlgTriggerEditor::slot_show_vars()
             mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
         }
     }
+    treeWidget_vars->show();
+}
 
+void dlgTriggerEditor::show_vars( )
+{
+    //no repopulation of variables
+    changeView( cmVarsView );
+    mCurrentVar = 0;
+    mpSourceEditorArea->hide();
+    toggleHiddenVarsButton->show();
+    if ( showHiddenVars )
+        toggleHiddenVarsButton->setText( "Hide Hidden Variables" );
+    else
+        toggleHiddenVarsButton->setText( "Show Hidden Variables" );
+    QTreeWidgetItem * pI = treeWidget_vars->topLevelItem( 0 );
+    if( pI )
+    {
+        if( pI->childCount() > 0 )
+        {
+            mpVarsMainArea->show();
+            slot_var_clicked( (QTreeWidgetItem*)treeWidget_vars->currentItem(), 0 );
+        }
+        else
+        {
+            mpVarsMainArea->hide();
+            mpSystemMessageArea->show();
+            mpSystemMessageArea->notificationAreaIconLabelInformation->show();
+            mpSystemMessageArea->notificationAreaIconLabelError->hide();
+            mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
+            QString msg = "To make a new variable click on the 'Add Item' icon above.\nTo add a table click 'Add Group'.";
+            mpSystemMessageArea->notificationAreaMessageBox->setText( msg );
+        }
+    }
     treeWidget_vars->show();
 }
 

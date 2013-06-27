@@ -43,6 +43,7 @@
 #include "TTreeWidget.h"
 #include "TKey.h"
 #include "dlgVarsMainArea.h"
+#include "TVar.h"
 //#include "TConsole.h"
 
 class dlgTimersMainArea;
@@ -95,6 +96,8 @@ public:
     void                        changeView( int );
     void                        recurseVariablesUp( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesDown( TVar *, QList< TVar * > & );
+    void                        show_vars( );
 
 signals:
 
@@ -110,7 +113,7 @@ public slots:
     void                        slot_saveVarAfterEdit();
     void                        slot_deleteVar();
     void                        slot_var_clicked( QTreeWidgetItem *, int );
-    void                        slot_show_vars();
+    void                        slot_show_vars( );
     void                        slot_viewErrorsAction();
     void                        slot_cursorPositionChanged();
     void                        slot_set_pattern_type_color( int );
