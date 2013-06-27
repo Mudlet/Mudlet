@@ -996,7 +996,8 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
                 lrefs.append(keyName.toInt());
                 var->setReference(true);
             }
-            lua_pop(L, 1);
+            else
+                lua_pop(L, 1);
         }
 //        qDebug()<<"key type/value:"<<kType<<keyName;
         //qDebug()<<"value type:"<<vType;
@@ -1033,10 +1034,10 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
                 //put the table on top
                 lua_pushnil(L);
                 var->setValue("{}", LUA_TTABLE);
-//                qDebug()<<"entering table"<<keyName<<kp<<vp<<varUnit->varExists(var);
-//                for (int i=1;i<=lua_gettop(L);i++){
-//                    qDebug()<<i<<":"<<lua_type(L,i*-1);
-//                }
+                qDebug()<<"entering table"<<keyName;
+                for (int i=1;i<=lua_gettop(L);i++){
+                    qDebug()<<i<<":"<<lua_type(L,i*-1);
+                }
                 iterateTable(L, -2, var, hide);
                 depth--;
             }
