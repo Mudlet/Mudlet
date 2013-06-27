@@ -1,4 +1,4 @@
-describe("test DB functionality", function()
+describe("Tests DB functions", function()
   setup(function()
     -- add in the location of our files
     package.path = "../lua/?.lua;"
@@ -15,13 +15,13 @@ describe("test DB functionality", function()
     require"TableUtils"
   end)
 
-  it("tests that DB.lua was loaded", function()
+  it("Should load DB.lua", function()
     require"DB"
     assert.truthy(db)
   end)
 
-  describe("test basic db:create() and db:add()", function()
-    setup(function()
+  describe("Tests that DB creation and deletion works", function()
+    it("Should create a db", function()
       mydb = db:create("people", {
         friends={"name", "city", "notes"},
         enemies={
@@ -37,20 +37,67 @@ describe("test DB functionality", function()
       })
     end)
 
-    it("tests basic db:add", function()
+    it("should successfully shut down a DB", function()
+      db:close()
+    end)
+
+    it("Should recreate a DB", function()
+      mydb = db:create("people", {
+        friends={"name", "city", "notes"},
+        enemies={
+          name="",
+          city="",
+          notes="",
+          enemied="",
+          kills=0,
+          _index = { "city" },
+          _unique = { "name" },
+          _violations = "REPLACE"
+        }
+      })
+    end)
+
+    it("Should successfully shut down a DB again", function()
+      db:close()
+    end)
+  end)
+
+  describe("Tests basic db:create() and db:add()", function()
+    before_each(function()
+      mydb = db:create("people", {
+        friends={"name", "city", "notes"},
+        enemies={
+          name="",
+          city="",
+          notes="",
+          enemied="",
+          kills=0,
+          _index = { "city" },
+          _unique = { "name" },
+          _violations = "REPLACE"
+        }
+      })
+    end)
+
+    after_each(function()
+      db:close()
+    end)
+
+    it("Should add one result to the db", function()
       db:add(mydb.enemies, {name="Bob", city="Sacramento"})
       local results = db:fetch(mydb.enemies)
       assert.is_true(#results == 1)
     end)
 
-    it("tests db:add unique replace constraint", function()
+    it("Should replace a db entry if add_unique is used and the unique index matches", function()
+      db:add(mydb.enemies, {name="Bob", city="Sacramento"})
       db:add(mydb.enemies, {name="Bob", city="San Francisco"})
       local results = db:fetch(mydb.enemies)
       assert.is_true(#results == 1)
       assert.is_true(results[1].city == "San Francisco")
     end)
 
-    it("tests inserting multiple values at once with db:add", function()
+    it("Should insert multiple values with a single db:add", function()
       db:add(mydb.friends,
         {name="Ixokai", city="Magnagora"},
         {name="Vadi", city="New Celest"},
