@@ -290,7 +290,12 @@ function db:_sql_columns(value)
    if t == "table" then
       col_chunks = {}
       for _, v in ipairs(value) do
-         col_chunks[#col_chunks+1] = '"'..v:lower()..'"'
+         -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term
+         if v:lower() == "desc" or v:lower() == "asc" then
+            col_chunks[#col_chunks] = col_chunks[#col_chunks] .. " " .. v
+         else
+            col_chunks[#col_chunks+1] = '"'..v:lower()..'"'
+         end
       end
 
       colstr = table.concat(col_chunks, ',')
@@ -730,13 +735,13 @@ function db:fetch(sheet, query, order_by, descending)
       for _, v in ipairs(order_by) do
          assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
          o[#o+1] = v.name
+
+         if descending then
+            o[#o+1] = "DESC"
+         end
       end
 
       sql = sql.." ORDER BY "..db:_sql_columns(o)
-
-      if descending then
-         sql = sql.." DESC"
-      end
    end
 
    return db:fetch_sql(sheet, sql)
