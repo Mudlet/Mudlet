@@ -123,22 +123,21 @@ describe("Tests DB functions", function()
 
   describe("Tests db:fetch()'s sorting functionality", function()
     before_each(function()
-      mydb = db:create("dslpnp_data",
-              {
-                      people = {
-                              name = "",
-                              race = "",
-                              class = "",
-                              level = 0,
-                              org = "",
-                              org_type = "",
-                              status = "",
-                              keyword = "",
-                              last_seen = db:Timestamp("CURRENT_TIMESTAMP"),
-                              _index = {"name"},
-                              _unique = {"keyword"},
-                              _violations = "REPLACE"
-                      }       })
+      mydb = db:create("dslpnp_data", {
+        people = {
+          name = "",
+          race = "",
+          class = "",
+          level = 0,
+          org = "",
+          org_type = "",
+          status = "",
+          keyword = "",
+          _index = {"name"},
+          _unique = {"keyword"},
+          _violations = "REPLACE"
+        }
+      })
     end)
 
     after_each(function()
@@ -159,6 +158,7 @@ describe("Tests DB functions", function()
               {name="Frank",level=31,class="cleric",race = "ogre", keyword = "Frank"})
 
       local results = db:fetch(mydb.people,nil,{mydb.people.level, mydb.people.name}, true)
+      assert.is_true(#results == 5)
       assert.is_true(results[1].name == "Frank" and results[1].level == 31)
       assert.is_true(results[2].name == "Bobc" and results[2].level == 15)
       assert.is_true(results[3].name == "Bobb" and results[3].level == 15)
