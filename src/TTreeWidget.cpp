@@ -126,10 +126,17 @@ void TTreeWidget::setHost( Host * pH )
     mpHost = pH;
 }
 
+void TTreeWidget::getAllChildren( QTreeWidgetItem *pItem, QList< QTreeWidgetItem * > & list)
+{
+    list.append( pItem );
+    for(int i=0;i<pItem->childCount();++i)
+        getAllChildren( pItem->child(i), list );
+}
+
 void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if( mIsVarTree && indexClicked.isValid() )
+    if( mIsVarTree && indexClicked.isValid() && mClickedItem == indexClicked )
     {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
@@ -138,10 +145,28 @@ void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
         if(rect.contains(event->pos()))
         {
             QTreeWidgetItem * clicked = itemFromIndex( indexClicked );
+            if ( ! ( clicked->flags()&Qt::ItemIsUserCheckable ) )
+                return;
             if ( clicked->checkState( 0 ) == Qt::Unchecked )
+            {
                 clicked->setCheckState( 0, Qt::Checked );
+                //get all children and see what ones we can save
+                QList< QTreeWidgetItem * > list;
+                getAllChildren( clicked, list );
+                QListIterator< QTreeWidgetItem * > it(list);
+                LuaInterface * lI = mpHost->getLuaInterface();
+                VarUnit * vu = lI->getVarUnit();
+                while( it.hasNext() )
+                {
+                    QTreeWidgetItem * item = it.next();
+                    if ( ! vu->shouldSave( item ) )
+                        item->setCheckState( 0, Qt::Unchecked );
+                }
+            }
             else
+            {
                 clicked->setCheckState( 0, Qt::Unchecked );
+            }
             return;
         }
     }

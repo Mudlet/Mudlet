@@ -14,6 +14,8 @@ public:
     QStringList varName(TVar * );
     QStringList shortVarName(TVar * );
     bool varExists(TVar *);
+    bool shouldSave(QTreeWidgetItem *);
+    bool shouldSave(TVar *);
     void addVariable(TVar *);
     void addTempVar( QTreeWidgetItem * , TVar * );
     void removeTempVar( QTreeWidgetItem * );

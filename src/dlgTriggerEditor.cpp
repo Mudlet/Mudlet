@@ -4630,14 +4630,20 @@ void dlgTriggerEditor::saveVar(){
         }
     }
     //redo this here in case we changed type
-    pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-    if (var->getValueType() != 6)//6 is lua_tfunction
-        pItem->setFlags(pItem->flags()|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
+    pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
+    pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+    pItem->setCheckState(0, Qt::Unchecked);
     if ( vu->isSaved( var ) ){
         pItem->setCheckState(0, Qt::Checked);
     }
-    else if (var->getValueType() != 6)
-        pItem->setCheckState(0, Qt::Unchecked);
+    QTreeWidgetItem * parent = pItem->parent();
+    if ( var->getValueType() == 6 || ( ( var->getParent() != vu->getBase() ) && !(parent && parent->flags()&Qt::ItemIsUserCheckable ) ) ){//6 is lua_tfunction, parent must be saveable as well if not global
+//        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
+        pItem->setDisabled( true );
+        pItem->setToolTip(0, "");
+//        pItem->setData(0, Qt::CheckStateRole, QVariant());
+//        qDebug()<<var->getName();
+    }
     pItem->setData( 0, Qt::UserRole, var->getValueType() );
     QIcon icon;
     switch (var->getValueType()){
@@ -4652,7 +4658,6 @@ void dlgTriggerEditor::saveVar(){
             break;
     }
     pItem->setIcon( 0, icon );
-    pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     slot_var_clicked(pItem,0);
 }
 
@@ -5211,6 +5216,20 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     mpVarsMainArea->hideVariable->setChecked( vu->isHidden( var ) );
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
     mpVarsMainArea->lineEdit_var_value->setText(lI->getValue( var ));
+    pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
+    pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+    pItem->setCheckState(0, Qt::Unchecked);
+    if ( vu->isSaved( var ) )
+        pItem->setCheckState(0, Qt::Checked);
+    QTreeWidgetItem * parent = pItem->parent();
+    if ( var->getValueType() == 6 || ( ( var->getParent() != vu->getBase() ) && !(parent && parent->flags()&Qt::ItemIsTristate ) ) ){//6 is lua_tfunction, parent must be saveable as well if not global
+//        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
+        pItem->setToolTip(0, "");
+        pItem->setDisabled( true );
+//        pItem->setData(0, Qt::CheckStateRole, QVariant());
+//        qDebug()<<var->getName();
+    }
+    pItem->setData( 0, Qt::UserRole, var->getValueType() );
     pItem->setIcon( 0, icon );
 }
 

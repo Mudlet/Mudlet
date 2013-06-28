@@ -62,6 +62,7 @@ public:
     void setIsVarTree();
     void setIsKeyTree();
     void beginInsertRows ( const QModelIndex & parent, int first, int last );
+    void getAllChildren( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
     
 private:
     

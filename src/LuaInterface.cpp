@@ -1034,10 +1034,10 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
                 //put the table on top
                 lua_pushnil(L);
                 var->setValue("{}", LUA_TTABLE);
-                qDebug()<<"entering table"<<keyName;
-                for (int i=1;i<=lua_gettop(L);i++){
-                    qDebug()<<i<<":"<<lua_type(L,i*-1);
-                }
+//                qDebug()<<"entering table"<<keyName<<kp<<vp<<varUnit->varExists(var);
+//                for (int i=1;i<=lua_gettop(L);i++){
+//                    qDebug()<<i<<":"<<lua_type(L,i*-1);
+//                }
                 iterateTable(L, -2, var, hide);
                 depth--;
             }
@@ -1053,7 +1053,9 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
             var->setValue(valueName);
         }
         else if (vType == LUA_TFUNCTION &&
-                 (!keyName.toLower().startsWith("alias") && !keyName.toLower().startsWith("trigger"))){
+                 (!keyName.toLower().startsWith("alias") && !keyName.toLower().startsWith("trigger")  &&
+                  !keyName.toLower().startsWith("action") && !keyName.toLower().startsWith("timer") &&
+                  !keyName.toLower().startsWith("key"))){
             //functions are compiled to bytecode so there is no reference
 //            lua_pushvalue(L,-1);
 //            valueName = lua_tostring(L,-1);

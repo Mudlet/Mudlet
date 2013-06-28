@@ -23,6 +23,19 @@ void VarUnit::addPointer( const void *p ){
     pointers.insert(p);
 }
 
+bool VarUnit::shouldSave( QTreeWidgetItem * p ){
+    TVar * var = getWVar(p);
+    if ( var->getValueType() == 6 || var->isReference() )
+        return false;
+    return true;
+}
+
+bool VarUnit::shouldSave( TVar * var ){
+    if ( var->getValueType() == 6 || var->isReference() )
+        return false;
+    return true;
+}
+
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
     QList< QTreeWidgetItem * > cList;
     QListIterator<TVar *> it(var->getChildren());
@@ -34,14 +47,18 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             s1 << child->getName();
             SortedWidgetItem * pItem = new SortedWidgetItem(s1);
             pItem->setText( 0, child->getName() );
-            pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled);
-            if ( child->getValueType() != 6 && ( ( child->getParent() == base ) || p->flags()&Qt::ItemIsTristate ) )//6 is lua_tfunction, parent must be saveable as well if not global
-                pItem->setFlags(pItem->flags()|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
-            if ( isSaved( child ) ){
+            pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
+            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+            pItem->setCheckState(0, Qt::Unchecked);
+            if ( isSaved( child ) )
                 pItem->setCheckState(0, Qt::Checked);
+            if ( ! shouldSave( child ) ){//6 is lua_tfunction, parent must be saveable as well if not global
+//                pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
+                pItem->setDisabled( true );
+                pItem->setToolTip(0, "");
+//                pItem->setData(0, Qt::CheckStateRole, QVariant());
+//                qDebug()<<child->getName();
             }
-            else if (child->getValueType() != 6)
-                pItem->setCheckState(0, Qt::Unchecked);
             pItem->setData( 0, Qt::UserRole, child->getValueType() );
             QIcon icon;
             switch (child->getValueType()){
@@ -56,7 +73,6 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
                     break;
             }
             pItem->setIcon( 0, icon );
-            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
             wVars.insert( pItem, child );
             cList.append( pItem );
             if ( child->getValueType() == 5 )
