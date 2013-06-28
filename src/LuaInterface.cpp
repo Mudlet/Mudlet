@@ -1004,6 +1004,12 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
 //        for (int i=1;i<=lua_gettop(L);i++){
 //            qDebug()<<i<<":"<<lua_type(L,i*-1);
 //        }
+        if (keyName == "package" && depth == 1){//don't load in the 'package' table
+            lua_pop(L, 1);
+            tVar->removeChild(var);
+            delete var;
+            continue;
+        }
         var->setName(keyName, kType);
         var->setValueType(vType);
         var->setParent(tVar);
