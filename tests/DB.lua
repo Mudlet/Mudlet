@@ -83,6 +83,10 @@ describe("Tests DB functions", function()
       db:close()
     end)
 
+    teardown(function()
+      os.remove("Database_people.db")
+    end)
+
     it("Should add one result to the db", function()
       db:add(mydb.enemies, {name="Bob", city="Sacramento"})
       local results = db:fetch(mydb.enemies)
@@ -115,9 +119,50 @@ describe("Tests DB functions", function()
 
       assert.is_true(results[3].name == "Heiko")
     end)
+  end)
+
+  describe("Tests db:fetch()'s sorting functionality", function()
+    before_each(function()
+      mydb = db:create("dslpnp_data",
+              {
+                      people = {
+                              name = "",
+                              race = "",
+                              class = "",
+                              level = 0,
+                              org = "",
+                              org_type = "",
+                              status = "",
+                              keyword = "",
+                              last_seen = db:Timestamp("CURRENT_TIMESTAMP"),
+                              _index = {"name"},
+                              _unique = {"keyword"},
+                              _violations = "REPLACE"
+                      }       })
+    end)
+
+    after_each(function()
+      db:close()
+    end)
 
     teardown(function()
-      os.remove("Database_people.db")
+      os.remove("Database_dslpnpdata.db")
+    end)
+
+    it("Should sort the fields by level first and then name, both in descending order", function()
+      db:add(mydb.people,
+              {name="Bob",level=12,class="mage",race = "elf",keyword = "Bob"},
+              {name="Bob",level=15,class="warrior",race = "human", keyword = "Bob"},
+              {name="Boba",level=15,class="warrior",race = "human", keyword = "Boba"},
+              {name="Bobb",level=15,class="warrior",race = "human", keyword = "Bobb"},
+              {name="Bobc",level=15,class="warrior",race = "human", keyword = "Bobc"},
+              {name="Frank",level=31,class="cleric",race = "ogre", keyword = "Frank"})
+
+      local results = db:fetch(mydb.people,nil,{mydb.people.level, mydb.people.name}, true)
+      assert.is_true(results[1].name == "Frank" and results[1].level == 31)
+      assert.is_true(results[2].name == "Bobc" and results[2].level == 15)
+      assert.is_true(results[3].name == "Bobb" and results[3].level == 15)
+      assert.is_true(results[#results].name == "Bob" and results[#results].level == 15)
     end)
   end)
 end)
