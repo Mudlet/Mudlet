@@ -693,14 +693,14 @@ end
 ---
 --- The results that are returned are not in any guaranteed order, though they are usually the same order
 --- as the records were inserted. If you want to rely on the order in any way, you must pass a value to the
---- order_by field. This must be a table array listing the columns you want to sort by.
---- It can be { "column1" }, or { "column1", "column2" } <br/><br/>
+--- order_by field. This must be a table array listing the fields you want to sort by.
+--- It can be { mydb.kills.area }, or { mydb.kills.area, mydb.kills.name } <br/><br/>
 ---
 --- The results are returned in ascending (smallest to largest) order; to reverse this pass true into the final field.
 ---
 --- @usage The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.
 ---   <pre>
----   db:fetch(mydb.enemies, nil, {"city", "name"})
+---   db:fetch(mydb.enemies, nil, {mydb.enemies.city, mydb.enemies.name})
 ---   </pre>
 --- @usage The second will fetch only the enemies which are in San Francisco.
 ---   <pre>
