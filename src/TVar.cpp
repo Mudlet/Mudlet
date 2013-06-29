@@ -1,4 +1,5 @@
 #include "TVar.h"
+#include <QDebug>
 
 TVar::TVar()
 {
@@ -46,7 +47,16 @@ QString TVar::getName(){
     return name;
 }
 
+bool TVarLessThan( TVar* var, TVar* var2 ){
+    QString a = var->getName();
+    QString b = var2->getName();
+    if ( a.toInt() && b.toInt() )
+        return a.toInt() < b.toInt();
+    return a.toLower() < b.toLower();
+}
+
 QList<TVar *> TVar::getChildren(){
+    qSort(children.begin(), children.end(), TVarLessThan);
     return children;
 }
 

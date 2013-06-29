@@ -280,8 +280,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_vars->hideColumn(1);
     treeWidget_vars->header()->hide();
     treeWidget_vars->setRootIsDecorated( false );
-    treeWidget_vars->setSortingEnabled( true );
-//    treeWidget_vars->setItemDelegate( new TTDelegate );
     connect( treeWidget_vars, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_itemClicked(QTreeWidgetItem*,int)) );
 
     treeWidget_keys->hide();
@@ -4637,7 +4635,8 @@ void dlgTriggerEditor::saveVar(){
         pItem->setCheckState(0, Qt::Checked);
     }
     QTreeWidgetItem * parent = pItem->parent();
-    if ( var->getValueType() == 6 || ( ( var->getParent() != vu->getBase() ) && !(parent && parent->flags()&Qt::ItemIsUserCheckable ) ) ){//6 is lua_tfunction, parent must be saveable as well if not global
+    if ( ! vu->shouldSave( var ) )
+    {
 //        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
         pItem->setDisabled( true );
         pItem->setToolTip(0, "");
@@ -5222,7 +5221,8 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     if ( vu->isSaved( var ) )
         pItem->setCheckState(0, Qt::Checked);
     QTreeWidgetItem * parent = pItem->parent();
-    if ( var->getValueType() == 6 || ( ( var->getParent() != vu->getBase() ) && !(parent && parent->flags()&Qt::ItemIsTristate ) ) ){//6 is lua_tfunction, parent must be saveable as well if not global
+    if ( ! vu->shouldSave( var ) )
+    {
 //        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
         pItem->setToolTip(0, "");
         pItem->setDisabled( true );
@@ -6005,7 +6005,6 @@ void dlgTriggerEditor::fillout_form()
 void dlgTriggerEditor::repopulateVars()
 {
     treeWidget_vars->setUpdatesEnabled( false );
-    treeWidget_vars->setSortingEnabled( false );
     QStringList sL7;
     sL7 << "Variables";
     mpVarBaseItem = new QTreeWidgetItem( sL7 );
@@ -6023,11 +6022,7 @@ void dlgTriggerEditor::repopulateVars()
     VarUnit * vu = lI->getVarUnit();
     vu->buildVarTree( mpVarBaseItem, vu->getBase(), showHiddenVars );
     mpVarBaseItem->setExpanded( true );
-    treeWidget_vars->sortItems(1,Qt::AscendingOrder);
-    //mpVarBaseItem->sortChildren(1, Qt::AscendingOrder);
     treeWidget_vars->setUpdatesEnabled( true );
-    treeWidget_vars->setSortingEnabled( true );
-    treeWidget_vars->sortByColumn(0);
 }
 
 void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )

@@ -26,17 +26,6 @@
 
 class Host;
 
-class SortedWidgetItem : public QTreeWidgetItem {
-  public:
-  SortedWidgetItem(QTreeWidget* parent):QTreeWidgetItem(parent){}
-  SortedWidgetItem(QStringList sl):QTreeWidgetItem(sl){}
-  private:
-  bool operator<(const QTreeWidgetItem &other)const {
-     int column = treeWidget()->sortColumn();
-     return text(column).toLower() < other.text(column).toLower();
-  }
-};
-
 class TTreeWidget : public QTreeWidget
 {
 Q_OBJECT
