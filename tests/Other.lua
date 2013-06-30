@@ -3,7 +3,15 @@ describe("Tests Other.lua functions", function()
     setup(function()
       echo      = function() end
       send      = function() end
-      tempTimer = function() end
+      tempTimer = function(time, code)
+        if type(code) == "string" then
+          loadstring(code)()
+        elseif type(code) == "function" then
+          code()
+        else
+          error("tempTimer: Code must be a string or a function.")
+        end
+      end
 
       -- add in the location of our files
       local oldpath = package.path
@@ -52,14 +60,14 @@ describe("Tests Other.lua functions", function()
     it("tests speedwalk('3w, 2ne, w, u', true, 1.25)", function()
       send           = spy.new(send)
       speedwalktimer = spy.new(speedwalktimer)
-      tempTimer      = spy.new(send)
+      tempTimer      = spy.new(tempTimer)
 
       speedwalk("3w, 2ne, w, u", true, 1.25)
       -- Will walk backwards: down, east, twice southwest, thrice east, with 1.25 seconds delay between every move.
 
       assert.spy(speedwalktimer).was.called()
-      assert.spy(send).was.called(2)
-      assert.spy(tempTimer).was.called(1)
+      assert.spy(send).was.called(7)
+      assert.spy(tempTimer).was.called(6)
     end)
   end)
 end)
