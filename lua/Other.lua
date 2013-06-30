@@ -408,34 +408,34 @@ end
 
 
 --- <b><u>TODO</u></b> speedwalktimer()
-function speedwalktimer()
-	send(walklist[1])
-	table.remove(walklist, 1)
-	if #walklist>0 then
-		tempTimer(walkdelay, [[speedwalktimer()]])
-	end
+function speedwalktimer(walklist, walkdelay)
+    send(walklist[1])
+    table.remove(walklist, 1)
+    if #walklist>0 then
+        tempTimer(walkdelay, function() speedwalktimer(walklist, walkdelay) end)
+    end
 end
 
 
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
 function speedwalk(dirString, backwards, delay)
-	local dirString		= dirString:lower()
-	walklist			= {}
-	walkdelay			= delay
-	local reversedir	= {
-		n	= "s",
-		en	= "sw",
-		e	= "w",
-		es	= "nw",
-		s	= "n",
-		ws	= "ne",
-		w	= "e",
-		wn	= "se",
-		u	= "d",
-		d	= "u",
-		ni	= "out",
-		tuo	= "in"
+	local dirString = dirString:lower()
+	local walkdelay = delay
+	local walklist  = {}
+	local reversedir        = {
+		n       = "s",
+		en      = "sw",
+		e       = "w",
+		es      = "nw",
+		s       = "n",
+		ws      = "ne",
+		w       = "e",
+		wn      = "se",
+		u       = "d",
+		d       = "u",
+		ni      = "out",
+		tuo     = "in"
 	}
 	if not backwards then
 		for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
@@ -457,7 +457,7 @@ function speedwalk(dirString, backwards, delay)
 		end
 	end
 	if walkdelay then
-		speedwalktimer()
+		speedwalktimer(walklist, walkdelay)
 	end
 end
 
