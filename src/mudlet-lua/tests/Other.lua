@@ -21,7 +21,7 @@ describe("Tests Other.lua functions", function()
 
     end)
 
-    it("Tests speedwalk('16d1se1u')", function()
+    it("Tests basic speedwalk() with chained directions", function()
       send = spy.new(send)
 
       -- Will walk 16 times down, once southeast, once up. All in immediate succession.
@@ -33,7 +33,7 @@ describe("Tests Other.lua functions", function()
       assert.spy(send).was_not_called_with("e")
     end)
 
-    it("Tests speedwalk('2ne,3e,2n,e')", function()
+    it("Tests basic speedwalk() with commas as separators", function()
       send = spy.new(send)
 
       -- Will walk twice northeast, thrice east, twice north, once east. All in immediate succession.")
@@ -44,7 +44,7 @@ describe("Tests Other.lua functions", function()
       assert.spy(send).was.called_with("n")
     end)
 
-    it("tests speedwalk('5sw - 3s - 2n - w', true)", function()
+    it("tests reverse speedwalk", function()
       send = spy.new(send)
 
       speedwalk("5sw - 3s - 2n - w", true)
@@ -57,7 +57,7 @@ describe("Tests Other.lua functions", function()
       assert.spy(send).was.was_not_called_with("w")
     end)
 
-    it("tests speedwalk('3w, 2ne, w, u', true, 1.25)", function()
+    it("tests reverse speedwalk with a delay", function()
       send           = spy.new(send)
       speedwalktimer = spy.new(speedwalktimer)
       tempTimer      = spy.new(tempTimer)
