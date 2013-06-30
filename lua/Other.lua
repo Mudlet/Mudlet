@@ -601,13 +601,15 @@ do
 	end
 end
 
-ioprint = print
-function print(...)
-  local t, echo, tostring = {...}, echo, tostring
-  for i = 1, #t do
-    echo((tostring(t[i]) or '?').."    ")
-  end
-  echo("\n")
+if not _TEST then  -- special exception, as overwriting print() messes up printing in the test environment
+	ioprint = print
+	function print(...)
+	  local t, echo, tostring = {...}, echo, tostring
+	  for i = 1, #t do
+	    echo((tostring(t[i]) or '?').."    ")
+	  end
+	  echo("\n")
+	end
 end
 
 function deleteFull()
