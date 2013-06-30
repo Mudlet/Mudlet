@@ -10,7 +10,9 @@ install:
  - sudo luarocks install busted
 
 script:
- - "cd tests && busted -l lua DB.lua"
+ - "cd tests"
+ - "busted -l lua DB.lua"
+ - "busted -l lua Other.lua"
 
 notifications:
   email:
