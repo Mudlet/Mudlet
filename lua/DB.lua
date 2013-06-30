@@ -587,7 +587,7 @@ function db:_migrate_indexes(conn, s_name, schema, current_columns)
                --assert(db:_index_valid(current_columns, value),
                --      "In sheet "..s_name.." an index field is specified that does not exist.")
 
-               sql = sql_create_index:format(
+               local sql = sql_create_index:format(
                      opt[option_type], db:_index_name(s_name, value), s_name, db:_sql_columns(value)
                )
                db:echo_sql(sql)
