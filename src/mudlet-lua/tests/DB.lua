@@ -1,4 +1,4 @@
-describe("Tests DB functions", function()
+describe("Tests DB.lua functions", function()
   setup(function()
     -- add in the location of our files
     package.path = "../lua/?.lua;"
