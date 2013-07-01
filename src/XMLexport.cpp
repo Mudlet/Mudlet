@@ -247,6 +247,13 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mShowRoomIDs", pT->mShowRoomID ? "yes" : "no");
     writeAttribute( "mShowPanel", pT->mShowPanel ? "yes" : "no");
     writeAttribute( "mHaveMapperScript", pT->mHaveMapperScript ? "yes" : "no");
+    QString ignore;
+    QSetIterator<QChar> it(pT->mDoubleClickIgnore);
+    while( it.hasNext() )
+    {
+        ignore = ignore.append(it.next());
+    }
+    writeAttribute( "mDoubleClickIgnore", ignore);
 
     writeTextElement( "name", pT->mHostName );
     //writeTextElement( "login", pT->mLogin );

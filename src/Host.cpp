@@ -170,6 +170,8 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
     mpMap->init( this );
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
+    mDoubleClickIgnore.insert('"');
+    mDoubleClickIgnore.insert('\'');
 }
 
 Host::Host()
@@ -299,6 +301,8 @@ Host::Host()
     mpMap->init( this );
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
+    mDoubleClickIgnore.insert('"');
+    mDoubleClickIgnore.insert('\'');
 }
 
 Host::~Host()
