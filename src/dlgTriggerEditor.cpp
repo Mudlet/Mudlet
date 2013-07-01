@@ -2829,16 +2829,17 @@ void dlgTriggerEditor::addVar( bool isFolder ){
     QString name;
     mpVarsMainArea->key_type->setCurrentIndex(0);
     if (isFolder){
-        mpVarsMainArea->lineEdit_var_value->setReadOnly(true);
+//        mpSourceEditorArea->editor
+        mpSourceEditorArea->editor->setReadOnly(true);
         mpVarsMainArea->var_type->setDisabled(true);
         mpVarsMainArea->var_type->setCurrentIndex(4);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
-        mpVarsMainArea->lineEdit_var_value->setText("NewTable");
+        mpSourceEditorArea->editor->setPlainText("NewTable");
         name="";
     }
     else{
-        mpVarsMainArea->lineEdit_var_value->setReadOnly(false);
+        mpSourceEditorArea->editor->setReadOnly(false);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Variable name...");
         mpVarsMainArea->var_type->setDisabled(false);
@@ -4457,7 +4458,7 @@ void dlgTriggerEditor::saveVar(){
     if ( !var )
         return;
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
-    QString newValue = mpVarsMainArea->lineEdit_var_value->toPlainText();
+    QString newValue = mpSourceEditorArea->editor->toPlainText();
     qDebug()<<"our new name"<<newName;
     if (newName == ""){
         qDebug()<<"no name";
@@ -5149,7 +5150,7 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     {
         mpVarsMainArea->hideVariable->setChecked( false );
         mpVarsMainArea->lineEdit_var_name->setText("");
-        mpVarsMainArea->lineEdit_var_value->setText("");
+        mpSourceEditorArea->editor->setPlainText("");
         //check for temp item
         var = vu->getTVar( pItem );
         if ( var && var->getValueType() == LUA_TTABLE )
@@ -5185,7 +5186,7 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     }
     if (varType == LUA_TTABLE || varType == LUA_TFUNCTION)
     {
-        mpVarsMainArea->lineEdit_var_value->setReadOnly(true);
+        mpSourceEditorArea->editor->setReadOnly(true);
         if ( varType == LUA_TTABLE )
         {
             if ( pItem->childCount() )
@@ -5202,7 +5203,7 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     }
     else
     {
-        mpVarsMainArea->lineEdit_var_value->setReadOnly(false);
+        mpSourceEditorArea->editor->setReadOnly(false);
         mpVarsMainArea->var_type->setEnabled(true);
         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
         if ( varType == LUA_TSTRING )
@@ -5214,7 +5215,7 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     }
     mpVarsMainArea->hideVariable->setChecked( vu->isHidden( var ) );
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
-    mpVarsMainArea->lineEdit_var_value->setText(lI->getValue( var ));
+    mpSourceEditorArea->editor->setPlainText(lI->getValue( var ));
     pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
@@ -6753,7 +6754,7 @@ void dlgTriggerEditor::slot_show_vars( )
     changeView( cmVarsView );
     repopulateVars();
     mCurrentVar = 0;
-    mpSourceEditorArea->hide();
+    mpSourceEditorArea->show();
     toggleHiddenVarsButton->show();
     if ( showHiddenVars )
         toggleHiddenVarsButton->setText( "Hide Hidden Variables" );
