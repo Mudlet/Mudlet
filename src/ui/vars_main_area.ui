@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>574</width>
-    <height>319</height>
+    <width>422</width>
+    <height>95</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,7 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>0</width>
-    <height>200</height>
+    <height>0</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -32,6 +32,15 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="horizontalSpacing">
+    <number>0</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>9</number>
+   </property>
+   <property name="margin">
+    <number>0</number>
+   </property>
    <item row="0" column="0" colspan="3">
     <widget class="QLineEdit" name="lineEdit_var_name">
      <property name="toolTip">
@@ -49,7 +58,7 @@ p, li { white-space: pre-wrap; }
    <item row="3" column="0">
     <widget class="QGroupBox" name="hideVariable">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -150,9 +159,6 @@ or, alternatively, use this not to mess them by up accident</string>
       <bool>false</bool>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="spacing">
-       <number>0</number>
-      </property>
       <property name="leftMargin">
        <number>5</number>
       </property>
@@ -168,7 +174,7 @@ or, alternatively, use this not to mess them by up accident</string>
       <item>
        <widget class="QLabel" name="label_3">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -187,9 +193,6 @@ or, alternatively, use this not to mess them by up accident</string>
         </property>
         <property name="text">
          <string>doesn't show if hidden variables are enabled</string>
-        </property>
-        <property name="scaledContents">
-         <bool>true</bool>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
