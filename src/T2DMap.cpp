@@ -473,6 +473,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     {
         pRID = mpMap->mpRoomDB->getRoom( mRID );
         pAID = mpMap->mpRoomDB->getArea( mAID );
+        if( !pRID || !pAID ) return;
         ox = mOx;
         oy = mOy;
 // N/U:         oz = mOz;
@@ -563,7 +564,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
             TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
-// N/U:             int trID = pArea->rooms[i];
+            if( !pR ) continue;
+            int trID = pArea->rooms[i];
             float rx = pR->x*tx+_rx;
             float ry = pR->y*-1*ty+_ry;
             int rz = pR->z;
