@@ -473,6 +473,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     {
         pRID = mpMap->mpRoomDB->getRoom( mRID );
         pAID = mpMap->mpRoomDB->getArea( mAID );
+        if( !pRID || !pAID ) return;
         ox = mOx;
         oy = mOy;
         oz = mOz;
@@ -491,7 +492,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     TArea * pArea = pAID;
     if( ! pArea ) return;
-
     int zEbene;
     zEbene = mOz;
 
@@ -563,6 +563,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
             TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
+            if( !pR ) continue;
             int trID = pArea->rooms[i];
             float rx = pR->x*tx+_rx;
             float ry = pR->y*-1*ty+_ry;
@@ -793,7 +794,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     }
                 }
             }
-
             if( pR->customLines.size() > 0 )
             {
                 QPen oldPen = p.pen();
@@ -912,7 +912,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
 
             int e = pR->z;
-
             // draw exit stubs
             QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
             for( int k=0; k<pR->exitStubs.size(); k++ )
@@ -1152,6 +1151,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     for( int i=0; i<pArea->rooms.size(); i++ )
     {
         TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
+        if( !pR ) continue;
         float rx = pR->x*tx+_rx;
         float ry = pR->y*-1*ty+_ry;
         int rz = pR->z;
@@ -1377,7 +1377,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         pen.setCapStyle( Qt::RoundCap );
         pen.setJoinStyle( Qt::RoundJoin );
         p.setPen( pen );
-
         //FIXME: redo exit stubs here since the room will draw over up/down stubs -- its repetitive though
         QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
         for( int k=0; k<pR->exitStubs.size(); k++ )
@@ -1403,7 +1402,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 p.drawPolygon(_poly);
            }
         }
-
         if( pR->getUp() > 0 )
         {
             QPolygonF _poly;
@@ -1566,7 +1564,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
         }
     }
-
     if( mpMap->mapLabels.contains( mAID ) )
     {
         QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);
