@@ -88,24 +88,20 @@ mudlet::mudlet()
 , mShowToolbar( true )
 , mWindowMinimized( false )
 , mReplaySpeed( 1 )
-, mIsGoingDown( false )
-, mpCurrentActiveHost( 0 )
-, actionReplaySpeedDown( 0 )
-, actionReplaySpeedUp( 0 )
 , mpIRC( 0 )
+#if defined (Q_OS_LINUX) || defined (Q_OS_MAC) ||defined (Q_OS_WIN)
+    , version( "Mudlet 2.1" )
+#else
+    , version( "Mudlet 2.1" )
+#endif
+, mpCurrentActiveHost( 0 )
 , mpMusicBox1(Phonon::createPlayer(Phonon::MusicCategory) )
 , mpMusicBox2(Phonon::createPlayer(Phonon::MusicCategory) )
 , mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
 , mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
-#ifdef Q_OS_LINUX
-    , version( "Mudlet 2.1" )
-#endif
-#ifdef Q_OS_MAC
-    , version( "Mudlet 2.1" )
-#endif
-#ifdef Q_OS_WIN
-    , version( "Mudlet 2.1" )
-#endif
+, mIsGoingDown( false )
+, actionReplaySpeedDown( 0 )
+, actionReplaySpeedUp( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );

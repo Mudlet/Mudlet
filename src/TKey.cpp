@@ -39,22 +39,22 @@ using namespace std;
 
 TKey::TKey( TKey * parent, Host * pHost )
 : Tree<TKey>( parent )
-, mpHost( pHost )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, mNeedsToBeCompiled( true )
 , exportItem(true)
+, mModuleMasterFolder(false)
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mModuleMember(false)
 {
 }
 
 TKey::TKey( QString name, Host * pHost )
 : Tree<TKey>(0)
+, exportItem(true)
+, mModuleMasterFolder(false)
 , mName( name )
 , mpHost( pHost )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
-, exportItem(true)
+, mModuleMember(false)
 {
 }
 

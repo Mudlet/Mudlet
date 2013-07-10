@@ -3820,7 +3820,7 @@ void dlgTriggerEditor::saveAction()
     if( location > 0 ) location++;
 
     int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
-    bool useCustomLayout = false;//mpActionsMainArea->useCustomLayout->isChecked();
+// N/U:     bool useCustomLayout = false;//mpActionsMainArea->useCustomLayout->isChecked();
     if( pItem )
     {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -7045,8 +7045,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
-    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+// N/U:     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+// N/U:     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
 
     QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonFgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
@@ -7064,8 +7064,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
-    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+// N/U:     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+// N/U:     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
 
     QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonBgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )

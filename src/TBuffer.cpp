@@ -133,6 +133,16 @@ TBuffer::TBuffer( Host * pH )
 , mWrapAt            ( 81 )
 , mWrapIndent        ( 0 )
 , mCursorY           ( 0 )
+, mMXP               ( false )
+, mAssemblingToken   ( false )
+, currentToken       ( "" )
+, openT              ( 0 )
+, closeT             ( 0 )
+, mMXP_LINK_MODE     ( false )
+, mIgnoreTag         ( false )
+, mSkip              ( "" )
+, mParsingVar        ( false )
+, mMXP_SEND_NO_REF_MODE ( false )
 , gotESC             ( false )
 , gotHeader          ( false )
 , codeRet            ( 0 )
@@ -160,18 +170,8 @@ TBuffer::TBuffer( Host * pH )
 , mBold              ( false )
 , mItalics           ( false )
 , mUnderline         ( false )
-, mFgColorCode       ( 0 )
-, mBgColorCode       ( 0 )
-, mMXP               ( false )
-, mAssemblingToken   ( false )
-, currentToken       ( "" )
-, openT              ( 0 )
-, closeT             ( 0 )
-, mMXP_LINK_MODE     ( false )
-, mIgnoreTag         ( false )
-, mSkip              ( "" )
-, mParsingVar        ( false )
-, mMXP_SEND_NO_REF_MODE ( false )
+, mFgColorCode       ( false )
+, mBgColorCode       ( false )
 {
     clear();
     newLines = 0;
@@ -1435,7 +1435,7 @@ void TBuffer::translateToPlainText( std::string & s )
                 {
                     mAssemblingToken = false;
                     //qDebug()<<"identified TAG("<<currentToken.c_str()<<")";
-                    int _pfs = currentToken.find_first_of(' ');
+                    string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if( _pfs == std::string::npos )
                     {
@@ -1591,7 +1591,7 @@ void TBuffer::translateToPlainText( std::string & s )
                     else if( mMXP_Elements.contains( _tn ) )
                     {
                         QString _tp;
-                        int _fs = currentToken.find_first_of(' ');
+                        string::size_type _fs = currentToken.find_first_of(' ');
                         if( _fs != std::string::npos )
                             _tp = currentToken.substr( _fs ).c_str();
                         else

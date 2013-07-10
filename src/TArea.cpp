@@ -44,8 +44,7 @@
 #define OTHER 17
 
 TArea::TArea(TMap * map , TRoomDB * pRDB )
-: mpRoomDB( pRDB )
-, min_x(0)
+: min_x(0)
 , min_y(0)
 , min_z(0)
 , max_x(0)
@@ -54,6 +53,7 @@ TArea::TArea(TMap * map , TRoomDB * pRDB )
 , gridMode( false )
 , isZone( false )
 , zoneAreaRef( 0 )
+, mpRoomDB( pRDB )
 {
 }
 
@@ -62,13 +62,18 @@ TArea::~TArea()
     if( mpRoomDB )
         mpRoomDB->removeArea( (TArea*)this );
     else
-        qDebug()<<"ERROR: TArea instance has no mpRoomDB";
+        qDebug()<<"ERROR: In TArea::~TArea(), instance has no mpRoomDB";
 }
 
 int TArea::getAreaID()
 {
     if( mpRoomDB )
         return mpRoomDB->getAreaID( this );
+    else
+    {
+        qDebug()<<"ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
+        return -1;
+    }
 }
 
 QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()

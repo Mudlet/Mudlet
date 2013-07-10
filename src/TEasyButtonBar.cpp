@@ -144,10 +144,14 @@ void TEasyButtonBar::finalize()
     //fillerWidget->setMinimumHeight(1);
     //fillerWidget->setMinimumWidth(1);
     int columns = mpTAction->getButtonColumns();
-    if( columns <= 0 ) columns = 1;
+    if( columns <= 0 )
+        columns = 1;
+    int row = (++mItemCount) / columns;
+    int column = mItemCount % columns;
     if( mpLayout )
     {
-        mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
+        mpLayout->addWidget( fillerWidget, row, column );
+//        mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
     }
 }
 

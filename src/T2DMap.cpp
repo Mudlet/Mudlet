@@ -447,7 +447,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         return;
     }
 
-    int ox, oy, oz;
+    int ox, oy; // N/U: oz;
     if( mRID != mpMap->mRoomId && mShiftMode ) mShiftMode = false;
     TArea * pAID;
     TRoom * pRID;
@@ -475,7 +475,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         pAID = mpMap->mpRoomDB->getArea( mAID );
         ox = mOx;
         oy = mOy;
-        oz = mOz;
+// N/U:         oz = mOz;
     }
     if( ox*tx > xspan/2*tx )
         _rx = -(tx*ox-xspan/2*tx);
@@ -563,7 +563,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
             TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
-            int trID = pArea->rooms[i];
+// N/U:             int trID = pArea->rooms[i];
             float rx = pR->x*tx+_rx;
             float ry = pR->y*-1*ty+_ry;
             int rz = pR->z;
@@ -911,7 +911,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 p.setPen(oldPen);
             }
 
-            int e = pR->z;
+// N/U:             int e = pR->z;
 
             // draw exit stubs
             QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
@@ -1241,9 +1241,12 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( ! mpMap->customEnvColors.contains(env) ) break;
             c = mpMap->customEnvColors[env];
         }
-        if( ( mPick || __Pick ) && mPHighlight.x() >= dr.x()-(tx*rSize) && mPHighlight.x() <= dr.x()+(tx*rSize) && mPHighlight.y() >= dr.y()-(ty*rSize) && mPHighlight.y() <= dr.y()+(ty*rSize)
-            || mMultiSelectionList.contains(pArea->rooms[i]) )
-        {
+        if( ( ( mPick || __Pick )
+              && mPHighlight.x() >= dr.x()-(tx*rSize)
+              && mPHighlight.x() <= dr.x()+(tx*rSize)
+              && mPHighlight.y() >= dr.y()-(ty*rSize)
+              && mPHighlight.y() <= dr.y()+(ty*rSize) )
+            || mMultiSelectionList.contains(pArea->rooms[i]) ) {
             p.fillRect(dr,QColor(255,155,55));
             mPick = false;
             if( mStartSpeedWalk )
@@ -1284,7 +1287,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         else
         {
             char _ch = pR->c;
-            if( _ch >= 33 && _ch < 255 )
+            if( _ch >= 33 /* && _ch < 255 seems that _ch is a signed char so will always be less than 255 */)
             {
                 int _color = ( 265 - 257 ) * 254 + _ch;//(mpMap->rooms[pArea->rooms[i]]->environment - 257 ) * 254 + _ch;
 
@@ -1487,9 +1490,12 @@ void T2DMap::paintEvent( QPaintEvent * e )
                {
                    dr = QRectF(rx-(tx*rSize)/2,ry-(ty*rSize)/2,tx*rSize,ty*rSize);
                }
-               if( (mPick || __Pick) && mPHighlight.x() >= dr.x()-tx/2 && mPHighlight.x() <= dr.x()+tx/2 && mPHighlight.y() >= dr.y()-ty/2 && mPHighlight.y() <= dr.y()+ty/2
-                   || mMultiSelectionList.contains(pArea->rooms[i]) )
-               {
+               if( ( (mPick || __Pick)
+                     && mPHighlight.x() >= dr.x()-tx/2
+                     && mPHighlight.x() <= dr.x()+tx/2
+                     && mPHighlight.y() >= dr.y()-ty/2
+                     && mPHighlight.y() <= dr.y()+ty/2 )
+                   || mMultiSelectionList.contains(pArea->rooms[i]) ) {
                    p.fillRect(dr,QColor(50,255,50));
                    mPick = false;
                    mTarget = it.key();
@@ -1741,7 +1747,7 @@ void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
 #include <QMessageBox>
 void T2DMap::createLabel( QRectF labelRect )
 {
-    QRectF selectedRegion = labelRect;
+// N/U:     QRectF selectedRegion = labelRect;
     TMapLabel label;
     QFont _font;
     QString t = "no text";
@@ -2074,7 +2080,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                         lpos.setY( _ly );
                         int mx = event->pos().x();
                         int my = event->pos().y();
-                        int mz = mOz;
+// N/U:                         int mz = mOz;
                         QPoint click = QPoint(mx,my);
                         QRectF br = QRect(_lx, _ly, it.value().clickSize.width(), it.value().clickSize.height());
                         if( br.contains( click ))
@@ -2583,7 +2589,7 @@ void T2DMap::slot_changeColor()
     while( it.hasNext() )
     {
         it.next();
-        int env = it.key();
+// N/U:         int env = it.key();
         QColor c;
         c = it.value();
         QListWidgetItem * pI = new QListWidgetItem( pLW );
@@ -2995,18 +3001,18 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
         TArea * pArea = mpMap->mpRoomDB->getArea(_areaID);
         if( ! pArea ) return;
 
-        int ox = mOx;
-        int oy = mOy;
-        float _rx;
-        float _ry;
-        if( ox*mTX > xspan/2*mTX )
-            _rx = -(mTX*ox-xspan/2*mTX);
-        else
-            _rx = xspan/2*mTX-mTX*ox;
-        if( oy*mTY > yspan/2*mTY )
-            _ry = -(mTY*oy-yspan/2*mTY);
-        else
-            _ry = yspan/2*mTY-mTY*oy;
+// N/U:        int ox = mOx;
+// N/U:        int oy = mOy;
+// N/U:        float _rx;
+// N/U:        float _ry;
+//        if( ox*mTX > xspan/2*mTX )
+//            _rx = -(mTX*ox-xspan/2*mTX);
+//        else
+//            _rx = xspan/2*mTX-mTX*ox;
+//        if( oy*mTY > yspan/2*mTY )
+//            _ry = -(mTY*oy-yspan/2*mTY);
+//        else
+//            _ry = yspan/2*mTY-mTY*oy;
         int mx = event->pos().x()/mTX + mOx;
         int my = event->pos().y()/mTY + mOy;
         mx = mx - xspan/2 + 1;

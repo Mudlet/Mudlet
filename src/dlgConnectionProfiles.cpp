@@ -490,7 +490,7 @@ void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
-    int currentRow = profiles_tree_widget->currentIndex().row();
+// N/U:     int currentRow = profiles_tree_widget->currentIndex().row();
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
     removeDir( dir.path(), dir.path() );
     fillout_form();
