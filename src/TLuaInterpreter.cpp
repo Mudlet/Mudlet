@@ -1733,23 +1733,19 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( !pHost->mpMap ) return 0;
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
-    if( !pR )
-    {
+    if( !pR ){
         lua_pushstring( L, "connectExitStub: RoomId doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if(!pR->exitStubs.contains(dirType))
-    {
+    if(!pR->exitStubs.contains(dirType)){
         lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if (roomsGiven)
-    {
-        if (!pR_to)
-        {
+    if (roomsGiven){
+        TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
+        if (!pR_to){
             lua_pushstring( L, "connectExitStubs: toRoom doesn't exist" );
             lua_error( L );
             return 1;
@@ -1762,13 +1758,15 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     }
     else
     {
-        if (!pR->exitStubs.contains(dirType))
-        {
+        if (!pR->exitStubs.contains(dirType)){
             lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
             lua_error( L );
             return 1;
         }
         pHost->mpMap->connectExitStub(roomId, dirType);
+// Nothing has yet been put onto stack for a LUA return value in this case,
+// and it should always be possible to add a stub exit, so provide a true value :
+        lua_pushboolean(L, true );
     }
     pHost->mpMap->mMapGraphNeedsUpdate = true;
     return 1;

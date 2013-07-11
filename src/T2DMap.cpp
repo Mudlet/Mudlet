@@ -1959,48 +1959,56 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                 {
                     it.next();
                     const QList<QPointF> & _pL= it.value();
-                    for( int j=0; j<_pL.size(); j++ )
+                    if( _pL.size() )
                     {
-                        float olx, oly, lx, ly;
-                        if( j==0 )
+                        for( int j=0; j<_pL.size(); j++ )
                         {
-                            olx = pR->x;
-                            oly = pR->y; //FIXME: exit richtung beachten, um den Linienanfangspunkt zu berechnen
-                        }
-                        else
-                        {
-                            olx = lx;
-                            oly = ly;
-                        }
-                        lx = _pL[j].x();
-                        ly = _pL[j].y();
+                            float olx, oly, lx, ly;
+                            if( j==0 )
+                            {  // First segment of a custom line
+                               // start it at the centre of the room
+                                olx = pR->x;
+                                oly = pR->y; //FIXME: exit richtung beachten, um den Linienanfangspunkt zu berechnen
+                                lx = _pL[0].x();
+                                ly = _pL[0].y();
+                            }
+                            else
+                            {  // Not the first segment of a custom line
+                               // so start it at the end of the previous one
+                                olx = lx;
+                                oly = ly;
+                                lx = _pL[j].x();
+                                ly = _pL[j].y();
+                            }
+                            // End of each custom line segment is given
 
-                        // click auf einen edit - punkt
-                        if( mCustomLineSelectedRoom != 0 )
-                        {
-                            if( abs(mx-lx)<=0.25 && abs(my-ly)<=0.25 )
+                            // click auf einen edit - punkt
+                            if( mCustomLineSelectedRoom != 0 )
                             {
-                                mCustomLineSelectedPoint = j;
+                                if( abs(mx-lx)<=0.25 && abs(my-ly)<=0.25 )
+                                {
+                                    mCustomLineSelectedPoint = j;
+                                    return;
+                                }
+                            }
+                            QLineF line = QLineF(olx,oly, lx,ly);
+                            QLineF normal = line.normalVector();
+                            QLineF tl;
+                            tl.setP1(pc);
+                            tl.setAngle(normal.angle());
+                            tl.setLength(0.1);
+                            QLineF tl2;
+                            tl2.setP1(pc);
+                            tl2.setAngle(normal.angle());
+                            tl2.setLength(-0.1);
+                            QPointF pi;
+                            if( ( line.intersect( tl, &pi) == QLineF::BoundedIntersection ) || ( line.intersect( tl2, &pi) == QLineF::BoundedIntersection ) )
+                            {
+                                mCustomLineSelectedRoom = pR->getId();
+                                mCustomLineSelectedExit = it.key();
+                                repaint();
                                 return;
                             }
-                        }
-                        QLineF line = QLineF(olx,oly, lx,ly);
-                        QLineF normal = line.normalVector();
-                        QLineF tl;
-                        tl.setP1(pc);
-                        tl.setAngle(normal.angle());
-                        tl.setLength(0.1);
-                        QLineF tl2;
-                        tl2.setP1(pc);
-                        tl2.setAngle(normal.angle());
-                        tl2.setLength(-0.1);
-                        QPointF pi;
-                        if( ( line.intersect( tl, &pi) == QLineF::BoundedIntersection ) || ( line.intersect( tl2, &pi) == QLineF::BoundedIntersection ) )
-                        {
-                            mCustomLineSelectedRoom = pR->getId();
-                            mCustomLineSelectedExit = it.key();
-                            repaint();
-                            return;
                         }
                     }
                 }

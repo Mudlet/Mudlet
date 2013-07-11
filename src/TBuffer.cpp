@@ -3735,19 +3735,22 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     bool bold = false;
     bool italics = false;
     bool underline = false;
-    int fgR;
-    int fgG;
-    int fgB;
-    int bgR;
-    int bgG;
-    int bgB;
+    int fgR=0;
+    int fgG=0;
+    int fgB=0;
+    int bgR=0;
+    int bgG=0;
+    int bgB=0;
+    // This combination of color values (black on black) cannot usefully be used in practice
+    // - so use as initialization values
     QString fontWeight;
     QString fontStyle;
     QString fontDecoration;
     bool needChange = true;
     for( ; x<P2.x(); x++ )
     {
-        if( x >= static_cast<int>(buffer[y].size()) ) break;
+        if( x >= static_cast<int>(buffer[y].size()) )
+            break;
         if( needChange
             || buffer[y][x].fgR != fgR
             || buffer[y][x].fgG != fgG
@@ -3782,12 +3785,15 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             else
                 fontDecoration = "normal";
             s += "</span><span style=\"";
-            s+="color: rgb(" + QString::number(fgR)+"," + QString::number(fgG)+"," + QString::number(fgB) + ");";
-            s += " background: rgb(" + QString::number(bgR)+"," + QString::number(bgG)+"," + QString::number(bgB) +");";
+            s += "color: rgb(" + QString::number(fgR) + ","
+                               + QString::number(fgG) + ","
+                               + QString::number(fgB) + ");";
+            s += " background: rgb(" + QString::number(bgR) + ","
+                                     + QString::number(bgG) + ","
+                                     + QString::number(bgB) + ");";
             s += " font-weight: " + fontWeight +
-                "; font-style: " + fontStyle +
-                "; font-decoration: " + fontDecoration +
-                "\">";
+                 "; font-style: " + fontStyle +
+                 "; font-decoration: " + fontDecoration + "\">";
         }
         if( lineBuffer[y][x] == '<' )
             s.append("&lt;");
@@ -3796,7 +3802,8 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
         else
             s.append(lineBuffer[y][x]);
     }
-    if( s.size() > 0 ) s.append("<br />");
+    if( s.size() > 0 )
+        s.append("<br />");
     return s;
 }
 

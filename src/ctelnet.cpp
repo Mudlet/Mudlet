@@ -1465,7 +1465,7 @@ void cTelnet::readPipe()
     for( int i = 0; i < datalen; i++ )
     {
         char ch = loadBuffer[i];
-
+        cout << "GOT REPLAY:"<<loadBuffer<<endl;
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
