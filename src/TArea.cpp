@@ -44,8 +44,7 @@
 #define OTHER 17
 
 TArea::TArea(TMap * map , TRoomDB * pRDB )
-: mpRoomDB( pRDB )
-, min_x(0)
+: min_x(0)
 , min_y(0)
 , min_z(0)
 , max_x(0)
@@ -54,6 +53,7 @@ TArea::TArea(TMap * map , TRoomDB * pRDB )
 , gridMode( false )
 , isZone( false )
 , zoneAreaRef( 0 )
+, mpRoomDB( pRDB )
 {
 }
 
@@ -62,13 +62,18 @@ TArea::~TArea()
     if( mpRoomDB )
         mpRoomDB->removeArea( (TArea*)this );
     else
-        qDebug()<<"ERROR: TArea instance has no mpRoomDB";
+        qDebug()<<"ERROR: In TArea::~TArea(), instance has no mpRoomDB";
 }
 
 int TArea::getAreaID()
 {
     if( mpRoomDB )
         return mpRoomDB->getAreaID( this );
+    else
+    {
+        qDebug()<<"ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
+        return -1;
+    }
 }
 
 QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
@@ -412,6 +417,10 @@ void TArea::calcSpan()
         if( _m < min_z )
         {
             min_z = _m;
+            if( ! ebenen.contains( _m ) )
+            {
+                ebenen.push_back( _m );
+            }
         }
     }
     for( int i=0; i<rooms.size(); i++ )
@@ -455,68 +464,81 @@ void TArea::calcSpan()
 
     for( int k=0; k<ebenen.size(); k++ )
     {
+        // For each of the (used) z-axis values that has been put into the list "ebenen"
         int _min_x;
         int _min_y;
         int _min_z;
         int _max_x;
         int _max_y;
         int _max_z;
+        bool minAndMaxsInitialized = false;
+
         if( rooms.size() > 0 )
         {
             int id = rooms[0];
             TRoom * pR = mpRoomDB->getRoom( id );
-            if( !pR ) continue;
+            if( !pR )
+                continue;
             _min_x = pR->x;
             _max_x = _min_x;
             _min_y = pR->y*-1;
             _max_y = _min_y;
             _min_z = pR->z;
             _max_z = _min_z;
+            minAndMaxsInitialized = true;
         }
 
         for( int i=0; i<rooms.size(); i++ )
         {
             int id = rooms[i];
             TRoom * pR = mpRoomDB->getRoom( id );
-            if( !pR ) continue;
-            if( pR->z != ebenen[k]) continue;
-            int _m = pR->x;
-            if( _m < _min_x )
-            {
-                _min_x = _m;
+            if( !pR )
+                continue;   // Not a valid room so ignore
+            if( pR->z != ebenen[k])
+                continue;   // Room is not on the z-axis value level that we currently are working with
+            if( ! minAndMaxsInitialized )
+            {  // Will get here if FIRST room (in rooms[]) was not a valid one
+                _min_x = pR->x;
+                _max_x = _min_x;
+                _min_y = pR->y*-1;
+                _max_y = _min_y;
+                _min_z = pR->z;
+                _max_z = _min_z;
+                minAndMaxsInitialized = true;
             }
-            _m = pR->y*-1;
-            if( _m < _min_y )
+            else
             {
-                _min_y = _m;
-            }
-            _m = pR->z;
-            if( _m < _min_z )
-            {
-                _min_z = _m;
-            }
-            _m = pR->x;
-            if( _m > _max_x )
-            {
-                _max_x = _m;
-            }
-            _m = pR->y*-1;
-            if( _m > _max_y )
-            {
-                _max_y = _m;
-            }
-            _m = pR->z;
-            if( _m > _max_z )
-            {
-                _max_z = _m;
+                int _m = pR->x;
+                if( _m < _min_x )
+                    _min_x = _m;
+                if( _m > _max_x )
+                    _max_x = _m;
+
+                _m = pR->y*-1;
+                if( _m < _min_y )
+                   _min_y = _m;
+                if( _m > _max_y )
+                   _max_y = _m;
+
+                // This bit is pointless, we already known that pR->z will be the
+                // fixed z-axis value that ebenen[k] holds so _min_z and _max_z will
+                // also have that value.
+                _m = pR->z;
+                if( _m < _min_z )
+                   _min_z = _m;
+                if( _m > _max_z )
+                   _max_z = _m;
             }
         }
-        xminEbene[ebenen[k]] = _min_x;
-        yminEbene[ebenen[k]] = _min_y;
-        zminEbene[ebenen[k]] = _min_z;
-        xmaxEbene[ebenen[k]] = _max_x;
-        ymaxEbene[ebenen[k]] = _max_y;
-        zmaxEbene[ebenen[k]] = _max_z;
+        if( minAndMaxsInitialized )
+        {
+            xminEbene[ebenen[k]] = _min_x;
+            yminEbene[ebenen[k]] = _min_y;
+            zminEbene[ebenen[k]] = _min_z;
+            xmaxEbene[ebenen[k]] = _max_x;
+            ymaxEbene[ebenen[k]] = _max_y;
+            zmaxEbene[ebenen[k]] = _max_z;
+        }
     }
 }
 

@@ -656,6 +656,7 @@ int TLuaInterpreter::getLines( lua_State * L )
 // luaTable result[line_number, content] = getLines( from_cursorPos, to_cursorPos )
 int TLuaInterpreter::getBufferTable( lua_State * L )
 {
+/*
     int luaFrom;
     if( ! lua_isnumber( L, 1 ) )
     {
@@ -679,6 +680,7 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     {
         luaTo=lua_tointeger( L, 2 );
     }
+ Above part does not achieve anything whilst following stuff is commented out! */
     /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QStringList strList = pHost->getBufferTable( luaFrom, luaTo );
     if( mudlet::debugMode ) qDebug()<<"TLuaInterpreter::getBufferTable() strList="<<strList;
@@ -689,7 +691,10 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
         lua_pushstring( L, strList[i].toLatin1().data() );
         lua_settable(L, -3);
     } */
-    return 0;
+//    return 0;
+    lua_pushstring( L, "getBufferTable: Currently commented out in source code" );
+    lua_error( L );
+    return 1;
 }
 
 int TLuaInterpreter::loadRawFile( lua_State * L )
@@ -1516,6 +1521,7 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
 
 int TLuaInterpreter::getBufferLine( lua_State * L )
 {
+/*
     int luaLine;
     if( ! lua_isnumber( L, 1 ) )
     {
@@ -1527,12 +1533,15 @@ int TLuaInterpreter::getBufferLine( lua_State * L )
     {
         luaLine = lua_tointeger( L, 1 );
     }
-
+ Above part does not achieve anything whilst following stuff is commented out! */
     /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString line = pHost->getBufferLine( luaLine );
     if( mudlet::debugMode ) qDebug()<<"TLuaInterpreter::getBufferLine() line="<<line;
     lua_pushstring( L, line.toLatin1().data() );*/
-    return 0;
+//    return 0;
+    lua_pushstring( L, "getBufferLine: Currently commented out in source code" );
+    lua_error( L );
+    return 1;
 }
 
 // replace( sessionID, replace_with )
@@ -1724,23 +1733,19 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( !pHost->mpMap ) return 0;
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
-    if( !pR )
-    {
+    if( !pR ){
         lua_pushstring( L, "connectExitStub: RoomId doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if(!pR->exitStubs.contains(dirType))
-    {
+    if(!pR->exitStubs.contains(dirType)){
         lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if (roomsGiven)
-    {
-        if (!pR_to)
-        {
+    if (roomsGiven){
+        TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
+        if (!pR_to){
             lua_pushstring( L, "connectExitStubs: toRoom doesn't exist" );
             lua_error( L );
             return 1;
@@ -1753,13 +1758,15 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     }
     else
     {
-        if (!pR->exitStubs.contains(dirType))
-        {
+        if (!pR->exitStubs.contains(dirType)){
             lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
             lua_error( L );
             return 1;
         }
         pHost->mpMap->connectExitStub(roomId, dirType);
+// Nothing has yet been put onto stack for a LUA return value in this case,
+// and it should always be possible to add a stub exit, so provide a true value :
+        lua_pushboolean(L, true );
     }
     pHost->mpMap->mMapGraphNeedsUpdate = true;
     return 1;
@@ -2691,7 +2698,7 @@ int TLuaInterpreter::setMainWindowSize( lua_State *L )
     {
         y1 = lua_tonumber( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+// N/U:     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
 
     mudlet::self()->resize( x1, y1 );
 
@@ -3600,7 +3607,7 @@ int TLuaInterpreter::lockSpecialExit( lua_State *L )
 
 int TLuaInterpreter::hasSpecialExitLock( lua_State *L )
 {
-    bool b = true;
+// N/U:     bool b = true;
     int id, to;
     std::string dir;
     if( ! lua_isnumber( L, 1 ) )
@@ -4215,6 +4222,7 @@ int TLuaInterpreter::setAppStyleSheet( lua_State *L )
     else
         luaWindowName = "main";
     qApp->setStyleSheet( luaWindowName.c_str() );
+    return 0;
 }
 
 // this is an internal only function used by the package system
@@ -4461,7 +4469,7 @@ int TLuaInterpreter::setPopup( lua_State *L )
     string a2;
     QStringList _hintList;
     QStringList _commandList;
-    bool customFormat = false;
+// N/U:     bool customFormat = false;
     int s = 1;
     int n = lua_gettop( L );
     // console name is an optional first argument
@@ -4535,11 +4543,12 @@ int TLuaInterpreter::setPopup( lua_State *L )
         }
         s++;
     }
+/* N/U:
     if( n >= s )
     {
         customFormat = lua_toboolean( L, s );
     }
-
+*/
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString txt = a2.c_str();
     QString name = a1.c_str();
@@ -5434,7 +5443,7 @@ int TLuaInterpreter::tempButton( lua_State *L){
 
 
     pT->registerAction();
-    int childID = pT->getID();
+// N/U:     int childID = pT->getID();
     mpHost->getActionUnit()->updateToolbar();
     return 1;
 }
@@ -5503,7 +5512,7 @@ int TLuaInterpreter::tempButtonToolbar( lua_State *L  )
     pT->setIsFolder( true );
     pT->setIsActive( true );
     pT->registerAction();
-    int childID = pT->getID();
+// N/U:     int childID = pT->getID();
     pHost->getActionUnit()->updateToolbar();
 
 
@@ -6413,7 +6422,7 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
 
 int TLuaInterpreter::addAreaName( lua_State *L )
 {
-    int id;
+// N/U:     int id;
     string name;
 
     if( ! lua_isstring( L, 1 ) )
@@ -7055,7 +7064,7 @@ int TLuaInterpreter::createMapImageLabel( lua_State * L )
     string text;
     bool showOnTop = true;
 
-    int args = lua_gettop(L);
+// N/U:     int args = lua_gettop(L);
     if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "createMapLabel: wrong argument type" );
@@ -8429,7 +8438,7 @@ int TLuaInterpreter::insertLink( lua_State *L )
     int n = lua_gettop( L );
     int s = 1;
     bool b = false;
-    bool gotBool = false;
+// N/U:     bool gotBool = false;
     for( ; s<=n; s++ )
     {
         if( lua_isstring( L, s ) )
@@ -8440,7 +8449,7 @@ int TLuaInterpreter::insertLink( lua_State *L )
         }
         else if( lua_isboolean( L, s ) )
         {
-            gotBool = true;
+// N/U:             gotBool = true;
             b = lua_toboolean( L, s );
         }
     }
@@ -9199,6 +9208,7 @@ int TLuaInterpreter::installPackage( lua_State * L )
     QString package = event.c_str();
     if( pHost )
         pHost->installPackage( package, 0 );
+    return 0;
 }
 
 int TLuaInterpreter::uninstallPackage( lua_State * L )
@@ -9218,6 +9228,7 @@ int TLuaInterpreter::uninstallPackage( lua_State * L )
     QString package = event.c_str();
     if( pHost )
         pHost->uninstallPackage( package, 0 );
+    return 0;
 }
 
 int TLuaInterpreter::installModule( lua_State * L)
@@ -9445,7 +9456,7 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     {
         text = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+// N/U:     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString chan = who.c_str();
     QString txt = text.c_str();
     if( ! mudlet::self()->mpIRC ) return 0;
@@ -9871,7 +9882,7 @@ void TLuaInterpreter::msdp2Lua(char *src, int srclen)
     nest = last = 0;
     i = 0;
     QString script;// = "{";
-    bool isSet = false;
+// N/U:     bool isSet = false;
     bool no_array_marker_bug = false;
     while (i < srclen)
     {
@@ -9937,7 +9948,7 @@ void TLuaInterpreter::msdp2Lua(char *src, int srclen)
                        setMSDPTable(token, script);
                        varList.clear();
                        script.clear();
-                       isSet = true;
+// N/U:                       isSet = true;
                    }
                 }
                 last = MSDP_VAR;
@@ -9983,7 +9994,7 @@ void TLuaInterpreter::msdp2Lua(char *src, int srclen)
     if( varList.size() )
     {
         //qDebug()<<"<script>"<<script;
-        int startVal = script.indexOf(":")+1;
+// N/U:         int startVal = script.indexOf(":")+1;
         QString token = varList.front();
         token = token.replace("\"","");
         script = script.replace(0,token.size()+3, "");

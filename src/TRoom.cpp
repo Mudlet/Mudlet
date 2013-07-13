@@ -1,3 +1,22 @@
+/***************************************************************************
+ *   Copyright (C) 2012 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
+ *                                                                         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 
 #include <QVector3D>
 #include "TRoom.h"
@@ -5,12 +24,22 @@
 #include <QDebug>
 
 TRoom::TRoom(TRoomDB * pRDB )
-: id( 0 )
-, mpRoomDB( pRDB )
-, area( 0 )
-, x( 0 )
+: x( 0 )
 , y( 0 )
 , z( 0 )
+, environment( -1 )
+, isLocked( false )
+, min_x( 0 )
+, min_y( 0 )
+, max_x( 0 )
+, max_y( 0 )
+, c( 0 )
+, highlight( false )
+, highlightColor( QColor( 255,150,0 ) )
+, rendered(false)
+, id( 0 )
+, area( 0 )
+, weight(1)
 , north( -1 )
 , northeast( -1 )
 , east( -1 )
@@ -23,17 +52,7 @@ TRoom::TRoom(TRoomDB * pRDB )
 , down( -1 )
 , in( -1 )
 , out( -1 )
-, environment( -1 )
-, weight(1)
-, isLocked( false )
-, c( 0 )
-, highlight( false )
-, highlightColor( QColor( 255,150,0 ) )
-, rendered(false)
-, min_x( 0 )
-, max_x( 0 )
-, min_y( 0 )
-, max_y( 0 )
+, mpRoomDB( pRDB )
 {
 }
 
@@ -323,7 +342,8 @@ void TRoom::calcRoomDimensions()
 
 #include <QDataStream>
 
-bool TRoom::restore( QDataStream & ifs, int i, int version )
+/*bool - N/U: no return value created or used */
+void TRoom::restore( QDataStream & ifs, int i, int version )
 {
 
     id = i;
