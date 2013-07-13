@@ -39,13 +39,13 @@ using namespace std;
 TTimer::TTimer( TTimer * parent, Host * pHost )
 : Tree<TTimer>( parent )
 , mRegisteredAnonymousLuaFunction( false )
+, exportItem(true)
+, mModuleMasterFolder(false)
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mIsTempTimer( false )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
 , mpTimer( new QTimer )
-, exportItem(true)
+, mModuleMember(false)
 {
     mpTimer->stop();
 }
@@ -53,15 +53,15 @@ TTimer::TTimer( TTimer * parent, Host * pHost )
 TTimer::TTimer( QString name, QTime time, Host * pHost )
 : Tree<TTimer>(0)
 , mRegisteredAnonymousLuaFunction( false )
+, exportItem(true)
+, mModuleMasterFolder(false)
 , mName( name )
 , mTime( time )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
 , mIsTempTimer( false )
-, exportItem(true)
 , mpTimer( new QTimer )
+, mModuleMember(false)
 {
     mpTimer->stop();
 }

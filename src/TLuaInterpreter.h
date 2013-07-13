@@ -119,6 +119,9 @@ public:
     TGatekeeperThread * mpGatekeeperThread;
     QNetworkAccessManager * mpFileDownloader;
 
+    static int getCustomLines( lua_State * );
+    static int addCustomLine( lua_State * );
+    static int noop( lua_State * );
     static int sendMSDP( lua_State * );
     static int auditAreas( lua_State * );
     static int getAreaExits(lua_State * );

@@ -41,6 +41,7 @@ public:
     std::list<TTrigger *> getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
     TTrigger *            getTrigger( int id );
     void                  removeAllTempTriggers();
+    void                  reorderTriggersAfterPackageImport();
     TTrigger *            findTrigger( QString & );
     bool                  enableTrigger( QString & );
     bool                  disableTrigger( QString & );

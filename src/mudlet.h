@@ -70,6 +70,8 @@ public:
                                 ~mudlet();
    static                        mudlet * self();
    void                          addSubWindow(TConsole* p);
+   int                           getColumnNumber( Host * pHost, QString & name );
+   int                           getLineNumber( Host * pHost, QString & name );
    void                          printSystemMessage( Host * pH, QString & s );
    void                          print( Host *, QString & );
    void                          addConsoleForNewHost( Host * pH );

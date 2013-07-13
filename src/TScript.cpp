@@ -39,22 +39,22 @@ using namespace std;
 
 TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
-, mpHost( pHost )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, mNeedsToBeCompiled( true )
 , exportItem(true)
+, mModuleMasterFolder(false)
+, mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mModuleMember(false)
 {
 }
 
 TScript::TScript( QString name, Host * pHost )
 : Tree<TScript>(0)
+, exportItem(true)
+, mModuleMasterFolder(false)
 , mName( name )
 , mpHost( pHost )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
-, exportItem(true)
+, mModuleMember(false)
 {
 }
 

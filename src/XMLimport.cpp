@@ -1264,7 +1264,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     mpHost->getTimerUnit()->registerTimer( pT );
     pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
 
-    bool isOffsetTimer = ( attributes().value("isOffsetTimer") == "yes" );
+// N/U:     bool isOffsetTimer = ( attributes().value("isOffsetTimer") == "yes" );
 
 
     if (module)
