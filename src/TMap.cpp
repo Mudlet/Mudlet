@@ -27,8 +27,8 @@
 
 
 TMap::TMap( Host * pH )
-: mpHost( pH )
-, mpRoomDB( new TRoomDB( this ) )
+: mpRoomDB( new TRoomDB( this ) )
+, mpHost( pH )
 , mpM( 0 )
 , mpMapper( 0 )
 , mMapGraphNeedsUpdate( true )
@@ -76,9 +76,9 @@ TMap::TMap( Host * pH )
     m2DPanMode = false;
     mLeftDown = false;
     mRightDown = false;
-    float m2DPanXStart=0;
-    float m2DPanYStart=0;
-    int mViewArea = 0;
+// N/U:     float m2DPanXStart=0;
+// N/U:     float m2DPanYStart=0;
+// N/U:     int mViewArea = 0;
 }
 
 void TMap::mapClear()
@@ -247,8 +247,6 @@ int TMap::createNewRoomID()
 
 bool TMap::setExit( int from, int to, int dir )
 {
-
-    qDebug()<<"setExit("<<from<<", "<<to<<" dir="<<dir;
     TRoom * pR = mpRoomDB->getRoom( from );
     TRoom * pR_to = mpRoomDB->getRoom( to );
 
@@ -322,7 +320,7 @@ void TMap::init( Host * pH )
     while( it.hasNext() )
     {
         it.next();
-        TArea * pA = it.value();
+// N/U:         TArea * pA = it.value();
         int areaID = it.key();
         if( mapLabels.contains(areaID) )
         {
@@ -933,7 +931,7 @@ bool TMap::serialize( QDataStream & ofs )
         while( itL2.hasNext() )
         {
             itL2.next();
-            int ii = itL2.key();
+// N/U:             int ii = itL2.key();
             ofs << itL2.key();//label ID
             TMapLabel label = itL2.value();
             ofs << label.pos;
@@ -952,7 +950,7 @@ bool TMap::serialize( QDataStream & ofs )
     {
 
         it.next();
-        int i = it.key();
+// N/U:         int i = it.key();
         TRoom * pR = it.value();
         ofs <<  pR->getId();
         ofs << pR->getArea();
@@ -1191,6 +1189,9 @@ bool TMap::restore(QString location)
             init( mpHost );
             if (msgBox.clickedButton() == yesButton) {
                 mpMapper->downloadMap();
+            }
+            else if(msgBox.clickedButton() == noButton) {
+                ; //No-op to avoid unused "noButton"
             }
         }
         else

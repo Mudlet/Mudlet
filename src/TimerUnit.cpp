@@ -305,10 +305,10 @@ bool TimerUnit::enableTimer( QString & name )
     {
         TTimer * pT = it.value();
 
-        bool ret = false;
+// N/U:         bool ret = false;
 
         if( ! pT->isOffsetTimer() )
-            ret = pT->setIsActive( true );
+           /* ret = */ pT->setIsActive( true );
         else
             pT->setShouldBeActive( true );
 

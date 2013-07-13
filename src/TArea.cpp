@@ -44,8 +44,7 @@
 #define OTHER 17
 
 TArea::TArea(TMap * map , TRoomDB * pRDB )
-: mpRoomDB( pRDB )
-, min_x(0)
+: min_x(0)
 , min_y(0)
 , min_z(0)
 , max_x(0)
@@ -54,6 +53,7 @@ TArea::TArea(TMap * map , TRoomDB * pRDB )
 , gridMode( false )
 , isZone( false )
 , zoneAreaRef( 0 )
+, mpRoomDB( pRDB )
 {
 }
 
@@ -62,13 +62,18 @@ TArea::~TArea()
     if( mpRoomDB )
         mpRoomDB->removeArea( (TArea*)this );
     else
-        qDebug()<<"ERROR: TArea instance has no mpRoomDB";
+        qDebug()<<"ERROR: In TArea::~TArea(), instance has no mpRoomDB";
 }
 
 int TArea::getAreaID()
 {
     if( mpRoomDB )
         return mpRoomDB->getAreaID( this );
+    else
+    {
+        qDebug()<<"ERROR: TArea::getAreaID() instance has no mpRoomDB, returning -1 as ID";
+        return -1;
+    }
 }
 
 QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
@@ -101,17 +106,19 @@ QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
 QList<int> TArea::getRoomsByPosition( int x, int y, int z )
 {
     QList<int> dL;
-    QList<TRoom*> roomList = mpRoomDB->getRoomPtrList();
-    for( int i=0; i<roomList.size(); i++ )
+    for( int i=0; i<rooms.size(); i++ )
     {
-        TRoom * pR = roomList[i];
-        int id = pR->getId();
-        int _x = pR->x;
-        int _y = pR->y;
-        int _z = pR->z;
-        if( _x == x && _y == y && _z == z )
+        TRoom * pR = mpRoomDB->getRoom(rooms[i]);
+        if( pR )
         {
-            dL.push_back( id );
+            int id = pR->getId();
+            int _x = pR->x;
+            int _y = pR->y;
+            int _z = pR->z;
+            if( _x == x && _y == y && _z == z )
+            {
+                dL.push_back( id );
+            }
         }
     }
     return dL;
@@ -158,12 +165,9 @@ QList<int> TArea::getCollisionNodes()
 
 void TArea::fast_ausgaengeBestimmen( int id )
 {
-    qDebug()<<"trace#0";
     TRoom * pR = mpRoomDB->getRoom(id);
     if( ! pR ) return;
-    qDebug()<<"trace#1";
     exits.remove(id);
-    qDebug()<<"trace#1";
     if( pR->getNorth() > 0 && rooms.indexOf( pR->getNorth() ) < 0 )
     {
         QPair<int, int> p = QPair<int,int>(id, NORTH);
@@ -224,31 +228,22 @@ void TArea::fast_ausgaengeBestimmen( int id )
         QPair<int, int> p = QPair<int,int>(id, OUT);
         exits.insertMulti( id, p );
     }
-    qDebug()<<"trace#2";
     const QMap<int, QString> otherMap = pR->getOtherMap();
-    qDebug()<<"trace#3";
     QMapIterator<int,QString> it( otherMap );
-    qDebug()<<"trace#4";
     while( it.hasNext() )
     {
-        qDebug()<<"trace#5";
         it.next();
-        qDebug()<<"trace#6";
         int _exit = it.key();
         TRoom * pO = mpRoomDB->getRoom(_exit);
-        qDebug()<<"trace#7 pO="<<pO;
         if( pO )
         {
-            qDebug()<<"trace#8";
             if( pO->getArea() != getAreaID() )
             {
-                qDebug()<<"trace#9";
                 QPair<int, int> p = QPair<int,int>(pO->getId(), OTHER);
                 exits.insertMulti( pO->getId(), p );
             }
         }
     }
-    qDebug()<<"trace#10-OKexit";
 }
 
 void TArea::ausgaengeBestimmen()
@@ -422,6 +417,10 @@ void TArea::calcSpan()
         if( _m < min_z )
         {
             min_z = _m;
+            if( ! ebenen.contains( _m ) )
+            {
+                ebenen.push_back( _m );
+            }
         }
     }
     for( int i=0; i<rooms.size(); i++ )
@@ -465,68 +464,81 @@ void TArea::calcSpan()
 
     for( int k=0; k<ebenen.size(); k++ )
     {
+        // For each of the (used) z-axis values that has been put into the list "ebenen"
         int _min_x;
         int _min_y;
         int _min_z;
         int _max_x;
         int _max_y;
         int _max_z;
+        bool minAndMaxsInitialized = false;
+
         if( rooms.size() > 0 )
         {
             int id = rooms[0];
             TRoom * pR = mpRoomDB->getRoom( id );
-            if( !pR ) continue;
+            if( !pR )
+                continue;
             _min_x = pR->x;
             _max_x = _min_x;
             _min_y = pR->y*-1;
             _max_y = _min_y;
             _min_z = pR->z;
             _max_z = _min_z;
+            minAndMaxsInitialized = true;
         }
 
         for( int i=0; i<rooms.size(); i++ )
         {
             int id = rooms[i];
             TRoom * pR = mpRoomDB->getRoom( id );
-            if( !pR ) continue;
-            if( pR->z != ebenen[k]) continue;
-            int _m = pR->x;
-            if( _m < _min_x )
-            {
-                _min_x = _m;
+            if( !pR )
+                continue;   // Not a valid room so ignore
+            if( pR->z != ebenen[k])
+                continue;   // Room is not on the z-axis value level that we currently are working with
+            if( ! minAndMaxsInitialized )
+            {  // Will get here if FIRST room (in rooms[]) was not a valid one
+                _min_x = pR->x;
+                _max_x = _min_x;
+                _min_y = pR->y*-1;
+                _max_y = _min_y;
+                _min_z = pR->z;
+                _max_z = _min_z;
+                minAndMaxsInitialized = true;
             }
-            _m = pR->y*-1;
-            if( _m < _min_y )
+            else
             {
-                _min_y = _m;
-            }
-            _m = pR->z;
-            if( _m < _min_z )
-            {
-                _min_z = _m;
-            }
-            _m = pR->x;
-            if( _m > _max_x )
-            {
-                _max_x = _m;
-            }
-            _m = pR->y*-1;
-            if( _m > _max_y )
-            {
-                _max_y = _m;
-            }
-            _m = pR->z;
-            if( _m > _max_z )
-            {
-                _max_z = _m;
+                int _m = pR->x;
+                if( _m < _min_x )
+                    _min_x = _m;
+                if( _m > _max_x )
+                    _max_x = _m;
+
+                _m = pR->y*-1;
+                if( _m < _min_y )
+                   _min_y = _m;
+                if( _m > _max_y )
+                   _max_y = _m;
+
+                // This bit is pointless, we already known that pR->z will be the
+                // fixed z-axis value that ebenen[k] holds so _min_z and _max_z will
+                // also have that value.
+                _m = pR->z;
+                if( _m < _min_z )
+                   _min_z = _m;
+                if( _m > _max_z )
+                   _max_z = _m;
             }
         }
-        xminEbene[ebenen[k]] = _min_x;
-        yminEbene[ebenen[k]] = _min_y;
-        zminEbene[ebenen[k]] = _min_z;
-        xmaxEbene[ebenen[k]] = _max_x;
-        ymaxEbene[ebenen[k]] = _max_y;
-        zmaxEbene[ebenen[k]] = _max_z;
+        if( minAndMaxsInitialized )
+        {
+            xminEbene[ebenen[k]] = _min_x;
+            yminEbene[ebenen[k]] = _min_y;
+            zminEbene[ebenen[k]] = _min_z;
+            xmaxEbene[ebenen[k]] = _max_x;
+            ymaxEbene[ebenen[k]] = _max_y;
+            zmaxEbene[ebenen[k]] = _max_z;
+        }
     }
 }
 

@@ -66,6 +66,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     // website_entry atm is only a label
     //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
+    profile_name_entry->setReadOnly(true);
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
     notificationAreaIconLabelError->hide();
@@ -433,6 +434,7 @@ void dlgConnectionProfiles::slot_save_name()
 
 void dlgConnectionProfiles::slot_addProfile()
 {
+    profile_name_entry->setReadOnly(false);
     fillout_form();
     welcome_message->hide();
 
@@ -488,7 +490,7 @@ void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
-    int currentRow = profiles_tree_widget->currentIndex().row();
+// N/U:     int currentRow = profiles_tree_widget->currentIndex().row();
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
     removeDir( dir.path(), dir.path() );
     fillout_form();
@@ -501,6 +503,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
 
     QString profile = profiles_tree_widget->currentItem()->text();
+    if( profile.size() > 1 ) return;
 
     QUiLoader loader;
 
@@ -574,6 +577,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 {
     if( !pItem )
         return;
+
+    profile_name_entry->setReadOnly(true);
 
     QString profile_name = pItem->text();
 
@@ -806,6 +811,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             notificationAreaMessageBox->setText(tr(""));
         }
     }
+    profile_name_entry->setReadOnly(true);
 
 }
 
@@ -1093,6 +1099,7 @@ void dlgConnectionProfiles::fillout_form()
 
     if( toselect )
         profiles_tree_widget->setCurrentItem( toselect );
+    profile_name_entry->setReadOnly(true);
 }
 
 void dlgConnectionProfiles::slot_cancel()
