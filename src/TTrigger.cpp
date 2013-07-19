@@ -36,8 +36,8 @@
 #include "TDebug.h"
 #include <pcre.h>
 #include <sstream>
-#include <QSound>
-#include <phonon>
+//#include <QSound>
+//#include <phonon>
 
 using namespace std;
 

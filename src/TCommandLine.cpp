@@ -589,7 +589,7 @@ void TCommandLine::handleTabCompletion( bool direction )
         QString lastWord;
         QRegExp reg = QRegExp("\\b(\\w+)$");
         int typePosition = reg.indexIn( mTabCompletionTyped );
-        if( reg.numCaptures() >= 1 )
+        if( reg.captureCount() >= 1 )
             lastWord = reg.cap( 1 );
         else
             lastWord = "";

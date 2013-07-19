@@ -42,6 +42,10 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 #include "dlgNotepad.h"
+#include <QToolBar>
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QMessageBox>
 
 //#ifdef Q_CC_GNU
     #include "dlgIRC.h"
@@ -95,10 +99,10 @@ mudlet::mudlet()
     , version( "Mudlet 2.1" )
 #endif
 , mpCurrentActiveHost( 0 )
-, mpMusicBox1(Phonon::createPlayer(Phonon::MusicCategory) )
-, mpMusicBox2(Phonon::createPlayer(Phonon::MusicCategory) )
-, mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
-, mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
+//, mpMusicBox1(Phonon::createPlayer(Phonon::MusicCategory) )
+//, mpMusicBox2(Phonon::createPlayer(Phonon::MusicCategory) )
+//, mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
+//, mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
 , mIsGoingDown( false )
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
@@ -415,7 +419,7 @@ void mudlet::layoutModules(){
     // overload but that is how they do it...
     sl << "Module Name" << "Priority" << "Save & Sync?" << "Module Location";
     moduleTable->setHorizontalHeaderLabels(sl);
-    moduleTable->horizontalHeader()->setResizeMode(0, QHeaderView::Stretch);
+    moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
     //clear everything
@@ -2352,33 +2356,33 @@ void mudlet::slot_replaySpeedDown()
 
 void mudlet::stopSounds()
 {
-    mpMusicBox1->stop();
-    mpMusicBox2->stop();
-    mpMusicBox3->stop();
-    mpMusicBox4->stop();
+//    mpMusicBox1->stop();
+//    mpMusicBox2->stop();
+//    mpMusicBox3->stop();
+//    mpMusicBox4->stop();
 }
 
 void mudlet::playSound( QString s )
 {
-    if( mpMusicBox1->remainingTime() == 0 )
-    {
-        mpMusicBox1->setCurrentSource( s );
-        mpMusicBox1->play();
-    }
-    else if( mpMusicBox2->remainingTime() == 0 )
-    {
-        mpMusicBox2->setCurrentSource( s );
-        mpMusicBox2->play();
-    }
-    else if( mpMusicBox3->remainingTime() == 0 )
-    {
-        mpMusicBox3->setCurrentSource( s );
-        mpMusicBox3->play();
-    }
-    else
-    {
-        mpMusicBox4->clear();
-        mpMusicBox4->setCurrentSource( s );
-        mpMusicBox4->play();
-    }
+//    if( mpMusicBox1->remainingTime() == 0 )
+//    {
+//        mpMusicBox1->setCurrentSource( s );
+//        mpMusicBox1->play();
+//    }
+//    else if( mpMusicBox2->remainingTime() == 0 )
+//    {
+//        mpMusicBox2->setCurrentSource( s );
+//        mpMusicBox2->play();
+//    }
+//    else if( mpMusicBox3->remainingTime() == 0 )
+//    {
+//        mpMusicBox3->setCurrentSource( s );
+//        mpMusicBox3->play();
+//    }
+//    else
+//    {
+//        mpMusicBox4->clear();
+//        mpMusicBox4->setCurrentSource( s );
+//        mpMusicBox4->play();
+//    }
 }
