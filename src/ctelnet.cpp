@@ -1124,8 +1124,8 @@ void cTelnet::setChannel102Variables( QString & msg )
     }
     else
     {
-        int _m = msg.at(0).toAscii();
-        int _a = msg.at(1).toAscii();
+        int _m = msg.at(0).toLatin1();
+        int _a = msg.at(1).toLatin1();
         mpHost->mLuaInterpreter.setChannel102Table( _m, _a );
     }
 }

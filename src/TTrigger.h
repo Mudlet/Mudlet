@@ -38,7 +38,7 @@
 #include <QTextBlock>
 #include "TMatchState.h"
 #include <pcre.h>
-#include <QSound>
+//#include <QSound>
 
 #define REGEX_SUBSTRING 0
 #define REGEX_PERL 1
