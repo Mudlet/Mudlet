@@ -42,11 +42,11 @@
 //    #include <Phonon>
 //#endif
 //Debian BSD patch:
-#ifdef Q_OS_WIN32
-     #include <Phonon>
-#else
-     #include <phonon>
-#endif
+//#ifdef Q_OS_WIN32
+//     #include <Phonon>
+//#else
+//     #include <phonon>
+//#endif
 
 class QAction;
 class QMenu;
@@ -70,6 +70,8 @@ public:
                                 ~mudlet();
    static                        mudlet * self();
    void                          addSubWindow(TConsole* p);
+   int                           getColumnNumber( Host * pHost, QString & name );
+   int                           getLineNumber( Host * pHost, QString & name );
    void                          printSystemMessage( Host * pH, QString & s );
    void                          print( Host *, QString & );
    void                          addConsoleForNewHost( Host * pH );
@@ -159,10 +161,10 @@ public:
    Host *                        mpCurrentActiveHost;
    bool                          mAutolog;
    QString                       mIrcNick;
-   Phonon::MediaObject *         mpMusicBox1;
-   Phonon::MediaObject *         mpMusicBox2;
-   Phonon::MediaObject *         mpMusicBox3;
-   Phonon::MediaObject *         mpMusicBox4;
+//   Phonon::MediaObject *         mpMusicBox1;
+//   Phonon::MediaObject *         mpMusicBox2;
+//   Phonon::MediaObject *         mpMusicBox3;
+//   Phonon::MediaObject *         mpMusicBox4;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
 

@@ -39,11 +39,11 @@ using namespace std;
 TAlias::TAlias( TAlias * parent, Host * pHost )
 : Tree<TAlias>( parent )
 , mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mIsTempAlias( false )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
-, mNeedsToBeCompiled( true )
 , exportItem(true)
-, mIsTempAlias( false )
 {
 }
 
@@ -51,11 +51,11 @@ TAlias::TAlias( QString name, Host * pHost )
 : Tree<TAlias>(0)
 , mName( name )
 , mpHost( pHost )
+, mNeedsToBeCompiled( true )
+, mIsTempAlias( false )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
-, mNeedsToBeCompiled( true )
 , exportItem(true)
-, mIsTempAlias( false )
 {
 }
 

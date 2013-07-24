@@ -36,8 +36,8 @@
 #include "TDebug.h"
 #include <pcre.h>
 #include <sstream>
-#include <QSound>
-#include <phonon>
+//#include <QSound>
+//#include <phonon>
 
 using namespace std;
 
@@ -56,20 +56,21 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , mIsTempTrigger( false )
-, mModuleMember(false)
+, exportItem(true)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
 , mTriggerType( REGEX_SUBSTRING )
-, exportItem(true)
+
 , mIsLineTrigger( false )
 , mStartOfLineDelta( 0 )
 , mLineDelta( 3 )
-, mConditionLineDelta( 0 )
 , mIsMultiline( false )
+, mConditionLineDelta( 0 )
 , mpLua( mpHost->getLuaInterpreter() )
 , mFgColor( QColor(255,0,0) )
 , mBgColor( QColor(255,255,0) )
 , mIsColorizerTrigger( false )
+, mModuleMember(false)
 {
 }
 
@@ -87,23 +88,22 @@ TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexPropery
 , mpHost( pHost )
 , mName( name )
 , mIsTempTrigger( false )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
 , mRegexCodeList( regexList )
+, exportItem(true)
+, mModuleMasterFolder(false)
 , mRegexCodePropertyList( regexProperyList )
 , mNeedsToBeCompiled( true )
-, exportItem(true)
 , mTriggerType( REGEX_SUBSTRING )
 , mIsLineTrigger( false )
 , mStartOfLineDelta( 0 )
 , mLineDelta( 3 )
-, mConditionLineDelta( 0 )
 , mIsMultiline( isMultiline )
+, mConditionLineDelta( 0 )
 , mpLua( mpHost->getLuaInterpreter() )
 , mFgColor( QColor(255,0,0) )
 , mBgColor( QColor(255,255,0) )
 , mIsColorizerTrigger( false )
-
+, mModuleMember(false)
 {
     setRegexCodeList( regexList, regexProperyList );
 }
@@ -1166,7 +1166,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
             {
                 execute();
             }
-            bool conditionMet = false;
+// N/U:             bool conditionMet = false;
             typedef list<TTrigger *>::const_iterator I;
             for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
             {

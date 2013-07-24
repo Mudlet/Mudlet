@@ -127,12 +127,22 @@ TChar::TChar( const TChar & copy )
 
 TBuffer::TBuffer( Host * pH )
 : mLinkID            ( 0 )
-, mLinesLimit        ( 1000 )
-, mBatchDeleteSize   ( 100 )
+, mLinesLimit        ( 10000 )
+, mBatchDeleteSize   ( 1000 )
 , mUntriggered       ( 0 )
-, mWrapAt            ( 99999999 )
+, mWrapAt            ( 81 )
 , mWrapIndent        ( 0 )
 , mCursorY           ( 0 )
+, mMXP               ( false )
+, mAssemblingToken   ( false )
+, currentToken       ( "" )
+, openT              ( 0 )
+, closeT             ( 0 )
+, mMXP_LINK_MODE     ( false )
+, mIgnoreTag         ( false )
+, mSkip              ( "" )
+, mParsingVar        ( false )
+, mMXP_SEND_NO_REF_MODE ( false )
 , gotESC             ( false )
 , gotHeader          ( false )
 , codeRet            ( 0 )
@@ -160,18 +170,8 @@ TBuffer::TBuffer( Host * pH )
 , mBold              ( false )
 , mItalics           ( false )
 , mUnderline         ( false )
-, mFgColorCode       ( 0 )
-, mBgColorCode       ( 0 )
-, mMXP               ( false )
-, mAssemblingToken   ( false )
-, currentToken       ( "" )
-, openT              ( 0 )
-, closeT             ( 0 )
-, mMXP_LINK_MODE     ( false )
-, mIgnoreTag         ( false )
-, mSkip              ( "" )
-, mParsingVar        ( false )
-, mMXP_SEND_NO_REF_MODE ( false )
+, mFgColorCode       ( false )
+, mBgColorCode       ( false )
 {
     clear();
     newLines = 0;
@@ -1435,7 +1435,7 @@ void TBuffer::translateToPlainText( std::string & s )
                 {
                     mAssemblingToken = false;
                     //qDebug()<<"identified TAG("<<currentToken.c_str()<<")";
-                    int _pfs = currentToken.find_first_of(' ');
+                    string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if( _pfs == std::string::npos )
                     {
@@ -1591,7 +1591,7 @@ void TBuffer::translateToPlainText( std::string & s )
                     else if( mMXP_Elements.contains( _tn ) )
                     {
                         QString _tp;
-                        int _fs = currentToken.find_first_of(' ');
+                        string::size_type _fs = currentToken.find_first_of(' ');
                         if( _fs != std::string::npos )
                             _tp = currentToken.substr( _fs ).c_str();
                         else
@@ -3735,19 +3735,22 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     bool bold = false;
     bool italics = false;
     bool underline = false;
-    int fgR;
-    int fgG;
-    int fgB;
-    int bgR;
-    int bgG;
-    int bgB;
+    int fgR=0;
+    int fgG=0;
+    int fgB=0;
+    int bgR=0;
+    int bgG=0;
+    int bgB=0;
+    // This combination of color values (black on black) cannot usefully be used in practice
+    // - so use as initialization values
     QString fontWeight;
     QString fontStyle;
     QString fontDecoration;
     bool needChange = true;
     for( ; x<P2.x(); x++ )
     {
-        if( x >= static_cast<int>(buffer[y].size()) ) break;
+        if( x >= static_cast<int>(buffer[y].size()) )
+            break;
         if( needChange
             || buffer[y][x].fgR != fgR
             || buffer[y][x].fgG != fgG
@@ -3782,12 +3785,15 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             else
                 fontDecoration = "normal";
             s += "</span><span style=\"";
-            s+="color: rgb(" + QString::number(fgR)+"," + QString::number(fgG)+"," + QString::number(fgB) + ");";
-            s += " background: rgb(" + QString::number(bgR)+"," + QString::number(bgG)+"," + QString::number(bgB) +");";
+            s += "color: rgb(" + QString::number(fgR) + ","
+                               + QString::number(fgG) + ","
+                               + QString::number(fgB) + ");";
+            s += " background: rgb(" + QString::number(bgR) + ","
+                                     + QString::number(bgG) + ","
+                                     + QString::number(bgB) + ");";
             s += " font-weight: " + fontWeight +
-                "; font-style: " + fontStyle +
-                "; font-decoration: " + fontDecoration +
-                "\">";
+                 "; font-style: " + fontStyle +
+                 "; font-decoration: " + fontDecoration + "\">";
         }
         if( lineBuffer[y][x] == '<' )
             s.append("&lt;");
@@ -3796,7 +3802,8 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
         else
             s.append(lineBuffer[y][x]);
     }
-    if( s.size() > 0 ) s.append("<br />");
+    if( s.size() > 0 )
+        s.append("<br />");
     return s;
 }
 

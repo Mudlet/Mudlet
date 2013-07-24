@@ -52,19 +52,17 @@ cTelnet::cTelnet( Host * pH )
 , mAlertOnNewData( true )
 , mGA_Driver( false )
 , mFORCE_GA_OFF( false )
+, mpComposer( 0 )
 , mpHost(pH)
 , mpPostingTimer( new QTimer( this ) )
 , mUSE_IRE_DRIVER_BUGFIX( false )
 , mLF_ON_GA( false )
-
 , mCommands( 0 )
 , mMCCP_version_1( false )
 , mMCCP_version_2( false )
 , enableATCP( false )
 , enableGMCP( false )
-
 , enableChannel102( false )
-, mpComposer( 0 )
 
 {
     mIsTimerPosting = false;
@@ -1046,12 +1044,12 @@ void cTelnet::setGMCPVariables( QString & msg )
 {
     QString var;
     QString arg;
-    bool single = true;
+// N/U:    bool single = true;
     if( msg.indexOf( '\n' ) > -1 )
     {
         var = msg.section( "\n", 0, 0 );
         arg = msg.section( "\n", 1 );
-        single = false;
+// N/U:        single = false;
     }
     else
     {
@@ -1126,8 +1124,8 @@ void cTelnet::setChannel102Variables( QString & msg )
     }
     else
     {
-        int _m = msg.at(0).toAscii();
-        int _a = msg.at(1).toAscii();
+        int _m = msg.at(0).toLatin1();
+        int _a = msg.at(1).toLatin1();
         mpHost->mLuaInterpreter.setChannel102Table( _m, _a );
     }
 }
@@ -1467,7 +1465,7 @@ void cTelnet::readPipe()
     for( int i = 0; i < datalen; i++ )
     {
         char ch = loadBuffer[i];
-
+        cout << "GOT REPLAY:"<<loadBuffer<<endl;
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG

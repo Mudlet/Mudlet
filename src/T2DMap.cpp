@@ -447,7 +447,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         return;
     }
 
-    int ox, oy, oz;
+    int ox, oy; // N/U: oz;
     if( mRID != mpMap->mRoomId && mShiftMode ) mShiftMode = false;
     TArea * pAID;
     TRoom * pRID;
@@ -473,9 +473,10 @@ void T2DMap::paintEvent( QPaintEvent * e )
     {
         pRID = mpMap->mpRoomDB->getRoom( mRID );
         pAID = mpMap->mpRoomDB->getArea( mAID );
+        if( !pRID || !pAID ) return;
         ox = mOx;
         oy = mOy;
-        oz = mOz;
+// N/U:         oz = mOz;
     }
     if( ox*tx > xspan/2*tx )
         _rx = -(tx*ox-xspan/2*tx);
@@ -563,6 +564,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         for( int i=0; i<pArea->rooms.size(); i++ )
         {
             TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
+            if( !pR ) continue;
             int trID = pArea->rooms[i];
             float rx = pR->x*tx+_rx;
             float ry = pR->y*-1*ty+_ry;
@@ -911,7 +913,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 p.setPen(oldPen);
             }
 
-            int e = pR->z;
+// N/U:             int e = pR->z;
 
             // draw exit stubs
             QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
@@ -1241,9 +1243,12 @@ void T2DMap::paintEvent( QPaintEvent * e )
             if( ! mpMap->customEnvColors.contains(env) ) break;
             c = mpMap->customEnvColors[env];
         }
-        if( ( mPick || __Pick ) && mPHighlight.x() >= dr.x()-(tx*rSize) && mPHighlight.x() <= dr.x()+(tx*rSize) && mPHighlight.y() >= dr.y()-(ty*rSize) && mPHighlight.y() <= dr.y()+(ty*rSize)
-            || mMultiSelectionList.contains(pArea->rooms[i]) )
-        {
+        if( ( ( mPick || __Pick )
+              && mPHighlight.x() >= dr.x()-(tx*rSize)
+              && mPHighlight.x() <= dr.x()+(tx*rSize)
+              && mPHighlight.y() >= dr.y()-(ty*rSize)
+              && mPHighlight.y() <= dr.y()+(ty*rSize) )
+            || mMultiSelectionList.contains(pArea->rooms[i]) ) {
             p.fillRect(dr,QColor(255,155,55));
             mPick = false;
             if( mStartSpeedWalk )
@@ -1284,7 +1289,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         else
         {
             char _ch = pR->c;
-            if( _ch >= 33 && _ch < 255 )
+            if( _ch >= 33 /* && _ch < 255 seems that _ch is a signed char so will always be less than 255 */)
             {
                 int _color = ( 265 - 257 ) * 254 + _ch;//(mpMap->rooms[pArea->rooms[i]]->environment - 257 ) * 254 + _ch;
 
@@ -1487,9 +1492,12 @@ void T2DMap::paintEvent( QPaintEvent * e )
                {
                    dr = QRectF(rx-(tx*rSize)/2,ry-(ty*rSize)/2,tx*rSize,ty*rSize);
                }
-               if( (mPick || __Pick) && mPHighlight.x() >= dr.x()-tx/2 && mPHighlight.x() <= dr.x()+tx/2 && mPHighlight.y() >= dr.y()-ty/2 && mPHighlight.y() <= dr.y()+ty/2
-                   || mMultiSelectionList.contains(pArea->rooms[i]) )
-               {
+               if( ( (mPick || __Pick)
+                     && mPHighlight.x() >= dr.x()-tx/2
+                     && mPHighlight.x() <= dr.x()+tx/2
+                     && mPHighlight.y() >= dr.y()-ty/2
+                     && mPHighlight.y() <= dr.y()+ty/2 )
+                   || mMultiSelectionList.contains(pArea->rooms[i]) ) {
                    p.fillRect(dr,QColor(50,255,50));
                    mPick = false;
                    mTarget = it.key();
@@ -1741,7 +1749,7 @@ void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
 #include <QMessageBox>
 void T2DMap::createLabel( QRectF labelRect )
 {
-    QRectF selectedRegion = labelRect;
+// N/U:     QRectF selectedRegion = labelRect;
     TMapLabel label;
     QFont _font;
     QString t = "no text";
@@ -1951,48 +1959,56 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                 {
                     it.next();
                     const QList<QPointF> & _pL= it.value();
-                    for( int j=0; j<_pL.size(); j++ )
+                    if( _pL.size() )
                     {
-                        float olx, oly, lx, ly;
-                        if( j==0 )
+                        for( int j=0; j<_pL.size(); j++ )
                         {
-                            olx = pR->x;
-                            oly = pR->y; //FIXME: exit richtung beachten, um den Linienanfangspunkt zu berechnen
-                        }
-                        else
-                        {
-                            olx = lx;
-                            oly = ly;
-                        }
-                        lx = _pL[j].x();
-                        ly = _pL[j].y();
+                            float olx, oly, lx, ly;
+                            if( j==0 )
+                            {  // First segment of a custom line
+                               // start it at the centre of the room
+                                olx = pR->x;
+                                oly = pR->y; //FIXME: exit richtung beachten, um den Linienanfangspunkt zu berechnen
+                                lx = _pL[0].x();
+                                ly = _pL[0].y();
+                            }
+                            else
+                            {  // Not the first segment of a custom line
+                               // so start it at the end of the previous one
+                                olx = lx;
+                                oly = ly;
+                                lx = _pL[j].x();
+                                ly = _pL[j].y();
+                            }
+                            // End of each custom line segment is given
 
-                        // click auf einen edit - punkt
-                        if( mCustomLineSelectedRoom != 0 )
-                        {
-                            if( abs(mx-lx)<=0.25 && abs(my-ly)<=0.25 )
+                            // click auf einen edit - punkt
+                            if( mCustomLineSelectedRoom != 0 )
                             {
-                                mCustomLineSelectedPoint = j;
+                                if( abs(mx-lx)<=0.25 && abs(my-ly)<=0.25 )
+                                {
+                                    mCustomLineSelectedPoint = j;
+                                    return;
+                                }
+                            }
+                            QLineF line = QLineF(olx,oly, lx,ly);
+                            QLineF normal = line.normalVector();
+                            QLineF tl;
+                            tl.setP1(pc);
+                            tl.setAngle(normal.angle());
+                            tl.setLength(0.1);
+                            QLineF tl2;
+                            tl2.setP1(pc);
+                            tl2.setAngle(normal.angle());
+                            tl2.setLength(-0.1);
+                            QPointF pi;
+                            if( ( line.intersect( tl, &pi) == QLineF::BoundedIntersection ) || ( line.intersect( tl2, &pi) == QLineF::BoundedIntersection ) )
+                            {
+                                mCustomLineSelectedRoom = pR->getId();
+                                mCustomLineSelectedExit = it.key();
+                                repaint();
                                 return;
                             }
-                        }
-                        QLineF line = QLineF(olx,oly, lx,ly);
-                        QLineF normal = line.normalVector();
-                        QLineF tl;
-                        tl.setP1(pc);
-                        tl.setAngle(normal.angle());
-                        tl.setLength(0.1);
-                        QLineF tl2;
-                        tl2.setP1(pc);
-                        tl2.setAngle(normal.angle());
-                        tl2.setLength(-0.1);
-                        QPointF pi;
-                        if( ( line.intersect( tl, &pi) == QLineF::BoundedIntersection ) || ( line.intersect( tl2, &pi) == QLineF::BoundedIntersection ) )
-                        {
-                            mCustomLineSelectedRoom = pR->getId();
-                            mCustomLineSelectedExit = it.key();
-                            repaint();
-                            return;
                         }
                     }
                 }
@@ -2074,7 +2090,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                         lpos.setY( _ly );
                         int mx = event->pos().x();
                         int my = event->pos().y();
-                        int mz = mOz;
+// N/U:                         int mz = mOz;
                         QPoint click = QPoint(mx,my);
                         QRectF br = QRect(_lx, _ly, it.value().clickSize.width(), it.value().clickSize.height());
                         if( br.contains( click ))
@@ -2289,7 +2305,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
-        mLastMouseClick = event->posF();
+        mLastMouseClick = event->localPos();
     }
     update();
 }
@@ -2308,6 +2324,7 @@ void T2DMap::slot_deleteCustomExitLine()
             mCustomLineSelectedRoom = 0;
             mCustomLineSelectedExit = "";
             mCustomLineSelectedPoint = -1;
+            pR->calcRoomDimensions();
         }
     }
 }
@@ -2500,7 +2517,7 @@ void T2DMap::slot_setCharacter()
     {
         QString s = QInputDialog::getText(this,"enter marker letter","letter");
         if( s.size() < 1 ) return;
-        pR->c = s[0].toAscii();
+        pR->c = s[0].toLatin1();
         repaint();
     }
 }
@@ -2582,7 +2599,7 @@ void T2DMap::slot_changeColor()
     while( it.hasNext() )
     {
         it.next();
-        int env = it.key();
+// N/U:         int env = it.key();
         QColor c;
         c = it.value();
         QListWidgetItem * pI = new QListWidgetItem( pLW );
@@ -2655,6 +2672,7 @@ void T2DMap::slot_spread()
             newMap.insert(itk.key(), _pL );
         }
         pR->customLines = newMap;
+        pR->calcRoomDimensions();
     }
     repaint();
 }
@@ -2702,6 +2720,7 @@ void T2DMap::slot_shrink()
             newMap.insert(itk.key(), _pL );
         }
         pR->customLines = newMap;
+        pR->calcRoomDimensions();
     }
     repaint();
 }
@@ -2858,6 +2877,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                     my = yspan/2 - my;
                     QPointF pc = QPointF(mx,my);
                     pR->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
+                    pR->calcRoomDimensions();
                     repaint();
                     return;
                 }
@@ -2991,18 +3011,18 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
         TArea * pArea = mpMap->mpRoomDB->getArea(_areaID);
         if( ! pArea ) return;
 
-        int ox = mOx;
-        int oy = mOy;
-        float _rx;
-        float _ry;
-        if( ox*mTX > xspan/2*mTX )
-            _rx = -(mTX*ox-xspan/2*mTX);
-        else
-            _rx = xspan/2*mTX-mTX*ox;
-        if( oy*mTY > yspan/2*mTY )
-            _ry = -(mTY*oy-yspan/2*mTY);
-        else
-            _ry = yspan/2*mTY-mTY*oy;
+// N/U:        int ox = mOx;
+// N/U:        int oy = mOy;
+// N/U:        float _rx;
+// N/U:        float _ry;
+//        if( ox*mTX > xspan/2*mTX )
+//            _rx = -(mTX*ox-xspan/2*mTX);
+//        else
+//            _rx = xspan/2*mTX-mTX*ox;
+//        if( oy*mTY > yspan/2*mTY )
+//            _ry = -(mTY*oy-yspan/2*mTY);
+//        else
+//            _ry = yspan/2*mTY-mTY*oy;
         int mx = event->pos().x()/mTX + mOx;
         int my = event->pos().y()/mTY + mOy;
         mx = mx - xspan/2 + 1;
@@ -3044,6 +3064,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                     newMap.insert(itk.key(), _pL );
                 }
                 pR->customLines = newMap;
+                pR->calcRoomDimensions();
             }
         }
         repaint();
@@ -3213,27 +3234,19 @@ void T2DMap::slot_setCustomLine()
 
     b_ = d->findChild<QPushButton*>("up");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getUp() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     b_ = d->findChild<QPushButton*>("down");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getDown() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     b_ = d->findChild<QPushButton*>("in");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getIn() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     b_ = d->findChild<QPushButton*>("out");
     if( !b_ ) return;
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
-    b_->setCheckable(false);
-    if( pR->getOut() <= 0 ) b_->setDisabled(true);
+    b_->hide();
 
     QMapIterator<int, QString> it(pR->getOtherMap());
     while( it.hasNext() )
@@ -3297,6 +3310,7 @@ void T2DMap::slot_setCustomLine2()
 
 void T2DMap::slot_setCustomLine2B(QTreeWidgetItem * special_exit, int column )
 {
+    qDebug()<<"setCustomLine2B() special exit chosen";
     if( ! special_exit ) return;
     QString exit = special_exit->text(1);
     mpCustomLinesDialog->close();
