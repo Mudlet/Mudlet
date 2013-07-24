@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
     //FIXME qInstallMsgHandler( debugOutput );
     spDebugConsole = 0;
 
-    QGL::setPreferredPaintEngine(QPaintEngine::Raster);//faster map drawing on ubuntu
     Q_INIT_RESOURCE(mudlet_alpha);
     QApplication app(argc, argv);
     app.setApplicationName("Mudlet");

@@ -51,6 +51,11 @@
 #include "dlgTriggerPatternEdit.h"
 #include "THighlighter.h"
 #include "TTextEdit.h"
+#include <QToolBar>
+#include <QColorDialog>
+#include <QMessageBox>
+#include <QFileDialog>
+
 using namespace std;
 
 const int dlgTriggerEditor::cmTriggerView = 1;

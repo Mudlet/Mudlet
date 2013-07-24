@@ -760,7 +760,7 @@ namespace Irc
                 {
                     foreach (const QString &cap, tempCapabilities)
                     {
-                        if (cap.startsWith(QString::fromAscii("-")))
+                        if (cap.startsWith(QString::fromLatin1("-")))
                             // remove disabled capabilities from the list
                             for (int capi = 0; capi <
                                    enabledCapabilities.size(); ++capi)
@@ -805,7 +805,7 @@ namespace Irc
         {
             const QChar identstate = message.at(0);
             message.remove(0, 1);
-            switch (identstate.toAscii())
+            switch (identstate.toLatin1())
             {
             case '+':
                 return Irc::Buffer::IdentifiedFlag;
@@ -1363,8 +1363,8 @@ namespace Irc
                 cap.remove(QLatin1String("\n"));
                 caps.append(cap + QLatin1String(" "));
             }
-            d->socket->write(QString::fromAscii("CAP REQ :%1\r\n")
-                              .arg(caps).toAscii());
+            d->socket->write(QString::fromLatin1("CAP REQ :%1\r\n")
+                              .arg(caps).toLatin1());
             return;
         }
 
