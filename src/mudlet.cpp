@@ -42,6 +42,10 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 #include "dlgNotepad.h"
+#include <QToolBar>
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QMessageBox>
 
 //#ifdef Q_CC_GNU
     #include "dlgIRC.h"
@@ -88,24 +92,16 @@ mudlet::mudlet()
 , mShowToolbar( true )
 , mWindowMinimized( false )
 , mReplaySpeed( 1 )
-, mIsGoingDown( false )
+, mpIRC( 0 )
+#if defined (Q_OS_LINUX) || defined (Q_OS_MAC) ||defined (Q_OS_WIN)
+    , version( "Mudlet 2.1" )
+#else
+    , version( "Mudlet 2.1" )
+#endif
 , mpCurrentActiveHost( 0 )
+, mIsGoingDown( false )
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
-, mpIRC( 0 )
-, mpMusicBox1(Phonon::createPlayer(Phonon::MusicCategory) )
-, mpMusicBox2(Phonon::createPlayer(Phonon::MusicCategory) )
-, mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
-, mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
-#ifdef Q_OS_LINUX
-    , version( "Mudlet 2.1" )
-#endif
-#ifdef Q_OS_MAC
-    , version( "Mudlet 2.1" )
-#endif
-#ifdef Q_OS_WIN
-    , version( "Mudlet 2.1" )
-#endif
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -401,6 +397,10 @@ mudlet::mudlet()
     timerAutologin->start( 1000 );
 
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
+    mpMusicBox1 = new QMediaPlayer;
+    mpMusicBox2 = new QMediaPlayer;
+    mpMusicBox3 = new QMediaPlayer;
+    mpMusicBox4 = new QMediaPlayer;
 
 }
 
@@ -419,7 +419,7 @@ void mudlet::layoutModules(){
     // overload but that is how they do it...
     sl << "Module Name" << "Priority" << "Save & Sync?" << "Module Location";
     moduleTable->setHorizontalHeaderLabels(sl);
-    moduleTable->horizontalHeader()->setResizeMode(0, QHeaderView::Stretch);
+    moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
     //clear everything
@@ -1293,10 +1293,39 @@ bool mudlet::setLabelOnLeave( Host * pHost, QString & name, QString & func, TEve
         return false;
 }
 
+int mudlet::getLineNumber( Host * pHost, QString & name )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        return dockWindowConsoleMap[name]->getLineNumber();
+    }
+    else
+    {
+        TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesnt exit\n" >> 0;
+    }
+    return -1;
+}
+
+int mudlet::getColumnNumber( Host * pHost, QString & name )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        return dockWindowConsoleMap[name]->getColumnNumber();
+    }
+    else
+    {
+        TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: window doesnt exit\n" >> 0;
+    }
+    return -1;
+}
+
+
 int mudlet::getLastLineNumber( Host * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) )
     {
         return dockWindowConsoleMap[name]->getLastLineNumber();
     }
@@ -2327,33 +2356,46 @@ void mudlet::slot_replaySpeedDown()
 
 void mudlet::stopSounds()
 {
-    mpMusicBox1->stop();
-    mpMusicBox2->stop();
-    mpMusicBox3->stop();
-    mpMusicBox4->stop();
+//    mpMusicBox1->stop();
+//    mpMusicBox2->stop();
+//    mpMusicBox3->stop();
+//    mpMusicBox4->stop();
 }
 
 void mudlet::playSound( QString s )
 {
-    if( mpMusicBox1->remainingTime() == 0 )
+//    {
+//        mpMusicBox1->setCurrentSource( s );
+//        mpMusicBox1->play();
+//    }
+//    else if( mpMusicBox2->remainingTime() == 0 )
+//    {
+//        mpMusicBox2->setCurrentSource( s );
+//        mpMusicBox2->play();
+//    }
+//    else if( mpMusicBox3->remainingTime() == 0 )
+//    {
+//        mpMusicBox3->setCurrentSource( s );
+//        mpMusicBox3->play();
+    if( mpMusicBox1->state() != QMediaPlayer::PlayingState )
     {
-        mpMusicBox1->setCurrentSource( s );
+        mpMusicBox1->setMedia( QUrl::fromLocalFile( s ) );
         mpMusicBox1->play();
     }
-    else if( mpMusicBox2->remainingTime() == 0 )
+    else if( mpMusicBox2->state() != QMediaPlayer::PlayingState )
     {
-        mpMusicBox2->setCurrentSource( s );
+        mpMusicBox2->setMedia( QUrl::fromLocalFile( s ) );
         mpMusicBox2->play();
     }
-    else if( mpMusicBox3->remainingTime() == 0 )
+    else if( mpMusicBox3->state() != QMediaPlayer::PlayingState )
     {
-        mpMusicBox3->setCurrentSource( s );
+        mpMusicBox3->setMedia( QUrl::fromLocalFile( s ) );
         mpMusicBox3->play();
     }
     else
     {
-        mpMusicBox4->clear();
-        mpMusicBox4->setCurrentSource( s );
+        mpMusicBox4->stop();
+        mpMusicBox4->setMedia( QUrl::fromLocalFile( s ) );
         mpMusicBox4->play();
     }
 }

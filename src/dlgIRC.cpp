@@ -242,7 +242,7 @@ void dlgIRC::irc_gotMsg3( QString a, uint code, QStringList c )
             irc_gotMsg( "", "", "You have changed your nick." );
         }
     }
-    else if( code = 366 )
+    else if( code == 366 )
         return;
     else
     {

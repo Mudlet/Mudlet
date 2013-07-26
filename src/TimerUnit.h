@@ -38,7 +38,7 @@ class TimerUnit
     friend class XMLimport;
 
 public:
-                          TimerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0) {;}
+                          TimerUnit( Host * pHost ) : statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0), mpHost(pHost), mMaxID(0) {;}
     void                  removeAllTempTimers();
     std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
     TTimer *              getTimer( int id );

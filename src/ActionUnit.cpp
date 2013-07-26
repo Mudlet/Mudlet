@@ -446,13 +446,13 @@ TAction * ActionUnit::getHeadAction( TToolBar * pT )
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        bool found = false;
+// N/U:         bool found = false;
         typedef list<TToolBar *>::iterator I2;
         for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
         {
             if( pT == (*it)->mpToolBar )
             {
-                found = true;
+// N/U:                 found = true;
                 return *it;
             }
         }
@@ -542,13 +542,13 @@ TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        bool found = false;
+// N/U:         bool found = false;
         typedef list<TEasyButtonBar *>::iterator I2;
         for( I2 it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
         {
             if( pT == (*it)->mpEasyButtonBar )
             {
-                found = true;
+// N/U:                 found = true;
                 return *it;
             }
         }

@@ -737,6 +737,9 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
     pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
     pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
+    QStringRef ignore = attributes().value("mDoubleClickIgnore");
+    for(int i=0;i<ignore.size();i++)
+        pT->mDoubleClickIgnore.insert( ignore.at( i ) );
 
     while( ! atEnd() )
     {
@@ -1261,7 +1264,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     mpHost->getTimerUnit()->registerTimer( pT );
     pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
 
-    bool isOffsetTimer = ( attributes().value("isOffsetTimer") == "yes" );
+// N/U:     bool isOffsetTimer = ( attributes().value("isOffsetTimer") == "yes" );
 
 
     if (module)

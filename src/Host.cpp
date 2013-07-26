@@ -103,8 +103,6 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mUSE_UNIX_EOL( false )
 , mWrapAt( 100 )
 , mWrapIndentCount( 0 )
-, mCommandLineBgColor( QColor(  0,  0,  0) )
-, mCommandLineFgColor( QColor(128,128,128) )
 , mBlack             ( QColor(  0,  0,  0) )
 , mLightBlack        ( QColor(128,128,128) )
 , mRed               ( QColor(128,  0,  0) )
@@ -146,13 +144,15 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mSpellDic            ( "en_US" )
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
+, mModuleSaveBlock(false)
 , mpUnzipDialog        ( 0 )
-, mRoomSize            ( 0.5 )
 , mLineSize            ( 5.0 )
+, mRoomSize            ( 0.5 )
 , mServerGUI_Package_version( -1 )
 , mServerGUI_Package_name( "nothing" )
 , mAcceptServerGUI     ( true )
-, mModuleSaveBlock(false)
+, mCommandLineFgColor( QColor(128,128,128) )
+, mCommandLineBgColor( QColor(  0,  0,  0) )
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
 {
@@ -173,6 +173,8 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
     mpMap->init( this );
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
+    mDoubleClickIgnore.insert('"');
+    mDoubleClickIgnore.insert('\'');
 }
 
 Host::Host()
@@ -231,9 +233,6 @@ Host::Host()
 , mUSE_UNIX_EOL( false )
 , mWrapAt( 100 )
 , mWrapIndentCount( 0 )
-, mModuleSaveBlock(false)
-, mCommandLineBgColor( QColor(  0,  0,  0) )
-, mCommandLineFgColor( QColor(128,128,128) )
 , mBlack             ( QColor(  0,  0,  0) )
 , mLightBlack        ( QColor(128,128,128) )
 , mRed               ( QColor(128,  0,  0) )
@@ -275,13 +274,16 @@ Host::Host()
 , mSpellDic            ( "en_US" )
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
+, mModuleSaveBlock(false)
 , mpUnzipDialog        ( 0 )
-, mRoomSize            ( 0.5 )
 , mLineSize            ( 5.0 )
+, mRoomSize            ( 0.5 )
 , mShowInfo            ( true )
 , mServerGUI_Package_version( -1 )
 , mServerGUI_Package_name( "nothing" )
 , mAcceptServerGUI     ( true )
+, mCommandLineFgColor( QColor(128,128,128) )
+, mCommandLineBgColor( QColor(  0,  0,  0) )
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
 {
@@ -302,6 +304,8 @@ Host::Host()
     mpMap->init( this );
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
+    mDoubleClickIgnore.insert('"');
+    mDoubleClickIgnore.insert('\'');
 }
 
 Host::~Host()
@@ -1171,6 +1175,8 @@ bool Host::installPackage( QString fileName, int module )
             file_xml.close();
         }
     }
+    // reorder permanent and temporary triggers: perm first, temp second
+    mTriggerUnit.reorderTriggersAfterPackageImport();
     return true;
 }
 

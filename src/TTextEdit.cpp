@@ -1278,22 +1278,30 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         {
             int xind=x;
             int yind=y;
+
+            if ( yind >= mpBuffer->lineBuffer.size() )
+                return;
+            if ( xind >= mpBuffer->lineBuffer[yind].size() )
+                return;
             while( xind < static_cast<int>( mpBuffer->buffer[yind].size() ) )
             {
-                QString c = mpBuffer->lineBuffer[yind].at(xind);
-                if (c == " ")
+                QChar c = mpBuffer->lineBuffer[yind].at(xind);
+                if ( c == ' ' )
                     break;
                 xind++;
             }
+            if ( mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind-1)) )
+                xind--;
             mPB.setX ( xind-1 );
             mPB.setY ( yind );
             for( xind=x-1; xind>0; xind--)
             {
-                QString c = mpBuffer->lineBuffer[yind].at(xind);
-                if (c == " ")
+                QChar c = mpBuffer->lineBuffer[yind].at(xind);
+                if (c == ' ')
                     break;
             }
-            if ( xind > 0)
+            if ( xind > 0 ||
+                 mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at( xind ) ) )
                 mPA.setX ( xind+1 );
             else
                 mPA.setX ( xind );

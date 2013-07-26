@@ -261,6 +261,30 @@ void TriggerUnit::removeTrigger( TTrigger * pT )
     mTriggerMap.remove(pT->getID());
 }
 
+// trigger matching order is permantent trigger objects first, temporary objects second
+// after package import or module sync this order needs to be reset
+void TriggerUnit::reorderTriggersAfterPackageImport()
+{
+    QList<TTrigger *> tempList;
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    {
+        TTrigger * pChild = *it;
+        if( pChild->isTempTrigger() )
+        {
+            tempList.push_back( pChild );
+        }
+    }
+    for( int i=0; i<tempList.size(); i++ )
+    {
+        mTriggerRootNodeList.remove( tempList[i] );
+    }
+    for( int i=0; i<tempList.size(); i++ )
+    {
+        mTriggerRootNodeList.push_back( tempList[i] );
+    }
+
+}
 
 qint64 TriggerUnit::getNewID()
 {
@@ -426,20 +450,17 @@ void TriggerUnit::setTriggerStayOpen( QString name, int lines )
 
 bool TriggerUnit::killTrigger( QString & name )
 {
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
+    while( it != mLookupTable.end() && it.key() == name )
     {
-        TTrigger * pChild = *it;
-        if( pChild->getName() == name )
+        TTrigger * pT = it.value();
+        if( pT->isTempTrigger() ) //this function is only defined for tempTriggers, permanent objects cannot be removed
         {
-            // only temporary triggers can be killed
-            if( pChild->isTempTrigger() )
-            {
-                pChild->setIsActive( false );
-                markCleanup( pChild );
-                return true;
-            }
+            // there can only be a single tempTrigger by this name and this function ignores non-tempTriggers by definition
+            markCleanup( pT );
+            return true;
         }
+        it++;
     }
     return false;
 }

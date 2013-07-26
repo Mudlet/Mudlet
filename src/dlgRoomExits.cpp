@@ -23,9 +23,9 @@
 
 
 dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW )
-: mpHost( pH )
+: QDialog( pW )
+, mpHost( pH )
 , mpEditItem( 0 )
-, QDialog( pW )
 {
     setupUi(this);
     connect( saveButton, SIGNAL(pressed()), this, SLOT(save()));

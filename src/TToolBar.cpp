@@ -134,8 +134,14 @@ void TToolBar::finalize()
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding );
     fillerWidget->setSizePolicy( sizePolicy );
     int columns = mpTAction->getButtonColumns();
-    if( columns <= 0 ) columns = 1;
-    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
+    if( columns <= 0 )
+        columns = 1;
+    int row = (++mItemCount) / columns;
+    int column = (mItemCount - 1) % columns ;
+    mpLayout->addWidget( fillerWidget, row, column);
+// 3 lines above are to avoid order of operations problem of orginal line
+// (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:
+//    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
 }
 
 void TToolBar::slot_pressed()

@@ -1,11 +1,11 @@
 
-CONFIG += uitools
+#CONFIG += uitools
 
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
-MOC_DIR = ./tmp
-OBJECTS_DIR = ./tmp
-QT += network opengl phonon
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-parameter
+QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-parameter
+#MOC_DIR = ./tmp
+#OBJECTS_DIR = ./tmp
+QT += network opengl uitools multimedia
 DEPENDPATH += .
 INCLUDEPATH += .
 LIBLUA = -llua5.1
@@ -21,7 +21,8 @@ unix:LIBS += -lpcre \
     -lyajl \
     -lGLU \
     -lquazip \
-    -lzzip
+    -lzzip \
+    -lz
 
 win32:LIBS += \
     -llua51 \
@@ -114,16 +115,16 @@ SOURCES += TConsole.cpp \
     TRoom.cpp \
     TMap.cpp \
     TBuffer.cpp \
-    irc/src/ircbuffer.cpp \
-    irc/src/irc.cpp \
-    irc/src/ircsession.cpp \
-    irc/src/ircutil.cpp \
-    dlgIRC.cpp \
     T2DMap.cpp \
     dlgRoomExits.cpp \
     dlgPackageExporter.cpp \
     exitstreewidget.cpp \
-    TRoomDB.cpp
+    TRoomDB.cpp \
+    irc/src/ircbuffer.cpp \
+    irc/src/irc.cpp \
+    irc/src/ircsession.cpp \
+    irc/src/ircutil.cpp \
+    dlgIRC.cpp
 
 
 HEADERS += mudlet.h \
@@ -192,16 +193,17 @@ HEADERS += mudlet.h \
     glwidget.h \
     dlgMapper.h \
     Tree.h \
-    irc/include/ircbuffer.h \
-    irc/include/irc.h \
-    irc/include/ircsession.h \
-    irc/include/ircutil.h \
     dlgIRC.h \
     T2DMap.h \
     dlgRoomExits.h \
     dlgPackageExporter.h \
     exitstreewidget.h \
-    TRoomDB.h
+    TRoomDB.h \
+    irc/include/ircbuffer.h \
+    irc/include/irc.h \
+    irc/include/ircsession.h \
+    irc/include/ircutil.h
+
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \

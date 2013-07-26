@@ -428,6 +428,13 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         connect(load_map_button, SIGNAL(clicked()), this, SLOT(loadMap()));
         connect(save_map_button, SIGNAL(clicked()), this, SLOT(saveMap()));
 
+        //doubleclick ignore
+        QString ignore;
+        QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
+        while( it.hasNext() )
+            ignore = ignore.append(it.next());
+        doubleclick_ignore_lineedit->setText( ignore );
+
     }
 }
 
@@ -1517,6 +1524,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
     pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
     pHost->mpConsole->changeColors();
+    QString lIgnore = doubleclick_ignore_lineedit->text();
+    for(int i=0;i<lIgnore.size();i++){
+        mpHost->mDoubleClickIgnore.insert(lIgnore.at(i));
+    }
 
     //pHost->mIRCNick = ircNick->text();
     QString old_nick = mudlet::self()->mIrcNick;

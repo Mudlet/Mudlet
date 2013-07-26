@@ -969,7 +969,7 @@ void TConsole::changeColors()
         QRectF r2;
         const QString t = "123";
         p.drawText(r,1,t,&r2);
-        int mFontHeight = QFontMetrics( mDisplayFont ).height();
+// N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
         int mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
         qreal letterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
         console->mLetterSpacing = letterSpacing;
@@ -1014,7 +1014,7 @@ void TConsole::changeColors()
         QRectF r2;
         const QString t = "123";
         p.drawText(r,1,t,&r2);
-        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
+// N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
         int mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
         qreal letterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
         console->mLetterSpacing = letterSpacing;
@@ -2002,8 +2002,10 @@ QString TConsole::getCurrentLine( std::string & buf )
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
         TConsole * pC = mSubConsoleMap[key];
-        if( ! pC ) return false;
-        return pC->getCurrentLine();
+        if( ! pC )
+            return ""; //return value was false but a QString is needed not a boolean
+        else
+            return pC->getCurrentLine();
     }
     else
     {
