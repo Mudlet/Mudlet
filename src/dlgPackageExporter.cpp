@@ -4,14 +4,9 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include "XMLexport.h"
-#ifdef Q_OS_WIN
-    #include "quazip.h"
-    #include "JlCompress.h"
-#else
-    #include <quazip/quazip.h>
-    #include <quazip/JlCompress.h>
-#endif
 #include <QDesktopServices>
+#include "zip.h"
+#include "zipconf.h"
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::dlgPackageExporter)
@@ -48,7 +43,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     if ( !packageDir.exists() ){
         packageDir.mkpath(tempDir);
     }
-    zip = packagePath + "/" + packageName + ".zip";
+    zipFile = packagePath + "/" + packageName + ".zip";
     filePath = tempDir + "/" + packageName + ".xml";
 
     QString luaConfig = tempDir + "/config.lua";
@@ -247,7 +242,14 @@ void dlgPackageExporter::slot_export_package(){
 
 
         //#ifdef Q_OS_WIN
-            JlCompress::compressDir(zip, tempDir );
+        int err;
+        zip* archive = zip_open( zipFile.toStdString().c_str(), 0, &err);
+        qDebug()<<"zip open error"<<err;
+        err = zip_dir_add( archive, tempDir.toStdString().c_str() );
+        qDebug()<<"added dir error"<<err;
+        err = zip_close( archive );
+        qDebug()<<"close file error"<<err;
+            //JlCompress::compressDir(zip, tempDir );
 //        #else
 //            ui->infoLabel->setText("Exported package to "+filePath);
 //        #endif

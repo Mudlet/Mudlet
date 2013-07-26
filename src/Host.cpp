@@ -37,8 +37,8 @@
 #include "TEvent.h"
 #include <QMessageBox>
 #include "dlgNotepad.h"
-#include "C:\mingw\msys\include\zip.h"
-#include "C:\mingw\msys\include\zipconf.h"
+#include "zip.h"
+#include "zipconf.h"
 
 extern "C" {
     #include "lua.h"
@@ -46,14 +46,6 @@ extern "C" {
     #include "lauxlib.h"
 }
 
-#include <QtUiTools>
-#ifdef Q_OS_WIN
-    #include "quazip.h"
-    #include "JlCompress.h"
-#else
-    #include <quazip/quazip.h>
-    #include <quazip/JlCompress.h>
-#endif
 
 Host::Host( int port, QString hostname, QString login, QString pass, int id )
 : mTelnet( this )
@@ -1017,7 +1009,57 @@ bool Host::installPackage( QString fileName, int module )
 //            QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
 //            mLuaInterpreter.compileAndExecuteScript( _script );
 //        #else
-            JlCompress::extractDir(fileName, _dest );
+            //JlCompress::extractDir(fileName, _dest );
+        int err;
+        //from: https://gist.github.com/mobius/1759816
+        struct zip_stat zs;
+        struct zip_file *zf;
+        int fd;
+        long long sum;
+        char buf[100];
+        zip* archive = zip_open( fileName.toStdString().c_str(), 0, &err);
+        qDebug()<<"zip open error"<<err;
+        for (int i=0;i<zip_get_num_entries( archive, 0 );i++ )
+        {
+            if ( zip_stat_index( zip, i, 0, &zs ) == 0 )
+            {
+                if ( zs.name[strlen( zs.name )-1] == '/' )
+                {
+                    safe_create_dir( zs.name );
+                }
+                else
+                {
+                    zf = zip_fopen_index( archive, i, 0 );
+                    if ( !zf )
+                    {
+                        qDebug()<<"zip open error"<<zf;
+                        return false;
+                    }
+                    fd = open( zs.name, O_RDWR | O_TRUNC | O_CREAT, 0644);
+                    if ( fd <0 )
+                    {
+                        qDebug()<<"file desc. error"<<fd;
+                        return false;
+                    }
+                    sum = 0;
+                    while( sum != zs.size )
+                    {
+                        int len = zip_fread( zf, buf, 100 );
+                        if ( len < 0 )
+                        {
+                            qDebug()<<"zip_fread error"<<len;
+                            return false;
+                        }
+                        write( fd, buf, len );
+                        sum += len;
+                    }
+                    close( fd );
+                    zip_fclose( zf );
+                }
+            }
+        }
+        err = zip_close( archive );
+        qDebug()<<"close file error"<<err;
 //        #endif
         QString xmlPath = _dest+packageName+".xml";
         mpUnzipDialog->close();
