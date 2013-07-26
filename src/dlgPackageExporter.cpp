@@ -242,13 +242,57 @@ void dlgPackageExporter::slot_export_package(){
 
 
         //#ifdef Q_OS_WIN
-        int err;
-        zip* archive = zip_open( zipFile.toStdString().c_str(), 0, &err);
-        qDebug()<<"zip open error"<<err;
-        err = zip_dir_add( archive, tempDir.toStdString().c_str() );
-        qDebug()<<"added dir error"<<err;
+        int err = 0;
+        char buf[100];
+        zip* archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
+        qDebug()<<"dp saving to"<<zipFile;
+        if ( err != 0 )
+        {
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            qDebug()<<"dp zip open error"<<zipFile<<buf;
+            close();
+            return;
+        }
+        err = zip_dir_add( archive, tempDir.toStdString().c_str(), ZIP_FL_ENC_GUESS );
+        if ( err != 0 )
+        {
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            qDebug()<<"dp zip add dir error"<<buf;
+            close();
+            return;
+        }
+        QDir dir(tempDir);
+        QStringList contents = dir.entryList();
+        for(int i=0;i<contents.size();i++)
+        {
+            QString fname = contents[i];
+            if ( fname == "." || fname == ".." )
+                continue;
+            QString fullName = tempDir+"/"+contents[i];
+            struct zip_source *s = zip_source_file( archive, fullName.toStdString().c_str(), 0, 0);
+            if ( s == NULL )
+            {
+                int sep = 0;
+                zip_error_get( archive, &err, &sep);
+                zip_error_to_str(buf, sizeof(buf), err, errno);
+                qDebug()<<"zip source error"<<fullName<<fname<<buf;
+            }
+            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+            if ( err == -1 )
+            {
+                int sep = 0;
+                zip_error_get( archive, &err, &sep);
+                zip_error_to_str(buf, sizeof(buf), err, errno);
+                qDebug()<<"added file error"<<fullName<<fname<<buf;
+            }
+        }
         err = zip_close( archive );
-        qDebug()<<"close file error"<<err;
+        if ( err != 0 ){
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            qDebug()<<"dp close file error"<<buf;
+            close();
+            return;
+        }
             //JlCompress::compressDir(zip, tempDir );
 //        #else
 //            ui->infoLabel->setText("Exported package to "+filePath);

@@ -36,6 +36,7 @@
 #include "mudlet.h"
 #include "TEvent.h"
 #include <QMessageBox>
+#include <QUiLoader>
 #include "dlgNotepad.h"
 #include "zip.h"
 #include "zipconf.h"
@@ -1014,35 +1015,47 @@ bool Host::installPackage( QString fileName, int module )
 //            mLuaInterpreter.compileAndExecuteScript( _script );
 //        #else
             //JlCompress::extractDir(fileName, _dest );
-        int err;
+        int err = 0;
         //from: https://gist.github.com/mobius/1759816
         struct zip_stat zs;
         struct zip_file *zf;
-        int fd;
+//        int fd;
         long long sum;
         char buf[100];
         zip* archive = zip_open( fileName.toStdString().c_str(), 0, &err);
-        qDebug()<<"zip open error"<<err;
+        if ( err != 0 )
+        {
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            qDebug()<<"zip add dir error"<<buf;
+            return false;
+        }
         for (int i=0;i<zip_get_num_entries( archive, 0 );i++ )
         {
-            if ( zip_stat_index( zip, i, 0, &zs ) == 0 )
+            int zsi = zip_stat_index( archive, i, 0, &zs );
+            if( zsi == 0 )
             {
                 if ( zs.name[strlen( zs.name )-1] == '/' )
                 {
-                    safe_create_dir( zs.name );
+                    QDir dir = QDir( zs.name );
+                    if ( !dir.exists() )
+                        dir.mkdir( "." );
                 }
                 else
                 {
                     zf = zip_fopen_index( archive, i, 0 );
                     if ( !zf )
                     {
-                        qDebug()<<"zip open error"<<zf;
+                        int sep = 0;
+                        zip_error_get( archive, &err, &sep);
+                        zip_error_to_str(buf, sizeof(buf), err, errno);
+                        qDebug()<<"zip open error"<<buf;
                         return false;
                     }
-                    fd = open( zs.name, O_RDWR | O_TRUNC | O_CREAT, 0644);
-                    if ( fd <0 )
+                    QFile fd(_dest+QString(zs.name));
+                    fd.open(QIODevice::ReadWrite|QIODevice::Truncate);
+                    if ( !fd.isOpen() )
                     {
-                        qDebug()<<"file desc. error"<<fd;
+                        qDebug()<<"error opening"<<_dest+QString(zs.name);
                         return false;
                     }
                     sum = 0;
@@ -1054,16 +1067,20 @@ bool Host::installPackage( QString fileName, int module )
                             qDebug()<<"zip_fread error"<<len;
                             return false;
                         }
-                        write( fd, buf, len );
+                        fd.write( buf, len );
                         sum += len;
                     }
-                    close( fd );
+                    fd.close();
                     zip_fclose( zf );
                 }
             }
         }
         err = zip_close( archive );
-        qDebug()<<"close file error"<<err;
+        if ( err != 0 ){
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            qDebug()<<"close file error"<<buf;
+            return false;
+        }
 //        #endif
         QString xmlPath = _dest+packageName+".xml";
         mpUnzipDialog->close();

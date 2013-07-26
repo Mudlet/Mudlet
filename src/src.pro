@@ -22,7 +22,8 @@ unix:LIBS += -lpcre \
     -lGLU \
     -lquazip \
     -lzzip \
-    -lz
+    -lz \
+    -lzip
 
 win32:LIBS += \
     -llua51 \
