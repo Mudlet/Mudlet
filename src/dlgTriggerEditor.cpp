@@ -4493,8 +4493,8 @@ void dlgTriggerEditor::saveVar(){
         else
             nameType = LUA_TSTRING;
     }
-    if ( ( valueType != LUA_TTABLE ) &&
-         ( ( valueType == -1 ) || ( var && valueType != var->getValueType() ) ) )
+    if ( ( valueType != LUA_TTABLE ) && ( valueType == -1 ) )
+         //( ( valueType == -1 ) || ( var && valueType != var->getValueType() ) ) )
     {
         if ( newValue.toInt() )
             valueType = LUA_TNUMBER;
@@ -4608,7 +4608,11 @@ void dlgTriggerEditor::saveVar(){
             if ( newName != var->getName() || nameType != var->getKeyType() )
             {
                 //lets make sure the nametype works
-                if ( var->getKeyType() == LUA_TNUMBER && newName.toInt() )
+                if ( nameType == LUA_TSTRING )
+                {
+                    //do nothing, we can always make key to string
+                }
+                else if ( var->getKeyType() == LUA_TNUMBER && newName.toInt() )
                     nameType = LUA_TNUMBER;
                 else
                     nameType = LUA_TSTRING;
@@ -4629,7 +4633,7 @@ void dlgTriggerEditor::saveVar(){
                 var->setValue( newValue, valueType );
                 change = change|0x2;
             }
-            qDebug()<<"change stauts"<<change;
+            qDebug()<<"change status"<<change;
             if ( change )
             {
                 if ( change&0x1 || newVar )

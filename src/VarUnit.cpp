@@ -7,7 +7,7 @@
 VarUnit::VarUnit()
 {
     qDebug()<<"making new VarUnit";
-    wVars.setInsertInOrder(true);
+//    wVars.setInsertInOrder(true);
 }
 
 bool VarUnit::isHidden( TVar * var ){

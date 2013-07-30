@@ -21,7 +21,8 @@ unix:LIBS += -lpcre \
     -lyajl \
     -lGLU \
     -lquazip \
-    -lzzip
+    -lzzip \
+    -lz
 
 win32:LIBS += -L"c:\mudlet3_package" \
     -llua51 \
