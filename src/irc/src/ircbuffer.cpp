@@ -196,7 +196,7 @@ namespace Irc
         for (int i = 0; i < mode.size(); ++i)
         {
             QChar c = mode.at(i);
-            switch (c.toAscii())
+            switch (c.toLatin1())
             {
                 case '+':
                     add = true;

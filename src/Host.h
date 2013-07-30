@@ -73,6 +73,7 @@ public:
                        Host( int port, QString mHostName, QString login, QString pass, int host_id );
 
                        ~Host();
+
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     void               setName( QString s )             { QMutexLocker locker(& mLock); mHostName = s; }
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
