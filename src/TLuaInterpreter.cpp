@@ -10258,6 +10258,8 @@ bool TLuaInterpreter::callMulti( QString & function, QString & mName )
 
 bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
 {
+    if( function.isEmpty() )
+        return false;
     lua_State * L = pGlobalLua;
     int error = luaL_dostring(L, QString("return " + function).toLatin1().data());
     QString n;
