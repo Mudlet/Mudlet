@@ -51,7 +51,7 @@ extern "C"
     #include "lualib.h"
     #include "lauxlib.h"
 }
-//#include <phonon>
+
 /*//for map var access
 union mVarTypes {
     int * i;
@@ -1813,7 +1813,7 @@ int TLuaInterpreter::getExitStubs( lua_State * L  ){
             }
         }
     }
-    return 1;
+    return 0;
 }
 
 int TLuaInterpreter::getModulePath( lua_State *L )
@@ -4249,12 +4249,6 @@ int TLuaInterpreter::showUnzipProgress( lua_State * L )
     mudlet::self()->showUnzipProgress( txt );
     return 0;
 }
-
-//#ifdef Q_OS_LINUX
-//    #include <phonon>
-//#else
-//    #include <Phonon>
-//#endif
 
 int TLuaInterpreter::playSoundFile( lua_State * L )
 {

@@ -5,7 +5,7 @@ QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
-QT += network opengl uitools
+QT += network opengl uitools multimedia
 DEPENDPATH += .
 INCLUDEPATH += .
 LIBLUA = -llua5.1
@@ -21,14 +21,18 @@ unix:LIBS += -lpcre \
     -lyajl \
     -lGLU \
     -lquazip \
-    -lzzip
+    -lzzip \
+    -lz \
+    -lzip
 
 win32:LIBS += -L"C:\\mudlet5_package" \
     -llua51 \
     -lpcre \
     -lhunspell \
     -lquazip \
+    -llibzip \
     -lzlib \
+    -llibzip \
     -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
     -lyajl
 

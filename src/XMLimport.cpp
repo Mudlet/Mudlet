@@ -20,6 +20,7 @@
 
 #include "XMLimport.h"
 #include "mudlet.h"
+#include "TRoom.h"
 #include <QStringList>
 #include <QDebug>
 
@@ -736,6 +737,9 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
     pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
     pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
+    QStringRef ignore = attributes().value("mDoubleClickIgnore");
+    for(int i=0;i<ignore.size();i++)
+        pT->mDoubleClickIgnore.insert( ignore.at( i ) );
 
     while( ! atEnd() )
     {
