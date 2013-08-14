@@ -125,6 +125,10 @@ SOURCES += TConsole.cpp \
     dlgPackageExporter.cpp \
     exitstreewidget.cpp \
     TRoomDB.cpp \
+    TVar.cpp \
+    LuaInterface.cpp \
+    VarUnit.cpp \
+    dlgVarsMainArea.cpp \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
     irc/src/ircsession.cpp \
@@ -204,6 +208,10 @@ HEADERS += mudlet.h \
     dlgPackageExporter.h \
     exitstreewidget.h \
     TRoomDB.h \
+    TVar.h \
+    LuaInterface.h \
+    VarUnit.h \
+    dlgVarsMainArea.h \
     irc/include/ircbuffer.h \
     irc/include/irc.h \
     irc/include/ircsession.h \
@@ -242,7 +250,8 @@ FORMS += ui/connection_profiles.ui \
     ui/module_manager.ui \
     ui/package_manager_unpack.ui \
     ui/dlgPackageExporter.ui \
-    ui/custom_lines.ui
+    ui/custom_lines.ui \
+    ui/vars_main_area.ui
 
 win32: {
     SOURCES += lua_yajl.c

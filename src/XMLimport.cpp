@@ -180,6 +180,114 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
     return ! error();
 }
 
+void XMLimport::readVariableGroup( TVar *pParent )
+{
+    TVar * var;
+    if( pParent )
+    {
+        var = new TVar( pParent );
+    }
+    else
+    {
+        var = new TVar( );
+    }
+
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    QString keyName, value;
+    int keyType, valueType;
+    while( ! atEnd() )
+    {
+        readNext();
+        if( isEndElement() ) break;
+
+        if( isStartElement() )
+        {
+            if( name() == "name" )
+            {
+                keyName = readElementText();
+                continue;
+            }
+
+            else if( name() == "value")
+            {
+                value = readElementText();
+                continue;
+            }
+            else if( name() == "keyType" )
+            {
+                keyType = readElementText().toInt() ;
+                continue;
+            }
+            else if ( name() == "valueType" )
+            {
+                valueType = readElementText().toInt();
+                var->setName( keyName, keyType );
+                var->setValue( value, valueType );
+                vu->addSavedVar( var );
+                lI->setValue( var );
+                continue;
+            }
+            else if( name() == "VariableGroup" )
+            {
+                readVariableGroup( var );
+            }
+            else if( name() == "Variable" )
+            {
+                readVariableGroup( var );
+            }
+        }
+    }
+}
+
+void XMLimport::readHiddenVariables()
+{
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    while( ! atEnd() )
+    {
+        readNext();
+        if( isEndElement() ) break;
+
+        if( isStartElement() )
+        {
+            if( name() == "name" )
+            {
+                QString var = readElementText();
+                vu->addHidden( var );
+                continue;
+            }
+        }
+    }
+}
+
+void XMLimport::readVariablePackage()
+{
+    qDebug()<<"importing variables";
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    mpVar = vu->getBase();
+    while( ! atEnd() )
+    {
+        readNext();
+        if( isStartElement() )
+        {
+            if( name() == "VariableGroup" )
+            {
+                readVariableGroup( mpVar );
+            }
+            else if( name() == "Variable" )
+            {
+                readVariableGroup( mpVar );
+            }
+            else if ( name() == "HiddenVariables")
+            {
+                readHiddenVariables( );
+            }
+        }
+    }
+}
+
 void XMLimport::readMap()
 {
     while( ! atEnd() )
@@ -461,6 +569,10 @@ void XMLimport::readPackage()
             else if(name() == "HelpPackage"){
                 readHelpPackage();
                 continue;
+            }
+            else if( name() == "VariablePackage" )
+            {
+                readVariablePackage();
             }
             else
             {
