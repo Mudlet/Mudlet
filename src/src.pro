@@ -1,8 +1,8 @@
 
 #CONFIG += uitools
 
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-parameter
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs
+QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
 QT += network opengl uitools
@@ -23,23 +23,27 @@ unix:LIBS += -lpcre \
     -lquazip \
     -lzzip
 
-win32:LIBS += -L"c:\mudlet3_package" \
+win32:LIBS += -L"C:\\mudlet5_package" \
     -llua51 \
     -lpcre \
     -lhunspell \
     -lquazip \
+    -lzlib \
+    -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
     -lyajl
 
 unix:INCLUDEPATH += /usr/include/lua5.1
 
-win32:INCLUDEPATH += "c:\mudlet_package_MINGW\Lua_src\include" \
-    "c:\mudlet_package_MINGW\zlib-1.2.5" \
-    "c:\mudlet_package_MINGW\boost_1_45_0" \
-    "c:\mudlet_package_MINGW\pcre-8.0-lib\include" \
-    #"C:\mudlet_package_MSVC\lloyd-yajl-f4b2b1a\yajl-2.0.1\include" \
-    "c:\mudlet2_package\src\yajl1-src\src\include" \
-    "C:\Users\heiko\mudlet\src\quazip\quazip-0.4.4\quazip" \
-    "C:\mudlet_package_MINGW\hunspell-1.3.1\src"
+win32:INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
+    "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
+    #"c:\\mudlet_package_MINGW\\boost_1_45_0" \
+    "C:\\mudlet5_package\\boost_1_54_0" \
+    "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
+    "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
+    #"C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include" \
+    #"c:\mudlet2_package\src\yajl1-src\src\include" \
+    "C:\\Users\\heiko\\mudlet\\src\\quazip\\quazip-0.4.4\\quazip" \
+    "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
 
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: {
@@ -236,9 +240,9 @@ FORMS += ui/connection_profiles.ui \
     ui/dlgPackageExporter.ui \
     ui/custom_lines.ui
 
-#win32: {
-#    SOURCES += lua_yajl.c
-#}
+win32: {
+    SOURCES += lua_yajl.c
+}
 
 #unix: {
 #    SOURCES += lua_yajl1.c
