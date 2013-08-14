@@ -483,14 +483,49 @@ function db:_migrate(db_name, s_name)
    -- have been added.
    local cur = conn:execute("PRAGMA table_info('"..s_name.."')") -- currently broken - LuaSQL bug, needs to be upgraded for new sqlite API
 
-   if cur ~= 0 then
-      local row = cur:fetch({}, "a")
+   if type(cur) ~= "number" then
+     local row = cur:fetch({}, "a")
+     if row then
+        while row do
+           current_columns[row.name] = row.type
+           row = cur:fetch({}, "a")
+        end
+     else
+        ---------------  GETS ALL COLUMNS FROM SHEET IF IT EXISTS
+        db:echo_sql("SELECT * FROM "..s_name)
+        local get_sheet_cur = conn:execute("SELECT * FROM "..s_name)  -- select the sheet
 
-      while row do
-         current_columns[row.name] = row.type
-         row = cur:fetch({}, "a")
-      end
-      cur:close()
+        if get_sheet_cur and get_sheet_cur ~= 0 then
+           local row = get_sheet_cur:fetch({}, "a") -- grab the first row, if any
+           if not row then -- if no first row then
+              local col = ""
+              for k,v in pairs(schema.columns) do -- look through sheet schema to find the first column that is text
+                 if type(k) == "number" then
+                    if string.sub(v,1,1) ~= "_" then col = v break end
+                 else
+                    if string.sub(k,1,1) ~= "_" and type(v) == "string" then col = k break end
+                 end
+              end
+              db:add({_db_name = db_name, _sht_name = s_name},{[col] = "test"}) -- add row with found column set as "test"
+              db:echo_sql("SELECT * FROM "..s_name)
+              local get_row_cur = conn:execute("SELECT * FROM "..s_name) -- select the sheet
+              row = get_row_cur:fetch({}, "a") -- grab the newly created row
+              get_row_cur:close()
+              -- delete the newly created row
+              db:delete({_db_name = db_name, _sht_name = s_name},db:eq({database = db_name, sheet = s_name, name = col, type = "string"},"test"))
+           end
+           if row then -- add each column from row to current_columns table
+              for k,v in pairs(row) do
+                 current_columns[k] = ""
+              end
+           end
+           get_sheet_cur:close()
+        end
+     end
+   end
+
+   if type(cur) == "userdata" then
+     cur:close()
    end
 
    -- The SQL definition of a column is:
@@ -533,7 +568,6 @@ function db:_migrate(db_name, s_name)
    else
       -- At this point we know that the sheet already exists, but we are concerned if the current
       -- definition includes columns which may be added.
-
       local sql_chunks = {}
       local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
 
@@ -567,6 +601,7 @@ function db:_migrate(db_name, s_name)
    conn:commit()
    conn:execute("VACUUM")
 end
+
 
 
 
