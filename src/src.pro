@@ -46,7 +46,8 @@ win32:INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
     "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
     #"C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include" \
     #"c:\mudlet2_package\src\yajl1-src\src\include" \
-    "C:\\Users\\heiko\\mudlet\\src\\quazip\\quazip-0.4.4\\quazip" \
+    #"C:\\Users\\heiko\\mudlet\\src\\quazip\\quazip-0.4.4\\quazip" \
+    "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
     "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
 
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
