@@ -25,6 +25,7 @@
 
 class mudlet;
 class TLuaInterpreter;
+class LuaInterface;
 
 
 #include <list>
@@ -51,6 +52,7 @@ class TLuaInterpreter;
 #include "TRoom.h"
 #include "TMap.h"
 #include <QListWidget>
+#include "LuaInterface.h"
 
 class dlgTriggerEditor;
 class TConsole;
@@ -104,6 +106,7 @@ public:
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
     TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
+    LuaInterface *     getLuaInterface() { return mLuaInterface; }
     void               incomingStreamProcessor( QString & paragraph, int line );
     void               postIrcMessage( QString, QString, QString );
     void               enableTimer( QString & );
@@ -152,6 +155,7 @@ public:
     cTelnet            mTelnet;
     TConsole *         mpConsole;
     TLuaInterpreter    mLuaInterpreter;
+    LuaInterface *     mLuaInterface;
     TriggerUnit        mTriggerUnit;
     TimerUnit          mTimerUnit;
     ScriptUnit         mScriptUnit;

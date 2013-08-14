@@ -25,6 +25,9 @@
 #include <QXmlStreamWriter>
 
 #include "Host.h"
+#include "TVar.h"
+#include "VarUnit.h"
+#include "LuaInterface.h"
 
 
 class XMLexport : public QXmlStreamWriter
@@ -47,6 +50,7 @@ public:
     bool            writeAction( TAction * );
     bool            writeScript( TScript * );
     bool            writeKey( TKey * );
+    bool            writeVariable( TVar *, LuaInterface *, VarUnit * );
     bool            writeModuleXML( QIODevice * device, QString moduleName);
     bool            exportHost( Host * );
 

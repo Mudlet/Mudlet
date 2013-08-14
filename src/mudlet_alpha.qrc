@@ -132,5 +132,9 @@
         <file>vyzor.mpackage</file>
         <file>deleteOldProfiles.xml</file>
         <file>icons/Slothmud.png</file>
+        <file>icons/variables.png</file>
+        <file>icons/variable.png</file>
+        <file>icons/table.png</file>
+        <file>icons/function.png</file>
     </qresource>
 </RCC>

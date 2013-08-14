@@ -42,6 +42,7 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 #include "dlgNotepad.h"
+#include "LuaInterface.h"
 #include <QToolBar>
 #include <QApplication>
 #include <QDesktopWidget>
@@ -395,6 +396,10 @@ mudlet::mudlet()
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
+
+    //LuaInterface * li = new LuaInterface(getActiveHost());
+    //li->getVars();
+
 
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
     mpMusicBox1 = new QMediaPlayer;
@@ -2072,6 +2077,8 @@ void mudlet::doAutoLogin( QString & profile_name )
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     //for( int i=0;i<entries.size(); i++ )
     //    qDebug()<<i<<"#"<<entries[i];
+//    LuaInterface * lI = pHost->getLuaInterface();
+//    lI->getVars( true );
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+entries[0]);
@@ -2167,6 +2174,8 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     addConsoleForNewHost( pHost );
     pHost->mBlockScriptCompile = false;
     pHost->mLuaInterpreter.loadGlobal();
+    LuaInterface * lI = pHost->getLuaInterface();
+    lI->getVars( true );
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 
