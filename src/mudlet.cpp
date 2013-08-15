@@ -95,9 +95,9 @@ mudlet::mudlet()
 , mReplaySpeed( 1 )
 , mpIRC( 0 )
 #if defined (Q_OS_LINUX) || defined (Q_OS_MAC) ||defined (Q_OS_WIN)
-    , version( "Mudlet 2.1" )
+    , version( "Mudlet 3.0-rc1" )
 #else
-    , version( "Mudlet 2.1" )
+    , version( "Mudlet 3.0-rc1" )
 #endif
 , mpCurrentActiveHost( 0 )
 , mIsGoingDown( false )

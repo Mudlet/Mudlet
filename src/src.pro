@@ -258,9 +258,9 @@ win32: {
     SOURCES += lua_yajl.c
 }
 
-#unix: {
-#    SOURCES += lua_yajl1.c
-#}
+unix: {
+    SOURCES += lua-yajl2-linux.c
+}
 
 TEMPLATE = app
 TARGET = mudlet
