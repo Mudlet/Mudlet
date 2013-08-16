@@ -1,11 +1,11 @@
 
 #CONFIG += uitools
 
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-parameter
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs
+QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
-QT += network opengl uitools
+QT += network opengl uitools multimedia
 DEPENDPATH += .
 INCLUDEPATH += .
 LIBLUA = -llua5.1
@@ -21,25 +21,34 @@ unix:LIBS += -lpcre \
     -lyajl \
     -lGLU \
     -lquazip \
-    -lzzip
+    -lzzip \
+    -lz \
+    -lzip
 
-win32:LIBS += -L"c:\mudlet3_package" \
+win32:LIBS += -L"C:\\mudlet5_package" \
     -llua51 \
     -lpcre \
     -lhunspell \
     -lquazip \
+    -llibzip \
+    -lzlib \
+    -llibzip \
+    -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
     -lyajl
 
 unix:INCLUDEPATH += /usr/include/lua5.1
 
-win32:INCLUDEPATH += "c:\mudlet_package_MINGW\Lua_src\include" \
-    "c:\mudlet_package_MINGW\zlib-1.2.5" \
-    "c:\mudlet_package_MINGW\boost_1_45_0" \
-    "c:\mudlet_package_MINGW\pcre-8.0-lib\include" \
-    #"C:\mudlet_package_MSVC\lloyd-yajl-f4b2b1a\yajl-2.0.1\include" \
-    "c:\mudlet2_package\src\yajl1-src\src\include" \
-    "C:\Users\heiko\mudlet\src\quazip\quazip-0.4.4\quazip" \
-    "C:\mudlet_package_MINGW\hunspell-1.3.1\src"
+win32:INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
+    "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
+    #"c:\\mudlet_package_MINGW\\boost_1_45_0" \
+    "C:\\mudlet5_package\\boost_1_54_0" \
+    "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
+    "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
+    #"C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include" \
+    #"c:\mudlet2_package\src\yajl1-src\src\include" \
+    #"C:\\Users\\heiko\\mudlet\\src\\quazip\\quazip-0.4.4\\quazip" \
+    "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
+    "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
 
 unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: {
@@ -117,6 +126,10 @@ SOURCES += TConsole.cpp \
     dlgPackageExporter.cpp \
     exitstreewidget.cpp \
     TRoomDB.cpp \
+    TVar.cpp \
+    LuaInterface.cpp \
+    VarUnit.cpp \
+    dlgVarsMainArea.cpp \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
     irc/src/ircsession.cpp \
@@ -196,6 +209,10 @@ HEADERS += mudlet.h \
     dlgPackageExporter.h \
     exitstreewidget.h \
     TRoomDB.h \
+    TVar.h \
+    LuaInterface.h \
+    VarUnit.h \
+    dlgVarsMainArea.h \
     irc/include/ircbuffer.h \
     irc/include/irc.h \
     irc/include/ircsession.h \
@@ -234,15 +251,16 @@ FORMS += ui/connection_profiles.ui \
     ui/module_manager.ui \
     ui/package_manager_unpack.ui \
     ui/dlgPackageExporter.ui \
-    ui/custom_lines.ui
+    ui/custom_lines.ui \
+    ui/vars_main_area.ui
 
-#win32: {
-#    SOURCES += lua_yajl.c
-#}
+win32: {
+    SOURCES += lua_yajl.c
+}
 
-#unix: {
-#    SOURCES += lua_yajl1.c
-#}
+unix: {
+    SOURCES += lua-yajl2-linux.c
+}
 
 TEMPLATE = app
 TARGET = mudlet

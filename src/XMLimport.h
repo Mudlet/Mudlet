@@ -24,6 +24,9 @@
 #include <QXmlStreamReader>
 
 #include "Host.h"
+#include "TVar.h"
+#include "LuaInterface.h"
+#include "VarUnit.h"
 
 class Host;
 class TTrigger;
@@ -56,6 +59,7 @@ private:
     void      readScriptPackage();
     void      readRooms();
     void      readKeyPackage();
+    void      readVariablePackage();
     void      readUnknownMapElement();
     void      readMap();
     void      readRoom();
@@ -81,6 +85,8 @@ private:
     void      readActionGroup( TAction * pParent );
     void      readScriptGroup( TScript * pParent );
     void      readKeyGroup( TKey * pParent );
+    void      readVariableGroup( TVar * pParent );
+    void      readHiddenVariables();
 
 
     void      readStringList( QStringList & );
@@ -97,6 +103,7 @@ private:
     TKey *   mpKey;
     TAction * mpAction;
     TScript * mpScript;
+    TVar *    mpVar;
 
     bool gotTrigger;
     bool gotTimer;

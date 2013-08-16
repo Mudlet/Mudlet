@@ -42,6 +42,8 @@
 #include "dlgSearchArea.h"
 #include "TTreeWidget.h"
 #include "TKey.h"
+#include "dlgVarsMainArea.h"
+#include "TVar.h"
 //#include "TConsole.h"
 
 class dlgTimersMainArea;
@@ -61,6 +63,7 @@ class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
 class TKey;
 class TConsole;
+class dlgVarsMainArea;
 
 class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
 {
@@ -81,10 +84,20 @@ public:
     void                        children_icon_alias( QTreeWidgetItem * pWidgetItemParent );
     void                        children_icon_key( QTreeWidgetItem * pWidgetItemParent );
     void                        doCleanReset();
+    void                        addVar( bool );
+    int                         canRecast( QTreeWidgetItem *, int, int );
+    void                        saveVar();
+    void                        repopulateVars();
     QToolBar *                  toolBar;
     QToolBar *                  toolBar2;
     bool                        mNeedUpdateData;
+    bool                        showHiddenVars;
     TConsole *                  mpErrorConsole;
+    void                        changeView( int );
+    void                        recurseVariablesUp( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesDown( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesDown( TVar *, QList< TVar * > & );
+    void                        show_vars( );
 
 signals:
 
@@ -93,6 +106,14 @@ signals:
     void                        update();
 
 public slots:
+    void                        slot_toggleHiddenVars();
+    void                        slot_toggleHiddenVar( bool );
+    void                        slot_addVar();
+    void                        slot_addVarGroup();
+    void                        slot_saveVarAfterEdit();
+    void                        slot_deleteVar();
+    void                        slot_var_clicked( QTreeWidgetItem *, int );
+    void                        slot_show_vars( );
     void                        slot_viewErrorsAction();
     void                        slot_cursorPositionChanged();
     void                        slot_set_pattern_type_color( int );
@@ -218,6 +239,7 @@ private:
     QTreeWidgetItem *           mCurrentAction;
     QTreeWidgetItem *           mCurrentScript;
     QTreeWidgetItem *           mCurrentKey;
+    QTreeWidgetItem *           mCurrentVar;
 
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;
@@ -225,6 +247,7 @@ private:
     QTreeWidgetItem *           mpTimerBaseItem;
     QTreeWidgetItem *           mpActionBaseItem;
     QTreeWidgetItem *           mpKeyBaseItem;
+    QTreeWidgetItem *           mpVarBaseItem;
 
     QTreeWidgetItem *           mpCurrentActionItem;
     QTreeWidgetItem *           mpCurrentKeyItem;
@@ -232,6 +255,7 @@ private:
     QTreeWidgetItem *           mpCurrentScriptItem;
     QTreeWidgetItem *           mpCurrentTriggerItem;
     QTreeWidgetItem *           mpCurrentAliasItem;
+    QTreeWidgetItem *           mpCurrentVarItem;
     QLineEdit *                 mpCursorPositionIndicator;
     int                         mCurrentView;
     static const int            cmTriggerView;
@@ -240,6 +264,7 @@ private:
     static const int            cmScriptView;
     static const int            cmActionView;
     static const int            cmKeysView;
+    static const int            cmVarsView;
 
     QScrollArea *               mpScrollArea;
     QWidget *                   HpatternList;
@@ -266,6 +291,7 @@ private:
     //QsciDocument                mDocument;
     Host *                      mpHost;
     QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
+    dlgVarsMainArea *           mpVarsMainArea;
 };
 
 #endif

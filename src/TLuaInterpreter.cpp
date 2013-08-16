@@ -42,7 +42,7 @@
 //#ifdef Q_OS_WIN32
 //    #include "lua_yajl.c"
 //#else
-    #include "lua-yajl2-linux.c"
+//    #include "lua-yajl2-linux.c"
 //#endif
 
 extern "C"
@@ -51,7 +51,7 @@ extern "C"
     #include "lualib.h"
     #include "lauxlib.h"
 }
-//#include <phonon>
+
 /*//for map var access
 union mVarTypes {
     int * i;
@@ -60,6 +60,12 @@ union mVarTypes {
     string * s;
     QString * qs;
 };*/
+
+
+extern "C"
+{
+    int luaopen_yajl(lua_State*);
+}
 
 extern QStringList gSysErrors;
 
@@ -4243,12 +4249,6 @@ int TLuaInterpreter::showUnzipProgress( lua_State * L )
     mudlet::self()->showUnzipProgress( txt );
     return 0;
 }
-
-//#ifdef Q_OS_LINUX
-//    #include <phonon>
-//#else
-//    #include <Phonon>
-//#endif
 
 int TLuaInterpreter::playSoundFile( lua_State * L )
 {

@@ -42,6 +42,7 @@
 #include "EAction.h"
 #include "TTextEdit.h"
 #include "dlgNotepad.h"
+#include "LuaInterface.h"
 #include <QToolBar>
 #include <QApplication>
 #include <QDesktopWidget>
@@ -94,15 +95,11 @@ mudlet::mudlet()
 , mReplaySpeed( 1 )
 , mpIRC( 0 )
 #if defined (Q_OS_LINUX) || defined (Q_OS_MAC) ||defined (Q_OS_WIN)
-    , version( "Mudlet 2.1" )
+    , version( "Mudlet 3.0-rc1" )
 #else
-    , version( "Mudlet 2.1" )
+    , version( "Mudlet 3.0-rc1" )
 #endif
 , mpCurrentActiveHost( 0 )
-//, mpMusicBox1(Phonon::createPlayer(Phonon::MusicCategory) )
-//, mpMusicBox2(Phonon::createPlayer(Phonon::MusicCategory) )
-//, mpMusicBox3(Phonon::createPlayer(Phonon::MusicCategory) )
-//, mpMusicBox4(Phonon::createPlayer(Phonon::MusicCategory) )
 , mIsGoingDown( false )
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
@@ -400,7 +397,15 @@ mudlet::mudlet()
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
 
+    //LuaInterface * li = new LuaInterface(getActiveHost());
+    //li->getVars();
+
+
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
+    mpMusicBox1 = new QMediaPlayer;
+    mpMusicBox2 = new QMediaPlayer;
+    mpMusicBox3 = new QMediaPlayer;
+    mpMusicBox4 = new QMediaPlayer;
 
 }
 
@@ -459,13 +464,13 @@ void mudlet::layoutModules(){
             }
 
             masterModule->setToolTip(QString("Checking this box will cause the module to be saved & resync'd across all open sessions."));
-            if (moduleInfo[0].endsWith(".zip") || moduleInfo[0].endsWith(".mpackage")){
-                masterModule->setCheckState(Qt::Unchecked);
-                masterModule->setFlags(Qt::NoItemFlags);
-                masterModule->setText("don't sync");
-                moduleInfo[1] = "0";
-                masterModule->setToolTip(QString("mpackage and zip packages are currently unabled to be synced across packages."));
-            }
+//            if (moduleInfo[0].endsWith(".zip") || moduleInfo[0].endsWith(".mpackage")){
+//                masterModule->setCheckState(Qt::Unchecked);
+//                masterModule->setFlags(Qt::NoItemFlags);
+//                masterModule->setText("don't sync");
+//                moduleInfo[1] = "0";
+//                masterModule->setToolTip(QString("mpackage and zip packages are currently unabled to be synced across packages."));
+//            }
             QString moduleName = pModules[i];
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
@@ -563,11 +568,11 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem){
         moduleHelpButton->setDisabled((!pH->moduleHelp[entry->text()].contains("helpURL") || pH->moduleHelp[entry->text()]["helpURL"].isEmpty()));
     else
         moduleHelpButton->setDisabled(true);
-    if (itemPath->text().endsWith(".zip") || itemPath->text().endsWith(".mpackage")){
-        checkStatus->setCheckState(Qt::Unchecked);
-        checkStatus->setFlags(Qt::NoItemFlags);
-        checkStatus->setText("don't sync");
-    }
+//    if (itemPath->text().endsWith(".zip") || itemPath->text().endsWith(".mpackage")){
+//        checkStatus->setCheckState(Qt::Unchecked);
+//        checkStatus->setFlags(Qt::NoItemFlags);
+//        checkStatus->setText("don't sync");
+//    }
 
 }
 
@@ -2072,6 +2077,8 @@ void mudlet::doAutoLogin( QString & profile_name )
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     //for( int i=0;i<entries.size(); i++ )
     //    qDebug()<<i<<"#"<<entries[i];
+//    LuaInterface * lI = pHost->getLuaInterface();
+//    lI->getVars( true );
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+entries[0]);
@@ -2167,6 +2174,8 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     addConsoleForNewHost( pHost );
     pHost->mBlockScriptCompile = false;
     pHost->mLuaInterpreter.loadGlobal();
+    LuaInterface * lI = pHost->getLuaInterface();
+    lI->getVars( true );
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 
@@ -2364,7 +2373,6 @@ void mudlet::stopSounds()
 
 void mudlet::playSound( QString s )
 {
-//    if( mpMusicBox1->remainingTime() == 0 )
 //    {
 //        mpMusicBox1->setCurrentSource( s );
 //        mpMusicBox1->play();
@@ -2378,11 +2386,25 @@ void mudlet::playSound( QString s )
 //    {
 //        mpMusicBox3->setCurrentSource( s );
 //        mpMusicBox3->play();
-//    }
-//    else
-//    {
-//        mpMusicBox4->clear();
-//        mpMusicBox4->setCurrentSource( s );
-//        mpMusicBox4->play();
-//    }
+    if( mpMusicBox1->state() != QMediaPlayer::PlayingState )
+    {
+        mpMusicBox1->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox1->play();
+    }
+    else if( mpMusicBox2->state() != QMediaPlayer::PlayingState )
+    {
+        mpMusicBox2->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox2->play();
+    }
+    else if( mpMusicBox3->state() != QMediaPlayer::PlayingState )
+    {
+        mpMusicBox3->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox3->play();
+    }
+    else
+    {
+        mpMusicBox4->stop();
+        mpMusicBox4->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox4->play();
+    }
 }
