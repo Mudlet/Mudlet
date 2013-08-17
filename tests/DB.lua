@@ -37,7 +37,7 @@ describe("Tests DB.lua functions", function()
       })
     end)
 
-    it("should successfully shut down a DB", function()
+    it("Should successfully shut down a DB", function()
       db:close()
     end)
 
@@ -59,6 +59,32 @@ describe("Tests DB.lua functions", function()
 
     it("Should successfully shut down a DB again", function()
       db:close()
+    end)
+
+    it("Should create and add a row", function()
+      mydb = db:create("people", {
+        friends={"name", "city", "notes"},
+        enemies={
+          name="",
+          city="",
+          notes="",
+          enemied="",
+          kills=0,
+          _index = { "city" },
+          _unique = { "name" },
+          _violations = "REPLACE"
+        }
+      })
+
+      db:add(mydb.friends, {name = "test subject", city = "Golden City", notes = "fill in the blanks"})
+    end)
+
+    it("Should successfully shut down a DB after data has been added", function()
+      db:close()
+    end)
+
+    teardown(function()
+      os.remove("Database_people.db")
     end)
   end)
 
@@ -163,6 +189,52 @@ describe("Tests DB.lua functions", function()
       assert.is_true(results[2].name == "Bobc" and results[2].level == 15)
       assert.is_true(results[3].name == "Bobb" and results[3].level == 15)
       assert.is_true(results[#results].name == "Bob" and results[#results].level == 15)
+    end)
+  end)
+
+  describe("Tests db:create() ability to add a new row to an existing database #db", function()
+    before_each(function()
+      mydb = db:create("mydb", {
+        sheet = {
+          row1 = "",
+          row2 = 0,
+          _index = {"row1"},
+          _unique = {"row1"},
+          _violations = "REPLACE"
+        }
+      })
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+    end)
+
+    it("Should add a row of type number successfully to an empty db", function()
+      mydb = db:create("mydb", {
+        sheet = {
+          row1 = "",
+          row2 = 0,
+          row3 = 0,
+          _index = {"row1"},
+          _unique = {"row1"},
+          _violations = "REPLACE"
+        }
+      })
+    end)
+
+    it("Should add a row of type string successfully to an empty db", function()
+      mydb = db:create("mydb", {
+        sheet = {
+          row1 = "",
+          row2 = 0,
+          row3 = "",
+          _index = {"row1"},
+          _unique = {"row1"},
+          _violations = "REPLACE"
+        }
+      })
     end)
   end)
 end)
