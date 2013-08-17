@@ -1,9 +1,5 @@
 This project contains all Mudlet lua code (lua folder).
 
-
-[![Build Status](https://travis-ci.org/vadi2/mudlet-lua.png?branch=master)](https://travis-ci.org/vadi2/mudlet-lua)
-
-
 Project structure:
 ------------------
 
@@ -12,8 +8,7 @@ Project structure:
             luadoc/           LuaDoc extensions (this code is not loaded by Mudlet)
             LuaGlobal.lua     loader for all Lua code used by Mudlet
 
-        tests/                unit tests for mudlet-lua
-
+        tests/                unit tests for mudlet-lua 
         mudlet-lua-doc/       generated documentation (depreciated)
 
         CONTRIBS
@@ -22,3 +17,4 @@ Project structure:
         README
         TODO
 
+Current unit tests status: [![Build Status](https://travis-ci.org/vadi2/mudlet-lua.png?branch=master)](https://travis-ci.org/vadi2/mudlet-lua)
