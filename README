@@ -1,18 +1,7 @@
+This project contains all Mudlet lua code (lua folder).
 
 
-This project contains all Mudlet lua code (lua folder). 
-
-
-This will allow us to easily maintain it and generate common documentation with LuaDoc.
-(We are using improved version of LuaDoc, because LuaDoc 3.0.1 is barely usable.)
-
-
-You can generate doc on linux box with following command (mudlet-lua-doc folder).
-You will need LuaDoc 3.0.1 (with custom improvements, which are in lua/luadoc folder)
-
-    sh genDoc.sh
-
-
+[![Build Status](https://travis-ci.org/vadi2/mudlet-lua.png?branch=master)](https://travis-ci.org/vadi2/mudlet-lua)
 
 
 Project structure:
@@ -23,7 +12,9 @@ Project structure:
             luadoc/           LuaDoc extensions (this code is not loaded by Mudlet)
             LuaGlobal.lua     loader for all Lua code used by Mudlet
 
-        mudlet-lua-doc/       all generated documentation
+        tests/                unit tests for mudlet-lua
+
+        mudlet-lua-doc/       generated documentation (depreciated)
 
         CONTRIBS
         genDoc.sh             script for generation documentation
