@@ -1123,7 +1123,7 @@ end
 ---   </pre>
 function db:echo_sql(sql)
    if db.debug_sql then
-      echo("\n"..sql.."\n")
+      print(sql)
    end
 end
 
