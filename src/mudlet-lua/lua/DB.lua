@@ -498,14 +498,7 @@ function db:_migrate(db_name, s_name)
         if get_sheet_cur and get_sheet_cur ~= 0 then
            local row = get_sheet_cur:fetch({}, "a") -- grab the first row, if any
            if not row then -- if no first row then
-              local col = ""
-              for k,v in pairs(schema.columns) do -- look through sheet schema to find the first column that is text
-                 if type(k) == "number" then
-                    if string.sub(v,1,1) ~= "_" then col = v break end
-                 else
-                    if string.sub(k,1,1) ~= "_" and type(v) == "string" then col = k break end
-                 end
-              end
+              local col = "_unique" -- this is really, really bad misuse. it necessary, but don't copy this behavior
               db:add({_db_name = db_name, _sht_name = s_name},{[col] = "test"}) -- add row with found column set as "test"
               db:echo_sql("SELECT * FROM "..s_name)
               local get_row_cur = conn:execute("SELECT * FROM "..s_name) -- select the sheet
