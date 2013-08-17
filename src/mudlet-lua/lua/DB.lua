@@ -9,7 +9,8 @@
 -----------------------------------------------------------------------------
 if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
-
+require"DebugTools"
+require"TableUtils"
 
 -- TODO those funciton are already definde elsewhere
 -- Tests if a table is empty: this is useful in situations where you find
@@ -498,14 +499,38 @@ function db:_migrate(db_name, s_name)
         if get_sheet_cur and get_sheet_cur ~= 0 then
            local row = get_sheet_cur:fetch({}, "a") -- grab the first row, if any
            if not row then -- if no first row then
-              local col = "_unique" -- this is really, really bad misuse. it necessary, but don't copy this behavior
-              db:add({_db_name = db_name, _sht_name = s_name},{[col] = "test"}) -- add row with found column set as "test"
-              db:echo_sql("SELECT * FROM "..s_name)
-              local get_row_cur = conn:execute("SELECT * FROM "..s_name) -- select the sheet
-              row = get_row_cur:fetch({}, "a") -- grab the newly created row
-              get_row_cur:close()
-              -- delete the newly created row
-              db:delete({_db_name = db_name, _sht_name = s_name},db:eq({database = db_name, sheet = s_name, name = col, type = "string"},"test"))
+              local tried_cols, contains, found_something, col = {}, table.contains, false
+
+              while not found_something do -- guarded by the error below from infinite looping
+                 col = false
+                 for k,v in pairs(schema.columns) do -- look through sheet schema to find the first column that is text
+                    if type(k) == "number" then
+                       if string.sub(v,1,1) ~= "_" and not contains(tried_cols, v) then col = v break end
+                    else
+                       if string.sub(k,1,1) ~= "_" and type(v) == "string" and not contains(tried_cols, k) then col = k break end
+                    end
+                 end
+
+                 if not col then error("db:_migrate: cannot find a suitable column for testing a new row with.") end
+
+                 -- add row with found column set as "test"
+                 db:add({_db_name = db_name, _sht_name = s_name},{[col] = "test"})
+
+                 db:echo_sql("SELECT * FROM "..s_name)
+                 local get_row_cur = conn:execute("SELECT * FROM "..s_name) -- select the sheet
+                 row = get_row_cur:fetch({}, "a") -- grab the newly created row
+                 get_row_cur:close()
+
+                 -- delete the newly created row. If we picked a row that doesn't exist yet and we're
+                 -- trying to add, the delete will fail - remember this, and try another row
+                 local worked, msg = pcall(db.delete, db, {_db_name = db_name, _sht_name = s_name},db:eq({database = db_name, sheet = s_name, name = col, type = "string"},"test"))
+
+                 if not worked then
+                   tried_cols[#tried_cols+1] = col
+                 else
+                   found_something = true
+                 end
+             end
            end
            if row then -- add each column from row to current_columns table
               for k,v in pairs(row) do
