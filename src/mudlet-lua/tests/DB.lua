@@ -192,7 +192,7 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
-  describe("Tests db:create() ability to add a new row to an existing database #db", function()
+  describe("Tests db:create() ability to add a new row to an existing database", function()
     before_each(function()
       mydb = db:create("mydb", {
         sheet = {
@@ -211,30 +211,51 @@ describe("Tests DB.lua functions", function()
       mydb = nil
     end)
 
-    it("Should add a row of type number successfully to an empty db", function()
-      mydb = db:create("mydb", {
-        sheet = {
-          row1 = "",
-          row2 = 0,
-          row3 = 0,
-          _index = {"row1"},
-          _unique = {"row1"},
-          _violations = "REPLACE"
-        }
-      })
+    it("Should add a column of type number successfully to an empty db", function()
+      local newschema = {
+        row1 = "",
+        row2 = 0,
+        row3 = 0,
+        _index = {"row1"},
+        _unique = {"row1"},
+        _violations = "REPLACE"
+      }
+
+      mydb = db:create("mydb", { sheet = newschema })
+      assert.are.same(db.__schema.mydb.sheet.columns, newschema)
     end)
 
-    it("Should add a row of type string successfully to an empty db", function()
-      mydb = db:create("mydb", {
-        sheet = {
-          row1 = "",
-          row2 = 0,
-          row3 = "",
-          _index = {"row1"},
-          _unique = {"row1"},
-          _violations = "REPLACE"
-        }
-      })
+    it("Should add a column of type string successfully to an empty db", function()
+      local newschema = {
+        row1 = "",
+        row2 = 0,
+        row3 = "",
+        _index = {"row1"},
+        _unique = {"row1"},
+        _violations = "REPLACE"
+      }
+
+      mydb = db:create("mydb", { sheet = newschema })
+      assert.are.same(db.__schema.mydb.sheet.columns, newschema)
+    end)
+
+    it("Should add a column successfully to a filled db", function()
+      db:add(mydb.sheet, {row1 = "some data"})
+
+      local newschema = {
+        row1 = "",
+        row2 = 0,
+        row3 = "",
+        _index = {"row1"},
+        _unique = {"row1"},
+        _violations = "REPLACE"
+      }
+
+      mydb = db:create("mydb", { sheet = newschema })
+      assert.are.same(db.__schema.mydb.sheet.columns, newschema)
+      local newrow = db:fetch(mydb.sheet)[1]
+      assert.is_true(newrow.row1 == "some data")
+      assert.is_true(newrow.row3 == "")
     end)
   end)
 end)
