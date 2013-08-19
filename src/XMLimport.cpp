@@ -195,7 +195,8 @@ void XMLimport::readVariableGroup( TVar *pParent )
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     QString keyName, value;
-    int keyType, valueType;
+    int keyType = 0;
+    int valueType;
     while( ! atEnd() )
     {
         readNext();

@@ -565,7 +565,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         {
             TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
             if( !pR ) continue;
-            int trID = pArea->rooms[i];
             float rx = pR->x*tx+_rx;
             float ry = pR->y*-1*ty+_ry;
             int rz = pR->z;

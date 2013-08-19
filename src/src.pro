@@ -1,8 +1,6 @@
 
-#CONFIG += uitools
-
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs
-QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
+QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
 QT += network opengl uitools multimedia
@@ -40,13 +38,9 @@ unix:INCLUDEPATH += /usr/include/lua5.1
 
 win32:INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
     "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
-    #"c:\\mudlet_package_MINGW\\boost_1_45_0" \
     "C:\\mudlet5_package\\boost_1_54_0" \
     "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
     "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
-    #"C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include" \
-    #"c:\mudlet2_package\src\yajl1-src\src\include" \
-    #"C:\\Users\\heiko\\mudlet\\src\\quazip\\quazip-0.4.4\\quazip" \
     "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
     "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
 
@@ -265,22 +259,5 @@ unix: {
 TEMPLATE = app
 TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc
-DISTFILES += paragraph.css
-unix: {
-    luaglobal.path = $$SHARE_DIR
-    luaglobal.files = LuaGlobal.lua
-    documentation.path = $$SHARE_DIR
-    documentation.files = mudlet_documentation.html
-    fonts.path = $$SHARE_DIR
-    fonts.files = fonts/ttf-bitstream-vera-1.10/*
-    target.path = $$BIN_DIR
-}
-INSTALLS += fonts \
-    luaglobal \
-    documentation \
-    target
-
-OTHER_FILES += \
-    mudlet_documentation.txt
 
 
