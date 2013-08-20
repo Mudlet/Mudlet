@@ -7,6 +7,8 @@
 #include <QDesktopServices>
 #include "zip.h"
 #include "zipconf.h"
+#include <errno.h>
+
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::dlgPackageExporter)
@@ -244,7 +246,9 @@ void dlgPackageExporter::slot_export_package(){
         //#ifdef Q_OS_WIN
         int err = 0;
         char buf[100];
-        zip* archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
+        zip* archive;
+        //archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
+        archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE, &err);
         qDebug()<<"dp saving to"<<zipFile;
         if ( err != 0 )
         {
@@ -253,7 +257,8 @@ void dlgPackageExporter::slot_export_package(){
             close();
             return;
         }
-        err = zip_dir_add( archive, tempDir.toStdString().c_str(), ZIP_FL_ENC_GUESS );
+//        err = zip_dir_add( archive, tempDir.toStdString().c_str(), ZIP_FL_ENC_GUESS );
+        err = zip_add_dir( archive, tempDir.toStdString().c_str() );
         if ( err != 0 )
         {
             zip_error_to_str(buf, sizeof(buf), err, errno);
@@ -277,7 +282,8 @@ void dlgPackageExporter::slot_export_package(){
                 zip_error_to_str(buf, sizeof(buf), err, errno);
                 qDebug()<<"zip source error"<<fullName<<fname<<buf;
             }
-            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+//            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+            err = zip_add( archive, fname.toStdString().c_str(), s);
             if ( err == -1 )
             {
                 int sep = 0;

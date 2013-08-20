@@ -40,6 +40,7 @@
 #include "dlgNotepad.h"
 #include "zip.h"
 #include "zipconf.h"
+#include <errno.h>
 
 extern "C" {
     #include "lua.h"
@@ -406,7 +407,8 @@ void Host::saveModules(int sync)
             struct zip_source *s = zip_source_file( zipFile, filename_xml.toStdString().c_str(), 0, 0 );
             QTime t;
             t.start();
-            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+//            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+            int err = zip_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s );
             qDebug()<<"added file error"<<err;
             qDebug()<<"time to add"<<t.elapsed();
             if( zipFile )
