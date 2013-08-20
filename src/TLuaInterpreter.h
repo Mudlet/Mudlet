@@ -63,6 +63,7 @@ class TEvent;
 class TLuaInterpreter : public QThread  {
 
     friend class TForkedProcess;
+    friend class LuaInterface;
 
 Q_OBJECT
 

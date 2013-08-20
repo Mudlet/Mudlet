@@ -211,7 +211,7 @@ static int to_value_end(void* ctx) {
 }
 
 /* See STRATEGY section below */
-static int noop(lua_State* L) {
+static int noop( __attribute__((unused)) lua_State * L) {
     return 0;
 }
 

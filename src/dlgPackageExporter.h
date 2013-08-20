@@ -50,7 +50,7 @@ private:
     QString filePath;
     QString tempDir;
     QString packageName;
-    QString zip;
+    QString zipFile;
 public slots:
     void slot_addFiles();
     void slot_browse_button();
