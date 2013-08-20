@@ -432,11 +432,19 @@ bool XMLexport::writeHost( Host * pT )
     }
     writeEndElement();
     TVar * base = vu->getBase();
-    QListIterator<TVar *> it7( base->getChildren() );
-    while( it7.hasNext() )
+    if ( !base )
     {
-        TVar * var = it7.next();
-        writeVariable( var, lI, vu );
+        lI->getVars( false );
+        base = vu->getBase();
+    }
+    if ( base )
+    {
+        QListIterator<TVar *> it7( base->getChildren() );
+        while( it7.hasNext() )
+        {
+            TVar * var = it7.next();
+            writeVariable( var, lI, vu );
+        }
     }
     writeEndElement();
 
