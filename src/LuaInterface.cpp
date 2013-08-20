@@ -583,6 +583,7 @@ bool LuaInterface::setCValue( QList<TVar *> vars ){
         qDebug()<<"panic in setCValue";
         return false;
     }
+    return true;
 }
 
 bool LuaInterface::setValue( TVar * var ){
@@ -851,6 +852,7 @@ bool LuaInterface::loadVar( TVar* var ){
         qDebug()<<"panic in loadVar";
         return false;
     }
+    return true;
 }
 
 void LuaInterface::renameVar( TVar * var ){

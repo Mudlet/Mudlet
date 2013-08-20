@@ -147,10 +147,12 @@ bool TVar::setValueType(int t){
 bool TVar::setName(QString n, int kt){
     name = n;
     kType = kt;
+    return true;
 }
 
 bool TVar::setName(QString n){
     name = n;
+    return true;
 }
 
 TVar * TVar::getParent(){

@@ -4556,7 +4556,8 @@ void dlgTriggerEditor::saveVar(){
                 {
                     //lets check again
                     if ( var->getValueType() == LUA_TTABLE ){
-                        valueType == LUA_TTABLE;
+                        //HEIKO: obvious logic error used to be valueType == LUA_TABLE
+                        valueType = LUA_TTABLE;
                     }
                     else if ( valueType == LUA_TNUMBER && newValue.toInt() )
                         valueType = LUA_TNUMBER;
@@ -4652,7 +4653,6 @@ void dlgTriggerEditor::saveVar(){
     if ( vu->isSaved( var ) ){
         pItem->setCheckState(0, Qt::Checked);
     }
-    QTreeWidgetItem * parent = pItem->parent();
     if ( ! vu->shouldSave( var ) )
     {
 //        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
@@ -5238,7 +5238,6 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     pItem->setCheckState(0, Qt::Unchecked);
     if ( vu->isSaved( var ) )
         pItem->setCheckState(0, Qt::Checked);
-    QTreeWidgetItem * parent = pItem->parent();
     if ( ! vu->shouldSave( var ) )
     {
 //        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));

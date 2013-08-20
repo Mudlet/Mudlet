@@ -475,6 +475,7 @@ bool XMLexport::writeVariable( TVar * var, LuaInterface * lI, VarUnit * vu )
             writeEndElement();
         }
     }
+    return true;
 }
 
 bool XMLexport::exportGenericPackage( QIODevice * device )
