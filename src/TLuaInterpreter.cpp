@@ -42,7 +42,7 @@
 //#ifdef Q_OS_WIN32
 //    #include "lua_yajl.c"
 //#else
-    #include "lua-yajl2-linux.c"
+//    #include "lua-yajl2-linux.c"
 //#endif
 
 extern "C"
@@ -60,6 +60,12 @@ union mVarTypes {
     string * s;
     QString * qs;
 };*/
+
+
+extern "C"
+{
+    int luaopen_yajl(lua_State*);
+}
 
 extern QStringList gSysErrors;
 

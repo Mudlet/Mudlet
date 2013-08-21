@@ -36,13 +36,18 @@
 #include "mudlet.h"
 #include "TEvent.h"
 #include <QMessageBox>
+#include <QUiLoader>
 #include "dlgNotepad.h"
+#include "zip.h"
+#include "zipconf.h"
+#include <errno.h>
 
 extern "C" {
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
 }
+
 
 Host::Host( int port, QString hostname, QString login, QString pass, int id )
 : mTelnet( this )
@@ -154,6 +159,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mHaveMapperScript( false )
 {
    // mLogStatus = mudlet::self()->mAutolog;
+    mLuaInterface = new LuaInterface(this);
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
     directoryLogFile.append("/log");
@@ -284,7 +290,7 @@ Host::Host()
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
 {
-
+    mLuaInterface = new LuaInterface(this);
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
     directoryLogFile.append("/log");
@@ -311,8 +317,10 @@ Host::~Host()
     mErrorLogFile.close();
 }
 
-void Host::saveModules(int sync){
-    if (mModuleSaveBlock){
+void Host::saveModules(int sync)
+{
+    if (mModuleSaveBlock)
+    {
         qDebug()<<"MODULES SAVING DISABLED UNTIL RELOAD";
         return;
     }
@@ -323,38 +331,102 @@ void Host::saveModules(int sync){
     QDir savePath = QDir(dirName);
     if (!savePath.exists())
         savePath.mkpath(dirName);
-    while(it.hasNext()){
+    while(it.hasNext())
+    {
         it.next();
         QStringList entry = it.value();
         QString filename_xml = entry[0];
         QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        //move the old file, use the key (module name) as the file
-        savePath.rename(filename_xml,dirName+it.key()+time);
+        QString moduleName = it.key();
+        QString tempDir;
+        QString zipName;
+        zip * zipFile = 0;
+        if ( filename_xml.endsWith( "mpackage" ) || filename_xml.endsWith( "zip" ) )
+        {
+            tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
+            filename_xml = tempDir + "/" + moduleName + ".xml";
+            qDebug()<<"attempting to open zip archive"<<entry[0];
+            int err;
+            zipFile = zip_open( entry[0].toStdString().c_str(), 0, &err);
+            qDebug()<<"zip error status"<<err;
+            /*if ( ! zipOpened )
+            {
+                qDebug()<<"could not open archive, recreating it";
+                zip = tempDir + "/" + moduleName + ".zip";
+                QString luaConfig = tempDir + "/config.lua";
+                QFile configFile(luaConfig);
+                if ( !configFile.exists() && configFile.open(QIODevice::WriteOnly | QIODevice::Text) )
+                {
+                    QTextStream out(&configFile);
+                    out << "mpackage = \"" << moduleName << "\"\n";
+                    out.flush();
+                    configFile.close();
+                }
+                if ( filename_xml.endsWith( "mpackage" ) )
+                    filename_xml = filename_xml.left(filename_xml.size()-8)+"xml";
+                else
+                    filename_xml = filename_xml.left(filename_xml.size()-3)+"xml";
+                qDebug()<<"zipping up to"<<tempDir;
+            }
+            else
+            {
+                zipName = filename_xml;
+            }*/
+            zipName = filename_xml;
+            QDir packageDir = QDir(tempDir);
+            if ( !packageDir.exists() ){
+                packageDir.mkpath(tempDir);
+            }
+        }
+        else
+        {
+            savePath.rename(filename_xml,dirName+moduleName+time);//move the old file, use the key (module name) as the file
+        }
         QFile file_xml( filename_xml );
         qDebug()<<"writing module xml for:"<<entry[0];
         if ( file_xml.open( QIODevice::WriteOnly ) )
         {
             XMLexport writer(this);
-            qDebug()<<"successfully wrote module xml for:"<<entry[0];
-            writer.writeModuleXML( & file_xml, it.key());
+            qDebug()<<"successfully wrote module xml for:"<<entry[0]<<"to"<<filename_xml;
+            writer.writeModuleXML( & file_xml, it.key() );
             file_xml.close();
+
             if (entry[1].toInt())
                 modulesToSync << it.key();
         }
-        else{
+        else
+        {
             file_xml.close();
             qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
             qDebug()<<"aborting process to avoid corruption";
             mModuleSaveBlock = true;
             return;
         }
+        if( !zipName.isEmpty() )
+        {
+            struct zip_source *s = zip_source_file( zipFile, filename_xml.toStdString().c_str(), 0, 0 );
+            QTime t;
+            t.start();
+//            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+            int err = zip_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s );
+            qDebug()<<"added file error"<<err;
+            qDebug()<<"time to add"<<t.elapsed();
+            if( zipFile )
+            {
+                err = zip_close( zipFile );
+            }
+            qDebug()<<"close file error"<<err;
+            qDebug()<<"time to close"<<t.elapsed();
+        }
     }
     modulesToWrite.clear();
-    if (sync){
+    if (sync)
+    {
         //synchronize modules across sessions
         QMap<Host *, TConsole *> activeSessions = mudlet::self()->mConsoleMap;
         QMapIterator<Host *, TConsole *> it2(activeSessions);
-        while (it2.hasNext()){
+        while (it2.hasNext())
+        {
             it2.next();
             Host * host = it2.key();
             if (host->mHostName == mHostName)
@@ -363,20 +435,24 @@ void Host::saveModules(int sync){
             QMap<QString, int> modulePri = host->mModulePriorities;
             QMapIterator<QString, int> it3(modulePri);
             QMap<int, QStringList> moduleOrder;
-            while( it3.hasNext() ){
+            while( it3.hasNext() )
+            {
                 it3.next();
                 //QStringList moduleEntry = moduleOrder[it3.value()];
                 //moduleEntry.append(it3.key());
                 moduleOrder[it3.value()].append(it3.key());// = moduleEntry;
             }
             QMapIterator<int, QStringList> it4(moduleOrder);
-            while(it4.hasNext()){
+            while(it4.hasNext())
+            {
                 it4.next();
                 //qDebug()<<"On priority "<<it4.key();
                 QStringList moduleList = it4.value();
-                for(int i=0;i<moduleList.size();i++){
+                for(int i=0;i<moduleList.size();i++)
+                {
                     QString moduleName = moduleList[i];
-                    if (modulesToSync.contains(moduleName)){
+                    if (modulesToSync.contains(moduleName))
+                    {
                         //qDebug()<<"synchronizing module:"<<moduleName<<" in profile:"<<host->mHostName;
                         host->reloadModule(moduleName);
                     }
@@ -386,10 +462,12 @@ void Host::saveModules(int sync){
     }
 }
 
-void Host::reloadModule(QString moduleName){
+void Host::reloadModule(QString moduleName)
+{
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> it(installedModules);
-    while(it.hasNext()){
+    while(it.hasNext())
+    {
         it.next();
         QStringList entry = it.value();
         if (it.key() == moduleName){
@@ -400,7 +478,8 @@ void Host::reloadModule(QString moduleName){
     //iterate through mInstalledModules again and reset the entry flag to be correct.
     //both the installedModules and mInstalled should be in the same order now as well
     QMapIterator<QString, QStringList> it2(mInstalledModules);
-    while(it2.hasNext()){
+    while(it2.hasNext())
+    {
         it2.next();
         QStringList entry = installedModules[it2.key()];
         mInstalledModules[it2.key()] = entry;
@@ -872,15 +951,6 @@ void Host::showUnpackingProgress( QString  txt )
     QApplication::sendPostedEvents();
 }
 
-#include <QtUiTools>
-#ifdef Q_OS_WIN
-    #include "quazip.h"
-    #include "JlCompress.h"
-#else
-    #include <quazip/quazip.h>
-    #include <quazip/JlCompress.h>
-#endif
-
 bool Host::installPackage( QString fileName, int module )
 {
 
@@ -964,8 +1034,76 @@ bool Host::installPackage( QString fileName, int module )
 //            QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
 //            mLuaInterpreter.compileAndExecuteScript( _script );
 //        #else
-            JlCompress::extractDir(fileName, _dest );
+            //JlCompress::extractDir(fileName, _dest );
+        int err = 0;
+        //from: https://gist.github.com/mobius/1759816
+        struct zip_stat zs;
+        struct zip_file *zf;
+//        int fd;
+        long long sum;
+        char buf[100];
+        zip* archive = zip_open( fileName.toStdString().c_str(), 0, &err);
+        if ( err != 0 )
+        {
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            qDebug()<<"zip add dir error"<<buf;
+            return false;
+        }
+        for (int i=0;i<zip_get_num_entries( archive, 0 );i++ )
+        {
+            int zsi = zip_stat_index( archive, i, 0, &zs );
+            if( zsi == 0 )
+            {
+                if ( zs.name[strlen( zs.name )-1] == '/' )
+                {
+                    QDir dir = QDir( zs.name );
+                    if ( !dir.exists() )
+                        dir.mkdir( "." );
+                }
+                else
+                {
+                    zf = zip_fopen_index( archive, i, 0 );
+                    if ( !zf )
+                    {
+                        int sep = 0;
+                        zip_error_get( archive, &err, &sep);
+                        zip_error_to_str(buf, sizeof(buf), err, errno);
+                        qDebug()<<"zip open error"<<buf;
+                        return false;
+                    }
+                    QFile fd(_dest+QString(zs.name));
+                    fd.open(QIODevice::ReadWrite|QIODevice::Truncate);
+                    if ( !fd.isOpen() )
+                    {
+                        qDebug()<<"error opening"<<_dest+QString(zs.name);
+                        return false;
+                    }
+                    sum = 0;
+                    //HEIKO: comparison between signed and unsigned
+                    while( static_cast<zip_uint64_t>(sum) != zs.size )
+                    {
+                        int len = zip_fread( zf, buf, 100 );
+                        if ( len < 0 )
+                        {
+                            qDebug()<<"zip_fread error"<<len;
+                            return false;
+                        }
+                        fd.write( buf, len );
+                        sum += len;
+                    }
+                    fd.close();
+                    zip_fclose( zf );
+                }
+            }
+        }
+        err = zip_close( archive );
+        if ( err != 0 ){
+            zip_error_to_str(buf, sizeof(buf), err, errno);
+            qDebug()<<"close file error"<<buf;
+            return false;
+        }
 //        #endif
+        QString xmlPath = _dest+packageName+".xml";
         mpUnzipDialog->close();
         mpUnzipDialog = 0;
 
@@ -1015,7 +1153,8 @@ bool Host::installPackage( QString fileName, int module )
             QString login = getLogin();
             QString pass = getPass();
             XMLimport reader( this );
-            if (module){
+            if (module)
+            {
                 QStringList moduleEntry;
                 moduleEntry << fileName;
                 moduleEntry << "0";
@@ -1028,6 +1167,7 @@ bool Host::installPackage( QString fileName, int module )
             setName( profileName );
             setLogin( login );
             setPass( pass );
+            file2.close();
         }
     }
     else
@@ -1039,7 +1179,8 @@ bool Host::installPackage( QString fileName, int module )
         QString login = getLogin();
         QString pass = getPass();
         XMLimport reader( this );
-        if (module){
+        if (module)
+        {
             QStringList moduleEntry;
             moduleEntry << fileName;
             moduleEntry << "0";
@@ -1052,13 +1193,14 @@ bool Host::installPackage( QString fileName, int module )
         setName( profileName );
         setLogin( login );
         setPass( pass );
+        file2.close();
     }
-    qDebug()<<"here";
     if( mpEditorDialog )
     {
        mpEditorDialog->doCleanReset();
     }
-    if (!module){
+    if (!module)
+    {
         QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
         QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
         QDir dir_xml;
@@ -1116,10 +1258,12 @@ bool Host::uninstallPackage( QString packageName, int module)
 //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
 //     3=uninstall from a script
 
-    if (module){
+    if (module)
+    {
         if( ! mInstalledModules.contains( packageName ) ) return false;
     }
-    else{
+    else
+    {
         if( ! mInstalledPackages.contains( packageName ) ) return false;
     }
     int dualInstallations=0;
@@ -1138,7 +1282,8 @@ bool Host::uninstallPackage( QString packageName, int module)
     mScriptUnit.uninstall( packageName );
     mKeyUnit.uninstall( packageName );
     qDebug()<<"all uninstall steps complete";
-    if (module){
+    if (module)
+    {
         //if module == 2, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
         mInstalledModules.remove( packageName );
@@ -1148,16 +1293,19 @@ bool Host::uninstallPackage( QString packageName, int module)
         //if module == 1/3, we actually uninstall it.
         qDebug()<<"removing module"<<packageName;
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
-        if (dualInstallations){
+        if (dualInstallations)
+        {
             qDebug()<<"we're a dual install, reinstalling package";
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
             installPackage(entry[0], 0);
         }
     }
-    else{
+    else
+    {
         mInstalledPackages.removeAll( packageName );
-        if (dualInstallations){
+        if (dualInstallations)
+        {
             QStringList entry = mInstalledModules[packageName];
             installPackage(entry[0], 1);
             //restore the module edit flag

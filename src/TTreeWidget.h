@@ -40,14 +40,18 @@ public:
     bool dropMimeData( QTreeWidgetItem * parent, int index, const QMimeData * data, Qt::DropAction action );
     void rowsAboutToBeRemoved ( const QModelIndex & parent, int start, int end );   
     void rowsInserted( const QModelIndex & parent, int start, int end );
+    void mousePressEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
     void setHost( Host * pH );
     void setIsScriptTree();
     void setIsTimerTree();
     void setIsTriggerTree();
     void setIsAliasTree();
     void setIsActionTree();
+    void setIsVarTree();
     void setIsKeyTree();
     void beginInsertRows ( const QModelIndex & parent, int first, int last );
+    void getAllChildren( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
     
 private:
     
@@ -60,8 +64,9 @@ private:
     bool mIsScriptTree;
     bool mIsTimerTree;
     bool mIsKeyTree;
+    bool mIsVarTree;
     bool mIsActionTree;
-    
+    QModelIndex mClickedItem;
     
 signals:
     
