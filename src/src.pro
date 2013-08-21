@@ -18,10 +18,8 @@ unix:LIBS += -lpcre \
     -L/usr/local/lib/ \
     -lyajl \
     -lGLU \
-    -lquazip \
-    -lzzip \
-    -lz \
-    -lzip
+    -lzip \
+    -lz
 
 win32:LIBS += -L"C:\\mudlet5_package" \
     -llua51 \
