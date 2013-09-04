@@ -191,6 +191,89 @@ int TLuaInterpreter::Wait( lua_State *L )
   return 0;
 }
 
+QString TLuaInterpreter::dirToString( lua_State * L, int position )
+{
+    QString dir;
+    int dirNum;
+    if ( lua_isnumber( L, position ) )
+    {
+        dirNum = lua_tonumber( L, position );
+        if ( dirNum <= 0 || dirNum >= 13 )
+            return 0;
+        if ( dirNum == 1 )
+            return "north";
+        if ( dirNum == 2 )
+            return "northeast";
+        if ( dirNum == 3 )
+            return "northwest";
+        if ( dirNum == 4 )
+            return "east";
+        if ( dirNum == 5 )
+            return "west";
+        if ( dirNum == 6 )
+            return "south";
+        if ( dirNum == 7 )
+            return "southeast";
+        if ( dirNum == 8 )
+            return "southwest";
+        if ( dirNum == 9 )
+            return "up";
+        if ( dirNum == 10 )
+            return "down";
+        if ( dirNum == 11 )
+            return "in";
+        if ( dirNum == 12 )
+            return "out";
+    }
+    if ( lua_isstring( L, position ) )
+    {
+        dir = lua_tostring( L, position );
+        return dir;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::dirToNumber( lua_State * L, int position )
+{
+    QString dir;
+    int dirNum;
+    if ( lua_isstring( L, position ) )
+    {
+        dir = lua_tostring( L, position );
+        dir = dir.toLower();
+        if ( dir == "n" || dir == "north" )
+            return 1;
+        if ( dir == "ne" || dir == "northeast" )
+            return 2;
+        if ( dir == "nw" || dir == "northwest" )
+            return 3;
+        if ( dir == "e" || dir == "east" )
+            return 4;
+        if ( dir == "w" || dir == "west" )
+            return 5;
+        if ( dir == "s" || dir == "south" )
+            return 6;
+        if ( dir == "se" || dir == "southeast" )
+            return 7;
+        if ( dir == "sw" || dir == "southwest" )
+            return 8;
+        if ( dir == "u" || dir == "up" )
+            return 9;
+        if ( dir == "d" || dir == "down" )
+            return 10;
+        if ( dir == "in" )
+            return 11;
+        if ( dir == "out" )
+            return 12;
+    }
+    if ( lua_isnumber( L, position ) )
+    {
+        dirNum = lua_tonumber( L, position );
+        return ( dirNum >= 1 && dirNum <= 12 ? dirNum : 0);
+    }
+    return 0;
+}
+
 int TLuaInterpreter::denyCurrentSend( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -1649,22 +1732,22 @@ int TLuaInterpreter::setExitStub( lua_State * L  ){
     //args:room id, direction (as given by the #define direction table), status
     int roomId, dirType;
     bool status;
-    if (!lua_isnumber(L,1)){
+    if (!lua_isnumber(L,1))
+    {
         lua_pushstring( L, "setExitStub: Need a room number as first argument" );
-        lua_error( L );
-        return 1;
-    }
-    else{
-        roomId = lua_tonumber(L,1);
-    }
-    if (!lua_isnumber(L,2)){
-        lua_pushstring( L, "setExitStub: Need a dir number as 2nd argument" );
         lua_error( L );
         return 1;
     }
     else
     {
-        dirType = lua_tonumber(L,2);
+        roomId = lua_tonumber(L,1);
+    }
+    dirType = dirToNumber( L, 2 );
+    if ( ! dirType )
+    {
+        lua_pushstring( L, "setExitStub: Need a dir number as 2nd argument" );
+        lua_error( L );
+        return 1;
     }
     if (!lua_isboolean(L,3))
     {
@@ -1713,45 +1796,57 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     int toRoom;
     int dirType;
     int roomsGiven = 0;
-    if (!lua_isnumber(L,1)){
+    if ( ! lua_isnumber( L, 1 ) )
+    {
         lua_pushstring( L, "connectExitStub: Need a room number as first argument" );
         lua_error( L );
         return 1;
     }
     else
-        roomId = lua_tonumber(L,1);
-    if (!lua_isnumber(L,2)){
+        roomId = lua_tonumber( L, 1);
+    dirType = dirToNumber( L, 2 );
+    if ( ! dirType )
+    {
         lua_pushstring( L, "connectExitStub: Need a direction number (or room id) as 2nd argument" );
         lua_error( L );
         return 1;
     }
-    else
-        dirType = lua_tonumber(L,2);
-    if (!lua_isnumber(L,3) && !lua_isstring(L,3)){
+    if ( ! lua_isnumber( L, 3 ) && ! lua_isstring( L, 3) )
+    {
         roomsGiven = 0;
     }
     else
     {
         roomsGiven = 1;
         toRoom = lua_tonumber(L,2);
-        dirType = lua_tonumber(L,3);
+        dirType = dirToNumber( L, 3 );
+        if( ! dirType )
+        {
+            lua_pushstring( L, "connectExitStub: Invalid direction entered.");
+            lua_error( L );
+            return 1;
+        }
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( !pHost->mpMap ) return 0;
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    if( !pR ){
+    if( ! pR )
+    {
         lua_pushstring( L, "connectExitStub: RoomId doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if(!pR->exitStubs.contains(dirType)){
+    if( ! pR->exitStubs.contains( dirType ) )
+    {
         lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
         lua_error( L );
         return 1;
     }
-    if (roomsGiven){
+    if ( roomsGiven )
+    {
         TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
-        if (!pR_to){
+        if ( ! pR_to )
+        {
             lua_pushstring( L, "connectExitStubs: toRoom doesn't exist" );
             lua_error( L );
             return 1;
@@ -1764,12 +1859,13 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     }
     else
     {
-        if (!pR->exitStubs.contains(dirType)){
+        if ( ! pR->exitStubs.contains( dirType ) )
+        {
             lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
             lua_error( L );
             return 1;
         }
-        pHost->mpMap->connectExitStub(roomId, dirType);
+        pHost->mpMap->connectExitStub( roomId, dirType );
 // Nothing has yet been put onto stack for a LUA return value in this case,
 // and it should always be possible to add a stub exit, so provide a true value :
         lua_pushboolean(L, true );
@@ -3520,16 +3616,12 @@ int TLuaInterpreter::lockExit( lua_State *L )
         id = lua_tonumber( L, 1 );
     }
 
-
-    if( ! lua_isnumber( L, 2 ) )
+    dir = dirToNumber( L, 2 );
+    if( ! dir )
     {
         lua_pushstring( L, "lockExit: wrong argument type" );
         lua_error( L );
         return 1;
-    }
-    else
-    {
-        dir = lua_tonumber( L, 2 );
     }
 
     if( ! lua_isboolean( L, 3 ) )
@@ -3674,16 +3766,12 @@ int TLuaInterpreter::hasExitLock( lua_State *L )
         id = lua_tonumber( L, 1 );
     }
 
-
-    if( ! lua_isnumber( L, 2 ) )
+    dir = dirToNumber( L, 2 );
+    if( ! dir )
     {
         lua_pushstring( L, "lockExit: wrong argument type" );
         lua_error( L );
         return 1;
-    }
-    else
-    {
-        dir = lua_tonumber( L, 2 );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -6550,16 +6638,12 @@ int TLuaInterpreter::setExit( lua_State *L )
     {
         to = lua_tointeger( L, 2 );
     }
-
-    if( ! lua_isnumber( L, 3 ) )
+    dir = dirToNumber( L, 3 );
+    if( ! dir )
     {
         lua_pushstring( L, "setExit: wrong argument type" );
         lua_error( L );
         return 1;
-    }
-    else
-    {
-        dir = lua_tointeger( L, 3 );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -7271,7 +7355,7 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
 {
     int roomID;
     int weight;
-    string text;
+    QString text;
     if( ! lua_isnumber( L, 1 ) )
     {
         lua_pushstring( L, "setExitWeight: wrong argument type" );
@@ -7282,16 +7366,12 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     {
         roomID = lua_tointeger( L, 1 );
     }
-
-    if( ! lua_isstring( L, 2 ) )
+    text = dirToString( L, 2 );
+    if( text == 0 )
     {
         lua_pushstring( L, "setExitWeight: wrong argument type" );
         lua_error( L );
         return 1;
-    }
-    else
-    {
-        text = lua_tostring( L, 2 );
     }
 
     if( ! lua_isnumber( L, 3 ) )
@@ -7305,13 +7385,12 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
         weight = lua_tonumber( L, 3 );
     }
 
-    QString _text = text.c_str();
-    _text = _text.toLower();
+    text = text.toLower();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
     if( pR )
     {
-        pR->setExitWeight(_text, weight );
+        pR->setExitWeight(text, weight );
     }
     return 0;
 }
@@ -7382,24 +7461,12 @@ int TLuaInterpreter::addCustomLine( lua_State * L )
             lua_pop( L, 1 );
         }
     }
-    if ( ! lua_isstring( L, 3 ) )
+    direction = dirToString( L, 3 );
+    if ( direction == 0 )
     {
         lua_pushstring( L, "addCustomLine: Third argument must be direction" );
         lua_error( L );
         return 1;
-    }
-    else
-    {
-        //QStringList validDirections;
-        //validDirections << "NW" << "N" << "NE" << "E" << "SE" << "S" << "SW" << "W";
-
-        direction = QString(lua_tostring( L, 3 )); //note: special exits are case sensitive
-//        if ( ! validDirections.contains( direction ) )
-//        {
-//            lua_pushstring( L, "addCustomLine: Direction argument must be one of NW, N, NE, E, SE, S, SW, W or the special exit command string." );
-//            lua_error( L );
-//            return 1;
-//        }
     }
     if ( lua_isstring( L, 4 ) )
     {
