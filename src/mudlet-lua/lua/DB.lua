@@ -1204,12 +1204,15 @@ end
 ---
 --- @see db:fetch
 function db:eq(field, value, case_insensitive)
+   local fieldname = field.name
+   -- escape column names as per https://www.sqlite.org/lang_expr.html
+   fieldname = '"'..fieldname:gsub("'", "''")..'"'
    if case_insensitive then
       local v = db:_coerce(field, value):lower()
-      return "lower("..field.name..") == "..v
+      return "lower("..fieldname..") == "..v
    else
       local v = db:_coerce(field, value)
-      return field.name.." == "..v
+      return fieldname.." == "..v
    end
 end
 
