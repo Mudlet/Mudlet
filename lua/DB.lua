@@ -9,8 +9,8 @@
 -----------------------------------------------------------------------------
 if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
-require"DebugTools"
-require"TableUtils"
+if not display then require"DebugTools" end
+if not table.contains then require"TableUtils" end
 
 -- TODO those funciton are already definde elsewhere
 -- Tests if a table is empty: this is useful in situations where you find
@@ -719,7 +719,8 @@ function db:fetch_sql(sheet, sql)
    db:echo_sql(sql)
    local cur = conn:execute(sql)
 
-   if cur ~= 0 then
+   -- if we had a syntax error in our SQL, cur will be nil
+   if cur and cur ~= 0 then
       local results = {}
       local row = cur:fetch({}, "a")
 
