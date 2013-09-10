@@ -1486,7 +1486,15 @@ function db.__Timestamp:as_string(format)
       format = "%m-%d-%Y %H:%M:%S"
    end
 
-   return os.date(format, self._timestamp)
+   -- the timestamp is stored in UTC time, so work out the difference in seconds
+   -- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
+   local ts = os.time()
+   local utc = os.date('!*t',ts)
+   local lcl = os.date('*t',ts)
+   lcl.isdst = false
+   local timediff = os.difftime(os.time(lcl), os.time(utc))
+
+   return os.date(format, self._timestamp + timediff)
 end
 
 
