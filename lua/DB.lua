@@ -1480,33 +1480,37 @@ db.__TimestampMT = {
 }
 
 
+-- the timestamp is stored in UTC time, so work out the difference in seconds
+-- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
+local function calculate_UTCdiff()
+   local ts = os.time()
+   local utc = os.date('!*t',ts)
+   local lcl = os.date('*t',ts)
+   lcl.isdst = false
+   return os.difftime(os.time(lcl), os.time(utc))
+end
+
 
 function db.__Timestamp:as_string(format)
    if not format then
       format = "%m-%d-%Y %H:%M:%S"
    end
 
-   -- the timestamp is stored in UTC time, so work out the difference in seconds
-   -- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
-   local ts = os.time()
-   local utc = os.date('!*t',ts)
-   local lcl = os.date('*t',ts)
-   lcl.isdst = false
-   local timediff = os.difftime(os.time(lcl), os.time(utc))
 
-   return os.date(format, self._timestamp + timediff)
+
+   return os.date(format, self._timestamp + calculate_UTCdiff())
 end
 
 
 
 function db.__Timestamp:as_table()
-   return os.date("*t", self._timestamp)
+   return os.date("*t", self._timestamp + calculate_UTCdiff())
 end
 
 
 
 function db.__Timestamp:as_number()
-   return self._timestamp
+   return self._timestamp + calculate_UTCdiff()
 end
 
 
