@@ -6803,7 +6803,7 @@ void dlgTriggerEditor::show_vars( )
     //no repopulation of variables
     changeView( cmVarsView );
     mCurrentVar = 0;
-    mpSourceEditorArea->hide();
+    mpSourceEditorArea->show();
     toggleHiddenVarsButton->show();
     if ( showHiddenVars )
         toggleHiddenVarsButton->setText( "Hide Hidden Variables" );
