@@ -1056,9 +1056,13 @@ bool Host::installPackage( QString fileName, int module )
             {
                 if ( zs.name[strlen( zs.name )-1] == '/' )
                 {
-                    QDir dir = QDir( zs.name );
-                    if ( !dir.exists() )
-                        dir.mkdir( "." );
+                    QDir dir = QDir( _dest );
+                    if ( !dir.exists( zs.name ) ) {
+                        if ( dir.mkdir( zs.name ) == false )
+												{
+												    qDebug()<<"error creating subdirectory: "<<QString(zs.name);
+												}
+										}
                 }
                 else
                 {
