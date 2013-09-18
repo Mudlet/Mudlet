@@ -257,15 +257,6 @@ void dlgPackageExporter::slot_export_package(){
             close();
             return;
         }
-//        err = zip_dir_add( archive, tempDir.toStdString().c_str(), ZIP_FL_ENC_GUESS );
-        err = zip_add_dir( archive, tempDir.toStdString().c_str() );
-        if ( err != 0 )
-        {
-            zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"dp zip add dir error"<<buf;
-            close();
-            return;
-        }
         QDir dir(tempDir);
         QStringList contents = dir.entryList();
         for(int i=0;i<contents.size();i++)
