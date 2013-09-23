@@ -1482,37 +1482,29 @@ db.__TimestampMT = {
 
 -- the timestamp is stored in UTC time, so work out the difference in seconds
 -- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
-local function calculate_UTCdiff()
-   local ts = os.time()
-   local utc = os.date('!*t',ts)
-   local lcl = os.date('*t',ts)
+local function calculate_UTCdiff(ts)
+   local date, time = os.date, os.time
+   local utc = date('!*t',ts)
+   local lcl = date('*t',ts)
    lcl.isdst = false
-   return os.difftime(os.time(lcl), os.time(utc))
+   return os.difftime(time(lcl), time(utc))
 end
-
 
 function db.__Timestamp:as_string(format)
    if not format then
       format = "%m-%d-%Y %H:%M:%S"
    end
 
-
-
-   return os.date(format, self._timestamp + calculate_UTCdiff())
+   return os.date(format, self._timestamp + calculate_UTCdiff(self._timestamp))
 end
-
-
 
 function db.__Timestamp:as_table()
-   return os.date("*t", self._timestamp + calculate_UTCdiff())
+   return os.date("*t", self._timestamp + calculate_UTCdiff(self._timestamp))
 end
-
-
 
 function db.__Timestamp:as_number()
-   return self._timestamp + calculate_UTCdiff()
+   return self._timestamp + calculate_UTCdiff(self._timestamp)
 end
-
 
 
 --- <b><u>TODO</u></b>
@@ -1532,20 +1524,6 @@ function db:Timestamp(ts, fmt)
    end
    return setmetatable(dt, db.__TimestampMT)
 end
-
-
-
--- function db.Timestamp:new(ts, fmt)
---    local dt = {}
---    if type(ts) == "table" then
---       dt._timestamp = os.time(ts)
---    elseif type(ts) == "number" then
---       dt._timestamp = ts
---    elseif assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
---       dt._timestamp = "CURRENT_TIMESTAMP"
---    end
---    return setmetatable(dt, db.__TimestampMT)
--- end
 
 
 
