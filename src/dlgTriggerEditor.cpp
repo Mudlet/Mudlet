@@ -5186,7 +5186,9 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     int varType = var->getValueType();
     int keyType = var->getKeyType();
     QIcon icon;
-    mpVarsMainArea->key_type->setDisabled(false);
+    mpVarsMainArea->key_type->setEnabled(true);
+    mpSourceEditorArea->editor->setReadOnly(false);
+    mpVarsMainArea->var_type->setEnabled(true);
     if (keyType == 4)
         mpVarsMainArea->key_type->setCurrentIndex(1);
     else if (keyType == 3)
@@ -5220,8 +5222,6 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     }
     else
     {
-        mpSourceEditorArea->editor->setReadOnly(false);
-        mpVarsMainArea->var_type->setEnabled(true);
         icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
         if ( varType == LUA_TSTRING )
             mpVarsMainArea->var_type->setCurrentIndex(1);
@@ -6628,6 +6628,7 @@ void dlgTriggerEditor::changeView( int view )
         mNeedUpdateData = false;
     }
 
+    mpSourceEditorArea->editor->setReadOnly(false);
     mCurrentView = view;
 
     mpTriggersMainArea->hide();
