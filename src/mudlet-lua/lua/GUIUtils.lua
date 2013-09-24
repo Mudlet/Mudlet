@@ -786,27 +786,29 @@ if rex then
 	_Echos = {
 		Patterns = {
 			Hex = {
-				[[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
-				rex.new[[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
+					[[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
+					rex.new[[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
 				},
 			Decimal = {
-				-- [[(\x5c?<[0-9,:]+>)|(<r>)]],
-				[[(<[0-9,:]+>)|(<r>)]],
-				rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
+					[[(<[0-9,:]+>)|(<r>)]],
+					rex.new[[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
 				},
 			Color = {
-				[[(<[a-zA-Z_,:]+>)]],
-				rex.new[[<([a-zA-Z_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z_]+))?>]],
+					[[(<[a-zA-Z_,:]+>)]],
+					rex.new[[<([a-zA-Z_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z_]+))?>]],
 				},
 			Ansi = {
-				[[(<[0-9,:]+>)]],
-				rex.new[[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
+					[[(<[0-9,:]+>)]],
+					rex.new[[<([0-9]{1,2})?(?::([0-9]{1,2}))?>]],
 				},
 			},
 		Process = function(str, style)
 			local t = {}
-			local tonumber = tonumber
+			local tonumber, _Echos, color_table = tonumber, _Echos, color_table
 
+			-- s: A subject section (can be an empty string)
+			-- c: colour code
+			-- r: reset code
 			for s, c, r in rex.split(str, _Echos.Patterns[style][1]) do
 				if c and (c:byte(1) == 92) then
 					c = c:sub(2)
@@ -825,7 +827,10 @@ if rex then
 						end
 						if fr and fg and fb then color.fg = { fr, fg, fb } end
 						if br and bg and bb then color.bg = { br, bg, bb } end
-						t[#t+1] = color
+
+						-- if the colour failed to match anything, then what we captured in <> wasn't a colour -
+						-- pass it into the text stream then
+						t[#t+1] = ((fr or br) and color or c)
 					elseif style == 'Color' then
 						if c == "<reset>" then t[#t+1] = "\27reset"
 						else
