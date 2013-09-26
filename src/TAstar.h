@@ -13,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>    // for sqrt
+#include <QDebug>
 
 using namespace boost;
 using namespace std;
@@ -22,6 +23,7 @@ using namespace std;
 struct location
 {
   float y, x, z; // lat, long
+  int id, area;
 };
 typedef float cost;
 
@@ -74,11 +76,13 @@ public:
     : m_location(l), m_goal(goal) {}
   CostType operator()(Vertex u)
   {
-    //    CostType dx = m_location[m_goal].x - m_location[u].x;
-    //    CostType dy = m_location[m_goal].y - m_location[u].y;
-    //    CostType dz = m_location[m_goal].z - m_location[u].z;
-    return 1;
-    //return ::sqrt(dx * dx + dy * dy + dz * dz);
+      if (m_location[m_goal].area != m_location[u].area)
+          return 1;
+      CostType dx = m_location[m_goal].x - m_location[u].x;
+      CostType dy = m_location[m_goal].y - m_location[u].y;
+      //qDebug() << "dx" << dx << "dy" << dy << "\n";
+      CostType dz = m_location[m_goal].z - m_location[u].z;
+      return ::sqrt(dx * dx + dy * dy + dz * dz);
   }
 private:
   LocMap m_location;

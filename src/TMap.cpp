@@ -454,6 +454,7 @@ void TMap::initGraph()
 {
     QTime _time; _time.start();
     locations.clear();
+    roomidToIndex.clear();
     g.clear();
     g = mygraph_t();
     weightmap = get(edge_weight, g);
@@ -474,8 +475,21 @@ void TMap::initGraph()
         l.x = pR->x;
         l.y = pR->y;
         l.z = pR->z;
+        l.id = pR->getId();
+        l.area = pR->getArea();
         locations.push_back( l );
-
+    }
+    for(int i=0;i<locations.size();i++){
+        roomidToIndex[locations[i].id] = i;
+        indexToRoomid[i] = locations[i].id;
+    }
+    for( int _k=0; _k<roomList.size(); _k++ ){
+        TRoom * pR = roomList[_k];
+        if( pR->isLocked || !roomidToIndex.contains(pR->getId()) )
+        {
+            continue;
+        }
+        int roomIndex = roomidToIndex[pR->getId()];
         TRoom * pN = mpRoomDB->getRoom( pR->getNorth() );
         TRoom * pNW = mpRoomDB->getRoom( pR->getNorthwest() );
         TRoom * pNE = mpRoomDB->getRoom( pR->getNortheast() );
@@ -496,12 +510,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_NORTH ) )
             {
-                edgeCount++;
+                //edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getNorth(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                             roomidToIndex[pR->getNorth()],
+                                            g );
                 if( exitWeights.contains("n"))
                     weightmap[e] = pR->getExitWeight("n");
                 else
@@ -512,12 +526,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_SOUTH ) )
             {
-                edgeCount++;
+                //edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getSouth(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getSouth()],
+                                            g );
                 if( exitWeights.contains("s"))
                     weightmap[e] = pR->getExitWeight("s");
                 else
@@ -528,29 +542,28 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_NORTHEAST ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getNortheast(),
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getNortheast()],
                                             g );
                 if( exitWeights.contains("ne"))
                     weightmap[e] = pR->getExitWeight("ne");
                 else
                     weightmap[e] = pNE->getWeight();
-
             }
         }
         if( pE && !pE->isLocked )
         {
             if( !pR->hasExitLock( DIR_EAST ) )
             {
-               edgeCount++;
+               //edgeCount++;
                edge_descriptor e;
                bool inserted;
-               tie(e, inserted) = add_edge( i,
-                                            pR->getEast(),
-                                            g );
+               tie(e, inserted) = add_edge( roomIndex,
+                                           roomidToIndex[pR->getEast()],
+                                           g );
                if( exitWeights.contains("e"))
                    weightmap[e] = pR->getExitWeight("e");
                else
@@ -561,12 +574,13 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_WEST ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getWest(),
-                                             g );
+                bool exit = false;
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getWest()],
+                                            g );
                 if( exitWeights.contains("w"))
                     weightmap[e] = pR->getExitWeight("w");
                 else
@@ -577,12 +591,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_SOUTHWEST ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getSouthwest(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getSouthwest()],
+                                            g );
                 if( exitWeights.contains("sw"))
                     weightmap[e] = pR->getExitWeight("sw");
                 else
@@ -593,12 +607,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_SOUTHEAST ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getSoutheast(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getSoutheast()],
+                                            g );
                 if( exitWeights.contains("se"))
                     weightmap[e] = pR->getExitWeight("se");
                 else
@@ -609,12 +623,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_NORTHWEST ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getNorthwest(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getNorthwest()],
+                                            g );
                 if( exitWeights.contains("nw"))
                     weightmap[e] = pR->getExitWeight("nw");
                 else
@@ -625,12 +639,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_UP ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getUp(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getUp()],
+                                            g );
                 if( exitWeights.contains("up"))
                     weightmap[e] = pR->getExitWeight("up");
                 else
@@ -641,12 +655,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_DOWN ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getDown(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getDown()],
+                                            g );
                 if( exitWeights.contains("down"))
                     weightmap[e] = pR->getExitWeight("down");
                 else
@@ -657,12 +671,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_IN ) )
             {
-                edgeCount++;
+//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( i,
-                                             pR->getIn(),
-                                             g );
+                tie(e, inserted) = add_edge( roomIndex,
+                                            roomidToIndex[pR->getIn()],
+                                            g );
                 if( exitWeights.contains("in"))
                     weightmap[e] = pR->getExitWeight("in");
                 else
@@ -673,12 +687,12 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_OUT ) )
             {
-                 edgeCount++;
+//                 edgeCount++;
                  edge_descriptor e;
                  bool inserted;
-                 tie(e, inserted) = add_edge( i,
-                                              pR->getOut(),
-                                              g );
+                 tie(e, inserted) = add_edge( roomIndex,
+                                              roomidToIndex[pR->getOut()],
+                                             g );
                  if( exitWeights.contains("out"))
                      weightmap[e] = pR->getExitWeight("out");
                  else
@@ -695,16 +709,16 @@ void TMap::initGraph()
                 QString _cmd = it.value();
                 if( _cmd.size()>0 ) _cmd.remove(0,1);//strip special exit lock information
                 TRoom * pSpecial = mpRoomDB->getRoom( _id );
-                if( !pSpecial || pR->hasSpecialExitLock( _id, _cmd ))
+                if( !pSpecial || pR->hasSpecialExitLock( _id, _cmd ) || pSpecial->isLocked)
                     continue;
                 else
                 {
-                    edgeCount++;
+//                    edgeCount++;
                     edge_descriptor e;
                     bool inserted;
-                    tie(e, inserted) = add_edge( i,
-                                                 _id,
-                                                 g );
+                    tie(e, inserted) = add_edge( roomIndex,
+                                                roomidToIndex[pSpecial->getId()],
+                                                g );
                     if( exitWeights.contains(_cmd))
                     {
                         weightmap[e] = pR->getExitWeight(_cmd);
@@ -713,10 +727,11 @@ void TMap::initGraph()
                     {
                         weightmap[e] = pSpecial->getWeight();
                     }
+
                 }
             }
         }
-        if( roomExits == edgeCount ) locations.pop_back();
+//        if( roomExits == edgeCount ) locations.pop_back();
     }
 
     mMapGraphNeedsUpdate = false;
@@ -730,8 +745,8 @@ bool TMap::findPath( int from, int to )
         initGraph();
      }
 
-     vertex start = from;//mRoomId;
-     vertex goal = to;//mTargetID;
+     //vertex start = from;//mRoomId;
+     //vertex goal = to;//mTargetID;
      TRoom * pFrom = mpRoomDB->getRoom( from );
      TRoom * pTo = mpRoomDB->getRoom( to );
 
@@ -740,8 +755,13 @@ bool TMap::findPath( int from, int to )
          return false;
      }
 
+     vertex start = roomidToIndex[from];
+     vertex goal = roomidToIndex[to];
+
      vector<mygraph_t::vertex_descriptor> p(num_vertices(g));
      vector<cost> d(num_vertices(g));
+     QTime t;
+     t.start();
      try
      {
          astar_search( g,
@@ -752,20 +772,23 @@ bool TMap::findPath( int from, int to )
      }
      catch( found_goal fg )
      {
+         qDebug()<<"time elapsed in astar:"<<t.elapsed();
+         t.restart();
          list<vertex> shortest_path;
          for(vertex v = goal; ; v = p[v])
          {
-             cout << "assembling path: v="<<v<<endl;
-             if( ! mpRoomDB->getRoom( v ) )
+             //cout << "assembling path: v="<<v<<endl;
+             int nextRoom = indexToRoomid[v];
+             if( ! mpRoomDB->getRoom( nextRoom ) )
              {
                  cout<<"ERROR path assembly: path room not in map!"<<endl;
                  return false;
              }
-             shortest_path.push_front(v);
+             shortest_path.push_front(nextRoom);
              if(p[v] == v) break;
          }
-         TRoom * pRD1 = mpRoomDB->getRoom(start);
-         TRoom * pRD2 = mpRoomDB->getRoom(goal);
+         TRoom * pRD1 = mpRoomDB->getRoom(from);
+         TRoom * pRD2 = mpRoomDB->getRoom(to);
          if( !pRD1 || !pRD2 ) return false;
          cout << "Shortest path from " << pRD1->getId() << " to "
               << pRD2->getId() << ": ";
@@ -773,7 +796,7 @@ bool TMap::findPath( int from, int to )
          cout << pRD1->getId();
          mPathList.clear();
          mDirList.clear();
-         int curRoom = start;
+         int curRoom = from;
 
          for( ++spi; spi != shortest_path.end(); ++spi )
          {
@@ -861,10 +884,10 @@ bool TMap::findPath( int from, int to )
                  }
              }
 
-             qDebug()<<"added to DirList:"<<mDirList.back();
+             //qDebug()<<"added to DirList:"<<mDirList.back();
              curRoom = *spi;
          }
-
+        qDebug()<<"time elapsed building path"<<t.elapsed();
          return true;
      }
 

@@ -5094,6 +5094,7 @@ void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list)
 }
 
 void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
+    qDebug()<<"var clicked"<<pItem;
     if( ! pItem ) return;
     int state = pItem->checkState( column );
     if ( state == Qt::Checked || state == Qt::PartiallyChecked )
@@ -6629,6 +6630,8 @@ void dlgTriggerEditor::changeView( int view )
     }
 
     mpSourceEditorArea->editor->setReadOnly(false);
+    if (mCurrentView != view)
+        mpSourceEditorArea->editor->clear();
     mCurrentView = view;
 
     mpTriggersMainArea->hide();

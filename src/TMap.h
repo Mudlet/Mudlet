@@ -129,6 +129,8 @@ public:
     dlgMapper * mpMapper;
     QList<int> mTestedNodes;
     QList<int> conList;
+    QMap<int, int> roomidToIndex;
+    QMap<int, int> indexToRoomid;
     int mPlausaOptOut;
 
     QMap<QString, int> pixNameTable;
