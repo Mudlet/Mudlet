@@ -98,6 +98,8 @@ end
 
 --- Determines if a table contains a value as a key or as a value (recursive).
 function table.contains(t, value)
+	if type(t) ~= "table" then return nil, "first parameter passed isn't a table" end
+
 	for k, v in pairs(t) do
 		if v == value then
 			return true
