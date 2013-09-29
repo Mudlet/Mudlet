@@ -79,7 +79,15 @@ datetime = {
    }
 }
 
-
+-- the timestamp is stored in UTC time, so work out the difference in seconds
+-- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
+local function calculate_UTCdiff(ts)
+   local date, time = os.date, os.time
+   local utc = date('!*t',ts)
+   local lcl = date('*t',ts)
+   lcl.isdst = false
+   return os.difftime(time(lcl), time(utc))
+end
 
 -- NOT LUADOC
 -- The rex.match function does not return named patterns even if you use named capture
@@ -214,6 +222,7 @@ end
 -- NOT LUADOC
 -- Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to
 -- prevent inadvertant SQL injection.
+-- called when generating the schema
 function db:_sql_convert(value)
    local t = db:_sql_type(value)
 
@@ -344,7 +353,7 @@ function db:_sql_values(values)
          if not t._timestamp then
             return "NULL"
          else
-            s = tostring(t._timestamp)
+            s = "datetime('"..t._timestamp.."', 'unixepoch')"
          end
       else
          s = tostring(v)
@@ -1170,7 +1179,10 @@ function db:_coerce_sheet(sheet, tbl)
             if field.type == "number" then
                tbl[k] = tonumber(tbl[k]) or tbl[k]
             elseif field.type == "datetime" then
-               tbl[k] = db:Timestamp(datetime:parse(tbl[k], nil, true))
+               -- the value, tbl[k], is currently in a UTC timestamp
+               local localtime = datetime:parse(tbl[k], nil, true)
+               -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
+               tbl[k] = db:Timestamp(localtime + calculate_UTCdiff(localtime))
             end
          end
       end
@@ -1191,7 +1203,7 @@ function db:_coerce(field, value)
       if value._timestamp == false then
          return "NULL"
       else
-         return tonumber(value._timestamp) or "'"..value.."'"
+         return "datetime('"..value._timestamp.."', 'unixepoch')" or "'"..value.."'"
       end
    else
       return "'"..tostring(value):gsub("'", "''").."'"
@@ -1479,16 +1491,6 @@ db.__TimestampMT = {
    __index = db.__Timestamp
 }
 
-
--- the timestamp is stored in UTC time, so work out the difference in seconds
--- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
-local function calculate_UTCdiff(ts)
-   local date, time = os.date, os.time
-   local utc = date('!*t',ts)
-   local lcl = date('*t',ts)
-   lcl.isdst = false
-   return os.difftime(time(lcl), time(utc))
-end
 
 function db.__Timestamp:as_string(format)
    if not format then
