@@ -132,7 +132,7 @@ function datetime:parse(source, format, as_epoch)
    local fmt = datetime:_get_pattern(format)
    local m = {fmt:tfind(source)}
 
-   if m then
+   if m and m[3] then
       m = m[3]
       dt = {}
 
