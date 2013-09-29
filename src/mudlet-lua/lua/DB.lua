@@ -1495,14 +1495,21 @@ function db.__Timestamp:as_string(format)
       format = "%m-%d-%Y %H:%M:%S"
    end
 
+   -- given how we have an as_string function, having to wrap it in tostring() is a bit silly. So in this case, return nil as a string
+   if type(self._timestamp) ~= "number" then return "nil", "db.Timestamp:as_string: timestamp seems to be invalid and isn't a number" end
+
    return os.date(format, self._timestamp + calculate_UTCdiff(self._timestamp))
 end
 
 function db.__Timestamp:as_table()
+   if type(self._timestamp) ~= "number" then return nil, "db.Timestamp:as_string: timestamp seems to be invalid and isn't a number" end
+
    return os.date("*t", self._timestamp + calculate_UTCdiff(self._timestamp))
 end
 
 function db.__Timestamp:as_number()
+   if type(self._timestamp) ~= "number" then return nil, "db.Timestamp:as_string: timestamp seems to be invalid and isn't a number" end
+
    return self._timestamp + calculate_UTCdiff(self._timestamp)
 end
 
