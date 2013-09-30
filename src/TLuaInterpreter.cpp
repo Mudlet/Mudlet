@@ -9870,10 +9870,10 @@ void TLuaInterpreter::parseJSON( QString & key, QString & string_data, QString p
     {
         {
             string e;
-            if( lua_isstring( L, 1 ) )
+            if( lua_isstring( L, -1 ) )
             {
                 e = "Lua error:";
-                e += lua_tostring( L, 1 );
+                e += lua_tostring( L, -1 );
             }
             QString _n = "JSON decoder error:";
             QString _f = "json_to_value";
