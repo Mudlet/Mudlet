@@ -81,7 +81,7 @@ datetime = {
 
 -- the timestamp is stored in UTC time, so work out the difference in seconds
 -- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
-local function calculate_UTCdiff(ts)
+function datetime:calculate_UTCdiff(ts)
    local date, time = os.date, os.time
    local utc = date('!*t',ts)
    local lcl = date('*t',ts)
@@ -1182,7 +1182,7 @@ function db:_coerce_sheet(sheet, tbl)
                -- the value, tbl[k], is currently in a UTC timestamp
                local localtime = datetime:parse(tbl[k], nil, true)
                -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
-               tbl[k] = db:Timestamp(localtime + calculate_UTCdiff(localtime))
+               tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
             end
          end
       end
@@ -1513,6 +1513,12 @@ function db.__Timestamp:as_number()
    if type(self._timestamp) ~= "number" then return nil, "db.Timestamp:as_number: timestamp seems to be invalid and isn't a number" end
 
    return self._timestamp
+end
+
+function db.__Timestamp:set(timestamp)
+   assert(type(timestamp) == "number", "db.Timestamp:set: timestamp needs to be a number")
+
+   self._timestamp = timestamp
 end
 
 
