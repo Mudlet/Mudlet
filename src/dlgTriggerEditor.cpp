@@ -4655,11 +4655,9 @@ void dlgTriggerEditor::saveVar(){
     }
     if ( ! vu->shouldSave( var ) )
     {
-//        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
-        pItem->setDisabled( true );
+        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsUserCheckable));
+        pItem->setForeground(0, QBrush(QColor("grey")));
         pItem->setToolTip(0, "");
-//        pItem->setData(0, Qt::CheckStateRole, QVariant());
-//        qDebug()<<var->getName();
     }
     pItem->setData( 0, Qt::UserRole, var->getValueType() );
     QIcon icon;
@@ -5163,7 +5161,7 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     TVar * var = vu->getWVar(pItem);
-    qDebug()<<"current var"<<var;
+    qDebug()<<"current var"<<var<<var->getName();
     if (!var)
     {
         mpVarsMainArea->hideVariable->setChecked( false );
@@ -5241,11 +5239,9 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         pItem->setCheckState(0, Qt::Checked);
     if ( ! vu->shouldSave( var ) )
     {
-//        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
+        pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsUserCheckable));
+        pItem->setForeground(0, QBrush(QColor("grey")));
         pItem->setToolTip(0, "");
-        pItem->setDisabled( true );
-//        pItem->setData(0, Qt::CheckStateRole, QVariant());
-//        qDebug()<<var->getName();
     }
     pItem->setData( 0, Qt::UserRole, var->getValueType() );
     pItem->setIcon( 0, icon );

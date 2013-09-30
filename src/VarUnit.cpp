@@ -73,11 +73,9 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             if ( isSaved( child ) )
                 pItem->setCheckState(0, Qt::Checked);
             if ( ! shouldSave( child ) ){//6 is lua_tfunction, parent must be saveable as well if not global
-//                pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
-                pItem->setDisabled( true );
+                pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsUserCheckable));
+                pItem->setForeground(0, QBrush(QColor("grey")));
                 pItem->setToolTip(0, "");
-//                pItem->setData(0, Qt::CheckStateRole, QVariant());
-//                qDebug()<<child->getName();
             }
             pItem->setData( 0, Qt::UserRole, child->getValueType() );
             QIcon icon;
