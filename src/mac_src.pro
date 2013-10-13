@@ -9,7 +9,7 @@ QMAKE_CXX = g++
 
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
-QT += network opengl uitools
+QT += network opengl uitools multimedia
 
 cache()
 
@@ -239,7 +239,9 @@ FORMS += ui/connection_profiles.ui \
     ui/package_manager.ui \
     ui/module_manager.ui \
     ui/package_manager_unpack.ui \
-    ui/dlgPackageExporter.ui
+    ui/dlgPackageExporter.ui \
+    ui/custom_lines.ui \
+    ui/vars_main_area.ui
 
 win32: {
     SOURCES += lua_yajl.c
