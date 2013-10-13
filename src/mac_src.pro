@@ -248,8 +248,12 @@ win32: {
     SOURCES += lua_yajl.c
 }
 
-unix: {
+unix!macx: {
     SOURCES += lua_yajl1.c
+}
+
+macx: {
+    SOURCES += lua_yajl.c
 }
 
 TEMPLATE = app

@@ -102,3 +102,5 @@ src/wglext.h
 src/.qmake.cache
 
 src/mac_src.pro.user.77560cc.2.3pre1
+
+src/qrc_mudlet_alpha.cpp
