@@ -1,26 +1,18 @@
 CONFIG += release
 CONFIG -= app_bundle
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
 QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 
-QMAKE_CC = gcc
-QMAKE_CXX = g++
+# Necessary? We should use the default compiler preferred by Qt on the system (clang vs gcc)
+# QMAKE_CC = gcc
+# QMAKE_CXX = g++
 
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
 QT += network opengl uitools multimedia
 
 cache()
-
-# workaround https://bugreports.qt-project.org/browse/QTBUG-22829 when using Boost 1.48+
-# QMAKE_MOC = $$QMAKE_MOC -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
-
-#macx:INCLUDEPATH += /Users/heikokoehn/Downloads/lua5_1_4_MacOS106_lib/include \
-#/Users/heikokoehn/Downloads/boost_1_46_1 \
-#/usr/local/include/yajl/include
-
-# macx:INCLUDEPATH += /opt/local/include
 
 # use pkg-config whenever possible
 # I'm not certain whenever latest 1.54 boost will work, or we need 1.48
@@ -104,7 +96,6 @@ SOURCES += TConsole.cpp \
     dlgMapper.cpp \
     TRoom.cpp \
     TMap.cpp \
-    #lua_yajl.c \
     TBuffer.cpp \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
