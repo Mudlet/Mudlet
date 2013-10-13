@@ -1,31 +1,56 @@
-CONFIG += release uitools
-CONFIG += app_bundle
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.4
+CONFIG += release
+CONFIG -= app_bundle
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5
+QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wno-deprecated -Wno-unused-parameter
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
+
+QMAKE_CC = gcc
+QMAKE_CXX = g++
 
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
-QT += network opengl phonon
+QT += network opengl uitools
 
+cache()
 
+# workaround https://bugreports.qt-project.org/browse/QTBUG-22829 when using Boost 1.48+
+# QMAKE_MOC = $$QMAKE_MOC -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
 
-macx:INCLUDEPATH += /Users/heikokoehn/Downloads/lua5_1_4_MacOS106_lib/include \
-/Users/heikokoehn/Downloads/boost_1_46_1 \
-/usr/local/include/yajl/include
+#macx:INCLUDEPATH += /Users/heikokoehn/Downloads/lua5_1_4_MacOS106_lib/include \
+#/Users/heikokoehn/Downloads/boost_1_46_1 \
+#/usr/local/include/yajl/include
+
+# macx:INCLUDEPATH += /opt/local/include
+
+# use pkg-config whenever possible
+# I'm not certain whenever latest 1.54 boost will work, or we need 1.48
+#  (or whenever we actually need to link to it here)
+macx {
+    # http://stackoverflow.com/a/16972067
+    QT_CONFIG -= no-pkg-config
+    CONFIG += link_pkgconfig
+    PKGCONFIG += hunspell lua yajl libpcre libzip
+}
+
 
 macx:LIBS += \
-/Users/heikokoehn/lib/liblua.a \
+#/Users/heikokoehn/lib/liblua.a \
+# -L /opt/local/lib \ #don't link to macports libraries - should be self-contained
+#-llua \ #statically include Lua, because we aren't shipping a dylib
+#/opt/local/lib/liblua.a \
 #/usr/local/lib/libluajit-5.1.a \
-/usr/local/lib/libzzip.a \
--F../Frameworks \
--L../Frameworks \
--lpcre \
--lhunspell \
+#/usr/local/lib/libzzip.a \
+#-lzzip \ #statically include zzip, because we aren't shipping a dylib
+#/opt/local/lib/libzzip.a \
+#-F../Frameworks \
+#-L../Frameworks \
+# -lpcre \ # while we include a pcre dylib, it is version 1 while this Mudlet is built against 2 as reported by otool - static-linking for safety
+#/opt/local/lib/libpcre.a \
+#-lhunspell \ #macports handles this via pkg-config
 -lz \
--lyajl
+#/usr/local/lib/libyajl_s.a #-lyajl or even lyajl_s fail, because the linker tries to use the .dylib then - and fails
 
-unix:INCLUDEPATH += /usr/include/lua5.1
+#unix:INCLUDEPATH += /usr/include/lua5.1
 
 INCLUDEPATH += irc/include
 
@@ -102,7 +127,9 @@ SOURCES += TConsole.cpp \
     dlgIRC.cpp \
     T2DMap.cpp \
     dlgRoomExits.cpp \
-    luazip.c
+    exitstreewidget.cpp \
+    luazip.c \
+    dlgPackageExporter.cpp
 
 
 HEADERS += mudlet.h \
@@ -177,7 +204,9 @@ HEADERS += mudlet.h \
     irc/include/ircutil.h \
     dlgIRC.h \
     T2DMap.h \
-    dlgRoomExits.h
+    dlgRoomExits.h \
+    exitstreewidget.h \
+    dlgPackageExporter.h
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \
@@ -209,7 +238,8 @@ FORMS += ui/connection_profiles.ui \
     ui/lacking_mapper_script.ui \
     ui/package_manager.ui \
     ui/module_manager.ui \
-    ui/package_manager_unpack.ui
+    ui/package_manager_unpack.ui \
+    ui/dlgPackageExporter.ui
 
 win32: {
     SOURCES += lua_yajl.c
@@ -239,3 +269,4 @@ INSTALLS += fonts \
 
 OTHER_FILES += \
     mudlet_documentation.txt
+
