@@ -47,7 +47,8 @@ macx:LIBS += \
 # -lpcre \ # while we include a pcre dylib, it is version 1 while this Mudlet is built against 2 as reported by otool - static-linking for safety
 #/opt/local/lib/libpcre.a \
 #-lhunspell \ #macports handles this via pkg-config
--lz \
+    -lz \
+    -lGLU
 #/usr/local/lib/libyajl_s.a #-lyajl or even lyajl_s fail, because the linker tries to use the .dylib then - and fails
 
 #unix:INCLUDEPATH += /usr/include/lua5.1
