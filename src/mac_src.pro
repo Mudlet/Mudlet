@@ -34,24 +34,9 @@ macx {
 
 
 macx:LIBS += \
-#/Users/heikokoehn/lib/liblua.a \
-# -L /opt/local/lib \ #don't link to macports libraries - should be self-contained
-#-llua \ #statically include Lua, because we aren't shipping a dylib
-#/opt/local/lib/liblua.a \
-#/usr/local/lib/libluajit-5.1.a \
-#/usr/local/lib/libzzip.a \
-#-lzzip \ #statically include zzip, because we aren't shipping a dylib
-#/opt/local/lib/libzzip.a \
-#-F../Frameworks \
-#-L../Frameworks \
-# -lpcre \ # while we include a pcre dylib, it is version 1 while this Mudlet is built against 2 as reported by otool - static-linking for safety
-#/opt/local/lib/libpcre.a \
-#-lhunspell \ #macports handles this via pkg-config
+    # I didn't see an obvious pkg-config option for these two
     -lz \
-    -lGLU
-#/usr/local/lib/libyajl_s.a #-lyajl or even lyajl_s fail, because the linker tries to use the .dylib then - and fails
-
-#unix:INCLUDEPATH += /usr/include/lua5.1
+    -lzzip
 
 INCLUDEPATH += irc/include
 
@@ -130,7 +115,12 @@ SOURCES += TConsole.cpp \
     dlgRoomExits.cpp \
     exitstreewidget.cpp \
     luazip.c \
-    dlgPackageExporter.cpp
+    dlgPackageExporter.cpp \
+    TRoomDB.cpp \
+    TVar.cpp \
+    LuaInterface.cpp \
+    VarUnit.cpp \
+    dlgVarsMainArea.cpp
 
 
 HEADERS += mudlet.h \
@@ -207,7 +197,12 @@ HEADERS += mudlet.h \
     T2DMap.h \
     dlgRoomExits.h \
     exitstreewidget.h \
-    dlgPackageExporter.h
+    dlgPackageExporter.h \
+    TRoomDB.h \
+    TVar.h \
+    LuaInterface.h \
+    VarUnit.h \
+    dlgVarsMainArea.h
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \
