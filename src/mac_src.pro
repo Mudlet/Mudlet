@@ -1,4 +1,3 @@
-CONFIG += release
 CONFIG -= app_bundle
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
 QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
