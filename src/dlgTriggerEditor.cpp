@@ -909,6 +909,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     //mpSourceEditorArea->highlighter->rehighlight();
     tree_widget_search_results_main->clear();
     tree_widget_search_results_main->show();
+    tree_widget_search_results_main->setUpdatesEnabled( false );
 
     // type   | name | line number/pattern/name what has been found
     //-------------------------------------------------------------------------
@@ -1305,14 +1306,21 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
         LuaInterface * lI = mpHost->getLuaInterface();
         VarUnit * vu = lI->getVarUnit();
         TVar * base = vu->getBase();
-        QListIterator<TVar *> it(base->getChildren());
+        QListIterator<TVar *> it(base->getChildren(0));
+        QTime t;
+        t.start();
         while( it.hasNext() )
         {
             TVar * var = it.next();
+            if ( ! showHiddenVars && vu->isHidden( var ) )
+                continue;
             //recurse down this variable
             QList< TVar * > list;
-            recurseVariablesDown( var, list );
+            qDebug()<<"time to recurse vars down";
+            recurseVariablesDown( var, list, 0 );
+            qDebug()<<t.restart();
             QListIterator<TVar *> it2(list);
+            qDebug()<<"time to recurse down this list";
             while( it2.hasNext() )
             {
                 TVar * var2 = it2.next();
@@ -1338,10 +1346,11 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     tree_widget_search_results_main->addTopLevelItem( pItem2 );
                 }
             }
-
+            qDebug()<<t.restart();
         }
     }
     mpSourceEditorArea->highlighter->setSearchPattern( s );
+    tree_widget_search_results_main->setUpdatesEnabled( true );
 }
 
 void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const QString & s )
@@ -4437,7 +4446,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
     if ( valueType == LUA_TTABLE && cValueType != LUA_TTABLE )
     {
         //trying to change a table to something else
-        if ( ( var->getChildren() ).size() )
+        if ( ( var->getChildren(0) ).size() )
         {
             return 0;
         }
@@ -5083,12 +5092,12 @@ void dlgTriggerEditor::recurseVariablesDown( QTreeWidgetItem *pItem, QList< QTre
         recurseVariablesDown( pItem->child(i), list );
 }
 
-void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list)
+void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list, int sort)
 {
     list.append( var );
-    QListIterator<TVar *> it(var->getChildren());
+    QListIterator<TVar *> it(var->getChildren(sort));
     while (it.hasNext())
-        recurseVariablesDown( it.next(), list );
+        recurseVariablesDown( it.next(), list, sort );
 }
 
 void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){

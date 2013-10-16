@@ -58,7 +58,7 @@ bool VarUnit::shouldSave( TVar * var ){
 
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
     QList< QTreeWidgetItem * > cList;
-    QListIterator<TVar *> it(var->getChildren());
+    QListIterator<TVar *> it(var->getChildren(1));
     while(it.hasNext()){
         TVar * child = it.next();
 //        qDebug()<<child->getName()<<isHidden(child);

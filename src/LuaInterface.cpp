@@ -86,7 +86,7 @@ bool LuaInterface::validMove(QTreeWidgetItem * p){
 }
 
 void LuaInterface::getAllChildren( TVar * var, QList<TVar *> * list){
-    QListIterator<TVar *> it(var->getChildren());
+    QListIterator<TVar *> it(var->getChildren(1));
     if (varUnit->isSaved(var) || var->saved)
         list->append(var);
     else

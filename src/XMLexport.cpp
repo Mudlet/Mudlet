@@ -439,7 +439,7 @@ bool XMLexport::writeHost( Host * pT )
     }
     if ( base )
     {
-        QListIterator<TVar *> it7( base->getChildren() );
+        QListIterator<TVar *> it7( base->getChildren(0) );
         while( it7.hasNext() )
         {
             TVar * var = it7.next();
@@ -462,7 +462,7 @@ bool XMLexport::writeVariable( TVar * var, LuaInterface * lI, VarUnit * vu )
             writeTextElement( "keyType", QString::number( var->getKeyType() ) );
             writeTextElement( "value", lI->getValue( var ) );
             writeTextElement( "valueType", QString::number( var->getValueType() ) );
-            QListIterator<TVar *> it( var->getChildren() );
+            QListIterator<TVar *> it( var->getChildren(0) );
             while( it.hasNext() )
             {
                 TVar * var = it.next();

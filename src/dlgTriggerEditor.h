@@ -96,7 +96,7 @@ public:
     void                        changeView( int );
     void                        recurseVariablesUp( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
-    void                        recurseVariablesDown( TVar *, QList< TVar * > & );
+    void                        recurseVariablesDown( TVar *, QList< TVar * > &, int );
     void                        show_vars( );
 
 signals:

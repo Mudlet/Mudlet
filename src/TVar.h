@@ -43,7 +43,7 @@ public:
     void    setNewName(QString, int);
     void    setNewName(QString);
     void    setReference(bool);
-    QList<TVar *>  getChildren();
+    QList<TVar *>  getChildren(int);
     TVar *  getParent();
     QString getValue();
     QString getName();

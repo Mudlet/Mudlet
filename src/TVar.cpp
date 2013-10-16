@@ -75,8 +75,9 @@ bool TVarLessThan( TVar* var, TVar* var2 ){
     return a.toLower() < b.toLower();
 }
 
-QList<TVar *> TVar::getChildren(){
-    qSort(children.begin(), children.end(), TVarLessThan);
+QList<TVar *> TVar::getChildren(int sort=1){
+    if (sort)
+        qSort(children.begin(), children.end(), TVarLessThan);
     return children;
 }
 
