@@ -6,8 +6,8 @@ describe("Tests DB.lua functions", function()
     -- add in the location of Lua libraries on Ubuntu 12.04
     package.path = package.path .. "/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/lib/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?/init.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua"
 
-    rex = require"rex_pcre"
-    require"luasql.sqlite3"
+    luasql = require"luasql.sqlite3"
+    rex    = require"rex_pcre"
 
     -- define some common Mudlet functions essential to operation
     function getMudletHomeDir() return "." end
