@@ -190,7 +190,7 @@ end
 -----------------------------------------------------------------------------
 -- The database wrapper library
 -----------------------------------------------------------------------------
-if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
+if package.loaded["luasql.sqlite3"] then luasql = require "luasql.sqlite3" end
 
 db = {}
 db.__autocommit = {}
