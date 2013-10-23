@@ -258,4 +258,89 @@ describe("Tests DB.lua functions", function()
       assert.is_true(newrow.row3 == "")
     end)
   end)
+
+  describe("Tests, if options are correctly recognised and applied.",
+  function()
+
+    before_each(function()
+      mydb = db:create("mydb", 
+        { 
+          sheet = { 
+            name = "", id = 0, 
+            _index = { "name" },
+            _unique = { "id" },
+            _violations = "FAIL"
+          }
+        })
+    end)
+
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+    end)
+
+    it("Tests, if the options are filtered out correctly on creation.", 
+      function()
+
+        db:add(mydb.sheet, {id = 0, name = "Bob"})
+        local rows = db:fetch(mydb.sheet)
+
+        assert.equals(3, table.size(rows[1])) -- We expect 2 columns plus a
+                                              -- _row_id
+
+        assert.are.same({ _row_id = 1, id = 0, name = "Bob" }, rows[1])
+
+      end)
+
+    it("Tests, if all indexes are applied correctly.",
+      function()
+
+        local conn = db.__conn.mydb
+        local cur = conn:execute("SELECT * FROM sqlite_master" ..
+                                 " WHERE type = 'index'")
+        local results = {}
+
+        if cur and cur ~= 0 then
+          local row = cur:fetch({}, "a")
+
+          while row do
+            results[#results+1] = row
+            row = cur:fetch({}, "a")
+          end
+          cur:close()
+        end
+
+        assert.equals(3, #results)
+
+        for _, v in ipairs(results) do
+
+          local expected
+
+          if v.name == "sqlite_autoindex_sheet_1" then
+            expected = { type = "index", name = "sqlite_autoindex_sheet_1",
+                         rootpage = 3, tbl_name = "sheet" }
+          elseif v.name == "idx_sheet_c_name" then
+            expected = { type = "index", name = "idx_sheet_c_name",
+                         rootpage = 5, tbl_name = "sheet",
+                         sql = 'CREATE INDEX idx_sheet_c_name ' ..
+                               'ON sheet ("name")' 
+                       }
+          elseif v.name == "idx_sheet_c_id" then
+            expected = { type = "index", name = "idx_sheet_c_id",
+                         rootpage = 6, tbl_name = "sheet",
+                         sql = 'CREATE UNIQUE INDEX idx_sheet_c_id ' ..
+                               'ON sheet ("id")' 
+                       }
+          end
+
+          assert.are.same(expected, v)
+
+        end 
+
+      end)
+
+  end)
+
 end)
