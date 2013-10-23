@@ -316,20 +316,23 @@ describe("Tests DB.lua functions", function()
 
         for _, v in ipairs(results) do
 
+          v.rootpage = nil -- skip the rootpage, as this is nothing we can
+                                 -- change
+
           local expected
 
           if v.name == "sqlite_autoindex_sheet_1" then
             expected = { type = "index", name = "sqlite_autoindex_sheet_1",
-                         rootpage = 3, tbl_name = "sheet" }
+                         tbl_name = "sheet" }
           elseif v.name == "idx_sheet_c_name" then
             expected = { type = "index", name = "idx_sheet_c_name",
-                         rootpage = 5, tbl_name = "sheet",
+                         tbl_name = "sheet",
                          sql = 'CREATE INDEX idx_sheet_c_name ' ..
                                'ON sheet ("name")' 
                        }
           elseif v.name == "idx_sheet_c_id" then
             expected = { type = "index", name = "idx_sheet_c_id",
-                         rootpage = 6, tbl_name = "sheet",
+                         tbl_name = "sheet",
                          sql = 'CREATE UNIQUE INDEX idx_sheet_c_id ' ..
                                'ON sheet ("id")' 
                        }
