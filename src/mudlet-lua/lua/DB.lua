@@ -456,12 +456,16 @@ function db:create(db_name, sheets)
             t[v] = ""
          end
          sht = t
-      else                          -- sheet provided in the sheet = {"colun1" = default} format
+      else                          -- sheet provided in the sheet = {"column1" = default} format
+         local opts = {}
          for k, v in pairs(sht) do
             if string.starts(k, "_") then
                options[k] = v
-               sht[k] = ""
+               opts[#opts + 1] = k
             end
+         end
+         for _, v in ipairs(opts) do
+            sht[v] = nil
          end
       end
 
