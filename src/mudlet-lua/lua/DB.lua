@@ -646,7 +646,6 @@ function db:_migrate(db_name, s_name)
                assert(ret, str)
             end
          end
-      --FIXME   
       end
    end
 
