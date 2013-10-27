@@ -254,8 +254,142 @@ describe("Tests DB.lua functions", function()
       mydb = db:create("mydb", { sheet = newschema })
       assert.are.same(db.__schema.mydb.sheet.columns, newschema)
       local newrow = db:fetch(mydb.sheet)[1]
-      assert.is_true(newrow.row1 == "some data")
-      assert.is_true(newrow.row3 == "")
+      assert.are.same("some data", newrow.row1)
+      assert.are.same("", newrow.row3)
     end)
+  end)
+
+  describe("Tests, if options are correctly recognised and applied",
+  function()
+
+    before_each(function()
+      mydb = db:create("mydb", 
+        { 
+          sheet = { 
+            name = "", id = 0, 
+            _index = { "name" },
+            _unique = { "id" },
+            _violations = "FAIL"
+          }
+        })
+    end)
+
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+    end)
+
+    it("should correctly filter the options on creation.", 
+      function()
+
+        db:add(mydb.sheet, {id = 0, name = "Bob"})
+        local rows = db:fetch(mydb.sheet)
+
+        assert.equals(3, table.size(rows[1])) -- We expect 2 columns plus a
+                                              -- _row_id
+
+        assert.are.same({ _row_id = 1, id = 0, name = "Bob" }, rows[1])
+
+      end)
+
+    it("should apply all indexes correctly.",
+      function()
+
+        local conn = db.__conn.mydb
+        local cur = conn:execute("SELECT * FROM sqlite_master" ..
+                                 " WHERE type = 'index'")
+        local results = {}
+
+        if cur and cur ~= 0 then
+          local row = cur:fetch({}, "a")
+
+          while row do
+            results[#results+1] = row
+            row = cur:fetch({}, "a")
+          end
+          cur:close()
+        end
+
+        assert.equals(3, #results)
+
+        for _, v in ipairs(results) do
+
+          v.rootpage = nil -- skip the rootpage, as this is nothing we can
+                                 -- change
+
+          local expected
+
+          if v.name == "sqlite_autoindex_sheet_1" then
+            expected = { type = "index", name = "sqlite_autoindex_sheet_1",
+                         tbl_name = "sheet" }
+          elseif v.name == "idx_sheet_c_name" then
+            expected = { type = "index", name = "idx_sheet_c_name",
+                         tbl_name = "sheet",
+                         sql = 'CREATE INDEX idx_sheet_c_name ' ..
+                               'ON sheet ("name")' 
+                       }
+          elseif v.name == "idx_sheet_c_id" then
+            expected = { type = "index", name = "idx_sheet_c_id",
+                         tbl_name = "sheet",
+                         sql = 'CREATE UNIQUE INDEX idx_sheet_c_id ' ..
+                               'ON sheet ("id")' 
+                       }
+          end
+
+          assert.are.same(expected, v)
+
+        end 
+
+      end)
+
+  end)
+
+  describe("Tests, if columns are deleted successfully",
+  function()
+
+    before_each(function()
+      mydb = db:create("mydb", -- This create is a but of a cheat: create the 
+        {                      -- sqlite file and database connection for us.
+          sheet = {
+            name = "", id = 0, blubb = "",
+            _index = { "name" },
+            _unique = { "id" },
+            _violations = "FAIL"
+          }
+        })
+    end)
+
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+    end)
+
+    it("should successfully delete columns in an empty table.",
+    function()
+      mydb = db:create("mydb", { sheet = { name = "", id = 0 }})
+      local test = { name = "foo", id = 500 }
+      db:add(mydb.sheet, test)
+      local res = db:fetch(mydb.sheet)
+      assert.are.equal(1, #res)
+      res[1]._row_id = nil --we get the row id back, which we don't need
+      assert.are.same(test, res[1])
+    end)
+
+    it("should successfully delete columns in a non empty table.",
+    function()
+      local test = { name = "foo", id = 500, blubb = "bar" }
+      db:add(mydb.sheet, test)
+      mydb = db:create("mydb", { sheet = { name = "", id = 0 }})
+      local res = db:fetch(mydb.sheet)
+      test.blubb = nil -- we expect the blubb gets deleted
+      assert.are.equal(1, #res)
+      res[1]._row_id = nil --we get the row id back, which we don't need
+      assert.are.same(test, res[1])
+    end)
+
   end)
 end)
