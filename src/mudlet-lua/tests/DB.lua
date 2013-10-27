@@ -254,12 +254,12 @@ describe("Tests DB.lua functions", function()
       mydb = db:create("mydb", { sheet = newschema })
       assert.are.same(db.__schema.mydb.sheet.columns, newschema)
       local newrow = db:fetch(mydb.sheet)[1]
-      assert.is_true(newrow.row1 == "some data")
-      assert.is_true(newrow.row3 == "")
+      assert.are.same("some data", newrow.row1)
+      assert.are.same("", newrow.row3)
     end)
   end)
 
-  describe("Tests, if options are correctly recognised and applied.",
+  describe("Tests, if options are correctly recognised and applied",
   function()
 
     before_each(function()
@@ -281,7 +281,7 @@ describe("Tests DB.lua functions", function()
       mydb = nil
     end)
 
-    it("Tests, if the options are filtered out correctly on creation.", 
+    it("should correctly filter the options on creation.", 
       function()
 
         db:add(mydb.sheet, {id = 0, name = "Bob"})
@@ -294,7 +294,7 @@ describe("Tests DB.lua functions", function()
 
       end)
 
-    it("Tests, if all indexes are applied correctly.",
+    it("should apply all indexes correctly.",
       function()
 
         local conn = db.__conn.mydb
@@ -346,4 +346,50 @@ describe("Tests DB.lua functions", function()
 
   end)
 
+  describe("Tests, if columns are deleted successfully",
+  function()
+
+    before_each(function()
+      mydb = db:create("mydb", -- This create is a but of a cheat: create the 
+        {                      -- sqlite file and database connection for us.
+          sheet = {
+            name = "", id = 0, blubb = "",
+            _index = { "name" },
+            _unique = { "id" },
+            _violations = "FAIL"
+          }
+        })
+    end)
+
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+    end)
+
+    it("should successfully delete columns in an empty table.",
+    function()
+      mydb = db:create("mydb", { sheet = { name = "", id = 0 }})
+      local test = { name = "foo", id = 500 }
+      db:add(mydb.sheet, test)
+      local res = db:fetch(mydb.sheet)
+      assert.are.equal(1, #res)
+      res[1]._row_id = nil --we get the row id back, which we don't need
+      assert.are.same(test, res[1])
+    end)
+
+    it("should successfully delete columns in a non empty table.",
+    function()
+      local test = { name = "foo", id = 500, blubb = "bar" }
+      db:add(mydb.sheet, test)
+      mydb = db:create("mydb", { sheet = { name = "", id = 0 }})
+      local res = db:fetch(mydb.sheet)
+      test.blubb = nil -- we expect the blubb gets deleted
+      assert.are.equal(1, #res)
+      res[1]._row_id = nil --we get the row id back, which we don't need
+      assert.are.same(test, res[1])
+    end)
+
+  end)
 end)
