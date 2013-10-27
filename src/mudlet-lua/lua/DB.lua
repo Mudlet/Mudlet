@@ -565,55 +565,88 @@ function db:_migrate(db_name, s_name)
    -- The db module does not presently support columns that are required. Everything is optional,
    -- everything may be NULL / nil.
    -- If you specify a column's type, you also specify its default value.
-   local sql_column = ', "%s" %s NULL'
-   local sql_column_default = sql_column..' DEFAULT %s'
-
    if table.is_empty(current_columns) then
       -- At this point, we know that the specified table does not exist in the database and so we
       -- should create it.
 
       -- Every sheet has an implicit _row_id column. It is not presently (and likely never will be)
       -- supported to define the primary key of any sheet.
-      local sql_chunks = {"CREATE TABLE ", s_name,  '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT'}
-
-      -- We iterate over every defined column, and add a line which creates it.
-      for key, value in pairs(schema.columns) do
-         local sql = ""
-         if value == nil then
-            sql = sql_column:format(key, db:_sql_type(value))
-         else
-            sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
-         end
-         if (type(schema.options._unique) == "table" and table.contains(schema.options._unique, key))
-            or (type(schema.options._unique) == "string" and schema.options._unique == key) then
-            sql = sql .. " UNIQUE"
-         end
-         sql_chunks[#sql_chunks+1] = sql
-      end
-
-      sql_chunks[#sql_chunks+1] = ")"
-
-      local sql = table.concat(sql_chunks, "")
+      local sql = db:_build_create_table_sql(schema, s_name)
       db:echo_sql(sql)
       conn:execute(sql)
 
    else
       -- At this point we know that the sheet already exists, but we are concerned if the current
       -- definition includes columns which may be added.
-      local sql_chunks = {}
-      local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
+      local missing = {}
 
       for k, v in pairs(schema.columns) do
-         t = db:_sql_type(v)
-         v = db:_sql_convert(v)
 
          -- Here we test it a given column exists in the sheet already, and if not, we add that
          -- column.
          if not current_columns[k] then
-            local sql = sql_add:format(s_name, k, t, v)
+            missing[#missing + 1] = { name = k, default = v }
+         end
+      end
+
+      if #missing > 0 and 
+         table.size(current_columns) + #missing == table.size(schema.columns)+1
+         -- We have changes and when we did those changes, we have exactly
+         -- the number of columns we need. The "+1" is for the _row_id
+         -- which is not in the schema.
+      then
+         local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
+         for _, v in ipairs(missing) do
+            local t = db:_sql_type(v.default)
+            local def = db:_sql_convert(v.default)
+            local sql = sql_add:format(s_name, v.name, t, def)
             conn:execute(sql)
             db:echo_sql(sql)
          end
+      elseif 
+         #missing + table.size(current_columns) > table.size(schema.columns) + 1
+         -- if we add all missing columns and we have more columns than we want
+         -- then there are currently some columns we don't want anymore.
+      then
+         local get_create = "SELECT sql FROM sqlite_master " ..
+                            "WHERE type = 'table' AND " ..
+                            "name = '" .. s_name .."'"
+         local ret_str
+         cur, ret_str = conn:execute(get_create)
+         assert(cur, ret_str)
+         if type(cur) ~= "number" then
+            local row = cur:fetch({}, "a");
+            cur:close()
+            local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
+            local sql_chunks = {}
+            local fields = { "_row_id" }
+            local sql
+
+            create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
+
+            for k, _ in pairs(schema.columns) do
+              fields[#fields + 1] = string.format('"%s"', k)
+            end
+            local fields_sql = table.concat(fields, ", ")
+
+            sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
+            sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak " ..
+                                          "SELECT * FROM " .. s_name .. ";"
+            sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
+            sql_chunks[#sql_chunks + 1] = db:_build_create_table_sql(schema,
+                                               s_name) .. ";"
+            sql_chunks[#sql_chunks + 1] = string.format(
+                 "INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql,
+                 s_name)
+            sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
+
+            for _, sql in ipairs(sql_chunks) do
+               db:echo_sql(sql)
+               local ret, str = conn:execute(sql)
+               assert(ret, str)
+            end
+         end
+      --FIXME   
       end
    end
 
@@ -634,7 +667,33 @@ function db:_migrate(db_name, s_name)
    conn:execute("VACUUM")
 end
 
+function db:_build_create_table_sql(schema, s_name)
 
+   local sql_column = ', "%s" %s NULL'
+   local sql_column_default = sql_column..' DEFAULT %s'
+
+
+   local sql_chunks = {"CREATE TABLE ", s_name,  '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT'}
+
+      -- We iterate over every defined column, and add a line which creates it.
+   for key, value in pairs(schema.columns) do
+      local sql = ""
+      if value == nil then
+         sql = sql_column:format(key, db:_sql_type(value))
+      else
+         sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
+      end
+      if (type(schema.options._unique) == "table" and table.contains(schema.options._unique, key))
+         or (type(schema.options._unique) == "string" and schema.options._unique == key) then
+         sql = sql .. " UNIQUE"
+      end
+      sql_chunks[#sql_chunks+1] = sql
+   end
+
+   sql_chunks[#sql_chunks+1] = ")"
+
+   return table.concat(sql_chunks, "")
+end
 
 
 -- NOT LUADOC
