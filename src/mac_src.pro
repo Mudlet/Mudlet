@@ -3,9 +3,11 @@ QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-ver
 QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 
-# Necessary? We should use the default compiler preferred by Qt on the system (clang vs gcc)
-# QMAKE_CC = gcc
-# QMAKE_CXX = g++
+# We should use the default compiler preferred by Qt on the system (clang vs gcc)
+!macx {
+  QMAKE_CC = gcc
+  QMAKE_CXX = g++
+}
 
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
@@ -14,8 +16,6 @@ QT += network opengl uitools multimedia
 cache()
 
 # use pkg-config whenever possible
-# I'm not certain whenever latest 1.54 boost will work, or we need 1.48
-#  (or whenever we actually need to link to it here)
 macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
