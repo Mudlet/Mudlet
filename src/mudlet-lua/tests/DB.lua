@@ -263,10 +263,10 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydb", 
-        { 
-          sheet = { 
-            name = "", id = 0, 
+      mydb = db:create("mydb",
+        {
+          sheet = {
+            name = "", id = 0,
             _index = { "name" },
             _unique = { "id" },
             _violations = "FAIL"
@@ -281,7 +281,7 @@ describe("Tests DB.lua functions", function()
       mydb = nil
     end)
 
-    it("should correctly filter the options on creation.", 
+    it("should correctly filter the options on creation.",
       function()
 
         db:add(mydb.sheet, {id = 0, name = "Bob"})
@@ -328,19 +328,19 @@ describe("Tests DB.lua functions", function()
             expected = { type = "index", name = "idx_sheet_c_name",
                          tbl_name = "sheet",
                          sql = 'CREATE INDEX idx_sheet_c_name ' ..
-                               'ON sheet ("name")' 
+                               'ON sheet ("name")'
                        }
           elseif v.name == "idx_sheet_c_id" then
             expected = { type = "index", name = "idx_sheet_c_id",
                          tbl_name = "sheet",
                          sql = 'CREATE UNIQUE INDEX idx_sheet_c_id ' ..
-                               'ON sheet ("id")' 
+                               'ON sheet ("id")'
                        }
           end
 
           assert.are.same(expected, v)
 
-        end 
+        end
 
       end)
 
@@ -350,8 +350,8 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydb", -- This create is a but of a cheat: create the 
-        {                      -- sqlite file and database connection for us.
+      mydb = db:create("mydb",
+        {
           sheet = {
             name = "", id = 0, blubb = "",
             _index = { "name" },
@@ -389,6 +389,207 @@ describe("Tests DB.lua functions", function()
       assert.are.equal(1, #res)
       res[1]._row_id = nil --we get the row id back, which we don't need
       assert.are.same(test, res[1])
+    end)
+
+  end)
+
+
+  describe("Tests, of the queries by example work",
+  function()
+
+    before_each(function()
+      mydb = db:create("mydb",
+        {
+          sheet = {
+            name = "", id = 0, city = "",
+            _index = { "name" },
+            _unique = { "id" },
+            _violations = "FAIL"
+          }
+        })
+      test_data = {
+        {name="Ixokai", city="Magnagora", id=1},
+        {name="Vadi", city="New Celest", id=2},
+        {name="Heiko", city="Hallifax", id=3},
+        {name="Keneanung", city="Hashan", id=4},
+        {name="Carmain", city="Mhaldor", id=5},
+      }
+      db:add(mydb.sheet, unpack(test_data))
+    end)
+
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+      test_data = nil
+    end)
+
+    it("should successfully return all rows on an empty example.",
+    function()
+      local res = db:query_by_example(mydb.sheet, {})
+      assert.are.equal(#test_data, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(test_data, res)
+    end)
+
+    it("should successfully return a single row for a simple pattern.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { name = "Ixokai"})
+      assert.are.equal(1, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(test_data[1], res[1])
+    end)
+
+    it("should successfully return all matching rows for operator '<'.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = "< 3"})
+      local exp_res = { test_data[1], test_data[2] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows for operator '>'.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = "> 3"})
+      local exp_res = { test_data[4], test_data[5] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows for operator '>='.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = ">= 3"})
+      local exp_res = { test_data[3], test_data[4], test_data[5] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows for operator '<='.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = "<= 3"})
+      local exp_res = { test_data[1], test_data[2], test_data[3] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows for operator '!='.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = "!= 3"})
+      local exp_res = { test_data[1], test_data[2], test_data[4], test_data[5] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows for operator '<>'.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = "<> 3"})
+      local exp_res = { test_data[1], test_data[2], test_data[4], test_data[5] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows for operator '||'.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = "1||3||5"})
+      local exp_res = { test_data[1], test_data[3], test_data[5] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows with placeholder '_'.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { name = "V_di"})
+      local exp_res = { test_data[2] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows with placeholder '%'.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { city = "M%"})
+      local exp_res = { test_data[1], test_data[5] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should successfully return all matching rows with ranges.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = "2::4"})
+      local exp_res = { test_data[2], test_data[3], test_data[4] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should return no row on an empty string.",
+    function()
+      local res = db:query_by_example(mydb.sheet, { name = ""})
+      local exp_res = { }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+    it("should handle non-string field values gracefully by converting "
+    .. "them to a string (lua functionality).",
+    function()
+      local res = db:query_by_example(mydb.sheet, { id = 3})
+      local exp_res = { test_data[3] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
+    end)
+
+
+    it("should correctly combine a query for a specific item.",
+    function()
+      db:add(mydb.sheet, { name = "Kneanung", city = "Mhaldor", id = 6 })
+      local res = db:query_by_example(mydb.sheet, 
+                    {name = "Keneanung", city = "Hashan" })
+      local exp_res = { test_data[4] }
+      assert.are.equal(#exp_res, #res)
+      for k, v in ipairs(res) do
+         res[k]._row_id = nil --we get the row id back, which we don't need
+      end
+      assert.are.same(exp_res, res)
     end)
 
   end)
