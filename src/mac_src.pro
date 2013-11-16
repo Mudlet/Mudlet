@@ -1,4 +1,4 @@
-CONFIG -= app_bundle
+# CONFIG -= app_bundle
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
 QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
@@ -260,5 +260,6 @@ INSTALLS += fonts \
     target
 
 OTHER_FILES += \
-    mudlet_documentation.txt
+    mudlet_documentation.txt \
+    mac-deploy.sh
 
