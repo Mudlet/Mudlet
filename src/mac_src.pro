@@ -15,14 +15,14 @@ QT += network opengl uitools multimedia
 
 cache()
 
-# use pkg-config whenever possible
+# use pkg-config whenever possible for linking on a mac
+# the same should be done on the Linux platform as well
 macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
     PKGCONFIG += hunspell lua yajl libpcre libzip
 }
-
 
 macx:LIBS += \
     # I didn't see an obvious pkg-config option for these two
@@ -254,6 +254,15 @@ unix: {
     fonts.files = fonts/ttf-bitstream-vera-1.10/*
     target.path = $$BIN_DIR
 }
+
+# Copy mudlet-lua into the .app bundle
+macx: {
+    # the location is relative to mac_src.pro, so just use mudlet-lua
+    APP_MUDLET_LUA_FILES.files = mudlet-lua
+    APP_MUDLET_LUA_FILES.path  = Contents/Resources
+    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
+}
+
 INSTALLS += fonts \
     luaglobal \
     documentation \

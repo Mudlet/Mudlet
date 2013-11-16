@@ -6,5 +6,6 @@
 
 echo Copying Qt and dependent libraries...
 export PATH=$PATH:$HOME/Qt/5.1.1/clang_64/bin
-echo $PATH
+echo Using: $PATH to find macdeployqt
 sudo macdeployqt ./mudlet.app -dmg
+echo Done!
