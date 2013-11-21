@@ -10847,16 +10847,21 @@ void TLuaInterpreter::initLuaGlobals()
 
 void TLuaInterpreter::loadGlobal()
 {
-    //QString path = QDir::homePath()+"/.config/mudlet/mudlet-lua/lua/LuaGlobal.lua";
-
+# // Load relatively to MacOS inside Resources when we're in a .app bundle
+#if defined(Q_OS_MAC)
+    QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
+#else
     QString path = "mudlet-lua/lua/LuaGlobal.lua";
+#endif
+
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
     if( error != 0 )
     {
         string e = "no error message available from Lua";
         if( lua_isstring( pGlobalLua, 1 ) )
         {
-            e = "[ ERROR ]  -  LuaGlobal.lua compile error - please report!";
+            e = "[ ERROR :( ]  -  LuaGlobal.lua compile error - please report! ";
+            e += "Error from Lua: ";
             e += lua_tostring( pGlobalLua, 1 );
         }
         gSysErrors << e.c_str();
