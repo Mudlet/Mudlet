@@ -1825,40 +1825,41 @@ function db:query_by_example(database, example)
    if table.is_empty(example) then return db:fetch(database) end
 
    local topLevel = {}
+   local find = string.find
+   local match = string.match
 
    for key, value in pairs(example) do
 
       value = string.trim(value)
 
-      local op, exp = string.match(value, "^%s*([<>=!]*)%s*(.*)$")
+      local op, exp = match(value, "^%s*([<>=!]*)%s*(.*)$")
 
       if op == "<" then
-         table.insert(topLevel, db:lt(database[key], exp))
+         topLevel[#topLevel + 1] = db:lt(database[key], exp)
       elseif op == ">" then
-         table.insert(topLevel, db:gt(database[key], exp))
+         topLevel[#topLevel + 1] = db:gt(database[key], exp)
       elseif op == ">=" then
-         table.insert(topLevel, db:gte(database[key], exp))
+         topLevel[#topLevel + 1] = db:gte(database[key], exp)
       elseif op == "<=" then
-         table.insert(topLevel, db:lte(database[key], exp))
+         topLevel[#topLevel + 1] = db:lte(database[key], exp)
       elseif op == "!=" or op == "<>" then
-         if string.match(exp, "__NULL__") then
-            table.insert(topLevel, db:is_not_nil(database[key]))
+         if find(exp, "__NULL__", 1, true) then
+            topLevel[#topLevel + 1] = db:is_not_nil(database[key])
          else
-            table.insert(topLevel, db:not_eq(database[key], exp))
+            topLevel[#topLevel + 1] = db:not_eq(database[key], exp)
          end
       else
-         if string.match(value, "%s*||%s*") then
-            table.insert(topLevel, db:in_(database[key], string.split(value,
-"%s*||%s*")))
-         elseif string.match(value, "__NULL__") then
-            table.insert(topLevel, db:is_nil(database[key]))
-         elseif string.match(value, "_") or string.match(value, "%%") then
-            table.insert(topLevel, db:like(database[key], value))
-         elseif string.match(value, "::") then
-            table.insert(topLevel, db:between(database[key], string.match(value,
-"^(.-)::(.+)$")))
+         if find(value, "%s*||%s*") then
+            topLevel[#topLevel + 1] = db:in_(database[key], string.split(value,
+"%s*||%s*"))
+         elseif find(value, "__NULL__", 1, true) then
+            topLevel[#topLevel + 1] = db:is_nil(database[key])
+         elseif find(value, "_", 1, true) or find(value, "%", 1, true) then
+            topLevel[#topLevel + 1] = db:like(database[key], value)
+         elseif find(value, "::", 1, true) then
+            topLevel[#topLevel + 1] = db:between(database[key], match(value, "^(.-)::(.+)$"))
          else
-            table.insert(topLevel, db:eq(database[key], value))
+            topLevel[#topLevel + 1] = db:eq(database[key], value)
          end
       end
 
