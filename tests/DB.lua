@@ -394,7 +394,7 @@ describe("Tests DB.lua functions", function()
   end)
 
 
-  describe("Tests, of the queries by example work",
+  describe("Tests that queries by example work",
   function()
 
     before_each(function()
@@ -581,7 +581,7 @@ describe("Tests DB.lua functions", function()
 
     it("should correctly combine a query for a specific item.",
     function()
-      db:add(mydb.sheet, { name = "Kneanung", city = "Mhaldor", id = 6 })
+      db:add(mydb.sheet, { name = "Kenanung", city = "Mhaldor", id = 6 })
       local res = db:query_by_example(mydb.sheet, 
                     {name = "Keneanung", city = "Hashan" })
       local exp_res = { test_data[4] }
