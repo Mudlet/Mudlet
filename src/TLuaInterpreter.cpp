@@ -10847,7 +10847,8 @@ void TLuaInterpreter::initLuaGlobals()
 
 void TLuaInterpreter::loadGlobal()
 {
-# // Load relatively to MacOS inside Resources when we're in a .app bundle
+# // Load relatively to MacOS inside Resources when we're in a .app bundle,
+# // as mudlet-lua always gets copied in by the build script into the bundle
 #if defined(Q_OS_MAC)
     QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
 #else
