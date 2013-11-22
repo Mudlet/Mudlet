@@ -11,6 +11,7 @@ if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
 if not display then require"DebugTools" end
 if not table.contains then require"TableUtils" end
+if not string.trim then require"StringUtils" end
 
 -- TODO those funciton are already definde elsewhere
 -- Tests if a table is empty: this is useful in situations where you find
@@ -1734,3 +1735,135 @@ function db:get_database(db_name)
    return setmetatable(db_inst, db.__DatabaseMT)
 end
 
+--- Queries for database content matching the given example. Different fields of
+--- the example are AND connected.
+--- </br>
+--- Field values should be strings and can contain the following values:
+--- <ul>
+---   <li>literal strings to search for
+---   <li>comparison terms prepended with &lt;, &gt;, &gt;=, &lt;=, !=, &lt;&gt;
+---       for number and date comparisons
+---   <li>ranges with :: between lower and upper bound
+---   <li>different single values combined by || as OR
+---   <li>strings containing % for a single and _ for multiple wildcard
+---       characters
+--- </ul>
+--- <br/>
+--- @param database Reference to the database that should be queried.
+--- @param example  Query prototype that should be searched for.
+--- @usage This example shows, how to use this function:
+---   <pre>
+---      mydb = db:create("mydb",
+---        {
+---          sheet = {
+---            name = "", id = 0, city = "",
+---            _index = { "name" },
+---            _unique = { "id" },
+---            _violations = "FAIL"
+---          }
+---        })
+---      test_data = {
+---        {name="Ixokai", city="Magnagora", id=1},
+---        {name="Vadi", city="New Celest", id=2},
+---        {name="Heiko", city="Hallifax", id=3},
+---        {name="Keneanung", city="Hashan", id=4},
+---        {name="Carmain", city="Mhaldor", id=5},
+---        {name="Ixokai", city="Hallifax", id=6},
+---      }
+---      db:add(mydb.sheet, unpack(test_data))
+---      res = db:query_by_example(mydb.sheet, { name = "Ixokai"})
+---      display(res)
+---      --[[
+---      Prints
+---      {
+---        {
+---          id = 1,
+---          name = "Ixokai",
+---          city = "Magnagora"
+---        },
+---        {
+---          id = 6,
+---          name = "Ixokai",
+---          city = "Hallifax"
+---        }
+---      }
+---      --]]
+---   </pre>
+---
+--- @usage This example shows, how to combine two fields:
+---   <pre>
+---      mydb = db:create("mydb",
+---        {
+---          sheet = {
+---            name = "", id = 0, city = "",
+---            _index = { "name" },
+---            _unique = { "id" },
+---            _violations = "FAIL"
+---          }
+---        })
+---      test_data = {
+---        {name="Ixokai", city="Magnagora", id=1},
+---        {name="Vadi", city="New Celest", id=2},
+---        {name="Heiko", city="Hallifax", id=3},
+---        {name="Keneanung", city="Hashan", id=4},
+---        {name="Carmain", city="Mhaldor", id=5},
+---      }
+---      db:add(mydb.sheet, unpack(test_data))
+---      res = db:query_by_example(mydb.sheet, { name = "Ixokai", id = "1"})
+---      display(res)
+---      --[[
+---      Prints
+---      {
+---        id = 1,
+---        name = "Ixokai",
+---        city = "Magnagora"
+---      }
+---      --]]
+---   </pre>
+function db:query_by_example(database, example)
+
+   if table.is_empty(example) then return db:fetch(database) end
+
+   local topLevel = {}
+   local find = string.find
+   local match = string.match
+
+   for key, value in pairs(example) do
+
+      value = string.trim(value)
+
+      local op, exp = match(value, "^%s*([<>=!]*)%s*(.*)$")
+
+      if op == "<" then
+         topLevel[#topLevel + 1] = db:lt(database[key], exp)
+      elseif op == ">" then
+         topLevel[#topLevel + 1] = db:gt(database[key], exp)
+      elseif op == ">=" then
+         topLevel[#topLevel + 1] = db:gte(database[key], exp)
+      elseif op == "<=" then
+         topLevel[#topLevel + 1] = db:lte(database[key], exp)
+      elseif op == "!=" or op == "<>" then
+         if find(exp, "__NULL__", 1, true) then
+            topLevel[#topLevel + 1] = db:is_not_nil(database[key])
+         else
+            topLevel[#topLevel + 1] = db:not_eq(database[key], exp)
+         end
+      else
+         if find(value, "%s*||%s*") then
+            topLevel[#topLevel + 1] = db:in_(database[key], string.split(value,
+"%s*||%s*"))
+         elseif find(value, "__NULL__", 1, true) then
+            topLevel[#topLevel + 1] = db:is_nil(database[key])
+         elseif find(value, "_", 1, true) or find(value, "%", 1, true) then
+            topLevel[#topLevel + 1] = db:like(database[key], value)
+         elseif find(value, "::", 1, true) then
+            topLevel[#topLevel + 1] = db:between(database[key], match(value, "^(.-)::(.+)$"))
+         else
+            topLevel[#topLevel + 1] = db:eq(database[key], value)
+         end
+      end
+
+   end
+
+   return db:fetch(database,db:AND(unpack(topLevel)))
+end
