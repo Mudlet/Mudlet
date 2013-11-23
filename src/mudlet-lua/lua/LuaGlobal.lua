@@ -106,13 +106,21 @@ local packages = {
 }
 
 -- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
--- on Mac, it's set to LuaGlobals location. So work out where to load Lua files from
-local prefix = "./mudlet-lua/lua/"
-if not lfs.attributes(prefix) then
-        prefix = "../Resources/mudlet-lua/lua/"
+-- on Mac, it's set to LuaGlobals location - or the Applications folder, or something else...
+-- So work out where to load Lua files from using some heuristics
+local prefixes = {"./mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
+    "mudlet.app/Contents/Resources/mudlet-lua/lua/"}
+
+local prefix
+for i = 1, #prefixes do
+    if lfs.attributes(prefixes[i]) then
+        prefix = prefixes[i]
+        break
+    end
 end
-if not lfs.attributes(prefix) then
-	echo("Error locating lua files from LuaGlobal - we're looking from "..lfs.currentdir()..".\n")
+
+if not prefix then
+        echo("Error locating Lua files from LuaGlobal - we're looking from '"..lfs.currentdir().."'.\n")
 	return
 end
 
