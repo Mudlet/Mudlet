@@ -243,6 +243,12 @@ macx: {
 
 TEMPLATE = app
 TARGET = mudlet
+macx: {
+    # Capitalize the name for Mudlet, so it appears as 'Mudlet'
+    # and not 'mudlet' in the .dmg installer
+    TARGET = Mudlet
+}
+
 RESOURCES = mudlet_alpha.qrc
 DISTFILES += paragraph.css
 unix: {
