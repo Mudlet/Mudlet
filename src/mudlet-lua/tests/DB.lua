@@ -624,7 +624,7 @@ describe("Tests DB.lua functions", function()
       test_data = nil
     end)
     
-    if("should successfully sum all counts up.",
+    it("should successfully sum all counts up.",
     function()
       local total = db:aggregate(mydb.count, "total")
       local exp_total = 0
