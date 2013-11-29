@@ -593,4 +593,47 @@ describe("Tests DB.lua functions", function()
     end)
 
   end)
+
+  describe("Tests, if the aggregate function works as intended",
+  function()
+    
+    before_each(function()
+      mydb = db:create("mydb",
+        {
+          sheet = {
+            name = "", count = 0,
+            _index = { "name" },
+            _violations = "FAIL"
+          }
+        })
+      test_data = {
+        {name="Ixokai", count=11},
+        {name="Vadi", count=2},
+        {name="Heiko", count=15},
+        {name="Keneanung", count=22},
+        {name="Carmain", count=50},
+      }
+      db:add(mydb.sheet, unpack(test_data))
+    end)
+
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+      test_data = nil
+    end)
+    
+    if("should successfully sum all counts up.",
+    function()
+      local total = db:aggregate(mydb.count, "total")
+      local exp_total = 0
+      for _, v in ipairs(test_data) do
+        exp_total = v.count + exp_total
+      end
+      assert.is.same(exp_total, total)
+    end)
+    
+  end)
+
 end)
