@@ -626,7 +626,7 @@ describe("Tests DB.lua functions", function()
     
     it("should successfully sum all counts up.",
     function()
-      local total = db:aggregate(mydb.count, "total")
+      local total = db:aggregate(mydb.sheet.count, "total")
       local exp_total = 0
       for _, v in ipairs(test_data) do
         exp_total = v.count + exp_total
