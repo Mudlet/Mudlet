@@ -633,6 +633,17 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total, total)
     end)
+  
+    it("should successfully calculate the average of all numbers.",
+    function()
+      local avg = db:aggregate(mydb.sheet.count, "avg")
+      local exp_total, count = 0, 0
+      for _, v in ipairs(test_data) do
+        exp_total = exp_total + v.count
+        count = count + 1
+      end
+      assert.is.same(exp_total / count, avg)
+    end)
     
   end)
 
