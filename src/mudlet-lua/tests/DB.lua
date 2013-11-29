@@ -644,7 +644,55 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total / count, avg)
     end)
-    
+      
+    it("should successfully calculate the minimum value of the numbers.",
+    function()
+      local min = db:aggregate(mydb.sheet.count, "min")
+      local exp_min = 1000
+      for _, v in ipairs(test_data) do
+        if v.count < exp_min then
+          exp_min = v.count
+        end
+      end
+      assert.is.same(exp_min, min)
+    end)
+      
+    it("should successfully calculate the minimum value of the names.",
+    function()
+      local min = db:aggregate(mydb.sheet.name, "min")
+      local exp_min = "ZZZZZZZZZZZZZZ"
+      for _, v in ipairs(test_data) do
+        if v.name < exp_min then
+          exp_min = v.name
+        end
+      end
+      assert.is.same(exp_min, min)
+    end)
+      
+    it("should successfully calculate the maximum value of the numbers.",
+    function()
+      local max = db:aggregate(mydb.sheet.count, "max")
+      local exp_max = 0
+      for _, v in ipairs(test_data) do
+        if v.count > exp_max then
+          exp_max = v.count
+        end
+      end
+      assert.is.same(exp_max, max)
+    end)
+      
+    it("should successfully calculate the minimum value of the names.",
+    function()
+      local max = db:aggregate(mydb.sheet.name, "max")
+      local exp_max = "A"
+      for _, v in ipairs(test_data) do
+        if v.name > exp_max then
+          exp_max = v.name
+        end
+      end
+      assert.is.same(exp_max, max)
+    end)
+     
   end)
 
 end)
