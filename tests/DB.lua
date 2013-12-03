@@ -681,7 +681,7 @@ describe("Tests DB.lua functions", function()
       assert.is.same(exp_max, max)
     end)
       
-    it("should successfully calculate the minimum value of the names.",
+    it("should successfully calculate the maximum value of the names.",
     function()
       local max = db:aggregate(mydb.sheet.name, "max")
       local exp_max = "A"
@@ -691,6 +691,12 @@ describe("Tests DB.lua functions", function()
         end
       end
       assert.is.same(exp_max, max)
+    end)
+     
+    it("should successfully calculate the count of the names.",
+    function()
+      local count = db:aggregate(mydb.sheet.name, "count")
+      assert.is.same(#test_data, count)
     end)
      
   end)
