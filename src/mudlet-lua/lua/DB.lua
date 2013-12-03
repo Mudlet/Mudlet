@@ -905,6 +905,7 @@ function db:aggregate(field, fn, query)
    local sql_chunks = {"SELECT", fn, "(", field.name, ")", "AS", fn, "FROM", s_name}
 
    if query then
+      sql_chunks[#sql_chunks+1] = "WHERE"
       if type(query) == "table" then
          sql_chunks[#sql_chunks+1] = db:AND(unpack(query))
       else
