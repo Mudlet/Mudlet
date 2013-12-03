@@ -735,7 +735,9 @@ describe("Tests DB.lua functions", function()
       local exp_min = 1000
       for _, v in ipairs(test_data) do
         if v.count < exp_min then
-          exp_min = v.count
+          if v.count > 11 then
+            exp_min = v.count
+          end
         end
       end
       assert.is.same(exp_min, min)
@@ -793,7 +795,7 @@ describe("Tests DB.lua functions", function()
     function()
       local count = db:aggregate(mydb.sheet.name, "count",
                                  db:gt(mydb.sheet.count, 11))
-      local exp_count
+      local exp_count = 0
       for _, v in ipairs(test_data) do
         if v.count > 11 then
           exp_count = exp_count + 1
