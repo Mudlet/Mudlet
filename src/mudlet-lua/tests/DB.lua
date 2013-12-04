@@ -612,6 +612,7 @@ describe("Tests DB.lua functions", function()
         {name="Heiko", count=15},
         {name="Keneanung", count=22},
         {name="Carmain", count=50},
+        {name="Lynara", count=50},
       }
       db:add(mydb.sheet, unpack(test_data))
     end)
@@ -775,7 +776,7 @@ describe("Tests DB.lua functions", function()
       assert.is.same(exp_max, max)
     end)
       
-    it("should successfully calculate the maximum value of the names greater "
+    it("should successfully calculate the maximum value of the names greater with count "
     .. "than 11.",
     function()
       local max = db:aggregate(mydb.sheet.name, "max",
@@ -791,7 +792,7 @@ describe("Tests DB.lua functions", function()
       assert.is.same(exp_max, max)
     end)
      
-    it("should successfully calculate the count of the names greater than 11.",
+    it("should successfully calculate the count of the names with count greater than 11.",
     function()
       local count = db:aggregate(mydb.sheet.name, "count",
                                  db:gt(mydb.sheet.count, 11))
@@ -803,7 +804,96 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_count, count)
     end)
+    
+    it("should successfully sum all unique counts up.",
+    function()
+      local total = db:aggregate(mydb.sheet.count, "total", nil, true)
+      local exp_total = 0
+      local seen_values = { }
+      for _, v in ipairs(test_data) do
+        if not table.contains(seen_values, v.count) then
+          exp_total = v.count + exp_total
+          seen_values[#seen_values + 1] = v.count
+        end
+      end
+      assert.is.same(exp_total, total)
+    end)
+  
+    it("should successfully calculate the average of all unique numbers.",
+    function()
+      local avg = db:aggregate(mydb.sheet.count, "avg", nil, true)
+      local exp_total, count = 0, 0
+      local seen_values = { }
+      for _, v in ipairs(test_data) do
+        if not table.contains(seen_values, v.count) then
+          exp_total = exp_total + v.count
+          count = count + 1
+          seen_values[#seen_values + 1] = v.count
+        end
+      end
+      assert.is.same(exp_total / count, avg)
+    end)
+
+    it("should successfully calculate the count of the unique numbers.",
+    function()
+      local count = db:aggregate(mydb.sheet.number, "count", nil, true)
+      local exp_count = 0
+      local seen_values = { }
+      for _, v in ipairs(test_data) do
+        if not table.contains(seen_values, v.count) then
+          exp_count = exp_count + 1
+          seen_values[#seen_values + 1] = v.count
+        end
+      end
+      assert.is.same(exp_count, count)
+    end)
      
+    it("should successfully sum all unique counts greater than 11 up.",
+    function()
+      local total = db:aggregate(mydb.sheet.count, "total",
+                                 db:gt(mydb.sheet.count, 11), true)
+      local exp_total = 0
+      local seen_values = { }
+      for _, v in ipairs(test_data) do
+        if v.count > 11 and not table.contains(seen_values, v.count) then
+          exp_total = v.count + exp_total
+          seen_values[#seen_values + 1] = v.count
+        end
+      end
+      assert.is.same(exp_total, total)
+    end)
+  
+    it("should successfully calculate the average of all unique numbers greater than"
+    .. "11.",
+    function()
+      local avg = db:aggregate(mydb.sheet.count, "avg",
+                               db:gt(mydb.sheet.count, 11), true)
+      local exp_total, count = 0, 0
+      local seen_values = { }
+      for _, v in ipairs(test_data) do
+        if v.count > 11 and not table.contains(seen_values, v.count) then
+          exp_total = exp_total + v.count
+          count = count + 1
+          seen_values[#seen_values + 1] = v.count
+        end
+      end
+      assert.is.same(exp_total / count, avg)
+    end)
+
+    it("should successfully calculate the count of the unique numbers greater than 11.",
+    function()
+      local count = db:aggregate(mydb.sheet.count, "count",
+                                 db:gt(mydb.sheet.count, 11), true)
+      local exp_count = 0
+      local seen_values = { }
+      for _, v in ipairs(test_data) do
+        if v.count > 11 and not table.contains(seen_values, v.count) then
+          exp_count = exp_count + 1
+          seen_values[#seen_values + 1] = v.count
+        end
+      end
+      assert.is.same(exp_count, count)
+    end)       
   end)
 
 end)
