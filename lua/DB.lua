@@ -894,7 +894,7 @@ end
 ---   local mydb = db:get_database("my database")
 ---   echo(db:aggregate(mydb.enemies.name, "count"))
 ---   </pre>
-function db:aggregate(field, fn, query)
+function db:aggregate(field, fn, query, distinct)
    local db_name = field.database
    local s_name = field.sheet
    local conn = db.__conn[db_name]
@@ -902,7 +902,7 @@ function db:aggregate(field, fn, query)
    assert(type(field) == "table", "Field must be a field reference.")
    assert(field.name, "Field must be a real field reference.")
 
-   local sql_chunks = {"SELECT", fn, "(", field.name, ")", "AS", fn, "FROM", s_name}
+   local sql_chunks = {"SELECT", fn, "(", distinct and "DISTINCT" or "", field.name, ")", "AS", fn, "FROM", s_name}
 
    if query then
       sql_chunks[#sql_chunks+1] = "WHERE"
