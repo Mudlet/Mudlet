@@ -776,7 +776,7 @@ describe("Tests DB.lua functions", function()
       assert.is.same(exp_max, max)
     end)
       
-    it("should successfully calculate the maximum value of the names greater with count "
+    it("should successfully calculate the maximum value of the names with count greater "
     .. "than 11.",
     function()
       local max = db:aggregate(mydb.sheet.name, "max",
@@ -836,7 +836,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully calculate the count of the unique numbers.",
     function()
-      local count = db:aggregate(mydb.sheet.number, "count", nil, true)
+      local count = db:aggregate(mydb.sheet.count, "count", nil, true)
       local exp_count = 0
       local seen_values = { }
       for _, v in ipairs(test_data) do
@@ -864,7 +864,7 @@ describe("Tests DB.lua functions", function()
     end)
   
     it("should successfully calculate the average of all unique numbers greater than"
-    .. "11.",
+    .. " 11.",
     function()
       local avg = db:aggregate(mydb.sheet.count, "avg",
                                db:gt(mydb.sheet.count, 11), true)
