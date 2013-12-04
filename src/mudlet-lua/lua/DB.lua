@@ -905,25 +905,11 @@ function db:aggregate(field, fn, query)
    local sql_chunks = {"SELECT", fn, "(", field.name, ")", "AS", fn, "FROM", s_name}
 
    if query then
+      sql_chunks[#sql_chunks+1] = "WHERE"
       if type(query) == "table" then
          sql_chunks[#sql_chunks+1] = db:AND(unpack(query))
       else
          sql_chunks[#sql_chunks+1] = query
-      end
-   end
-
-   if order_by then
-      local o = {}
-      for _, v in ipairs(order_by) do
-         assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
-         o[#o+1] = v.name
-      end
-
-      sql_chunks[#sql_chunks+1] = "ORDER BY"
-      sql_chunks[#sql_chunks+1] = db:_sql_columns(o)
-
-      if descending then
-         sql_chunks[#sql_chunks+1] = "DESC"
       end
    end
 
@@ -936,6 +922,19 @@ function db:aggregate(field, fn, query)
       local row = cur:fetch({}, "a")
       local count = row[fn]
       cur:close()
+      
+      -- give back the correct data type. see http://www.sqlite.org/lang_aggfunc.html
+      if (fn:upper() ~= "MIN" and fn:upper() ~= "MAX") or field.type == "number" then
+         return tonumber(count)
+      end
+      if field.type == "string" then
+        return count
+      end
+      -- Only datetime left
+      -- the value, count, is currently in a UTC timestamp
+      local localtime = datetime:parse(count, nil, true)
+      -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
+      count = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
       return count
    else
       return 0

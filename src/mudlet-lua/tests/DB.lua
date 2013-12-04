@@ -593,4 +593,217 @@ describe("Tests DB.lua functions", function()
     end)
 
   end)
+
+  describe("Tests, if the aggregate function works as intended",
+  function()
+    
+    before_each(function()
+      mydb = db:create("mydb",
+        {
+          sheet = {
+            name = "", count = 0,
+            _index = { "name" },
+            _violations = "FAIL"
+          }
+        })
+      test_data = {
+        {name="Ixokai", count=11},
+        {name="Vadi", count=2},
+        {name="Heiko", count=15},
+        {name="Keneanung", count=22},
+        {name="Carmain", count=50},
+      }
+      db:add(mydb.sheet, unpack(test_data))
+    end)
+
+
+    after_each(function()
+      db:close()
+      os.remove("Database_mydb.db")
+      mydb = nil
+      test_data = nil
+    end)
+    
+    it("should successfully sum all counts up.",
+    function()
+      local total = db:aggregate(mydb.sheet.count, "total")
+      local exp_total = 0
+      for _, v in ipairs(test_data) do
+        exp_total = v.count + exp_total
+      end
+      assert.is.same(exp_total, total)
+    end)
+  
+    it("should successfully calculate the average of all numbers.",
+    function()
+      local avg = db:aggregate(mydb.sheet.count, "avg")
+      local exp_total, count = 0, 0
+      for _, v in ipairs(test_data) do
+        exp_total = exp_total + v.count
+        count = count + 1
+      end
+      assert.is.same(exp_total / count, avg)
+    end)
+      
+    it("should successfully calculate the minimum value of the numbers.",
+    function()
+      local min = db:aggregate(mydb.sheet.count, "min")
+      local exp_min = 1000
+      for _, v in ipairs(test_data) do
+        if v.count < exp_min then
+          exp_min = v.count
+        end
+      end
+      assert.is.same(exp_min, min)
+    end)
+      
+    it("should successfully calculate the minimum value of the names.",
+    function()
+      local min = db:aggregate(mydb.sheet.name, "min")
+      local exp_min = "ZZZZZZZZZZZZZZ"
+      for _, v in ipairs(test_data) do
+        if v.name < exp_min then
+          exp_min = v.name
+        end
+      end
+      assert.is.same(exp_min, min)
+    end)
+      
+    it("should successfully calculate the maximum value of the numbers.",
+    function()
+      local max = db:aggregate(mydb.sheet.count, "max")
+      local exp_max = 0
+      for _, v in ipairs(test_data) do
+        if v.count > exp_max then
+          exp_max = v.count
+        end
+      end
+      assert.is.same(exp_max, max)
+    end)
+      
+    it("should successfully calculate the maximum value of the names.",
+    function()
+      local max = db:aggregate(mydb.sheet.name, "max")
+      local exp_max = "A"
+      for _, v in ipairs(test_data) do
+        if v.name > exp_max then
+          exp_max = v.name
+        end
+      end
+      assert.is.same(exp_max, max)
+    end)
+     
+    it("should successfully calculate the count of the names.",
+    function()
+      local count = db:aggregate(mydb.sheet.name, "count")
+      assert.is.same(#test_data, count)
+    end)
+     
+    it("should successfully sum all counts greater than 11 up.",
+    function()
+      local total = db:aggregate(mydb.sheet.count, "total",
+                                 db:gt(mydb.sheet.count, 11))
+      local exp_total = 0
+      for _, v in ipairs(test_data) do
+        if v.count > 11 then
+          exp_total = v.count + exp_total
+        end
+      end
+      assert.is.same(exp_total, total)
+    end)
+  
+    it("should successfully calculate the average of all numbers greater than"
+    .. "11.",
+    function()
+      local avg = db:aggregate(mydb.sheet.count, "avg",
+                               db:gt(mydb.sheet.count, 11))
+      local exp_total, count = 0, 0
+      for _, v in ipairs(test_data) do
+        if v.count > 11 then
+          exp_total = exp_total + v.count
+          count = count + 1
+        end
+      end
+      assert.is.same(exp_total / count, avg)
+    end)
+      
+    it("should successfully calculate the minimum value of the numbers greater"
+    .. " than 11.",
+    function()
+      local min = db:aggregate(mydb.sheet.count, "min",
+                               db:gt(mydb.sheet.count, 11))
+      local exp_min = 1000
+      for _, v in ipairs(test_data) do
+        if v.count < exp_min then
+          if v.count > 11 then
+            exp_min = v.count
+          end
+        end
+      end
+      assert.is.same(exp_min, min)
+    end)
+      
+    it("should successfully calculate the minimum value of the names with count"
+    .. " greater than 11.",
+    function()
+      local min = db:aggregate(mydb.sheet.name, "min",
+                               db:gt(mydb.sheet.count, 11))
+      local exp_min = "ZZZZZZZZZZZZZZ"
+      for _, v in ipairs(test_data) do
+        if v.count > 11 then
+          if v.name < exp_min then
+            exp_min = v.name
+          end
+        end
+      end
+      assert.is.same(exp_min, min)
+    end)
+      
+    it("should successfully calculate the maximum value of the numbers greater "
+    .. "than 11.",
+    function()
+      local max = db:aggregate(mydb.sheet.count, "max",
+                               db:gt(mydb.sheet.count, 11))
+      local exp_max = 0
+      for _, v in ipairs(test_data) do
+        if v.count > 11 then
+          if v.count > exp_max then
+            exp_max = v.count
+          end
+        end
+      end
+      assert.is.same(exp_max, max)
+    end)
+      
+    it("should successfully calculate the maximum value of the names greater "
+    .. "than 11.",
+    function()
+      local max = db:aggregate(mydb.sheet.name, "max",
+                               db:gt(mydb.sheet.count, 11))
+      local exp_max = "A"
+      for _, v in ipairs(test_data) do
+        if v.count > 11 then
+          if v.name > exp_max then
+            exp_max = v.name
+          end
+        end
+      end
+      assert.is.same(exp_max, max)
+    end)
+     
+    it("should successfully calculate the count of the names greater than 11.",
+    function()
+      local count = db:aggregate(mydb.sheet.name, "count",
+                                 db:gt(mydb.sheet.count, 11))
+      local exp_count = 0
+      for _, v in ipairs(test_data) do
+        if v.count > 11 then
+          exp_count = exp_count + 1
+        end
+      end
+      assert.is.same(exp_count, count)
+    end)
+     
+  end)
+
 end)
