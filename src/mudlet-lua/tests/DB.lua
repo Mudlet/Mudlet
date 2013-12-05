@@ -427,7 +427,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all rows on an empty example.",
     function()
-      local res = db:query_by_example(mydb.sheet, {})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, {}))
       assert.are.equal(#test_data, #res)
       for k, v in ipairs(res) do
          res[k]._row_id = nil --we get the row id back, which we don't need
@@ -437,7 +437,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return a single row for a simple pattern.",
     function()
-      local res = db:query_by_example(mydb.sheet, { name = "Ixokai"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { name = "Ixokai"}))
       assert.are.equal(1, #res)
       for k, v in ipairs(res) do
          res[k]._row_id = nil --we get the row id back, which we don't need
@@ -447,7 +447,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows for operator '<'.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = "< 3"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = "< 3"}))
       local exp_res = { test_data[1], test_data[2] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -458,7 +458,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows for operator '>'.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = "> 3"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = "> 3"}))
       local exp_res = { test_data[4], test_data[5] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -469,7 +469,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows for operator '>='.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = ">= 3"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = ">= 3"}))
       local exp_res = { test_data[3], test_data[4], test_data[5] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -480,7 +480,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows for operator '<='.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = "<= 3"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = "<= 3"}))
       local exp_res = { test_data[1], test_data[2], test_data[3] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -491,7 +491,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows for operator '!='.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = "!= 3"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = "!= 3"}))
       local exp_res = { test_data[1], test_data[2], test_data[4], test_data[5] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -502,7 +502,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows for operator '<>'.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = "<> 3"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = "<> 3"}))
       local exp_res = { test_data[1], test_data[2], test_data[4], test_data[5] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -513,7 +513,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows for operator '||'.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = "1||3||5"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = "1||3||5"}))
       local exp_res = { test_data[1], test_data[3], test_data[5] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -524,7 +524,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows with placeholder '_'.",
     function()
-      local res = db:query_by_example(mydb.sheet, { name = "V_di"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { name = "V_di"}))
       local exp_res = { test_data[2] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -535,7 +535,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows with placeholder '%'.",
     function()
-      local res = db:query_by_example(mydb.sheet, { city = "M%"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { city = "M%"}))
       local exp_res = { test_data[1], test_data[5] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -546,7 +546,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully return all matching rows with ranges.",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = "2::4"})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = "2::4"}))
       local exp_res = { test_data[2], test_data[3], test_data[4] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -557,7 +557,7 @@ describe("Tests DB.lua functions", function()
 
     it("should return no row on an empty string.",
     function()
-      local res = db:query_by_example(mydb.sheet, { name = ""})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { name = ""}))
       local exp_res = { }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -569,7 +569,7 @@ describe("Tests DB.lua functions", function()
     it("should handle non-string field values gracefully by converting "
     .. "them to a string (lua functionality).",
     function()
-      local res = db:query_by_example(mydb.sheet, { id = 3})
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, { id = 3}))
       local exp_res = { test_data[3] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
@@ -582,8 +582,8 @@ describe("Tests DB.lua functions", function()
     it("should correctly combine a query for a specific item.",
     function()
       db:add(mydb.sheet, { name = "Kenanung", city = "Mhaldor", id = 6 })
-      local res = db:query_by_example(mydb.sheet, 
-                    {name = "Keneanung", city = "Hashan" })
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, 
+                    {name = "Keneanung", city = "Hashan" }))
       local exp_res = { test_data[4] }
       assert.are.equal(#exp_res, #res)
       for k, v in ipairs(res) do
