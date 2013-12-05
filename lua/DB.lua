@@ -1821,7 +1821,7 @@ end
 ---   </pre>
 function db:query_by_example(database, example)
 
-   if table.is_empty(example) then return db:fetch(database) end
+   if table.is_empty(example) then return nil end
 
    local topLevel = {}
    local find = string.find
@@ -1864,5 +1864,5 @@ function db:query_by_example(database, example)
 
    end
 
-   return db:fetch(database,db:AND(unpack(topLevel)))
+   return db:AND(unpack(topLevel))
 end
