@@ -261,12 +261,15 @@ unix: {
     target.path = $$BIN_DIR
 }
 
-# Copy mudlet-lua into the .app bundle
 macx: {
+    # Copy mudlet-lua into the .app bundle
     # the location is relative to mac_src.pro, so just use mudlet-lua
     APP_MUDLET_LUA_FILES.files = mudlet-lua
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
+
+    # Set the .app's icns file
+    ICON = osx-installer/osx.icns
 }
 
 INSTALLS += fonts \
