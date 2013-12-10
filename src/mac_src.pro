@@ -251,7 +251,7 @@ macx: {
 
 RESOURCES = mudlet_alpha.qrc
 DISTFILES += paragraph.css
-unix: {
+unix!macx: {
     luaglobal.path = $$SHARE_DIR
     luaglobal.files = LuaGlobal.lua
     documentation.path = $$SHARE_DIR
@@ -272,10 +272,14 @@ macx: {
     ICON = osx-installer/osx.icns
 }
 
-INSTALLS += fonts \
-    luaglobal \
-    documentation \
-    target
+# Copy stuff into install folder on all platforms but OSX, where it never worked
+# and just gives errors
+!macx: {
+    INSTALLS += fonts \
+        luaglobal \
+        documentation \
+        target
+}
 
 OTHER_FILES += \
     mudlet_documentation.txt \
