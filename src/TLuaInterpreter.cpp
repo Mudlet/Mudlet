@@ -1908,8 +1908,48 @@ int TLuaInterpreter::getExitStubs( lua_State * L  ){
                 lua_settable(L, -3);
             }
         }
+        else
+            lua_pushnil( L );
     }
-    return 0;
+    return 1;
+}
+
+int TLuaInterpreter::getExitStubs1( lua_State * L  ){
+    //args:room id
+    int roomId;
+    if (!lua_isnumber(L,1))
+    {
+        lua_pushstring( L, "getExitStubs: Need a room number as first argument" );
+        lua_error( L );
+        return 1;
+    }
+    else
+        roomId = lua_tonumber(L,1);
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( !pHost->mpMap ) return 0;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    if(!pR)
+    {
+        lua_pushstring( L, "getExitStubs: RoomId doesn't exist" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        QList<int> stubs = pR->exitStubs;
+        lua_newtable(L);
+        if (stubs.size())
+        {
+            for(int i=0;i<stubs.size();i++)
+            {
+                int exitType = stubs[i];
+                lua_pushnumber( L, i+1 );
+                lua_pushnumber( L, exitType );
+                lua_settable(L, -3);
+            }
+        }
+    }
+    return 1;
 }
 
 int TLuaInterpreter::getModulePath( lua_State *L )
@@ -10742,6 +10782,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setExitStub", TLuaInterpreter::setExitStub );
     lua_register( pGlobalLua, "connectExitStub", TLuaInterpreter::connectExitStub );
     lua_register( pGlobalLua, "getExitStubs", TLuaInterpreter::getExitStubs );
+    lua_register( pGlobalLua, "getExitStubs1", TLuaInterpreter::getExitStubs1 );
     lua_register( pGlobalLua, "setModulePriority", TLuaInterpreter::setModulePriority );
     lua_register( pGlobalLua, "getModulePriority", TLuaInterpreter::getModulePriority );
     lua_register( pGlobalLua, "updateMap", TLuaInterpreter::updateMap );

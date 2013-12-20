@@ -360,6 +360,7 @@ public:
     static int setExitStub( lua_State * L  );
     static int connectExitStub( lua_State * L  );
     static int getExitStubs( lua_State * L  );
+    static int getExitStubs1( lua_State * L  );
     static int getModulePriority( lua_State * L  );
     static int setModulePriority( lua_State * L  );
     static int updateMap(lua_State * L);
