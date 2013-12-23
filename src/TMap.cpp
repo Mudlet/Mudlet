@@ -757,6 +757,49 @@ bool TMap::findPath( int from, int to )
          return false;
      }
 
+     bool hasUsableExit = false;
+
+     if( pFrom->getNorth()                        > 0 && ( ! pFrom->hasExitLock( DIR_NORTH ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getSouth()     > 0 && ( ! pFrom->hasExitLock( DIR_SOUTH     ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getWest()      > 0 && ( ! pFrom->hasExitLock( DIR_WEST      ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getEast()      > 0 && ( ! pFrom->hasExitLock( DIR_EAST      ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getUp()        > 0 && ( ! pFrom->hasExitLock( DIR_UP        ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getDown()      > 0 && ( ! pFrom->hasExitLock( DIR_DOWN      ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getNortheast() > 0 && ( ! pFrom->hasExitLock( DIR_NORTHEAST ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getNorthwest() > 0 && ( ! pFrom->hasExitLock( DIR_NORTHWEST ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getSoutheast() > 0 && ( ! pFrom->hasExitLock( DIR_SOUTHEAST ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getSouthwest() > 0 && ( ! pFrom->hasExitLock( DIR_SOUTHWEST ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getIn()        > 0 && ( ! pFrom->hasExitLock( DIR_IN        ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit && pFrom->getOut()       > 0 && ( ! pFrom->hasExitLock( DIR_OUT       ) ) )
+         hasUsableExit = true;
+     if( ! hasUsableExit )
+     { // No available normal exits from this room so check the special ones
+         QStringList specialExitCommands = pFrom->getOtherMap().values();
+         while( ! specialExitCommands.isEmpty() )
+         {
+             if( specialExitCommands.at(0).mid(0,1)== "0" )
+             {
+                 hasUsableExit = true;
+                 break;
+             }
+             specialExitCommands.removeFirst();
+         }
+     }
+     if( ! hasUsableExit )
+         return false; // No available exits from the start room so give up!
+
+
      vertex start = roomidToIndex[from];
      vertex goal = roomidToIndex[to];
 

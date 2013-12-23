@@ -121,7 +121,14 @@ void TRoom::setArea( int _areaID )
 
     //remove from the old area
     TArea * pA2 = mpRoomDB->getArea( area );
+//    FIXME: uncomment for release
+//    if ( pA2 )
     pA2->removeRoom( id );
+//    else
+//    {
+//        QString error = "TRoom::setArea(): Dev Bug: Room had no current area!";
+//        mpRoomDB->mpMap->logError(error);
+//    }
 
     pA->addRoom( id );
     pA->fast_ausgaengeBestimmen(id);
@@ -283,10 +290,6 @@ UPDATE_AREAS: TArea * pA = mpRoomDB->getArea( getArea() );
     }
 
 }
-
-
-
-
 
 void TRoom::removeAllSpecialExitsToRoom( int _id )
 {

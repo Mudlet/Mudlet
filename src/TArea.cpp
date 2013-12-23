@@ -545,4 +545,11 @@ void TArea::calcSpan()
 void TArea::removeRoom( int room )
 {
     rooms.removeOne( room );
+    TRoom * pR = mpRoomDB->getRoom( room );
+    int x = pR->x;
+    int y = pR->y;
+    int z = pR->z;
+    if( max_x == x || min_x == x || max_y == y ||
+        min_y == y || max_z == z || min_z == z)
+        calcSpan();
 }
