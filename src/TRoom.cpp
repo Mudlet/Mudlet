@@ -38,7 +38,7 @@ TRoom::TRoom(TRoomDB * pRDB )
 , highlightColor( QColor( 255,150,0 ) )
 , rendered(false)
 , id( 0 )
-, area( 0 )
+, area( -1 )
 , weight(1)
 , north( -1 )
 , northeast( -1 )
@@ -118,6 +118,10 @@ void TRoom::setArea( int _areaID )
             return;
         }
     }
+
+    //remove from the old area
+    TArea * pA2 = mpRoomDB->getArea( area );
+    pA2->removeRoom( id );
 
     pA->addRoom( id );
     pA->fast_ausgaengeBestimmen(id);

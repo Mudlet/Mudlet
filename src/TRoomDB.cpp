@@ -124,6 +124,10 @@ bool TRoomDB::removeRoom( int id )
     if( rooms.contains(id ) && id > 0 )
     {
         TRoom * pR = getRoom( id );
+        //remove from area
+        TArea * pA = getArea ( pR->getArea() );
+        if ( pA )
+            pA->removeRoom( id );
         delete pR;
         return true;
     }
@@ -272,7 +276,7 @@ int TRoomDB::createNewAreaID()
 int TRoomDB::addArea( QString name )
 {
     // area name already exists
-    if( areaNamesMap.values().contains( name ) ) return -1;
+    if( areaNamesMap.values().contains( name ) ) return 0;
 
     int areaID = createNewAreaID();
     if( addArea( areaID ) )
@@ -281,7 +285,7 @@ int TRoomDB::addArea( QString name )
         return areaID;
     }
     else
-        return -1; //fail
+        return 0; //fail
 }
 
 // this func is called by the xml map importer

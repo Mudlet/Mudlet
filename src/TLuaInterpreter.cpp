@@ -6568,28 +6568,31 @@ int TLuaInterpreter::addAreaName( lua_State *L )
     QString _name = name.c_str();
 
     int newAreaID = pHost->mpMap->mpRoomDB->addArea( _name );
-    lua_pushnumber( L, newAreaID );
-    if( newAreaID > -1 )
+    if ( ! newAreaID )
     {
-        if( pHost->mpMap->mpMapper )
+        lua_pushstring( L, "addAreaName: Failed to create new area. It may already exist" );
+        lua_error( L );
+        return 1;
+    }
+    lua_pushnumber( L, newAreaID );
+    if( pHost->mpMap->mpMapper )
+    {
+        pHost->mpMap->mpMapper->showArea->clear();
+        QMapIterator<int, QString> it( pHost->mpMap->mpRoomDB->getAreaNamesMap() );
+        //sort them alphabetically (case sensitive)
+        QMap <QString, QString> areaNames;
+        while( it.hasNext() )
         {
-            pHost->mpMap->mpMapper->showArea->clear();
-            QMapIterator<int, QString> it( pHost->mpMap->mpRoomDB->getAreaNamesMap() );
-            //sort them alphabetically (case sensitive)
-            QMap <QString, QString> areaNames;
-            while( it.hasNext() )
-            {
-                it.next();
-                QString name = it.value();
-                areaNames.insert(name.toLower(), name);
-            }
+            it.next();
+            QString name = it.value();
+            areaNames.insert(name.toLower(), name);
+        }
 
-            QMapIterator<QString, QString> areaIt( areaNames );
-            while( areaIt.hasNext() )
-            {
-                areaIt.next();
-                pHost->mpMap->mpMapper->showArea->addItem( areaIt.value() );
-            }
+        QMapIterator<QString, QString> areaIt( areaNames );
+        while( areaIt.hasNext() )
+        {
+            areaIt.next();
+            pHost->mpMap->mpMapper->showArea->addItem( areaIt.value() );
         }
     }
     return 1;
@@ -6599,7 +6602,7 @@ int TLuaInterpreter::addAreaName( lua_State *L )
 
 int TLuaInterpreter::deleteArea( lua_State *L )
 {
-    int id = -1;
+    int id = 0;
     string name;
 
     if( lua_isnumber( L, 1 ) )
@@ -6618,7 +6621,7 @@ int TLuaInterpreter::deleteArea( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( id == -1 )
+    if( ! id )
     {
         QString _name = name.c_str();
         lua_pushboolean( L, pHost->mpMap->mpRoomDB->removeArea( _name ) );
@@ -6642,7 +6645,7 @@ int TLuaInterpreter::deleteRoom( lua_State *L )
     }
     else
     {
-        lua_pushstring( L, "addAreaName: wrong argument type" );
+        lua_pushstring( L, "deleteRoom: wrong argument type" );
         lua_error( L );
         return 1;
     }
@@ -6790,7 +6793,10 @@ int TLuaInterpreter::addRoom( lua_State * L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean( L, pHost->mpMap->addRoom( id ) );
+    bool added = pHost->mpMap->addRoom( id );
+    lua_pushboolean( L, added );
+    if ( added )
+        pHost->mpMap->setRoomArea( id, -1 );
     pHost->mpMap->mMapGraphNeedsUpdate = true;
 
     return 1;

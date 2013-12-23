@@ -542,4 +542,7 @@ void TArea::calcSpan()
     }
 }
 
-
+void TArea::removeRoom( int room )
+{
+    rooms.removeOne( room );
+}
