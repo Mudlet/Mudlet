@@ -454,15 +454,11 @@ void mudlet::layoutModules(){
             QTableWidgetItem *itemPriority = new QTableWidgetItem ();
             masterModule->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
             QStringList moduleInfo = pH->mInstalledModules[pModules[i]];
-            if (moduleInfo[1].toInt()){
+            masterModule->setText("sync?");
+            if (moduleInfo[1].toInt())
                 masterModule->setCheckState(Qt::Checked);//Qt::Checked);
-                masterModule->setText("sync");
-            }
-            else{
+            else
                 masterModule->setCheckState(Qt::Unchecked);//Qt::Checked);
-                masterModule->setText("don't sync");
-            }
-
             masterModule->setToolTip(QString("Checking this box will cause the module to be saved & resync'd across all open sessions."));
 //            if (moduleInfo[0].endsWith(".zip") || moduleInfo[0].endsWith(".mpackage")){
 //                masterModule->setCheckState(Qt::Unchecked);
