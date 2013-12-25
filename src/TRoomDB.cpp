@@ -78,7 +78,7 @@ bool TRoomDB::__removeRoom( int id )
     {
         TRoom * pR = getRoom( id );
         if( !pR ) return false;
-        QMapIterator<int, TRoom *> it( rooms );
+        QHashIterator<int, TRoom *> it( rooms );
         while( it.hasNext() )
         {
             it.next();
@@ -174,7 +174,7 @@ int TRoomDB::getAreaID( TArea * pA )
 void TRoomDB::buildAreas()
 {
     QTime _time; _time.start();
-    QMapIterator<int, TRoom *> it( rooms );
+    QHashIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
        it.next();
@@ -313,7 +313,7 @@ void TRoomDB::auditRooms()
 {
     QTime t; t.start();
     // rooms konsolidieren
-    QMapIterator<int, TRoom* > itRooms( rooms );
+    QHashIterator<int, TRoom* > itRooms( rooms );
     while( itRooms.hasNext() )
     {
         itRooms.next();
@@ -329,7 +329,7 @@ void TRoomDB::initAreasForOldMaps()
     buildAreas();
 
     // area mit raeumen fuellen
-    QMapIterator<int, TRoom *> it( rooms );
+    QHashIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
         it.next();

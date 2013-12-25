@@ -1013,7 +1013,7 @@ bool TMap::serialize( QDataStream & ofs )
             ofs << label.showOnTop;
         }
     }
-    QMapIterator<int, TRoom *> it( mpRoomDB->getRoomMap() );
+    QHashIterator<int, TRoom *> it( mpRoomDB->getRoomMap() );
     while( it.hasNext() )
     {
 

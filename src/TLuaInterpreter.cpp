@@ -4127,7 +4127,7 @@ int TLuaInterpreter::getRooms( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     lua_newtable(L);
-    QMapIterator<int,TRoom*> it(pHost->mpMap->mpRoomDB->getRoomMap());
+    QHashIterator<int,TRoom*> it(pHost->mpMap->mpRoomDB->getRoomMap());
     while( it.hasNext() )
     {
         it.next();

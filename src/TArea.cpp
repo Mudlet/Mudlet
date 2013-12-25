@@ -512,27 +512,30 @@ void TArea::calcSpan()
 
 void TArea::removeRoom( int room )
 {
+    QTime time;
+    time.start();
     TRoom * pR = mpRoomDB->getRoom( room );
-    rooms.removeAll( room );
+    rooms.removeOne( room );
     exits.remove( room );
-    int x = pR->x;
-    int y = pR->y*-1;
-    int z = pR->z;
-    int xmin=x;int ymin=y;int zmin=z;
-    int xmax=x;int ymax=y;int zmax=z;
-    if ( xminEbene.contains(z) )
-        xmin = xminEbene[z];
-    if ( yminEbene.contains(z))
-        ymin = yminEbene[z];
-    if ( zminEbene.contains(z))
-        zmin = zminEbene[z];
-    if ( xmaxEbene.contains(z))
-        xmax = xmaxEbene[z];
-    if ( ymaxEbene.contains(z))
-        ymax = ymaxEbene[z];
-    if ( zmaxEbene.contains(z))
-        zmax = zmaxEbene[z];
-    if( xmin == x || xmax == x || ymax == y ||
-        ymin == y || zmin == z || zmax == z)
-        calcSpan();
+    qDebug()<<room<<"took"<<time.elapsed();
+//    int x = pR->x;
+//    int y = pR->y*-1;
+//    int z = pR->z;
+//    int xmin=x;int ymin=y;int zmin=z;
+//    int xmax=x;int ymax=y;int zmax=z;
+//    if ( xminEbene.contains(z) )
+//        xmin = xminEbene[z];
+//    if ( yminEbene.contains(z))
+//        ymin = yminEbene[z];
+//    if ( zminEbene.contains(z))
+//        zmin = zminEbene[z];
+//    if ( xmaxEbene.contains(z))
+//        xmax = xmaxEbene[z];
+//    if ( ymaxEbene.contains(z))
+//        ymax = ymaxEbene[z];
+//    if ( zmaxEbene.contains(z))
+//        zmax = zmaxEbene[z];
+//    if( xmin == x || xmax == x || ymax == y ||
+//        ymin == y || zmin == z || zmax == z)
+//        calcSpan();
 }

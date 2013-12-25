@@ -52,7 +52,7 @@ public:
     void setAreaName( int areaID, QString name );
     const QList<TRoom *> getRoomPtrList();
     const QList<TArea *> getAreaPtrList();
-    const QMap<int, TRoom *> & getRoomMap() const { return rooms; }
+    const QHash<int, TRoom *> & getRoomMap() const { return rooms; }
     const QMap<int, TArea *> & getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
     QList<int> getAreaIDList();
@@ -77,7 +77,7 @@ private:
     int createNewAreaID();
     bool __removeRoom( int id );
 
-    QMap<int, TRoom *> rooms;
+    QHash<int, TRoom *> rooms;
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
     TMap * mpMap;

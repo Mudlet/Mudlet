@@ -252,7 +252,7 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
 {
     QString txt = pT->text();
 
-    QMapIterator<int, TRoom *> it( mpMap->mpRoomDB->getRoomMap() );
+    QHashIterator<int, TRoom *> it( mpMap->mpRoomDB->getRoomMap() );
     while( it.hasNext() )
     {
         it.next();
