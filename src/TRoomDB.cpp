@@ -76,7 +76,6 @@ bool TRoomDB::__removeRoom( int id )
 {
     if( rooms.contains(id ) && id > 0 )
     {
-
         TRoom * pR = getRoom( id );
         if( !pR ) return false;
         QMapIterator<int, TRoom *> it( rooms );
@@ -101,9 +100,9 @@ bool TRoomDB::__removeRoom( int id )
         int areaID = pR->getArea();
         TArea * pA = getArea( areaID );
         if( !pA ) return false;
-        pA->rooms.removeAll( id );
-        pA->exits.remove( id ); //note: this removes *all* keys=id
+        pA->removeRoom( id );
         mpMap->mMapGraphNeedsUpdate = true;
+        rooms.remove( id );
     }
     QList<QString> keyList = hashTable.keys();
     QList<int> valueList = hashTable.values();
@@ -124,10 +123,6 @@ bool TRoomDB::removeRoom( int id )
     if( rooms.contains(id ) && id > 0 )
     {
         TRoom * pR = getRoom( id );
-        //remove from area
-        TArea * pA = getArea ( pR->getArea() );
-        if ( pA )
-            pA->removeRoom( id );
         delete pR;
         return true;
     }
