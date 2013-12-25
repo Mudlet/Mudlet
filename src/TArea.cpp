@@ -373,6 +373,12 @@ void TArea::addRoom( int id )
 
 void TArea::calcSpan()
 {
+    xminEbene.clear();
+    yminEbene.clear();
+    zminEbene.clear();
+    xmaxEbene.clear();
+    ymaxEbene.clear();
+    zmaxEbene.clear();
     if( rooms.size() > 0 )
     {
         int id = rooms[0];
@@ -391,74 +397,36 @@ void TArea::calcSpan()
         int id = rooms[i];
         TRoom * pR = mpRoomDB->getRoom( id );
         if( !pR ) continue;
-        int _m = pR->x;
-        if( _m < min_x )
+        int _m_xmin = pR->x;
+        if( _m_xmin < min_x )
+            min_x = _m_xmin;
+        int _m_ymin = pR->y*-1;
+        if( _m_ymin < min_y )
+            min_y = _m_ymin;
+        int _m_zmin = pR->z;
+        if( _m_zmin < min_z )
         {
-            min_x = _m;
-        }
-    }
-    for( int i=0; i<rooms.size(); i++ )
-    {
-        int id = rooms[i];
-        TRoom * pR = mpRoomDB->getRoom( id );
-        if( !pR ) continue;
-        int _m = pR->y*-1;
-        if( _m < min_y )
-        {
-            min_y = _m;
-        }
-    }
-    for( int i=0; i<rooms.size(); i++ )
-    {
-        int id = rooms[i];
-        TRoom * pR = mpRoomDB->getRoom( id );
-        if( !pR ) continue;
-        int _m = pR->z;
-        if( _m < min_z )
-        {
-            min_z = _m;
-            if( ! ebenen.contains( _m ) )
+            min_z = _m_zmin;
+            if( ! ebenen.contains( _m_zmin ) )
             {
-                ebenen.push_back( _m );
+                ebenen.push_back( _m_zmin );
             }
         }
-    }
-    for( int i=0; i<rooms.size(); i++ )
-    {
-        int id = rooms[i];
-        TRoom * pR = mpRoomDB->getRoom( id );
-        if( !pR ) continue;
-        int _m = pR->x;
-        if( _m > max_x )
+        int _m_xmax = pR->x;
+        if( _m_xmax > max_x )
+            max_x = _m_xmax;
+        int _m_ymax = pR->y*-1;
+        if( _m_ymax > max_y )
+            max_y = _m_ymax;
+        int _m_zmax = pR->z;
+        if( _m_zmax > max_z )
         {
-            max_x = _m;
-        }
-    }
-    for( int i=0; i<rooms.size(); i++ )
-    {
-        int id = rooms[i];
-        TRoom * pR = mpRoomDB->getRoom( id );
-        if( !pR ) continue;
-        int _m = pR->y*-1;
-        if( _m > max_y )
-        {
-            max_y = _m;
-        }
-    }
-    for( int i=0; i<rooms.size(); i++ )
-    {
-        int id = rooms[i];
-        TRoom * pR = mpRoomDB->getRoom( id );
-        if( !pR ) continue;
-        int _m = pR->z;
-        if( _m > max_z )
-        {
-            max_z = _m;
+            max_z = _m_zmax;
         }
         // ebenenliste anlegen
-        if( ! ebenen.contains( _m ) )
+        if( ! ebenen.contains( _m_zmax ) )
         {
-            ebenen.push_back( _m );
+            ebenen.push_back( _m_zmax );
         }
     }
 
@@ -544,12 +512,27 @@ void TArea::calcSpan()
 
 void TArea::removeRoom( int room )
 {
-    rooms.removeOne( room );
     TRoom * pR = mpRoomDB->getRoom( room );
+    rooms.removeAll( room );
+    exits.remove( room );
     int x = pR->x;
-    int y = pR->y;
+    int y = pR->y*-1;
     int z = pR->z;
-    if( max_x == x || min_x == x || max_y == y ||
-        min_y == y || max_z == z || min_z == z)
+    int xmin=x;int ymin=y;int zmin=z;
+    int xmax=x;int ymax=y;int zmax=z;
+    if ( xminEbene.contains(z) )
+        xmin = xminEbene[z];
+    if ( yminEbene.contains(z))
+        ymin = yminEbene[z];
+    if ( zminEbene.contains(z))
+        zmin = zminEbene[z];
+    if ( xmaxEbene.contains(z))
+        xmax = xmaxEbene[z];
+    if ( ymaxEbene.contains(z))
+        ymax = ymaxEbene[z];
+    if ( zmaxEbene.contains(z))
+        zmax = zmaxEbene[z];
+    if( xmin == x || xmax == x || ymax == y ||
+        ymin == y || zmin == z || zmax == z)
         calcSpan();
 }
