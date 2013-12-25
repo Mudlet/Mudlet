@@ -58,7 +58,10 @@ TRoom::TRoom(TRoomDB * pRDB )
 
 TRoom::~TRoom()
 {
+    QTime timer;
+    timer.start();
     mpRoomDB->__removeRoom( id );
+    qDebug()<<"room destructor took"<<timer.elapsed();
 }
 
 int TRoom::hasExitStub(int direction){

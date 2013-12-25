@@ -27,14 +27,18 @@ TRoomDB::TRoomDB( TMap * pMap )
 
 TRoom * TRoomDB::getRoom( int id )
 {
-    if( rooms.contains( id ) && id > 0 )
-    {
-        return rooms[id];
-    }
-    else
-    {
-        return 0;
-    }
+    QHash< int, TRoom * >::iterator i = rooms.find( id );
+    if ( i != rooms.end() && i.key() == id )
+        return i.value();
+    return 0;
+//    if( rooms.contains( id ) && id > 0 )
+//    {
+//        return rooms[id];
+//    }
+//    else
+//    {
+//        return 0;
+//    }
 }
 
 bool TRoomDB::addRoom( int id )
