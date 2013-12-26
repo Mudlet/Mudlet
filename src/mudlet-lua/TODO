@@ -1,0 +1,17 @@
+need to sort out single GIT repozitory for all mudlet code
+	(well it's not so bad now ... there is one for lua and one for rest)
+
+
+Lua Code
+	test it properly e.g. that all functions are working
+	test new loading
+	clean up lua dependences rex_pcre, lpeg, luasql.sqlite3
+
+
+LuaDoc
+	gen LuaDoc and link it from main manual (this will be just API documentation)
+		e.g. LuaDoc will replace Alphabetic Function List, but still need most of original doc
+
+	make generated LuaDoc more appealing (check lua/luadoc/doclet/html folder for it)
+		this mainly includes better css
+

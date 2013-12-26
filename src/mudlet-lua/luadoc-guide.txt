@@ -1,0 +1,74 @@
+This file should give you basic guidelines for documenting mudlet-lua code 
+with LuaDoc. (Keep in mind that we did few extensions to LuaDoc,
+so this is not generic LuaDoc guide. All Mudlet LuaDoc extensions are 
+freely available in lua/luadoc/ folder.)
+
+I hope that everything will be clear from following example. 
+You can always ask for clarification on Mudlet forum...
+Please use <pre></pre> tag for any code - even if it's just one line.
+You will need to to escape all html characters.
+
+We would appreciate if you can follow this as close as 
+possible to keep it consistent and easily maintainable. 
+Thank you!
+
+
+
+
+--- Short description, which should end with dot. More extended description
+--- can be across many lines (including blank ones).
+---
+--- You can use pre tag anywhere you like. (Please indent it by 2 spaces.)
+---   <pre>
+---   if info ~= nil then
+---      assert(info.name, "function name undefined")
+---   end
+---   </pre>
+--- You can also force <br/> new line with HTML tag.
+---
+--- @release Mudlet 1.1.1
+---
+--- @param a is used for ... param description.
+--- @param b LuaDoc will generate basic doc for all omitted parameters.
+---
+--- @return truu/false (to keep if brief)
+---
+--- @usage Description of example.
+---   <pre>
+---   test(1, 2)
+---   </pre>
+--- @usage Description of second example can be very long,
+---   so I need to carry on following lines.
+---   <pre>
+---   local res = test("hit", 2)
+---   echo(res)
+---   </pre>
+---
+--- @see functionName
+--- @see anotherFunctionName
+---
+function test(a, b) end
+
+
+--- You can also document tables, but you have to manually set class and name tag.
+--- Set class to 'function' for all tables or variables or it will not appear in master index!
+---
+--- @see fg
+---
+--- @class function
+--- @name color_table
+color_table = {}
+
+
+-- NOT LUADOC
+-- This is function will not be in generated LuaDoc, but you can still 
+-- document it in save fashion.
+--
+-- normal lua comments   --
+-- LuaDoc documentation  ---
+--
+function _privateFunction()
+end
+
+
+
