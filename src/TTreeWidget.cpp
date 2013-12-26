@@ -25,6 +25,8 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "TDebug.h"
+#include "LuaInterface.h"
+#include "VarUnit.h"
 
 TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
 {
@@ -45,11 +47,23 @@ TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
     mIsAliasTree = false;
     mIsActionTree = false;
     mIsKeyTree = false;
+    mIsVarTree = false;
 }
 
 void TTreeWidget::setIsAliasTree()
 {
     mIsAliasTree = true;
+    mIsTriggerTree = false;
+    mIsScriptTree = false;
+    mIsTimerTree = false;
+    mIsActionTree = false;
+    mIsKeyTree = false;
+}
+
+void TTreeWidget::setIsVarTree()
+{
+    mIsVarTree = true;
+    mIsAliasTree = false;
     mIsTriggerTree = false;
     mIsScriptTree = false;
     mIsTimerTree = false;
@@ -110,6 +124,72 @@ void TTreeWidget::setIsScriptTree()
 void TTreeWidget::setHost( Host * pH )
 {
     mpHost = pH;
+}
+
+void TTreeWidget::getAllChildren( QTreeWidgetItem *pItem, QList< QTreeWidgetItem * > & list)
+{
+    list.append( pItem );
+    for(int i=0;i<pItem->childCount();++i)
+        getAllChildren( pItem->child(i), list );
+}
+
+void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
+{
+    QModelIndex indexClicked = indexAt(event->pos());
+    if( mIsVarTree && indexClicked.isValid() && mClickedItem == indexClicked )
+    {
+        QRect vrect = visualRect(indexClicked);
+        int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
+        QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation,
+                           vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
+        if(rect.contains(event->pos()))
+        {
+            QTreeWidgetItem * clicked = itemFromIndex( indexClicked );
+            if ( ! ( clicked->flags()&Qt::ItemIsUserCheckable ) )
+                return;
+            if ( clicked->checkState( 0 ) == Qt::Unchecked )
+            {
+                clicked->setCheckState( 0, Qt::Checked );
+                //get all children and see what ones we can save
+                QList< QTreeWidgetItem * > list;
+                getAllChildren( clicked, list );
+                QListIterator< QTreeWidgetItem * > it(list);
+                LuaInterface * lI = mpHost->getLuaInterface();
+                VarUnit * vu = lI->getVarUnit();
+                while( it.hasNext() )
+                {
+                    QTreeWidgetItem * item = it.next();
+                    if ( ! vu->shouldSave( item ) )
+                        item->setCheckState( 0, Qt::Unchecked );
+                }
+            }
+            else
+            {
+                clicked->setCheckState( 0, Qt::Unchecked );
+            }
+            return;
+        }
+    }
+    QTreeWidget::mouseReleaseEvent(event);
+}
+
+void TTreeWidget::mousePressEvent( QMouseEvent *event )
+{
+    QModelIndex indexClicked = indexAt(event->pos());
+    if( mIsVarTree && indexClicked.isValid() )
+    {
+        QRect vrect = visualRect(indexClicked);
+        int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
+        QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation,
+                           vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
+        if(rect.contains(event->pos()))
+        {
+            mClickedItem = indexClicked;
+            QTreeWidget::mousePressEvent(event);
+            return;
+        }
+    }
+    QTreeWidget::mousePressEvent(event);
 }
 
 void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end )
@@ -257,6 +337,25 @@ void TTreeWidget::dropEvent(QDropEvent *event)
         if( (dropIndicatorPosition() == QAbstractItemView::AboveItem )
          || (dropIndicatorPosition() == QAbstractItemView::BelowItem ) )
         {
+            event->setDropAction( Qt::IgnoreAction );
+            event->ignore();
+        }
+    }
+
+    if ( mIsVarTree )
+    {
+        LuaInterface * lI = mpHost->getLuaInterface();        
+        if ( ! lI->validMove( pItem ) )
+        {
+            event->setDropAction( Qt::IgnoreAction );
+            event->ignore();
+        }
+        QTreeWidgetItem * newpItem = pItem;
+        QTreeWidgetItem * cItem = selectedItems().first();
+        QTreeWidgetItem * oldpItem = cItem->parent();
+        if ( ! lI->reparentVariable( newpItem, cItem, oldpItem ) )
+        {
+            qDebug()<<"reparent failed";
             event->setDropAction( Qt::IgnoreAction );
             event->ignore();
         }

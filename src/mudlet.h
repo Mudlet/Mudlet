@@ -36,17 +36,7 @@
 #include <QMdiArea>
 #include "TConsole.h"
 #include "ui_main_window.h"
-//#ifdef Q_OS_LINUX
-//    #include <phonon>
-//#else
-//    #include <Phonon>
-//#endif
-//Debian BSD patch:
-#ifdef Q_OS_WIN32
-     #include <Phonon>
-#else
-     #include <phonon>
-#endif
+#include <QMediaPlayer>
 
 class QAction;
 class QMenu;
@@ -161,10 +151,10 @@ public:
    Host *                        mpCurrentActiveHost;
    bool                          mAutolog;
    QString                       mIrcNick;
-   Phonon::MediaObject *         mpMusicBox1;
-   Phonon::MediaObject *         mpMusicBox2;
-   Phonon::MediaObject *         mpMusicBox3;
-   Phonon::MediaObject *         mpMusicBox4;
+   QMediaPlayer *                mpMusicBox1;
+   QMediaPlayer *                mpMusicBox2;
+   QMediaPlayer *                mpMusicBox3;
+   QMediaPlayer *                mpMusicBox4;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
 

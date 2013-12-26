@@ -374,6 +374,48 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="TTreeWidget" name="treeWidget_vars">
+                   <property name="frameShape">
+                    <enum>QFrame::NoFrame</enum>
+                   </property>
+                   <property name="midLineWidth">
+                    <number>4</number>
+                   </property>
+                   <property name="dragDropMode">
+                    <enum>QAbstractItemView::InternalMove</enum>
+                   </property>
+                   <property name="alternatingRowColors">
+                    <bool>false</bool>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>32</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="rootIsDecorated">
+                    <bool>true</bool>
+                   </property>
+                   <property name="allColumnsShowFocus">
+                    <bool>true</bool>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>false</bool>
+                   </property>
+                   <property name="headerHidden">
+                    <bool>false</bool>
+                   </property>
+                   <property name="expandsOnDoubleClick">
+                    <bool>false</bool>
+                   </property>
+                   <column>
+                    <property name="text">
+                     <string>1</string>
+                    </property>
+                   </column>
+                  </widget>
+                 </item>
+                 <item>
                   <widget class="TTreeWidget" name="treeWidget">
                    <property name="frameShape">
                     <enum>QFrame::NoFrame</enum>
@@ -419,6 +461,25 @@
                      <string>1</string>
                     </property>
                    </column>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="toggleHiddenVarsButton">
+                   <property name="text">
+                    <string>Toggle Hidden Variables</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="autoDefault">
+                    <bool>false</bool>
+                   </property>
+                   <property name="default">
+                    <bool>false</bool>
+                   </property>
+                   <property name="flat">
+                    <bool>false</bool>
+                   </property>
                   </widget>
                  </item>
                  <item>
@@ -653,7 +714,7 @@
                              <string>...</string>
                             </property>
                             <property name="icon">
-                             <iconset>
+                             <iconset resource="../mudlet_alpha.qrc">
                               <normaloff>:/icons/application-exit.png</normaloff>:/icons/application-exit.png</iconset>
                             </property>
                             <property name="autoRaise">
@@ -723,15 +784,6 @@
                       </attribute>
                       <attribute name="headerDefaultSectionSize">
                        <number>80</number>
-                      </attribute>
-                      <attribute name="headerMinimumSectionSize">
-                       <number>20</number>
-                      </attribute>
-                      <attribute name="headerDefaultSectionSize">
-                       <number>80</number>
-                      </attribute>
-                      <attribute name="headerVisible">
-                       <bool>true</bool>
                       </attribute>
                       <attribute name="headerMinimumSectionSize">
                        <number>20</number>
@@ -1076,6 +1128,8 @@
    <header>TTreeWidget.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections/>
 </ui>

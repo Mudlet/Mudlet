@@ -565,7 +565,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         {
             TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
             if( !pR ) continue;
-            int trID = pArea->rooms[i];
             float rx = pR->x*tx+_rx;
             float ry = pR->y*-1*ty+_ry;
             int rz = pR->z;
@@ -2305,7 +2304,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
-        mLastMouseClick = event->posF();
+        mLastMouseClick = event->localPos();
     }
     update();
 }
@@ -2517,7 +2516,7 @@ void T2DMap::slot_setCharacter()
     {
         QString s = QInputDialog::getText(this,"enter marker letter","letter");
         if( s.size() < 1 ) return;
-        pR->c = s[0].toAscii();
+        pR->c = s[0].toLatin1();
         repaint();
     }
 }

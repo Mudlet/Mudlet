@@ -20,6 +20,7 @@
 
 #include "XMLimport.h"
 #include "mudlet.h"
+#include "TRoom.h"
 #include <QStringList>
 #include <QDebug>
 
@@ -177,6 +178,115 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
             mpHost->getScriptUnit()->unregisterScript( mpScript );
     }
     return ! error();
+}
+
+void XMLimport::readVariableGroup( TVar *pParent )
+{
+    TVar * var;
+    if( pParent )
+    {
+        var = new TVar( pParent );
+    }
+    else
+    {
+        var = new TVar( );
+    }
+
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    QString keyName, value;
+    int keyType = 0;
+    int valueType;
+    while( ! atEnd() )
+    {
+        readNext();
+        if( isEndElement() ) break;
+
+        if( isStartElement() )
+        {
+            if( name() == "name" )
+            {
+                keyName = readElementText();
+                continue;
+            }
+
+            else if( name() == "value")
+            {
+                value = readElementText();
+                continue;
+            }
+            else if( name() == "keyType" )
+            {
+                keyType = readElementText().toInt() ;
+                continue;
+            }
+            else if ( name() == "valueType" )
+            {
+                valueType = readElementText().toInt();
+                var->setName( keyName, keyType );
+                var->setValue( value, valueType );
+                vu->addSavedVar( var );
+                lI->setValue( var );
+                continue;
+            }
+            else if( name() == "VariableGroup" )
+            {
+                readVariableGroup( var );
+            }
+            else if( name() == "Variable" )
+            {
+                readVariableGroup( var );
+            }
+        }
+    }
+}
+
+void XMLimport::readHiddenVariables()
+{
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    while( ! atEnd() )
+    {
+        readNext();
+        if( isEndElement() ) break;
+
+        if( isStartElement() )
+        {
+            if( name() == "name" )
+            {
+                QString var = readElementText();
+                vu->addHidden( var );
+                continue;
+            }
+        }
+    }
+}
+
+void XMLimport::readVariablePackage()
+{
+    qDebug()<<"importing variables";
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    mpVar = vu->getBase();
+    while( ! atEnd() )
+    {
+        readNext();
+        if( isStartElement() )
+        {
+            if( name() == "VariableGroup" )
+            {
+                readVariableGroup( mpVar );
+            }
+            else if( name() == "Variable" )
+            {
+                readVariableGroup( mpVar );
+            }
+            else if ( name() == "HiddenVariables")
+            {
+                readHiddenVariables( );
+            }
+        }
+    }
 }
 
 void XMLimport::readMap()
@@ -461,6 +571,10 @@ void XMLimport::readPackage()
                 readHelpPackage();
                 continue;
             }
+            else if( name() == "VariablePackage" )
+            {
+                readVariablePackage();
+            }
             else
             {
                 readUnknownPackage();
@@ -736,6 +850,9 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
     pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
     pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
+    QStringRef ignore = attributes().value("mDoubleClickIgnore");
+    for(int i=0;i<ignore.size();i++)
+        pT->mDoubleClickIgnore.insert( ignore.at( i ) );
 
     while( ! atEnd() )
     {
