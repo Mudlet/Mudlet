@@ -172,84 +172,81 @@ mudlet::mudlet()
     }
     //restoreBar = new QMenu( this );
     QAction * actionConnect = new QAction(QIcon(":/icons/preferences-web-browser-cache.png"), tr("Connect"), this);
-    actionConnect->setStatusTip(tr("Connect To Server"));
+    actionConnect->setToolTip(tr("Connect to a MUD"));
     mpMainToolBar->addAction( actionConnect );
 
     QAction * actionTriggers = new QAction(QIcon(":/icons/tools-wizard.png"), tr("Triggers"), this);
-    actionTriggers->setStatusTip(tr("Show Triggers"));
+    actionTriggers->setToolTip(tr("Show and edit triggers"));
     mpMainToolBar->addAction( actionTriggers );
 
     QAction * actionAlias = new QAction(QIcon(":/icons/system-users.png"), tr("Aliases"), this);
-    actionAlias->setStatusTip(tr("Show Aliases"));
+    actionAlias->setToolTip(tr("Show and edit aliases"));
     actionAlias->setEnabled( true );
     mpMainToolBar->addAction( actionAlias );
 
     QAction * actionTimers = new QAction(QIcon(":/icons/chronometer.png"), tr("Timers"), this);
-    actionTimers->setStatusTip(tr("Show Timers"));
+    actionTimers->setToolTip(tr("Show and edit timers"));
     mpMainToolBar->addAction( actionTimers );
 
     QAction * actionButtons = new QAction(QIcon(":/icons/bookmarks.png"), tr("Buttons"), this);
-    actionButtons->setStatusTip(tr("Show Easy Buttons"));
+    actionButtons->setToolTip(tr("Show and edit easy buttons"));
     mpMainToolBar->addAction( actionButtons );
 
     QAction * actionScripts = new QAction(QIcon(":/icons/document-properties.png"), tr("Scripts"), this);
     actionScripts->setEnabled( true );
-    actionScripts->setStatusTip(tr("Show Scripts"));
+    actionScripts->setToolTip(tr("Show and edit scripts"));
     mpMainToolBar->addAction( actionScripts );
 
     QAction * actionKeys = new QAction(QIcon(":/icons/preferences-desktop-keyboard.png"), tr("Keys"), this);
-    actionKeys->setStatusTip(tr("Options"));
+    actionKeys->setToolTip(tr("Show and edit keys"));
     actionKeys->setEnabled( true );
     mpMainToolBar->addAction( actionKeys );
 
     QAction * actionIRC = new QAction(QIcon(":/icons/internet-telephony.png"), tr("Help Chat"), this);
-    actionIRC->setStatusTip(tr("help chat on IRC"));
+    actionIRC->setToolTip(tr("Join Mudlet help chat on IRC"));
     mpMainToolBar->addAction( actionIRC );
 
     QAction * actionMapper = new QAction(QIcon(":/icons/applications-internet.png"), tr("Map"), this);
-    actionMapper->setStatusTip(tr("show map"));
+    actionMapper->setToolTip(tr("Show/hide the map"));
     mpMainToolBar->addAction( actionMapper );
 
     QAction * actionHelp = new QAction(QIcon(":/icons/help-hint.png"), tr("Manual"), this);
-    actionHelp->setStatusTip(tr("Browse Reference Material and Documentation"));
+    actionHelp->setToolTip(tr("Browse reference material and documentation"));
     mpMainToolBar->addAction( actionHelp );
 
     QAction * actionOptions = new QAction(QIcon(":/icons/configure.png"), tr("Settings"), this);
-    actionOptions->setStatusTip(tr("Settings, Options and Preferences"));
+    actionOptions->setToolTip(tr("See and edit profile preferences"));
     mpMainToolBar->addAction( actionOptions );
 
-    QAction * actionNotes = new QAction(QIcon(":/icons/applications-accessories.png"), tr("Notepad"), this);
-    actionNotes->setStatusTip(tr("take notes"));
+    QAction * actionNotes = new QAction(QIcon(":/icons/applications-accessories.png"), tr("Notepad"), this);    
+    actionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
     mpMainToolBar->addAction( actionNotes );
 
-    QAction * actionPackageM = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Package Manager"), this);
-    actionPackageM->setStatusTip(tr("Package Manager"));
+    QAction * actionPackageM = new QAction(QIcon(":/icons/package-manager.png"), tr("Package Manager"), this);
+    actionPackageM->setToolTip(tr("Package Manager - allows you to install xmls, .mpackages"));
     mpMainToolBar->addAction( actionPackageM );
-//    QAction * menuActionPackageM = new QAction("Package Manager", this);
-//    menuActionPackageM->setStatusTip(tr("Package Manager"));
-//    connect(menuActionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
-//    QMenu * _miscMenu = new QMenu("Misc", this);
-//    _miscMenu->addAction(menuActionPackageM);
-//    menuBar()->addMenu(_miscMenu);
 
+    QAction * actionModuleM = new QAction(QIcon(":/icons/module-manager.png"), tr("Module Manager"), this);
+    actionModuleM->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
+    mpMainToolBar->addAction( actionModuleM );
 
 
     QAction * actionReplay = new QAction(QIcon(":/icons/media-optical.png"), tr("Replay"), this);
-    actionNotes->setStatusTip(tr("load replay"));
+    actionReplay->setToolTip(tr("Load a Mudlet replay"));
     mpMainToolBar->addAction( actionReplay );
 
     actionReconnect = new QAction(QIcon(":/icons/system-restart.png"), tr("Reconnect"), this);
-    actionNotes->setStatusTip(tr("reconnect"));
+    actionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
     mpMainToolBar->addAction( actionReconnect );
 
 
 
     QAction * actionMultiView = new QAction(QIcon(":/icons/view-split-left-right.png"), tr("MultiView"), this);
-    actionMultiView->setStatusTip(tr("MultiView"));
+    actionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
     mpMainToolBar->addAction( actionMultiView );
 
     QAction * actionStopAllTriggers = new QAction(QIcon(":/icons/edit-bomb.png"), tr("Stop All Triggers"), this);
-    actionStopAllTriggers->setStatusTip(tr("stop all triggers, alias, actions, timers and scripts"));
+    actionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
     //mpMainToolBar->addAction( actionStopAllTriggers );
 
 
@@ -259,13 +256,8 @@ mudlet::mudlet()
 
 
     QAction * actionAbout = new QAction(QIcon(":/icons/mudlet_main_32px.png"), tr("About"), this);
-    actionAbout->setStatusTip(tr("About"));
+    actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction( actionAbout );
-
-    QAction * actionCloseProfile = new QAction(QIcon(":/icons/window-close.png"), tr("Close"), this);
-    actionScripts->setEnabled( true );
-    actionScripts->setStatusTip(tr("close connection"));
-    //mpMainToolBar->addAction( actionCloseProfile );
 
 
 
@@ -304,7 +296,7 @@ mudlet::mudlet()
     setFont( mainFont );
     mainPane->setFont( mainFont );
     mpTabBar->setFont( mdiFont );
-    QIcon noIcon;
+
     mainPane->show();
     connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
@@ -317,13 +309,13 @@ mudlet::mudlet()
     connect(actionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
     connect(actionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-    connect(actionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
     connect(actionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
     connect(actionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
     connect(actionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
     connect(actionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(actionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
+    connect(actionModuleM, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
 
 
 
@@ -928,6 +920,7 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[10]->setEnabled( false );
     mpMainToolBar->actions()[11]->setEnabled( false );
     mpMainToolBar->actions()[12]->setEnabled( false );
+    mpMainToolBar->actions()[13]->setEnabled( false );
 }
 
 void mudlet::enableToolbarButtons()
@@ -943,6 +936,7 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[10]->setEnabled( true );
     mpMainToolBar->actions()[11]->setEnabled( true );
     mpMainToolBar->actions()[12]->setEnabled( true );
+    mpMainToolBar->actions()[13]->setEnabled( true );
 }
 
 bool mudlet::openWindow( Host * pHost, QString & name )
