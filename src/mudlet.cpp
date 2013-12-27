@@ -1811,9 +1811,7 @@ void mudlet::show_options_dialog()
 
 void mudlet::show_help_dialog()
 {
-    QString p = qApp->applicationDirPath();
-    p.append("/Mudlet_API_Reference_HTML.html");
-    QDesktopServices::openUrl(QUrl::fromLocalFile(p));//("file://./Mudlet_API_Reference_HTML.html"));//"http://mudlet.sourceforge.net/wordpress/?page_id=40"));
+    QDesktopServices::openUrl(QUrl("http://wiki.mudlet.org/w/Manual:Contents"));
 }
 
 void mudlet::slot_show_help_dialog_video()
