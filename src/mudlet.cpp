@@ -202,6 +202,11 @@ mudlet::mudlet()
     actionKeys->setEnabled( true );
     mpMainToolBar->addAction( actionKeys );
 
+    QAction * actionVars = new QAction(QIcon(":/icons/variables.png"), tr("Variables"), this);
+    actionVars->setToolTip(tr("Show and edit lua variables"));
+    actionVars->setEnabled( true );
+    mpMainToolBar->addAction( actionVars );
+
     QAction * actionIRC = new QAction(QIcon(":/icons/internet-telephony.png"), tr("Help Chat"), this);
     actionIRC->setToolTip(tr("Join Mudlet help chat on IRC"));
     mpMainToolBar->addAction( actionIRC );
@@ -305,6 +310,7 @@ mudlet::mudlet()
     connect(actionAlias, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
     connect(actionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
     connect(actionKeys, SIGNAL(triggered()),this,SLOT(show_key_dialog()));
+    connect(actionVars, SIGNAL(triggered()), this, SLOT(show_variable_dialog()));
     connect(actionButtons, SIGNAL(triggered()), this, SLOT(show_action_dialog()));
     connect(actionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
     connect(actionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
@@ -915,12 +921,13 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[4]->setEnabled( false );
     mpMainToolBar->actions()[5]->setEnabled( false );
     mpMainToolBar->actions()[6]->setEnabled( false );
-    mpMainToolBar->actions()[8]->setEnabled( false );
+    mpMainToolBar->actions()[7]->setEnabled( false );
     mpMainToolBar->actions()[9]->setEnabled( false );
     mpMainToolBar->actions()[10]->setEnabled( false );
     mpMainToolBar->actions()[11]->setEnabled( false );
     mpMainToolBar->actions()[12]->setEnabled( false );
     mpMainToolBar->actions()[13]->setEnabled( false );
+    mpMainToolBar->actions()[14]->setEnabled( false );
 }
 
 void mudlet::enableToolbarButtons()
@@ -931,12 +938,13 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[4]->setEnabled( true );
     mpMainToolBar->actions()[5]->setEnabled( true );
     mpMainToolBar->actions()[6]->setEnabled( true );
-    mpMainToolBar->actions()[8]->setEnabled( true );
+    mpMainToolBar->actions()[7]->setEnabled( true );
     mpMainToolBar->actions()[9]->setEnabled( true );
     mpMainToolBar->actions()[10]->setEnabled( true );
     mpMainToolBar->actions()[11]->setEnabled( true );
     mpMainToolBar->actions()[12]->setEnabled( true );
     mpMainToolBar->actions()[13]->setEnabled( true );
+    mpMainToolBar->actions()[14]->setEnabled( true );
 }
 
 bool mudlet::openWindow( Host * pHost, QString & name )
@@ -1780,6 +1788,17 @@ void mudlet::show_key_dialog()
     dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
     if( ! pEditor ) return;
     pEditor->slot_show_keys();
+    pEditor->raise();
+    pEditor->show();
+}
+
+void mudlet::show_variable_dialog()
+{
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
+    if( ! pEditor ) return;
+    pEditor->slot_show_vars();
     pEditor->raise();
     pEditor->show();
 }

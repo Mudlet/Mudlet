@@ -217,6 +217,7 @@ private slots:
    void                          show_timer_dialog();
    void                          show_action_dialog();
    void                          show_key_dialog();
+   void                          show_variable_dialog();
    void                          show_options_dialog();
 
 private:
