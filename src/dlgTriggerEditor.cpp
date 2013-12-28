@@ -3863,6 +3863,19 @@ void dlgTriggerEditor::saveAlias()
         name = regex;
     }
     QString substitution = mpAliasMainArea->substitution->text();
+    //check if sub will trigger regex
+    QRegExp rx(regex);
+    if ( rx.indexIn(substitution) != -1 )
+    {
+        //we have a loop
+        QIcon iconError;
+        iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        pItem->setIcon( 0, iconError );
+        pItem->setText( 0, name );
+        showInfo( QString( "Alias %1 has an infinite recursion. The regex pattern matches the substitution." )
+                  .arg(name));
+        return;
+    }
     QString script = mpSourceEditorArea->editor->toPlainText();
     if( pItem )
     {
