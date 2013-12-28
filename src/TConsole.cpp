@@ -1035,6 +1035,13 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         mpCommandLine->setFont(mpHost->mDisplayFont);
+        mFormatCurrent.bgR = mpHost->mBgColor.red();
+        mFormatCurrent.bgG = mpHost->mBgColor.green();
+        mFormatCurrent.bgB = mpHost->mBgColor.blue();
+        mFormatCurrent.fgR = mpHost->mFgColor.red();
+        mFormatCurrent.fgG = mpHost->mFgColor.green();
+        mFormatCurrent.fgB = mpHost->mFgColor.blue();
+
     }
     QPalette palette;
     palette.setColor( QPalette::Button, QColor(0,0,255) );
