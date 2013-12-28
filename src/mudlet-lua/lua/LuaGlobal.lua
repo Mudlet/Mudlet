@@ -79,9 +79,22 @@ end
 function handleWindowResizeEvent()
 end
 
+-- override built-in createMiniConsole to allow for multiple calls
+do
+	local oldcreateMiniConsole = createMiniConsole
+
+	function createMiniConsole(name,x,y,width,height)
+		oldcreateMiniConsole(name, 0,0,0,0)
+		moveWindow(name,x,y)
+		resizeWindow(name,width,height)
+	end
+end
+
+
 local packages = {
 	"StringUtils.lua",
 	"TableUtils.lua",
+	-- "Logging.lua", -- never documented and fails to load now
 	"DebugTools.lua",
 	"DB.lua",
 	"geyser/Geyser.lua",
@@ -103,10 +116,22 @@ local packages = {
 	"GUIUtils.lua",
 	"Other.lua",
 	"GMCP.lua",
-	}
+}
+
+
+-- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
+-- on Mac, it's set to LuaGlobals location. So work out where to load Lua files from
+local prefix = "./mudlet-lua/lua/"
+if not lfs.attributes(prefix) then
+        prefix = "../Resources/mudlet-lua/lua/"
+end
+if not lfs.attributes(prefix) then
+  echo("Error locating lua files from LuaGlobal - we're looking from "..lfs.currentdir()..".\n")
+  return
+end
 
 for _, package in ipairs(packages) do
-	local result, msg = pcall(dofile, "./mudlet-lua/lua/" .. package)
+	local result, msg = pcall(dofile, prefix .. package)
 	if not result then echo("Error attempting to load file: " .. package .. ": "..msg.."\n") end
 end
 

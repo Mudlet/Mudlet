@@ -1,0 +1,20 @@
+language: c
+
+install:
+ - sudo apt-get install lua5.1
+ - sudo apt-get install liblua5.1-filesystem0
+ - sudo apt-get install liblua5.1-rex-pcre0
+ - sudo apt-get install liblua5.1-sql-sqlite3-2
+ - sudo apt-get install liblua5.1-zip0
+ - sudo apt-get install luarocks
+ - sudo luarocks install busted
+
+script:
+ - "cd tests"
+ - "busted -l lua DB.lua"
+ - "busted -l lua Other.lua"
+
+notifications:
+  email:
+    on_failure: always
+    on_success: change

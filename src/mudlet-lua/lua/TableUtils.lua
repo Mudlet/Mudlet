@@ -98,6 +98,8 @@ end
 
 --- Determines if a table contains a value as a key or as a value (recursive).
 function table.contains(t, value)
+	if type(t) ~= "table" then return nil, "first parameter passed isn't a table" end
+
 	for k, v in pairs(t) do
 		if v == value then
 			return true
@@ -369,4 +371,19 @@ function table.index_of(table, element)
     end
   end
   return nil
+end
+
+-- returns a deep copy of the table with the metatable intact. Credit to Steve Donovan of Penlight.
+function table.deepcopy(t)
+    if type(t) ~= 'table' then return t end
+    local mt = getmetatable(t)
+    local res = {}
+    for k,v in pairs(t) do
+        if type(v) == 'table' then
+            v = table.deepcopy(v)
+        end
+        res[k] = v
+    end
+    setmetatable(res,mt)
+    return res
 end

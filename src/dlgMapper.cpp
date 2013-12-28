@@ -187,7 +187,7 @@ void dlgMapper::downloadMap()
     url.append("/maps/map.xml");
     //qDebug()<<"DOWNLOADING:"<<url;
     mpReply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
-    mpProgressDialog = new QProgressDialog("Downloading the map ...", "Abort", 0, 4000000, this);
+    mpProgressDialog = new QProgressDialog("Downloading the map ...", "Abort", 0, 4000000);
     connect(mpReply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));
     connect(mpProgressDialog, SIGNAL(canceled()), this, SLOT(cancel()));
     mpProgressDialog->show();

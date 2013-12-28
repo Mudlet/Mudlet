@@ -181,13 +181,8 @@ end
 ---   </pre>
 ---
 --- @return true or false
-function io.exists(fileOfFolderName)
-	local f = io.open(fileOfFolderName)
-	if f then
-		io.close(f)
-		return true
-	end
-	return false
+function io.exists(item)
+	return lfs.attributes(item) and true or false
 end
 
 
@@ -413,34 +408,34 @@ end
 
 
 --- <b><u>TODO</u></b> speedwalktimer()
-function speedwalktimer()
-	send(walklist[1])
-	table.remove(walklist, 1)
-	if #walklist>0 then
-		tempTimer(walkdelay, [[speedwalktimer()]])
-	end
+function speedwalktimer(walklist, walkdelay)
+    send(walklist[1])
+    table.remove(walklist, 1)
+    if #walklist>0 then
+        tempTimer(walkdelay, function() speedwalktimer(walklist, walkdelay) end)
+    end
 end
 
 
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
 function speedwalk(dirString, backwards, delay)
-	local dirString		= dirString:lower()
-	walklist			= {}
-	walkdelay			= delay
-	local reversedir	= {
-		n	= "s",
-		en	= "sw",
-		e	= "w",
-		es	= "nw",
-		s	= "n",
-		ws	= "ne",
-		w	= "e",
-		wn	= "se",
-		u	= "d",
-		d	= "u",
-		ni	= "out",
-		tuo	= "in"
+	local dirString = dirString:lower()
+	local walkdelay = delay
+	local walklist  = {}
+	local reversedir        = {
+		n       = "s",
+		en      = "sw",
+		e       = "w",
+		es      = "nw",
+		s       = "n",
+		ws      = "ne",
+		w       = "e",
+		wn      = "se",
+		u       = "d",
+		d       = "u",
+		ni      = "out",
+		tuo     = "in"
 	}
 	if not backwards then
 		for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
@@ -462,7 +457,7 @@ function speedwalk(dirString, backwards, delay)
 		end
 	end
 	if walkdelay then
-		speedwalktimer()
+		speedwalktimer(walklist, walkdelay)
 	end
 end
 
@@ -606,13 +601,15 @@ do
 	end
 end
 
-ioprint = print
-function print(...)
-  local t, echo, tostring = {...}, echo, tostring
-  for i = 1, #t do
-    echo((tostring(t[i]) or '?').."    ")
-  end
-  echo("\n")
+if not _TEST then  -- special exception, as overwriting print() messes up printing in the test environment
+	ioprint = print
+	function print(...)
+	  local t, echo, tostring = {...}, echo, tostring
+	  for i = 1, #t do
+	    echo((tostring(t[i]) or '?').."    ")
+	  end
+	  echo("\n")
+	end
 end
 
 function deleteFull()
