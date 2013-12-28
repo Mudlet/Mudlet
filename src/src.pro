@@ -1,6 +1,6 @@
 
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
+QMAKE_CXXFLAGS_DEBUG += -g -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
 QT += network opengl uitools multimedia
@@ -22,6 +22,7 @@ unix:LIBS += -lpcre \
     -lz
 
 win32:LIBS += -L"C:\\mudlet5_package" \
+    -L"C:\\mingw32\\lib" \
     -llua51 \
     -lpcre \
     -lhunspell \
@@ -35,6 +36,7 @@ win32:LIBS += -L"C:\\mudlet5_package" \
 unix:INCLUDEPATH += /usr/include/lua5.1
 
 win32:INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
+    "C:\\mingw32\\include" \
     "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
     "C:\\mudlet5_package\\boost_1_54_0" \
     "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
