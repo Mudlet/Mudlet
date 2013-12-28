@@ -26,7 +26,6 @@ win32:LIBS += -L"C:\\mudlet5_package" \
     -llua51 \
     -lpcre \
     -lhunspell \
-    -lquazip \
     -llibzip \
     -lzlib \
     -llibzip \

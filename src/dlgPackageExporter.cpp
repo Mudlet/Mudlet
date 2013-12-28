@@ -27,12 +27,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     closeButton = ui->buttonBox->addButton (QDialogButtonBox::Close);
     exportButton = new QPushButton(tr("&Export"));
 
-//
-//HEIKO: added ability to make fully fledged Mudlet packages including a package
-//       name config file and arbitray additional package content selection.
-//       However, this feature is currently restricted to windows only
-//       until quazip is part of the other Mudlet builds
-//#ifdef Q_OS_WIN
     ui->browseButton->hide();
     ui->filePath->hide();
     ui->textLabel1->hide();
@@ -59,12 +53,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
         configFile.close();
     }
     connect(ui->addFiles, SIGNAL(clicked()), this, SLOT(slot_addFiles()));
-//#else
-//    ui->addFiles->hide();
-//    ui->textLabel1_2->hide();
-//    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(slot_browse_button()));
-//    exportButton->setDisabled(true); // disabled by default until the user selects a location
-//#endif
 
     ui->buttonBox->addButton(exportButton, QDialogButtonBox::ResetRole);
     connect(exportButton, SIGNAL(clicked()), this, SLOT(slot_export_package()));
