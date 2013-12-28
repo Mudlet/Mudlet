@@ -229,7 +229,8 @@ int TRoomDB::getArea( TArea * pA )
 
 TArea * TRoomDB::getArea( int id )
 {
-    if( areas.contains( id ) && id > 0 )
+    //area id of -1 is a room in the "void", 0 is a failure
+    if( areas.contains( id ) && ( id > 0 || id == -1 ) )
     {
         return areas[id];
     }
@@ -253,7 +254,7 @@ bool TRoomDB::addArea( int id )
     }
     else
     {
-        QString error = QString("can't create area with ID=%1").arg(id);
+        QString error = QString("Area with ID=%1 already exists!").arg(id);
         mpMap->logError(error);
         return false;
     }
@@ -269,7 +270,7 @@ int TRoomDB::createNewAreaID()
             return _id;
         }
     }
-    return -1;
+    return 0;
 }
 
 int TRoomDB::addArea( QString name )

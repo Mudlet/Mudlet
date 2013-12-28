@@ -200,6 +200,7 @@ public:
     static int setExit( lua_State * );
     static int createRoomID( lua_State * );
     static int setRoomArea( lua_State * );
+    static int resetRoomArea( lua_State * );
     static int getRoomArea( lua_State * );
 
     static int denyCurrentSend( lua_State * );

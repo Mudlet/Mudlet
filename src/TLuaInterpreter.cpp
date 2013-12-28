@@ -8229,8 +8229,32 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
         area = lua_tointeger( L, 2 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-
+    if ( area <= 0 )
+    {
+        lua_pushstring( L, "setRoomArea: Area ID must be > 0. To remove a room's area, use resetRoomArea(roomID)" );
+        lua_error( L );
+        return 1;
+    }
     pHost->mpMap->setRoomArea( id, area );
+    return 0;
+}
+
+int TLuaInterpreter::resetRoomArea( lua_State * L )
+{
+    //will reset the room area to our void area
+    int id;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "resetRoomArea: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+        id = lua_tointeger( L, 1 );
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if ( pHost )
+        pHost->mpMap->setRoomArea( id, -1 );
     return 0;
 }
 
@@ -10732,6 +10756,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "createRoomID", TLuaInterpreter::createRoomID );
     lua_register( pGlobalLua, "getRoomArea", TLuaInterpreter::getRoomArea );
     lua_register( pGlobalLua, "setRoomArea", TLuaInterpreter::setRoomArea );
+    lua_register( pGlobalLua, "resetRoomArea", TLuaInterpreter::resetRoomArea );
     lua_register( pGlobalLua, "setAreaName", TLuaInterpreter::setAreaName );
     lua_register( pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked );
     lua_register( pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor );

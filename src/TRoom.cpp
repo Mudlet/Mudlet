@@ -108,15 +108,14 @@ void TRoom::setId( int _id )
 
 void TRoom::setArea( int _areaID )
 {
-    area = _areaID;
-    TArea * pA = mpRoomDB->getArea( area );
+    TArea * pA = mpRoomDB->getArea( _areaID );
     if( !pA )
     {
-        mpRoomDB->addArea( area );
-        pA = mpRoomDB->getArea( area );
+        mpRoomDB->addArea( _areaID );
+        pA = mpRoomDB->getArea( _areaID );
         if( !pA )
         {
-            QString error = "TRoom::setArea(): No area created! requested area ID=%1. Note: area IDs must be > 0";
+            QString error = QString( "TRoom::setArea(): No area created! requested area ID=%1. Note: area IDs must be > 0" ).arg( _areaID );
             mpRoomDB->mpMap->logError(error);
             return;
         }
@@ -132,7 +131,7 @@ void TRoom::setArea( int _areaID )
 //        QString error = "TRoom::setArea(): Dev Bug: Room had no current area!";
 //        mpRoomDB->mpMap->logError(error);
 //    }
-
+    area = _areaID;
     pA->addRoom( id );
     pA->fast_ausgaengeBestimmen(id);
     pA->fast_calcSpan(id);
