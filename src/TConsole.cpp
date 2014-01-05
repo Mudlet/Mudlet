@@ -2355,6 +2355,7 @@ TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width,
             return 0;
         }
         mSubConsoleMap[key] = pC;
+        pC->setObjectName( name );
         pC->setFocusPolicy( Qt::NoFocus );
         pC->setUserWindow();
         pC->console->setIsMiniConsole();
@@ -2382,6 +2383,7 @@ TLabel * TConsole::createLabel( QString & name, int x, int y, int width, int hei
     {
         TLabel * pC = new TLabel( mpMainFrame );
         mLabelMap[key] = pC;
+        pC->setObjectName( name );
         pC->setAutoFillBackground( fillBackground );
         pC->resize( width, height );
         pC->setContentsMargins(0,0,0,0);
@@ -2426,6 +2428,7 @@ bool TConsole::createButton( QString & name, int x, int y, int width, int height
     {
         TLabel * pC = new TLabel( mpMainFrame );
         mLabelMap[key] = pC;
+        pC->setObjectName( name );
         pC->setAutoFillBackground( fillBackground );
         pC->resize( width, height );
         pC->setContentsMargins(0,0,0,0);
