@@ -89,13 +89,9 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
     connect(this,SIGNAL(signalDisableTimer(int,QString)),this,SLOT(slotDisableTimer(int,QString)));
     connect(this,SIGNAL(signalClearUserWindow(int,QString)),this,SLOT(slotClearUserWindow(int,QString)));
 
-    connect(this, SIGNAL(signalSelect(int, QString, int)), this, SLOT(slotSelect(int,QString,int)));
-    connect(this, SIGNAL(signalSelectSection(int, int,int)), this, SLOT(slotSelectSection(int,int,int)));
     connect(this, SIGNAL(signalTempTimer(int, double,QString,QString)), this, SLOT(slotTempTimer(int,double,QString,QString)));
-
     connect(this, SIGNAL(signalReplace(int, QString)), this, SLOT(slotReplace(int,QString)));
-    connect(this, SIGNAL(signalSetFgColor(int, int,int,int)), this, SLOT(slotSetFgColor(int,int,int,int)));
-    connect(this, SIGNAL(signalSetBgColor(int, int,int,int)), this, SLOT(slotSetBgColor(int,int,int,int)));
+
     connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
 
     mpFileDownloader = new QNetworkAccessManager( this );
