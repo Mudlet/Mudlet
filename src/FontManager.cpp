@@ -59,8 +59,6 @@ void FontManager::loadFonts(QString folder)
         if (QFontDatabase::addApplicationFont(dir.absolutePath() + "/" + fontfile) == -1)
             std::cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().
                 data() << "/" << fontfile.toUtf8().data() << std::endl;
-        else
-            std::cout << "Loaded the font the file " << fontfile.toUtf8().data() << std::endl;
     }
 
 }
