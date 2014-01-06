@@ -4344,14 +4344,12 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
 //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
 int TLuaInterpreter::setAppStyleSheet( lua_State *L )
 {
-    string luaWindowName="";
     if( lua_isstring( L, 1 ) )
     {
-        luaWindowName = lua_tostring( L, 1 );
+        string stylesheet = lua_tostring( L, 1 );
+        qApp->setStyleSheet( stylesheet.c_str() );
     }
-    else
-        luaWindowName = "main";
-    qApp->setStyleSheet( luaWindowName.c_str() );
+
     return 0;
 }
 
@@ -10791,8 +10789,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "saveMap", TLuaInterpreter::saveMap );
     lua_register( pGlobalLua, "loadMap", TLuaInterpreter::loadMap );
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
-    // removed because of various Qt crashes
-    //lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
+    lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
     lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
     lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
     lua_register( pGlobalLua, "getRooms", TLuaInterpreter::getRooms );
