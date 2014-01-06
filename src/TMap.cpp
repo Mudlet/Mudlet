@@ -1077,8 +1077,6 @@ bool TMap::restore(QString location)
         QDir dir( folder );
         dir.setSorting(QDir::Time);
         entries = dir.entryList( QDir::Files, QDir::Time );
-        for( int i=0;i<entries.size(); i++ )
-            qDebug()<<i<<"#"<<entries[i];
     }
 
     bool canRestore = true;
