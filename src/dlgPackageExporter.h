@@ -41,13 +41,13 @@ public:
     QMap<QTreeWidgetItem *, TAction*> modActionMap;
     QMap<QTreeWidgetItem *, TTimer*> timerMap;
     QMap<QTreeWidgetItem *, TTimer*> modTimerMap;
+    QString filePath;
 private:
     Ui::dlgPackageExporter *ui;
     Host* mpHost;
     QTreeWidget * treeWidget;
     QPushButton *exportButton;
     QPushButton *closeButton;
-    QString filePath;
     QString tempDir;
     QString packageName;
     QString zipFile;

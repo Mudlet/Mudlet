@@ -700,6 +700,11 @@ void mudlet::slot_package_exporter(){
     Host * pH = getActiveHost();
     if( ! pH ) return;
     dlgPackageExporter *d = new dlgPackageExporter(this, pH);
+    // don't show the dialog if the user cancelled the wizard
+    if (d->filePath.isEmpty()) {
+        return;
+    }
+
     d->show();
 }
 

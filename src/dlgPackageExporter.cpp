@@ -30,8 +30,19 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     ui->browseButton->hide();
     ui->filePath->hide();
     ui->textLabel1->hide();
-    packageName = QInputDialog::getText(0,"Package Name", "Package Name");
+
+    // reset zipFile and filePath from possible previous use
+    zipFile = filePath = "";
+
+    packageName = QInputDialog::getText(0,"Package name", "Package name:");
+    if (packageName.isEmpty()) {
+        return;
+    }
     QString packagePath = QFileDialog::getExistingDirectory(0,"Where do you want to save the package?","Where do you want to save the package?");
+    if (packagePath.isEmpty()) {
+        return;
+    }
+
     tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/tmp/";
     packagePath.replace("\\", "/");
     tempDir = tempDir + "/" + packageName;
@@ -44,7 +55,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
 
     QString luaConfig = tempDir + "/config.lua";
     QFile configFile(luaConfig);
-    QStringList strings;
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         QTextStream out(&configFile);
