@@ -1,0 +1,11 @@
+{
+  "title": "Mudlet",
+  "app": "../Mudlet.app",
+  "background": "mudlet_osx_installer_background.png",
+  "icon": "osx.icns",
+  "icons": {
+    "size": 80,
+    "app": [154, 205],
+    "alias": [414, 205]
+  }
+}

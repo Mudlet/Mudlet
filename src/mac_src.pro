@@ -1,31 +1,33 @@
-CONFIG += release uitools
-CONFIG += app_bundle
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O3 -Wno-deprecated -Wno-unused-parameter
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.4
+# CONFIG -= app_bundle
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
+QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
+
+# We should use the default compiler preferred by Qt on the system (clang vs gcc)
+!macx {
+  QMAKE_CC = gcc
+  QMAKE_CXX = g++
+}
 
 MOC_DIR = ./tmp
 OBJECTS_DIR = ./tmp
-QT += network opengl phonon
+QT += network opengl uitools multimedia
 
+cache()
 
-
-macx:INCLUDEPATH += /Users/heikokoehn/Downloads/lua5_1_4_MacOS106_lib/include \
-/Users/heikokoehn/Downloads/boost_1_46_1 \
-/usr/local/include/yajl/include
+# use pkg-config whenever possible for linking on a mac
+# the same should be done on the Linux platform as well
+macx {
+    # http://stackoverflow.com/a/16972067
+    QT_CONFIG -= no-pkg-config
+    CONFIG += link_pkgconfig
+    PKGCONFIG += hunspell lua yajl libpcre libzip
+}
 
 macx:LIBS += \
-/Users/heikokoehn/lib/liblua.a \
-#/usr/local/lib/libluajit-5.1.a \
-/usr/local/lib/libzzip.a \
--F../Frameworks \
--L../Frameworks \
--lpcre \
--lhunspell \
--lz \
--lyajl
-
-unix:INCLUDEPATH += /usr/include/lua5.1
+    # I didn't see an obvious pkg-config option for these two
+    -lz \
+    -lzzip
 
 INCLUDEPATH += irc/include
 
@@ -93,7 +95,6 @@ SOURCES += TConsole.cpp \
     dlgMapper.cpp \
     TRoom.cpp \
     TMap.cpp \
-    #lua_yajl.c \
     TBuffer.cpp \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
@@ -102,7 +103,14 @@ SOURCES += TConsole.cpp \
     dlgIRC.cpp \
     T2DMap.cpp \
     dlgRoomExits.cpp \
-    luazip.c
+    exitstreewidget.cpp \
+    luazip.c \
+    dlgPackageExporter.cpp \
+    TRoomDB.cpp \
+    TVar.cpp \
+    LuaInterface.cpp \
+    VarUnit.cpp \
+    dlgVarsMainArea.cpp
 
 
 HEADERS += mudlet.h \
@@ -177,7 +185,14 @@ HEADERS += mudlet.h \
     irc/include/ircutil.h \
     dlgIRC.h \
     T2DMap.h \
-    dlgRoomExits.h
+    dlgRoomExits.h \
+    exitstreewidget.h \
+    dlgPackageExporter.h \
+    TRoomDB.h \
+    TVar.h \
+    LuaInterface.h \
+    VarUnit.h \
+    dlgVarsMainArea.h
 
 FORMS += ui/connection_profiles.ui \
     ui/main_window.ui \
@@ -209,21 +224,34 @@ FORMS += ui/connection_profiles.ui \
     ui/lacking_mapper_script.ui \
     ui/package_manager.ui \
     ui/module_manager.ui \
-    ui/package_manager_unpack.ui
+    ui/package_manager_unpack.ui \
+    ui/dlgPackageExporter.ui \
+    ui/custom_lines.ui \
+    ui/vars_main_area.ui
 
 win32: {
     SOURCES += lua_yajl.c
 }
 
-unix: {
+unix!macx: {
     SOURCES += lua_yajl1.c
+}
+
+macx: {
+    SOURCES += lua_yajl.c
 }
 
 TEMPLATE = app
 TARGET = mudlet
+macx: {
+    # Capitalize the name for Mudlet, so it appears as 'Mudlet'
+    # and not 'mudlet' in the .dmg installer
+    TARGET = Mudlet
+}
+
 RESOURCES = mudlet_alpha.qrc
 DISTFILES += paragraph.css
-unix: {
+unix!macx: {
     luaglobal.path = $$SHARE_DIR
     luaglobal.files = LuaGlobal.lua
     documentation.path = $$SHARE_DIR
@@ -232,10 +260,28 @@ unix: {
     fonts.files = fonts/ttf-bitstream-vera-1.10/*
     target.path = $$BIN_DIR
 }
-INSTALLS += fonts \
-    luaglobal \
-    documentation \
-    target
+
+macx: {
+    # Copy mudlet-lua into the .app bundle
+    # the location is relative to mac_src.pro, so just use mudlet-lua
+    APP_MUDLET_LUA_FILES.files = mudlet-lua
+    APP_MUDLET_LUA_FILES.path  = Contents/Resources
+    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
+
+    # Set the .app's icns file
+    ICON = osx-installer/osx.icns
+}
+
+# Copy stuff into install folder on all platforms but OSX, where it never worked
+# and just gives errors
+!macx: {
+    INSTALLS += fonts \
+        luaglobal \
+        documentation \
+        target
+}
 
 OTHER_FILES += \
-    mudlet_documentation.txt
+    mudlet_documentation.txt \
+    mac-deploy.sh
+
