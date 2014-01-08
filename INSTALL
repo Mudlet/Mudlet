@@ -1,0 +1,17 @@
+Installing on Windows
+---------------------
+
+Installing on Linux
+-------------------
+
+Installing on OSX
+-----------------
+
+Creating OSX installer
+----------------------
+These instructions are in finished. The gist of it is that you want to install Node.JS, install node-appdmg, and then run the following command after you've command in the src/ directory after you've compiled Mudlet for OSX:
+
+  ./mac-deploy.sh
+  appdmg ./osx-installer/mudlet-appdmg.json ~/Desktop/Mudlet.dmg
+
+This will give you a nice .dmg, with an aesthetic background and working icons you can drag to install.

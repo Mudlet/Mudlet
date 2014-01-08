@@ -34,7 +34,11 @@
 #endif
 
 #if QT_VERSION >= 0x040800
-    #include <GL/glu.h>
+    #ifdef __APPLE__
+        #include <OpenGL/glu.h>
+    #else
+        #include <GL/glu.h>
+    #endif
 #endif
 
 bool ortho;
