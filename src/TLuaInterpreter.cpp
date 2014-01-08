@@ -10995,7 +10995,7 @@ void TLuaInterpreter::loadGlobal()
         string e = "no error message available from Lua";
         if( lua_isstring( pGlobalLua, 1 ) )
         {
-            e = "[ ERROR :( ]  -  LuaGlobal.lua compile error - please report! ";
+            e = "[ ERROR ]  -  LuaGlobal.lua compile error - please report! ";
             e += "Error from Lua: ";
             e += lua_tostring( pGlobalLua, 1 );
         }
