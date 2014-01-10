@@ -1148,7 +1148,6 @@ bool TMap::restore(QString location)
                 ifs >> pA->xminEbene;
                 ifs >> pA->yminEbene;
                 ifs >> pA->zminEbene;
-                qDebug()<<"areaID:"<<areaID<<" rooms:"<<pA->rooms<<" exits:"<<pA->exits<<" xmaxEbene:"<<pA->xmaxEbene<<" ymaxEbene:"<<pA->ymaxEbene;
                 ifs >> pA->pos;
                 ifs >> pA->isZone;
                 ifs >> pA->zoneAreaRef;

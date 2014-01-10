@@ -329,7 +329,6 @@ void TRoom::calcRoomDimensions()
             max_x = min_x;
             min_y = _pL[0].y();
             max_y = min_y;
-            qDebug()<<"\nNEXT ROOM: rID:"<<getId()<<" FIRST: custom lines span: x("<<min_x<<"/"<<max_x<<") y("<<min_y<<"/"<<max_y<<")";
         }
         for( int i=0; i<_pL.size(); i++ )
         {
@@ -344,9 +343,7 @@ void TRoom::calcRoomDimensions()
             if( _y > max_y )
                 max_y = _y;
         }
-        qDebug()<<"roomID:"<<getId()<<" custom lines span exit("<<it.key()<<"): x("<<min_x<<"/"<<max_x<<") y("<<min_y<<"/"<<max_y<<")";
     }
-    qDebug()<<"-->customLines:"<<customLines;
 }
 
 #include <QDataStream>
