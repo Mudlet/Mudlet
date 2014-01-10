@@ -1,6 +1,8 @@
-# CONFIG -= app_bundle
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
-QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5 -Wno-unused-variable
+# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after
+CONFIG += warn_off
+# ignore unused parameters, because boost has a ton of them and that's not something we need to know
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wall -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5
+QMAKE_CXXFLAGS_DEBUG += -O0 -g -Wall -Wno-deprecated -Wno-unused-parameter -mmacosx-version-min=10.5
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 
 # We should use the default compiler preferred by Qt on the system (clang vs gcc)
