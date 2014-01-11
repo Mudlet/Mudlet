@@ -1307,8 +1307,6 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
         VarUnit * vu = lI->getVarUnit();
         TVar * base = vu->getBase();
         QListIterator<TVar *> it(base->getChildren(0));
-        QTime t;
-        t.start();
         while( it.hasNext() )
         {
             TVar * var = it.next();
@@ -1316,11 +1314,8 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                 continue;
             //recurse down this variable
             QList< TVar * > list;
-            qDebug()<<"time to recurse vars down";
             recurseVariablesDown( var, list, 0 );
-            qDebug()<<t.restart();
             QListIterator<TVar *> it2(list);
-            qDebug()<<"time to recurse down this list";
             while( it2.hasNext() )
             {
                 TVar * var2 = it2.next();
@@ -1346,7 +1341,6 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
                     tree_widget_search_results_main->addTopLevelItem( pItem2 );
                 }
             }
-            qDebug()<<t.restart();
         }
     }
     mpSourceEditorArea->highlighter->setSearchPattern( s );
@@ -4464,7 +4458,6 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
             return 0;
         }
         //no children, we can do this without bad things happening
-        qDebug()<<"can change table";
         return 1;
     }
     if ( valueType == LUA_TTABLE && cValueType != LUA_TTABLE )
@@ -4475,7 +4468,6 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
 }
 
 void dlgTriggerEditor::saveVar(){
-    qDebug()<<"we want to save"<<mCurrentVar;
     if (!mCurrentVar)
         return;
     QTreeWidgetItem * pItem = (QTreeWidgetItem*)mCurrentVar;
@@ -4494,9 +4486,7 @@ void dlgTriggerEditor::saveVar(){
         return;
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorArea->editor->toPlainText();
-    qDebug()<<"our new name"<<newName;
     if (newName == ""){
-        qDebug()<<"no name";
         slot_var_clicked(pItem,0);
         return;
     }
@@ -4506,8 +4496,6 @@ void dlgTriggerEditor::saveVar(){
         nameType = -1;
     //check variable recasting
     int varRecast = canRecast(pItem,nameType,valueType);
-    qDebug()<<"var recast status of"<<newName<<varRecast;
-    qDebug()<<nameType<<valueType<<var->getValueType();
     if ( ( nameType == -1 ) || ( var && nameType != var->getKeyType() ) )
     {
         if ( QString( newName ).toInt() )
@@ -4526,25 +4514,16 @@ void dlgTriggerEditor::saveVar(){
             valueType = LUA_TSTRING;
     }
     if (varRecast == 2){
-        //qDebug()<<"it works out";
         //we sometimes get in here from new variables
         if ( newVar )
         {
             //we're making this var
-            qDebug()<<"its a new variable";
             var = vu->getTVar( pItem );
-            qDebug()<<var;
             if ( ! var )
                 var = new TVar();
-            qDebug()<<"new variable, set it up";
-            qDebug()<<newName<<nameType;
             var->setName( newName, nameType );
-            qDebug()<<"name set";
-            qDebug()<<newValue<<valueType;
             var->setValue( newValue, valueType );
-            qDebug()<<"value set";
             lI->createVar( var );
-            qDebug()<<"created in lua";
             vu->addVariable(var);
             vu->addTreeItem( pItem, var );
             vu->removeTempVar( pItem );
@@ -4555,12 +4534,11 @@ void dlgTriggerEditor::saveVar(){
         {
             if ( newName == var->getName() && ( var->getValueType() == LUA_TTABLE && newValue == var->getValue() ) )
             {
-                qDebug()<<"no change";
+                //no change made
             }
             else
             {
-                //we're trying to rename it
-                qDebug()<<"we're renaming/recasting";
+                //we're trying to rename it/recast it
                 int change = 0;
                 if ( newName != var->getName() || nameType != var->getKeyType() )
                 {
@@ -4572,8 +4550,6 @@ void dlgTriggerEditor::saveVar(){
                     change = change|0x1;
                 }
                 var->setNewName( newName, nameType );
-                qDebug()<<var->getValueType();
-                qDebug()<<newValue<<var->getValue()<<valueType;
                 if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
                 {
                     //lets check again
@@ -4587,11 +4563,9 @@ void dlgTriggerEditor::saveVar(){
                         valueType = LUA_TBOOLEAN;
                     else
                         valueType = LUA_TSTRING;//nope, you don't agree, you lose your value
-                    qDebug()<<"value type is"<<valueType;
                     var->setValue( newValue, valueType );
                     change = change|0x2;
                 }
-                qDebug()<<"change status is"<<change;
                 if ( change )
                 {
                     if ( change&0x1 || newVar )
@@ -4606,14 +4580,11 @@ void dlgTriggerEditor::saveVar(){
             }
         }
     }
-    else if (varRecast == 1){
-        qDebug()<<"rcast it";
+    else if (varRecast == 1){//recast it
         TVar * var = vu->getWVar(pItem);
-        qDebug()<<var;
         if ( newVar )
         {
             //we're making this var
-            qDebug()<<"new variable, set it up";
             var = vu->getTVar( pItem );
             var->setName( newName, nameType );
             var->setValue( newValue, valueType );
@@ -4625,8 +4596,7 @@ void dlgTriggerEditor::saveVar(){
         }
         else if ( var )
         {
-            //we're trying to rename it
-            qDebug()<<"we're renaming/recasting1";
+            //we're trying to rename it/recast it
             int change = 0;
             if ( newName != var->getName() || nameType != var->getKeyType() )
             {
@@ -4656,7 +4626,6 @@ void dlgTriggerEditor::saveVar(){
                 var->setValue( newValue, valueType );
                 change = change|0x2;
             }
-            qDebug()<<"change status"<<change;
             if ( change )
             {
                 if ( change&0x1 || newVar )
@@ -5114,7 +5083,6 @@ void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list, 
 }
 
 void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
-    qDebug()<<"var clicked"<<pItem;
     if( ! pItem ) return;
     int state = pItem->checkState( column );
     if ( state == Qt::Checked || state == Qt::PartiallyChecked )
@@ -5156,7 +5124,6 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         {
             TVar * v = vu->getWVar( list[i] );
             if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) ){
-//                qDebug()<<"up"<<v->getName();
                 vu->removeSavedVar( v );
             }
         }
@@ -5166,7 +5133,6 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
         {
             TVar * v = vu->getWVar( list[i] );
             if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) ){
-//                qDebug()<<"down"<<v->getName();
                 vu->removeSavedVar( v );
             }
         }
@@ -5183,7 +5149,6 @@ void dlgTriggerEditor::slot_var_clicked( QTreeWidgetItem *pItem, int column ){
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     TVar * var = vu->getWVar(pItem);
-    qDebug()<<"current var"<<var<<var->getName();
     if (!var)
     {
         mpVarsMainArea->hideVariable->setChecked( false );
@@ -7593,7 +7558,6 @@ void dlgTriggerEditor::slot_profileSaveAction()
         XMLexport writer( mpHost );
         writer.exportHost( & file_xml );
         file_xml.close();
-        qDebug()<<"saving modules";
         mpHost->saveModules(1);
     }
     else
@@ -7620,7 +7584,6 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
                             .arg(file.errorString()));
        return;
     }
-qDebug()<<"generic export";
     XMLexport writer( mpHost, true );//just export a generic package without host element
     //writer.exportHost( & file );
     writer.exportGenericPackage( & file );

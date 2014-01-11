@@ -321,10 +321,9 @@ void Host::saveModules(int sync)
 {
     if (mModuleSaveBlock)
     {
-        qDebug()<<"MODULES SAVING DISABLED UNTIL RELOAD";
+        //FIXME: This should generate an error to the user
         return;
     }
-    qDebug()<<"DONE MAIN WRITING, DOING MODULES NOW";
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
     QString dirName = QDir::homePath()+"/.config/mudlet/moduleBackups/";
@@ -345,33 +344,8 @@ void Host::saveModules(int sync)
         {
             tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
             filename_xml = tempDir + "/" + moduleName + ".xml";
-            qDebug()<<"attempting to open zip archive"<<entry[0];
             int err;
             zipFile = zip_open( entry[0].toStdString().c_str(), 0, &err);
-            qDebug()<<"zip error status"<<err;
-            /*if ( ! zipOpened )
-            {
-                qDebug()<<"could not open archive, recreating it";
-                zip = tempDir + "/" + moduleName + ".zip";
-                QString luaConfig = tempDir + "/config.lua";
-                QFile configFile(luaConfig);
-                if ( !configFile.exists() && configFile.open(QIODevice::WriteOnly | QIODevice::Text) )
-                {
-                    QTextStream out(&configFile);
-                    out << "mpackage = \"" << moduleName << "\"\n";
-                    out.flush();
-                    configFile.close();
-                }
-                if ( filename_xml.endsWith( "mpackage" ) )
-                    filename_xml = filename_xml.left(filename_xml.size()-8)+"xml";
-                else
-                    filename_xml = filename_xml.left(filename_xml.size()-3)+"xml";
-                qDebug()<<"zipping up to"<<tempDir;
-            }
-            else
-            {
-                zipName = filename_xml;
-            }*/
             zipName = filename_xml;
             QDir packageDir = QDir(tempDir);
             if ( !packageDir.exists() ){
@@ -383,11 +357,9 @@ void Host::saveModules(int sync)
             savePath.rename(filename_xml,dirName+moduleName+time);//move the old file, use the key (module name) as the file
         }
         QFile file_xml( filename_xml );
-        qDebug()<<"writing module xml for:"<<entry[0];
         if ( file_xml.open( QIODevice::WriteOnly ) )
         {
             XMLexport writer(this);
-            qDebug()<<"successfully wrote module xml for:"<<entry[0]<<"to"<<filename_xml;
             writer.writeModuleXML( & file_xml, it.key() );
             file_xml.close();
 
@@ -397,8 +369,8 @@ void Host::saveModules(int sync)
         else
         {
             file_xml.close();
-            qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
-            qDebug()<<"aborting process to avoid corruption";
+            //FIXME: Should have an error reported to user
+            //qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
             mModuleSaveBlock = true;
             return;
         }
@@ -409,14 +381,12 @@ void Host::saveModules(int sync)
             t.start();
 //            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
             int err = zip_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s );
-            qDebug()<<"added file error"<<err;
-            qDebug()<<"time to add"<<t.elapsed();
+            //FIXME: error checking
             if( zipFile )
             {
                 err = zip_close( zipFile );
             }
-            qDebug()<<"close file error"<<err;
-            qDebug()<<"time to close"<<t.elapsed();
+            //FIXME: error checking
         }
     }
     modulesToWrite.clear();
@@ -446,14 +416,12 @@ void Host::saveModules(int sync)
             while(it4.hasNext())
             {
                 it4.next();
-                //qDebug()<<"On priority "<<it4.key();
                 QStringList moduleList = it4.value();
                 for(int i=0;i<moduleList.size();i++)
                 {
                     QString moduleName = moduleList[i];
                     if (modulesToSync.contains(moduleName))
                     {
-                        //qDebug()<<"synchronizing module:"<<moduleName<<" in profile:"<<host->mHostName;
                         host->reloadModule(moduleName);
                     }
                 }
@@ -962,7 +930,6 @@ bool Host::installPackage( QString fileName, int module )
 //     a script.  This separation is necessary to be able to reuse code
 //     while avoiding infinite loops from script installations.
 
-    qDebug()<<"in install package"<<fileName;
     if( fileName.isEmpty() ) return false;
 
     QFile file(fileName);
@@ -978,9 +945,6 @@ bool Host::installPackage( QString fileName, int module )
     packageName.replace( '/' , "" );
     packageName.replace( '\\' , "" );
     packageName.replace( '.' , "" );
-    qDebug()<<"package name"<<packageName;
-    qDebug()<<module;
-
     if ( module )
     {
         if( (module == 2) && (mActiveModules.contains( packageName ) ))
@@ -989,7 +953,6 @@ bool Host::installPackage( QString fileName, int module )
         }
         else if ( (module == 3) && ( mActiveModules.contains(packageName) ) )
         {
-            qDebug()<<"module already installed, leaving";
             return false;//we're already installed
         }
     }
@@ -1006,7 +969,6 @@ bool Host::installPackage( QString fileName, int module )
         mpEditorDialog->doCleanReset();
     }
     QFile file2;
-    qDebug()<<"zip check";
     if( fileName.endsWith(".zip") || fileName.endsWith(".mpackage") )
     {
         QString _home = QDir::homePath();
@@ -1046,7 +1008,7 @@ bool Host::installPackage( QString fileName, int module )
         if ( err != 0 )
         {
             zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"zip add dir error"<<buf;
+            //FIXME: Tell user error
             return false;
         }
         for (int i=0;i<zip_get_num_entries( archive, 0 );i++ )
@@ -1057,12 +1019,14 @@ bool Host::installPackage( QString fileName, int module )
                 if ( zs.name[strlen( zs.name )-1] == '/' )
                 {
                     QDir dir = QDir( _dest );
-                    if ( !dir.exists( zs.name ) ) {
+                    if ( !dir.exists( zs.name ) )
+                    {
                         if ( dir.mkdir( zs.name ) == false )
-												{
-												    qDebug()<<"error creating subdirectory: "<<QString(zs.name);
-												}
-										}
+                        {
+                            //FIXME: report error to user
+                            //qDebug()<<"error creating subdirectory: "<<QString(zs.name);
+                        }
+                    }
                 }
                 else
                 {
@@ -1072,14 +1036,14 @@ bool Host::installPackage( QString fileName, int module )
                         int sep = 0;
                         zip_error_get( archive, &err, &sep);
                         zip_error_to_str(buf, sizeof(buf), err, errno);
-                        qDebug()<<"zip open error"<<buf;
+                        //FIXME: report error to user
                         return false;
                     }
                     QFile fd(_dest+QString(zs.name));
                     fd.open(QIODevice::ReadWrite|QIODevice::Truncate);
                     if ( !fd.isOpen() )
                     {
-                        qDebug()<<"error opening"<<_dest+QString(zs.name);
+                        //FIXME: report error to user qDebug()<<"error opening"<<_dest+QString(zs.name);
                         return false;
                     }
                     sum = 0;
@@ -1089,7 +1053,7 @@ bool Host::installPackage( QString fileName, int module )
                         int len = zip_fread( zf, buf, 100 );
                         if ( len < 0 )
                         {
-                            qDebug()<<"zip_fread error"<<len;
+                            //FIXME: report error to user qDebug()<<"zip_fread error"<<len;
                             return false;
                         }
                         fd.write( buf, len );
@@ -1103,7 +1067,7 @@ bool Host::installPackage( QString fileName, int module )
         err = zip_close( archive );
         if ( err != 0 ){
             zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"close file error"<<buf;
+            //FIXME: report error to user qDebug()<<"close file error"<<buf;
             return false;
         }
 //        #endif
@@ -1285,7 +1249,6 @@ bool Host::uninstallPackage( QString packageName, int module)
     mActionUnit.uninstall( packageName );
     mScriptUnit.uninstall( packageName );
     mKeyUnit.uninstall( packageName );
-    qDebug()<<"all uninstall steps complete";
     if (module)
     {
         //if module == 2, this is a temporary uninstall for reloading so we exit here
@@ -1295,11 +1258,10 @@ bool Host::uninstallPackage( QString packageName, int module)
         if ( module == 2 )
             return true;
         //if module == 1/3, we actually uninstall it.
-        qDebug()<<"removing module"<<packageName;
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations)
         {
-            qDebug()<<"we're a dual install, reinstalling package";
+            //we're a dual install, reinstalling package
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
             installPackage(entry[0], 0);
@@ -1338,18 +1300,15 @@ bool Host::uninstallPackage( QString packageName, int module)
     QFile file_xml( filename_xml );
     if ( file_xml.open( QIODevice::WriteOnly ) )
     {
-        qDebug()<<"writing new host to file";
         XMLexport writer( this );
         writer.exportHost( & file_xml );
         file_xml.close();
-        qDebug()<<"done writing host";
     }
     //NOW we reset if we're uninstalling a module
     if( mpEditorDialog && module == 3 )
     {
         mpEditorDialog->doCleanReset();
     }
-    qDebug()<<"finished uninstall";
     return true;
 }
 

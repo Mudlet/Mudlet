@@ -81,13 +81,11 @@ XMLexport::XMLexport( TKey * pT )
 
 bool XMLexport::writeModuleXML( QIODevice * device, QString moduleName){
     setDevice(device);
-    qDebug()<<moduleName;
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
     writeAttribute("version", "1.0");
-    qDebug()<<"starting writeModule routine";
 
     writeStartElement( "TriggerPackage" );
     Host * pT = mpHost;
@@ -268,7 +266,6 @@ bool XMLexport::writeHost( Host * pT )
     }
     writeEndElement();
     if (pT->mInstalledModules.size()){
-        qDebug()<<"installed module being done";
         writeStartElement( "mInstalledModules" );
         QMapIterator<QString, QStringList> it(pT->mInstalledModules);
         pT->modulesToWrite.clear();
@@ -277,11 +274,9 @@ bool XMLexport::writeHost( Host * pT )
             it.next();
             writeTextElement("key", it.key());
             QStringList entry = it.value();
-            qDebug()<<"XMLexport"<<entry[0]<<","<<entry[1];
             writeTextElement("filepath", entry[0]);
             writeTextElement("globalSave", entry[1]);
             if (entry[1].toInt()){
-                qDebug()<<"adding module to write list:"<<it.key();
                 pT->modulesToWrite[it.key()] = entry;
             }
             writeTextElement("priority", QString::number(pT->mModulePriorities[it.key()]));

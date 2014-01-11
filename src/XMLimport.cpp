@@ -47,8 +47,6 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
     gotScript = false;
     module = moduleFlag;
 
-    qDebug()<<"module flag:"<<module<<" importing: "<<mPackageName;
-
     if( ! packName.isEmpty() )
     {
         mpKey = new TKey( 0, mpHost );
@@ -264,7 +262,6 @@ void XMLimport::readHiddenVariables()
 
 void XMLimport::readVariablePackage()
 {
-    qDebug()<<"importing variables";
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     mpVar = vu->getBase();
@@ -581,7 +578,6 @@ void XMLimport::readPackage()
             }
         }
     }
-    qDebug()<<"reading package end";
 }
 
 void XMLimport::readHelpPackage(){
@@ -1969,7 +1965,6 @@ void XMLimport::readMapList( QMap<QString, QStringList> & map)
             else if (name() == "filepath"){
                 entry << readElementText();
                 //map[key] = readElementText();
-                //qDebug()<<"key:"<<key<<"value"<<map[key];
             }
             else if (name() == "globalSave"){
                 entry << readElementText();
@@ -1977,7 +1972,6 @@ void XMLimport::readMapList( QMap<QString, QStringList> & map)
             else if (name() == "priority"){
                 entry << readElementText();
                 map[key] = entry;
-                qDebug()<<"key:"<<key<<"path"<<entry[0];
                 entry.clear();
 
             }

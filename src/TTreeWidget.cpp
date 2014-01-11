@@ -355,7 +355,6 @@ void TTreeWidget::dropEvent(QDropEvent *event)
         QTreeWidgetItem * oldpItem = cItem->parent();
         if ( ! lI->reparentVariable( newpItem, cItem, oldpItem ) )
         {
-            qDebug()<<"reparent failed";
             event->setDropAction( Qt::IgnoreAction );
             event->ignore();
         }

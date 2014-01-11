@@ -247,11 +247,10 @@ void dlgPackageExporter::slot_export_package(){
         zip* archive;
         //archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
         archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE, &err);
-        qDebug()<<"dp saving to"<<zipFile;
         if ( err != 0 )
         {
             zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"dp zip open error"<<zipFile<<buf;
+            //FIXME: report error to user qDebug()<<"dp zip open error"<<zipFile<<buf;
             close();
             return;
         }
@@ -269,7 +268,7 @@ void dlgPackageExporter::slot_export_package(){
                 int sep = 0;
                 zip_error_get( archive, &err, &sep);
                 zip_error_to_str(buf, sizeof(buf), err, errno);
-                qDebug()<<"zip source error"<<fullName<<fname<<buf;
+                //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
             }
 //            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
             err = zip_add( archive, fname.toStdString().c_str(), s);
@@ -278,13 +277,13 @@ void dlgPackageExporter::slot_export_package(){
                 int sep = 0;
                 zip_error_get( archive, &err, &sep);
                 zip_error_to_str(buf, sizeof(buf), err, errno);
-                qDebug()<<"added file error"<<fullName<<fname<<buf;
+                //FIXME: report error to userqDebug()<<"added file error"<<fullName<<fname<<buf;
             }
         }
         err = zip_close( archive );
         if ( err != 0 ){
             zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"dp close file error"<<buf;
+            //FIXME: report error to userqDebug()<<"dp close file error"<<buf;
             close();
             return;
         }

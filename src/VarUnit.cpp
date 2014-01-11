@@ -26,14 +26,11 @@
 
 VarUnit::VarUnit()
 {
-    qDebug()<<"making new VarUnit";
-//    wVars.setInsertInOrder(true);
 }
 
 bool VarUnit::isHidden( TVar * var ){
     if ( var->getName() == "_G" )//we never hide global
         return false;
-//    qDebug()<<"checking"<<var->getName()<<shortVarName(var).join(".");
     if (hidden.contains(shortVarName(var).join(".")))
         return true;
     return hiddenByUser.contains(shortVarName(var).join("."));
@@ -61,7 +58,6 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
     QListIterator<TVar *> it(var->getChildren(1));
     while(it.hasNext()){
         TVar * child = it.next();
-//        qDebug()<<child->getName()<<isHidden(child);
         if ( showHidden || !isHidden( child ) ){
             QStringList s1;
             s1 << child->getName();
@@ -187,21 +183,17 @@ void VarUnit::removeHidden( TVar * var ){
 void VarUnit::addSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
     var->saved = true;
-//    qDebug()<<n;
     savedVars.insert(n);
-    qDebug()<<"added"<<n;
 }
 
 void VarUnit::removeSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
     savedVars.remove(n);
     var->saved = false;
-    //qDebug()<<"removed"<<n;
 }
 
 bool VarUnit::isSaved( TVar * var ){
     QString n = shortVarName(var).join(".");
-//    qDebug()<<"checking isSaved"<<n;
     return (savedVars.contains(n) || var->saved);
 }
 
