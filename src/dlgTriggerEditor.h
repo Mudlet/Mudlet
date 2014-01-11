@@ -175,7 +175,7 @@ public slots:
     void                        slot_script_toggle_active();
     void                        slot_key_toggle_active();
     void                        slot_search_triggers( const QString s );
-    void                        slot_item_clicked_search_list(QTreeWidgetItem*);
+    void                        slot_item_clicked_search_list(QTreeWidgetItem*, QTreeWidgetItem*);
     void                        slot_switchToExpertMonde();
     void                        slot_delete_item();
     void                        slot_deleteTrigger();
