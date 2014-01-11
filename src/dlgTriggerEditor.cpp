@@ -3857,16 +3857,17 @@ void dlgTriggerEditor::saveAlias()
         name = regex;
     }
     QString substitution = mpAliasMainArea->substitution->text();
-    //check if sub will trigger regex
+    //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
     QRegExp rx(regex);
-    if ( rx.indexIn(substitution) != -1 )
+    //
+    if ( !regex.isEmpty() && rx.indexIn(substitution) != -1 )
     {
         //we have a loop
         QIcon iconError;
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
         pItem->setText( 0, name );
-        showInfo( QString( "Alias %1 has an infinite recursion. The regex pattern matches the substitution." )
+        showError(QString( "Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever." )
                   .arg(name));
         return;
     }
