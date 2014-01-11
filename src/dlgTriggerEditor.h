@@ -112,7 +112,7 @@ public slots:
     void                        slot_addVarGroup();
     void                        slot_saveVarAfterEdit();
     void                        slot_deleteVar();
-    void                        slot_var_clicked( QTreeWidgetItem *, int );
+    void                        slot_var_clicked( QTreeWidgetItem * );
     void                        slot_show_vars( );
     void                        slot_viewErrorsAction();
     void                        slot_cursorPositionChanged();
@@ -120,7 +120,7 @@ public slots:
     void                        slot_soundTrigger();
     void                        slot_colorizeTriggerSetBgColor();
     void                        slot_colorizeTriggerSetFgColor();
-    void                        slot_itemClicked( QTreeWidgetItem * pItem, int column );
+    void                        slot_itemClicked( QTreeWidgetItem * pItem );
     void                        slot_choseButtonColor();
     void                        slot_export();
     void                        slot_import();
@@ -138,12 +138,12 @@ public slots:
     void                        slot_show_aliases();
     void                        slot_show_actions();
     void                        slot_show_keys();
-    void                        slot_trigger_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_timer_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_scripts_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_alias_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_action_clicked( QTreeWidgetItem * pItem, int column );
-    void                        slot_key_clicked( QTreeWidgetItem *pItem, int column );
+    void                        slot_trigger_clicked( QTreeWidgetItem *pItem );
+    void                        slot_timer_clicked( QTreeWidgetItem *pItem );
+    void                        slot_scripts_clicked( QTreeWidgetItem *pItem );
+    void                        slot_alias_clicked( QTreeWidgetItem *pItem );
+    void                        slot_action_clicked( QTreeWidgetItem * pItem );
+    void                        slot_key_clicked( QTreeWidgetItem *pItem );
     void                        slot_update();
     void                        slot_deleteProfile();
     void                        slot_connection_dlg_finnished();
@@ -175,7 +175,7 @@ public slots:
     void                        slot_script_toggle_active();
     void                        slot_key_toggle_active();
     void                        slot_search_triggers( const QString s );
-    void                        slot_item_clicked_search_list(QTreeWidgetItem*, int);
+    void                        slot_item_clicked_search_list(QTreeWidgetItem*);
     void                        slot_switchToExpertMonde();
     void                        slot_delete_item();
     void                        slot_deleteTrigger();
