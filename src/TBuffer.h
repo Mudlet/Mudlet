@@ -136,6 +136,7 @@ public:
     void paste( QPoint &, TBuffer );
     std::deque<TChar> bufferLine;
     std::deque< std::deque<TChar> > buffer;
+    std::deque< bool > echoText;
     QStringList            timeBuffer;
     QStringList            lineBuffer;
     QList<bool>            promptBuffer;
@@ -173,6 +174,7 @@ public:
     char              mOpenMainQuote;
     bool              mMXP_SEND_NO_REF_MODE;
     std::string       mAssembleRef;
+    bool              mEchoText;
 
 private:
     inline void       shrinkBuffer();

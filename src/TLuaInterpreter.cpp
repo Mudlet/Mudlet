@@ -8827,7 +8827,9 @@ int TLuaInterpreter::Echo( lua_State *L )
     if( n == 1 )
     {
         txt = a1.c_str();
+        pHost->mpConsole->buffer.mEchoText = true;
         pHost->mpConsole->echo( txt );
+        pHost->mpConsole->buffer.mEchoText = false;
     }
 
 
