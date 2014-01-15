@@ -2067,8 +2067,8 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
     }
     showInfo( QString( "Trying to %2 Trigger %1 %3." )
               .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
-              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
+              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
     if( pItem->childCount() > 0 )
     {
         children_icon_triggers( pItem );
@@ -2262,8 +2262,8 @@ void dlgTriggerEditor::slot_timer_toggle_active()
 
     showInfo( QString( "Trying to %2 Timer %1 %3." )
               .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
-              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
+              .arg( pT->shouldBeActive() ? "activate" : "deactivated" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_alias_toggle_active()
@@ -2314,7 +2314,7 @@ void dlgTriggerEditor::slot_alias_toggle_active()
     showInfo( QString( "Trying to %2 Alias %1 %3." )
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
+              .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
 
     if( pItem->childCount() > 0 )
     {
@@ -2450,8 +2450,8 @@ void dlgTriggerEditor::slot_script_toggle_active()
     }
     showInfo( QString( "Trying to %2 Script %1 %3." )
               .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
-              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
+              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_action_toggle_active()
@@ -2501,8 +2501,8 @@ void dlgTriggerEditor::slot_action_toggle_active()
     }
     showInfo( QString( "Trying to %2 Action %1 %3." )
               .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
-              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
+              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -2553,8 +2553,8 @@ void dlgTriggerEditor::slot_key_toggle_active()
     }
     showInfo( QString( "Trying to %2 Key %1 %3." )
               .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activated" : "deactivated" )
-              .arg( pT->state() ? "succeeded" : QString("failed reason:") + pT->getError() ) );
+              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
+              .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
     if( pItem->childCount() > 0 )
     {
         children_icon_key( pItem );
