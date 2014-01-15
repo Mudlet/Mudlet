@@ -2065,7 +2065,7 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
     }
-    showInfo( QString( "Trying to %2 trigger %1 %3." )
+    showInfo( QString( "Trying to %2 trigger <em>%1</em> %3." )
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
               .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
@@ -2260,7 +2260,7 @@ void dlgTriggerEditor::slot_timer_toggle_active()
     }
 
 
-    showInfo( QString( "Trying to %2 timer %1 %3." )
+    showInfo( QString( "Trying to %2 timer <em>%1</em> %3." )
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activate" : "deactivated" )
               .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
@@ -2311,7 +2311,7 @@ void dlgTriggerEditor::slot_alias_toggle_active()
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
     }
-    showInfo( QString( "Trying to %2 alias %1 %3." )
+    showInfo( QString( "Trying to %2 alias <em>%1</em> %3." )
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
               .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
@@ -2448,7 +2448,7 @@ void dlgTriggerEditor::slot_script_toggle_active()
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
     }
-    showInfo( QString( "Trying to %2 script %1 %3." )
+    showInfo( QString( "Trying to %2 script <em>%1</em> %3." )
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
               .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
@@ -2499,7 +2499,7 @@ void dlgTriggerEditor::slot_action_toggle_active()
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
     }
-    showInfo( QString( "Trying to %2 action %1 %3." )
+    showInfo( QString( "Trying to %2 action <em>%1</em> %3." )
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
               .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
@@ -2551,7 +2551,7 @@ void dlgTriggerEditor::slot_key_toggle_active()
         iconError.addPixmap(QPixmap(QString::fromUtf8(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon( 0, iconError );
     }
-    showInfo( QString( "Trying to %2 key %1 %3." )
+    showInfo( QString( "Trying to %2 key <em>%1</em> %3." )
               .arg(pT->getName())
               .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
               .arg( pT->state() ? "succeeded" : QString("failed reason: ") + pT->getError() ) );
