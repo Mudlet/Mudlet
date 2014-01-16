@@ -120,7 +120,7 @@ public slots:
     void                        slot_soundTrigger();
     void                        slot_colorizeTriggerSetBgColor();
     void                        slot_colorizeTriggerSetFgColor();
-    void                        slot_item_selected( QTreeWidgetItem * pItem );
+    void                        slot_item_selected_save( QTreeWidgetItem * pItem );
     void                        slot_choseButtonColor();
     void                        slot_export();
     void                        slot_import();

@@ -246,7 +246,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget->setRootIsDecorated( false );
     treeWidget->setHost( mpHost );
     treeWidget->header()->hide();
-    connect( treeWidget, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(slot_item_selected(QTreeWidgetItem*)) );
+    connect( treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
     tree_widget_search_results_main->hide(); // hide search results
 
     mpOptionsAreaTriggers->hide();
@@ -261,7 +261,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_alias->setColumnCount(1);
     treeWidget_alias->header()->hide();
     treeWidget_alias->setRootIsDecorated( false );
-    connect( treeWidget_alias, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(slot_item_selected(QTreeWidgetItem*)) );
+    connect( treeWidget_alias, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
 
     treeWidget_actions->hide();
     treeWidget_actions->setHost( mpHost );
@@ -269,7 +269,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated( false );
-    connect( treeWidget_actions, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(slot_item_selected(QTreeWidgetItem*)) );
+    connect( treeWidget_actions, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
 
     treeWidget_timers->hide();
     treeWidget_timers->setHost( mpHost );
@@ -277,7 +277,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated( false );
-    connect( treeWidget_timers, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(slot_item_selected(QTreeWidgetItem*)) );
+    connect( treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
 
     treeWidget_vars->hide();
     treeWidget_vars->setHost( mpHost );
@@ -286,7 +286,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_vars->hideColumn(1);
     treeWidget_vars->header()->hide();
     treeWidget_vars->setRootIsDecorated( false );
-    connect( treeWidget_vars, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(slot_item_selected(QTreeWidgetItem*)) );
+    connect( treeWidget_vars, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
 
     treeWidget_keys->hide();
     treeWidget_keys->setHost( mpHost );
@@ -294,7 +294,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated( false );
-    connect( treeWidget_keys, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(slot_item_selected(QTreeWidgetItem*)) );
+    connect( treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
 
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost( mpHost );
@@ -302,7 +302,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated( false );
-    connect( treeWidget_scripts, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(slot_item_selected(QTreeWidgetItem*)) );
+    connect( treeWidget_scripts, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
 
     QAction * viewTriggerAction = new QAction(QIcon(":/icons/tools-wizard.png"), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
@@ -4822,6 +4822,7 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
 {
+    qDebug() << "slot_trigger_selected";
     if( ! pItem ) return;
 
     mCurrentTrigger = pItem;
@@ -7051,8 +7052,9 @@ void dlgTriggerEditor::slot_delete_item()
     };
 }
 
-void dlgTriggerEditor::slot_item_selected( QTreeWidgetItem * pItem )
+void dlgTriggerEditor::slot_item_selected_save( QTreeWidgetItem * pItem )
 {
+    qDebug() << "slot_item_selected_save";
     if( ! pItem ) return;
 
     switch( mCurrentView )
