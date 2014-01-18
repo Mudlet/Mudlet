@@ -126,6 +126,7 @@ mudlet::mudlet()
 #if QT_VERSION >= 0x040500
     mpTabBar->setTabsClosable ( true );
     connect( mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
+    mpTabBar->setMovable(true);
 #endif
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
