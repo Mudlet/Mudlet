@@ -832,6 +832,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
     if( ! pConsole ) return;
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle( pH->getName() );
+    pConsole->setObjectName( pH->getName() );
     mConsoleMap[pH] = pConsole;
     int newTabID = mpTabBar->addTab( pH->getName() );
     mTabMap[pH->getName()] = pConsole;
