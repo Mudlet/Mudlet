@@ -43,11 +43,8 @@ TChar::TChar()
     bgR = 0;
     bgG = 0;
     bgB = 0;
-    italics = false;
-    bold = false;
-    underline = false;
+    flags = 0;
     link = 0;
-    invers = false;
 }
 
 TChar::TChar( int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bool u, int _link )
@@ -57,12 +54,15 @@ TChar::TChar( int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bo
 , bgR(bR)
 , bgG(bG)
 , bgB(bB)
-, italics(i)
-, bold(b)
-, underline(u)
 , link(_link )
-, invers( false )
 {
+    flags = 0;
+    if (i)
+        flags |= TCHAR_ITALICS;
+    if (b)
+        flags |= TCHAR_BOLD;
+    if (u)
+        flags |= TCHAR_UNDERLINE;
 }
 
 TChar::TChar( Host * pH )
@@ -86,10 +86,7 @@ TChar::TChar( Host * pH )
         bgG = 0;
         bgB = 0;
     }
-    italics = false;
-    bold = false;
-    underline = false;
-    invers = false;
+    flags = 0;
     link = 0;
 }
 
@@ -101,10 +98,7 @@ bool TChar::operator==( const TChar & c )
     if( bgR != c.bgR ) return false;
     if( bgG != c.bgG ) return false;
     if( bgB != c.bgB ) return false;
-    if( bold != c.bold ) return false;
-    if( italics != c.italics ) return false;
-    if( underline != c.underline ) return false;
-    if( invers != c.invers ) return false;
+    if( flags != c.flags ) return false;
     if( link != c.link ) return false;
     return true;
 }
@@ -117,11 +111,9 @@ TChar::TChar( const TChar & copy )
     bgR = copy.bgR;
     bgG = copy.bgG;
     bgB = copy.bgB;
-    italics = copy.italics;
-    bold = copy.bold;
-    underline = copy.underline;
+    flags = copy.flags;
     link = copy.link;
-    invers = false;
+    flags &= ~(TCHAR_INVERSE);//for some reason we always clear the inverse, is this a bug?
 }
 
 
@@ -340,9 +332,9 @@ void TBuffer::addLink( bool trigMode, QString & text, QStringList & command, QSt
                 format.bgR,
                 format.bgG,
                 format.bgB,
-                format.bold,
-                format.italics,
-                format.underline,
+                format.flags & TCHAR_BOLD,
+                format.flags & TCHAR_ITALICS,
+                format.flags & TCHAR_UNDERLINE,
                 mLinkID );
     }
     else
@@ -356,9 +348,9 @@ void TBuffer::addLink( bool trigMode, QString & text, QStringList & command, QSt
                     format.bgR,
                     format.bgG,
                     format.bgB,
-                    format.bold,
-                    format.italics,
-                    format.underline,
+                    format.flags & TCHAR_BOLD,
+                    format.flags & TCHAR_ITALICS,
+                    format.flags & TCHAR_UNDERLINE,
                     mLinkID );
     }
 }
@@ -1923,7 +1915,7 @@ void TBuffer::translateToPlainText( std::string & s )
     //            c.fgR = 0;
     //            c.fgG = 0;
     //            c.fgB = 255;
-                c.underline = true;
+                c.flags |= TCHAR_UNDERLINE;
             }
 
 
@@ -2518,7 +2510,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
     }
     else
     {
-        appendLine( text, 0, text.size(), format.fgR, format.fgG, format.fgB, format.bgR, format.bgG, format.bgB, format.bold, format.italics, format.underline );
+        appendLine( text, 0, text.size(), format.fgR, format.fgG, format.fgB, format.bgR, format.bgG, format.bgB, format.flags & TCHAR_BOLD, format.flags & TCHAR_ITALICS, format.flags & TCHAR_UNDERLINE );
     }
     return true;
 }
@@ -2551,9 +2543,9 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
                      buffer[y][x].bgR,
                      buffer[y][x].bgG,
                      buffer[y][x].bgB,
-                     (buffer[y][x].bold == true),
-                     (buffer[y][x].italics == true),
-                     (buffer[y][x].underline == true) );
+                     (buffer[y][x].flags & TCHAR_BOLD),
+                     (buffer[y][x].flags & TCHAR_ITALICS),
+                     (buffer[y][x].flags & TCHAR_UNDERLINE) );
         }
         return slice;
 //    TBuffer slice( mpHost );
@@ -2645,9 +2637,9 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
                    chunk.buffer[0][cx].bgR,
                    chunk.buffer[0][cx].bgG,
                    chunk.buffer[0][cx].bgB,
-                   (chunk.buffer[0][cx].bold == true),
-                   (chunk.buffer[0][cx].italics == true),
-                   (chunk.buffer[0][cx].underline == true) );
+                   (chunk.buffer[0][cx].flags & TCHAR_BOLD),
+                   (chunk.buffer[0][cx].flags & TCHAR_ITALICS),
+                   (chunk.buffer[0][cx].flags & TCHAR_UNDERLINE) );
         }
     }
     if( hasAppended )
@@ -2683,9 +2675,9 @@ void TBuffer::appendBuffer( TBuffer chunk )
                chunk.buffer[0][cx].bgR,
                chunk.buffer[0][cx].bgG,
                chunk.buffer[0][cx].bgB,
-               (chunk.buffer[0][cx].bold == true),
-               (chunk.buffer[0][cx].italics == true),
-               (chunk.buffer[0][cx].underline == true) );
+               (chunk.buffer[0][cx].flags & TCHAR_BOLD),
+               (chunk.buffer[0][cx].flags & TCHAR_ITALICS),
+               (chunk.buffer[0][cx].flags & TCHAR_UNDERLINE) );
     }
     QString lf = "\n";
     append( lf,
@@ -3516,8 +3508,10 @@ bool TBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
                         return true;
                     }
                 }
-
-                buffer[y][x].bold = bold;
+                if ( bold )
+                    buffer[y][x].flags |= TCHAR_BOLD;
+                else
+                    buffer[y][x].flags &= ~(TCHAR_BOLD);
                 x++;
             }
         }
@@ -3559,7 +3553,10 @@ bool TBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
                         return true;
                     }
                 }
-                buffer[y][x].italics = bold;
+                if ( bold )
+                    buffer[y][x].flags |= TCHAR_ITALICS;
+                else
+                    buffer[y][x].flags &= ~(TCHAR_ITALICS);
                 x++;
             }
         }
@@ -3602,7 +3599,10 @@ bool TBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
                     }
                 }
 
-                buffer[y][x].underline = bold;
+                if ( bold )
+                    buffer[y][x].flags |= TCHAR_UNDERLINE;
+                else
+                    buffer[y][x].flags &= ~(TCHAR_UNDERLINE);
                 x++;
             }
         }
@@ -3758,9 +3758,9 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             || buffer[y][x].bgR != bgR
             || buffer[y][x].bgG != bgG
             || buffer[y][x].bgB != bgB
-            || buffer[y][x].bold != bold
-            || buffer[y][x].underline != underline
-            || buffer[y][x].italics != italics )
+            || ( buffer[y][x].flags & TCHAR_BOLD ) != bold
+            || ( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
+            || ( buffer[y][x].flags & TCHAR_ITALICS ) != italics )
         {
             needChange = false;
             fgR = buffer[y][x].fgR;
@@ -3769,9 +3769,9 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             bgR = buffer[y][x].bgR;
             bgG = buffer[y][x].bgG;
             bgB = buffer[y][x].bgB;
-            bold = buffer[y][x].bold;
-            italics = buffer[y][x].italics;
-            underline = buffer[y][x].underline;
+            bold = buffer[y][x].flags & TCHAR_BOLD;
+            italics = buffer[y][x].flags & TCHAR_ITALICS;
+            underline = buffer[y][x].flags & TCHAR_UNDERLINE;
             if( bold )
                 fontWeight = "bold";
             else

@@ -1092,9 +1092,18 @@ bool mudlet::setTextFormat( Host * pHost, QString & name, int r1, int g1, int b1
         pC->mFormatCurrent.fgR = r2;
         pC->mFormatCurrent.fgG = g2;
         pC->mFormatCurrent.fgB = b2;
-        pC->mFormatCurrent.bold = bold;
-        pC->mFormatCurrent.underline = underline;
-        pC->mFormatCurrent.italics = italics;
+        if( bold )
+            pC->mFormatCurrent.flags |= TCHAR_BOLD;
+        else
+            pC->mFormatCurrent.flags &= ~(TCHAR_BOLD);
+        if( underline )
+            pC->mFormatCurrent.flags |= TCHAR_UNDERLINE;
+        else
+            pC->mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
+        if( italics )
+            pC->mFormatCurrent.flags |= TCHAR_ITALICS;
+        else
+            pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
         return true;
     }
     else

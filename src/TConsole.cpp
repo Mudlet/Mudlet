@@ -122,9 +122,9 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         mStandardFormat.fgR = mFgColor.red();
         mStandardFormat.fgG = mFgColor.green();
         mStandardFormat.fgB = mFgColor.blue();
-        mStandardFormat.bold = false;
-        mStandardFormat.italics = false;
-        mStandardFormat.underline = false;
+        mStandardFormat.flags &= ~(TCHAR_BOLD);
+        mStandardFormat.flags &= ~(TCHAR_ITALICS);
+        mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
     }
     else
     {
@@ -154,9 +154,9 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         mStandardFormat.fgR = mpHost->mFgColor.red();
         mStandardFormat.fgG = mpHost->mFgColor.green();
         mStandardFormat.fgB = mpHost->mFgColor.blue();
-        mStandardFormat.bold = false;
-        mStandardFormat.italics = false;
-        mStandardFormat.underline = false;
+        mStandardFormat.flags &= ~(TCHAR_BOLD);
+        mStandardFormat.flags &= ~(TCHAR_ITALICS);
+        mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
     }
     setContentsMargins(0,0,0,0);
     if( mpHost )
@@ -1488,9 +1488,9 @@ void TConsole::reset()
     mFormatCurrent.fgR = mStandardFormat.fgR;
     mFormatCurrent.fgG = mStandardFormat.fgG;
     mFormatCurrent.fgB = mStandardFormat.fgB;
-    mFormatCurrent.bold = false;
-    mFormatCurrent.italics = false;
-    mFormatCurrent.underline = false;
+    mFormatCurrent.flags &= ~(TCHAR_BOLD);
+    mFormatCurrent.flags &= ~(TCHAR_ITALICS);
+    mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
 }
 
 void TConsole::insertLink( QString text, QStringList & func, QStringList & hint, QPoint P, bool customFormat )
@@ -1661,9 +1661,9 @@ void TConsole::insertText( QString text, QPoint P )
                            mFormatCurrent.bgR,
                            mFormatCurrent.bgG,
                            mFormatCurrent.bgB,
-                           mFormatCurrent.bold,
-                           mFormatCurrent.italics,
-                           mFormatCurrent.underline );
+                           mFormatCurrent.flags & TCHAR_BOLD,
+                           mFormatCurrent.flags & TCHAR_ITALICS,
+                           mFormatCurrent.flags & TCHAR_UNDERLINE );
             console->showNewLines();
             console2->showNewLines();
         }
@@ -2124,19 +2124,28 @@ void TConsole::setLink( QString & linkText, QStringList & linkFunction, QStringL
 
 void TConsole::setBold( bool b )
 {
-    mFormatCurrent.bold = b;
+    if( b )
+        mFormatCurrent.flags |= TCHAR_BOLD;
+    else
+        mFormatCurrent.flags &= ~(TCHAR_BOLD);
     buffer.applyBold( P_begin, P_end, b );
 }
 
 void TConsole::setItalics( bool b )
 {
-    mFormatCurrent.italics = b;
+    if( b )
+        mFormatCurrent.flags |= TCHAR_ITALICS;
+    else
+        mFormatCurrent.flags &= ~(TCHAR_ITALICS);
     buffer.applyItalics( P_begin, P_end, b );
 }
 
 void TConsole::setUnderline( bool b )
 {
-    mFormatCurrent.underline = b;
+    if( b )
+        mFormatCurrent.flags |= TCHAR_UNDERLINE;
+    else
+        mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
     buffer.applyUnderline( P_begin, P_end, b );
 }
 
@@ -2251,9 +2260,9 @@ void TConsole::echo( QString & msg )
                            mFormatCurrent.bgR,
                            mFormatCurrent.bgG,
                            mFormatCurrent.bgB,
-                           mFormatCurrent.bold,
-                           mFormatCurrent.italics,
-                           mFormatCurrent.underline );
+                           mFormatCurrent.flags & TCHAR_BOLD,
+                           mFormatCurrent.flags & TCHAR_ITALICS,
+                           mFormatCurrent.flags & TCHAR_UNDERLINE );
     }
     else
     {
@@ -2273,9 +2282,9 @@ void TConsole::print( const char * txt )
                    mFormatCurrent.bgR,
                    mFormatCurrent.bgG,
                    mFormatCurrent.bgB,
-                   mFormatCurrent.bold,
-                   mFormatCurrent.italics,
-                   mFormatCurrent.underline );
+                   mFormatCurrent.flags & TCHAR_BOLD,
+                   mFormatCurrent.flags & TCHAR_ITALICS,
+                   mFormatCurrent.flags & TCHAR_UNDERLINE );
     console->showNewLines();
     console2->showNewLines();
 }
@@ -2546,9 +2555,9 @@ void TConsole::print( QString & msg )
                     mFormatCurrent.bgR,
                     mFormatCurrent.bgG,
                     mFormatCurrent.bgB,
-                    mFormatCurrent.bold,
-                    mFormatCurrent.italics,
-                    mFormatCurrent.underline );
+                    mFormatCurrent.flags & TCHAR_BOLD,
+                    mFormatCurrent.flags & TCHAR_ITALICS,
+                    mFormatCurrent.flags & TCHAR_UNDERLINE );
     console->showNewLines();
     console2->showNewLines();
 }
