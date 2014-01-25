@@ -2247,7 +2247,7 @@ void dlgTriggerEditor::slot_timer_toggle_active()
 
     showInfo( QString( "Trying to %2 timer <em>%1</em> %3." )
               .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivated" )
+              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
               .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
 }
 
@@ -4324,6 +4324,7 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
 {
+    qDebug() << "slot_trigger_selected";
     if( ! pItem ) return;
 
     mCurrentTrigger = pItem;
@@ -6555,6 +6556,7 @@ void dlgTriggerEditor::slot_delete_item()
 
 void dlgTriggerEditor::slot_item_selected_save( QTreeWidgetItem * pItem )
 {
+    qDebug() << "slot_item_selected_save";
     if( ! pItem ) return;
 
     switch( mCurrentView )
