@@ -34,6 +34,12 @@
 #ifndef TBUFFER_H
 #define TBUFFER_H
 
+#define TCHAR_ITALICS 1
+#define TCHAR_BOLD 2
+#define TCHAR_UNDERLINE 4
+#define TCHAR_INVERSE 8
+#define TCHAR_ECHO 16
+
 class Host;
 
 
@@ -51,11 +57,12 @@ public:
     int    bgR;
     int    bgG;
     int    bgB;
-    bool   italics;
-    bool   bold;
-    bool   underline;
+    int    flags;
+//    bool   italics;
+//    bool   bold;
+//    bool   underline;
     int    link;
-    bool   invers;
+//    bool   invers;
 };
 
 
@@ -173,6 +180,7 @@ public:
     char              mOpenMainQuote;
     bool              mMXP_SEND_NO_REF_MODE;
     std::string       mAssembleRef;
+    bool              mEchoText;
 
 private:
     inline void       shrinkBuffer();

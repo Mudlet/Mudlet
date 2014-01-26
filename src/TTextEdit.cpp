@@ -576,12 +576,12 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                     else
                         drawBackground( p, textRect, bgColor );
                 }
-                if( ( p.font().bold() != f.bold ) || ( p.font().underline() != f.underline ) || (p.font().italic() != f.italics) )
+                if( ( p.font().bold() != (f.flags & TCHAR_BOLD) ) || ( p.font().underline() != (f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != (f.flags & TCHAR_ITALICS)) )
                 {
                     QFont font = p.font();
-                    font.setBold( f.bold );
-                    font.setUnderline( f.underline );
-                    font.setItalic( f.italics );
+                    font.setBold( f.flags & TCHAR_BOLD );
+                    font.setUnderline( f.flags & TCHAR_UNDERLINE );
+                    font.setItalic( f.flags & TCHAR_ITALICS );
                     font.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
                     p.setFont( font );
                 }
@@ -763,7 +763,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                 int delta = 1;
                 QColor fgColor;
                 QColor bgColor;
-                if( f.invers )
+                if( f.flags & TCHAR_INVERSE )
                 {
                     bgColor = QColor(f.fgR, f.fgG, f.fgB );
                     fgColor = QColor(f.bgR, f.bgG, f.bgB );
@@ -820,11 +820,11 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                                   mFontHeight * i,
                                   mFontWidth * delta,
                                   mFontHeight );
-                if( f.invers || ( bgColor != mBgColor ) )
+                if( f.flags & TCHAR_INVERSE || ( bgColor != mBgColor ) )
                 {
                     drawBackground( p, textRect, bgColor );
                 }
-                drawCharacters( p, textRect, text, f.bold, f.underline, f.italics, fgColor, bgColor );
+                drawCharacters( p, textRect, text, f.flags & TCHAR_BOLD, f.flags & TCHAR_UNDERLINE, f.flags & TCHAR_ITALICS, fgColor, bgColor );
                 i2+=delta;
             }
         }
@@ -927,7 +927,7 @@ void TTextEdit::highlight()
             mpBuffer->dirty[y] = true;
             if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
-                mpBuffer->buffer[y][x].invers = true;
+                mpBuffer->buffer[y][x].flags |= TCHAR_INVERSE;
             }
             else
             {
@@ -967,7 +967,7 @@ void TTextEdit::unHighlight( QRegion & region )
             mpBuffer->dirty[y] = true;
             if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
             {
-                mpBuffer->buffer[y][x].invers = false;
+                mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
                 mpBuffer->dirty[y] = true;
             }
             else
@@ -1011,6 +1011,11 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
                 QStringList tooltip = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
                 QToolTip::showText( event->globalPos(), tooltip.join("\n") );
             }
+//            else if( ( y >= mPA.y() && y <= mPB.y() ) &&
+//                     ( x >= mPA.x() && x <= mPB.x() ) )
+//            {
+//                //we're on the thing we double clicked
+//            }
             else
             {
                 setCursor( Qt::IBeamCursor );
@@ -1085,7 +1090,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 
                     if( x < static_cast<int>(mpBuffer->buffer[y].size()) && x >= 0 )
                     {
-                        mpBuffer->buffer[y][x].invers = false;
+                        mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
                     }
                     else
                     {
@@ -1121,7 +1126,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
                     }
                     if( x < static_cast<int>(mpBuffer->buffer[y].size()) )
                     {
-                        mpBuffer->buffer[y][x].invers = false;
+                        mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
                     }
                     else
                     {
