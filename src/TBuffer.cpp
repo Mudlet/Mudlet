@@ -1968,6 +1968,8 @@ void TBuffer::append( QString & text,
     {
         std::deque<TChar> newLine;
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        if( mEchoText )
+            c.flags |= TCHAR_ECHO;
         newLine.push_back( c );
         buffer.push_back( newLine );
         lineBuffer.push_back(QString());
@@ -2040,6 +2042,8 @@ void TBuffer::append( QString & text,
         }
         lineBuffer.back().append( text.at( i ) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, linkID);
+        if( mEchoText )
+            c.flags |= TCHAR_ECHO;
         buffer.back().push_back( c );
         if( firstChar )
         {
@@ -2072,6 +2076,8 @@ void TBuffer::appendLine( QString & text,
     {
         std::deque<TChar> newLine;
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+        if( mEchoText )
+            c.flags |= TCHAR_ECHO;
         newLine.push_back( c );
         buffer.push_back( newLine );
         lineBuffer.push_back(QString());
@@ -2089,6 +2095,8 @@ void TBuffer::appendLine( QString & text,
     {
         lineBuffer.back().append( text.at( i ) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, linkID);
+        if( mEchoText )
+            c.flags |= TCHAR_ECHO;
         buffer.back().push_back( c );
         if( firstChar )
         {
@@ -2720,6 +2728,8 @@ inline int TBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
     QChar space = ' ';
     while( i2 < i_end )
     {
+        if( buffer[i][i2].flags & TCHAR_ECHO )
+            break;
         if( lineBuffer[i][i2] == space )
             offset++;
         else
