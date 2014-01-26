@@ -2047,7 +2047,6 @@ void TBuffer::append( QString & text,
             }
         }
         lineBuffer.back().append( text.at( i ) );
-        echoText.push_back( mEchoText );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, linkID);
         buffer.back().push_back( c );
         if( firstChar )
@@ -2097,7 +2096,6 @@ void TBuffer::appendLine( QString & text,
     for( int i=sub_start; i<=(sub_start+sub_end); i++ )
     {
         lineBuffer.back().append( text.at( i ) );
-        echoText.push_back( mEchoText );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, linkID);
         buffer.back().push_back( c );
         if( firstChar )
@@ -2726,16 +2724,14 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
 inline int TBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
 {
     int offset = 0;
-    int echoIt = 0;
     int i_end = lineBuffer[i].size();
     QChar space = ' ';
     while( i2 < i_end )
     {
-        if( lineBuffer[i][i2] == space && !echoText.at(echoIt) )
+        if( lineBuffer[i][i2] == space )
             offset++;
         else
             break;
-        echoIt++;
         i2++;
     }
     return offset;
@@ -2877,7 +2873,6 @@ inline int TBuffer::wrap( int startLine )
     log(startLine, startLine+tempList.size());
     //qDebug()<<"lB="<<lineBuffer.size()<<" pB="<<promptBuffer.size()<<" tB="<<timeBuffer.size()<<" pB="<<promptBuffer.size()<<" dB="<<dirty.size();
     //Q_ASSERT(!(lineBuffer.size() == promptBuffer.size() == timeBuffer.size() == dirty.size() ));
-    echoText.clear();
     return insertedLines > 0 ? insertedLines : 0;
 }
 
