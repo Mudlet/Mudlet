@@ -4108,7 +4108,6 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
     }
     lua_newtable(L);
     const QList<int> areaRooms = pA->getAreaRooms();
-    qDebug()<<"getAreaRooms()"<<areaRooms;
     for( int i=0; i<areaRooms.size(); i++ )
     {
         int roomID = areaRooms.at( i );

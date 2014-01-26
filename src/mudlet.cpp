@@ -126,6 +126,7 @@ mudlet::mudlet()
 #if QT_VERSION >= 0x040500
     mpTabBar->setTabsClosable ( true );
     connect( mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
+    mpTabBar->setMovable(true);
 #endif
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
@@ -831,6 +832,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
     if( ! pConsole ) return;
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle( pH->getName() );
+    pConsole->setObjectName( pH->getName() );
     mConsoleMap[pH] = pConsole;
     int newTabID = mpTabBar->addTab( pH->getName() );
     mTabMap[pH->getName()] = pConsole;
