@@ -2741,7 +2741,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
 
 inline int TBuffer::wrap( int startLine )
 {
-    if( static_cast<int>(buffer.size()) < startLine ) return 0;
+    if( static_cast<int>(buffer.size()) < startLine || startLine < 0 ) return 0;
     std::queue<std::deque<TChar> > queue;
     QStringList tempList;
     QStringList timeList;
