@@ -744,7 +744,6 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, QT
     if ( !pItem )
         return;
 
-    qDebug()<<"dlgTriggerEditor::slot_item_clicked_search_list item="<<pItem->text(0);
     if( pItem->text(0) == QString("Trigger") )
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
@@ -2259,7 +2258,6 @@ void dlgTriggerEditor::slot_alias_toggle_active()
 
     TAlias * pT = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;
-    qDebug()<<"aliasToggleActive()";
     pT->setIsActive( ! pT->shouldBeActive() );
 
     if( pT->isFolder() )
@@ -4324,8 +4322,10 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
 {
-    qDebug() << "slot_trigger_selected";
     if( ! pItem ) return;
+
+    // save the current trigger before switching to the new one
+    saveTrigger();
 
     mCurrentTrigger = pItem;
     mpTriggersMainArea->show();
@@ -4494,6 +4494,10 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
 void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
 {
     if( ! pItem ) return;
+
+    // save the current alias before switching to the new one
+    saveAlias();
+
     mCurrentAlias = pItem;
     mpAliasMainArea->show();
     mpSourceEditorArea->show();
@@ -4533,6 +4537,10 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
 void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
 {
     if( ! pItem ) return;
+
+    // save the current key before switching to the new one
+    saveKey();
+
     mCurrentKey = pItem;
     mpKeysMainArea->show();
     mpSourceEditorArea->show();
@@ -4588,7 +4596,8 @@ void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list, 
         recurseVariablesDown( it.next(), list, sort );
 }
 
-void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem){
+void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
+{
     if( ! pItem ) return;
     int column = treeWidget_vars->currentColumn();
     int state = pItem->checkState( column );
@@ -4744,6 +4753,10 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem){
 void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 {
     if( ! pItem ) return;
+
+    // save the current action before switching to the new one
+    saveAction();
+
     mCurrentAction = pItem;
     mpActionsMainArea->show();
     mpSourceEditorArea->editor->show();
@@ -4822,6 +4835,10 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
 {
     if( ! pItem ) return;
+
+    // save the current script before switching to the new one
+    saveScript();
+
     mCurrentScript = pItem;
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
@@ -4858,6 +4875,10 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
 void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
 {
     if( ! pItem ) return;
+
+    // save the current timer before switching to the new one
+    saveTimer();
+
     mCurrentTimer = pItem;
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
@@ -5065,7 +5086,6 @@ void dlgTriggerEditor::fillout_form()
         TTimer * pT = *it;
         if( pT->isTempTimer() ) continue;
         QString s = pT->getName();
-        qDebug()<<"init: name="<<pT->getName()<<" mUserActiveState="<<pT->shouldBeActive();
         QStringList sList;
         sList << s;
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpTimerBaseItem, sList);
@@ -6556,7 +6576,6 @@ void dlgTriggerEditor::slot_delete_item()
 
 void dlgTriggerEditor::slot_item_selected_save( QTreeWidgetItem * pItem )
 {
-    qDebug() << "slot_item_selected_save";
     if( ! pItem ) return;
 
     switch( mCurrentView )
