@@ -260,3 +260,4 @@ RESOURCES = mudlet_alpha.qrc
 
 
 # try -O1 —fsanitize=address for AddressSanitizer w/ clang
+# use -DDEBUG_TELNET to show telnet commands
