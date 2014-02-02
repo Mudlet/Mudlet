@@ -1060,7 +1060,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
     x = ( event->x() / mFontWidth ) - timeOffset;
     if( ( x < 0 ) || ( y < 0 ) || ( y > (int) mpBuffer->size()-1 ) )
     {
-        qDebug()<<"Mouse SELECT: ERROR#1";
+//        qDebug()<<"Mouse SELECT: ERROR#1";
         return;
     }
 

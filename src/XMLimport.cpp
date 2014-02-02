@@ -1455,7 +1455,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     }
     else
     {
-        qDebug()<<"NOT enabling Timer name:"<<pT->getName();
+//        qDebug()<<"NOT enabling Timer name:"<<pT->getName();
         //pT->disableTimer( pT->getID() );
         //pT->deactivate();
         //pT->mpTimer->stop();
