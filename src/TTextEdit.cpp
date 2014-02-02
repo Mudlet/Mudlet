@@ -84,7 +84,6 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     }
     else
     {
-        initDefaultSettings();
         mIsDebugConsole = true;
         mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
@@ -101,8 +100,9 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         mLetterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
         mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
 #endif
-
         setFont( mDisplayFont );
+        // initialize after mFontHeight and mFontWidth have been set, because the function uses them!
+        initDefaultSettings();
     }
     mScreenHeight = height() / mFontHeight;
 
