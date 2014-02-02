@@ -634,7 +634,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
 }
 
-void dlgTriggerEditor::slot_toggleHiddenVar( bool status ){
+void dlgTriggerEditor::slot_toggleHiddenVar( bool status )
+{
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     TVar * var = vu->getWVar( mpCurrentVarItem );
@@ -647,7 +648,8 @@ void dlgTriggerEditor::slot_toggleHiddenVar( bool status ){
     }
 }
 
-void dlgTriggerEditor::slot_toggleHiddenVars( ){
+void dlgTriggerEditor::slot_toggleHiddenVars( )
+{
     showHiddenVars = !showHiddenVars;
     if ( showHiddenVars )
         toggleHiddenVarsButton->setText( "Hide Hidden Variables" );
@@ -1755,7 +1757,8 @@ void dlgTriggerEditor::slot_addVar()
         addVar(false); //add normal action
 }
 
-void dlgTriggerEditor::slot_addVarGroup(){
+void dlgTriggerEditor::slot_addVarGroup()
+{
     if (mCurrentVar)
         addVar(true);
 }
@@ -2827,11 +2830,13 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     slot_timer_selected( treeWidget_timers->currentItem() );
 }
 
-void dlgTriggerEditor::addVar( bool isFolder ){
+void dlgTriggerEditor::addVar( bool isFolder )
+{
     saveVar();
     QString name;
     mpVarsMainArea->key_type->setCurrentIndex(0);
-    if (isFolder){
+    if (isFolder)
+    {
 //        mpSourceEditorArea->editor
         mpSourceEditorArea->editor->setReadOnly(true);
         mpVarsMainArea->var_type->setDisabled(true);
@@ -2891,7 +2896,8 @@ void dlgTriggerEditor::addVar( bool isFolder ){
         newVar->setValueType(LUA_TNONE);
     vu->addTempVar( newItem, newVar );
     newItem->setFlags(newItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled ));
-    if (newItem){
+    if (newItem)
+    {
         treeWidget_vars->setCurrentItem( newItem );
         mCurrentVar = (QTreeWidgetItem*)newItem;
         showInfo( msgInfoAddVar );
@@ -3939,7 +3945,8 @@ void dlgTriggerEditor::slot_saveKeyAfterEdit()
     return saveKey();
 }
 
-int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int valueType){
+int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int valueType)
+{
     //basic checks, return 1 if we can recast, 2 if no need to recast, 0 if we can't recast
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
@@ -3971,7 +3978,8 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
     return 1;
 }
 
-void dlgTriggerEditor::saveVar(){
+void dlgTriggerEditor::saveVar()
+{
     if (!mCurrentVar)
         return;
     QTreeWidgetItem * pItem = (QTreeWidgetItem*)mCurrentVar;
@@ -3990,7 +3998,8 @@ void dlgTriggerEditor::saveVar(){
         return;
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorArea->editor->toPlainText();
-    if (newName == ""){
+    if (newName == "")
+    {
         slot_var_selected(pItem);
         return;
     }
@@ -4017,7 +4026,8 @@ void dlgTriggerEditor::saveVar(){
         else
             valueType = LUA_TSTRING;
     }
-    if (varRecast == 2){
+    if (varRecast == 2)
+    {
         //we sometimes get in here from new variables
         if ( newVar )
         {
@@ -4057,7 +4067,8 @@ void dlgTriggerEditor::saveVar(){
                 if ( var->getValueType() != LUA_TTABLE && ( newValue != var->getValue() || valueType != var->getValueType() ) )
                 {
                     //lets check again
-                    if ( var->getValueType() == LUA_TTABLE ){
+                    if ( var->getValueType() == LUA_TTABLE )
+                    {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
                         valueType = LUA_TTABLE;
                     }
@@ -4084,7 +4095,8 @@ void dlgTriggerEditor::saveVar(){
             }
         }
     }
-    else if (varRecast == 1){//recast it
+    else if (varRecast == 1)
+    {//recast it
         TVar * var = vu->getWVar(pItem);
         if ( newVar )
         {
@@ -4145,7 +4157,8 @@ void dlgTriggerEditor::saveVar(){
     pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
-    if ( vu->isSaved( var ) ){
+    if ( vu->isSaved( var ) )
+    {
         pItem->setCheckState(0, Qt::Checked);
     }
     if ( ! vu->shouldSave( var ) )
@@ -4156,7 +4169,8 @@ void dlgTriggerEditor::saveVar(){
     }
     pItem->setData( 0, Qt::UserRole, var->getValueType() );
     QIcon icon;
-    switch (var->getValueType()){
+    switch (var->getValueType())
+    {
         case 5:
             icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/table.png")), QIcon::Normal, QIcon::Off);
             break;
@@ -4599,6 +4613,11 @@ void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list, 
 void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
 {
     if( ! pItem ) return;
+
+    // save the current variable before switching to the new one
+    if ( pItem != mCurrentVar )
+        saveVar();
+
     int column = treeWidget_vars->currentColumn();
     int state = pItem->checkState( column );
     if ( state == Qt::Checked || state == Qt::PartiallyChecked )
@@ -4639,7 +4658,8 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) ){
+            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            {
                 vu->removeSavedVar( v );
             }
         }
@@ -4648,7 +4668,8 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) ){
+            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            {
                 vu->removeSavedVar( v );
             }
         }
