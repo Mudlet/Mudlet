@@ -391,7 +391,7 @@ void cTelnet::setDisplayDimensions()
 
 void cTelnet::sendTelnetOption( char type, char option )
 {
-#ifdef DEBUG
+#ifdef DEBUG_TELNET
     QString _type;
     switch ((quint8)type)
     {
