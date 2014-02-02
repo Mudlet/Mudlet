@@ -306,7 +306,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layoutLayer->setMargin( 0 );//neu rc1
     layoutLayer->setSpacing( 0 );//neu rc1
     layoutLayer->setMargin( 0 );//neu rc1
-    QSizePolicy sizePolicyLayer(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     mpScrollBar->setFixedWidth( 15 );
 

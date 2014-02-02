@@ -1,4 +1,3 @@
-
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -g -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
@@ -260,3 +259,5 @@ TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc
 
 
+# try -O1 —fsanitize=address for AddressSanitizer w/ clang
+# use -DDEBUG_TELNET to show telnet commands

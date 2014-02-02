@@ -391,7 +391,7 @@ void cTelnet::setDisplayDimensions()
 
 void cTelnet::sendTelnetOption( char type, char option )
 {
-#ifdef DEBUG
+#ifdef DEBUG_TELNET
     QString _type;
     switch ((quint8)type)
     {
@@ -443,7 +443,7 @@ void cTelnet::setDownloadProgress( qint64 got, qint64 tot )
 void cTelnet::processTelnetCommand( const string & command )
 {
   char ch = command[1];
-#ifdef DEBUG
+#ifdef DEBUG_TELNET
   QString _type;
   switch ((quint8)ch)
   {
@@ -462,7 +462,7 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_GA:
       case TN_EOR:
       {
-          #ifdef DEBUG
+          #ifdef DEBUG_TELNET
             cout << "cTelnet::processTelnetCommand() command = TN_GA/TN_EOR"<<endl;
           #endif
           recvdGA = true;

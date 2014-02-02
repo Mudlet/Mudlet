@@ -539,12 +539,16 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData( QString profile, QString item )
 {
-    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
-    file.open( QIODevice::ReadOnly );
-    QDataStream ifs( & file );
+    QString filepath = QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item;
+    QFile file( filepath );
+    bool success = file.open( QIODevice::ReadOnly );
     QString ret;
-    ifs >> ret;
-    file.close();
+    if ( success ) {
+        QDataStream ifs( & file );
+        ifs >> ret;
+        file.close();
+    }
+
     return ret;
 }
 

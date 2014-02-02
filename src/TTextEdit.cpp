@@ -84,7 +84,6 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
     }
     else
     {
-        initDefaultSettings();
         mIsDebugConsole = true;
         mFontHeight = QFontMetrics( mDisplayFont ).height();
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
@@ -101,8 +100,9 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         mLetterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
         mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
 #endif
-
         setFont( mDisplayFont );
+        // initialize after mFontHeight and mFontWidth have been set, because the function uses them!
+        initDefaultSettings();
     }
     mScreenHeight = height() / mFontHeight;
 
@@ -193,15 +193,21 @@ void TTextEdit::initDefaultSettings()
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
 //    mDisplayFont.setWordSpacing( 0 );
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
-        QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
-        QPainter p(&pixmap);
-        p.setFont(mDisplayFont);
-        const QRectF r = QRectF(0,0,mScreenWidth*mFontWidth*2,mFontHeight*2);
-        QRectF r2;
-        const QString t = "1234";
-        p.drawText(r,1,t,&r2);
-        mLetterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
-        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
+        int width = mScreenWidth*mFontWidth*2;
+        int height = mFontHeight*2;
+        // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
+        // mScreenWidth ever zero and it gets used in the follow calculations.
+        if ( width > 0 && height > 0 ) {
+            QPixmap pixmap = QPixmap( width, height );
+            QPainter p(&pixmap);
+            p.setFont(mDisplayFont);
+            const QRectF r = QRectF( 0,0,width,height );
+            QRectF r2;
+            const QString t = "1234";
+            p.drawText(r,1,t,&r2);
+            mLetterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
+            mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
+        }
 #endif
     mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
     mDisplayFont.setFixedPitch(true);
@@ -294,18 +300,24 @@ void TTextEdit::updateScreenView()
         mFontAscent = QFontMetrics( mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
-        QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
-        QPainter p(&pixmap);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
-        if( p.isActive() )
-        {
-            p.setFont(mDisplayFont);
-            const QRectF r = QRectF(0,0,mScreenWidth*mFontWidth*2,mFontHeight*2);
-            QRectF r2;
-            const QString t = "1234";
-            p.drawText(r,1,t,&r2);
-            mLetterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
-            mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
+        int width = mScreenWidth*mFontWidth*2;
+        int height = mFontHeight*2;
+        // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
+        // mScreenWidth ever zero and it gets used in the follow calculations.
+        if ( width > 0 && height > 0 ) {
+            QPixmap pixmap = QPixmap( width, height );
+            QPainter p(&pixmap);
+            mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
+            if( p.isActive() )
+            {
+                p.setFont(mDisplayFont);
+                const QRectF r = QRectF( 0,0,width,height );
+                QRectF r2;
+                const QString t = "1234";
+                p.drawText(r,1,t,&r2);
+                mLetterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
+                mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
+            }
         }
 #endif
     }
@@ -1048,7 +1060,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
     x = ( event->x() / mFontWidth ) - timeOffset;
     if( ( x < 0 ) || ( y < 0 ) || ( y > (int) mpBuffer->size()-1 ) )
     {
-        qDebug()<<"Mouse SELECT: ERROR#1";
+//        qDebug()<<"Mouse SELECT: ERROR#1";
         return;
     }
 
