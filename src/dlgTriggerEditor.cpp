@@ -2719,10 +2719,6 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->spinBox_linemargin->setValue( 0 );
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
 
-    QPalette pal = palette();
-    QColor color =  pal.color( QPalette::Button );
-    QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-
     mpTriggersMainArea->pushButtonFgColor->setChecked( false );
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
