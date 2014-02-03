@@ -652,7 +652,7 @@ void dlgTriggerEditor::slot_toggleHiddenVars( ){
     if ( showHiddenVars )
         toggleHiddenVarsButton->setText( "Hide Hidden Variables" );
     else
-        toggleHiddenVarsButton->setText( " Show Hidden Variables" );
+        toggleHiddenVarsButton->setText( "Show Hidden Variables" );
     repopulateVars();
 }
 
@@ -5987,7 +5987,7 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
             pItem->setIcon( 0, iconError );
             showError( pT->getError() );
         }
-        qDebug()<<"WARNING: dlgTriggerEditor::expand_child_timers() called name:"<<pT->getName();
+//        qDebug()<<"WARNING: dlgTriggerEditor::expand_child_timers() called name:"<<pT->getName();
 //        if( pT->isActive() )
 //        {
 //            pT->enableTimer();// pT->getName() );

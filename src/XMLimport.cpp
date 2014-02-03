@@ -1437,7 +1437,6 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     //if( ( ! isOffsetTimer ) && ( ! pT->isFolder() ) && ( pT->shouldBeActive() ) )
     if( ! pT->mpParent && pT->shouldBeActive() )
     {
-        qDebug()<<"regular Timer enabling name:"<<pT->getName();
         pT->setIsActive( true );
         pT->enableTimer( pT->getID() );
 //        if( pT->canBeUnlocked( 0 ) )

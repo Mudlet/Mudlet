@@ -1331,9 +1331,6 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         {
             mLastClickTimer.start();
             mMouseTracking = true;
-            //int x = event->x() / mFontWidth;
-            //int y = ( event->y() / mFontHeight ) + imageTopLine();
-            qDebug()<<"x="<<x<<" y="<<y;
             if( y >= mpBuffer->size() )
             {
                 return;
