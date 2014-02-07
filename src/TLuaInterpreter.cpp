@@ -10419,7 +10419,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
     {
         if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
         {
-            lua_pushnumber( L, pE->mArgumentList[i].toInt() );
+            lua_pushnumber( L, pE->mArgumentList[i].toDouble() );
         }
         else
         {
