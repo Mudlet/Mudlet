@@ -10402,7 +10402,6 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
         return false;
     lua_State * L = pGlobalLua;
     int error = luaL_dostring(L, QString("return " + function).toLatin1().data());
-    QString n;
     if( error != 0 )
     {
         string e;
@@ -10436,7 +10435,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
         }
         QString _n = "event handler function";
         logError( e, _n, function );
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< function << " (" << function <<") ERROR:"<<e.c_str()<<"\n">>0;}
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< function << " (" << function <<") ERROR: "<<e.c_str()<<"\n">>0;}
     }
     lua_pop( L, lua_gettop( L ) );
     if( error == 0 )
