@@ -121,7 +121,13 @@ local packages = {
 -- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
 -- on Mac, it's set to LuaGlobals location - or the Applications folder, or something else...
 -- So work out where to load Lua files from using some heuristics
-local prefixes = {"./mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
+-- Addition of "../src/" to front of first path allows things to work when "Shadow Building"
+-- option of Qt Creator is used (separates object code from source code in directories
+-- beside the latter, allowing parallel builds against different Qt Library versions
+-- or {Release|Debug} types).
+-- TODO: extend to support common Lua code being placed in system shared directory
+-- tree as ought to happen for *nix install builds.
+local prefixes = {"../src/mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
     "mudlet.app/Contents/Resources/mudlet-lua/lua/"}
 
 local prefix

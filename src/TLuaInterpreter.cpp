@@ -10989,7 +10989,9 @@ void TLuaInterpreter::loadGlobal()
 #if defined(Q_OS_MAC)
     QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
 #else
-    QString path = "mudlet-lua/lua/LuaGlobal.lua";
+    QString path = "../src/mudlet-lua/lua/LuaGlobal.lua";
+    // Additional "../src/" allows location of lua code when object code is in a
+    // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
 #endif
 
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
