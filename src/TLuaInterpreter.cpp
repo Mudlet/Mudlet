@@ -1771,14 +1771,7 @@ int TLuaInterpreter::setExitStub( lua_State * L  ){
         lua_error( L );
         return 1;
     }
-    if(status)
-    {
-        pR->setExitStub(dirType, 1);
-    }
-    else
-    {
-        pR->setExitStub(dirType, 0);
-    }
+    pR->setExitStub(dirType, status);
     return 0;
 }
 
@@ -1849,9 +1842,9 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
         }
         Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
         lua_pushboolean(L, pHost->mpMap->setExit( roomId, toRoom, dirType ) );
-        //pHost->mpMap->rooms[roomId]->setExitStub(dirType, 0);
+        //pHost->mpMap->rooms[roomId]->setExitStub(dirType, false);
         //setExit( toRoom, roomId, pHost->mpMap->reverseDirections[dirType]);
-        //pHost->mpMap->rooms[toRoom]->setExitStub(pHost->mpMap->reverseDirections[dirType], 0);
+        //pHost->mpMap->rooms[toRoom]->setExitStub(pHost->mpMap->reverseDirections[dirType], false);
     }
     else
     {
@@ -7893,8 +7886,43 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
     TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( id_to );
     if( pR_from && pR_to )
     {
-        pR_from->addSpecialExit( id_to, _dir );
+        pR_from->setSpecialExit( id_to, _dir );
         pR_from->setSpecialExitLock( id_to, _dir, false );
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
+    }
+    return 0;
+}
+
+int TLuaInterpreter::removeSpecialExit( lua_State * L )
+{
+    int id;
+    string dir;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "removeSpecialExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        id = lua_tointeger( L, 1 );
+    }
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "removeSpecialExit: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        dir = lua_tostring( L, 2 );
+    }
+    QString _dir = dir.c_str();
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    if( pR )
+    {
+        pR->setSpecialExit( -1, _dir );
         pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -10766,6 +10794,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setGridMode", TLuaInterpreter::setGridMode );
     lua_register( pGlobalLua, "solveRoomCollisions", TLuaInterpreter::solveRoomCollisions );
     lua_register( pGlobalLua, "addSpecialExit", TLuaInterpreter::addSpecialExit );
+    lua_register( pGlobalLua, "removeSpecialExit", TLuaInterpreter::removeSpecialExit );
     lua_register( pGlobalLua, "getSpecialExits", TLuaInterpreter::getSpecialExits );
     lua_register( pGlobalLua, "getSpecialExitsSwap", TLuaInterpreter::getSpecialExitsSwap );
     lua_register( pGlobalLua, "clearSpecialExits", TLuaInterpreter::clearSpecialExits );

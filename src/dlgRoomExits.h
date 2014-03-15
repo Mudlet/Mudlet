@@ -22,10 +22,12 @@
 #define DLGROOMEXITS_H
 
 #include <QDialog>
+#include <QTreeWidgetItem>
+#include <QtWidgets>
 #include "ui_room_exits.h"
-#include "Host.h"
 
 class Host;
+class TRoom;
 
 class dlgRoomExits : public QDialog, public Ui::roomExits
 {
@@ -34,18 +36,44 @@ public:
     explicit dlgRoomExits(Host *, QWidget *parent = 0);
     void init( int );
     Host * mpHost;
-    int mRoomID;
-    int mEditColumn;
     QTreeWidgetItem * mpEditItem;
 
 signals:
 
 public slots:
-    void slot_editItem(QTreeWidgetItem * pI, int column );
     void save();
     void slot_addSpecialExit();
-    //void cancel();
+    void slot_editSpecialExit(QTreeWidgetItem *, int);
+    void slot_endEditSpecialExits();
+    void slot_ne_textEdited(const QString &);
+    void slot_n_textEdited(const QString &);
+    void slot_nw_textEdited(const QString &);
+    void slot_up_textEdited(const QString &);
+    void slot_w_textEdited(const QString &);
+    void slot_e_textEdited(const QString &);
+    void slot_down_textEdited(const QString &);
+    void slot_sw_textEdited(const QString &);
+    void slot_s_textEdited(const QString &);
+    void slot_se_textEdited(const QString &);
+    void slot_in_textEdited(const QString &);
+    void slot_out_textEdited(const QString &);
+    void slot_stub_ne_stateChanged(int);
+    void slot_stub_n_stateChanged(int);
+    void slot_stub_nw_stateChanged(int);
+    void slot_stub_up_stateChanged(int);
+    void slot_stub_w_stateChanged(int);
+    void slot_stub_e_stateChanged(int);
+    void slot_stub_down_stateChanged(int);
+    void slot_stub_sw_stateChanged(int);
+    void slot_stub_s_stateChanged(int);
+    void slot_stub_se_stateChanged(int);
+    void slot_stub_in_stateChanged(int);
+    void slot_stub_out_stateChanged(int);
 
+private:
+    TRoom * pR;
+    int mRoomID;
+    int mEditColumn;
 };
 
 #endif // DLGROOMEXITS_H

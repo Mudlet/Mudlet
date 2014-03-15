@@ -298,7 +298,7 @@ bool TMap::setExit( int from, int to, int dir )
         default:
             ret = false;
     }
-    pR->setExitStub(dir, 0);
+    pR->setExitStub(dir, false);
     mMapGraphNeedsUpdate = true;
     TArea * pA = mpRoomDB->getArea( pR->getArea() );
     if ( ! pA )

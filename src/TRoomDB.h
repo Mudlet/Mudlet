@@ -39,7 +39,7 @@ public:
 
     TRoom * getRoom( int id );
     TArea * getArea( int id );
-    int getArea( TArea * pA );
+//     int getArea( TArea * pA ); use duplicate int getAreaID( TArea * pA ) instead
     bool addRoom( int id );
     int size() { return rooms.size(); }
     bool removeRoom( int id );

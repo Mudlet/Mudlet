@@ -1,1 +1,6 @@
 See COMPILE for compilation instructions, and INSTALL for installation & installer instructions.
+
+SlySvens branches at GitHub (not exhaustive):
+mudletDev		- local fork of github/Chris7/mudletDev
+mudletDev-exitsDialog	- add extended/improved GUI for exits (accessed from 2D mapper context menu)
+
