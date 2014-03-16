@@ -103,6 +103,8 @@ bool TRoomDB::__removeRoom( int id )
         }
         int areaID = pR->getArea();
         TArea * pA = getArea( areaID );
+// FIXME: Is it appropriate to bail out here if there is no Area as we haven't
+// cleared the Hash table yet...!
         if( !pA ) return false;
         pA->removeRoom( id );
         mpMap->mMapGraphNeedsUpdate = true;
@@ -217,15 +219,17 @@ QList<int> TRoomDB::getRoomIDList()
     return rooms.keys();
 }
 
-int TRoomDB::getArea( TArea * pA )
-{
-    if( pA && areas.values().contains(pA) )
-    {
-        return areas.key(pA);
-    }
-    else
-        return -1;
-}
+// NOTE: This is MIS-NAMED and redundent as it returns the int ID of a given TArea
+// pointer and there is the method getAreaID(TArea *) here as well that does it!
+//int TRoomDB::getArea( TArea * pA )
+//{
+//    if( pA && areas.values().contains(pA) )
+//    {
+//        return areas.key(pA);
+//    }
+//    else
+//        return -1;
+//}
 
 TArea * TRoomDB::getArea( int id )
 {
@@ -295,7 +299,8 @@ bool TRoomDB::addArea( int id, QString name )
 {
     if( areaNamesMap.values().contains(name) ) return false;
     if( areaNamesMap.keys().contains(id) ) return false;
-    if( addArea( id ) )
+    bool ret = addArea( id );
+    if( ret ) // Wrong check for error (==0 was being made)
     {
         areaNamesMap[id] = name;
         return true;

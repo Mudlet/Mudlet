@@ -1,6 +1,7 @@
 bin/*
 qtcreator-build/*
 src-build-desktop/*
+build-src-*/*
 src/CMakeLists.txt.user
 src/debug/*
 src/release/*

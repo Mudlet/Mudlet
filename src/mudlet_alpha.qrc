@@ -138,5 +138,6 @@
         <file>icons/function.png</file>
         <file>icons/package-manager.png</file>
         <file>icons/module-manager.png</file>
+        <file>icons/mudlet_room_exits.png</file>
     </qresource>
 </RCC>
