@@ -14,6 +14,10 @@
   <property name="windowTitle">
    <string>Exits for Room &quot;&quot; [*]</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../mudlet_alpha.qrc">
+    <normaloff>:/icons/mudlet_room_exits.png</normaloff>:/icons/mudlet_room_exits.png</iconset>
+  </property>
   <layout class="QGridLayout" name="gridLayout_all" rowstretch="1,1,0">
    <property name="leftMargin">
     <number>6</number>
@@ -2128,7 +2132,9 @@ or LUA script</string>
   <tabstop>button_save</tabstop>
   <tabstop>button_cancel</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>button_cancel</sender>
@@ -2165,17 +2171,17 @@ or LUA script</string>
   </property>
  </designerdata>
  <buttongroups>
-  <buttongroup name="doortype_out"/>
-  <buttongroup name="doortype_in"/>
-  <buttongroup name="doortype_up"/>
   <buttongroup name="doortype_n"/>
-  <buttongroup name="doortype_s"/>
-  <buttongroup name="doortype_down"/>
   <buttongroup name="doortype_ne"/>
   <buttongroup name="doortype_nw"/>
+  <buttongroup name="doortype_se"/>
+  <buttongroup name="doortype_out"/>
+  <buttongroup name="doortype_sw"/>
+  <buttongroup name="doortype_s"/>
+  <buttongroup name="doortype_in"/>
+  <buttongroup name="doortype_up"/>
+  <buttongroup name="doortype_down"/>
   <buttongroup name="doortype_e"/>
   <buttongroup name="doortype_w"/>
-  <buttongroup name="doortype_se"/>
-  <buttongroup name="doortype_sw"/>
  </buttongroups>
 </ui>

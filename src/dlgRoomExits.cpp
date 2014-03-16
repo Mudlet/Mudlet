@@ -265,8 +265,8 @@ void dlgRoomExits::save()
         pR->setSpecialExit( -1, value );
     }
 
-    if (nw->isEnabled() && nw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != 0 )
-    { // There IS a valid exit on the dialogue in this direction
+    if (nw->isEnabled() && nw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != 0 ) {
+        // There IS a valid exit on the dialogue in this direction
         pR->setExit( nw->text().toInt(), DIR_NORTHWEST ); // So store it
         if (pR->hasExitStub(DIR_NORTHWEST))   // And ensure that stub exit is cleared if set
             pR->setExitStub(DIR_NORTHWEST, false);
@@ -274,9 +274,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "nw", weight_nw->value());
         else
             pR->setExitWeight( "nw", 0);
-    }
-    else
-    { // No valid exit on the dialogue
+    } else { // No valid exit on the dialogue
         pR->setExit( -1, DIR_NORTHWEST ); // So ensure the value for no exit is stored
         if (stub_nw->isChecked() != pR->hasExitStub(DIR_NORTHWEST))
             // Does the stub exit setting differ from what is stored
@@ -288,8 +286,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "NW" ); // And remove any custom line stuff, which uses opposite case keys - *sigh*
     }
 
-    if (n->isEnabled() && n->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != 0 )
-    {
+    if (n->isEnabled() && n->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != 0 ) {
         pR->setExit( n->text().toInt(), DIR_NORTH );
         if (pR->hasExitStub(DIR_NORTH))
             pR->setExitStub(DIR_NORTH, false);
@@ -297,9 +294,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "n", weight_n->value());
         else
             pR->setExitWeight( "n", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_NORTH );
         if (stub_n->isChecked() != pR->hasExitStub(DIR_NORTH))
             pR->setExitStub(DIR_NORTH, stub_n->isChecked());
@@ -310,8 +305,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "N" );
     }
 
-    if (ne->isEnabled() && ne->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != 0 )
-    {
+    if (ne->isEnabled() && ne->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != 0 ) {
         pR->setExit( ne->text().toInt(), DIR_NORTHEAST );
         if (pR->hasExitStub(DIR_NORTHEAST))
             pR->setExitStub(DIR_NORTHEAST, false);
@@ -319,9 +313,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "ne", weight_ne->value());
         else
             pR->setExitWeight( "ne", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_NORTHEAST );
         if (stub_ne->isChecked() != pR->hasExitStub(DIR_NORTHEAST))
             pR->setExitStub(DIR_NORTHEAST, stub_ne->isChecked());
@@ -332,8 +324,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "NE" );
     }
 
-    if (up->isEnabled() && up->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != 0 )
-    {
+    if (up->isEnabled() && up->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != 0 ) {
         pR->setExit( up->text().toInt(), DIR_UP );
         if (pR->hasExitStub(DIR_UP))
             pR->setExitStub(DIR_UP, false);
@@ -341,9 +332,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "up", weight_up->value());
         else
             pR->setExitWeight( "up", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_UP );
         if (stub_up->isChecked() != pR->hasExitStub(DIR_UP))
             pR->setExitStub(DIR_UP, stub_up->isChecked());
@@ -354,8 +343,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "UP" );
     }
 
-    if (w->isEnabled() && w->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != 0 )
-    {
+    if (w->isEnabled() && w->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != 0 ) {
         pR->setExit( w->text().toInt(), DIR_WEST );
         if (pR->hasExitStub(DIR_WEST))
             pR->setExitStub(DIR_WEST, false);
@@ -363,9 +351,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "w", weight_w->value());
         else
             pR->setExitWeight( "w", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_WEST );
         if (stub_w->isChecked() != pR->hasExitStub(DIR_WEST))
             pR->setExitStub(DIR_WEST, stub_w->isChecked());
@@ -376,8 +362,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "W" );
     }
 
-    if (e->isEnabled() && e->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != 0 )
-    {
+    if (e->isEnabled() && e->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != 0 ) {
         pR->setExit( e->text().toInt(), DIR_EAST );
         if (pR->hasExitStub(DIR_EAST))
             pR->setExitStub(DIR_EAST, false);
@@ -385,9 +370,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "e", weight_e->value());
         else
             pR->setExitWeight( "e", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_EAST );
         if (stub_e->isChecked() != pR->hasExitStub(DIR_EAST))
             pR->setExitStub(DIR_EAST, stub_e->isChecked());
@@ -398,8 +381,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "E" );
     }
 
-    if (down->isEnabled() && down->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != 0 )
-    {
+    if (down->isEnabled() && down->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != 0 ) {
         pR->setExit( down->text().toInt(), DIR_DOWN );
         if (pR->hasExitStub(DIR_DOWN))
             pR->setExitStub(DIR_DOWN, false);
@@ -407,9 +389,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "down", weight_down->value());
         else
             pR->setExitWeight( "down", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_DOWN );
         if (stub_down->isChecked() != pR->hasExitStub(DIR_DOWN))
             pR->setExitStub(DIR_DOWN, stub_down->isChecked());
@@ -420,8 +400,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "DOWN" );
     }
 
-    if (sw->isEnabled() && sw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != 0 )
-    {
+    if (sw->isEnabled() && sw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != 0 ) {
         pR->setExit( sw->text().toInt(), DIR_SOUTHWEST );
         if (pR->hasExitStub(DIR_SOUTHWEST))
             pR->setExitStub(DIR_SOUTHWEST, false);
@@ -429,9 +408,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "sw", weight_sw->value());
         else
             pR->setExitWeight( "sw", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_SOUTHWEST );
         if (stub_sw->isChecked() != pR->hasExitStub(DIR_SOUTHWEST))
             pR->setExitStub(DIR_SOUTHWEST, stub_sw->isChecked());
@@ -442,8 +419,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "SW" );
     }
 
-    if (s->isEnabled() && s->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != 0 )
-    {
+    if (s->isEnabled() && s->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != 0 ) {
         pR->setExit( s->text().toInt(), DIR_SOUTH );
         if (pR->hasExitStub(DIR_SOUTH))
             pR->setExitStub(DIR_SOUTH, false);
@@ -451,9 +427,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "s", weight_s->value());
         else
             pR->setExitWeight( "s", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_SOUTH );
         if (stub_s->isChecked() != pR->hasExitStub(DIR_SOUTH))
             pR->setExitStub(DIR_SOUTH, stub_s->isChecked());
@@ -464,8 +438,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "S" );
     }
 
-    if (se->isEnabled() && se->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != 0 )
-    {
+    if (se->isEnabled() && se->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != 0 ) {
         pR->setExit( se->text().toInt(), DIR_SOUTHEAST );
         if (pR->hasExitStub(DIR_SOUTHEAST))
             pR->setExitStub(DIR_SOUTHEAST, false);
@@ -477,17 +450,14 @@ void dlgRoomExits::save()
         pR->customLinesColor.remove( "SE" );
         pR->customLinesStyle.remove( "SE" );
         pR->customLines.remove( "SE" );
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_SOUTHEAST );
         if (stub_se->isChecked() != pR->hasExitStub(DIR_SOUTHEAST))
             pR->setExitStub(DIR_SOUTHEAST, stub_se->isChecked());
         pR->setExitWeight( "se", 0);
     }
 
-    if (in->isEnabled() && in->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != 0 )
-    {
+    if (in->isEnabled() && in->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != 0 ) {
         pR->setExit( in->text().toInt(), DIR_IN );
         if (pR->hasExitStub(DIR_IN))
             pR->setExitStub(DIR_IN, false);
@@ -495,9 +465,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "in", weight_in->value());
         else
             pR->setExitWeight( "in", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_IN );
         if (stub_in->isChecked() != pR->hasExitStub(DIR_IN))
             pR->setExitStub(DIR_IN, stub_in->isChecked());
@@ -508,8 +476,7 @@ void dlgRoomExits::save()
         pR->customLines.remove( "IN" );
     }
 
-    if (out->isEnabled() && out->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != 0 )
-    {
+    if (out->isEnabled() && out->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != 0 ) {
         pR->setExit( out->text().toInt(), DIR_OUT );
         if (pR->hasExitStub(DIR_OUT))
             pR->setExitStub(DIR_OUT, false);
@@ -517,9 +484,7 @@ void dlgRoomExits::save()
             pR->setExitWeight( "out", weight_out->value());
         else
             pR->setExitWeight( "out", 0);
-    }
-    else
-    {
+    } else {
         pR->setExit( -1, DIR_OUT );
         if (stub_out->isChecked() != pR->hasExitStub(DIR_OUT))
             pR->setExitStub(DIR_OUT, stub_out->isChecked());
@@ -548,70 +513,45 @@ void dlgRoomExits::save()
     //   created without an explict Id, any attempt to set a different Id using
     //   setId() seems to fail for me :(
     if (doortype_nw->checkedId()<-1)
-    {
         pR->setDoor( "nw", -2-doortype_nw->checkedId());
-    }
 
     if (doortype_n->checkedId()<-1)
-    {
         pR->setDoor( "n", -2-doortype_n->checkedId());
-    }
 
     if (doortype_ne->checkedId()<-1)
-    {
         pR->setDoor( "ne", -2-doortype_ne->checkedId());
-    }
 
     if (doortype_up->checkedId()<-1)
-    {
         pR->setDoor( "up", -2-doortype_up->checkedId());
-    }
 
     if (doortype_w->checkedId()<-1)
-    {
         pR->setDoor( "w", -2-doortype_w->checkedId());
-    }
 
     if (doortype_e->checkedId()<-1)
-    {
         pR->setDoor( "e", -2-doortype_e->checkedId());
-    }
 
     if (doortype_down->checkedId()<-1)
-    {
         pR->setDoor( "down", -2-doortype_down->checkedId());
-    }
 
     if (doortype_sw->checkedId()<-1)
-    {
         pR->setDoor( "sw", -2-doortype_sw->checkedId());
-    }
 
     if (doortype_s->checkedId()<-1)
-    {
         pR->setDoor( "s", -2-doortype_s->checkedId());
-    }
 
     if (doortype_se->checkedId()<-1)
-    {
         pR->setDoor( "se", -2-doortype_se->checkedId());
-    }
 
     if (doortype_in->checkedId()<-1)
-    {
         pR->setDoor( "in", -2-doortype_in->checkedId());
-    }
 
     if (doortype_out->checkedId()<-1)
-    {
         pR->setDoor( "in", -2-doortype_out->checkedId());
-    }
 
     TArea * pA = mpHost->mpMap->mpRoomDB->getArea( pR->getArea() );
     if( pA )
-    {
         pA->fast_ausgaengeBestimmen( pR->getId() );
-    }
+
     close();
 }
 
@@ -619,7 +559,6 @@ void dlgRoomExits::save()
 // These slots are called as the text for the exitID is edited
 void dlgRoomExits::slot_nw_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -633,10 +572,10 @@ void dlgRoomExits::slot_nw_textEdited(const QString &text)
         doortype_open_nw->setEnabled(true);
         doortype_closed_nw->setEnabled(true);
         doortype_locked_nw->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        nw->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            nw->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            nw->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0 ) {
         // Something is entered but it does not yield a valid exit roomID
         // Enable stub exit control
@@ -661,12 +600,10 @@ void dlgRoomExits::slot_nw_textEdited(const QString &text)
         doortype_closed_nw->setEnabled(false);
         doortype_locked_nw->setEnabled(false);
     }
-    frame_nw->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_n_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -679,10 +616,10 @@ void dlgRoomExits::slot_n_textEdited(const QString &text)
         doortype_open_n->setEnabled(true);
         doortype_closed_n->setEnabled(true);
         doortype_locked_n->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        n->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            n->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            n->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         n->setStyleSheet("color:red");
         n->setToolTip("Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.");
@@ -704,12 +641,10 @@ void dlgRoomExits::slot_n_textEdited(const QString &text)
         doortype_closed_n->setEnabled(false);
         doortype_locked_n->setEnabled(false);
     }
-    frame_n->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_ne_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -722,10 +657,10 @@ void dlgRoomExits::slot_ne_textEdited(const QString &text)
         doortype_open_ne->setEnabled(true);
         doortype_closed_ne->setEnabled(true);
         doortype_locked_ne->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        ne->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            ne->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            ne->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         ne->setStyleSheet("color:red");
         ne->setToolTip("Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.");
@@ -747,12 +682,10 @@ void dlgRoomExits::slot_ne_textEdited(const QString &text)
         doortype_closed_ne->setEnabled(false);
         doortype_locked_ne->setEnabled(false);
     }
-    frame_ne->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_up_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -765,10 +698,10 @@ void dlgRoomExits::slot_up_textEdited(const QString &text)
         doortype_open_up->setEnabled(true);
         doortype_closed_up->setEnabled(true);
         doortype_locked_up->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        up->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            up->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            up->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         up->setStyleSheet("color:red");
         up->setToolTip("Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.");
@@ -790,12 +723,10 @@ void dlgRoomExits::slot_up_textEdited(const QString &text)
         doortype_closed_up->setEnabled(false);
         doortype_locked_up->setEnabled(false);
     }
-    frame_up->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_w_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -808,10 +739,10 @@ void dlgRoomExits::slot_w_textEdited(const QString &text)
         doortype_open_w->setEnabled(true);
         doortype_closed_w->setEnabled(true);
         doortype_locked_w->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        w->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            w->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            w->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         w->setStyleSheet("color:red");
         w->setToolTip("Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.");
@@ -833,12 +764,10 @@ void dlgRoomExits::slot_w_textEdited(const QString &text)
         doortype_closed_w->setEnabled(false);
         doortype_locked_w->setEnabled(false);
     }
-    frame_w->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_e_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -851,10 +780,10 @@ void dlgRoomExits::slot_e_textEdited(const QString &text)
         doortype_open_e->setEnabled(true);
         doortype_closed_e->setEnabled(true);
         doortype_locked_e->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\" [*]");
-        e->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            e->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            e->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         e->setStyleSheet("color:red");
         e->setToolTip("Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.");
@@ -876,12 +805,10 @@ void dlgRoomExits::slot_e_textEdited(const QString &text)
         doortype_closed_e->setEnabled(false);
         doortype_locked_e->setEnabled(false);
     }
-    frame_e->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_down_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -894,10 +821,10 @@ void dlgRoomExits::slot_down_textEdited(const QString &text)
         doortype_open_down->setEnabled(true);
         doortype_closed_down->setEnabled(true);
         doortype_locked_down->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        down->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            down->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            down->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         down->setStyleSheet("color:red");
         down->setToolTip("Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.");
@@ -919,12 +846,10 @@ void dlgRoomExits::slot_down_textEdited(const QString &text)
         doortype_closed_down->setEnabled(false);
         doortype_locked_down->setEnabled(false);
     }
-    frame_down->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_sw_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -937,10 +862,10 @@ void dlgRoomExits::slot_sw_textEdited(const QString &text)
         doortype_open_sw->setEnabled(true);
         doortype_closed_sw->setEnabled(true);
         doortype_locked_sw->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        sw->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            sw->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            sw->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         sw->setStyleSheet("color:red");
         sw->setToolTip("Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.");
@@ -962,12 +887,10 @@ void dlgRoomExits::slot_sw_textEdited(const QString &text)
         doortype_closed_sw->setEnabled(false);
         doortype_locked_sw->setEnabled(false);
     }
-    frame_sw->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_s_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -980,10 +903,10 @@ void dlgRoomExits::slot_s_textEdited(const QString &text)
         doortype_open_s->setEnabled(true);
         doortype_closed_s->setEnabled(true);
         doortype_locked_s->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        s->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            s->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            s->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         s->setStyleSheet("color:red");
         s->setToolTip("Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.");
@@ -1005,12 +928,10 @@ void dlgRoomExits::slot_s_textEdited(const QString &text)
         doortype_closed_s->setEnabled(false);
         doortype_locked_s->setEnabled(false);
     }
-    frame_s->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_se_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -1023,10 +944,10 @@ void dlgRoomExits::slot_se_textEdited(const QString &text)
         doortype_open_se->setEnabled(true);
         doortype_closed_se->setEnabled(true);
         doortype_locked_se->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        se->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            se->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            se->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         se->setStyleSheet("color:red");
         se->setToolTip("Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.");
@@ -1048,12 +969,10 @@ void dlgRoomExits::slot_se_textEdited(const QString &text)
         doortype_closed_se->setEnabled(false);
         doortype_locked_se->setEnabled(false);
     }
-    frame_se->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_in_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -1066,10 +985,10 @@ void dlgRoomExits::slot_in_textEdited(const QString &text)
         doortype_open_in->setEnabled(true);
         doortype_closed_in->setEnabled(true);
         doortype_locked_in->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        in->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            in->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            in->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         in->setStyleSheet("color:red");
         in->setToolTip("Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.");
@@ -1091,12 +1010,10 @@ void dlgRoomExits::slot_in_textEdited(const QString &text)
         doortype_closed_in->setEnabled(false);
         doortype_locked_in->setEnabled(false);
     }
-    frame_in->setToolTip(toolTipText);
 }
 
 void dlgRoomExits::slot_out_textEdited(const QString &text)
 {
-    QString toolTipText = "";
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
@@ -1109,10 +1026,10 @@ void dlgRoomExits::slot_out_textEdited(const QString &text)
         doortype_open_out->setEnabled(true);
         doortype_closed_out->setEnabled(true);
         doortype_locked_out->setEnabled(true);
-        toolTipText = "Exits to \"";
-        toolTipText.append(exitToRoom->name);
-        toolTipText.append("\"");
-        out->setToolTip(toolTipText);
+        if( exitToRoom->name.trimmed().length() )
+            out->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
+        else
+            out->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
         out->setStyleSheet("color:red");
         out->setToolTip("Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.");
@@ -1134,7 +1051,6 @@ void dlgRoomExits::slot_out_textEdited(const QString &text)
         doortype_closed_out->setEnabled(false);
         doortype_locked_out->setEnabled(false);
     }
-    frame_out->setToolTip(toolTipText);
 }
 
 // These slots are called as the stub exit checkboxes are clicked
@@ -1158,7 +1074,7 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
     } else {
         nw->setEnabled(true);
         nw->setToolTip("Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.");
-        //  noroute_ne->setEnabled(true); although this branch will enable the exit entry
+        //  noroute_nw->setEnabled(true); although this branch will enable the exit entry
         //  there will not be a valid one there yet so don't enable the noroute(lock) control here!
         doortype_none_nw->setEnabled(false);
         doortype_open_nw->setEnabled(false);
@@ -1701,11 +1617,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getNorthwest() > 0 ) { //Does this exit point anywhere
-        nw->setText(QString::number(pR->getNorthwest()));  //Put in the value
+    int exit = pR->getExit(DIR_NORTHWEST);
+    if ( exit > 0 ) { //Does this exit point anywhere
+        nw->setText(QString::number( exit ));  //Put in the value
         nw->setEnabled(true);     //Enable it for editing
         nw->setStyleSheet("color:blue");
-        nw->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getNorthwest())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            nw->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            nw->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_nw->setEnabled(true);    //Enable speedwalk lock control
         doortype_none_nw->setEnabled(true);   //Enable door type controls...
         doortype_open_nw->setEnabled(true);
@@ -1746,11 +1666,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getNorth() > 0 ) {
-        n->setText(QString::number(pR->getNorth()));
+    exit = pR->getExit(DIR_NORTH);
+    if ( exit > 0 ) {
+        n->setText(QString::number( exit ));
         n->setEnabled(true);
         n->setStyleSheet("color:blue");
-        n->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getNorth())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            n->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            n->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_n->setEnabled(true);
         doortype_none_n->setEnabled(true);
         doortype_open_n->setEnabled(true);
@@ -1791,11 +1715,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getNortheast() > 0 ) {
+    exit = pR->getExit(DIR_NORTHEAST);
+    if ( exit > 0 ) {
         ne->setText(QString::number(pR->getNortheast()));
         ne->setEnabled(true);
         ne->setStyleSheet("color:blue");
-        ne->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getNortheast())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            ne->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            ne->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_ne->setEnabled(true);
         doortype_none_ne->setEnabled(true);
         doortype_open_ne->setEnabled(true);
@@ -1836,11 +1764,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getUp() > 0 ) {
+    exit = pR->getExit(DIR_UP);
+    if ( exit > 0 ) {
         up->setText(QString::number(pR->getUp()));
         up->setEnabled(true);
         up->setStyleSheet("color:blue");
-        up->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getUp())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            up->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            up->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_up->setEnabled(true);
         doortype_none_up->setEnabled(true);
         doortype_open_up->setEnabled(true);
@@ -1881,11 +1813,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getWest() > 0 ) {
+    exit = pR->getExit(DIR_WEST);
+    if ( exit > 0 ) {
         w->setText(QString::number(pR->getWest()));
         w->setEnabled(true);
         w->setStyleSheet("color:blue");
-        w->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getWest())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            w->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            w->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_w->setEnabled(true);
         doortype_none_w->setEnabled(true);
         doortype_open_w->setEnabled(true);
@@ -1925,11 +1861,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getEast() > 0 ) {
+    exit = pR->getExit(DIR_EAST);
+    if ( exit > 0 ) {
         e->setText(QString::number(pR->getEast()));
         e->setEnabled(true);
         e->setStyleSheet("color:blue");
-        e->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getEast())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            e->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            e->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_e->setEnabled(true);
         doortype_none_e->setEnabled(true);
         doortype_open_e->setEnabled(true);
@@ -1969,11 +1909,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getDown() > 0 ) {
+    exit = pR->getExit(DIR_DOWN);
+    if ( exit > 0 ) {
         down->setText(QString::number(pR->getDown()));
         down->setEnabled(true);
         down->setStyleSheet("color:blue");
-        down->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getDown())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            down->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            down->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_down->setEnabled(true);
         doortype_none_down->setEnabled(true);
         doortype_open_down->setEnabled(true);
@@ -2013,11 +1957,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getSouthwest() > 0 ) {
+    exit = pR->getExit(DIR_SOUTHWEST);
+    if ( exit > 0 ) {
         sw->setText(QString::number(pR->getSouthwest()));
         sw->setEnabled(true);
         sw->setStyleSheet("color:blue");
-        sw->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getSouthwest())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            sw->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            sw->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_sw->setEnabled(true);
         doortype_none_sw->setEnabled(true);
         doortype_open_sw->setEnabled(true);
@@ -2057,11 +2005,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getSouth() > 0 ) {
+    exit = pR->getExit(DIR_SOUTH);
+    if ( exit > 0 ) {
         s->setText(QString::number(pR->getSouth()));
         s->setEnabled(true);
         s->setStyleSheet("color:blue");
-        s->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getSouth())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            s->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            s->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_s->setEnabled(true);
         doortype_none_s->setEnabled(true);
         doortype_open_s->setEnabled(true);
@@ -2101,11 +2053,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getSoutheast() > 0 ) {
+    exit = pR->getExit(DIR_SOUTHEAST);
+    if ( exit > 0 ) {
         se->setText(QString::number(pR->getSoutheast()));
         se->setEnabled(true);
         se->setStyleSheet("color:blue");
-        se->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getSoutheast())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            se->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            se->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_se->setEnabled(true);
         doortype_none_se->setEnabled(true);
         doortype_open_se->setEnabled(true);
@@ -2145,11 +2101,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getIn() > 0 ) {
+    exit = pR->getExit(DIR_IN);
+    if ( exit > 0 ) {
         in->setText(QString::number(pR->getIn()));
         in->setEnabled(true);
         in->setStyleSheet("color:blue");
-        in->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getIn())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            in->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            in->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_in->setEnabled(true);
         doortype_none_in->setEnabled(true);
         doortype_open_in->setEnabled(true);
@@ -2190,11 +2150,15 @@ void dlgRoomExits::init( int id )
         }
     }
 
-    if ( pR->getOut() > 0 ) {
+    exit = pR->getExit(DIR_OUT);
+    if ( exit > 0 ) {
         out->setText(QString::number(pR->getOut()));
         out->setEnabled(true);
         out->setStyleSheet("color:blue");
-        out->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom(pR->getOut())->name % "\""));
+        if( mpHost->mpMap->mpRoomDB->getRoom( exit )->name.trimmed().length() )
+            out->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exit )->name % "\""));
+        else
+            out->setToolTip(QString("Exit to unnamed room is valid"));
         noroute_out->setEnabled(true);
         doortype_none_out->setEnabled(true);
         doortype_open_out->setEnabled(true);
