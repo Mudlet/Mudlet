@@ -1962,6 +1962,9 @@
    </item>
    <item row="2" column="3">
     <widget class="QPushButton" name="button_save">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="toolTip">
       <string>Use this button to save any changes, will also remove any invalid Special exits.</string>
      </property>
@@ -2003,6 +2006,9 @@
         <property name="itemsExpandable">
          <bool>false</bool>
         </property>
+        <property name="sortingEnabled">
+         <bool>false</bool>
+        </property>
         <property name="wordWrap">
          <bool>true</bool>
         </property>
@@ -2014,6 +2020,9 @@
         </attribute>
         <attribute name="headerMinimumSectionSize">
          <number>40</number>
+        </attribute>
+        <attribute name="headerShowSortIndicator" stdset="0">
+         <bool>false</bool>
         </attribute>
         <attribute name="headerStretchLastSection">
          <bool>true</bool>

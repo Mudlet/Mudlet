@@ -1,3 +1,5 @@
+#ifndef _DLG_ROOM_EXITS_H
+#define _DLG_ROOM_EXITS_H
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
@@ -18,16 +20,47 @@
  ***************************************************************************/
 
 
-#ifndef DLGROOMEXITS_H
-#define DLGROOMEXITS_H
 
+#include <QCheckBox>
 #include <QDialog>
+#include <QLineEdit>
+#include <QMap>
+#include <QRadioButton>
+#include <QSpinBox>
+#include <QString>
 #include <QTreeWidgetItem>
-#include <QtWidgets>
 #include "ui_room_exits.h"
 
 class Host;
 class TRoom;
+
+class TExit
+{
+public:
+    bool hasNoRoute;
+    bool hasStub;
+    int destination;
+    int door;
+    int weight;
+
+    friend bool operator==( TExit &a, TExit &b )
+    {
+        return a.destination == b.destination
+                 && a.door == b.door
+                 && a.hasNoRoute == b.hasNoRoute
+                 && a.hasStub == b.hasStub
+                 && a.weight == b.weight ;
+    }
+
+    friend bool operator!=( TExit &a, TExit &b )
+    {
+        return a.destination != b.destination
+                 || a.door != b.door
+                 || a.hasNoRoute != b.hasNoRoute
+                 || a.hasStub != b.hasStub
+                 || a.weight != b.weight ;
+    }
+};
 
 class dlgRoomExits : public QDialog, public Ui::roomExits
 {
@@ -70,10 +103,21 @@ public slots:
     void slot_stub_in_stateChanged(int);
     void slot_stub_out_stateChanged(int);
 
+private slots:
+    void slot_checkModified();
+
 private:
     TRoom * pR;
     int mRoomID;
     int mEditColumn;
+    QMap<int, TExit *> originalExits; // key = (normal) exit DIR_***, value = exit class instance
+    QMap<QString, TExit *> originalSpecialExits;
+
+    void initExit( int roomId, int direction, int exitId, QLineEdit * exitLineEdit,
+                   QCheckBox * noRoute, QCheckBox * stub,
+                   QRadioButton * none, QRadioButton * open,
+                   QRadioButton * closed, QRadioButton * locked, QSpinBox * weight );
+    TExit * makeExitFromControls( int direction );
 };
 
-#endif // DLGROOMEXITS_H
+#endif //_ DLG_ROOM_EXITS_H
