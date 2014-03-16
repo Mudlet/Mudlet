@@ -446,15 +446,15 @@ void dlgRoomExits::save()
             pR->setExitWeight( "se", weight_se->value());
         else
             pR->setExitWeight( "se", 0);
-        pR->customLinesArrow.remove( "SE" );
-        pR->customLinesColor.remove( "SE" );
-        pR->customLinesStyle.remove( "SE" );
-        pR->customLines.remove( "SE" );
     } else {
         pR->setExit( -1, DIR_SOUTHEAST );
         if (stub_se->isChecked() != pR->hasExitStub(DIR_SOUTHEAST))
             pR->setExitStub(DIR_SOUTHEAST, stub_se->isChecked());
         pR->setExitWeight( "se", 0);
+        pR->customLinesArrow.remove( "SE" );
+        pR->customLinesColor.remove( "SE" );
+        pR->customLinesStyle.remove( "SE" );
+        pR->customLines.remove( "SE" );
     }
 
     if (in->isEnabled() && in->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != 0 ) {
@@ -546,7 +546,7 @@ void dlgRoomExits::save()
         pR->setDoor( "in", -2-doortype_in->checkedId());
 
     if (doortype_out->checkedId()<-1)
-        pR->setDoor( "in", -2-doortype_out->checkedId());
+        pR->setDoor( "out", -2-doortype_out->checkedId());
 
     TArea * pA = mpHost->mpMap->mpRoomDB->getArea( pR->getArea() );
     if( pA )
