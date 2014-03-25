@@ -7512,11 +7512,11 @@ int TLuaInterpreter::addCustomLine( lua_State * L )
     if ( lua_isstring( L, 4 ) )
     {
         QStringList validLines;
-        validLines << "solid line" << "dot line" << "dash line";
+        validLines << "solid line" << "dot line" << "dash line" << "dash dot line" << "dash dot dot line";
         line_style = QString(lua_tostring( L, 4 ));
         if ( ! validLines.contains(line_style) )
         {
-            lua_pushstring( L, "addCustomLine: Valid line styles: solid line, dot line, dash line" );
+            lua_pushstring( L, "addCustomLine: Valid line styles: \"solid line\", \"dot line\", \"dash line\", \"dash dot line\" or \"dash dot dot line\".");
             lua_error( L );
             return 1;
         }

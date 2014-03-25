@@ -244,7 +244,8 @@ FORMS += ui/connection_profiles.ui \
     ui/package_manager_unpack.ui \
     ui/dlgPackageExporter.ui \
     ui/custom_lines.ui \
-    ui/vars_main_area.ui
+    ui/vars_main_area.ui \
+    ui/custom_lines_properties.ui
 
 win32: {
     SOURCES += lua_yajl.c
