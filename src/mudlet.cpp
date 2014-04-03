@@ -94,11 +94,7 @@ mudlet::mudlet()
 , mWindowMinimized( false )
 , mReplaySpeed( 1 )
 , mpIRC( 0 )
-#if defined (Q_OS_LINUX) || defined (Q_OS_MAC) ||defined (Q_OS_WIN)
-    , version( "Mudlet 3.0-rc1" )
-#else
-    , version( "Mudlet 3.0-rc1" )
-#endif
+, version( QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD) )
 , mpCurrentActiveHost( 0 )
 , mIsGoingDown( false )
 , actionReplaySpeedDown( 0 )
@@ -261,7 +257,7 @@ mudlet::mudlet()
     mpMainToolBar->addAction( actionProfileBackup );*/
 
 
-    QAction * actionAbout = new QAction(QIcon(":/icons/mudlet_main_32px.png"), tr("About"), this);
+    QAction * actionAbout = new QAction(QIcon(":/icons/mudlet_information.png"), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction( actionAbout );
 

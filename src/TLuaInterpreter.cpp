@@ -9235,6 +9235,140 @@ int TLuaInterpreter::getCustomEnvColorTable( lua_State * L )
     return 1;
 }
 
+
+// syntax: getVersion()
+// returns: all values (i.e. 4 return values!) of this mudlet version including
+// build (if present, that value should be nil in a release version so might be
+// used as a test for that.)
+//
+// syntax: getVersion({"major"|"minor"|"revision"|"build"|"string"|"table"})
+// returns:           { number| number| number   | string| string | table }
+//    part of version information, the last being a key-value table form of all
+// the components, and the string form a printable string of all components.
+//
+// Introduced in 3.0.1-rc2, to assist package writers to allow for undocumented
+// software features to be accommodated if there is **absolutely** no *other* way
+// to detect if there are things that do not work as they should in a particular
+// build of Mudlet.
+int TLuaInterpreter::getMudletVersion( lua_State * L )
+{
+    QByteArray version = QByteArray(APP_VERSION).trimmed();
+    QByteArray build = QByteArray(APP_BUILD).trimmed();
+
+    QList<QByteArray> versionData = version.split('.');
+    if( versionData.size() != 3 )
+    {
+        qWarning( "TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly set on compilation,\n"
+                 "   is the VERSION value in the project file present?");
+        lua_pushstring( L, "getMudletVersion: sorry, version information not available." );
+        lua_error( L );
+        return 1;
+    }
+
+    bool ok = true;
+    int major = 0;
+    int minor = 0;
+    int revision = 0;
+    {
+        major = versionData.at(0).toInt( & ok );
+        if( ok )
+            minor = versionData.at(1).toInt( & ok );
+        if( ok )
+            revision = versionData.at(2).toInt( & ok );
+    }
+    if( ! ok )
+    {
+        qWarning("TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly parsed,\n"
+                 "   was the VERSION value in the project file correct at compilation time?");
+        lua_pushstring( L, "getMudletVersion: sorry, version information corrupted." );
+        lua_error( L );
+        return 1;
+    }
+
+    int n = lua_gettop( L );
+
+    if( n == 1 )
+    {
+        if( ! lua_isstring( L, 1 ) )
+        {
+            lua_pushstring( L, "getMudletVersion: wrong argument type." );
+            lua_error( L );
+        }
+        else
+        {
+            string what = lua_tostring( L, 1 );
+            QString tidiedWhat = QString( what.c_str() ).toLower().trimmed();
+            if( tidiedWhat.contains("major"))
+            {
+                lua_pushinteger( L, major );
+            }
+            else if( tidiedWhat.contains("minor"))
+            {
+                lua_pushinteger( L, minor );
+            }
+            else if( tidiedWhat.contains("revision"))
+            {
+                lua_pushinteger( L, revision );
+            }
+            else if( tidiedWhat.contains("build"))
+            {
+                if( build.isEmpty() )
+                    lua_pushnil( L );
+                else
+                    lua_pushstring( L, build );
+            }
+            else if( tidiedWhat.contains("string"))
+            {
+                if( build.isEmpty() )
+                    lua_pushstring( L, version.constData() );
+                else
+                    lua_pushstring( L, version.append(build).constData() );
+            }
+            else if( tidiedWhat.contains("table"))
+            {
+                lua_pushinteger( L, major );
+                lua_pushinteger( L, minor );
+                lua_pushinteger( L, revision );
+                if( build.isEmpty() )
+                    lua_pushnil( L );
+                else
+                    lua_pushstring( L, build );
+                return 4;
+            }
+            else
+            {
+                lua_pushstring( L, "getMudletVersion: takes one (optional) argument:\n"
+                                "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+                lua_error( L );
+            }
+        }
+    }
+    else if( n == 0)
+    {
+        lua_newtable( L );
+        lua_pushstring( L, "major" );
+        lua_pushinteger( L, major );
+        lua_settable( L, -3 );
+        lua_pushstring( L, "minor" );
+        lua_pushinteger( L, minor );
+        lua_settable( L, -3 );
+        lua_pushstring( L, "revision" );
+        lua_pushinteger( L, revision );
+        lua_settable( L, -3 );
+        lua_pushstring( L, "build" );
+        lua_pushstring( L, QByteArray(APP_BUILD).trimmed().data() );
+        lua_settable( L, -3 );
+    }
+    else
+    {
+        lua_pushstring( L, "getMudletVersion: only takes one (optional) argument:\n"
+                        "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+        lua_error( L );
+    }
+    return 1;
+}
+
+
 //syntax: getTime( bool return_string, string time_format ) with return_string == false -> return table
 int TLuaInterpreter::getTime( lua_State * L )
 {
@@ -10869,6 +11003,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "handleWindowResizeEvent", TLuaInterpreter::noop );
     lua_register( pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine );
     lua_register( pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines );
+    lua_register( pGlobalLua, "getMudletVersion", TLuaInterpreter::getMudletVersion );
 
 
 

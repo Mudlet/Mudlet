@@ -372,6 +372,7 @@ public:
     static int addMapMenu(lua_State * L);
     static int removeMapMenu(lua_State * L);
     static int getMapMenus(lua_State * L);
+    static int getMudletVersion( lua_State * L );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;

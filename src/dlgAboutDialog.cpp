@@ -23,5 +23,10 @@
 dlgAboutDialog::dlgAboutDialog(QWidget * parent) : QDialog(parent)
 {
     setupUi(this);
+    mudletTitleLabel->setTextFormat(Qt::RichText);
+    mudletTitleLabel->setText( QString("<p align=\"center\" style=\" margin-top:6px; margin-bottom:6px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; \"><span style=\" font-family:\'DejaVu Sans\'; font-size:14pt; font-weight:600; color:#c04000;\">Version: %1%2</span><br><br><br><span style=\" font-family:\'DejaVu Sans\'; font-size:14pt; font-weight:600; color:#801000; \">&#169; Heiko K&#246;hn 2008-%3</span></p>")
+                                       .arg(APP_VERSION)
+                                       .arg(APP_BUILD)
+                                       .arg(QString(__DATE__).mid(7)) );
 }
 
