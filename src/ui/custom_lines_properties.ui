@@ -21,7 +21,7 @@
    </sizepolicy>
   </property>
   <property name="cursor">
-   <cursorShape>UpArrowCursor</cursorShape>
+   <cursorShape>ArrowCursor</cursorShape>
   </property>
   <property name="windowTitle">
    <string>Custom Line Properties [*]</string>
