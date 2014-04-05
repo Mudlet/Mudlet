@@ -950,13 +950,13 @@ void T2DMap::paintEvent( QPaintEvent * e )
                             if( pk == mCustomLineSelectedPoint )
                                 _pen = QPen( QColor(255,255,55),
                                              _savedPen.width(),
-                                             Qt::DotLine,
+                                             Qt::SolidLine,
                                              Qt::FlatCap,
                                              _savedPen.joinStyle() ); // Draw the selected point in yellow not orange.
                             else
                                 _pen = QPen( _savedPen.color(),
                                              _savedPen.width(),
-                                             Qt::DotLine,
+                                             Qt::SolidLine,
                                              Qt::FlatCap,
                                              _savedPen.joinStyle() );
                             p.setBrush(Qt::NoBrush); // Draw hollow circles not default filled ones!
@@ -1241,21 +1241,14 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 float _radius = tx * 1.2;
                 float _diagonal = tx * 1.2;
                 QPointF _center = QPointF( rx, ry );
-                QRadialGradient _gradient( _center, _radius );
-                _gradient.setColorAt( 1.00, QColor( 255, 255,  50, 255 ) );
-                _gradient.setColorAt( 0.90, QColor( 255, 255,  50, 255 ) );
-                _gradient.setColorAt( 0.89, QColor(   0,   0,   0,   0 ) );
-                _gradient.setColorAt( 0.61, QColor(   0,   0,   0,   0 ) );
-                _gradient.setColorAt( 0.60, QColor( 255, 255,  50, 255 ) );
-                _gradient.setColorAt( 0.50, QColor( 255, 255,  50, 255 ) );
-                _gradient.setColorAt( 0.49, QColor(   0,   0,   0,   0 ) );
-                _gradient.setColorAt( 0.00, QColor(   0,   0,   0,   0 ) );
-                QPen myPen( QColor( 255, 255,  50, 255) );
-                myPen.setWidth(tx * 0.2);
+
+                QPen myPen( QColor( 255, 255, 50, 192) );  // Quarter opaque yellow pen
+                myPen.setWidth(tx * 0.1);
                 QPainterPath myPath;
                 p.setPen( myPen );
-                p.setBrush( _gradient );
+                p.setBrush( Qt::NoBrush);
                 myPath.addEllipse( _center, _radius, _radius );
+                myPath.addEllipse( _center, _radius / 2.0, _radius / 2.0 );
                 myPath.moveTo( rx - _diagonal, ry - _diagonal );
                 myPath.lineTo( rx + _diagonal, ry + _diagonal );
                 myPath.moveTo( rx + _diagonal, ry - _diagonal );
@@ -2359,8 +2352,19 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             connect( action13, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
             QAction * action14 = new QAction("custom exit lines", this );
-            action14->setStatusTip(tr("replace an exit line with a custom line"));
-            connect( action14, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
+            TArea * pArea = mpMap->mpRoomDB->getArea(mAID);
+            if( ! pArea )
+                return;
+            if( pArea->gridMode )
+            { // Disable custom exit lines in grid mode as they aren't visible anyway
+                action14->setStatusTip(tr("custom exit lines are not shown and are not editable in grid mode"));
+                action14->setEnabled(false);
+            }
+            else
+            {
+                action14->setStatusTip(tr("replace an exit line with a custom line"));
+                connect( action14, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
+            }
 
             QAction * action15 = new QAction("Create Label", this );
             action15->setStatusTip(tr("Create labels to show text or images."));
@@ -2420,26 +2424,55 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                 if( pR )
                 {
                     QAction * action = new QAction("add point", this );
-                    action->setStatusTip(tr("divide segment by adding a new point mid-way along"));
-                    if( mCustomLineSelectedPoint > 0 )
+                    if( mCustomLineSelectedPoint > -1 )
+                        // The first user manipulable point IS zero - line is
+                        // drawn to it from a point around room symbol dependent
+                        // on the exit direction - and we can now add even to it
+                    {
                         connect( action, SIGNAL(triggered()), this, SLOT(slot_customLineAddPoint()));
+                        action->setStatusTip(tr("divide segment by adding a new point mid-way along"));
+                    }
                     else
+                    {
                         action->setEnabled(false);
+                        action->setStatusTip(tr("select a point first, then add a new point mid-way along the segment towards room"));
+                    }
 
                     QAction * action2 = new QAction("remove point", this );
-                    action2->setStatusTip(tr("merge pair of segments by removing this point"));
-                    if( mCustomLineSelectedPoint > 0 && mCustomLineSelectedPoint < pR->customLines.value(mCustomLineSelectedExit).count() )
-                        connect( action2, SIGNAL(triggered()), this, SLOT(slot_customLineRemovePoint()));
+                    // Permit this to be enabled if the current point is 0 or greater, but not if there is no others
+                    if( mCustomLineSelectedPoint > -1 )
+                    {
+                        if( pR->customLines.value(mCustomLineSelectedExit).count() > 1 )
+                        {
+                            connect( action2, SIGNAL(triggered()), this, SLOT(slot_customLineRemovePoint()));
+                            if( ( mCustomLineSelectedPoint + 1 ) < pR->customLines.value(mCustomLineSelectedExit).count() )
+                            {
+                                action2->setStatusTip(tr("merge pair of segments by removing this point"));
+                            }
+                            else
+                            {
+                                action2->setStatusTip(tr("remove last segment by removing this point"));
+                            }
+                        }
+                        else
+                        {
+                            action2->setEnabled(false);
+                            action2->setStatusTip(tr("use \"delete line\" to remove the only segment ending in an editable point"));
+                        }
+                    }
                     else
+                    {
                         action2->setEnabled(false);
+                        action2->setStatusTip(tr("select a point first, then remove it"));
+                    }
 
                     QAction * action3 = new QAction("properties", this );
                     action3->setText("properties...");
-                    action3->setStatusTip(tr("change the properties of this line"));
+                    action3->setStatusTip(tr("change the properties of this custom line"));
                     connect( action3, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
                     QAction * action4 = new QAction("delete line", this );
-                    action4->setStatusTip(tr("delete"));
+                    action4->setStatusTip(tr("delete all of this custom line"));
                     connect( action4, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
 
                     mPopupMenu = true;
@@ -2641,11 +2674,48 @@ void T2DMap::slot_customLineProperties()
 
 void T2DMap::slot_customLineAddPoint()
 {
+    TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
+    if( ! pR )
+        return;
+
     if( mCustomLineSelectedPoint > 0 )
     {
-        TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
         QLineF segment = QLineF( pR->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint - 1),
                                  pR->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint) );
+        segment.setLength(segment.length() / 2.0);
+        pR->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, segment.p2() );
+        mCustomLineSelectedPoint++;
+        repaint();
+    }
+    else if( mCustomLineSelectedPoint == 0 )
+    {
+        // The first user manipulable point IS zero - line is drawn to it from a
+        // point around room symbol dependent on the exit direction
+        // The first segment of custom line stick out half of the distance
+        // between two rooms at a map unit vector distance apart. so an added
+        // point inserted before the first must be placed halfway between
+        // the offset point and the previosu first point
+        QPointF customLineStartPoint;
+        if( mCustomLineSelectedExit == "N" )
+            customLineStartPoint = QPointF( pR->x      , pR->y + 0.5 );
+        else if( mCustomLineSelectedExit == "S" )
+            customLineStartPoint = QPointF( pR->x      , pR->y - 0.5 );
+        else if( mCustomLineSelectedExit == "E" )
+            customLineStartPoint = QPointF( pR->x + 0.5, pR->y       );
+        else if( mCustomLineSelectedExit == "W" )
+            customLineStartPoint = QPointF( pR->x - 0.5, pR->y       );
+        else if( mCustomLineSelectedExit == "NE" )
+            customLineStartPoint = QPointF( pR->x + 0.5, pR->y + 0.5 );
+        else if( mCustomLineSelectedExit == "NW" )
+            customLineStartPoint = QPointF( pR->x - 0.5, pR->y + 0.5 );
+        else if( mCustomLineSelectedExit == "SE" )
+            customLineStartPoint = QPointF( pR->x + 0.5, pR->y - 0.5 );
+        else if( mCustomLineSelectedExit == "SW" )
+            customLineStartPoint = QPointF( pR->x - 0.5, pR->y - 0.5 );
+        else
+            customLineStartPoint = QPointF( pR->x      , pR->y       );
+        QLineF segment = QLineF( customLineStartPoint,
+                                 pR->customLines.value(mCustomLineSelectedExit).at(0) );
         segment.setLength(segment.length() / 2.0);
         pR->customLines[mCustomLineSelectedExit].insert(mCustomLineSelectedPoint, segment.p2() );
         mCustomLineSelectedPoint++;
@@ -2656,11 +2726,22 @@ void T2DMap::slot_customLineAddPoint()
 
 void T2DMap::slot_customLineRemovePoint()
 {
+    TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
+    if( ! pR )
+        return;
+
     if( mCustomLineSelectedPoint > 0 )
     {
-        TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
         pR->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
         mCustomLineSelectedPoint--;
+        repaint();
+    }
+    else if( mCustomLineSelectedPoint == 0 && pR->customLines.value(mCustomLineSelectedExit).count() > 1 )
+    {
+        // The first user manipulable point IS zero - line is drawn to it from a
+        // point around room symbol dependent on the exit direction.  We can only
+        // allow it's deletion if there is at least another one left.
+        pR->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
         repaint();
     }
 }
