@@ -1,6 +1,18 @@
 See COMPILE for compilation instructions, and INSTALL for installation & installer instructions.
 
-SlySvens branches at GitHub (not exhaustive):
-mudletDev		- local fork of github/Chris7/mudletDev
-mudletDev-exitsDialog	- add extended/improved GUI for exits (accessed from 2D mapper context menu)
-
+SlySven's branches at GitHub (not exhaustive):
+mudletDev		- local fork of github/Chris7/mudletDev.
+mudletDev_exitsDialog	- add extended/improved GUI for exits (accessed from 2D
+			mapper context menu).
+mudletDev_fileLocation	- allow lua files to be located away from executable and
+			get mudlet to remeber where. Also allows creation of
+			"make install" aspect in Makefile.
+mudletDev_customExitsFixAndEnhance
+			- restore operation of and enhance custom exit line GUI
+			drawing operations to 2D Mapper.
+mudletDev_versionData	- Link all places where Mudlet version is required to
+			value placed into project file.  Allow Lua scripts to
+			access this information.  Add Myself to contributors and
+			text of GPL to "About" dialog.  Provide commandline
+			argument handling to provide help, version and quiet
+			(no splash screen) options and help for builtin Qt ones.

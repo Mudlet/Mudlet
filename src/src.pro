@@ -1,3 +1,10 @@
+################################################################################
+# MERGING INSTRUCTIONS: to merge this in (as pull request #33 to               #
+# www.github.com/Chris7/Mudlet2/mudletDev) after                               #
+# "mudletDev_customExitsFixAndEnhance" been done as pull request #32           #
+# Take ALL changes from other side                                             #
+# THEN add in just the FIRST block of additions at the top of this file        #
+################################################################################
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -g -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
