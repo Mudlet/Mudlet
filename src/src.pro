@@ -11,43 +11,57 @@ LIBLUA = -llua5.1
 # automatically link to LuaJIT if it exists
 #exists(/usr/lib/x86_64-linux-gnu/libluajit-5.1.a):LIBLUA = -L/usr/lib/x86_64-linux-gnu/ -lluajit-5.1
 
-unix:LIBS += -lpcre \
-    $$LIBLUA \
-    -lhunspell \
-    -L/usr/local/lib/ \
-    -lyajl \
-    -lGLU \
-    -lzip \
-    -lz
+TEMPLATE = app
+TARGET = mudlet
+RESOURCES = mudlet_alpha.qrc
 
-win32:LIBS += -L"C:\\mudlet5_package" \
-    -L"C:\\mingw32\\lib" \
-    -llua51 \
-    -lpcre \
-    -lhunspell \
-    -llibzip \
-    -lzlib \
-    -llibzip \
-    -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
-    -lyajl
+# try -O1 —fsanitize=address for AddressSanitizer w/ clang
+# use -DDEBUG_TELNET to show telnet commands
 
-unix:INCLUDEPATH += /usr/include/lua5.1
-
-win32:INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
-    "C:\\mingw32\\include" \
-    "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
-    "C:\\mudlet5_package\\boost_1_54_0" \
-    "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
-    "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
-    "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
-    "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
-
-unix:isEmpty( INSTALL_PREFIX ):INSTALL_PREFIX = /usr/local
 unix: {
-    SHARE_DIR = /usr/local/share/mudlet
-    BIN_DIR = $$INSTALL_PREFIX/bin
+# Distribution packagers would be using PREFIX = /usr but this is accepted
+# destination place for local builds for software for all users:
+    isEmpty( PREFIX ) PREFIX = /usr/local
+    isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
+    isEmpty( DATADIR ) DATADIR = $${DATAROOTDIR}/mudlet
+# According to Linux FHS /usr/local/games is an alternative location for leasure time BINARIES 8-):
+    isEmpty( BINDIR ) BINDIR = $${PREFIX}/bin
+# Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
+    isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
+    LIBS += -lpcre \
+        $$LIBLUA \
+        -lhunspell \
+        -L/usr/local/lib/ \
+        -lyajl \
+        -lGLU \
+        -lzip \
+        -lz
+    INCLUDEPATH += /usr/include/lua5.1
+    SOURCES += lua-yajl2-linux.c
+} else:win32: {
+    LIBS += -L"C:\\mudlet5_package" \
+        -L"C:\\mingw32\\lib" \
+        -llua51 \
+        -lpcre \
+        -lhunspell \
+        -llibzip \
+        -lzlib \
+        -llibzip \
+        -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
+        -lyajl
+    INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
+        "C:\\mingw32\\include" \
+        "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
+        "C:\\mudlet5_package\\boost_1_54_0" \
+        "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
+        "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
+        "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
+        "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
+    SOURCES += lua_yajl.c
 }
+
 INCLUDEPATH += irc/include
+
 SOURCES += TConsole.cpp \
     ctelnet.cpp \
     main.cpp \
@@ -244,20 +258,6 @@ FORMS += ui/connection_profiles.ui \
     ui/package_manager_unpack.ui \
     ui/dlgPackageExporter.ui \
     ui/custom_lines.ui \
-    ui/vars_main_area.ui
+    ui/vars_main_area.ui \
+    ui/custom_lines_properties.ui
 
-win32: {
-    SOURCES += lua_yajl.c
-}
-
-unix: {
-    SOURCES += lua-yajl2-linux.c
-}
-
-TEMPLATE = app
-TARGET = mudlet
-RESOURCES = mudlet_alpha.qrc
-
-
-# try -O1 —fsanitize=address for AddressSanitizer w/ clang
-# use -DDEBUG_TELNET to show telnet commands

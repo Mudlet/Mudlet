@@ -99,9 +99,11 @@ public:
     int  mCustomLinesRoomTo;
     QString mCustomLinesRoomExit;
     QComboBox * mpCurrentLineStyle;
+    QString mCurrentLineStyle;
     QPushButton * mpCurrentLineColor;
     QColor mCurrentLineColor;
     QCheckBox * mpCurrentLineArrow;
+    bool mCurrentLineArrow;
     bool mShowGrid;
     QPointF mLastMouseClick;
     bool mBubbleMode;
@@ -156,6 +158,11 @@ public slots:
     void slot_setCustomLine2();
     void slot_userAction(QString);
     void slot_setCustomLine2B(QTreeWidgetItem*, int);
+    void slot_undoCustomLineLastPoint();
+    void slot_doneCustomLine();
+    void slot_customLineProperties();
+    void slot_customLineAddPoint();
+    void slot_customLineRemovePoint();
 };
 
 #endif // T2DMAP_H
