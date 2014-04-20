@@ -11025,10 +11025,10 @@ void TLuaInterpreter::initLuaGlobals()
     if( error != 0 )
     {
         string e = "no error message available from Lua";
-        if( lua_isstring( pGlobalLua, 1 ) )
+        if( lua_isstring( pGlobalLua, -1 ) )
         {
             e = "Lua error:";
-            e+=lua_tostring( pGlobalLua, 1 );
+            e+=lua_tostring( pGlobalLua, -1 );
         }
         QString msg = "[ ERROR ] cannot find Lua module rex_pcre. Some functions may not be available.";
         msg.append( e.c_str() );
@@ -11045,10 +11045,10 @@ void TLuaInterpreter::initLuaGlobals()
     if( error != 0 )
     {
         string e = "no error message available from Lua";
-        if( lua_isstring( pGlobalLua, 1 ) )
+        if( lua_isstring( pGlobalLua, -1 ) )
         {
             e = "Lua error:";
-            e+=lua_tostring( pGlobalLua, 1 );
+            e+=lua_tostring( pGlobalLua, -1 );
         }
         QString msg = "[ ERROR ] cannot find Lua module zip";
         msg.append( e.c_str() );
@@ -11064,10 +11064,10 @@ void TLuaInterpreter::initLuaGlobals()
     if( error != 0 )
     {
         string e = "no error message available from Lua";
-        if( lua_isstring( pGlobalLua, 1 ) )
+        if( lua_isstring( pGlobalLua, -1 ) )
         {
             e = "Lua error:";
-            e+=lua_tostring( pGlobalLua, 1 );
+            e+=lua_tostring( pGlobalLua, -1 );
         }
         QString msg = "[ ERROR ] cannot find Lua module lfs (Lua File System).";
         msg.append( e.c_str() );
@@ -11084,10 +11084,10 @@ void TLuaInterpreter::initLuaGlobals()
     if( error != 0 )
     {
         string e = "no error message available from Lua";
-        if( lua_isstring( pGlobalLua, 1 ) )
+        if( lua_isstring( pGlobalLua, -1 ) )
         {
             e = "Lua error:";
-            e+=lua_tostring( pGlobalLua, 1 );
+            e+=lua_tostring( pGlobalLua, -1 );
         }
         QString msg = "[ ERROR ] cannot find Lua module luasql.sqlite3. Database support will not be available.";
         msg.append( e.c_str() );
@@ -11162,11 +11162,11 @@ void TLuaInterpreter::loadGlobal()
     if( error != 0 )
     {
         string e = "no error message available from Lua";
-        if( lua_isstring( pGlobalLua, 1 ) )
+        if( lua_isstring( pGlobalLua, -1 ) )
         {
             e = "[ ERROR ]  -  LuaGlobal.lua compile error - please report! ";
             e += "Error from Lua: ";
-            e += lua_tostring( pGlobalLua, 1 );
+            e += lua_tostring( pGlobalLua, -1 );
         }
         gSysErrors << e.c_str();
     }
