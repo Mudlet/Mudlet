@@ -36,8 +36,6 @@ using namespace std;
 
 TConsole *  spDebugConsole = 0;
 
-QStringList gSysErrors;
-
 extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 
 int main(int argc, char *argv[])

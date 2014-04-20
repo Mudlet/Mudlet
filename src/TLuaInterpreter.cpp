@@ -67,8 +67,6 @@ extern "C"
     int luaopen_yajl(lua_State*);
 }
 
-extern QStringList gSysErrors;
-
 using namespace std;
 
 map<lua_State*, Host*> TLuaInterpreter::luaInterpreterMap;
@@ -10886,7 +10884,6 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring (pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
-
     if( error != 0 )
     {
         string e = "no error message available from Lua";
@@ -10895,37 +10892,37 @@ void TLuaInterpreter::initLuaGlobals()
             e = "Lua error:";
             e+=lua_tostring( pGlobalLua, 1 );
         }
-        QString msg = "[ ERROR ] cannot find Lua module rex_pcre. Some functions may not be available.";
+        QString msg = "[ ERROR ] - Cannot find Lua module rex_pcre.\n"
+                                  "Some functions may not be available.\n";
         msg.append( e.c_str() );
-        gSysErrors << msg;
+        mpHost->mTelnet.postMessage( msg );
     }
     else
     {
-        QString msg = "[  OK  ]  -  Lua module rex_pcre loaded";
-        gSysErrors << msg;
+        QString msg = "[  OK  ]  - Lua module rex_pcre loaded.";
+        mpHost->mTelnet.postMessage( msg );
     }
 
     error = luaL_dostring( pGlobalLua, "require \"zip\"" );
-
     if( error != 0 )
     {
         string e = "no error message available from Lua";
         if( lua_isstring( pGlobalLua, 1 ) )
         {
             e = "Lua error:";
-            e+=lua_tostring( pGlobalLua, 1 );
+            e+= lua_tostring( pGlobalLua, 1 );
         }
-        QString msg = "[ ERROR ] cannot find Lua module zip";
+        QString msg = "[ ERROR ] - Cannot find Lua module zip.\n";
         msg.append( e.c_str() );
-        gSysErrors << msg;
+        mpHost->mTelnet.postMessage( msg );
     }
     else
     {
-        QString msg = "[  OK  ]  -  Lua module zip loaded";
-        gSysErrors << msg;
+        QString msg = "[  OK  ]  - Lua module zip loaded.";
+        mpHost->mTelnet.postMessage( msg );
     }
+
     error = luaL_dostring( pGlobalLua, "require \"lfs\"" );
-
     if( error != 0 )
     {
         string e = "no error message available from Lua";
@@ -10934,18 +10931,18 @@ void TLuaInterpreter::initLuaGlobals()
             e = "Lua error:";
             e+=lua_tostring( pGlobalLua, 1 );
         }
-        QString msg = "[ ERROR ] cannot find Lua module lfs (Lua File System).";
+        QString msg = "[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
+                                  "Probably will not be able to access Mudlet Lua code.\n";
         msg.append( e.c_str() );
-        gSysErrors << msg;
+        mpHost->mTelnet.postMessage( msg );
     }
     else
     {
-        QString msg = "[  OK  ]  -  Lua module lfs loaded";
-        gSysErrors << msg;
+        QString msg = "[  OK  ]  - Lua module lfs loaded";
+        mpHost->mTelnet.postMessage( msg );
     }
 
     error = luaL_dostring( pGlobalLua, "luasql = require \"luasql.sqlite3\"" );
-
     if( error != 0 )
     {
         string e = "no error message available from Lua";
@@ -10954,14 +10951,15 @@ void TLuaInterpreter::initLuaGlobals()
             e = "Lua error:";
             e+=lua_tostring( pGlobalLua, 1 );
         }
-        QString msg = "[ ERROR ] cannot find Lua module luasql.sqlite3. Database support will not be available.";
+        QString msg = "[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
+                                  "Database support will not be available.\n";
         msg.append( e.c_str() );
-        gSysErrors << msg;
+        mpHost->mTelnet.postMessage( msg );
     }
     else
     {
-        QString msg = "[  OK  ]  -  Lua module sqlite3 loaded";
-        gSysErrors << msg;
+        QString msg = "[  OK  ]  - Lua module sqlite3 loaded";
+        mpHost->mTelnet.postMessage( msg );
     }
 
 //    QString path = QDir::homePath()+"/.config/mudlet/mudlet-lua/lua/LuaGlobal.lua";
@@ -11029,15 +11027,15 @@ void TLuaInterpreter::loadGlobal()
         string e = "no error message available from Lua";
         if( lua_isstring( pGlobalLua, 1 ) )
         {
-            e = "[ ERROR ]  -  LuaGlobal.lua compile error - please report! ";
-            e += "Error from Lua: ";
+            e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                            "Error from Lua: ";
             e += lua_tostring( pGlobalLua, 1 );
         }
-        gSysErrors << e.c_str();
+        mpHost->mTelnet.postMessage( e.c_str() );
     }
     else
     {
-        gSysErrors << "[  OK  ]  -  mudlet-lua API & Geyser Layout manager loaded.";
+        mpHost->mTelnet.postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
     }
 
 }

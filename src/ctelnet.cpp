@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <QDebug>
 #include <QDir>
+#include <QStringBuilder>
 #include <QTcpSocket>
 #include "mudlet.h"
 #include "TDebug.h"
@@ -40,8 +41,6 @@
 
 
 #define DEBUG
-
-extern QStringList gSysErrors;
 
 using namespace std;
 
@@ -63,7 +62,6 @@ cTelnet::cTelnet( Host * pH )
 , enableATCP( false )
 , enableGMCP( false )
 , enableChannel102( false )
-
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -123,6 +121,14 @@ void cTelnet::reset ()
 
 cTelnet::~cTelnet()
 {
+    if(messageStack.size())
+    {
+        qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
+        foreach(QString message, messageStack)
+        {
+            qWarning("%s\n------------", qPrintable( message ) );
+        }
+    }
     disconnect();
     socket.deleteLater();
 }
@@ -155,28 +161,20 @@ void cTelnet::connectIt(const QString &address, int port)
         mLF_ON_GA = mpHost->mLF_ON_GA;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
     }
+
     if( socket.state() != QAbstractSocket::UnconnectedState )
     {
         socket.abort();
         connectIt( address, port );
         return;
-
     }
+
     hostName = address;
     hostPort = port;
-    #if QT_VERSION >= 0x040500
-        gSysErrors.removeDuplicates();
-    #endif
-    for( int i=0; i<gSysErrors.size(); i++ )
-    {
-        QString m = gSysErrors[i];
-        m.append("\n");
-        postMessage( m );
-    }
     // QChar(0x2714));//'?'
     // QChar(0x2718));//'?'
     // QChar(0x24d8));//info i im kreis
-    QString server = "[ info ]  -  looking up the IP address of server:" + address + ":" + QString::number(port) + " ...\n";
+    QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
     postMessage( server );
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
@@ -194,7 +192,7 @@ void cTelnet::disconnect ()
 
 void cTelnet::handle_socket_signal_error()
 {
-    QString err = "[ ERROR ] TCP/IP socket ERROR:" + socket.errorString() + "\n";
+    QString err = "[ ERROR ] - TCP/IP socket ERROR:" % socket.errorString();
     postMessage( err );
 }
 
@@ -211,7 +209,7 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
-    QString msg = "[ INFO ]  -  A connection has been established successfully.\n\n\n";
+    QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
     postMessage( msg );
     QString func = "onConnect";
     QString nothing = "";
@@ -238,19 +236,16 @@ void cTelnet::handle_socket_signal_disconnected()
     mpHost->raiseEvent( &me );
     QString msg;
     QTime timeDiff(0,0,0,0);
-    msg = QString("[ INFO ]  -  connection time: %1\n").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
+    msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
     reset();
-    QString lf = "\n\n";
-    QString err =    "[ INFO ]  -  Socket got disconnected. " + socket.errorString() + "\n";
-    QString spacer = "          -                 \n";//"-------------------------------------------------------------\n";
+    QString err =    "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
+    QString spacer = "    ";
     if( ! mpHost->mIsGoingDown )
     {
-        //postMessage( lf );
         postMessage( spacer );
         postMessage( err );
         postMessage( msg );
-        postMessage( spacer );
     }
 }
 
@@ -259,16 +254,16 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     if(!hostInfo.addresses().isEmpty())
     {
         mHostAddress = hostInfo.addresses().first();
-        QString msg = "[ INFO ]  -  The IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
+        QString msg = "[ INFO ]  - The IP address of "+hostName+" has been found. It is: "+mHostAddress.toString()+"\n";
         postMessage( msg );
-        msg = "[ INFO ]  -  trying to connect to "+mHostAddress.toString()+":"+QString::number(hostPort)+" ...\n";
+        msg = "[ INFO ]  - Trying to connect to "+mHostAddress.toString()+":"+QString::number(hostPort)+" ...\n";
         postMessage( msg );
         socket.connectToHost(mHostAddress, hostPort);
     }
     else
     {
         socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = "[ ERROR ] Host name lookup Failure! Connection cannot be established. The server name is not correct, not working properly, or your nameservers are not working properly.\n";
+        QString msg = "[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.";
         postMessage( msg );
         return;
     }
@@ -1199,31 +1194,122 @@ void cTelnet::atcpComposerSave( QString txt )
     return time;
 } */
 
+
+// Revamped to take additional [ WARN ], [ ALERT ] and [ INFO ] prefixes and to indent
+// additional lines (ending with '\n') to last space character after "-"
+// following prefix.
+// Prefixes are made uppercase.
+// Will store messages if the TConsole on which they are to be placed is not yet
+// in existance as happens during startup, then pumps them out in order of
+// arrival once a message arrives when the TConsole DOES exist.
 void cTelnet::postMessage( QString msg )
 {
-    //mudlet::self()->printSystemMessage( mpHost, msg );
-    if( ! msg.endsWith( '\n' ) )
+    messageStack.append(msg);
+
+    if( ! mpHost->mpConsole )
     {
-        msg.append("\n");
+        // Console doesn't exist (yet), stack up messages until it does...
+        return;
     }
-    if( msg.indexOf("[ ERROR ] ") != -1 )
+
+    while(messageStack.size())
     {
-        mpHost->mpConsole->print( msg, 150, 0, 0, 0, 0, 0 );
-    }
-    else if( msg.contains( "[  OK  ] " ) )
-    {
-        QString a = "[  OK  ]";
-        QString b = msg.mid(8);
-        mpHost->mpConsole->print( a, 0, 160, 0, 0, 0, 0 );
-        mpHost->mpConsole->print( b, 190, 100, 50, 0, 0, 0 );
-    }
-    else
-    {
-        QString a = "[ INFO ]";
-        QString b = msg.mid(8);
-        mpHost->mpConsole->print( a, 0, 150, 190, 0, 0, 0 );
-        mpHost->mpConsole->print( b, 190, 150, 0, 0, 0, 0 );
-        //mpHost->mpConsole->print( msg, 190, 150, 0, 0, 0, 0 );
+        while( messageStack.first().endsWith('\n') )
+        { // Must strip off final line feeds as use that character for split() - will replace it later
+            messageStack.first().chop(1);
+        }
+
+        QStringList body = messageStack.first().split(QChar('\n'));
+
+        qint8 openBraceIndex = body.at(0).indexOf("[");
+        qint8 closeBraceIndex = body.at(0).indexOf("]");
+        qint8 hyphenIndex = body.at(0).indexOf("- ");
+        if( openBraceIndex >= 0 && closeBraceIndex > 0 && closeBraceIndex < hyphenIndex )
+        {
+            quint8 prefixLength = hyphenIndex + 1;
+            while( body.at(0).at(prefixLength) == ' ' )
+            {
+                prefixLength++;
+            }
+
+            QString prefix = body.at(0).left(prefixLength).toUpper();
+            QString firstLineTail = body.at(0).mid(prefixLength);
+            body.removeFirst();
+            if( prefix.contains("ERROR") )
+            {
+                mpHost->mpConsole->print( prefix, 150, 0, 0, 0, 0, 0 ); // Red on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    // Fix for lua using tabs for indentation which was messing up justification:
+                    body[_i] = temp.rightJustified( temp.length() + prefixLength );
+                }
+                if( body.size() )
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+            }
+            else if( prefix.contains("WARN") )
+            {
+                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 );
+                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 150, 0, 0, 0, 0 ); //Foreground dark grey, background bright grey
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                }
+                if( body.size() )
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 150, 0, 0, 0, 0 );
+            }
+            else if( prefix.contains("ALERT") )
+            {
+                mpHost->mpConsole->print( prefix, 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                }
+                if( body.size() )
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+            }
+            else if( prefix.contains("INFO") )
+            {
+                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 ); // Cyan on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                }
+                if( body.size() )
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+            }
+            else if( prefix.contains("OK") )
+            {
+                mpHost->mpConsole->print( prefix, 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                }
+                if( body.size() )
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+            }
+            else
+            {  // Unrecognised but still in a "[ something ] -  message..." format
+                mpHost->mpConsole->print( prefix, 190, 50, 50, 190, 190, 190 ); // Foreground red, background bright grey
+                mpHost->mpConsole->print( firstLineTail.append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                }
+                if( body.size() )
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+            }
+        }
+        else
+        {  // No prefix found
+            mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 190, 0, 0, 0 ); //Foreground bright grey, background black
+        }
+        messageStack.removeFirst();
     }
 }
 
