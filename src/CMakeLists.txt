@@ -5,7 +5,6 @@ SET(QT_USE_QTNETWORK 1)
 SET(QT_USE_QOPENGL 1)
 SET(QT_USE_PHONON 1)
 SET(QT_USE_OPENGL 1)
-SET(CMAKE_CONFIGURATION_TYPES "Release" "Debug")
 SET(mudlet_RCCS mudlet_alpha.qrc)
 SET( mudlet_SRCS 
 TConsole.cpp
