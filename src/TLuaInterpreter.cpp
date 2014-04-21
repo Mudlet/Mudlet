@@ -8192,11 +8192,13 @@ int TLuaInterpreter::downloadFile( lua_State * L )
     QString _url = url.c_str();
     QString _path = path.c_str();
     QNetworkRequest request = QNetworkRequest( QUrl( _url ) );
+#ifndef QT_NO_OPENSSL
     if ( _path.contains("https") )
     {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
         request.setSslConfiguration( config );
     }
+#endif
     QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( request );
     pHost->mLuaInterpreter.downloadMap[reply] = _path;
     return 0;
