@@ -1,6 +1,3 @@
-project (mudlet)
-
-CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 SET(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
