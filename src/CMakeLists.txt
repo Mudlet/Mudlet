@@ -71,6 +71,13 @@ TConsole.cpp
     dlgRoomExits.cpp
 	lua_yajl.c
 	dlgIrc.cpp
+    dlgPackageExporter.cpp
+    dlgVarsMainArea.cpp
+    exitstreewidget.cpp
+    LuaInterface.cpp
+    TRoomDB.cpp
+    TVar.cpp
+    VarUnit.cpp
 )
 
 SET(mudlet_UIS 
@@ -101,6 +108,9 @@ ui/connection_profiles.ui
     ui/mapper_room_color.ui
     ui/room_exits.ui
     ui/lacking_mapper_script.ui
+    ui/dlgPackageExporter.ui
+    ui/irc.ui
+    ui/vars_main_area.ui
 )
 
 SET(mudlet_MOC_HDRS 
@@ -173,6 +183,9 @@ mudlet.h
     T2DMap.h
     dlgRoomExits.h
 	dlgIrc.h
+    dlgPackageExporter.h
+    dlgVarsMainArea.h
+    exitstreewidget.h
 )
 
 SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
