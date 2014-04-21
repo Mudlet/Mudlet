@@ -65,10 +65,14 @@ union mVarTypes {
 };*/
 
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     int luaopen_yajl(lua_State*);
+#ifndef LUA_CPP
 }
+#endif
 
 extern QStringList gSysErrors;
 

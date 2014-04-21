@@ -69,7 +69,6 @@ TConsole.cpp
     TBuffer.cpp
     T2DMap.cpp
     dlgRoomExits.cpp
-	lua_yajl.c
 	dlgIrc.cpp
     dlgPackageExporter.cpp
     dlgVarsMainArea.cpp
@@ -259,6 +258,9 @@ SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
 
 IF(LUA_CPP)
   ADD_DEFINITIONS(-DLUA_CPP)
+  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.cpp)
+ELSE(LUA_CPP)
+  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.c)
 ENDIF(LUA_CPP)
 
 add_subdirectory(irc)
