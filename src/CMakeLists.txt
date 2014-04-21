@@ -1,10 +1,5 @@
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
-SET(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
-SET(QT_USE_QTNETWORK 1)
-SET(QT_USE_QOPENGL 1)
-SET(QT_USE_PHONON 1)
-SET(QT_USE_OPENGL 1)
 SET(mudlet_RCCS mudlet_alpha.qrc)
 SET( mudlet_SRCS 
 TConsole.cpp
@@ -180,13 +175,27 @@ mudlet.h
 	dlgIrc.h
 )
 
-FIND_PACKAGE(Qt4 REQUIRED)
+FIND_PACKAGE(Qt5Core REQUIRED)
+FIND_PACKAGE(Qt5Multimedia REQUIRED)
+FIND_PACKAGE(Qt5Network REQUIRED)
+FIND_PACKAGE(Qt5OpenGL REQUIRED)
+FIND_PACKAGE(Qt5UiTools REQUIRED)
+FIND_PACKAGE(Qt5Widgets REQUIRED)
+
 #FIND_PACKAGE(Lua51 REQUIRED)
 #FIND_PACKAGE(ZLIB REQUIRED)
 #FIND_PACKAGE(PCRE REQUIRED)
 
 
-INCLUDE(${QT_USE_FILE})
+INCLUDE_DIRECTORIES(
+    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5Network_INCLUDE_DIRS}
+    ${Qt5OpenGL_INCLUDE_DIRS}
+    ${Qt5Multimedia_INCLUDE_DIRS}
+    ${Qt5UiTools_INCLUDE_DIRS}
+)
+
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
 "C:\\mudlet_package_MSVC\\pcre-8.0-lib\\include" 
 "C:\\mudlet_package_MSVC\\Lua_src\\include" 
@@ -202,22 +211,21 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
   ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-Wno-deprecated  -DUNICODE  -D_UNICODE")
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-QT4_AUTOMOC(${mudlet_SRCS})
-QT4_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
-QT4_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-QT4_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
+QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
+QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
 add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
 
 TARGET_LINK_LIBRARIES( 
 mudlet 
-c:\\Qt_VC\\4.7.3\\lib\\qtmain.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtOpenGL4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtCore4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtGui4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtNetwork4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtUiTools.lib
-C:\\Qt_VC\\4.7.3\\lib\\phonon4.lib
+    ${Qt5Core_QTMAIN_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Widgets_LIBRARIES}
+    ${Qt5Network_LIBRARIES}
+    ${Qt5Multimedia_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${Qt5UiTools_LIBRARIES}
 c:\\mudlet_package_MSVC\\zlib_125\\zlibwapi.lib
 C:\\mudlet_package_MSVC\\Lua_src\\lib\\lua51.lib
 C:\\mudlet_package_MSVC\\pcre-8.12\\Release\\pcre.lib
