@@ -248,6 +248,8 @@ IF(LUA_CPP)
   ADD_DEFINITIONS(-DLUA_CPP)
 ENDIF(LUA_CPP)
 
+add_subdirectory(irc)
+
 INCLUDE_DIRECTORIES(
     ${Qt5Core_INCLUDE_DIRS}
     ${Qt5Widgets_INCLUDE_DIRS}
@@ -264,7 +266,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
     ${Boost_INCLUDE_DIRS}
     ${HUNSPELL_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
-"C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\include"
+    ${CMAKE_CURRENT_SOURCE_DIR}/irc/include
     ${ZIP_INCLUDE_DIR}
 )
 
@@ -293,7 +295,7 @@ mudlet
     ${HUNSPELL_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${YAJL_LIBRARIES}
-"C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\lib\\ircclient-qt.lib"
+    irccqt
     ${Boost_LIBRARIES}
     ${ZIP_LIBRARY}
 )
