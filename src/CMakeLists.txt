@@ -175,6 +175,26 @@ mudlet.h
 	dlgIrc.h
 )
 
+IF(EXISTS "${PROJECT_SOURCE_DIR}/../include/lua.h")
+  SET(LUA_INCLUDE_DIR_TEMP "${PROJECT_SOURCE_DIR}/../include")
+  GET_FILENAME_COMPONENT(LUA_INCLUDE_DIR ${LUA_INCLUDE_DIR_TEMP} ABSOLUTE CACHE)
+  IF(EXISTS "${PROJECT_SOURCE_DIR}/../lib/lualib.lib")
+    SET(LUA_LIBRARY_RELEASE_TEMP "${PROJECT_SOURCE_DIR}/../lib/lualib.lib")
+    GET_FILENAME_COMPONENT(LUA_LIBRARY_RELEASE ${LUA_LIBRARY_RELEASE_TEMP} ABSOLUTE CACHE)
+  ENDIF()
+  IF(EXISTS "${PROJECT_SOURCE_DIR}/../lib/lualibd.lib")
+    SET(LUA_LIBRARY_DEBUG_TEMP "${PROJECT_SOURCE_DIR}/../lib/lualibd.lib")
+    GET_FILENAME_COMPONENT(LUA_LIBRARY_DEBUG ${LUA_LIBRARY_DEBUG_TEMP} ABSOLUTE CACHE)
+  ENDIF()
+  IF(LUA_LIBRARY_DEBUG AND LUA_LIBRARY_RELEASE)
+    SET(LUA_LIBRARY optimized ${LUA_LIBRARY_RELEASE} debug ${LUA_LIBRARY_DEBUG} )
+  ELSEIF(LUA_LIBRARY_RELEASE)
+    SET(LUA_LIBRARY ${LUA_LIBRARY_RELEASE} )
+  ELSEIF(LUA_LIBRARY_DEBUG)
+    SET(LUA_LIBRARY ${LUA_LIBRARY_DEBUG} )
+  ENDIF()
+ENDIF()
+
 FIND_PACKAGE(Qt5Core REQUIRED)
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
@@ -183,10 +203,15 @@ FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 
 FIND_PACKAGE(OpenGL REQUIRED)
-#FIND_PACKAGE(Lua51 REQUIRED)
+FIND_PACKAGE(Lua51 REQUIRED)
 #FIND_PACKAGE(ZLIB REQUIRED)
 #FIND_PACKAGE(PCRE REQUIRED)
 
+SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
+
+IF(LUA_CPP)
+  ADD_DEFINITIONS(-DLUA_CPP)
+ENDIF(LUA_CPP)
 
 INCLUDE_DIRECTORIES(
     ${Qt5Core_INCLUDE_DIRS}
@@ -199,7 +224,7 @@ INCLUDE_DIRECTORIES(
 
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
 "C:\\mudlet_package_MSVC\\pcre-8.0-lib\\include" 
-"C:\\mudlet_package_MSVC\\Lua_src\\include" 
+    ${LUA_INCLUDE_DIR}
 "C:\\mudlet_package_MSVC\\zlib-1.2.5"
 "c:\\mudlet_package_MSVC\\boost_1_45_0"
 "c:\\mudlet_package_MSVC\\pcre-8.0-lib\\include"
@@ -228,7 +253,7 @@ mudlet
     ${Qt5OpenGL_LIBRARIES}
     ${Qt5UiTools_LIBRARIES}
 c:\\mudlet_package_MSVC\\zlib_125\\zlibwapi.lib
-C:\\mudlet_package_MSVC\\Lua_src\\lib\\lua51.lib
+    ${LUA_LIBRARIES}
 C:\\mudlet_package_MSVC\\pcre-8.12\\Release\\pcre.lib
 C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\\libhunspell.lib
     ${OPENGL_LIBRARIES}

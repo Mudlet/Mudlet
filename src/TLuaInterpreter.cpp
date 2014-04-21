@@ -45,13 +45,16 @@
 //    #include "lua-yajl2-linux.c"
 //#endif
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
+#ifndef LUA_CPP
 }
-
+#endif
 /*//for map var access
 union mVarTypes {
     int * i;
