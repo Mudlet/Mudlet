@@ -175,6 +175,8 @@ mudlet.h
 	dlgIrc.h
 )
 
+SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
+
 IF(EXISTS "${PROJECT_SOURCE_DIR}/../include/lua.h")
   SET(LUA_INCLUDE_DIR_TEMP "${PROJECT_SOURCE_DIR}/../include")
   GET_FILENAME_COMPONENT(LUA_INCLUDE_DIR ${LUA_INCLUDE_DIR_TEMP} ABSOLUTE CACHE)
@@ -226,7 +228,7 @@ FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(Lua51 REQUIRED)
 FIND_PACKAGE(ZLIB REQUIRED)
-#FIND_PACKAGE(PCRE REQUIRED)
+FIND_PACKAGE(PCRE REQUIRED)
 
 SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
 
@@ -244,11 +246,10 @@ INCLUDE_DIRECTORIES(
 )
 
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
-"C:\\mudlet_package_MSVC\\pcre-8.0-lib\\include" 
+    ${PCRE_INCLUDE_DIR}
     ${LUA_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
 "c:\\mudlet_package_MSVC\\boost_1_45_0"
-"c:\\mudlet_package_MSVC\\pcre-8.0-lib\\include"
 "C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src"
 "C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include"
 "C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\include"
@@ -275,7 +276,7 @@ mudlet
     ${Qt5UiTools_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${LUA_LIBRARIES}
-C:\\mudlet_package_MSVC\\pcre-8.12\\Release\\pcre.lib
+    ${PCRE_LIBRARIES}
 C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\\libhunspell.lib
     ${OPENGL_LIBRARIES}
 "C:\\Users\\heiko\\Desktop\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\lib\\Release\\yajl.lib"
