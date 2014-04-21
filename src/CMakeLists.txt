@@ -187,7 +187,7 @@ FIND_PACKAGE(Qt4 REQUIRED)
 
 
 INCLUDE(${QT_USE_FILE})
-INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR} 
+INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
 "C:\\mudlet_package_MSVC\\pcre-8.0-lib\\include" 
 "C:\\mudlet_package_MSVC\\Lua_src\\include" 
 "C:\\mudlet_package_MSVC\\zlib-1.2.5"
