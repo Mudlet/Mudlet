@@ -179,6 +179,8 @@ SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
 SET(YAJL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "YAJL install directory.")
 
+SET(HUNSPELL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "HUNSPELL install directory.")
+
 IF(EXISTS "${PROJECT_SOURCE_DIR}/../include/lua.h")
   SET(LUA_INCLUDE_DIR_TEMP "${PROJECT_SOURCE_DIR}/../include")
   GET_FILENAME_COMPONENT(LUA_INCLUDE_DIR ${LUA_INCLUDE_DIR_TEMP} ABSOLUTE CACHE)
@@ -232,6 +234,7 @@ FIND_PACKAGE(Lua51 REQUIRED)
 FIND_PACKAGE(ZLIB REQUIRED)
 FIND_PACKAGE(PCRE REQUIRED)
 FIND_PACKAGE(YAJL REQUIRED)
+FIND_PACKAGE(HUNSPELL REQUIRED)
 
 SET(Boost_USE_STATIC_LIBS ON)
 FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
@@ -256,7 +259,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
     ${LUA_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
-"C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src"
+    ${HUNSPELL_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
 "C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\include"
 )
@@ -283,7 +286,7 @@ mudlet
     ${ZLIB_LIBRARIES}
     ${LUA_LIBRARIES}
     ${PCRE_LIBRARIES}
-C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\\libhunspell.lib
+    ${HUNSPELL_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${YAJL_LIBRARIES}
 "C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\lib\\ircclient-qt.lib"
