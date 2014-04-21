@@ -230,6 +230,9 @@ FIND_PACKAGE(Lua51 REQUIRED)
 FIND_PACKAGE(ZLIB REQUIRED)
 FIND_PACKAGE(PCRE REQUIRED)
 
+SET(Boost_USE_STATIC_LIBS ON)
+FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
+
 SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
 
 IF(LUA_CPP)
@@ -249,7 +252,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
     ${PCRE_INCLUDE_DIR}
     ${LUA_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
-"c:\\mudlet_package_MSVC\\boost_1_45_0"
+    ${Boost_INCLUDE_DIRS}
 "C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src"
 "C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include"
 "C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\include"
@@ -281,6 +284,7 @@ C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\
     ${OPENGL_LIBRARIES}
 "C:\\Users\\heiko\\Desktop\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\lib\\Release\\yajl.lib"
 "C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\lib\\ircclient-qt.lib"
+    ${Boost_LIBRARIES}
 )
 
 install( PROGRAMS mudlet DESTINATION "/usr/local/bin" )
