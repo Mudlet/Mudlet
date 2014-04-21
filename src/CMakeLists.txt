@@ -182,6 +182,7 @@ FIND_PACKAGE(Qt5OpenGL REQUIRED)
 FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 
+FIND_PACKAGE(OpenGL REQUIRED)
 #FIND_PACKAGE(Lua51 REQUIRED)
 #FIND_PACKAGE(ZLIB REQUIRED)
 #FIND_PACKAGE(PCRE REQUIRED)
@@ -230,8 +231,7 @@ c:\\mudlet_package_MSVC\\zlib_125\\zlibwapi.lib
 C:\\mudlet_package_MSVC\\Lua_src\\lib\\lua51.lib
 C:\\mudlet_package_MSVC\\pcre-8.12\\Release\\pcre.lib
 C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\\libhunspell.lib
-"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\Lib\\OpenGL32.Lib"
-"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\Lib\\GlU32.Lib"
+    ${OPENGL_LIBRARIES}
 "C:\\Users\\heiko\\Desktop\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\lib\\Release\\yajl.lib"
 "C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\lib\\ircclient-qt.lib"
 )
