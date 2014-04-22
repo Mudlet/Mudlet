@@ -114,71 +114,43 @@ ui/connection_profiles.ui
 
 SET(mudlet_MOC_HDRS 
 mudlet.h
-    TTimer.h
     EAction.h
     TConsole.h
     ctelnet.h
-    Host.h
-    TMap.h
-    TAStar.h
-    HostManager.h
-    HostPool.h
     dlgConnectionProfiles.h
     dlgTriggerEditor.h
-    TTrigger.h
     TLuaInterpreter.h
     dlgTriggers_main_area.h
     dlgOptionsAreaTriggers.h
     dlgTriggerPatternEdit.h
     TCommandLine.h
     TTreeWidget.h
-    TTreeWidgetItem.h
-    TScript.h
-    TAlias.h
     dlgTimersMainArea.h
     dlgSourceEditorArea.h
     dlgSystemMessageArea.h
-    TimerUnit.h
-    ScriptUnit.h
-    AliasUnit.h
     dlgScriptsMainArea.h
     dlgAliasMainArea.h
     dlgOptionsAreaAlias.h
     dlgOptionsAreaScripts.h
     dlgOptionsAreaTimers.h
     dlgSearchArea.h
-    TAction.h
-    ActionUnit.h
     dlgActionMainArea.h
     dlgOptionsAreaAction.h
     dlgAboutDialog.h
-    TMatchState.h
-    TEvent.h
-    TDebug.h
     dlgKeysMainArea.h
-    TKey.h
-    KeyUnit.h
     dlgProfilePreferences.h
     TTextEdit.h
-    TFlipButton.h
     TToolBar.h
-    TBuffer.h
-    TriggerUnit.h
     TLabel.h
     TEasyButtonBar.h
     TForkedProcess.h
     dlgColorTrigger.h
     TSplitter.h
-    TSplitterHandle.h
     dlgNotepad.h
     THighlighter.h
     dlgComposer.h
-    TRoom.h
-    TArea.h
-    TMap.h
     glwidget.h
     dlgMapper.h
-    Tree.h
     T2DMap.h
     dlgRoomExits.h
 	dlgIrc.h
