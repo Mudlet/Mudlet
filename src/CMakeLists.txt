@@ -1,8 +1,10 @@
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
+
 SET(mudlet_RCCS mudlet_alpha.qrc)
-SET( mudlet_SRCS 
-TConsole.cpp
+
+SET(mudlet_SRCS
+    TConsole.cpp
     ctelnet.cpp
     main.cpp
     Host.cpp
@@ -69,7 +71,7 @@ TConsole.cpp
     TBuffer.cpp
     T2DMap.cpp
     dlgRoomExits.cpp
-	dlgIrc.cpp
+    dlgIrc.cpp
     dlgPackageExporter.cpp
     dlgVarsMainArea.cpp
     exitstreewidget.cpp
@@ -79,8 +81,8 @@ TConsole.cpp
     VarUnit.cpp
 )
 
-SET(mudlet_UIS 
-ui/connection_profiles.ui
+SET(mudlet_UIS
+    ui/connection_profiles.ui
     ui/main_window.ui
     ui/trigger_editor.ui
     ui/options_area_triggers.ui
@@ -112,8 +114,8 @@ ui/connection_profiles.ui
     ui/vars_main_area.ui
 )
 
-SET(mudlet_MOC_HDRS 
-mudlet.h
+SET(mudlet_MOC_HDRS
+    mudlet.h
     EAction.h
     TConsole.h
     ctelnet.h
@@ -153,7 +155,7 @@ mudlet.h
     dlgMapper.h
     T2DMap.h
     dlgRoomExits.h
-	dlgIrc.h
+    dlgIrc.h
     dlgPackageExporter.h
     dlgVarsMainArea.h
     exitstreewidget.h
