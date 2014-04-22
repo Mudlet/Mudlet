@@ -159,6 +159,43 @@ mudlet.h
     exitstreewidget.h
 )
 
+SET(mudlet_HDRS
+    ActionUnit.h
+    AliasUnit.h
+    FontManager.h
+    Host.h
+    HostManager.h
+    HostPool.h
+    KeyUnit.h
+    LuaInterface.h
+    ScriptUnit.h
+    TAction.h
+    TAlias.h
+    TArea.h
+    TAstar.h
+    TBuffer.h
+    TDebug.h
+    TEvent.h
+    TFlipButton.h
+    TimerUnit.h
+    TKey.h
+    TMap.h
+    TMatchState.h
+    Tree.h
+    TriggerUnit.h
+    TRoom.h
+    TRoomDB.h
+    TScript.h
+    TSplitterHandle.h
+    TTimer.h
+    TTreeWidgetItem.h
+    TTrigger.h
+    TVar.h
+    VarUnit.h
+    XMLexport.h
+    XMLimport.h
+)
+
 if(MSVC)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP")
 endif(MSVC)
@@ -269,7 +306,7 @@ QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
-add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
+add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS} ${mudlet_HDRS} ${mudlet_MOC_HDRS})
 
 TARGET_LINK_LIBRARIES( 
 mudlet 
