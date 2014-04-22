@@ -285,9 +285,8 @@ INCLUDE_DIRECTORIES(
     ${Qt5OpenGL_INCLUDE_DIRS}
     ${Qt5Multimedia_INCLUDE_DIRS}
     ${Qt5UiTools_INCLUDE_DIRS}
-)
-
-INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${mudlet_BINARY_DIR}/src
     ${PCRE_INCLUDE_DIR}
     ${LUA_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
@@ -302,10 +301,16 @@ QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
-add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS} ${mudlet_HDRS} ${mudlet_MOC_HDRS})
+add_executable(mudlet WIN32
+    ${mudlet_SRCS}
+    ${mudlet_UIS_H}
+    ${mudlet_MOC_SRCS}
+    ${mudlet_RCC_SRCS}
+    ${mudlet_HDRS}
+    ${mudlet_MOC_HDRS}
+)
 
-TARGET_LINK_LIBRARIES( 
-mudlet 
+TARGET_LINK_LIBRARIES(mudlet
     ${Qt5Core_QTMAIN_LIBRARIES}
     ${Qt5Core_LIBRARIES}
     ${Qt5Widgets_LIBRARIES}
