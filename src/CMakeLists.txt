@@ -141,7 +141,7 @@ SET(mudlet_MOC_HDRS
     dlgTimersMainArea.h
     dlgTriggerEditor.h
     dlgTriggerPatternEdit.h
-    dlgTriggers_main_area.h
+    dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h

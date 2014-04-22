@@ -143,7 +143,7 @@ HEADERS += mudlet.h \
     dlgTriggerEditor.h \
     TTrigger.h \
     TLuaInterpreter.h \
-    dlgTriggers_main_area.h \
+    dlgTriggersMainArea.h \
     dlgOptionsAreaTriggers.h \
     dlgTriggerPatternEdit.h \
     TCommandLine.h \
