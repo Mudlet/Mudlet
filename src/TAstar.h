@@ -2,11 +2,13 @@
 #define TASTAR_H
 
 
+#ifndef Q_MOC_RUN
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/random.hpp>
 #include <boost/random.hpp>
 #include <boost/graph/graphviz.hpp>
+#endif
 //#include <sys/time.h>
 #include <vector>
 #include <list>

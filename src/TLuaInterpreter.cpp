@@ -45,13 +45,16 @@
 //    #include "lua-yajl2-linux.c"
 //#endif
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
+#ifndef LUA_CPP
 }
-
+#endif
 /*//for map var access
 union mVarTypes {
     int * i;
@@ -62,10 +65,14 @@ union mVarTypes {
 };*/
 
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     int luaopen_yajl(lua_State*);
+#ifndef LUA_CPP
 }
+#endif
 
 extern QStringList gSysErrors;
 
@@ -8189,11 +8196,13 @@ int TLuaInterpreter::downloadFile( lua_State * L )
     QString _url = url.c_str();
     QString _path = path.c_str();
     QNetworkRequest request = QNetworkRequest( QUrl( _url ) );
+#ifndef QT_NO_OPENSSL
     if ( _path.contains("https") )
     {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
         request.setSslConfiguration( config );
     }
+#endif
     QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( request );
     pHost->mLuaInterpreter.downloadMap[reply] = _path;
     return 0;

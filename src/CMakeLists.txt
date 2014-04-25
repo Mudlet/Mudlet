@@ -1,14 +1,5 @@
-project (mudlet)
-
-CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
-SET(QT_MIN_VERSION "4.4.0") # we need at least version 4.4 of Qt now
-SET(QT_USE_QTNETWORK 1)
-SET(QT_USE_QOPENGL 1)
-SET(QT_USE_PHONON 1)
-SET(QT_USE_OPENGL 1)
-SET(CMAKE_CONFIGURATION_TYPES "Release" "Debug")
 SET(mudlet_RCCS mudlet_alpha.qrc)
 SET( mudlet_SRCS 
 TConsole.cpp
@@ -78,8 +69,14 @@ TConsole.cpp
     TBuffer.cpp
     T2DMap.cpp
     dlgRoomExits.cpp
-	lua_yajl.c
 	dlgIrc.cpp
+    dlgPackageExporter.cpp
+    dlgVarsMainArea.cpp
+    exitstreewidget.cpp
+    LuaInterface.cpp
+    TRoomDB.cpp
+    TVar.cpp
+    VarUnit.cpp
 )
 
 SET(mudlet_UIS 
@@ -110,6 +107,9 @@ ui/connection_profiles.ui
     ui/mapper_room_color.ui
     ui/room_exits.ui
     ui/lacking_mapper_script.ui
+    ui/dlgPackageExporter.ui
+    ui/irc.ui
+    ui/vars_main_area.ui
 )
 
 SET(mudlet_MOC_HDRS 
@@ -182,55 +182,137 @@ mudlet.h
     T2DMap.h
     dlgRoomExits.h
 	dlgIrc.h
+    dlgPackageExporter.h
+    dlgVarsMainArea.h
+    exitstreewidget.h
 )
 
-FIND_PACKAGE(Qt4 REQUIRED)
-#FIND_PACKAGE(Lua51 REQUIRED)
-#FIND_PACKAGE(ZLIB REQUIRED)
-#FIND_PACKAGE(PCRE REQUIRED)
+SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
+SET(YAJL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "YAJL install directory.")
 
-INCLUDE(../MudletCPack.cmake) # Use CPack
-INCLUDE(${QT_USE_FILE})
-INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR} 
-"C:\\mudlet_package_MSVC\\pcre-8.0-lib\\include" 
-"C:\\mudlet_package_MSVC\\Lua_src\\include" 
-"C:\\mudlet_package_MSVC\\zlib-1.2.5"
-"c:\\mudlet_package_MSVC\\boost_1_45_0"
-"c:\\mudlet_package_MSVC\\pcre-8.0-lib\\include"
-"C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src"
-"C:\\mudlet_package_MSVC\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\include"
-"C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\include"
+SET(HUNSPELL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "HUNSPELL install directory.")
+
+SET(ZIP_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "ZIP install directory.")
+
+IF(EXISTS "${PROJECT_SOURCE_DIR}/../include/lua.h")
+  SET(LUA_INCLUDE_DIR_TEMP "${PROJECT_SOURCE_DIR}/../include")
+  GET_FILENAME_COMPONENT(LUA_INCLUDE_DIR ${LUA_INCLUDE_DIR_TEMP} ABSOLUTE CACHE)
+  IF(EXISTS "${PROJECT_SOURCE_DIR}/../lib/lualib.lib")
+    SET(LUA_LIBRARY_RELEASE_TEMP "${PROJECT_SOURCE_DIR}/../lib/lualib.lib")
+    GET_FILENAME_COMPONENT(LUA_LIBRARY_RELEASE ${LUA_LIBRARY_RELEASE_TEMP} ABSOLUTE CACHE)
+  ENDIF()
+  IF(EXISTS "${PROJECT_SOURCE_DIR}/../lib/lualibd.lib")
+    SET(LUA_LIBRARY_DEBUG_TEMP "${PROJECT_SOURCE_DIR}/../lib/lualibd.lib")
+    GET_FILENAME_COMPONENT(LUA_LIBRARY_DEBUG ${LUA_LIBRARY_DEBUG_TEMP} ABSOLUTE CACHE)
+  ENDIF()
+  IF(LUA_LIBRARY_DEBUG AND LUA_LIBRARY_RELEASE)
+    SET(LUA_LIBRARY optimized ${LUA_LIBRARY_RELEASE} debug ${LUA_LIBRARY_DEBUG} )
+  ELSEIF(LUA_LIBRARY_RELEASE)
+    SET(LUA_LIBRARY ${LUA_LIBRARY_RELEASE} )
+  ELSEIF(LUA_LIBRARY_DEBUG)
+    SET(LUA_LIBRARY ${LUA_LIBRARY_DEBUG} )
+  ENDIF()
+ENDIF()
+
+IF(EXISTS "${PROJECT_SOURCE_DIR}/../include/zlib.h")
+  SET(ZLIB_INCLUDE_DIR_TEMP "${PROJECT_SOURCE_DIR}/../include")
+  GET_FILENAME_COMPONENT(ZLIB_INCLUDE_DIR ${ZLIB_INCLUDE_DIR_TEMP} ABSOLUTE CACHE)
+  SET(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/..")
+  IF(EXISTS "${PROJECT_SOURCE_DIR}/../lib/zlibstat.lib")
+    SET(ZLIB_LIBRARY_RELEASE_TEMP "${PROJECT_SOURCE_DIR}/../lib/zlibstat.lib")
+    GET_FILENAME_COMPONENT(ZLIB_LIBRARY_RELEASE ${ZLIB_LIBRARY_RELEASE_TEMP} ABSOLUTE CACHE)
+  ENDIF()
+  IF(EXISTS "${PROJECT_SOURCE_DIR}/../lib/zlibstatd.lib")
+    SET(ZLIB_LIBRARY_DEBUG_TEMP "${PROJECT_SOURCE_DIR}/../lib/zlibstatd.lib")
+    GET_FILENAME_COMPONENT(ZLIB_LIBRARY_DEBUG ${ZLIB_LIBRARY_DEBUG_TEMP} ABSOLUTE CACHE)
+  ENDIF()
+  IF(ZLIB_LIBRARY_DEBUG AND ZLIB_LIBRARY_RELEASE)
+    SET(ZLIB_LIBRARY optimized ${ZLIB_LIBRARY_RELEASE} debug ${ZLIB_LIBRARY_DEBUG} )
+  ELSEIF(ZLIB_LIBRARY_RELEASE)
+    SET(ZLIB_LIBRARY ${ZLIB_LIBRARY_RELEASE} )
+  ELSEIF(ZLIB_LIBRARY_DEBUG)
+    SET(ZLIB_LIBRARY ${ZLIB_LIBRARY_DEBUG} )
+  ENDIF()
+ENDIF()
+
+FIND_PACKAGE(Qt5Core REQUIRED)
+FIND_PACKAGE(Qt5Multimedia REQUIRED)
+FIND_PACKAGE(Qt5Network REQUIRED)
+FIND_PACKAGE(Qt5OpenGL REQUIRED)
+FIND_PACKAGE(Qt5UiTools REQUIRED)
+FIND_PACKAGE(Qt5Widgets REQUIRED)
+
+FIND_PACKAGE(OpenGL REQUIRED)
+FIND_PACKAGE(Lua51 REQUIRED)
+FIND_PACKAGE(ZLIB REQUIRED)
+FIND_PACKAGE(PCRE REQUIRED)
+FIND_PACKAGE(YAJL REQUIRED)
+FIND_PACKAGE(HUNSPELL REQUIRED)
+FIND_PACKAGE(ZIP REQUIRED)
+
+SET(Boost_USE_STATIC_LIBS ON)
+FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
+
+SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
+
+IF(LUA_CPP)
+  ADD_DEFINITIONS(-DLUA_CPP)
+  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.cpp)
+ELSE(LUA_CPP)
+  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.c)
+ENDIF(LUA_CPP)
+
+add_subdirectory(irc)
+
+INCLUDE_DIRECTORIES(
+    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5Network_INCLUDE_DIRS}
+    ${Qt5OpenGL_INCLUDE_DIRS}
+    ${Qt5Multimedia_INCLUDE_DIRS}
+    ${Qt5UiTools_INCLUDE_DIRS}
+)
+
+INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
+    ${PCRE_INCLUDE_DIR}
+    ${LUA_INCLUDE_DIR}
+    ${ZLIB_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIRS}
+    ${HUNSPELL_INCLUDE_DIR}
+    ${YAJL_INCLUDE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/irc/include
+    ${ZIP_INCLUDE_DIR}
 )
 
 IF(CMAKE_COMPILER_IS_GNUCXX)
   ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-Wno-deprecated  -DUNICODE  -D_UNICODE")
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-QT4_AUTOMOC(${mudlet_SRCS})
-QT4_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
-QT4_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-QT4_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
+QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
+QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
 add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
 
 TARGET_LINK_LIBRARIES( 
 mudlet 
-c:\\Qt_VC\\4.7.3\\lib\\qtmain.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtOpenGL4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtCore4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtGui4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtNetwork4.lib
-C:\\Qt_VC\\4.7.3\\lib\\QtUiTools.lib
-C:\\Qt_VC\\4.7.3\\lib\\phonon4.lib
-c:\\mudlet_package_MSVC\\zlib_125\\zlibwapi.lib
-C:\\mudlet_package_MSVC\\Lua_src\\lib\\lua51.lib
-C:\\mudlet_package_MSVC\\pcre-8.12\\Release\\pcre.lib
-C:\\mudlet_package_MSVC\\hunspell-1.3.1\\src\\win_api\\Release_dll\\libhunspell\\libhunspell.lib
-"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\Lib\\OpenGL32.Lib"
-"C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.0A\\Lib\\GlU32.Lib"
-"C:\\Users\\heiko\\Desktop\\lloyd-yajl-f4b2b1a\\yajl-2.0.1\\lib\\Release\\yajl.lib"
-"C:\\mudlet_package_MSVC\\libircclient-qt-0.5.0\\lib\\ircclient-qt.lib"
+    ${Qt5Core_QTMAIN_LIBRARIES}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Widgets_LIBRARIES}
+    ${Qt5Network_LIBRARIES}
+    ${Qt5Multimedia_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${Qt5UiTools_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ${LUA_LIBRARIES}
+    ${PCRE_LIBRARIES}
+    ${HUNSPELL_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    ${YAJL_LIBRARIES}
+    irccqt
+    ${Boost_LIBRARIES}
+    ${ZIP_LIBRARY}
 )
 
 install( PROGRAMS mudlet DESTINATION "/usr/local/bin" )
