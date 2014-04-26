@@ -723,8 +723,8 @@ void mudlet::slot_close_profile_requested( int tab )
     {
         mpTabBar->removeTab( tab );
         mConsoleMap.remove( pH );
-        HostManager::self()->deleteHost( pH->getName() );
         mTabMap.remove( pH->getName() );
+        HostManager::self()->deleteHost( pH->getName() );
     }
 
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
