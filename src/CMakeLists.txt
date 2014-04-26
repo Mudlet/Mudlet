@@ -104,7 +104,6 @@ ui/connection_profiles.ui
     ui/composer.ui
     ui/mapper.ui
     ui/profile_preferences.ui
-    ui/mapper_room_color.ui
     ui/room_exits.ui
     ui/lacking_mapper_script.ui
     ui/dlgPackageExporter.ui
