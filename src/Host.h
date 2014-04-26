@@ -315,13 +315,6 @@ public:
     bool               mFORCE_MXP_NEGOTIATION_OFF;
     bool               mHaveMapperScript;
     QSet<QChar>         mDoubleClickIgnore;
-
-private:
-    Host();
-
-
-
-
 };
 #endif
 
