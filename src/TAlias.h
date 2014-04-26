@@ -50,7 +50,6 @@ public:
     virtual          ~TAlias();
                      TAlias( TAlias * parent, Host * pHost );
                      TAlias( QString name, Host * pHost );
-                     TAlias& clone(const TAlias& );
     void             compileAll();
     QString          getName()                       { return mName; }
     void             setName( QString name );
@@ -67,7 +66,6 @@ public:
     void             setIsFolder( bool b )           { mIsFolder = b; }
     bool             match( QString & toMatch );
     bool             registerAlias();
-    bool             isClone(TAlias &b) const;
     bool             isTempAlias()                   { return mIsTempAlias; }
     void             setIsTempAlias( bool b )        { mIsTempAlias = b; }
 

@@ -49,7 +49,6 @@ public:
     virtual          ~TKey();
                      TKey( TKey * parent, Host * pHost );
                      TKey( QString name, Host * pHost );
-                     TKey& clone(const TKey& );
     void             compileAll();
     QString          getName()                          { return mName; }
     void             setName( QString name )            { mName = name; }
@@ -72,7 +71,6 @@ public:
     bool             registerKey();
     //bool             serialize( QDataStream & );
     //bool             restore( QDataStream & fs, bool );
-    bool             isClone( TKey & ) const;
     bool             exportItem;
     bool            mModuleMasterFolder;
 private:

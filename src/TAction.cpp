@@ -333,38 +333,3 @@ void TAction::insertActions( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
     menu->addAction( action );
     //mudlet::self()->bindMenu( menu, action );
 }
-
-
-
-
-TAction& TAction::clone(const TAction& b)
-{
-    mName = b.mName;
-    mCommandButtonUp = b.mCommandButtonUp;
-    mCommandButtonDown = b.mCommandButtonDown;
-    mRegex = b.mRegex;
-    mScript = b.mScript;
-    mIsPushDownButton = b.mIsPushDownButton;
-    mIsFolder = b.mIsFolder;
-    mpHost = b.mpHost;
-    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
-    mIcon = b.mIcon;
-    mpToolBar = b.mpToolBar;
-    return *this;
-}
-
-bool TAction::isClone( TAction & b ) const
-{
-    return ( mName == b.mName
-             && mCommandButtonUp == b.mCommandButtonUp
-             && mCommandButtonDown == b.mCommandButtonDown
-             && mRegex == b.mRegex
-             && mScript == b.mScript
-             && mIsPushDownButton == b.mIsPushDownButton
-             && mIsFolder == b.mIsFolder
-             && mpHost == b.mpHost
-             && mNeedsToBeCompiled == b.mNeedsToBeCompiled
-             && mpToolBar == b.mpToolBar
-             && mIcon == b.mIcon );
-}
-
