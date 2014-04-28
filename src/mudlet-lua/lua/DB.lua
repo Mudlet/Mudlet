@@ -429,13 +429,13 @@ end
 ---   </pre>
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
 function db:create(db_name, sheets)
-   if not db.__env then
+   if not db.__env or (db.__env and db.__env = 'SQLite3 environment (closed)') then
       db.__env = luasql.sqlite3()
    end
 
    db_name = db:safe_name(db_name)
 
-   if not db.__conn[db_name] then
+   if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] = 'SQLite3 connection (closed)') then
       db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
       db.__conn[db_name]:setautocommit(false)
       db.__autocommit[db_name] = true
@@ -590,7 +590,7 @@ function db:_migrate(db_name, s_name)
          end
       end
 
-      if #missing > 0 and 
+      if #missing > 0 and
          table.size(current_columns) + #missing == table.size(schema.columns)+1
          -- We have changes and when we did those changes, we have exactly
          -- the number of columns we need. The "+1" is for the _row_id
@@ -604,7 +604,7 @@ function db:_migrate(db_name, s_name)
             conn:execute(sql)
             db:echo_sql(sql)
          end
-      elseif 
+      elseif
          #missing + table.size(current_columns) > table.size(schema.columns) + 1
          -- if we add all missing columns and we have more columns than we want
          -- then there are currently some columns we don't want anymore.
@@ -922,7 +922,7 @@ function db:aggregate(field, fn, query, distinct)
       local row = cur:fetch({}, "a")
       local count = row[fn]
       cur:close()
-      
+
       -- give back the correct data type. see http://www.sqlite.org/lang_aggfunc.html
       if (fn:upper() ~= "MIN" and fn:upper() ~= "MAX") or field.type == "number" then
          return tonumber(count)
