@@ -429,13 +429,13 @@ end
 ---   </pre>
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
 function db:create(db_name, sheets)
-   if not db.__env or (db.__env and db.__env = 'SQLite3 environment (closed)') then
+   if not db.__env or (db.__env and db.__env == 'SQLite3 environment (closed)') then
       db.__env = luasql.sqlite3()
    end
 
    db_name = db:safe_name(db_name)
 
-   if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] = 'SQLite3 connection (closed)') then
+   if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] == 'SQLite3 connection (closed)') then
       db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
       db.__conn[db_name]:setautocommit(false)
       db.__autocommit[db_name] = true
