@@ -472,7 +472,7 @@ void TMap::initGraph()
             continue;
         }
         roomCount++;
-        int roomExits = edgeCount;
+// N/u:        int roomExits = edgeCount;
         location l;
         l.x = pR->x;
         l.y = pR->y;
@@ -481,7 +481,7 @@ void TMap::initGraph()
         l.area = pR->getArea();
         locations.push_back( l );
     }
-    for(int i=0;i<locations.size();i++){
+    for( unsigned int i=0;i<locations.size();i++){
         roomidToIndex[locations[i].id] = i;
         indexToRoomid[i] = locations[i].id;
     }
@@ -579,7 +579,7 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                bool exit = false;
+//                bool exit = false;
                 tie(e, inserted) = add_edge( roomIndex,
                                             roomidToIndex[pR->getWest()],
                                             g );

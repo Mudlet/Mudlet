@@ -1,10 +1,3 @@
-################################################################################
-# MERGING INSTRUCTIONS: to merge this in (as pull request #33 to               #
-# www.github.com/Chris7/Mudlet2/mudletDev) after                               #
-# "mudletDev_customExitsFixAndEnhance" been done as pull request #32           #
-# Take ALL changes from other side                                             #
-# THEN add in just the FIRST block of additions at the top of this file        #
-################################################################################
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -g -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
@@ -21,7 +14,7 @@ VERSION = 3.0.1
 # distinguish the version:
 ## I'll tag MY versions with something containing "slysven" but please edit it
 ## to something else and take this 2 line extra comment out! 8-) - Slysven:
-BUILD = -rc2-slysven
+BUILD = -rc2-slysven_versionData
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
