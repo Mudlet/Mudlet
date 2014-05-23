@@ -222,40 +222,56 @@ int main(int argc, char *argv[])
       // well!)  The upside of this means no messing around with GIMP every
       // year/version. 8-)
         QPainter painter( &splashImage );
-        QFont font( "DejaVu Serif", 16, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
+        unsigned fontSize = 16;
         QString sourceVersionText = QString( "Version: " APP_VERSION APP_BUILD );
+
+        bool isWithinSpace = false;
+        while( ! isWithinSpace )
+        {
+            QFont font( "DejaVu Serif", fontSize, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
+            QTextLayout versionTextLayout( sourceVersionText, font, painter.device() );
+            versionTextLayout.beginLayout();
+            // Start work in this text item
+            QTextLine versionTextline = versionTextLayout.createLine();
+            // First draw (one line from) the text we have put in on the layout to
+            // see how wide it is..., assuming accutally that it will only take one
+            // line of text
+            versionTextline.setLineWidth( 280 );
+            //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
+            versionTextline.setPosition( QPointF( 0, 0 ) );
+            // Only pretend, so we can see how much space it will take
+            QTextLine dummy = versionTextLayout.createLine();
+            if( ! dummy.isValid() )
+            { // No second line so have got all text in first so can do it
+                isWithinSpace = true;
+                qreal versionTextWidth = versionTextline.naturalTextWidth();
+                // This is the ACTUAL width of the created text
+                versionTextline.setPosition( QPointF( (320 - versionTextWidth) / 2.0 , 270 ) );
+                // And now we can place it centred horizontally
+                versionTextLayout.endLayout();
+                // end the layout process and paint it out
+                painter.setPen( QColor( 176, 64, 0, 255 ) ); // #b04000
+                versionTextLayout.draw( &painter, QPointF( 0, 0 ) );
+            }
+            else
+            { // Too big - text has spilled over onto a second line - so try again
+                fontSize--;
+                versionTextLayout.clearLayout();
+                versionTextLayout.endLayout();
+            }
+        }
+
+        // Repeat for other text, but we know it will fit at given size
         QString sourceCopyrightText = QChar( 169 ) % QString( " Heiko K" ) % QChar( 246 ) % QString( "hn 2008-" ) % QString(__DATE__).mid(7);
-        QTextLayout versionTextLayout( sourceVersionText, font, painter.device() );
+        QFont font( "DejaVu Serif", 16, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
         QTextLayout copyrightTextLayout( sourceCopyrightText, font, painter.device() );
-
-        versionTextLayout.beginLayout();
-        // Start work in this text item
-        QTextLine versionTextline = versionTextLayout.createLine();
-        // First draw (one line from) the text we have put in on the layout to
-        // see how wide it is..., assuming accutally that it will only take one
-        // line of text
-        versionTextline.setLineWidth( 280 );
-        //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
-        versionTextline.setPosition( QPointF( 0, 0 ) );
-        // Only pretend, so we can see how much space it will take
-        qreal versionTextWidth = versionTextline.naturalTextWidth();
-        // This is the ACTUAL width of the created text
-        versionTextline.setPosition( QPointF( (320 - versionTextWidth) / 2.0 , 270 ) );
-        // And now we can place it centred horizontally
-        versionTextLayout.endLayout();
-
         copyrightTextLayout.beginLayout();
-        // Repeat for other text
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
         copyrightTextline.setLineWidth( 280 );
         copyrightTextline.setPosition( QPointF( 1, 1 ) );
         qreal copyrightTextWidth = copyrightTextline.naturalTextWidth();
         copyrightTextline.setPosition( QPointF( (320 - copyrightTextWidth) / 2.0 , 340 ) );
         copyrightTextLayout.endLayout();
-
-        painter.setPen( QColor( 176, 64, 0, 255 ) ); // #b04000
-        versionTextLayout.draw( &painter, QPointF( 0, 0 ) );
-
         painter.setPen( QColor( 112, 16, 0, 255 ) ); // #701000
         copyrightTextLayout.draw( &painter, QPointF( 0, 0 ) );
     }
