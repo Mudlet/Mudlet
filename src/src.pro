@@ -1,5 +1,5 @@
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -g -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
+QMAKE_CXXFLAGS_DEBUG += -O0 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
 QT += network opengl uitools multimedia
