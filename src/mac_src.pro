@@ -17,6 +17,39 @@ QT += network opengl uitools multimedia
 
 cache()
 
+# Set the current Mudlet Version, unfortunately the Qt documentation suggests
+# that only a #.#.# form without any other alphanumberic suffixes is required:
+VERSION = 3.0.1
+
+# Leave the value of the following empty, line should be "BUILD =" without quotes
+# (it is NOT a Qt built-in variable) for a release build or, if you are
+# distributing modified code, it would be useful if you could put something to
+# distinguish the version:
+## I'll tag MY versions with something containing "slysven" but please edit it
+## to something else and take this 2 line extra comment out! 8-) - Slysven:
+BUILD = -rc2-slysven
+
+# Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
+# dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
+# be automatically rebuilt so you will need to 'touch' them...!
+# Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
+DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
+DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
+win32{
+    TARGET = mudlet
+} else:macx{
+# Capitalize the name for Mudlet, so it appears as 'Mudlet'
+# and not 'mudlet' in the .dmg installer
+    TARGET = Mudlet
+} else{
+    TARGET = mudlet
+}
+
+# Create a record of what the executable will be called by hand
+# NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
+# executables with an ".exe" extension!
+DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
+
 # use pkg-config whenever possible for linking on a mac
 # the same should be done on the Linux platform as well
 macx {
@@ -244,12 +277,6 @@ macx: {
 }
 
 TEMPLATE = app
-TARGET = mudlet
-macx: {
-    # Capitalize the name for Mudlet, so it appears as 'Mudlet'
-    # and not 'mudlet' in the .dmg installer
-    TARGET = Mudlet
-}
 
 RESOURCES = mudlet_alpha.qrc
 DISTFILES += paragraph.css

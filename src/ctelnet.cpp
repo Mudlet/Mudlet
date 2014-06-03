@@ -71,7 +71,10 @@ cTelnet::cTelnet( Host * pH )
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
-    termType = "Mudlet 3.0.0dev";
+    termType = QString("Mudlet %1").arg(APP_VERSION);
+    if( QByteArray(APP_BUILD).trimmed().length() )
+        termType.append( QString(APP_BUILD) );
+
     iac = iac2 = insb = false;
 
     command = "";
@@ -512,7 +515,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h += TN_IAC;
               _h += TN_SB;
               _h += 200;
-              _h += "hello Mudlet 2.0.1\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
+              _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n");
               _h += TN_IAC;
               _h += TN_SE;
               socketOutRaw( _h );
@@ -531,7 +534,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h = TN_IAC;
               _h += TN_SB;
               _h += GMCP;
-              _h += "Core.Hello { \"client\": \"Mudlet\", \"version\": \"2.0.1\" }";
+              _h += string("Core.Hello { \"client\": \"Mudlet\", \"version\": \"") + APP_VERSION + APP_BUILD + string("\" }");
               _h += TN_IAC;
               _h += TN_SE;
 
@@ -808,7 +811,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   _h += TN_IAC;
                   _h += TN_SB;
                   _h += 200;
-                  _h += "hello Mudlet 2.0.1\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n";
+                  _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
                   _h += TN_IAC;
                   _h += TN_SE;
                   socketOutRaw( _h );

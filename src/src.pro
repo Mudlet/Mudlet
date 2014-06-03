@@ -1,8 +1,48 @@
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -g -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
+QMAKE_CXXFLAGS_DEBUG += -O0 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
-QT += network opengl uitools multimedia
+
+QT += network opengl
+
+lessThan( QT_MAJOR_VERSION, 5 ) {
+    CONFIG += qt resources app_bundle uitools
+    QT += phonon
+} else {
+    QT += uitools multimedia
+}
+
+# Set the current Mudlet Version, unfortunately the Qt documentation suggests
+# that only a #.#.# form without any other alphanumberic suffixes is required:
+VERSION = 3.0.1
+
+# Leave the value of the following empty, line should be "BUILD =" without quotes
+# (it is NOT a Qt built-in variable) for a release build or, if you are
+# distributing modified code, it would be useful if you could put something to
+# distinguish the version:
+## I'll tag MY versions with something containing "slysven" but please edit it
+## to something else and take this 2 line extra comment out! 8-) - Slysven:
+BUILD = -rc2-slysven_versionData
+
+# Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
+# dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
+# be automatically rebuilt so you will need to 'touch' them...!
+# Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
+DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
+DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
+win32{
+    TARGET = mudlet
+} else:macx{
+    TARGET = Mudlet
+} else{
+    TARGET = mudlet
+}
+
+# Create a record of what the executable will be called by hand
+# NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
+# executables with an ".exe" extension!
+DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
+
 DEPENDPATH += .
 INCLUDEPATH += .
 LIBLUA = -llua5.1
@@ -18,6 +58,16 @@ RESOURCES = mudlet_alpha.qrc
 # try -O1 —fsanitize=address for AddressSanitizer w/ clang
 # use -DDEBUG_TELNET to show telnet commands
 
+# Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
+# below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
+# from the executable's location will be used.  Mudlet will now moan and ask
+# the user to find them if the files (and specifically the <10KByte
+# "LuaGlobal.lua" one) is not accessable (read access only required) during
+# startup.  The precise directory is remembered once found (and stored in the
+# Mudlet configuration file as "systemLuaFilePath") but if the installer places
+# the files in the place documented here the user will not be bothered by this.
+#
+# (Geyser files should be in a "geyser" subdirectory of this)
 unix: {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
 # destination place for local builds for software for all users:
@@ -37,6 +87,7 @@ unix: {
         -lzip \
         -lz
     INCLUDEPATH += /usr/include/lua5.1
+    LUA_DEFAULT_DIR = $${DATADIR}/lua
     SOURCES += lua-yajl2-linux.c
 } else:win32: {
     LIBS += -L"C:\\mudlet5_package" \
@@ -57,207 +108,307 @@ unix: {
         "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
         "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
         "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
+# Leave this undefined so mudlet::readSettings() preprocessing will fall back to
+# hard-coded executable's /mudlet-lua/lua/ subdirectory
+#    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
     SOURCES += lua_yajl.c
 }
-
+unix {
+#   the "target" install set is handled automagically, just not very well...
+    target.path = $${BINDIR}
+    message("$${TARGET} will be installed to "$${target.path}"...")
+#     DOCS.path = $${DOCS_DIR}
+#     message("Documentation will be installed to "$${DOCS.path}"...")
+    !isEmpty( LUA_DEFAULT_DIR ) {
+# if a directory has been set for the lua files move the detail into the
+# installation details for the unix case:
+        LUA.path = $${LUA_DEFAULT_DIR}
+        LUA_GEYSER.path = $${LUA.path}/geyser
+# and define a preprocessor symbol LUA_DEFAULT_PATH with the value:
+        DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
+# and say what will happen:
+        message("Lua files will be installed to "$${LUA.path}"...")
+        message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
+    }
+}
 INCLUDEPATH += irc/include
-
-SOURCES += TConsole.cpp \
+SOURCES += \
+    ActionUnit.cpp \
+    AliasUnit.cpp \
     ctelnet.cpp \
-    main.cpp \
+    dlgAboutDialog.cpp \
+    dlgActionMainArea.cpp \
+    dlgAliasMainArea.cpp \
+    dlgColorTrigger.cpp \
+    dlgComposer.cpp \
+    dlgConnectionProfiles.cpp \
+    dlgIRC.cpp \
+    dlgKeysMainArea.cpp \
+    dlgMapper.cpp \
+    dlgNotepad.cpp \
+    dlgOptionsAreaAction.cpp \
+    dlgOptionsAreaAlias.cpp \
+    dlgOptionsAreaScripts.cpp \
+    dlgOptionsAreaTimers.cpp \
+    dlgOptionsAreaTriggers.cpp \
+    dlgPackageExporter.cpp \
+    dlgProfilePreferences.cpp \
+    dlgRoomExits.cpp \
+    dlgScriptsMainArea.cpp \
+    dlgSearchArea.cpp \
+    dlgSourceEditorArea.cpp \
+    dlgSystemMessageArea.cpp \
+    dlgTimersMainArea.cpp \
+    dlgTriggerEditor.cpp \
+    dlgTriggerPatternEdit.cpp \
+    dlgTriggersMainArea.cpp \
+    dlgVarsMainArea.cpp \
+    EAction.cpp \
+    exitstreewidget.cpp \
+    FontManager.cpp \
+    glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
     HostPool.cpp \
-    dlgConnectionProfiles.cpp \
-    dlgTriggerEditor.cpp \
-    TTrigger.cpp \
-    TriggerUnit.cpp \
-    TLuaInterpreter.cpp \
-    dlgTriggersMainArea.cpp \
-    dlgOptionsAreaTriggers.cpp \
-    dlgOptionsAreaTimers.cpp \
-    dlgOptionsAreaScripts.cpp \
-    TCommandLine.cpp \
-    TTreeWidget.cpp \
-    TTreeWidgetItem.cpp \
-    TTimer.cpp \
-    TScript.cpp \
-    TAlias.cpp \
-    dlgTimersMainArea.cpp \
-    dlgSystemMessageArea.cpp \
-    dlgSourceEditorArea.cpp \
-    TimerUnit.cpp \
-    ScriptUnit.cpp \
-    AliasUnit.cpp \
-    dlgScriptsMainArea.cpp \
-    dlgAliasMainArea.cpp \
-    dlgOptionsAreaAlias.cpp \
-    dlgSearchArea.cpp \
-    TAction.cpp \
-    ActionUnit.cpp \
-    dlgActionMainArea.cpp \
-    dlgOptionsAreaAction.cpp \
-    EAction.cpp \
-    dlgAboutDialog.cpp \
-    TDebug.cpp \
-    dlgKeysMainArea.cpp \
-    TKey.cpp \
-    KeyUnit.cpp \
-    dlgProfilePreferences.cpp \
-    TTextEdit.cpp \
-    XMLexport.cpp \
-    XMLimport.cpp \
-    FontManager.cpp \
-    TFlipButton.cpp \
-    TToolBar.cpp \
-    TLabel.cpp \
-    TEasyButtonBar.cpp \
-    TForkedProcess.cpp \
-    dlgColorTrigger.cpp \
-    dlgTriggerPatternEdit.cpp \
-    TSplitter.cpp \
-    TSplitterHandle.cpp \
-    mudlet.cpp \
-    dlgNotepad.cpp \
-    THighlighter.cpp \
-    dlgComposer.cpp \
-    TArea.cpp \
-    glwidget.cpp \
-    dlgMapper.cpp \
-    TRoom.cpp \
-    TMap.cpp \
-    TBuffer.cpp \
-    T2DMap.cpp \
-    dlgRoomExits.cpp \
-    dlgPackageExporter.cpp \
-    exitstreewidget.cpp \
-    TRoomDB.cpp \
-    TVar.cpp \
-    LuaInterface.cpp \
-    VarUnit.cpp \
-    dlgVarsMainArea.cpp \
     irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
     irc/src/ircsession.cpp \
     irc/src/ircutil.cpp \
-    dlgIRC.cpp
+    KeyUnit.cpp \
+    LuaInterface.cpp \
+    main.cpp \
+    mudlet.cpp \
+    ScriptUnit.cpp \
+    T2DMap.cpp \
+    TAction.cpp \
+    TAlias.cpp \
+    TArea.cpp \
+    TBuffer.cpp \
+    TCommandLine.cpp \
+    TConsole.cpp \
+    TDebug.cpp \
+    TEasyButtonBar.cpp \
+    TFlipButton.cpp \
+    TForkedProcess.cpp \
+    THighlighter.cpp \
+    TimerUnit.cpp \
+    TKey.cpp \
+    TLabel.cpp \
+    TLuaInterpreter.cpp \
+    TMap.cpp \
+    TriggerUnit.cpp \
+    TRoom.cpp \
+    TRoomDB.cpp \
+    TScript.cpp \
+    TSplitter.cpp \
+    TSplitterHandle.cpp \
+    TTextEdit.cpp \
+    TTimer.cpp \
+    TToolBar.cpp \
+    TTreeWidget.cpp \
+    TTreeWidgetItem.cpp \
+    TTrigger.cpp \
+    TVar.cpp \
+    XMLexport.cpp \
+    XMLimport.cpp \
+    VarUnit.cpp
 
 
-HEADERS += mudlet.h \
-    TTimer.h \
-    EAction.h \
-    TConsole.h \
-    ctelnet.h \
-    Host.h \
-    TMap.h \
-    TAStar.h \
-    HostManager.h \
-    HostPool.h \
-    dlgConnectionProfiles.h \
-    dlgTriggerEditor.h \
-    TTrigger.h \
-    TLuaInterpreter.h \
-    dlgTriggers_main_area.h \
-    dlgOptionsAreaTriggers.h \
-    dlgTriggerPatternEdit.h \
-    TCommandLine.h \
-    TTreeWidget.h \
-    TTreeWidgetItem.h \
-    TScript.h \
-    TAlias.h \
-    dlgTimersMainArea.h \
-    dlgSourceEditorArea.h \
-    dlgSystemMessageArea.h \
-    TimerUnit.h \
-    ScriptUnit.h \
+HEADERS += \
+    ActionUnit.h \
     AliasUnit.h \
-    dlgScriptsMainArea.h \
+    ctelnet.h \
+    dlgAboutDialog.h \
+    dlgActionMainArea.h \
     dlgAliasMainArea.h \
+    dlgColorTrigger.h \
+    dlgComposer.h \
+    dlgConnectionProfiles.h \
+    dlgIRC.h \
+    dlgKeysMainArea.h \
+    dlgMapper.h \
+    dlgNotepad.h \
+    dlgOptionsAreaAction.h \
     dlgOptionsAreaAlias.h \
     dlgOptionsAreaScripts.h \
     dlgOptionsAreaTimers.h \
-    dlgSearchArea.h \
-    TAction.h \
-    ActionUnit.h \
-    dlgActionMainArea.h \
-    dlgOptionsAreaAction.h \
-    dlgAboutDialog.h \
-    TMatchState.h \
-    TEvent.h \
-    TDebug.h \
-    dlgKeysMainArea.h \
-    TKey.h \
-    KeyUnit.h \
+    dlgOptionsAreaTriggers.h \
+    dlgPackageExporter.h \
     dlgProfilePreferences.h \
-    TTextEdit.h \
-    TFlipButton.h \
-    TToolBar.h \
+    dlgRoomExits.h \
+    dlgScriptsMainArea.h \
+    dlgSearchArea.h \
+    dlgSourceEditorArea.h \
+    dlgSystemMessageArea.h \
+    dlgTriggerEditor.h \
+    dlgTriggers_main_area.h \
+    dlgTriggerPatternEdit.h \
+    dlgTimersMainArea.h \
+    dlgVarsMainArea.h \
+    EAction.h \
+    exitstreewidget.h \
+    glwidget.h \
+    Host.h \
+    HostManager.h \
+    HostPool.h \
+    irc/include/irc.h \
+    irc/include/ircbuffer.h \
+    irc/include/ircsession.h \
+    irc/include/ircutil.h \
+    KeyUnit.h \
+    LuaInterface.h \
+    mudlet.h \
+    ScriptUnit.h \
+    T2DMap.h \
+    TAction.h \
+    TAlias.h \
+    TArea.h \
+    TAStar.h \
     TBuffer.h \
-    TriggerUnit.h \
-    TLabel.h \
+    TCommandLine.h \
+    TConsole.h \
+    TDebug.h \
     TEasyButtonBar.h \
+    TEvent.h \
+    TFlipButton.h \
     TForkedProcess.h \
-    dlgColorTrigger.h \
+    THighlighter.h \
+    TLabel.h \
+    TLuaInterpreter.h \
+    TimerUnit.h \
+    TKey.h \
+    TMap.h \
+    TMatchState.h \
+    Tree.h \
+    TriggerUnit.h \
+    TRoom.h \
+    TRoomDB.h \
+    TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
-    dlgNotepad.h \
-    THighlighter.h \
-    dlgComposer.h \
-    TRoom.h \
-    TArea.h \
-    TMap.h \
-    glwidget.h \
-    dlgMapper.h \
-    Tree.h \
-    dlgIRC.h \
-    T2DMap.h \
-    dlgRoomExits.h \
-    dlgPackageExporter.h \
-    exitstreewidget.h \
-    TRoomDB.h \
+    TTextEdit.h \
+    TTimer.h \
+    TToolBar.h \
+    TTreeWidget.h \
+    TTreeWidgetItem.h \
+    TTrigger.h \
     TVar.h \
-    LuaInterface.h \
-    VarUnit.h \
-    dlgVarsMainArea.h \
-    irc/include/ircbuffer.h \
-    irc/include/irc.h \
-    irc/include/ircsession.h \
-    irc/include/ircutil.h
+    VarUnit.h
 
 
-FORMS += ui/connection_profiles.ui \
+FORMS += \
+    ui/about_dialog.ui \
+    ui/actions_main_area.ui \
+    ui/aliases_main_area.ui \
+    ui/color_trigger.ui \
+    ui/composer.ui \
+    ui/connection_profiles.ui \
+    ui/custom_lines.ui \
+    ui/dlgPackageExporter.ui \
+    ui/extended_search_area.ui \
+    ui/irc.ui \
+    ui/keybindings_main_area.ui \
+    ui/lacking_mapper_script.ui \
     ui/main_window.ui \
-    ui/trigger_editor.ui \
-    ui/options_area_triggers.ui \
-    ui/options_area_timers.ui \
+    ui/mapper.ui \
+    ui/mapper_room_color.ui \
+    ui/module_manager.ui \
+    ui/notes_editor.ui \
+    ui/options_area_actions.ui \
     ui/options_area_aliases.ui \
     ui/options_area_scripts.ui \
-    ui/triggers_main_area.ui \
-    ui/scripts_main_area.ui \
-    ui/aliases_main_area.ui \
-    ui/system_message_area.ui \
-    ui/source_editor_area.ui \
-    ui/extended_search_area.ui \
-    ui/actions_main_area.ui \
-    ui/options_area_actions.ui \
-    ui/timers_main_area.ui \
-    ui/about_dialog.ui \
-    ui/keybindings_main_area.ui \
-    ui/color_trigger.ui \
-    ui/notes_editor.ui \
-    ui/trigger_pattern_edit.ui \
-    ui/composer.ui \
-    ui/mapper.ui \
-    ui/profile_preferences.ui \
-    ui/irc.ui \
-    ui/mapper_room_color.ui \
-    ui/room_exits.ui \
-    ui/lacking_mapper_script.ui \
+    ui/options_area_timers.ui \
+    ui/options_area_triggers.ui \
     ui/package_manager.ui \
-    ui/module_manager.ui \
     ui/package_manager_unpack.ui \
-    ui/dlgPackageExporter.ui \
-    ui/custom_lines.ui \
-    ui/vars_main_area.ui \
-    ui/custom_lines_properties.ui
+    ui/profile_preferences.ui \
+    ui/room_exits.ui \
+    ui/scripts_main_area.ui \
+    ui/source_editor_area.ui \
+    ui/system_message_area.ui \
+    ui/timers_main_area.ui \
+    ui/trigger_editor.ui \
+    ui/trigger_pattern_edit.ui \
+    ui/triggers_main_area.ui \
+    ui/vars_main_area.ui
 
+# To use QtCreator as a Unix installer the generated Makefile must have the
+# following lists of files EXPLICITLY stated - IT IS NOT WORKABLE IF ONLY
+# A PATH IS GIVEN AS AN ENTRY TO THE .files LIST - as was the case for a
+# previous incarnation for macs.
+#
+# Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
+# choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
+# that - if you are NOT runnning QT Creator as root, which is the safest way
+# (i.e safe = NOT root) - against:
+# "Override <path to?>/make" has the entry: "/usr/bin/sudo"
+# without the quotes, assuming /usr/bin is the location of "sudo"
+# and against:
+# "Make arguments" has the entry: "-A sh -c '/usr/bin/make install'"
+# without the DOUBLE quotes but with the SINGLE quotes, assuming /usr/bin is the
+# location of "make"
+#
+# This then will run "make install" via sudo with root privileges when you use
+# the relevant "Deploy" option on the "Build" menu - and will ask you for YOUR
+# password via a GUI dialog if needed - so that the files can be placed in the
+# specified system directories to which a normal user (you?) does not have write
+# access normally.
+
+# Main lua files:
+LUA.files = \
+    $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
+    $${PWD}/mudlet-lua/lua/StringUtils.lua \
+    $${PWD}/mudlet-lua/lua/TableUtils.lua \
+    $${PWD}/mudlet-lua/lua/DebugTools.lua \
+    $${PWD}/mudlet-lua/lua/DB.lua \
+    $${PWD}/mudlet-lua/lua/GUIUtils.lua \
+    $${PWD}/mudlet-lua/lua/Other.lua \
+    $${PWD}/mudlet-lua/lua/GMCP.lua
+LUA.depends = mudlet
+
+# Geyser lua files:
+LUA_GEYSER.files = \
+    $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserLabel.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserHBox.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua
+LUA_GEYSER.depends = mudlet
+
+# Documentation files:
+# DOCS.files =
+
+
+# Pull the docs and lua files into the project so they show up in the Qt Creator project files list
+OTHER_FILES += \
+#     ${DOCS.files} \
+    ${LUA.files} \
+    ${LUA_GEYSER.files} \
+    ../README \
+    ../COMPILE \
+    ../COPYING \
+    ../Doxyfile \
+    ../INSTALL
+
+# Unix Makefile installer:
+# lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
+# or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
+# to provide a graphic password requestor needed to install software
+unix {
+# say what we want to get installed by "make install" (executed by 'deployment' step):
+    INSTALLS += \
+        target \
+        LUA \
+        LUA_GEYSER
+}
+# Other OS's have other installation routines - perhap they could be duplicated here?

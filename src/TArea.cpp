@@ -514,7 +514,7 @@ void TArea::removeRoom( int room )
 {
     QTime time;
     time.start();
-    TRoom * pR = mpRoomDB->getRoom( room );
+//    TRoom * pR = mpRoomDB->getRoom( room );
     rooms.removeOne( room );
     exits.remove( room );
     qDebug()<<"Area removal took"<<time.elapsed();
