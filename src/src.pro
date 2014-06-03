@@ -20,9 +20,7 @@ VERSION = 3.0.1
 # (it is NOT a Qt built-in variable) for a release build or, if you are
 # distributing modified code, it would be useful if you could put something to
 # distinguish the version:
-## I'll tag MY versions with something containing "slysven" but please edit it
-## to something else and take this 2 line extra comment out! 8-) - Slysven:
-BUILD = -rc2-slysven_versionData
+BUILD = -rc2_chris7_mudletdev
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -52,7 +50,6 @@ LIBLUA = -llua5.1
 #exists(/usr/lib/x86_64-linux-gnu/libluajit-5.1.a):LIBLUA = -L/usr/lib/x86_64-linux-gnu/ -lluajit-5.1
 
 TEMPLATE = app
-TARGET = mudlet
 RESOURCES = mudlet_alpha.qrc
 
 # try -O1 —fsanitize=address for AddressSanitizer w/ clang
