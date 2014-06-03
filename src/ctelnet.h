@@ -33,6 +33,7 @@ copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
 #include "dlgComposer.h"
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QStringList>
 
 const char TN_SE = 240;
 const char TN_NOP = 241;
@@ -119,6 +120,7 @@ public:
   QNetworkAccessManager * mpDownloader;
   QProgressDialog *   mpProgressDialog;
   QString             mServerPackage;
+    void                postMessage( QString msg );
 
 public slots:
   void                setDownloadProgress( qint64, qint64 );
@@ -138,7 +140,6 @@ private:
                       cTelnet(){;}
   void                initStreamDecompressor();
   int                 decompressBuffer( char * dirtyBuffer, int length );
-  void                postMessage( QString msg );
   void                reset();
   void                connectionFailed();
 
@@ -200,6 +201,7 @@ private:
   bool                enableATCP;
   bool                enableGMCP;
   bool                enableChannel102;
+    QStringList         messageStack;
 
 
 };
