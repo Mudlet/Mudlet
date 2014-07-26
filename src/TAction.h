@@ -53,7 +53,6 @@ public:
     virtual          ~TAction();
                      TAction( TAction * parent, Host * pHost );
                      TAction( QString name, Host * pHost );
-                     TAction & clone(const TAction & );
     void             compileAll();
     QString          getName()                                 { return mName; }
     void             setName( QString name )                   { mName = name; }
@@ -101,7 +100,6 @@ public:
     void             expandToolbar( mudlet * pMainWindow,
                                     TEasyButtonBar * pT,
                                     QMenu * menu );
-    bool             isClone(TAction & ) const;
     TToolBar *       mpToolBar;
     TEasyButtonBar * mpEasyButtonBar;
     int              mButtonState;

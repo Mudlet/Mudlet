@@ -52,7 +52,6 @@ public:
     virtual          ~TScript();
                      TScript( TScript * parent, Host * pHost );
                      TScript( QString name, Host * pHost );
-                     TScript& clone(const TScript& );
 
     QString          getName()                                         { return mName; }
     void             setName( QString name )                           { mName = name; }
@@ -70,7 +69,6 @@ public:
     void             callEventHandler( TEvent * );
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()                             { return mEventHandlerList; }
-    bool             isClone(TScript &b) const;
     bool             exportItem;
     bool            mModuleMasterFolder;
 private:

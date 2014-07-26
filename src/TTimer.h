@@ -51,7 +51,6 @@ public:
                     ~TTimer();
                      TTimer( TTimer * parent, Host * pHost );
                      TTimer( QString name, QTime time, Host * pHost );
-                     TTimer& clone(const TTimer& );
     void             compileAll();
     QString &        getName()                       { return mName; }
     void             setName( QString name );
@@ -82,7 +81,6 @@ public:
     void             disableTimer( qint64 );
     void             killTimer();
 
-    bool             isClone(TTimer &b) const;
     bool             isOffsetTimer();
     bool             mRegisteredAnonymousLuaFunction;
     bool             exportItem;

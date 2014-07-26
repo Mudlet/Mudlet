@@ -75,7 +75,6 @@ public:
     virtual          ~TTrigger();
                      TTrigger( TTrigger * parent, Host * pHost );
                      TTrigger( QString name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
-                     TTrigger & clone( const TTrigger & );
                       //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
                       //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
     QString          getCommand()                    { return mCommand; }
@@ -147,7 +146,6 @@ public:
     int              mColorTriggerFgAnsi;
     int              mColorTriggerBgAnsi;
     int              mKeepFiring;
-    bool             isClone( TTrigger & ) const;
     Host *           mpHost;
     QString                                mName;
     bool                                   mIsTempTrigger;

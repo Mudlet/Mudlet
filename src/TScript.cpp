@@ -176,23 +176,3 @@ void TScript::execute()
 
 
 
-TScript& TScript::clone(const TScript& b)
-{
-    mName = b.mName;
-    mScript = b.mScript;
-    mIsFolder = b.mIsFolder;
-    mpHost = b.mpHost;
-    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
-    mEventHandlerList = b.mEventHandlerList;
-    return *this;
-}
-
-bool TScript::isClone(TScript &b) const
-{
-    return ( mName == b.mName
-             && mScript == b.mScript
-             && mIsFolder == b.mIsFolder
-             && mpHost == b.mpHost
-             && mNeedsToBeCompiled == b.mNeedsToBeCompiled
-             && mEventHandlerList == b.mEventHandlerList );
-}

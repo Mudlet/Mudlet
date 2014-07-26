@@ -315,30 +315,6 @@ void TAlias::setRegexCode( QString code )
     mpRegex = re;
 }
 
-TAlias& TAlias::clone(const TAlias& b)
-{
-    mName = b.mName;
-    mCommand = b.mCommand;
-    mRegexCode = b.mRegexCode;
-    mpRegex = b.mpRegex;
-    mScript = b.mScript;
-    mIsFolder = b.mIsFolder;
-    mpHost = b.mpHost;
-    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
-    return *this;
-}
-
-bool TAlias::isClone(TAlias &b) const {
-    return (mName == b.mName
-            && mCommand == b.mCommand
-            && mRegexCode == b.mRegexCode
-            && mpRegex == b.mpRegex
-            && mScript == b.mScript
-            && mIsFolder == b.mIsFolder
-            && mpHost == b.mpHost
-            && mNeedsToBeCompiled == b.mNeedsToBeCompiled );
-}
-
 bool TAlias::registerAlias()
 {
     if( ! mpHost )
