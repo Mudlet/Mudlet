@@ -5,7 +5,6 @@
 #include "ui_irc.h"
 
 #ifdef Q_CC_MSVC
-    #define IRC_SHARED
     #include <ircsession.h>
 #else
     #include "irc/include/ircsession.h"

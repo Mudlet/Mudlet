@@ -45,13 +45,16 @@
 //    #include "lua-yajl2-linux.c"
 //#endif
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
+#ifndef LUA_CPP
 }
-
+#endif
 /*//for map var access
 union mVarTypes {
     int * i;
@@ -62,10 +65,14 @@ union mVarTypes {
 };*/
 
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     int luaopen_yajl(lua_State*);
+#ifndef LUA_CPP
 }
+#endif
 
 using namespace std;
 
@@ -8215,11 +8222,13 @@ int TLuaInterpreter::downloadFile( lua_State * L )
     QString _url = url.c_str();
     QString _path = path.c_str();
     QNetworkRequest request = QNetworkRequest( QUrl( _url ) );
+#ifndef QT_NO_OPENSSL
     if ( _path.contains("https") )
     {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
         request.setSslConfiguration( config );
     }
+#endif
     QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( request );
     pHost->mLuaInterpreter.downloadMap[reply] = _path;
     return 0;
@@ -10562,7 +10571,6 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
         return false;
     lua_State * L = pGlobalLua;
     int error = luaL_dostring(L, QString("return " + function).toLatin1().data());
-    QString n;
     if( error != 0 )
     {
         string e;
@@ -10579,7 +10587,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
     {
         if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
         {
-            lua_pushnumber( L, pE->mArgumentList[i].toInt() );
+            lua_pushnumber( L, pE->mArgumentList[i].toDouble() );
         }
         else
         {
@@ -10596,7 +10604,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
         }
         QString _n = "event handler function";
         logError( e, _n, function );
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< function << " (" << function <<") ERROR:"<<e.c_str()<<"\n">>0;}
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< function << " (" << function <<") ERROR: "<<e.c_str()<<"\n">>0;}
     }
     lua_pop( L, lua_gettop( L ) );
     if( error == 0 )

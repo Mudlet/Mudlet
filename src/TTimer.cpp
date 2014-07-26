@@ -475,29 +475,3 @@ void TTimer::killTimer()
     deactivate();
     mpTimer->stop();
 }
-
-
-TTimer& TTimer::clone(const TTimer & b)
-{
-    mName = b.mName;
-    mScript = b.mScript;
-    mTime = b.mTime;
-    mCommand = b.mCommand;
-    mIsFolder = b.mIsFolder;
-    mpHost = b.mpHost;
-    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
-    mIsTempTimer = b.mIsTempTimer;
-    return *this;
-}
-
-bool TTimer::isClone( TTimer & b ) const
-{
-    return( mName == b.mName
-            && mScript == b.mScript
-            && mTime == b.mTime
-            && mCommand == b.mCommand
-            && mIsFolder == b.mIsFolder
-            && mpHost == b.mpHost
-            && mNeedsToBeCompiled == b.mNeedsToBeCompiled
-            && mIsTempTimer == b.mIsTempTimer );
-}

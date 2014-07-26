@@ -42,11 +42,15 @@
 #include "zipconf.h"
 #include <errno.h>
 
+#ifndef LUA_CPP
 extern "C" {
+#endif
     #include "lua.h"
     #include "lualib.h"
     #include "lauxlib.h"
+#ifndef LUA_CPP
 }
+#endif
 
 
 Host::Host( int port, QString hostname, QString login, QString pass, int id )

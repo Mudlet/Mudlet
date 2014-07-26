@@ -293,10 +293,8 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        qDebug()<<"ActionUnit::getToolBarList(): Action name:"<<(*it)->getName();
         if( (*it)->mPackageName.size() > 0 )
         {
-            qDebug()<<"ActionUnit::getToolBarList(): ACTION PACKAGE found! name:"<<(*it)->mPackageName;
             typedef list<TAction *>::iterator I3;
             for( I3 it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
@@ -367,11 +365,9 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        qDebug()<<"ActionUnit::getEasyButtonBarList(): Action name:"<<(*it)->getName();
 
         if( (*it)->mPackageName.size() > 0 )
         {
-            qDebug()<<"ActionUnit::getEasyButtonBarList(): ACTION PACKAGE found! name:"<<(*it)->mPackageName;
             typedef list<TAction *>::iterator I3;
             for( I3 it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
@@ -588,7 +584,6 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
 
 void ActionUnit::updateToolbar()
 {
-    qDebug()<<"ActionUnit::updateToolBar()";
     getToolBarList();
     getEasyButtonBarList();
 }

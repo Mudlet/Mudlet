@@ -238,7 +238,7 @@ HEADERS += \
     dlgSourceEditorArea.h \
     dlgSystemMessageArea.h \
     dlgTriggerEditor.h \
-    dlgTriggers_main_area.h \
+    dlgTriggersMainArea.h \
     dlgTriggerPatternEdit.h \
     dlgTimersMainArea.h \
     dlgVarsMainArea.h \
@@ -304,7 +304,6 @@ FORMS += \
     ui/dlgPackageExporter.ui \
     ui/extended_search_area.ui \
     ui/irc.ui \
-    ui/keybindings_main_area.ui \
     ui/lacking_mapper_script.ui \
     ui/main_window.ui \
     ui/mapper.ui \

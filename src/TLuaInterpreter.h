@@ -31,12 +31,16 @@
 #include <QThread>
 #include <QTimer>
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     #include <lua.h>
     #include <lualib.h>
     #include <lauxlib.h>
+#ifndef LUA_CPP
 }
+#endif
 
 #include <QMutexLocker>
 #include <queue>

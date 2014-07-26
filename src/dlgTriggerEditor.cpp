@@ -654,7 +654,7 @@ void dlgTriggerEditor::slot_toggleHiddenVars( )
     if ( showHiddenVars )
         toggleHiddenVarsButton->setText( "Hide Hidden Variables" );
     else
-        toggleHiddenVarsButton->setText( " Show Hidden Variables" );
+        toggleHiddenVarsButton->setText( "Show Hidden Variables" );
     repopulateVars();
 }
 
@@ -2721,10 +2721,6 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
     mpTriggersMainArea->spinBox_linemargin->setValue( 0 );
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
-
-    QPalette pal = palette();
-    QColor color =  pal.color( QPalette::Button );
-    QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
 
     mpTriggersMainArea->pushButtonFgColor->setChecked( false );
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
@@ -6008,7 +6004,7 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
             pItem->setIcon( 0, iconError );
             showError( pT->getError() );
         }
-        qDebug()<<"WARNING: dlgTriggerEditor::expand_child_timers() called name:"<<pT->getName();
+//        qDebug()<<"WARNING: dlgTriggerEditor::expand_child_timers() called name:"<<pT->getName();
 //        if( pT->isActive() )
 //        {
 //            pT->enableTimer();// pT->getName() );
