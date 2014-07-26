@@ -1,191 +1,206 @@
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
+
 SET(mudlet_RCCS mudlet_alpha.qrc)
-SET( mudlet_SRCS 
-TConsole.cpp
+
+SET(mudlet_SRCS
+    ActionUnit.cpp
+    AliasUnit.cpp
     ctelnet.cpp
-    main.cpp
+    dlgAboutDialog.cpp
+    dlgActionMainArea.cpp
+    dlgAliasMainArea.cpp
+    dlgColorTrigger.cpp
+    dlgComposer.cpp
+    dlgConnectionProfiles.cpp
+    dlgIrc.cpp
+    dlgKeysMainArea.cpp
+    dlgMapper.cpp
+    dlgNotepad.cpp
+    dlgOptionsAreaAction.cpp
+    dlgOptionsAreaAlias.cpp
+    dlgOptionsAreaScripts.cpp
+    dlgOptionsAreaTimers.cpp
+    dlgOptionsAreaTriggers.cpp
+    dlgPackageExporter.cpp
+    dlgProfilePreferences.cpp
+    dlgRoomExits.cpp
+    dlgScriptsMainArea.cpp
+    dlgSearchArea.cpp
+    dlgSourceEditorArea.cpp
+    dlgSystemMessageArea.cpp
+    dlgTimersMainArea.cpp
+    dlgTriggerEditor.cpp
+    dlgTriggerPatternEdit.cpp
+    dlgTriggersMainArea.cpp
+    dlgVarsMainArea.cpp
+    EAction.cpp
+    exitstreewidget.cpp
+    FontManager.cpp
+    glwidget.cpp
     Host.cpp
     HostManager.cpp
     HostPool.cpp
-    dlgConnectionProfiles.cpp
-    dlgTriggerEditor.cpp
-    TTrigger.cpp
-    TriggerUnit.cpp
-    TLuaInterpreter.cpp
-    dlgTriggersMainArea.cpp
-    dlgOptionsAreaTriggers.cpp
-    dlgOptionsAreaTimers.cpp
-    dlgOptionsAreaScripts.cpp
-    TCommandLine.cpp
-    TTreeWidget.cpp
-    TTreeWidgetItem.cpp
-    TTimer.cpp
-    TScript.cpp
-    TAlias.cpp
-    dlgTimersMainArea.cpp
-    dlgSystemMessageArea.cpp
-    dlgSourceEditorArea.cpp
-    TimerUnit.cpp
-    ScriptUnit.cpp
-    AliasUnit.cpp
-    dlgScriptsMainArea.cpp
-    dlgAliasMainArea.cpp
-    dlgOptionsAreaAlias.cpp
-    dlgSearchArea.cpp
-    TAction.cpp
-    ActionUnit.cpp
-    dlgActionMainArea.cpp
-    dlgOptionsAreaAction.cpp
-    EAction.cpp
-    dlgAboutDialog.cpp
-    TDebug.cpp
-    dlgKeysMainArea.cpp
-    TKey.cpp
     KeyUnit.cpp
-    dlgProfilePreferences.cpp
-    TTextEdit.cpp
-    XMLexport.cpp
-    XMLimport.cpp
-    FontManager.cpp
-    TFlipButton.cpp
-    TToolBar.cpp
-    TLabel.cpp
+    LuaInterface.cpp
+    main.cpp
+    mudlet.cpp
+    ScriptUnit.cpp
+    T2DMap.cpp
+    TAction.cpp
+    TAlias.cpp
+    TArea.cpp
+    TBuffer.cpp
+    TCommandLine.cpp
+    TConsole.cpp
+    TDebug.cpp
     TEasyButtonBar.cpp
+    TFlipButton.cpp
     TForkedProcess.cpp
-    dlgColorTrigger.cpp
-    dlgTriggerPatternEdit.cpp
+    THighlighter.cpp
+    TimerUnit.cpp
+    TKey.cpp
+    TLabel.cpp
+    TLuaInterpreter.cpp
+    TMap.cpp
+    TriggerUnit.cpp
+    TRoom.cpp
+    TRoomDB.cpp
+    TScript.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
-    mudlet.cpp
-    dlgNotepad.cpp
-    THighlighter.cpp
-    dlgComposer.cpp
-    TArea.cpp
-    glwidget.cpp
-    dlgMapper.cpp
-    TRoom.cpp
-    TMap.cpp
-    TBuffer.cpp
-    T2DMap.cpp
-    dlgRoomExits.cpp
-	dlgIrc.cpp
-    dlgPackageExporter.cpp
-    dlgVarsMainArea.cpp
-    exitstreewidget.cpp
-    LuaInterface.cpp
-    TRoomDB.cpp
+    TTextEdit.cpp
+    TTimer.cpp
+    TToolBar.cpp
+    TTreeWidget.cpp
+    TTreeWidgetItem.cpp
+    TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
+    XMLexport.cpp
+    XMLimport.cpp
 )
 
-SET(mudlet_UIS 
-ui/connection_profiles.ui
+SET(mudlet_UIS
+    ui/about_dialog.ui
+    ui/actions_main_area.ui
+    ui/aliases_main_area.ui
+    ui/color_trigger.ui
+    ui/composer.ui
+    ui/connection_profiles.ui
+    ui/dlgPackageExporter.ui
+    ui/extended_search_area.ui
+    ui/irc.ui
+    ui/keybindings_main_area.ui
+    ui/lacking_mapper_script.ui
     ui/main_window.ui
-    ui/trigger_editor.ui
-    ui/options_area_triggers.ui
-    ui/options_area_timers.ui
+    ui/mapper.ui
+    ui/mapper_room_color.ui
+    ui/notes_editor.ui
+    ui/options_area_actions.ui
     ui/options_area_aliases.ui
     ui/options_area_scripts.ui
-    ui/triggers_main_area.ui
-    ui/scripts_main_area.ui
-    ui/aliases_main_area.ui
-    ui/system_message_area.ui
-    ui/source_editor_area.ui
-    ui/extended_search_area.ui
-    ui/actions_main_area.ui
-    ui/options_area_actions.ui
-    ui/timers_main_area.ui
-    ui/about_dialog.ui
-    ui/keybindings_main_area.ui
-    ui/color_trigger.ui
-    ui/notes_editor.ui
-    ui/trigger_pattern_edit.ui
-    ui/composer.ui
-    ui/mapper.ui
+    ui/options_area_timers.ui
+    ui/options_area_triggers.ui
     ui/profile_preferences.ui
-    ui/mapper_room_color.ui
     ui/room_exits.ui
-    ui/lacking_mapper_script.ui
-    ui/dlgPackageExporter.ui
-    ui/irc.ui
+    ui/scripts_main_area.ui
+    ui/source_editor_area.ui
+    ui/system_message_area.ui
+    ui/timers_main_area.ui
+    ui/triggers_main_area.ui
+    ui/trigger_editor.ui
+    ui/trigger_pattern_edit.ui
     ui/vars_main_area.ui
 )
 
 SET(mudlet_MOC_HDRS 
-mudlet.h
-    TTimer.h
-    EAction.h
-    TConsole.h
     ctelnet.h
-    Host.h
-    TMap.h
-    TAStar.h
-    HostManager.h
-    HostPool.h
-    dlgConnectionProfiles.h
-    dlgTriggerEditor.h
-    TTrigger.h
-    TLuaInterpreter.h
-    dlgTriggers_main_area.h
-    dlgOptionsAreaTriggers.h
-    dlgTriggerPatternEdit.h
-    TCommandLine.h
-    TTreeWidget.h
-    TTreeWidgetItem.h
-    TScript.h
-    TAlias.h
-    dlgTimersMainArea.h
-    dlgSourceEditorArea.h
-    dlgSystemMessageArea.h
-    TimerUnit.h
-    ScriptUnit.h
-    AliasUnit.h
-    dlgScriptsMainArea.h
+    dlgAboutDialog.h
+    dlgActionMainArea.h
     dlgAliasMainArea.h
+    dlgColorTrigger.h
+    dlgComposer.h
+    dlgConnectionProfiles.h
+    dlgIrc.h
+    dlgKeysMainArea.h
+    dlgMapper.h
+    dlgNotepad.h
+    dlgOptionsAreaAction.h
     dlgOptionsAreaAlias.h
     dlgOptionsAreaScripts.h
     dlgOptionsAreaTimers.h
-    dlgSearchArea.h
-    TAction.h
-    ActionUnit.h
-    dlgActionMainArea.h
-    dlgOptionsAreaAction.h
-    dlgAboutDialog.h
-    TMatchState.h
-    TEvent.h
-    TDebug.h
-    dlgKeysMainArea.h
-    TKey.h
-    KeyUnit.h
+    dlgOptionsAreaTriggers.h
+    dlgPackageExporter.h
     dlgProfilePreferences.h
-    TTextEdit.h
-    TFlipButton.h
-    TToolBar.h
-    TBuffer.h
-    TriggerUnit.h
-    TLabel.h
+    dlgRoomExits.h
+    dlgScriptsMainArea.h
+    dlgSearchArea.h
+    dlgSourceEditorArea.h
+    dlgSystemMessageArea.h
+    dlgTimersMainArea.h
+    dlgTriggerEditor.h
+    dlgTriggerPatternEdit.h
+    dlgTriggersMainArea.h
+    dlgVarsMainArea.h
+    EAction.h
+    exitstreewidget.h
+    glwidget.h
+    mudlet.h
+    T2DMap.h
+    TCommandLine.h
+    TConsole.h
     TEasyButtonBar.h
     TForkedProcess.h
-    dlgColorTrigger.h
-    TSplitter.h
-    TSplitterHandle.h
-    dlgNotepad.h
     THighlighter.h
-    dlgComposer.h
-    TRoom.h
-    TArea.h
-    TMap.h
-    glwidget.h
-    dlgMapper.h
-    Tree.h
-    T2DMap.h
-    dlgRoomExits.h
-	dlgIrc.h
-    dlgPackageExporter.h
-    dlgVarsMainArea.h
-    exitstreewidget.h
+    TLabel.h
+    TLuaInterpreter.h
+    TSplitter.h
+    TTextEdit.h
+    TToolBar.h
+    TTreeWidget.h
 )
+
+SET(mudlet_HDRS
+    ActionUnit.h
+    AliasUnit.h
+    FontManager.h
+    Host.h
+    HostManager.h
+    HostPool.h
+    KeyUnit.h
+    LuaInterface.h
+    ScriptUnit.h
+    TAction.h
+    TAlias.h
+    TArea.h
+    TAstar.h
+    TBuffer.h
+    TDebug.h
+    TEvent.h
+    TFlipButton.h
+    TimerUnit.h
+    TKey.h
+    TMap.h
+    TMatchState.h
+    Tree.h
+    TriggerUnit.h
+    TRoom.h
+    TRoomDB.h
+    TScript.h
+    TSplitterHandle.h
+    TTimer.h
+    TTreeWidgetItem.h
+    TTrigger.h
+    TVar.h
+    VarUnit.h
+    XMLexport.h
+    XMLimport.h
+)
+
+if(MSVC)
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP")
+endif(MSVC)
 
 SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
@@ -266,37 +281,38 @@ ENDIF(LUA_CPP)
 add_subdirectory(irc)
 
 INCLUDE_DIRECTORIES(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${mudlet_BINARY_DIR}/src
     ${Qt5Core_INCLUDE_DIRS}
     ${Qt5Widgets_INCLUDE_DIRS}
     ${Qt5Network_INCLUDE_DIRS}
     ${Qt5OpenGL_INCLUDE_DIRS}
     ${Qt5Multimedia_INCLUDE_DIRS}
     ${Qt5UiTools_INCLUDE_DIRS}
-)
-
-INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} ${mudlet_BINARY_DIR}/src
-    ${PCRE_INCLUDE_DIR}
-    ${LUA_INCLUDE_DIR}
-    ${ZLIB_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
-    ${HUNSPELL_INCLUDE_DIR}
-    ${YAJL_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/irc/include
+    ${HUNSPELL_INCLUDE_DIR}
+    ${LUA_INCLUDE_DIR}
+    ${PCRE_INCLUDE_DIR}
+    ${YAJL_INCLUDE_DIR}
     ${ZIP_INCLUDE_DIR}
+    ${ZLIB_INCLUDE_DIR}
 )
-
-IF(CMAKE_COMPILER_IS_GNUCXX)
-  ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-Wno-deprecated  -DUNICODE  -D_UNICODE")
-ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
-add_executable(mudlet WIN32 ${mudlet_SRCS} ${mudlet_UIS_H} ${mudlet_MOC_SRCS} ${mudlet_RCC_SRCS})
+add_executable(mudlet WIN32
+    ${mudlet_SRCS}
+    ${mudlet_MOC_SRCS}
+    ${mudlet_RCC_SRCS}
+    ${mudlet_HDRS}
+    ${mudlet_UIS_H}
+    ${mudlet_MOC_HDRS}
+)
 
-TARGET_LINK_LIBRARIES( 
-mudlet 
+TARGET_LINK_LIBRARIES(mudlet
     ${Qt5Core_QTMAIN_LIBRARIES}
     ${Qt5Core_LIBRARIES}
     ${Qt5Widgets_LIBRARIES}
@@ -304,19 +320,13 @@ mudlet
     ${Qt5Multimedia_LIBRARIES}
     ${Qt5OpenGL_LIBRARIES}
     ${Qt5UiTools_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    ${LUA_LIBRARIES}
-    ${PCRE_LIBRARIES}
-    ${HUNSPELL_LIBRARIES}
-    ${OPENGL_LIBRARIES}
-    ${YAJL_LIBRARIES}
-    irccqt
     ${Boost_LIBRARIES}
+    ${HUNSPELL_LIBRARIES}
+    ${LUA_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    ${PCRE_LIBRARIES}
+    ${YAJL_LIBRARIES}
     ${ZIP_LIBRARY}
+    ${ZLIB_LIBRARIES}
+    irccqt
 )
-
-install( PROGRAMS mudlet DESTINATION "/usr/local/bin" )
-install( FILES LuaGlobal.lua mudlet_documentation.html fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT fonts/ttf-bitstream-vera-1.10/local.conf fonts/ttf-bitstream-vera-1.10/README.TXT fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT fonts/ttf-bitstream-vera-1.10/VeraBd.ttf fonts/ttf-bitstream-vera-1.10/VeraBI.ttf fonts/ttf-bitstream-vera-1.10/VeraIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf fonts/ttf-bitstream-vera-1.10/VeraMono.ttf fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf fonts/ttf-bitstream-vera-1.10/VeraSe.ttf fonts/ttf-bitstream-vera-1.10/Vera.ttf DESTINATION "/usr/local/share/mudlet" )
-
-
-
