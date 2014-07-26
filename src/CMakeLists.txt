@@ -13,7 +13,7 @@ SET(mudlet_SRCS
     dlgColorTrigger.cpp
     dlgComposer.cpp
     dlgConnectionProfiles.cpp
-    dlgIrc.cpp
+    dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapper.cpp
     dlgNotepad.cpp
@@ -122,7 +122,7 @@ SET(mudlet_MOC_HDRS
     dlgColorTrigger.h
     dlgComposer.h
     dlgConnectionProfiles.h
-    dlgIrc.h
+    dlgIRC.h
     dlgKeysMainArea.h
     dlgMapper.h
     dlgNotepad.h
