@@ -307,7 +307,6 @@ FORMS += \
     ui/lacking_mapper_script.ui \
     ui/main_window.ui \
     ui/mapper.ui \
-    ui/mapper_room_color.ui \
     ui/module_manager.ui \
     ui/notes_editor.ui \
     ui/options_area_actions.ui \
