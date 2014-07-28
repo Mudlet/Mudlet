@@ -1,0 +1,15 @@
+language: cpp
+compiler:
+  - gcc
+before_install:
+  - sudo apt-add-repository ppa:ubuntu-sdk-team/ppa
+  - sudo apt-get update
+  - git clone https://github.com/lloyd/yajl.git
+install:
+  - sudo apt-get install build-essential qtbase5-dev qt5-default qtmultimedia5-dev qttools5-dev libhunspell-dev lua5.1 liblua5.1-0-dev libpcre3-dev libboost-dev zlib1g-dbg zlib1g-dev cmake libzip-dev libpulse-dev
+  - cd yajl
+  - ./configure
+  - sudo make install
+  - cd ..
+  - cd src
+  - qmake && make -j2
