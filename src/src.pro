@@ -305,6 +305,7 @@ FORMS += \
     ui/extended_search_area.ui \
     ui/irc.ui \
     ui/lacking_mapper_script.ui \
+    ui/keybindings_main_area.ui \
     ui/main_window.ui \
     ui/mapper.ui \
     ui/module_manager.ui \
