@@ -95,7 +95,6 @@ SET(mudlet_UIS
     ui/lacking_mapper_script.ui
     ui/main_window.ui
     ui/mapper.ui
-    ui/mapper_room_color.ui
     ui/notes_editor.ui
     ui/options_area_actions.ui
     ui/options_area_aliases.ui
@@ -280,6 +279,10 @@ ENDIF(LUA_CPP)
 
 add_subdirectory(irc)
 
+ADD_DEFINITIONS(-DQT_NO_STL)
+
+ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
+
 INCLUDE_DIRECTORIES(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${mudlet_BINARY_DIR}/src
@@ -313,7 +316,6 @@ add_executable(mudlet WIN32
 )
 
 TARGET_LINK_LIBRARIES(mudlet
-    ${Qt5Core_QTMAIN_LIBRARIES}
     ${Qt5Core_LIBRARIES}
     ${Qt5Widgets_LIBRARIES}
     ${Qt5Network_LIBRARIES}
