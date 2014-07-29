@@ -12,4 +12,5 @@ install:
   - sudo make install
   - cd ..
   - cd src
+script:
   - qmake && make -j2
