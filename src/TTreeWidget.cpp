@@ -279,11 +279,11 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                 {
                     if( pTChild->shouldBeActive() )
                     {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png") ), QIcon::Normal, QIcon::Off );
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/document-execute.png") ), QIcon::Normal, QIcon::Off );
                     }
                     else
                     {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png") ), QIcon::Normal, QIcon::Off );
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/document-stop.png") ), QIcon::Normal, QIcon::Off );
                     }
                 }
                 QTreeWidgetItem * pParent = itemFromIndex( parent );
