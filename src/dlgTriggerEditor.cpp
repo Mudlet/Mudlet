@@ -467,8 +467,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addTriggerGroupMenu->addAction( addAliasGroupMenuAction );
 
     toolBar = new QToolBar();
-    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
-    toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     toolBar->setMovable(true);
     toolBar->addAction( toggleActiveAction );
     toolBar->addAction( saveAction );
@@ -485,11 +483,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( saveProfileAsAction );
     toolBar->addAction( profileSaveAction );
 
-
-
     toolBar2 = new QToolBar();
-    toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
     connect(toggleHiddenVarsButton, SIGNAL(clicked()), this, SLOT(slot_toggleHiddenVars()));
 
     connect(mpVarsMainArea->hideVariable, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar( bool )));
@@ -507,7 +501,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar2->addAction( showDebugAreaAction );
 
     toolBar2->setMovable( true );
-
     toolBar2->setOrientation(Qt::Vertical);
 
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2 );
@@ -560,7 +553,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSearchArea->hide();
 
     readSettings();
-    setTBIconSize( 0 );
+    slot_setToolbarIconSize( mudlet::self()->mMainIconSize );
+    slot_setTreeWidgetIconSize( mudlet::self()->mTEFolderIconSize );
 
     tree_widget_search_results_main->setColumnCount( 4 );
     QStringList labelList;
@@ -599,6 +593,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     }
     showHiddenVars = false;
 
+    connect( mudlet::self(), SIGNAL( signal_resizeToolbarIcons( int ) ), this, SLOT( slot_setToolbarIconSize( int ) ) );
+    connect( mudlet::self(), SIGNAL( signal_resizeTreeIcons( int ) ), this, SLOT( slot_setTreeWidgetIconSize( int ) ) );
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVar( bool status )
@@ -643,7 +639,7 @@ void dlgTriggerEditor::slot_viewErrorsAction()
 }
 
 
-void dlgTriggerEditor::setTBIconSize( int s )
+void dlgTriggerEditor::slot_setToolbarIconSize( int s )
 {
     if( mudlet::self()->mMainIconSize > 2 )
     {
@@ -655,15 +651,19 @@ void dlgTriggerEditor::setTBIconSize( int s )
         toolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
         toolBar2->setToolButtonStyle( Qt::ToolButtonIconOnly );
     }
-    toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
-    toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
-    treeWidget->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
-    treeWidget_alias->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
-    treeWidget_timers->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
-    treeWidget_scripts->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
-    treeWidget_keys->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
-    treeWidget_actions->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
-    treeWidget_vars->setIconSize(QSize(mudlet::self()->mTEFolderIconSize*8,mudlet::self()->mTEFolderIconSize*8));
+    toolBar->setIconSize( QSize( mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8 ) );
+    toolBar2->setIconSize( QSize( mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8 ) );
+}
+
+void dlgTriggerEditor::slot_setTreeWidgetIconSize( int s )
+{
+    treeWidget->setIconSize( QSize( mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8 ) );
+    treeWidget_alias->setIconSize( QSize( mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8 ) );
+    treeWidget_timers->setIconSize( QSize( mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8 ) );
+    treeWidget_scripts->setIconSize( QSize( mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8 ) );
+    treeWidget_keys->setIconSize( QSize( mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8 ) );
+    treeWidget_actions->setIconSize( QSize( mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8 ) );
+    treeWidget_vars->setIconSize( QSize( mudlet::self()->mTEFolderIconSize * 8, mudlet::self()->mTEFolderIconSize * 8 ) );
 }
 
 void dlgTriggerEditor::slot_choseButtonColor()

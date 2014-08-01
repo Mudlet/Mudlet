@@ -1926,8 +1926,8 @@ or some other computer model that has a small screen.</string>
          <string>Save</string>
         </property>
         <property name="icon">
-         <iconset>
-          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+         <iconset resource="../mudlet_alpha.qrc">
+          <normaloff>:/icons/dialog-ok-apply.png</normaloff>:/icons/dialog-ok-apply.png</iconset>
         </property>
        </widget>
       </item>

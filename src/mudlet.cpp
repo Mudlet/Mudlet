@@ -269,6 +269,7 @@ mudlet::mudlet()
     mHostManager.addHost("default_host", "", "","" );
     mpDefaultHost = mHostManager.getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
+    mpDebugConsole->setWindowIcon( QIcon( QPixmap( QStringLiteral( ":/icons/mudlet_debug.png" ) ) ) );
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget( mpDebugConsole );
@@ -1657,13 +1658,12 @@ void mudlet::readSettings()
     QSettings settings("Mudlet", "Mudlet 1.0");
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
-    mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
-    mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(3)).toInt();
+    setToolbarIconSize( settings.value("mainiconsize",QVariant(3)).toInt() );
+    setTreeWidgetIconSize( settings.value("tefoldericonsize", QVariant(3)).toInt() );
     mShowMenuBar = settings.value("showMenuBar",QVariant(0)).toBool();
     mShowToolbar = settings.value("showToolbar",QVariant(0)).toBool();
     resize( size );
     move( pos );
-    setIcoSize( mMainIconSize );
     if( mShowMenuBar )
         MenuBar->show();
     else
@@ -1687,18 +1687,38 @@ void mudlet::readSettings()
     }
 }
 
-
-void mudlet::setIcoSize( int s )
+void mudlet::setToolbarIconSize( int s )
 {
-    mpMainToolBar->setIconSize(QSize(s*8,s*8));
+    if( s < 1 )
+    {
+        qDebug() << QStringLiteral( "mudlet::setToolbarIconSize( int: %1 ) Error: Invalid size, <1 supplied! " ).arg( s );
+        return;
+    }
+
+    mMainIconSize = s;
+    mpMainToolBar->setIconSize( QSize( s*8, s*8) );
     if( mMainIconSize > 2 )
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     else
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
+
     if( mShowMenuBar )
         menuBar()->show();
     else
         menuBar()->hide();
+
+    emit signal_resizeToolbarIcons( s );  // Tell ALL profiles that the size has changed
+}
+
+void mudlet::setTreeWidgetIconSize( int s )
+{
+    if( s < 1 )
+    {
+        qDebug() << QStringLiteral( "mudlet::setTreeWidgetIconSize( int: %1 ) Error: Invalid size, <1 supplied! " ).arg( s );
+        return;
+    }
+    mTEFolderIconSize = s;
+    emit signal_resizeTreeIcons( s );  // Tell ALL profiles that the size has changed
 }
 
 void mudlet::writeSettings()

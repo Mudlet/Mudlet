@@ -469,7 +469,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchUp->setMaximumSize(QSize(30,30));
     mpBufferSearchUp->setSizePolicy( sizePolicy5 );
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchUp->setToolTip("next result");
+    mpBufferSearchUp->setToolTip("Previous result...");
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchUp->setIcon( QIcon( QStringLiteral( ":/icons/go-up-search.png" ) ) );
     connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
@@ -479,7 +479,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setMaximumSize(QSize(30,30));
     mpBufferSearchDown->setSizePolicy( sizePolicy5 );
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchDown->setToolTip("next result");
+    mpBufferSearchDown->setToolTip("Next result...");
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
 
     mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/go-down-search.png" ) ) );
