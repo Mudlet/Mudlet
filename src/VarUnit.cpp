@@ -77,13 +77,13 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             QIcon icon;
             switch (child->getValueType()){
                 case 5:
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/table.png" ) ), QIcon::Normal, QIcon::Off );
                     break;
                 case 6:
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/function.png" ) ), QIcon::Normal, QIcon::Off );
                     break;
                 default:
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/variable.png" ) ), QIcon::Normal, QIcon::Off );
                     break;
             }
             pItem->setIcon( 0, icon );
