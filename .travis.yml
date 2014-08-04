@@ -11,6 +11,11 @@ install:
   - ./configure
   - sudo make install
   - cd ..
+before_score:
+  - mkdir build
   - cd src
 script:
   - qmake && make -j2
+  - cd ../build
+  - cmake ..
+  - make -j2
