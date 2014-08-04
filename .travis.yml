@@ -1,22 +1,19 @@
 language: cpp
+os:
+#  - osx
+  - linux
 compiler:
   - gcc
 before_install:
-  - sudo apt-add-repository ppa:ubuntu-sdk-team/ppa -y
-  - sudo apt-add-repository ppa:kalakris/cmake -y
-  - sudo apt-get update
-  - git clone https://github.com/lloyd/yajl.git
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then ./CI/travis.linux.before_install.sh; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ./CI/travis.osx.before_install.sh; fi
 install:
-  - sudo apt-get install build-essential qtbase5-dev qt5-default qtmultimedia5-dev qttools5-dev libhunspell-dev lua5.1 liblua5.1-0-dev libpcre3-dev libboost-dev zlib1g-dbg zlib1g-dev libzip-dev libpulse-dev cmake
-  - cd yajl
-  - ./configure
-  - sudo make install
-  - cd ..
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then ./CI/travis.linux.install.sh; fi  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ./CI/travis.osx.install.sh; fi
 before_script:
   - mkdir build
   - cd src
 script:
   - qmake && make -j2
   - cd ../build
-  - cmake -DHUNSPELL_LIBRARIES=/usr/lib/x86_64-linux-gnu/libhunspell.a ..
+  - cmake ..
   - make -j2
