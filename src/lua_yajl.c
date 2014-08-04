@@ -590,12 +590,7 @@ static int js_generator_number(lua_State *L) {
     } else if ( num == -HUGE_VAL ) {
         str = "-1e+666";
         len = 7;
-    // Allow building on OSX, leave the rest of the platforms be.
-#ifdef __APPLE__
     } else if ( isnan(num) ) {
-#else
-    } else if ( _isnan(num) ) {
-#endif
         str = "-0"; 
         len = 2;
    } else {
