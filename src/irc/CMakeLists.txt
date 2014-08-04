@@ -2,7 +2,15 @@
 # LibIrcClient-Qt
 ######################################################################
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
+IF(MSVC)
+  CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
+ELSE()
+  CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
+ENDIF()
+
+IF(POLICY CMP0020)
+  CMAKE_POLICY(SET CMP0020 NEW)
+ENDIF()
 
 PROJECT(ircclient-qt)
 
