@@ -197,9 +197,11 @@ SET(mudlet_HDRS
     XMLimport.h
 )
 
-if(MSVC)
+IF(MSVC)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP")
-endif(MSVC)
+ELSE(MSVC)
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+ENDIF(MSVC)
 
 SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
@@ -277,7 +279,7 @@ ELSE(LUA_CPP)
   SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.c)
 ENDIF(LUA_CPP)
 
-add_subdirectory(irc)
+ADD_SUBDIRECTORY(irc)
 
 ADD_DEFINITIONS(-DQT_NO_STL)
 
@@ -306,7 +308,7 @@ QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
-add_executable(mudlet WIN32
+ADD_EXECUTABLE(mudlet WIN32
     ${mudlet_SRCS}
     ${mudlet_MOC_SRCS}
     ${mudlet_RCC_SRCS}
