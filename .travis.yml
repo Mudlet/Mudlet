@@ -18,5 +18,5 @@ before_script:
 script:
   - qmake && make -j2
   - cd ../build
-  - cmake ..
+  - cmake -DHUNSPELL_LIBRARIES=/usr/lib/x86_64-linux-gnu/libhunspell.a ..
   - make -j2
