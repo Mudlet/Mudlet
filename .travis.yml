@@ -11,7 +11,7 @@ install:
   - ./configure
   - sudo make install
   - cd ..
-before_score:
+before_script:
   - mkdir build
   - cd src
 script:
