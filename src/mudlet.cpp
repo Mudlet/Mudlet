@@ -269,7 +269,6 @@ mudlet::mudlet()
     mHostManager.addHost("default_host", "", "","" );
     mpDefaultHost = mHostManager.getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
-    mpDebugConsole->setWindowIcon( QIcon( QPixmap( QStringLiteral( ":/icons/mudlet_debug.png" ) ) ) );
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget( mpDebugConsole );
