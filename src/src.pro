@@ -27,11 +27,10 @@ BUILD = -rc2-dev
 # Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
-win32{
-    TARGET = mudlet
-} else:macx{
+# Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
+macx {
     TARGET = Mudlet
-} else{
+} else {
     TARGET = mudlet
 }
 
