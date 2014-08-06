@@ -27,8 +27,8 @@
    <string>Custom Line Properties [*]</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>../icons/mudlet_custom_exit_properties.png</normaloff>../icons/mudlet_custom_exit_properties.png</iconset>
+   <iconset resource="../mudlet_alpha.qrc">
+    <normaloff>:/icons/mudlet_custom_exit_properties.png</normaloff>:/icons/mudlet_custom_exit_properties.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
@@ -270,7 +270,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>

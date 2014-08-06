@@ -274,10 +274,12 @@ mudlet::mudlet()
     HostManager::self()->addHost("default_host", "", "","" );
     mpDefaultHost = HostManager::self()->getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
-    mpDebugConsole->setWindowTitle("Central Debug Console");
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget( mpDebugConsole );
+    mpDebugArea->setWindowTitle( tr( "Central Debug Console" ) );
+    mpDebugArea->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_debug.png" ) ) );
+
     TConsoleMonitor * consoleCloser = new TConsoleMonitor;
     mpDebugArea->installEventFilter(consoleCloser);
 
