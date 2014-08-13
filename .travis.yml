@@ -4,12 +4,8 @@ os:
   - linux
 compiler:
   - gcc
-before_install:
-  - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then bash ./CI/travis.linux.before_install.sh; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ./CI/travis.osx.before_install.sh; fi
-install:
-  - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then bash ./CI/travis.linux.install.sh; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ./CI/travis.osx.install.sh; fi
+before_install: ./CI/travis.before_install.sh
+install: ./CI/travis.install.sh
 before_script:
   - mkdir build
   - cd src
