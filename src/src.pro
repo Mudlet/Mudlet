@@ -41,11 +41,6 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
 DEPENDPATH += .
 INCLUDEPATH += .
-LIBLUA = -llua5.1
-#!exists(/usr/lib/x86_64-linux-gnu/liblua5.1.a):LIBLUA = -llua
-
-# automatically link to LuaJIT if it exists
-#exists(/usr/lib/x86_64-linux-gnu/libluajit-5.1.a):LIBLUA = -L/usr/lib/x86_64-linux-gnu/ -lluajit-5.1
 
 TEMPLATE = app
 RESOURCES = mudlet_alpha.qrc
@@ -74,7 +69,7 @@ unix: {
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
     isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
     LIBS += -lpcre \
-        $$LIBLUA \
+        -llua5.1 \
         -lhunspell \
         -L/usr/local/lib/ \
         -lyajl \
