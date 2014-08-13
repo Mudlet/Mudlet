@@ -4,10 +4,14 @@ lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
 # that only a #.#.# form without any other alphanumberic suffixes is required:
 VERSION = 3.0.1
 
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O0 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
-#MOC_DIR = ./tmp
-#OBJECTS_DIR = ./tmp
+# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
+CONFIG += warn_off
+# ignore unused parameters, because boost has a ton of them and that is not something we need to know.
+QMAKE_CXXFLAGS_RELEASE += -O3 -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+QMAKE_CXXFLAGS_DEBUG += -O0 -Wall -g -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+
+# Mac specific flags.
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 
 QT += network opengl uitools multimedia
 
