@@ -85,7 +85,6 @@ unix: {
         -lz
     INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
-    SOURCES += lua-yajl2-linux.c
 } else:win32: {
     LIBS += -L"C:\\mudlet5_package" \
         -L"C:\\mingw32\\lib" \
@@ -108,7 +107,6 @@ unix: {
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
-    SOURCES += lua_yajl.c
 }
 unix {
 #   the "target" install set is handled automagically, just not very well...
@@ -173,6 +171,7 @@ SOURCES += \
     irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
+    lua_yajl.c \
     main.cpp \
     mudlet.cpp \
     ScriptUnit.cpp \
