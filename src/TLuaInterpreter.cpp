@@ -39,12 +39,6 @@
 
 
 
-//#ifdef Q_OS_WIN32
-//    #include "lua_yajl.c"
-//#else
-//    #include "lua-yajl2-linux.c"
-//#endif
-
 #ifndef LUA_CPP
 extern "C"
 {
