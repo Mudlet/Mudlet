@@ -399,7 +399,7 @@ OTHER_FILES += \
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
 # or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
-unix {
+unix:!macx: {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
     INSTALLS += \
         target \
