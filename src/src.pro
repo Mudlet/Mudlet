@@ -1,20 +1,15 @@
+lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
+
+# Set the current Mudlet Version, unfortunately the Qt documentation suggests
+# that only a #.#.# form without any other alphanumberic suffixes is required:
+VERSION = 3.0.1
+
 QMAKE_CXXFLAGS_RELEASE += -O3 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 QMAKE_CXXFLAGS_DEBUG += -O0 -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter
 #MOC_DIR = ./tmp
 #OBJECTS_DIR = ./tmp
 
-QT += network opengl
-
-lessThan( QT_MAJOR_VERSION, 5 ) {
-    CONFIG += qt resources app_bundle uitools
-    QT += phonon
-} else {
-    QT += uitools multimedia
-}
-
-# Set the current Mudlet Version, unfortunately the Qt documentation suggests
-# that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+QT += network opengl uitools multimedia
 
 # Leave the value of the following empty, line should be "BUILD =" without quotes
 # (it is NOT a Qt built-in variable) for a release build or, if you are
