@@ -165,8 +165,8 @@ SOURCES += \
     Host.cpp \
     HostManager.cpp \
     HostPool.cpp \
-    irc/src/ircbuffer.cpp \
     irc/src/irc.cpp \
+    irc/src/ircbuffer.cpp \
     irc/src/ircsession.cpp \
     irc/src/ircutil.cpp \
     KeyUnit.cpp \
@@ -205,9 +205,9 @@ SOURCES += \
     TTreeWidgetItem.cpp \
     TTrigger.cpp \
     TVar.cpp \
+    VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    VarUnit.cpp
+    XMLimport.cpp
 
 
 HEADERS += \
@@ -236,10 +236,10 @@ HEADERS += \
     dlgSearchArea.h \
     dlgSourceEditorArea.h \
     dlgSystemMessageArea.h \
-    dlgTriggerEditor.h \
-    dlgTriggersMainArea.h \
-    dlgTriggerPatternEdit.h \
     dlgTimersMainArea.h \
+    dlgTriggerEditor.h \
+    dlgTriggerPatternEdit.h \
+    dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
@@ -269,10 +269,10 @@ HEADERS += \
     TFlipButton.h \
     TForkedProcess.h \
     THighlighter.h \
-    TLabel.h \
-    TLuaInterpreter.h \
     TimerUnit.h \
     TKey.h \
+    TLabel.h \
+    TLuaInterpreter.h \
     TMap.h \
     TMatchState.h \
     Tree.h \
@@ -303,8 +303,8 @@ FORMS += \
     ui/dlgPackageExporter.ui \
     ui/extended_search_area.ui \
     ui/irc.ui \
-    ui/lacking_mapper_script.ui \
     ui/keybindings_main_area.ui \
+    ui/lacking_mapper_script.ui \
     ui/main_window.ui \
     ui/mapper.ui \
     ui/module_manager.ui \
@@ -322,9 +322,9 @@ FORMS += \
     ui/source_editor_area.ui \
     ui/system_message_area.ui \
     ui/timers_main_area.ui \
+    ui/triggers_main_area.ui \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
-    ui/triggers_main_area.ui \
     ui/vars_main_area.ui
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
@@ -351,33 +351,33 @@ FORMS += \
 
 # Main lua files:
 LUA.files = \
-    $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
-    $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua \
-    $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/DB.lua \
+    $${PWD}/mudlet-lua/lua/DebugTools.lua \
+    $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
+    $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
-    $${PWD}/mudlet-lua/lua/GMCP.lua
+    $${PWD}/mudlet-lua/lua/StringUtils.lua \
+    $${PWD}/mudlet-lua/lua/TableUtils.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
 LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserLabel.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserHBox.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserLabel.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua
+    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua \
 LUA_GEYSER.depends = mudlet
 
 # Documentation files:
