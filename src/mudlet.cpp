@@ -107,7 +107,7 @@ mudlet::mudlet()
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
-    setWindowIcon(QIcon(":/icons/mudlet_main_16px.png"));
+    setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_main_16px.png" ) ) );
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
     //restoreBar = menuBar()->addMenu( "" );
@@ -168,96 +168,96 @@ mudlet::mudlet()
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     }
     //restoreBar = new QMenu( this );
-    QAction * actionConnect = new QAction(QIcon(":/icons/preferences-web-browser-cache.png"), tr("Connect"), this);
+    QAction * actionConnect = new QAction( QIcon( QStringLiteral( ":/icons/preferences-web-browser-cache.png" ) ), tr("Connect"), this);
     actionConnect->setToolTip(tr("Connect to a MUD"));
     mpMainToolBar->addAction( actionConnect );
 
-    QAction * actionTriggers = new QAction(QIcon(":/icons/tools-wizard.png"), tr("Triggers"), this);
+    QAction * actionTriggers = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
     actionTriggers->setToolTip(tr("Show and edit triggers"));
     mpMainToolBar->addAction( actionTriggers );
 
-    QAction * actionAlias = new QAction(QIcon(":/icons/system-users.png"), tr("Aliases"), this);
+    QAction * actionAlias = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
     actionAlias->setToolTip(tr("Show and edit aliases"));
     actionAlias->setEnabled( true );
     mpMainToolBar->addAction( actionAlias );
 
-    QAction * actionTimers = new QAction(QIcon(":/icons/chronometer.png"), tr("Timers"), this);
+    QAction * actionTimers = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
     actionTimers->setToolTip(tr("Show and edit timers"));
     mpMainToolBar->addAction( actionTimers );
 
-    QAction * actionButtons = new QAction(QIcon(":/icons/bookmarks.png"), tr("Buttons"), this);
+    QAction * actionButtons = new QAction( QIcon( QStringLiteral( ":/icons/bookmarks.png" ) ), tr("Buttons"), this);
     actionButtons->setToolTip(tr("Show and edit easy buttons"));
     mpMainToolBar->addAction( actionButtons );
 
-    QAction * actionScripts = new QAction(QIcon(":/icons/document-properties.png"), tr("Scripts"), this);
+    QAction * actionScripts = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
     actionScripts->setEnabled( true );
     actionScripts->setToolTip(tr("Show and edit scripts"));
     mpMainToolBar->addAction( actionScripts );
 
-    QAction * actionKeys = new QAction(QIcon(":/icons/preferences-desktop-keyboard.png"), tr("Keys"), this);
+    QAction * actionKeys = new QAction( QIcon( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), tr("Keys"), this);
     actionKeys->setToolTip(tr("Show and edit keys"));
     actionKeys->setEnabled( true );
     mpMainToolBar->addAction( actionKeys );
 
-    QAction * actionVars = new QAction(QIcon(":/icons/variables.png"), tr("Variables"), this);
+    QAction * actionVars = new QAction( QIcon( QStringLiteral( ":/icons/variables.png" ) ), tr("Variables"), this);
     actionVars->setToolTip(tr("Show and edit lua variables"));
     actionVars->setEnabled( true );
     mpMainToolBar->addAction( actionVars );
 
-    QAction * actionIRC = new QAction(QIcon(":/icons/internet-telephony.png"), tr("Help Chat"), this);
+    QAction * actionIRC = new QAction( QIcon( QStringLiteral( ":/icons/internet-telephony.png" ) ), tr("Help Chat"), this);
     actionIRC->setToolTip(tr("Join Mudlet help chat on IRC"));
     mpMainToolBar->addAction( actionIRC );
 
-    QAction * actionMapper = new QAction(QIcon(":/icons/applications-internet.png"), tr("Map"), this);
+    QAction * actionMapper = new QAction( QIcon( QStringLiteral( ":/icons/applications-internet.png" ) ), tr("Map"), this);
     actionMapper->setToolTip(tr("Show/hide the map"));
     mpMainToolBar->addAction( actionMapper );
 
-    QAction * actionHelp = new QAction(QIcon(":/icons/help-hint.png"), tr("Manual"), this);
+    QAction * actionHelp = new QAction( QIcon( QStringLiteral( ":/icons/help-hint.png" ) ), tr("Manual"), this);
     actionHelp->setToolTip(tr("Browse reference material and documentation"));
     mpMainToolBar->addAction( actionHelp );
 
-    QAction * actionOptions = new QAction(QIcon(":/icons/configure.png"), tr("Settings"), this);
+    QAction * actionOptions = new QAction( QIcon( QStringLiteral( ":/icons/configure.png" ) ), tr("Settings"), this);
     actionOptions->setToolTip(tr("See and edit profile preferences"));
     mpMainToolBar->addAction( actionOptions );
 
-    QAction * actionNotes = new QAction(QIcon(":/icons/applications-accessories.png"), tr("Notepad"), this);    
+    QAction * actionNotes = new QAction( QIcon( QStringLiteral( ":/icons/applications-accessories.png" ) ), tr("Notepad"), this);
     actionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
     mpMainToolBar->addAction( actionNotes );
 
-    QAction * actionPackageM = new QAction(QIcon(":/icons/package-manager.png"), tr("Package Manager"), this);
+    QAction * actionPackageM = new QAction( QIcon( QStringLiteral( ":/icons/package-manager.png" ) ), tr("Package Manager"), this);
     actionPackageM->setToolTip(tr("Package Manager - allows you to install xmls, .mpackages"));
     mpMainToolBar->addAction( actionPackageM );
 
-    QAction * actionModuleM = new QAction(QIcon(":/icons/module-manager.png"), tr("Module Manager"), this);
+    QAction * actionModuleM = new QAction( QIcon( QStringLiteral( ":/icons/module-manager.png" ) ), tr("Module Manager"), this);
     actionModuleM->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
     mpMainToolBar->addAction( actionModuleM );
 
 
-    QAction * actionReplay = new QAction(QIcon(":/icons/media-optical.png"), tr("Replay"), this);
+    QAction * actionReplay = new QAction( QIcon( QStringLiteral( ":/icons/media-optical.png" ) ), tr("Replay"), this);
     actionReplay->setToolTip(tr("Load a Mudlet replay"));
     mpMainToolBar->addAction( actionReplay );
 
-    actionReconnect = new QAction(QIcon(":/icons/system-restart.png"), tr("Reconnect"), this);
+    actionReconnect = new QAction( QIcon( QStringLiteral( ":/icons/system-restart.png" ) ), tr("Reconnect"), this);
     actionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
     mpMainToolBar->addAction( actionReconnect );
 
 
 
-    QAction * actionMultiView = new QAction(QIcon(":/icons/view-split-left-right.png"), tr("MultiView"), this);
+    QAction * actionMultiView = new QAction( QIcon( QStringLiteral( ":/icons/view-split-left-right.png" ) ), tr("MultiView"), this);
     actionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
     mpMainToolBar->addAction( actionMultiView );
 
-    QAction * actionStopAllTriggers = new QAction(QIcon(":/icons/edit-bomb.png"), tr("Stop All Triggers"), this);
+    QAction * actionStopAllTriggers = new QAction( QIcon( QStringLiteral( ":/icons/edit-bomb.png" ) ), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
     //mpMainToolBar->addAction( actionStopAllTriggers );
 
 
-    /* QAction * actionProfileBackup = new QAction(QIcon(":/icons/utilities-file-archiver.png"), tr("Backup Profile"), this);
+    /* QAction * actionProfileBackup = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Backup Profile"), this);
     actionProfileBackup->setStatusTip(tr("Backup Profile"));
     mpMainToolBar->addAction( actionProfileBackup );*/
 
 
-    QAction * actionAbout = new QAction(QIcon(":/icons/mudlet_information.png"), tr("About"), this);
+    QAction * actionAbout = new QAction( QIcon( QStringLiteral( ":/icons/mudlet_information.png" ) ), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction( actionAbout );
 
@@ -285,7 +285,7 @@ mudlet::mudlet()
     {
         mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
         showFullScreen();
-        QAction * actionFullScreeniew = new QAction(QIcon(":/icons/dialog-cancel.png"), tr("Toggle Full Screen View"), this);
+        QAction * actionFullScreeniew = new QAction( QIcon( QStringLiteral( ":/icons/dialog-cancel.png" ) ), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction( actionFullScreeniew );
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
@@ -2295,11 +2295,11 @@ void mudlet::replayStart()
     replayTime = new QLabel( this );
     actionReplayTime = replayToolBar->addWidget( replayTime );
 
-    actionReplaySpeedUp = new QAction(QIcon(":/icons/export.png"), tr("faster"), this);
+    actionReplaySpeedUp = new QAction( QIcon( QStringLiteral( ":/icons/export.png" ) ), tr("Faster"), this);
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction( actionReplaySpeedUp );
 
-    actionReplaySpeedDown = new QAction(QIcon(":/icons/port.png"), tr("slower"), this);
+    actionReplaySpeedDown = new QAction( QIcon( QStringLiteral( ":/icons/port.png" ) ), tr("Slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction( actionReplaySpeedDown );
     replaySpeedDisplay = new QLabel( this );

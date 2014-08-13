@@ -378,8 +378,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     timeStampButton->setSizePolicy( sizePolicy5 );
     timeStampButton->setFocusPolicy( Qt::NoFocus );
     timeStampButton->setToolTip("Show Time Stamps");
-    QIcon icon(":/icons/dialog-information.png");
-    timeStampButton->setIcon( icon );
+    timeStampButton->setIcon( QIcon( QStringLiteral( ":/icons/dialog-information.png" ) ) );
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
 
     QToolButton * replayButton = new QToolButton;
@@ -389,8 +388,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     replayButton->setSizePolicy( sizePolicy5 );
     replayButton->setFocusPolicy( Qt::NoFocus );
     replayButton->setToolTip("record a replay");
-    QIcon icon4(":/icons/media-tape.png");
-    replayButton->setIcon( icon4 );
+    replayButton->setIcon( QIcon( QStringLiteral( ":/icons/media-tape.png" ) ) );
     connect( replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
 
     logButton = new QToolButton;
@@ -400,8 +398,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     logButton->setSizePolicy( sizePolicy5 );
     logButton->setFocusPolicy( Qt::NoFocus );
     logButton->setToolTip("start logging MUD output to log file");
-    QIcon icon3(":/icons/folder-downloads.png");
-    logButton->setIcon( icon3 );
+    logButton->setIcon( QIcon( QStringLiteral( ":/icons/folder-downloads.png" ) ) );
     connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
     networkLatency->setReadOnly( true );
@@ -444,10 +441,9 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
          }
     }
 
-    QIcon icon2(":/icons/edit-bomb.png");
     emergencyStop->setMinimumSize(QSize(30,30));
     emergencyStop->setMaximumSize(QSize(30,30));
-    emergencyStop->setIcon( icon2 );
+    emergencyStop->setIcon( QIcon( QStringLiteral( ":/icons/edit-bomb.png" ) ) );
     emergencyStop->setSizePolicy( sizePolicy4 );
     emergencyStop->setFocusPolicy( Qt::NoFocus );
     emergencyStop->setCheckable( true );
@@ -481,8 +477,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchUp->setToolTip("next result");
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
-    QIcon icon34(":/icons/export.png");
-    mpBufferSearchUp->setIcon( icon34 );
+    mpBufferSearchUp->setIcon( QIcon( QStringLiteral( ":/icons/export.png" ) ) );
     connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
 
 
@@ -492,8 +487,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchDown->setToolTip("next result");
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
-    QIcon icon35(":/icons/import.png");
-    mpBufferSearchDown->setIcon( icon35 );
+
+    mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/import.png" ) ) );
     connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
     layoutLayer2->addWidget( mpCommandLine );
@@ -2672,14 +2667,12 @@ void TConsole::slot_stop_all_triggers( bool b )
     if( b )
     {
         mpHost->stopAllTriggers();
-        QIcon icon2(":/icons/red-bomb.png");
-        emergencyStop->setIcon( icon2 );
+        emergencyStop->setIcon( QIcon( QStringLiteral( ":/icons/red-bomb.png" ) ) );
     }
     else
     {
         mpHost->reenableAllTriggers();
-        QIcon icon2(":/icons/edit-bomb.png");
-        emergencyStop->setIcon( icon2 );
+        emergencyStop->setIcon( QIcon( QStringLiteral( ":/icons/edit-bomb.png" ) ) );
     }
 }
 

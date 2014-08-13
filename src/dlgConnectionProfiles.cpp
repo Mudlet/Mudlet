@@ -43,9 +43,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
 
     QAbstractButton * abort = dialog_buttonbox->button( QDialogButtonBox::Cancel );
-    abort->setIcon(QIcon(":/icons/dialog-close.png"));
+    abort->setIcon( QIcon( QStringLiteral( ":/icons/dialog-close.png" ) ) );
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    connect_button->setIcon(QIcon(":/icons/dialog-ok-apply.png"));
+    connect_button->setIcon( QIcon( QStringLiteral( ":/icons/dialog-ok-apply.png" ) ) );
 
     connect( connect_button, SIGNAL(clicked()), this, SLOT(accept()));
     connect( abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
@@ -859,7 +859,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    QPixmap p(":/icons/avalon.png");
+    QPixmap p( QStringLiteral( ":/icons/avalon.png" ) );
     mi = QIcon( p.scaled(QSize(120,30)) );
     pM->setIcon(mi);
     muds.clear();
@@ -869,7 +869,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/achaea_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/achaea_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -878,7 +878,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem(pM);
-    QPixmap pd(":/icons/3klogo.png");
+    QPixmap pd( QStringLiteral( ":/icons/3klogo.png" ) );
     QPixmap pd1 = pd.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
     QIcon mi5(pd1);
     pM->setIcon(mi5);
@@ -888,7 +888,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem(pM);
-    QPixmap pc(":/icons/3slogo.png");
+    QPixmap pc( QStringLiteral( ":/icons/3slogo.png" ) );
     QPixmap pc1 = pc.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
     QIcon mi4(pc1);
     pM->setIcon(mi4);
@@ -899,7 +899,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/midkemia_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/midkemia_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -908,12 +908,12 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/lusternia_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/lusternia_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
     muds = "BatMUD";
-    QPixmap pb(":/icons/batmud_mud.png");
+    QPixmap pb( QStringLiteral( ":/icons/batmud_mud.png" ) );
     QPixmap pb1 = pb.scaled(QSize(120,30)).copy();
     mi = QIcon( pb1 );
     pM = new QListWidgetItem( muds );
@@ -928,7 +928,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/gw2.png" );
+    mi = QIcon( QStringLiteral( ":/icons/gw2.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -937,7 +937,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/Slothmud.png" );
+    mi = QIcon( QStringLiteral( ":/icons/Slothmud.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -946,7 +946,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon(":/icons/aardwolf_mud.png");
+    mi = QIcon( QStringLiteral( ":/icons/aardwolf_mud.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -955,7 +955,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/materiaMagicaIcon" );
+    mi = QIcon( QStringLiteral( ":/materiaMagicaIcon" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -964,7 +964,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/120x30RoDLogo.png" );
+    mi = QIcon( QStringLiteral( ":/icons/120x30RoDLogo.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -973,7 +973,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/zombiemud.png" );
+    mi = QIcon( QStringLiteral( ":/icons/zombiemud.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -982,7 +982,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/aetolia_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/aetolia_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -991,7 +991,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/imperian_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/imperian_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
@@ -1056,7 +1056,7 @@ void dlgConnectionProfiles::fillout_form()
         QPainter pt(&pb);
         pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
         pt.fillRect(QRect(0,0,120,30), shade);
-        QPixmap pg( ":/icons/mudlet_main_32px.png");
+        QPixmap pg( QStringLiteral( ":/icons/mudlet_main_32px.png" ) );
         pt.drawPixmap( QRect(5,5, 20, 20 ), pg );
 
         QFont _font;

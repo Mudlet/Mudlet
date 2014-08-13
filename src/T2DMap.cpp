@@ -2521,7 +2521,7 @@ void T2DMap::slot_customLineProperties()
                 qWarning("T2DMap::slot_customLineProperties() ERRROR: failed to create the dialog!");
                 return;
             }
-            d->setWindowIcon(QIcon(":/icons/mudlet_custom_exit_properties.png"));
+            d->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit_properties.png" ) ) );
             QLineEdit * le_toId = d->findChild<QLineEdit*>("toId");
             QLineEdit * le_fromId = d->findChild<QLineEdit*>("fromId");
             QLineEdit * le_cmd = d->findChild<QLineEdit*>("cmd");
@@ -3613,7 +3613,7 @@ void T2DMap::slot_setCustomLine()
     if( ! d )
         return;
     mpCustomLinesDialog = d;
-    mpCustomLinesDialog->setWindowIcon(QIcon(":/icons/mudlet_custom_exit.png"));
+    mpCustomLinesDialog->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
     TRoom * pR = mpMap->mpRoomDB->getRoom(mMultiSelectionList[0]);
     if( !pR )
         return;
