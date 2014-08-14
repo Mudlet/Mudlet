@@ -42,9 +42,6 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 DEPENDPATH += .
 INCLUDEPATH += .
 
-TEMPLATE = app
-RESOURCES = mudlet_alpha.qrc
-
 # try -O1 —fsanitize=address for AddressSanitizer w/ clang
 # use -DDEBUG_TELNET to show telnet commands
 
@@ -319,6 +316,11 @@ FORMS += \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
+
+
+RESOURCES = mudlet_alpha.qrc
+
+TEMPLATE = app
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
 # following lists of files EXPLICITLY stated - IT IS NOT WORKABLE IF ONLY
