@@ -392,7 +392,9 @@ OTHER_FILES += \
     ../COMPILE \
     ../COPYING \
     ../Doxyfile \
-    ../INSTALL
+    ../INSTALL \
+    mudlet_documentation.txt \
+    mac-deploy.sh
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
