@@ -58,7 +58,7 @@ RESOURCES = mudlet_alpha.qrc
 # the files in the place documented here the user will not be bothered by this.
 #
 # (Geyser files should be in a "geyser" subdirectory of this)
-unix: {
+unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
 # destination place for local builds for software for all users:
     isEmpty( PREFIX ) PREFIX = /usr/local
@@ -101,7 +101,7 @@ unix: {
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
 }
-unix {
+unix:!macx {
 #   the "target" install set is handled automagically, just not very well...
     target.path = $${BINDIR}
     message("$${TARGET} will be installed to "$${target.path}"...")
