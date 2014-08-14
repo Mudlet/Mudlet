@@ -39,12 +39,6 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
-DEPENDPATH += .
-INCLUDEPATH += .
-
-# try -O1 —fsanitize=address for AddressSanitizer w/ clang
-# use -DDEBUG_TELNET to show telnet commands
-
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
@@ -131,6 +125,7 @@ macx:LIBS += \
     -lzzip
 
 INCLUDEPATH += irc/include
+
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -389,12 +384,9 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
 
-# Documentation files:
-# DOCS.files =
-
 macx: {
     # Copy mudlet-lua into the .app bundle
-    # the location is relative to mac_src.pro, so just use mudlet-lua
+    # the location is relative to src.pro, so just use mudlet-lua
     APP_MUDLET_LUA_FILES.files = mudlet-lua
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
@@ -405,7 +397,6 @@ macx: {
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
-#     ${DOCS.files} \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
     ../README \
@@ -427,4 +418,3 @@ unix:!macx: {
         LUA \
         LUA_GEYSER
 }
-# Other OS's have other installation routines - perhap they could be duplicated here?
