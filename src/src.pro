@@ -119,6 +119,20 @@ unix:!macx {
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
     }
 }
+# use pkg-config whenever possible for linking on a mac
+# the same should be done on the Linux platform as well
+macx {
+    # http://stackoverflow.com/a/16972067
+    QT_CONFIG -= no-pkg-config
+    CONFIG += link_pkgconfig
+    PKGCONFIG += hunspell lua yajl libpcre libzip
+}
+
+# There does not seem to be an obvious pkg-config option for these two
+macx:LIBS += \
+    -lz \
+    -lzzip
+
 INCLUDEPATH += irc/include
 SOURCES += \
     ActionUnit.cpp \
@@ -376,6 +390,16 @@ LUA_GEYSER.depends = mudlet
 # Documentation files:
 # DOCS.files =
 
+macx: {
+    # Copy mudlet-lua into the .app bundle
+    # the location is relative to mac_src.pro, so just use mudlet-lua
+    APP_MUDLET_LUA_FILES.files = mudlet-lua
+    APP_MUDLET_LUA_FILES.path  = Contents/Resources
+    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
+
+    # Set the .app's icns file
+    ICON = osx-installer/osx.icns
+}
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
