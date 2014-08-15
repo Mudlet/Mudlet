@@ -1,6 +1,8 @@
+#ifndef MUDLET_MUDLET_H
+#define MUDLET_MUDLET_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,8 +22,6 @@
 
 
 
-#ifndef MUDLET_H
-#define MUDLET_H
 
 #include <QMainWindow>
 #include <QCloseEvent>
@@ -266,7 +266,4 @@ class TConsoleMonitor : public QObject
      bool eventFilter(QObject *obj, QEvent *event);
  };
 
-
-
-#endif
-
+#endif // MUDLET_MUDLET_H

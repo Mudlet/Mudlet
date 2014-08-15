@@ -1,10 +1,8 @@
-#ifndef TEASYBUTTONBAR_H
-#define TEASYBUTTONBAR_H
-
+#ifndef MUDLET_TEASYBUTTONBAR_H
+#define MUDLET_TEASYBUTTONBAR_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -67,6 +65,4 @@ public slots:
 
 };
 
-
-
-#endif // TEASYBUTTONBAR_H
+#endif // MUDLET_TEASYBUTTONBAR_H

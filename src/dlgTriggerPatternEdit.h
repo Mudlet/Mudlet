@@ -1,6 +1,8 @@
+#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
+#define MUDLET_DLGTRIGGERPATTERNEDIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef dlg_trigger_pattern_edit_h
-#define dlg_trigger_pattern_edit_h
 
 #include "ui_trigger_pattern_edit.h"
 #include <QWidget>
@@ -42,5 +42,4 @@ public slots:
     
 };
 
-#endif
-
+#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H

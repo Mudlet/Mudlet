@@ -1,10 +1,9 @@
-
-#ifndef _TRIGGER_H_
-#define _TRIGGER_H_
+#ifndef MUDLET_TTRIGGER_H
+#define MUDLET_TTRIGGER_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -189,5 +188,4 @@ private:
 
 };
 
-#endif
-
+#endif // MUDLET_TTRIGGER_H

@@ -1,10 +1,8 @@
-
-#ifndef _TSCRIPT_H_
-#define _TSCRIPT_H_
+#ifndef MUDLET_TSCRIPT_H
+#define MUDLET_TSCRIPT_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -85,5 +83,4 @@ private:
 
 };
 
-#endif
-
+#endif // MUDLET_TSCRIPT_H

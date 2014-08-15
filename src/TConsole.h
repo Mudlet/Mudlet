@@ -1,6 +1,8 @@
+#ifndef MUDLET_TCONSOLE_H
+#define MUDLET_TCONSOLE_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
- *                                                                         *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,8 +23,6 @@
 
 
 
-#ifndef TCONSOLE_H
-#define TCONSOLE_H
 
 //#include <sys/time.h>
 #include <stdio.h>
@@ -301,5 +301,4 @@ public slots:
 
 };
 
-#endif
-
+#endif // MUDLET_TCONSOLE_H

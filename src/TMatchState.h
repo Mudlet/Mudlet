@@ -1,10 +1,8 @@
-
-#ifndef _TMatchState_H_
-#define _TMatchState_H_
+#ifndef MUDLET_TMATCHSTATE_H
+#define MUDLET_TMATCHSTATE_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -92,5 +90,4 @@ public:
     int                                 mDelta;
 };
 
-#endif
-
+#endif // MUDLET_TMATCHSTATE_H

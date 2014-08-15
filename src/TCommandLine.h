@@ -1,6 +1,8 @@
+#ifndef MUDLET_TCOMMANDLINE_H
+#define MUDLET_TCOMMANDLINE_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef TCOMMANDLINE_H
-#define TCOMMANDLINE_H
 
 #include <QLineEdit>
 #include <QMainWindow>
@@ -95,5 +95,4 @@ public slots:
     void              slot_popupMenu();
 };
 
-#endif
-
+#endif // MUDLET_TCOMMANDLINE_H

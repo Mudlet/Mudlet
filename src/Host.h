@@ -1,6 +1,9 @@
+#ifndef MUDLET_HOST_H
+#define MUDLET_HOST_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,8 +23,6 @@
 
 
 
-#ifndef _HOST_H_
-#define _HOST_H_
 
 class mudlet;
 class TLuaInterpreter;
@@ -316,6 +317,5 @@ public:
     bool               mHaveMapperScript;
     QSet<QChar>         mDoubleClickIgnore;
 };
-#endif
 
-
+#endif // MUDLET_HOST_H

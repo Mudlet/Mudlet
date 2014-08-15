@@ -1,6 +1,8 @@
+#ifndef MUDLET_TFORKEDPROCESS_H
+#define MUDLET_TFORKEDPROCESS_H
+
 /***************************************************************************
- *   Copyright (C) 2009 by Benjamin Lerman                                 *
- *   mudlet@ambre.net                                                      *
+ *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef FORKED_PROCESS_H
-#define FORKED_PROCESS_H
 
 #include "TLuaInterpreter.h"
 
@@ -58,5 +58,4 @@ private slots:
     void slotFinish();
 };
 
-#endif
-
+#endif // MUDLET_TFORKEDPROCESS_H

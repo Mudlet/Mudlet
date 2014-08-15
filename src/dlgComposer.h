@@ -1,7 +1,8 @@
-#ifndef DLGCOMPOSER_H
-#define DLGCOMPOSER_H
+#ifndef MUDLET_DLGCOMPOSER_H
+#define MUDLET_DLGCOMPOSER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,5 +43,4 @@ public slots:
         void cancel();
 };
 
-
-#endif // DLGCOMPOSER_H
+#endif // MUDLET_DLGCOMPOSER_H

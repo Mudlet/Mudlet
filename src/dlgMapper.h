@@ -1,7 +1,8 @@
-#ifndef DLGMAPPER_H
-#define DLGMAPPER_H
+#ifndef MUDLET_DLGMAPPER_H
+#define MUDLET_DLGMAPPER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -65,4 +66,4 @@ public slots:
         void slot_lineSize(int d);
 };
 
-#endif // DLGMAPPER_H
+#endif // MUDLET_DLGMAPPER_H

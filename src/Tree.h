@@ -1,6 +1,8 @@
+#ifndef MUDLET_TREE_H
+#define MUDLET_TREE_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,8 +21,6 @@
  ***************************************************************************/
 
 
-#ifndef __TREE__H
-#define __TREE__H
 
 
 
@@ -331,5 +331,4 @@ void Tree<T>::Dump()
     std::cout << "ende dump()"<< std::endl;
 }
 
-#endif
-
+#endif // MUDLET_TREE_H

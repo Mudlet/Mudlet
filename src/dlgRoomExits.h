@@ -1,7 +1,8 @@
-#ifndef _DLG_ROOM_EXITS_H
-#define _DLG_ROOM_EXITS_H
+#ifndef MUDLET_DLGROOMEXITS_H
+#define MUDLET_DLGROOMEXITS_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -120,4 +121,4 @@ private:
     TExit * makeExitFromControls( int direction );
 };
 
-#endif //_ DLG_ROOM_EXITS_H
+#endif // MUDLET_DLGROOMEXITS_H

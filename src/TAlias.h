@@ -1,10 +1,9 @@
-
-#ifndef _TALIAS_H_
-#define _TALIAS_H_
+#ifndef MUDLET_TALIAS_H
+#define MUDLET_TALIAS_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -87,5 +86,4 @@ public:
     bool             exportItem;
 };
 
-#endif
-
+#endif // MUDLET_TALIAS_H

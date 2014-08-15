@@ -1,8 +1,8 @@
-#ifndef EXITSTREEWIDGET_H
-#define EXITSTREEWIDGET_H
+#ifndef MUDLET_EXITSTREEWIDGET_H
+#define MUDLET_EXITSTREEWIDGET_H
+
 /***************************************************************************
- *   Copyright (C) 2012 by Vadim Peretokin                                 *
- *   vadim.peretokin@mudlet.org                                            *
+ *   Copyright (C) 2012 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,5 +39,4 @@ signals:
 public slots:
 };
 
-
-#endif // EXITSTREEWIDGET_H
+#endif // MUDLET_EXITSTREEWIDGET_H

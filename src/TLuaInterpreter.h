@@ -1,6 +1,9 @@
+#ifndef MUDLET_LUAINTERPRETER_H
+#define MUDLET_LUAINTERPRETER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,8 +22,6 @@
  ***************************************************************************/
 
 
-#ifndef LUA_INTERPRETER_H
-#define LUA_INTERPRETER_H
 
 #include <string>
 #include <QObject>
@@ -547,7 +548,4 @@ private:
    QString parameters;
 };
   */
-#endif
-
-
-
+#endif // MUDLET_LUAINTERPRETER_H

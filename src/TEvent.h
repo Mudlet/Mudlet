@@ -1,10 +1,8 @@
-
-#ifndef _TEVENT_H_
-#define _TEVENT_H_
+#ifndef MUDLET_TEVENT_H
+#define MUDLET_TEVENT_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,6 +31,4 @@ public:
     QList<int> mArgumentTypeList;
 };
 
-#endif
-
-
+#endif // MUDLET_TEVENT_H

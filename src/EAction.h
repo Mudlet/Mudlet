@@ -1,6 +1,8 @@
+#ifndef MUDLET_EACTION_H
+#define MUDLET_EACTION_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _eaction_h
-#define _eaction_h
 #include "mudlet.h"
 #include "Host.h"
 #include "TFlipButton.h"
@@ -48,5 +48,4 @@ signals:
     
 };
 
-#endif
-
+#endif // MUDLET_EACTION_H

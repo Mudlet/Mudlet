@@ -1,6 +1,3 @@
-#ifndef _HOSTMANAGER_CPP_
-#define _HOSTMANAGER_CPP_
-
 /***************************************************************************
  *   Copyright (C) 2008 by Heiko Koehn                                     *
  *   KoehnHeiko@googlemail.com                                             *
@@ -93,5 +90,4 @@ bool HostManager::serialize()
 }
 
 
-#endif
 
