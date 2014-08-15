@@ -1,6 +1,7 @@
 /***************************************************************************
  *   copyright (C) 2002-2005 by Tomas Mecir (kmuddy@kmuddy.com)            *
  *   copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com     *
+ *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
