@@ -1,3 +1,6 @@
+#ifndef MUDLET_DLGNOTEPAD_H
+#define MUDLET_DLGNOTEPAD_H
+
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
@@ -17,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _dlg_notepad_h
-#define _dlg_notepad_h
 
 class Host;
 
@@ -38,5 +39,4 @@ public:
         Host * mpHost;
 };
 
-#endif
-
+#endif // MUDLET_DLGNOTEPAD_H

@@ -1,6 +1,8 @@
+#ifndef MUDLET_TMAP_H
+#define MUDLET_TMAP_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,8 +22,6 @@
 
 
 
-#ifndef TMAP_H
-#define TMAP_H
 
 class TRoom;
 class TArea;
@@ -153,9 +153,4 @@ public:
 
 };
 
-
-
-
-#endif // TMAP_H
-
-
+#endif // MUDLET_TMAP_H

@@ -1,6 +1,8 @@
+#ifndef MUDLET_TAREA_H
+#define MUDLET_TAREA_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,8 +22,6 @@
 
 
 
-#ifndef TAREA_H
-#define TAREA_H
 
 #include <QList>
 #include <QMultiMap>
@@ -86,4 +86,4 @@ private:
 //   unter berücksichtigung der an die area angrenzenden edges
 // - der span der area ist unterschiedlich
 
-#endif // TAREA_H
+#endif // MUDLET_TAREA_H

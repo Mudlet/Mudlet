@@ -1,6 +1,8 @@
+#ifndef MUDLET_VARUNIT_H
+#define MUDLET_VARUNIT_H
+
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
- *   <email Chris>                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,9 +19,6 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#ifndef VARUNIT_H
-#define VARUNIT_H
 
 #include <QMap>
 #include <QStringList>
@@ -68,4 +67,4 @@ private:
     QSet<const void*> pointers;
 };
 
-#endif // VARUNIT_H
+#endif // MUDLET_VARUNIT_H

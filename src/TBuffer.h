@@ -1,6 +1,9 @@
+#ifndef MUDLET_TBUFFER_H
+#define MUDLET_TBUFFER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,8 +34,6 @@
 #include "Host.h"
 #include <QXmlStreamReader>
 
-#ifndef TBUFFER_H
-#define TBUFFER_H
 
 #define TCHAR_ITALICS 1
 #define TCHAR_BOLD 2
@@ -287,4 +288,4 @@ private:
     int               mCode[1024];//FIXME: potential overflow bug
 };
 
-#endif
+#endif // MUDLET_TBUFFER_H

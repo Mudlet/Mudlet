@@ -1,6 +1,8 @@
+#ifndef MUDLET_LUAINTERFACE_H
+#define MUDLET_LUAINTERFACE_H
+
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
- *   <email Chris>                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,9 +19,6 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#ifndef LUAINTERFACE_H
-#define LUAINTERFACE_H
 
 #include "TLuaInterpreter.h"
 #include "TTreeWidget.h"
@@ -74,4 +73,4 @@ private:
     QList<int> lrefs;
 };
 
-#endif // LUAINTERFACE_H
+#endif // MUDLET_LUAINTERFACE_H

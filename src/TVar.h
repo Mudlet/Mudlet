@@ -1,6 +1,8 @@
+#ifndef MUDLET_TVAR_H
+#define MUDLET_TVAR_H
+
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
- *   <email Chris>                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,9 +19,6 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#ifndef TVAR_H
-#define TVAR_H
 
 #include <QString>
 #include <QStringList>
@@ -72,4 +71,4 @@ private:
     QString     nValue;
 };
 
-#endif // TVAR_H
+#endif // MUDLET_TVAR_H

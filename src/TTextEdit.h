@@ -1,6 +1,8 @@
+#ifndef MUDLET_TTEXTEDIT_H
+#define MUDLET_TTEXTEDIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _T_TEXTEDIT_H
-#define _T_TEXTEDIT_H
 
 //#include <sys/time.h>
 #include <stdio.h>
@@ -158,5 +158,4 @@ private:
 
 };
 
-#endif
-
+#endif // MUDLET_TTEXTEDIT_H

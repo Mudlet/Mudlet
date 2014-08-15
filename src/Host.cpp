@@ -21,8 +21,6 @@
 
 
 
-#ifndef _HOST_CPP_
-#define _HOST_CPP_
 
 #include <QString>
 #include "Host.h"
@@ -1250,6 +1248,5 @@ void Host::readPackageConfig( QString luaConfig, QString & packageName )
     }
 }
 
-#endif
 
 

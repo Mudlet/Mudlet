@@ -1,5 +1,8 @@
+#ifndef MUDLET_XMLEXPORT_H
+#define MUDLET_XMLEXPORT_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,8 +21,6 @@
  ***************************************************************************/
 
 
-#ifndef XML_EXPORT_H
-#define XML_EXPORT_H
 
 
 #include <QXmlStreamWriter>
@@ -82,4 +83,4 @@ private:
     QString         mType;
 };
 
-#endif // XML_EXPORT_H
+#endif // MUDLET_XMLEXPORT_H

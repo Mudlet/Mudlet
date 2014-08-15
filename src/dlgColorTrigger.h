@@ -1,8 +1,8 @@
-#ifndef DLGCOLORTRIGGER_H
-#define DLGCOLORTRIGGER_H
+#ifndef MUDLET_DLGCOLORTRIGGER_H
+#define MUDLET_DLGCOLORTRIGGER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -66,4 +66,4 @@ private:
 
 };
 
-#endif // DLGCOLORTRIGGER_H
+#endif // MUDLET_DLGCOLORTRIGGER_H
