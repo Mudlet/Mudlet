@@ -92,18 +92,6 @@ public:
     void log( int, int );
     int skipSpacesAtBeginOfLine( int i, int i2 );
     void addLink( bool, QString & text, QStringList & command, QStringList & hint, TChar format );
-//    void appendLink( QString & text,
-//                     int sub_start,
-//                     int sub_end,
-//                     int fgColorR,
-//                     int fgColorG,
-//                     int fgColorB,
-//                     int bgColorR,
-//                     int bgColorG,
-//                     int bgColorB,
-//                     bool bold,
-//                     bool italics,
-//                     bool underline );
     QString bufferToHtml( QPoint P1, QPoint P2 );
     int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
@@ -157,7 +145,6 @@ public:
     int               mWrapAt;
     int               mWrapIndent;
     void              setBufferSize( int s, int batch );
-    void              messen();
     int               speedTP;
     int               speedSequencer;
     int               speedAppend;
