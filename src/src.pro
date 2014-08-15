@@ -370,7 +370,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
 
 # Documentation files:
