@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,16 +22,17 @@
  ***************************************************************************/
 
 
-#include "TTimer.h"
-#include <list>
-#include <map>
+#include "pre_guard.h"
 #include <QMutex>
-#include <QDataStream>
-#include <QTimer>
-#include <QTime>
+#include <QMultiMap>
+#include <QString>
+#include "post_guard.h"
 
-class TTimer;
+#include <list>
+
 class Host;
+class TTimer;
+
 
 class TimerUnit
 {

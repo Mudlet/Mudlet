@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,31 +22,27 @@
  ***************************************************************************/
 
 
-
-
-
-//#include <sys/time.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <QMainWindow>
-#include <QCloseEvent>
-//#include "ui_console.h"
-//#include <QtWebKit>
-#include <iostream>
-#include "ctelnet.h"
-#include "TCommandLine.h"
-#include <QPlainTextEdit>
-#include <QTextDocumentFragment>
-#include <QPoint>
 #include "TBuffer.h"
-#include "Host.h"
-#include "TLabel.h"
 
+#include "pre_guard.h"
+#include <QFile>
+#include <QTextStream>
+#include <QDataStream>
+#include <QWidget>
+#include "post_guard.h"
+
+#include <list>
+#include <map>
+
+class QCloseEvent;
+class QLineEdit;
+class QScrollBar;
+class QToolButton;
+
+class dlgMapper;
 class Host;
-class mudlet;
 class TTextEdit;
-class TBuffer;
+class TCommandLine;
 class TLabel;
 class TSplitter;
 class dlgNotepad;

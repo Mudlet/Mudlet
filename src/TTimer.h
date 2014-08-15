@@ -22,21 +22,17 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QTimer>
-#include <QString>
-#include <QRegExp>
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
-#include <QTextBlock>
-#include <QTime>
 
+
+#include "pre_guard.h"
+#include <QMutex>
+#include <QTime>
+#include "post_guard.h"
+
+class Host;
+
+class QTimer;
 
 
 class TTimer : public Tree<TTimer>

@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,21 +18,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <assert.h>
-#include <QDebug>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <deque>
-#include <queue>
+
 #include "TBuffer.h"
+
 #include "Host.h"
 #include "TConsole.h"
 
+#include <QDebug>
 
-using namespace std;
+#include <queue>
 
-class Host;
+#include <assert.h>
 
 
 TChar::TChar()
@@ -1427,7 +1423,7 @@ void TBuffer::translateToPlainText( std::string & s )
                 {
                     mAssemblingToken = false;
                     //qDebug()<<"identified TAG("<<currentToken.c_str()<<")";
-                    string::size_type _pfs = currentToken.find_first_of(' ');
+                    std::string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if( _pfs == std::string::npos )
                     {
@@ -1583,7 +1579,7 @@ void TBuffer::translateToPlainText( std::string & s )
                     else if( mMXP_Elements.contains( _tn ) )
                     {
                         QString _tp;
-                        string::size_type _fs = currentToken.find_first_of(' ');
+                        std::string::size_type _fs = currentToken.find_first_of(' ');
                         if( _fs != std::string::npos )
                             _tp = currentToken.substr( _fs ).c_str();
                         else
@@ -3323,6 +3319,3 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
         s.append("<br />");
     return s;
 }
-
-
-

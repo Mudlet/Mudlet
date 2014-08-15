@@ -22,46 +22,35 @@
  ***************************************************************************/
 
 
-
-
-class mudlet;
-class TLuaInterpreter;
-class LuaInterface;
-
-
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QString>
-#include <QMutexLocker>
-#include "ctelnet.h"
-#include "TriggerUnit.h"
-#include "TimerUnit.h"
-#include "ScriptUnit.h"
-#include "AliasUnit.h"
 #include "ActionUnit.h"
-#include "TLuaInterpreter.h"
-#include <QTextBlock>
-#include <QTextStream>
-#include <QFile>
-#include "dlgTriggerEditor.h"
-#include "TEvent.h"
-#include "TKey.h"
+#include "AliasUnit.h"
+#include "ctelnet.h"
 #include "KeyUnit.h"
-#include <QVector3D>
-#include "TArea.h"
-#include "TRoom.h"
-#include "TMap.h"
-#include <QListWidget>
-#include "LuaInterface.h"
+#include "ScriptUnit.h"
+#include "TimerUnit.h"
+#include "TLuaInterpreter.h"
+#include "TriggerUnit.h"
+
+#include "pre_guard.h"
+#include <QColor>
+#include <QFile>
+#include <QFont>
+#include <QTextStream>
+#include "post_guard.h"
+
+class QDialog;
+class QPushButton;
+class QListWidget;
 
 class dlgTriggerEditor;
+class TEvent;
+class TArea;
+class LuaInterface;
+class TMap;
+class TRoom;
 class TConsole;
 class dlgNotepad;
 class TMap;
-
-
-
 
 
 class Host  : public QObject

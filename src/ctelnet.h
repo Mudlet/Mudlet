@@ -21,26 +21,32 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QObject>
-#include <list>
-//#include <sys/time.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <queue>
-#include <QQueue>
-#include <QTextCodec>
+
+#include "pre_guard.h"
 #include <QHostAddress>
-#include <QTcpSocket>
 #include <QHostInfo>
-#include <zlib.h>
-#include <QTimer>
+#include <QTcpSocket>
 #include <QTime>
-#include <QColor>
-#include "dlgComposer.h"
-#include <QNetworkAccessManager>
-#include <QProgressDialog>
+#include "post_guard.h"
 #include <QStringList>
+
+#include <zlib.h>
+
+#include <iostream>
+#include <queue>
+#include <string>
+
+class QNetworkAccessManager;
+class QNetworkReply;
+class QProgressDialog;
+class QTextCodec;
+class QTextDecoder;
+class QTextEncoder;
+class QTimer;
+
+class Host;
+class dlgComposer;
+
 
 const char TN_SE = 240;
 const char TN_NOP = 241;
@@ -76,13 +82,6 @@ const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char TNSB_IS = 0;
 const char TNSB_SEND = 1;
-
-
-
-
-class mudlet;
-class Host;
-//class dlgComposer;
 
 class cTelnet : public QObject
 {

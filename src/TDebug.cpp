@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,11 +19,11 @@
  ***************************************************************************/
 
 
-#include <QMap>
-#include <QString>
-#include <QTextCursor>
-#include "mudlet.h"
 #include "TDebug.h"
+
+#include "mudlet.h"
+#include "TConsole.h"
+
 
 TDebug::TDebug(QColor c, QColor d)
 { 
@@ -136,10 +136,4 @@ TDebug & TDebug::operator<<( const QList<int> &list )
     }
     msg += "), ";
     return *this;
-}    
-    
-
-
-
-
-
+}

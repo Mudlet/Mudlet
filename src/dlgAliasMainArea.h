@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,8 +22,9 @@
  ***************************************************************************/
 
 
+#include "pre_guard.h"
 #include "ui_aliases_main_area.h"
-#include <QWidget>
+#include "post_guard.h"
 
 
 class dlgAliasMainArea : public QWidget , public Ui::aliases_main_area

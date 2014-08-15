@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,20 +19,13 @@
  ***************************************************************************/
 
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <math.h>
-#include <QDataStream>
-#include <QRegExp>
-#include <QString>
-#include <QTextDocument>
 #include "TAlias.h"
+
+
 #include "Host.h"
-#include "HostManager.h"
 #include "mudlet.h"
 #include "TDebug.h"
+
 
 using namespace std;
 
@@ -401,5 +394,3 @@ void TAlias::execute()
     }
     mpHost->mLuaInterpreter.call( mFuncName, mName );
 }
-
-

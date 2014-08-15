@@ -21,13 +21,14 @@
  ***************************************************************************/
 
 
+#include "pre_guard.h"
 #include <QPushButton>
-#include <QStyleOptionButton>
+#include "post_guard.h"
 
-class TAction;
 class Host;
-class TToolBar;
+class TAction;
 class TEasyButtonBar;
+class TToolBar;
 
 class TFlipButton : public QPushButton
 {

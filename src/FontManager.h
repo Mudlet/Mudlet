@@ -20,12 +20,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
-#include <QFontDatabase>
+class QString;
 
 class FontManager
 {
-	public:
+public:
 	void addFonts();
 	void loadFonts(QString folder);
 	

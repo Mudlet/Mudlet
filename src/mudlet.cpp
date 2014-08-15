@@ -1,7 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
- *                                                                         *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,41 +20,45 @@
  ***************************************************************************/
 
 
-#include <QtGui>
-#include <QResizeEvent>
 #include "mudlet.h"
-#include "TConsole.h"
 
-#include <QTextEdit>
-#include <QTextStream>
-#include <QCloseEvent>
-#include <QFileDialog>
-#include <QtUiTools/quiloader.h>
+
 #include "ctelnet.h"
-#include "dlgConnectionProfiles.h"
-#include "dlgTriggerEditor.h"
-#include "dlgPackageExporter.h"
 #include "dlgAboutDialog.h"
-#include "TCommandLine.h"
-#include "EAction.h"
-#include "dlgProfilePreferences.h"
-#include "TDebug.h"
-#include "XMLimport.h"
-#include "EAction.h"
-#include "TTextEdit.h"
+#include "dlgConnectionProfiles.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
 #include "dlgNotepad.h"
+#include "dlgPackageExporter.h"
+#include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
+#include "EAction.h"
+#include "Host.h"
+#include "HostManager.h"
 #include "LuaInterface.h"
-#include <QToolBar>
+#include "TCommandLine.h"
+#include "TConsole.h"
+#include "TDebug.h"
+#include "TEvent.h"
+#include "TLabel.h"
+#include "TMap.h"
+#include "TRoomDB.h"
+#include "TTextEdit.h"
+#include "XMLimport.h"
+
+#include "pre_guard.h"
+#include <QtEvents>
 #include <QApplication>
+#include <QDesktopServices>
 #include <QDesktopWidget>
+#include <QDockWidget>
+#include <QFileDialog>
 #include <QMessageBox>
-
-//#ifdef Q_CC_GNU
-    #include "dlgIRC.h"
-//#endif
-
-//#define NDEBUG
-#include <assert.h>
+#include <QScrollBar>
+#include <QTextCharFormat>
+#include <QToolBar>
+#include <QtUiTools/quiloader.h>
+#include "post_guard.h"
 
 
 using namespace std;
@@ -1861,8 +1865,6 @@ void mudlet::slot_show_help_dialog_irc()
     QDesktopServices::openUrl(QUrl("http://webchat.freenode.net/?channels=mudlet"));
 }
 
-#include "dlgMapper.h"
-
 void mudlet::slot_mapper()
 {
     Host * pHost = getActiveHost();
@@ -1942,8 +1944,6 @@ void mudlet::slot_show_about_dialog()
     pDlg->raise();
     pDlg->show();
 }
-
-#include <QTextCharFormat>
 
 void mudlet::slot_notes()
 {

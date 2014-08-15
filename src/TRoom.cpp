@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2012 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
- *                                                                         *
+ *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,15 +18,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QDebug>
-#include <QDataStream>
-#include <QStringBuilder>
-#include <QVector3D>
-#include "TRoom.h"
-#include "TRoomDB.h"
-#include "dlgMapper.h"
 
-TRoom::TRoom(TRoomDB * pRDB )
+#include "TRoom.h"
+
+
+#include "TArea.h"
+#include "TRoomDB.h"
+
+#include "pre_guard.h"
+#include <QDataStream>
+#include <QDebug>
+#include <QStringBuilder>
+#include <QTime>
+#include "post_guard.h"
+
+
+TRoom::TRoom(TRoomDB * pRDB)
 : x( 0 )
 , y( 0 )
 , z( 0 )
@@ -569,8 +576,6 @@ void TRoom::calcRoomDimensions()
     }
 }
 
-// Include of QDataStream moved from here
-
 /* bool - N/U: no return value created or used */
 void TRoom::restore( QDataStream & ifs, int roomID, int version )
 {
@@ -740,6 +745,3 @@ void TRoom::auditExits()
         }
     }
 }
-
-
-

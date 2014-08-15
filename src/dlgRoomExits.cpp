@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,15 +18,23 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include <QDebug>
+
+
+#include "dlgRoomExits.h"
+
+
 #include <QStringBuilder>
 #include "TArea.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "Host.h"
-#include "dlgRoomExits.h"
+#include "TRoom.h"
+#include "TRoomDB.h"
 
+#include "pre_guard.h"
+#include <QDebug>
+#include "post_guard.h"
 
 dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW ): QDialog( pW ), mpHost( pH ), mpEditItem( 0 )
 {
@@ -185,8 +194,6 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setTextAlignment(7, Qt::AlignLeft );
     specialExits->addTopLevelItem(pI);
 }
-
-// include of TRoom.h moved from here
 
 void dlgRoomExits::save()
 {

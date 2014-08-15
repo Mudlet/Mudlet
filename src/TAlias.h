@@ -22,21 +22,12 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QTimer>
-#include <QString>
-#include <QRegExp>
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
+
 #include <pcre.h>
 
-class TLuaInterpreter;
+class Host;
+
 
 class TAlias : public Tree<TAlias>
 {

@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,20 +18,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cstddef> // NULL
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "Host.h"
-#include "TLuaInterpreter.h"
-#include <QDebug>
+
 #include "ActionUnit.h"
+
+
+#include "Host.h"
 #include "mudlet.h"
+#include "TAction.h"
+#include "TCommandLine.h"
+#include "TConsole.h"
+#include "TEasyButtonBar.h"
+#include "TToolBar.h"
+
 
 using namespace std;
 
@@ -587,5 +585,3 @@ void ActionUnit::updateToolbar()
     getToolBarList();
     getEasyButtonBarList();
 }
-
-

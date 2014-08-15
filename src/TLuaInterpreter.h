@@ -22,16 +22,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
-
-#include <string>
-#include <QObject>
+#include "pre_guard.h"
+#include <QMutex>
 #include <QNetworkReply>
 #include <QNetworkAccessManager>
-#include <QProcess>
-#include <QTcpSocket>
 #include <QThread>
 #include <QTimer>
+#include "post_guard.h"
 
 #ifndef LUA_CPP
 extern "C"
@@ -44,13 +41,21 @@ extern "C"
 }
 #endif
 
-#include <QMutexLocker>
-#include <queue>
-#include <string>
 #include <iostream>
 #include <list>
-//#include "TTrigger.h"
-//#include "Host.h"
+#include <map>
+#include <ostream>
+#include <queue>
+#include <string>
+
+
+class Host;
+class TEvent;
+class TGatekeeperThread;
+class TLuaMainThread;
+class TLuaThread;
+class TTrigger;
+
 
 #define SERVEROUTPUT 1
 #define USERCOMMAND 2
@@ -58,12 +63,6 @@ extern "C"
 #define RAWDATA 4
 
 
-class TLuaMainThread;
-class TLuaThread;
-class TGatekeeperThread;
-class Host;
-class TTrigger;
-class TEvent;
 
 
 class TLuaInterpreter : public QThread  {

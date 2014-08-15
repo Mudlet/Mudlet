@@ -21,8 +21,15 @@
  ***************************************************************************/
 
 
-#include <QDialog>
 #include "Host.h"
+
+#include "pre_guard.h"
+#include <QDialog>
+#include "post_guard.h"
+
+class QTreeWidget;
+class QTreeWidgetItem;
+
 
 namespace Ui {
 class dlgPackageExporter;

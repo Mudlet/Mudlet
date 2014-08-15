@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,10 +20,27 @@
 
 
 #include "XMLimport.h"
+
+
+#include "LuaInterface.h"
 #include "mudlet.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TMap.h"
 #include "TRoom.h"
+#include "TRoomDB.h"
+#include "TScript.h"
+#include "TTrigger.h"
+#include "TTimer.h"
+#include "TVar.h"
+#include "VarUnit.h"
+
+#include "pre_guard.h"
 #include <QStringList>
 #include <QDebug>
+#include "post_guard.h"
+
 
 int maxRooms;
 int maxAreas;
@@ -2036,4 +2054,3 @@ void XMLimport::readIntegerList( QList<int> & list )
         }
     }
 }
-

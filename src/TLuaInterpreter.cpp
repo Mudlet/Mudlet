@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,36 +20,50 @@
  ***************************************************************************/
 
 
-#include <QDebug>
-#include <QDir>
-#include <QString>
-#include <QRegExp>
-#include <QNetworkAccessManager>
-#include <QSslConfiguration>
-#include <QDesktopServices>
 #include "TLuaInterpreter.h"
-#include "TForkedProcess.h"
-#include "TTrigger.h"
+
+
+#include "dlgComposer.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "glwidget.h"
+#include "Host.h"
 #include "HostManager.h"
 #include "mudlet.h"
+#include "TAlias.h"
+#include "TArea.h"
+#include "TCommandLine.h"
+#include "TConsole.h"
 #include "TDebug.h"
+#include "TEvent.h"
+#include "TForkedProcess.h"
+#include "TMap.h"
+#include "TRoom.h"
+#include "TRoomDB.h"
+#include "TTextEdit.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+
+#include "pre_guard.h"
+#include <QDebug>
+#include <QDesktopServices>
+#include <QDir>
+#include <QFileDialog>
+#include <QRegExp>
+#include <QSound>
+#include <QSslConfiguration>
+#include <QString>
+#include "post_guard.h"
+
 #include <list>
 #include <string>
-#include "TEvent.h"
-#include "dlgMapper.h"
 
-
-
-#ifndef LUA_CPP
-extern "C"
-{
+#ifdef Q_OS_MAC
+    #include "luazip.c"
 #endif
-    #include "lua.h"
-    #include "lualib.h"
-    #include "lauxlib.h"
-#ifndef LUA_CPP
-}
-#endif
+
+
 /*//for map var access
 union mVarTypes {
     int * i;
@@ -2554,8 +2569,6 @@ int TLuaInterpreter::createBuffer( lua_State *L )
     mudlet::self()->createBuffer( pHost, text );
     return 0;
 }
-
-#include "TTextEdit.h"
 
 int TLuaInterpreter::clearUserWindow( lua_State *L )
 {
@@ -6184,7 +6197,6 @@ int TLuaInterpreter::permRegexTrigger( lua_State *L )
     return 1;
 }
 
-#include <QFileDialog>
 
 int TLuaInterpreter::invokeFileDialog( lua_State * L )
 {
@@ -9728,7 +9740,6 @@ int TLuaInterpreter::sendSocket( lua_State * L )
     return 0;
 }
 
-#include "dlgIRC.h"
 int TLuaInterpreter::sendIrc( lua_State * L )
 {
     string who;
@@ -10729,10 +10740,6 @@ void TLuaInterpreter::startLuaSessionInterpreter()
     mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
 }
 
-#ifdef Q_OS_MAC
-    #include "luazip.c"
-#endif
-
 // this function initializes the Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
@@ -11551,10 +11558,3 @@ int TLuaInterpreter::startPermSubstringTrigger( QString & name, QString & parent
     return id;
 
 }
-
-
-
-
-
-
-

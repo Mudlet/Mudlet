@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn -  KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,7 +19,16 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "dlgAboutDialog.h"
+
+
+#include "pre_guard.h"
+#include <QPainter>
+#include <QTextLayout>
+#include <QStringBuilder>
+#include "post_guard.h"
+
 
 dlgAboutDialog::dlgAboutDialog(QWidget * parent) : QDialog(parent)
 {
@@ -87,4 +97,3 @@ dlgAboutDialog::dlgAboutDialog(QWidget * parent) : QDialog(parent)
 
     mudletTitleLabel->setPixmap( QPixmap::fromImage( splashImage ) );
 }
-

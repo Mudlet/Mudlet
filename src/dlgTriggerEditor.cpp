@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,42 +18,50 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "dlgTriggerEditor.h"
-#include "Host.h"
-#include "HostManager.h"
-#include "TriggerUnit.h"
-#include "TTrigger.h"
-#include "TAction.h"
-#include <QHeaderView>
-#include <QtGui>
-#include <QMainWindow>
-#include <QListWidgetItem>
-#include "dlgTriggersMainArea.h"
-#include "dlgOptionsAreaTriggers.h"
-#include "dlgOptionsAreaAction.h"
-#include "dlgOptionsAreaTimers.h"
-#include "dlgOptionsAreaScripts.h"
-#include "dlgOptionsAreaAlias.h"
-#include "dlgAliasMainArea.h"
+
+
 #include "dlgActionMainArea.h"
+#include "dlgAliasMainArea.h"
+#include "dlgColorTrigger.h"
+#include "dlgKeysMainArea.h"
+#include "dlgOptionsAreaAction.h"
+#include "dlgOptionsAreaAlias.h"
+#include "dlgOptionsAreaScripts.h"
+#include "dlgOptionsAreaTimers.h"
+#include "dlgOptionsAreaTimers.h"
+#include "dlgOptionsAreaTriggers.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgSearchArea.h"
-#include "dlgKeysMainArea.h"
-#include "dlgOptionsAreaTimers.h"
-#include "TTreeWidget.h"
+#include "dlgTriggerPatternEdit.h"
+#include "dlgTriggersMainArea.h"
+#include "Host.h"
+#include "HostManager.h"
+#include "LuaInterface.h"
 #include "mudlet.h"
+#include "TAction.h"
+#include "TConsole.h"
+#include "THighlighter.h"
+#include "TriggerUnit.h"
+#include "TTextEdit.h"
+#include "TTreeWidget.h"
+#include "TTrigger.h"
+#include "VarUnit.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
-#include "dlgColorTrigger.h"
-#include "dlgTriggerPatternEdit.h"
-#include "THighlighter.h"
-#include "TTextEdit.h"
-#include "LuaInterface.h"
-#include "VarUnit.h"
-#include <QToolBar>
+
+#include "pre_guard.h"
 #include <QColorDialog>
-#include <QMessageBox>
 #include <QFileDialog>
+#include <QHeaderView>
+#include <QListWidget>
+#include <QMainWindow>
+#include <QMessageBox>
+#include <QSettings>
+#include <QToolBar>
+#include "post_guard.h"
+
 
 using namespace std;
 
@@ -7388,8 +7396,3 @@ void dlgTriggerEditor::slot_cursorPositionChanged()
     }
     QMainWindow::statusBar()->showMessage( line );
 }
-
-
-
-
-

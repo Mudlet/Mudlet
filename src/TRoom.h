@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,10 +22,14 @@
  ***************************************************************************/
 
 
-#include <QVector3D>
-#include <QMap>
+#include "TMap.h"
+
+#include "pre_guard.h"
 #include <QColor>
-//#include "TRoomDB.h"
+#include <QMap>
+#include <QVector3D>
+#include "post_guard.h"
+
 
 #define DIR_NORTH 1
 #define DIR_NORTHEAST 2

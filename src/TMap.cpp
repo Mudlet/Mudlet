@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,10 +20,23 @@
 
 
 #include "TMap.h"
+
+
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "Host.h"
+#include "TArea.h"
+#include "TConsole.h"
+#include "TRoom.h"
+#include "TRoomDB.h"
+
+#include "pre_guard.h"
 #include <QDebug>
+#include <QDir>
+#include <QFileDialog>
 #include <QMainWindow>
 #include <QMessageBox>
-#include "dlgMapper.h"
+#include "post_guard.h"
 
 
 TMap::TMap( Host * pH )
@@ -92,7 +105,6 @@ void TMap::mapClear()
     mapLabels.clear();
 }
 
-#include "TConsole.h"
 void TMap::logError( QString & msg )
 {
     QColor orange = QColor(255,128,0);
@@ -104,9 +116,6 @@ void TMap::logError( QString & msg )
     }
 }
 
-
-
-#include <QFileDialog>
 void TMap::exportMapToDatabase()
 {
     QString dbName = QFileDialog::getSaveFileName( 0, "Chose db file name." );
@@ -1061,8 +1070,6 @@ bool TMap::serialize( QDataStream & ofs )
     return true;
 }
 
-#include <QDir>
-
 bool TMap::restore(QString location)
 {
     qDebug()<<"restoring map of profile:"<<mpHost->getName()<<" url:"<<mpHost->getUrl();
@@ -1393,6 +1400,3 @@ void TMap::deleteMapLabel(int area, int labelID )
     mapLabels[area].remove( labelID );
     if( mpMapper ) mpMapper->mp2dMap->update();
 }
-
-
-

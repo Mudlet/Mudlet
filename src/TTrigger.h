@@ -22,22 +22,22 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QString>
-#include <QColor>
-
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
-#include <QTextBlock>
-#include "TMatchState.h"
+
+#include "pre_guard.h"
+#include <QColor>
+#include <QMap>
+#include "post_guard.h"
+
 #include <pcre.h>
-//#include <QSound>
+
+#include <map>
+#include <string>
+
+class Host;
+class TLuaInterpreter;
+class TMatchState;
+
 
 #define REGEX_SUBSTRING 0
 #define REGEX_PERL 1

@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,12 +18,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QDir>
-#include <iostream>
-#include <fstream>
+
 #include "HostManager.h"
+
+
 #include "Host.h"
-#include "HostPool.h"
+
+#include "pre_guard.h"
+#include <QDir>
+#include "post_guard.h"
+
+#include <iostream>
+#include <ostream>
+
 
 HostManager * HostManager::_self = 0;
 

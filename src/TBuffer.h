@@ -22,18 +22,17 @@
  ***************************************************************************/
 
 
-
-
-#include <QPoint>
-#include <QColor>
+#include "pre_guard.h"
 #include <QChar>
-#include <QString>
+#include <QColor>
+#include <QMap>
+#include <QPoint>
 #include <QStringList>
-#include <deque>
 #include <QTime>
-#include "Host.h"
-#include <QXmlStreamReader>
+#include "post_guard.h"
 
+#include <deque>
+#include <string>
 
 #define TCHAR_ITALICS 1
 #define TCHAR_BOLD 2
@@ -65,10 +64,6 @@ public:
     int    link;
 //    bool   invers;
 };
-
-
-class Host;
-
 
 const QChar cLF = QChar('\n');
 const QChar cSPACE = QChar(' ');

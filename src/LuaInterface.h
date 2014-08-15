@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,23 +21,29 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLuaInterpreter.h"
-#include "TTreeWidget.h"
-#include "Host.h"
-#include <QSet>
-#include <QTreeWidgetItem>
-#include <setjmp.h>
-#include "TVar.h"
-#include "VarUnit.h"
 
+#include "TVar.h"
+
+#include "pre_guard.h"
+#include <QSet>
+#include "post_guard.h"
+
+#ifndef LUA_CPP
 extern "C"
 {
-    #include "lua.h"
-    #include "lualib.h"
-    #include "lauxlib.h"
+#endif
+    #include <lua.h>
+#ifndef LUA_CPP
 }
-class TLuaInterpreter;
+#endif
+
+
 class Host;
+class TLuaInterpreter;
+class VarUnit;
+
+class QTreeWidgetItem;
+
 
 class LuaInterface
 {

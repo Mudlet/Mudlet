@@ -22,23 +22,21 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QTimer>
-#include <QString>
-#include <QRegExp>
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
-#include <QTextBlock>
-#include "TToolBar.h"
-#include "TFlipButton.h"
-#include <QMenu>
 
+#include "pre_guard.h"
+#include <QColor>
+#include <QIcon>
+#include "post_guard.h"
+
+class Host;
+class mudlet;
+class TEasyButtonBar;
+class TFlipButton;
+class TLuaInterpreter;
+class TToolBar;
+
+class QMenu;
 
 
 class TAction : public Tree<TAction>, QObject

@@ -1,35 +1,56 @@
 /***************************************************************************
- *   copyright (C) 2002-2005 by Tomas Mecir (kmuddy@kmuddy.com)            *
- *   copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com     *
+ *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
- *                                                                         *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
+ *   it under the terms of the GNU General Public License version 2 as     *
+ *   published by the Free Software Foundation.                            *
  *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "ctelnet.h"
-#include <time.h>
-//#include <unistd.h>
-#include <QTextCodec>
-#include <QHostAddress>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <sys/types.h>
-#include <stdio.h>
+
+
+#include "dlgComposer.h"
+#include "dlgMapper.h"
+#include "glwidget.h"
+#include "Host.h"
+#include "mudlet.h"
+#include "TConsole.h"
+#include "TDebug.h"
+#include "TEvent.h"
+#include "TMap.h"
+
+#include "pre_guard.h"
 #include <QDebug>
 #include <QDir>
+#include <QNetworkAccessManager>
+#include <QProgressDialog>
 #include <QStringBuilder>
-#include <QTcpSocket>
-#include "mudlet.h"
-#include "TDebug.h"
-#include "dlgComposer.h"
-#include "TMap.h"
-#include "dlgMapper.h"
+#include <QTextCodec>
+#include <QTimer>
+#include "post_guard.h"
+
+#include <iostream>
+#include <memory>
+#include <sstream>
+
+#include <sys/types.h>
+#include <stdio.h>
+#include <time.h>
+
 
 #ifdef DEBUG
     #undef DEBUG
@@ -1876,6 +1897,3 @@ MAIN_LOOP_END: ;
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();
 }
-
-
-

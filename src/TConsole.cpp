@@ -1,7 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
- *   Copyright (C) 2014      by Stephen Lyons (slysven@virginmedia.com)    *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,38 +20,34 @@
  ***************************************************************************/
 
 
-#include <QMessageBox>
-#include <QDebug>
 #include "TConsole.h"
-#include "mudlet.h"
-#include <QScrollBar>
-#include "TCommandLine.h"
-#include <QVBoxLayout>
-//#include <sys/time.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <time.h>
-//#include <unistd.h>
-#include <QTextCodec>
-#include <QHostAddress>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <sys/types.h>
-#include <stdio.h>
-#include "TDebug.h"
-#include "TTextEdit.h"
-#include <QGraphicsSimpleTextItem>
-#include "XMLexport.h"
-#include <QShortcut>
-#include "TLabel.h"
-#include "TSplitter.h"
-#include "TSplitterHandle.h"
-#include <QDir>
-#include "dlgNotepad.h"
-#include <assert.h>
+
+
 #include "dlgMapper.h"
+#include "Host.h"
+#include "mudlet.h"
+#include "TCommandLine.h"
+#include "TDebug.h"
+#include "TEvent.h"
+#include "TLabel.h"
+#include "TMap.h"
+#include "TRoomDB.h"
+#include "TSplitter.h"
+#include "TTextEdit.h"
+#include "XMLexport.h"
+
+#include "pre_guard.h"
+#include <QDir>
+#include <QMessageBox>
+#include <QLineEdit>
+#include <QScrollBar>
+#include <QShortcut>
+#include <QToolButton>
+#include <QVBoxLayout>
+#include "post_guard.h"
+
+#include <assert.h>
+
 
 using namespace std;
 
@@ -2806,6 +2802,3 @@ QSize TConsole::getMainWindowSize() const
     QSize mainWindowSize( consoleSize.width()-toolbarWidth, consoleSize.height()-(commandLineHeight+toolbarHeight));
     return mainWindowSize;
 }
-
-
-
