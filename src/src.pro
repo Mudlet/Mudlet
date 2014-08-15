@@ -310,6 +310,7 @@ HEADERS += \
     VarUnit.h
 
 
+# This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
     ui/about_dialog.ui \
     ui/actions_main_area.ui \
@@ -317,23 +318,18 @@ FORMS += \
     ui/color_trigger.ui \
     ui/composer.ui \
     ui/connection_profiles.ui \
-    ui/custom_lines.ui \
     ui/dlgPackageExporter.ui \
     ui/extended_search_area.ui \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
-    ui/lacking_mapper_script.ui \
     ui/main_window.ui \
     ui/mapper.ui \
-    ui/module_manager.ui \
     ui/notes_editor.ui \
     ui/options_area_actions.ui \
     ui/options_area_aliases.ui \
     ui/options_area_scripts.ui \
     ui/options_area_timers.ui \
     ui/options_area_triggers.ui \
-    ui/package_manager.ui \
-    ui/package_manager_unpack.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/scripts_main_area.ui \
