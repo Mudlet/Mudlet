@@ -390,7 +390,7 @@ void dlgProfilePreferences::resetColors()
 
     pHost->mCommandLineFgColor = Qt::darkGray;
     pHost->mCommandLineBgColor = Qt::black;
-    pHost->mCommandFgColor     = QColor(113, 113, 0);
+    pHost->mCommandFgColor     = Qt::darkYellow;
     pHost->mCommandBgColor     = Qt::black;
     pHost->mFgColor            = Qt::lightGray;
     pHost->mBgColor            = Qt::black;
