@@ -98,6 +98,7 @@ SET(mudlet_SRCS
     XMLimport.cpp
 )
 
+# This is for compiled UI files, not those used at runtime though the resource file.
 SET(mudlet_UIS
     ui/about_dialog.ui
     ui/actions_main_area.ui
@@ -109,7 +110,6 @@ SET(mudlet_UIS
     ui/extended_search_area.ui
     ui/irc.ui
     ui/keybindings_main_area.ui
-    ui/lacking_mapper_script.ui
     ui/main_window.ui
     ui/mapper.ui
     ui/notes_editor.ui
