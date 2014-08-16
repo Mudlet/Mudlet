@@ -2390,19 +2390,6 @@ void mudlet::stopSounds()
 
 void mudlet::playSound( QString s )
 {
-//    {
-//        mpMusicBox1->setCurrentSource( s );
-//        mpMusicBox1->play();
-//    }
-//    else if( mpMusicBox2->remainingTime() == 0 )
-//    {
-//        mpMusicBox2->setCurrentSource( s );
-//        mpMusicBox2->play();
-//    }
-//    else if( mpMusicBox3->remainingTime() == 0 )
-//    {
-//        mpMusicBox3->setCurrentSource( s );
-//        mpMusicBox3->play();
     if( mpMusicBox1->state() != QMediaPlayer::PlayingState )
     {
         mpMusicBox1->setMedia( QUrl::fromLocalFile( s ) );

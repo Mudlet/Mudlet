@@ -88,7 +88,6 @@ public:
     QPoint insert( QPoint &, QString text, int,int,int, int, int, int, bool bold, bool italics, bool underline );
     bool insertInLine( QPoint & cursor, QString & what, TChar & format );
     void expandLine( int y, int count, TChar & );
-    int wrap( int startLine, int screenWidth, int indentSize, TChar & format );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
     void log( int, int );
     int skipSpacesAtBeginOfLine( int i, int i2 );
