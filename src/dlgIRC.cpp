@@ -37,21 +37,13 @@
 dlgIRC::dlgIRC()
 {
     setupUi(this);
-    session = new Irc::Session(this);
+    session = new IrcSession(this);
     irc->setOpenExternalLinks ( true );
     setUnifiedTitleAndToolBarOnMac( true );
     connect( irc, SIGNAL(anchorClicked(QUrl)), this, SLOT(anchorClicked(QUrl)));
-    connect( session, SIGNAL(msgMessageReceived(const QString &, const QString &, const QString &)), this, SLOT(irc_gotMsg(QString, QString, QString)));
-    connect( session, SIGNAL(msgNoticeReceived(const QString &, const QString &, const QString &)), this, SLOT(irc_gotMsg(QString, QString, QString)));
-    connect( session, SIGNAL(msgUnknownMessageReceived(const QString &, const QStringList &)), this, SLOT(irc_gotMsg2(QString, QStringList)));
-    connect( session, SIGNAL(msgNumericMessageReceived(const QString &, uint, const QStringList &)), this, SLOT(irc_gotMsg3(QString, uint, QStringList)));
+    connect( session, SIGNAL(messageReceived(IrcMessage*)), this, SLOT(onMessageReceived(IrcMessage*)));
+    connect( session, SIGNAL(connected()), this, SLOT(onConnected()));
     connect( lineEdit, SIGNAL(returnPressed()), this, SLOT(sendMsg()));
-    connect( session, SIGNAL(msgJoined(const QString &, const QString &)), this, SLOT(slot_joined(QString, QString)));
-    connect( session, SIGNAL(msgParted(const QString &, const QString &, const QString &)), this, SLOT(slot_parted(QString, QString, QString)));
-
-    QStringList chans;
-    chans << "#mudlet";
-    session->setAutoJoinChannels( chans );
 
     QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
     file.open( QIODevice::ReadOnly );
@@ -70,11 +62,13 @@ dlgIRC::dlgIRC()
         file.close();
     }
 
-    session->setNick(nick);
+    session->setNickName(nick);
     mNick = nick;
-    session->setIdent("mudlet");
+    session->setUserName("mudlet");
     session->setRealName(mudlet::self()->version);
-    session->connectToServer("irc.freenode.net", 6667);
+    session->setHost("irc.freenode.net");
+    session->setPort(6667);
+    session->open();
 }
 
 void dlgIRC::sendMsg()
@@ -84,9 +78,9 @@ void dlgIRC::sendMsg()
     if( txt.startsWith("/nick ") )
     {
         txt.replace("/nick ", "" );
-        session->setNick( txt );
+        session->setNickName( txt );
         mNick = txt;
-        session->cmdNames("#mudlet");
+        session->sendCommand( IrcCommand::createNames( "#mudlet" ) );
         return;
     }
     if( txt.startsWith( "/msg ") )
@@ -97,14 +91,70 @@ void dlgIRC::sendMsg()
         if( _i == -1 || _i < 1 || txt.size()<_i+2 ) return;
         QString r = txt.mid(0, _i);
         QString m = txt.mid( _i+1 );
-        session->cmdMessage( r, m );
+        IrcCommand *cmd = IrcCommand::createMessage( r, m );
+        session->sendCommand( cmd );
+        IrcMessage* msg = IrcMessage::fromCommand( session->nickName(), cmd, session );
+        onMessageReceived( msg );
         qDebug()<<"r="<<r<<" msg="<<m;
-        session->cmdNames("#mudlet");
+        session->sendCommand( IrcCommand::createNames( "#mudlet" ) );
         return;
     }
 
-    session->cmdMessage("#mudlet", txt);
-    session->cmdNames( "#mudlet" );
+    IrcCommand *cmd = IrcCommand::createMessage( "#mudlet", txt );
+    session->sendCommand( cmd );
+    IrcMessage* msg = IrcMessage::fromCommand( session->nickName(), cmd, session );
+    onMessageReceived( msg );
+    session->sendCommand( IrcCommand::createNames( "#mudlet" ) );
+}
+
+void dlgIRC::onConnected() {
+    session->sendCommand( IrcCommand::createJoin( "#mudlet" ) );
+}
+
+void dlgIRC::onMessageReceived( IrcMessage* msg )
+{
+    switch( msg->type() )
+    {
+    case IrcMessage::Type::Join: {
+        IrcJoinMessage *rmsg = static_cast<IrcJoinMessage*>(msg);
+        slot_joined( rmsg->sender().name(), rmsg->channel() );
+        break;
+        }
+    case IrcMessage::Type::Notice: {
+        IrcNoticeMessage *rmsg = static_cast<IrcNoticeMessage*>(msg);
+        irc_gotMsg( rmsg->sender().name(), rmsg->target(), rmsg->message() );
+        break;
+        }
+    case IrcMessage::Type::Private: {
+        IrcPrivateMessage *rmsg = static_cast<IrcPrivateMessage*>(msg);
+        irc_gotMsg( rmsg->sender().name(), rmsg->target(), rmsg->message() );
+        break;
+        }
+    case IrcMessage::Type::Numeric: {
+        IrcNumericMessage *rmsg = static_cast<IrcNumericMessage*>(msg);
+        irc_gotMsg3( rmsg->sender().name(), rmsg->code(), rmsg->parameters() );
+        break;
+        }
+    case IrcMessage::Type::Part: {
+        IrcPartMessage *rmsg = static_cast<IrcPartMessage*>(msg);
+        slot_parted( rmsg->sender().name(), rmsg->channel(), rmsg->reason() );
+        break;
+        }
+    case IrcMessage::Type::Unknown:
+        irc_gotMsg2( msg->sender().name(), msg->parameters() );
+        break;
+    }
+    /*
+    Nick 	IrcNickMessage
+    Quit 	IrcQuitMessage
+    Topic 	IrcTopicMessage
+    Invite 	IrcInviteMessage
+    Kick 	IrcKickMessage
+    Mode 	IrcModeMessage
+    Ping 	IrcPingMessage
+    Pong 	IrcPongMessage
+    Error 	IrcErrorMessage
+    */
 }
 
 void dlgIRC::irc_gotMsg( QString a, QString b, QString c )
@@ -133,7 +183,7 @@ void dlgIRC::irc_gotMsg( QString a, QString b, QString c )
     const QString msg = c;
     const QString n = a;
     QString t;
-    if( b == a )
+    if( b == mNick )
         t = tr("<font color=#a5a5a5>[%1] </font>msg from <font color=#ff0000>%2</font><font color=#ff0000>: %3</font>").arg(_t).arg(n).arg(msg);
     else if( a == mNick )
         t = tr("<font color=#a5a5a5>[%1] </font><font color=#00aaaa>%2</font><font color=#004400>: %3</font>").arg(_t).arg(n).arg(msg);
@@ -191,7 +241,7 @@ void dlgIRC::irc_gotMsg2( QString a, QStringList c )
 void dlgIRC::irc_gotMsg3( QString a, uint code, QStringList c )
 {
     qDebug()<<"code="<<code<<" list="<<c;
-    if( code == 332 && c.size()>2 )
+    if( code == Irc::RPL_TOPIC && c.size()>2 )
     {
         QString m = c.join(" ");
         m.replace("<","&#60;");
@@ -223,7 +273,7 @@ void dlgIRC::irc_gotMsg3( QString a, uint code, QStringList c )
         t.replace(mNick, "");
         cur.insertHtml(t);
     }
-    else if( code == 353 && c.size()>=3 )
+    else if( code == Irc::RPL_NAMREPLY && c.size()>=3 )
     {
         QString nicks = c[3];
         QStringList nList = nicks.split(" ");
@@ -233,17 +283,17 @@ void dlgIRC::irc_gotMsg3( QString a, uint code, QStringList c )
             nickList->addItem( nList[i]);
         }
     }
-    else if( code == 433 )
+    else if( code == Irc::ERR_NICKNAMEINUSE )
     {
         QString m = c.join(" ");
         if( m.contains( "name is already in use" ) )
         {
             mNick.append("_");
-            session->setNick( mNick );
+            session->setNickName( mNick );
             irc_gotMsg( "", "", "You have changed your nick." );
         }
     }
-    else if( code == 366 )
+    else if( code == Irc::RPL_ENDOFNAMES )
         return;
     else
     {
@@ -274,7 +324,7 @@ void dlgIRC::slot_parted(QString nick, QString chan, QString msg )
     cur.insertHtml(t);
     irc->verticalScrollBar()->triggerAction(QScrollBar::SliderToMaximum);
     nickList->clear();
-    session->cmdNames( "#mudlet" );
+    session->sendCommand( IrcCommand::createNames( "#mudlet" ) );
 }
 
 

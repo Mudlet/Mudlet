@@ -940,7 +940,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     ofs << new_nick;
     file.close();
     if( mudlet::self()->mpIRC )
-        mudlet::self()->mpIRC->session->setNick( new_nick );
+        mudlet::self()->mpIRC->session->setNickName( new_nick );
 
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {

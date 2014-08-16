@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2008-2009 J-P Nurmi jpnurmi@gmail.com
+* Copyright (C) 2008-2012 J-P Nurmi <jpnurmi@gmail.com>
 *
 * This library is free software; you can redistribute it and/or modify it
 * under the terms of the GNU Lesser General Public License as published by
@@ -12,1053 +12,1857 @@
 * License for more details.
 */
 
-#include "../include/irc.h"
+#include "irc.h"
 #include <QMetaEnum>
 
-/*! \mainpage LibIrcClient-Qt - a cross-platform C++ IRC library
+/*! \mainpage Communi - a cross-platform IRC client library written with Qt 4
 
-    \section Introduction
+    \section introduction Introduction
 
-    LibIrcClient-Qt is a cross-platform IRC client library written with Qt 4.
+    Communi, formerly known as LibIrcClient-Qt, is a cross-platform IRC
+    client library written with Qt 4. IRC (Internet Relay Chat protocol)
+    is a simple text-based communication protocol.
 
-    \section Installation
+    \section install Installation
 
-    To compile LibIrcClient-Qt, do the standard mantra:
+    To compile Communi, do the standard mantra:
     \code
-    # qmake -config (debug|release)
-    # make
-    # sudo make install
+    $ qmake
+    $ make
+    $ sudo make install
     \endcode
 
-    \section Usage
+    The default build config is resolved by qmake. To build Communi
+    specifically in release or debug mode, you may pass additional
+    "-config release" or "-config debug" parameters to qmake, respectively.
+    Furthermore, in order to build a static version of Communi, you
+    may pass "-config static".
 
-    Add the following line to your qmake .pro file:
+    \section usage Usage
+
+    Add the following line to your qmake project (.pro) file:
     \code
-    CONFIG += libircclient-qt
+    CONFIG += communi
     \endcode
+
+    This adds the necessary include paths and linker rules in order to use the library.
+
+    Communi in a nutshell:
+    \li IrcSession manages the connection to an IRC server
+    \li IrcMessage represents a message received from an IRC server via IrcSession::messageReceived().
+    \li IrcCommand represents a command sent to an IRC server via IrcSession::sendCommand().
+
+    \defgroup core Core classes
+    \brief The list of core classes to get started with.
+
+    \defgroup message Message classes
+    \brief The list of available IRC message classes.
+
+    \defgroup utility Utility classes
+    \brief The list of utility classes.
  */
 
 /*!
-    \namespace Irc
-    \brief The Irc namespace contains miscellaneous identifiers used throughout the LibIrcClient-Qt library.
+    \file irc.h
+    \brief #include &lt;Irc&gt;
  */
 
 /*!
-    Returns the LibIrcClient-Qt version number as string
-    in form M.N.P (M = major, N = minor, P = patch).
+    \class Irc irc.h <Irc>
+    \ingroup utility
+    \brief The Irc class contains miscellaneous identifiers used throughout the library.
  */
 
 /*!
-    Returns the version number of LibIrcClient-Qt at run-time as a string (for example, "1.2.3").
+    Returns the version number of Communi at run-time as a string (for example, "1.2.3").
     This may be a different version than the version the application was compiled against.
 
-    \sa IRC_VERSION_STR
+    \sa COMMUNI_VERSION and COMMUNI_VERSION_STR
  */
 const char* Irc::version()
 {
-    return IRC_VERSION_STR;
+    return COMMUNI_VERSION_STR;
 }
 
 /*!
-    Returns the numeric RFC \a code as a string or \a 0 if the code is unknown.
+    Returns the numeric \a code as a string or \a 0 if the code is unknown.
+
+    \sa Irc::Code and IrcNumericMessage::code()
  */
-const char* Irc::Rfc::toString(uint code)
+const char* Irc::toString(int code)
 {
-    int index = staticMetaObject.indexOfEnumerator("Numeric");
+    int index = staticMetaObject.indexOfEnumerator("Code");
     Q_ASSERT(index != -1);
     QMetaEnum enumerator = staticMetaObject.enumerator(index);
     return enumerator.valueToKey(code);
 }
 
 /*!
-    \class Irc::Rfc irc.h
-    \brief The Irc::Rfc class enumerates command responses and error replies.
+    \enum Irc::Code
 
-    The Irc::Rfc class enumerates command responses and error replies as defined
-    in RFC 1459 (Internet Relay Chat Protocol - http://www.ietf.org/rfc/rfc1459.txt).
-
-    \sa Irc::Rfc::Numeric
+    The command responses and error replies as defined in
+    <a href="http://tools.ietf.org/html/rfc1459">RFC 1459</a>,
+    <a href="http://tools.ietf.org/html/rfc2812">RFC 2812</a>,
+    and various <a href="http://www.alien.net.au/irc/irc2numerics.html">IRCd specific extensions</a>.
  */
 
 /*!
-    \enum Irc::Rfc::Numeric
-
-    This enum describes the numeric message codes defined in the RFC.
+    \var Irc::RPL_WELCOME
+    \brief 1
  */
-
 /*!
-    \var Irc::Rfc::RPL_WELCOME
-    \brief 001 Welcome to the Internet Relay Network \<nick\>!\<user\>\@\<host\>
-
-    The server sends replies 001 to 004 to a user upon successful registration.
+    \var Irc::RPL_YOURHOST
+    \brief 2
  */
-
 /*!
-    \var Irc::Rfc::RPL_YOURHOST
-    \brief 002 Your host is \<servername\>, running version \<ver\>
-
-    The server sends replies 001 to 004 to a user upon successful registration.
+    \var Irc::RPL_CREATED
+    \brief 3
  */
-
 /*!
-    \var Irc::Rfc::RPL_CREATED
-    \brief 003 This server was created \<date\>
-
-    The server sends replies 001 to 004 to a user upon successful registration.
+    \var Irc::RPL_MYINFO
+    \brief 4
  */
-
 /*!
-    \var Irc::Rfc::RPL_MYINFO
-    \brief 004 \<servername\> \<version\> \<available user modes\> \<available channel modes\>
-
-    The server sends replies 001 to 004 to a user upon successful registration.
+    \var Irc::RPL_ISUPPORT
+    \brief 5
  */
-
 /*!
-    \var Irc::Rfc::RPL_BOUNCE
-    \brief 005 Try server \<server name\>, port \<port number\>
-
-    Sent by the server to a user to suggest an alternative server. This is often used when the connection is refused because the server is already full.
+    \var Irc::RPL_SNOMASK
+    \brief 8
  */
-
 /*!
-    \var Irc::Rfc::RPL_USERHOST
-    \brief 302 :*1\<reply\> *(
-
-    No description available in RFC
+    \var Irc::RPL_STATMEMTOT
+    \brief 9
  */
-
 /*!
-    \var Irc::Rfc::RPL_ISON
-    \brief 303 :*1\<nick\> *(
-
-    No description available in RFC
+    \var Irc::RPL_BOUNCE
+    \brief 10
  */
-
 /*!
-    \var Irc::Rfc::RPL_AWAY
-    \brief 301 \<nick\> :\<away message\>
-
-    No description available in RFC
+    \var Irc::RPL_STATMEM
+    \brief 10
  */
-
 /*!
-    \var Irc::Rfc::RPL_UNAWAY
-    \brief 305 :You are no longer marked as being away
-
-    No description available in RFC
+    \var Irc::RPL_YOURCOOKIE
+    \brief 14
  */
-
 /*!
-    \var Irc::Rfc::RPL_NOWAWAY
-    \brief 306 :You have been marked as being away
-
-    These replies are used with the AWAY command (if allowed). RPL_AWAY is sent to any client sending a PRIVMSG to a client which is away. RPL_AWAY is only sent by the server to which the client is connected. Replies RPL_UNAWAY and RPL_NOWAWAY are sent when the client removes and sets an AWAY message.
+    \var Irc::RPL_YOURID
+    \brief 42
  */
-
 /*!
-    \var Irc::Rfc::RPL_WHOISUSER
-    \brief 311 \<nick\> \<user\> \<host\> * :\<real name\>
-
-    No description available in RFC
+    \var Irc::RPL_SAVENICK
+    \brief 43
  */
-
 /*!
-    \var Irc::Rfc::RPL_WHOISSERVER
-    \brief 312 \<nick\> \<server\> :\<server info\>
-
-    No description available in RFC
+    \var Irc::RPL_ATTEMPTINGJUNC
+    \brief 50
  */
-
 /*!
-    \var Irc::Rfc::RPL_WHOISOPERATOR
-    \brief 313 \<nick\> :is an IRC operator
-
-    No description available in RFC
+    \var Irc::RPL_ATTEMPTINGREROUTE
+    \brief 51
  */
-
 /*!
-    \var Irc::Rfc::RPL_WHOISIDLE
-    \brief 317 \<nick\> \<integer\> :seconds idle
-
-    No description available in RFC
+    \var Irc::RPL_TRACELINK
+    \brief 200
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFWHOIS
-    \brief 318 \<nick\> :End of WHOIS list
-
-    No description available in RFC
+    \var Irc::RPL_TRACECONNECTING
+    \brief 201
  */
-
 /*!
-    \var Irc::Rfc::RPL_WHOISCHANNELS
-    \brief 319 "<nick> :*( ( "\@" / "+" ) \<channel\> " " )"
-
-    No description available in RFC
+    \var Irc::RPL_TRACEHANDSHAKE
+    \brief 202
  */
-
 /*!
-    \var Irc::Rfc::RPL_WHOWASUSER
-    \brief 314 \<nick\> \<user\> \<host\> * :\<real name\>
-
-    No description available in RFC
+    \var Irc::RPL_TRACEUNKNOWN
+    \brief 203
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFWHOWAS
-    \brief 369 \<nick\> :End of WHOWAS
-
-    When replying to a WHOWAS message, a server MUST use the replies RPL_WHOWASUSER, RPL_WHOISSERVER or ERR_WASNOSUCHNICK for each nickname in the presented list. At the end of all reply batches, there MUST be RPL_ENDOFWHOWAS (even if there was only one reply and it was an error).
+    \var Irc::RPL_TRACEOPERATOR
+    \brief 204
  */
-
 /*!
-    \var Irc::Rfc::RPL_LIST
-    \brief 322 \<channel\> \<# visible\> :\<topic\>
-
-    No description available in RFC
+    \var Irc::RPL_TRACEUSER
+    \brief 205
  */
-
 /*!
-    \var Irc::Rfc::RPL_LISTEND
-    \brief 323 :End of LIST
-
-    Replies RPL_LIST, RPL_LISTEND mark the actual replies with data and end of the server's response to a LIST command. If there are no channels available to return, only the end reply MUST be sent.
+    \var Irc::RPL_TRACESERVER
+    \brief 206
  */
-
 /*!
-    \var Irc::Rfc::RPL_UNIQOPIS
-    \brief 325 \<channel\> \<nickname\>
-
-    No description available in RFC
+    \var Irc::RPL_TRACESERVICE
+    \brief 207
  */
-
 /*!
-    \var Irc::Rfc::RPL_CHANNELMODEIS
-    \brief 324 \<channel\> \<mode\> \<mode params\>
-
-    No description available in RFC
+    \var Irc::RPL_TRACENEWTYPE
+    \brief 208
  */
-
 /*!
-    \var Irc::Rfc::RPL_CHANNELURL
-    \brief 329 \<channel\> \<url\>
-
-    No description available in RFC
+    \var Irc::RPL_TRACECLASS
+    \brief 209
  */
-
 /*!
-    \var Irc::Rfc::RPL_CHANNELCREATED
-    \brief 329 \<channel\> \<datetime\>
-
-    No description available in RFC
+    \var Irc::RPL_TRACERECONNECT
+    \brief 210
  */
-
 /*!
-    \var Irc::Rfc::RPL_NOTOPIC
-    \brief 331 \<channel\> :No topic is set
-
-    No description available in RFC
+    \var Irc::RPL_STATS
+    \brief 210
  */
-
 /*!
-    \var Irc::Rfc::RPL_TOPIC
-    \brief 332 \<channel\> :\<topic\>
-
-    When sending a TOPIC message to determine the channel topic, one of two replies is sent. If the topic is set, RPL_TOPIC is sent back else RPL_NOTOPIC.
+    \var Irc::RPL_STATSLINKINFO
+    \brief 211
  */
-
 /*!
-    \var Irc::Rfc::RPL_TOPICSET
-    \brief 333 \<channel\> \<user\> \<datetime\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSCOMMANDS
+    \brief 212
  */
-
 /*!
-    \var Irc::Rfc::RPL_INVITING
-    \brief 341 \<channel\> \<nick\>
-
-    Returned by the server to indicate that the attempted INVITE message was successful and is being passed onto the end client.
+    \var Irc::RPL_STATSCLINE
+    \brief 213
  */
-
 /*!
-    \var Irc::Rfc::RPL_SUMMONING
-    \brief 342 \<user\> :Summoning user to IRC
-
-    Returned by a server answering a SUMMON message to indicate that it is summoning that user.
+    \var Irc::RPL_STATSNLINE
+    \brief 214
  */
-
 /*!
-    \var Irc::Rfc::RPL_INVITELIST
-    \brief 346 \<channel\> \<invitemask\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSILINE
+    \brief 215
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFINVITELIST
-    \brief 347 \<channel\> :End of channel invite list
-
-    When listing the 'invitations masks' for a given channel, a server is required to send the list back using the RPL_INVITELIST and RPL_ENDOFINVITELIST messages. A separate RPL_INVITELIST is sent for each active mask. After the masks have been listed (or if none present) a RPL_ENDOFINVITELIST MUST be sent.
+    \var Irc::RPL_STATSKLINE
+    \brief 216
  */
-
 /*!
-    \var Irc::Rfc::RPL_EXCEPTLIST
-    \brief 348 \<channel\> \<exceptionmask\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSQLINE
+    \brief 217
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFEXCEPTLIST
-    \brief 349 \<channel\> :End of channel exception list
-
-    When listing the 'exception masks' for a given channel, a server is required to send the list back using the RPL_EXCEPTLIST and RPL_ENDOFEXCEPTLIST messages. A separate RPL_EXCEPTLIST is sent for each active mask. After the masks have been listed (or if none present) a RPL_ENDOFEXCEPTLIST MUST be sent.
+    \var Irc::RPL_STATSYLINE
+    \brief 218
  */
-
 /*!
-    \var Irc::Rfc::RPL_VERSION
-    \brief 351 \<version\>.\<debuglevel\> \<server\> :\<comments\>
-
-    Reply by the server showing its version details. The \<version\> is the version of the software being used (including any patchlevel revisions) and the \<debuglevel\> is used to indicate if the server is running in "debug mode". The "comments" field may contain any comments about the version or further version details.
+    \var Irc::RPL_ENDOFSTATS
+    \brief 219
  */
-
 /*!
-    \var Irc::Rfc::RPL_WHOREPLY
-    \brief 352 \<channel\> \<user\> \<host\> \<server\> \<nick\> \<H|G\>[*][@|+] :\<hopcount\> \<real name\>
-
-    No description available in RFC
+    \var Irc::RPL_UMODEIS
+    \brief 221
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFWHO
-    \brief 315 \<name\> :End of WHO list
-
-    The RPL_WHOREPLY and RPL_ENDOFWHO pair are used to answer a WHO message. The RPL_WHOREPLY is only sent if there is an appropriate match to the WHO query. If there is a list of parameters supplied with a WHO message, a RPL_ENDOFWHO MUST be sent after processing each list item with \<name\> being the item
+    \var Irc::RPL_MODLIST
+    \brief 222
  */
-
 /*!
-    \var Irc::Rfc::RPL_NAMREPLY
-    \brief 353 \<channel\> :[[@|+]\<nick\> [[@|+]\<nick\> [...]]]
-
-    No description available in RFC
+    \var Irc::RPL_SQLINE_NICK
+    \brief 222
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFNAMES
-    \brief 366 \<channel\> :End of NAMES list
-
-    To reply to a NAMES message, a reply pair consisting of RPL_NAMREPLY and RPL_ENDOFNAMES is sent by the server back to the client. If there is no channel found as in the query, then only RPL_ENDOFNAMES is returned. The exception to this is when a NAMES message is sent with no parameters and all visible channels and contents are sent back in a series of RPL_NAMEREPLY messages with a RPL_ENDOFNAMES to mark the end.
+    \var Irc::RPL_STATSZLINE
+    \brief 225
  */
-
 /*!
-    \var Irc::Rfc::RPL_LINKS
-    \brief 364 \<mask\> \<server\> :\<hopcount\> \<server info\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSCOUNT
+    \brief 226
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFLINKS
-    \brief 365 \<mask\> :End of LINKS list
-
-    In replying to the LINKS message, a server MUST send replies back using the RPL_LINKS numeric and mark the end of the list using an RPL_ENDOFLINKS reply.
+    \var Irc::RPL_SERVICEINFO
+    \brief 231
  */
-
 /*!
-    \var Irc::Rfc::RPL_BANLIST
-    \brief 367 \<channel\> \<banmask\>
-
-    No description available in RFC
+    \var Irc::RPL_ENDOFSERVICES
+    \brief 232
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFBANLIST
-    \brief 368 \<channel\> :End of channel ban list
-
-    When listing the active 'bans' for a given channel, a server is required to send the list back using the RPL_BANLIST and RPL_ENDOFBANLIST messages. A separate RPL_BANLIST is sent for each active banmask. After the banmasks have been listed (or if none present) a RPL_ENDOFBANLIST MUST be sent.
+    \var Irc::RPL_SERVICE
+    \brief 233
  */
-
 /*!
-    \var Irc::Rfc::RPL_INFO
-    \brief 371 :\<string\>
-
-    No description available in RFC
+    \var Irc::RPL_SERVLIST
+    \brief 234
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFINFO
-    \brief 374 :End of INFO list
-
-    A server responding to an INFO message is required to send all its 'info' in a series of RPL_INFO messages with a RPL_ENDOFINFO reply to indicate the end of the replies.
+    \var Irc::RPL_SERVLISTEND
+    \brief 235
  */
-
 /*!
-    \var Irc::Rfc::RPL_MOTDSTART
-    \brief 375 :- \<server\> Message of the day -
-
-    No description available in RFC
+    \var Irc::RPL_STATSVERBOSE
+    \brief 236
  */
-
 /*!
-    \var Irc::Rfc::RPL_MOTD
-    \brief 372 :- \<text\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSENGINE
+    \brief 237
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFMOTD
-    \brief 376 :End of MOTD command
-
-    When responding to the MOTD message and the MOTD file is found, the file is displayed line by line, with each line no longer than 80 characters, using RPL_MOTD format replies. These MUST be surrounded by a RPL_MOTDSTART (before the RPL_MOTDs) and an RPL_ENDOFMOTD (after).
+    \var Irc::RPL_STATSIAUTH
+    \brief 239
  */
-
 /*!
-    \var Irc::Rfc::RPL_YOUREOPER
-    \brief 381 :You are now an IRC operator
-
-    RPL_YOUREOPER is sent back to a client which has just successfully issued an OPER message and gained operator status.
+    \var Irc::RPL_STATSVLINE
+    \brief 240
  */
-
 /*!
-    \var Irc::Rfc::RPL_REHASHING
-    \brief 382 \<config file\> :Rehashing
-
-    If the REHASH option is used and an operator sends a REHASH message, an RPL_REHASHING is sent back to the operator.
+    \var Irc::RPL_STATSLLINE
+    \brief 241
  */
-
 /*!
-    \var Irc::Rfc::RPL_YOURESERVICE
-    \brief 383 You are service \<servicename\>
-
-    Sent by the server to a service upon successful registration.
+    \var Irc::RPL_STATSUPTIME
+    \brief 242
  */
-
 /*!
-    \var Irc::Rfc::RPL_TIME
-    \brief 391 \<server\> :\<string showing server's local time\>
-
-    When replying to the TIME message, a server MUST send the reply using the RPL_TIME format above. The string showing the time need only contain the correct day and time there. There is no further requirement for the time string.
+    \var Irc::RPL_STATSOLINE
+    \brief 243
  */
-
 /*!
-    \var Irc::Rfc::RPL_USERSSTART
-    \brief 392 :UserID   Terminal  Host
-
-    No description available in RFC
+    \var Irc::RPL_STATSHLINE
+    \brief 244
  */
-
-
 /*!
-    \var Irc::Rfc::RPL_USERS
-    \brief 393 :\<username\> \<ttyline\> \<hostname\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSSLINE
+    \brief 245
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFUSERS
-    \brief 394 :End of users
-
-    No description available in RFC
+    \var Irc::RPL_STATSPING
+    \brief 246
  */
-
 /*!
-    \var Irc::Rfc::RPL_NOUSERS
-    \brief 395 :Nobody logged in
-
-    If the USERS message is handled by a server, the replies RPL_USERSTART, RPL_USERS, RPL_ENDOFUSERS and RPL_NOUSERS are used. RPL_USERSSTART MUST be sent first, following by either a sequence of RPL_USERS or a single RPL_NOUSER. Following this is RPL_ENDOFUSERS.
+    \var Irc::RPL_STATSBLINE
+    \brief 247
  */
-
-
 /*!
-    \var Irc::Rfc::RPL_TRACELINK
-    \brief 200 Link \<version \& debug level\> \<destination\>
-                   \<next server\> V\<protocol version\>
-                   \<link uptime in seconds\> \<backstream sendq\>
-                   \<upstream sendq\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSDEFINE
+    \brief 248
  */
-
-
 /*!
-    \var Irc::Rfc::RPL_TRACECONNECTING
-    \brief 201 Try. \<class\> \<server\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSDEBUG
+    \brief 249
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACEHANDSHAKE
-    \brief 202 H.S. \<class\> \<server\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSDLINE
+    \brief 250
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACEUNKNOWN
-    \brief 203 ???? \<class\> [\<client IP address in dot form\>]
-
-    No description available in RFC
+    \var Irc::RPL_STATSCONN
+    \brief 250
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACEOPERATOR
-    \brief 204 Oper \<class\> \<nick\>
-
-    No description available in RFC
+    \var Irc::RPL_LUSERCLIENT
+    \brief 251
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACEUSER
-    \brief 205 User \<class\> \<nick\>
-
-    No description available in RFC
+    \var Irc::RPL_LUSEROP
+    \brief 252
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACESERVER
-    \brief 206 Serv \<class\> \<int\>S \<int\>C \<server\>
-                   \<nick!user|*!*\>\@\<host|server\> V\<protocol version\>
-
-    No description available in RFC
+    \var Irc::RPL_LUSERUNKNOWN
+    \brief 253
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACESERVICE
-    \brief 207 Service \<class\> \<name\> \<type\> \<active type\>
-
-    No description available in RFC
+    \var Irc::RPL_LUSERCHANNELS
+    \brief 254
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACENEWTYPE
-    \brief 208 \<newtype\> 0 \<client name\>
-
-    No description available in RFC
+    \var Irc::RPL_LUSERME
+    \brief 255
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACECLASS
-    \brief 209 Class \<class\> \<count\>
-
-    No description available in RFC
+    \var Irc::RPL_ADMINME
+    \brief 256
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACELOG
-    \brief 261 File \<logfile\> \<debug level\>
-
-    No description available in RFC
+    \var Irc::RPL_ADMINLOC1
+    \brief 257
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRACEEND
-    \brief 262 \<server name\> \<version \& debug level\> :End of TRACE
-
-    The RPL_TRACE* are all returned by the server in response to the TRACE message. How many are returned is dependent on the TRACE message and whether it was sent by an operator or not. There is no predefined order for which occurs first. Replies RPL_TRACEUNKNOWN, RPL_TRACECONNECTING and RPL_TRACEHANDSHAKE are all used for connections which have not been fully established and are either unknown, still attempting to connect or in the process of completing the 'server handshake'. RPL_TRACELINK is sent by any server which handles a TRACE message and has to pass it on to another server. The list of RPL_TRACELINKs sent in response to a TRACE command traversing the IRC network should reflect the actual connectivity of the servers themselves along that path. RPL_TRACENEWTYPE is to be used for any connection which does not fit in the other categories but is being displayed anyway. RPL_TRACEEND is sent to indicate the end of the list.
+    \var Irc::RPL_ADMINLOC2
+    \brief 258
  */
-
 /*!
-    \var Irc::Rfc::RPL_STATSLINKINFO
-    \brief 211 \<linkname\> \<sendq\> \<sent messages\>
-                   \<sent Kbytes\> \<received messages\>
-                   \<received Kbytes\> \<time open\>
-
-    reports statistics on a connection. \<linkname\> identifies the particular connection, \<sendq\> is the amount of data that is queued and waiting to be sent \<sent messages\> the number of messages sent, and \<sent Kbytes\> the amount of data sent, in Kbytes. \<received messages\> and \<received Kbytes\> are the equivalent of \<sent messages\> and \<sent Kbytes\> for received data, respectively. \<time open\> indicates how long ago the connection was opened, in seconds.
+    \var Irc::RPL_ADMINEMAIL
+    \brief 259
  */
-
 /*!
-    \var Irc::Rfc::RPL_STATSCOMMANDS
-    \brief 212 \<command\> \<count\> \<byte count\> \<remote count\>
-
-    reports statistics on commands usage.
+    \var Irc::RPL_TRACELOG
+    \brief 261
  */
-
 /*!
-    \var Irc::Rfc::RPL_ENDOFSTATS
-    \brief 219 \<stats letter\> :End of STATS report
-
-    No description available in RFC
+    \var Irc::RPL_TRACEPING
+    \brief 262
  */
-
 /*!
-    \var Irc::Rfc::RPL_STATSUPTIME
-    \brief 242 :Server Up %d days %d:%02d:%02d
-
-    reports the server uptime.
+    \var Irc::RPL_TRACEEND
+    \brief 262
  */
-
 /*!
-    \var Irc::Rfc::RPL_STATSOLINE
-    \brief 243 O \<hostmask\> * \<name\>
-
-    reports the allowed hosts from where user may become IRC operators.
+    \var Irc::RPL_TRYAGAIN
+    \brief 263
  */
-
 /*!
-    \var Irc::Rfc::RPL_UMODEIS
-    \brief 221 \<user mode string\>
-
-    To answer a query about a client's own mode, RPL_UMODEIS is sent back.
+    \var Irc::RPL_LOCALUSERS
+    \brief 265
  */
-
 /*!
-    \var Irc::Rfc::RPL_SERVLIST
-    \brief 234 \<name\> \<server\> \<mask\> \<type\> \<hopcount\> \<info\>
-
-    No description available in RFC
+    \var Irc::RPL_GLOBALUSERS
+    \brief 266
  */
-
 /*!
-    \var Irc::Rfc::RPL_SERVLISTEND
-    \brief 235 \<mask\> \<type\> :End of service listing
-
-    When listing services in reply to a SERVLIST message, a server is required to send the list back using the RPL_SERVLIST and RPL_SERVLISTEND messages. A separate RPL_SERVLIST is sent for each service. After the services have been listed (or if none present) a RPL_SERVLISTEND MUST be sent.
+    \var Irc::RPL_START_NETSTAT
+    \brief 267
  */
-
 /*!
-    \var Irc::Rfc::RPL_LUSERCLIENT
-    \brief 251 :There are \<integer\> users and \<integer\>
-                   services on \<integer\> servers
-
-    No description available in RFC
+    \var Irc::RPL_NETSTAT
+    \brief 268
  */
-
 /*!
-    \var Irc::Rfc::RPL_LUSEROP
-    \brief 252 \<integer\> :operator(s) online
-
-    No description available in RFC
+    \var Irc::RPL_END_NETSTAT
+    \brief 269
  */
-
 /*!
-    \var Irc::Rfc::RPL_LUSERUNKNOWN
-    \brief 253 \<integer\> :unknown connection(s)
-
-    No description available in RFC
+    \var Irc::RPL_PRIVS
+    \brief 270
  */
-
 /*!
-    \var Irc::Rfc::RPL_LUSERCHANNELS
-    \brief 254 \<integer\> :channels formed
-
-    No description available in RFC
+    \var Irc::RPL_SILELIST
+    \brief 271
  */
-
 /*!
-    \var Irc::Rfc::RPL_LUSERME
-    \brief 255 :I have \<integer\> clients and \<integer\>
-                    servers
-
-    In processing an LUSERS message, the server sends a set of replies from RPL_LUSERCLIENT, RPL_LUSEROP, RPL_USERUNKNOWN, RPL_LUSERCHANNELS and RPL_LUSERME. When replying, a server MUST send back RPL_LUSERCLIENT and RPL_LUSERME. The other replies are only sent back if a non-zero count is found for them.
+    \var Irc::RPL_ENDOFSILELIST
+    \brief 272
  */
-
 /*!
-    \var Irc::Rfc::RPL_ADMINME
-    \brief 256 \<server\> :Administrative info
-
-    No description available in RFC
+    \var Irc::RPL_NOTIFY
+    \brief 273
  */
-
 /*!
-    \var Irc::Rfc::RPL_ADMINLOC1
-    \brief 257 :\<admin info\>
-
-    No description available in RFC
+    \var Irc::RPL_ENDNOTIFY
+    \brief 274
  */
-
 /*!
-    \var Irc::Rfc::RPL_ADMINLOC2
-    \brief 258 :\<admin info\>
-
-    No description available in RFC
+    \var Irc::RPL_STATSDELTA
+    \brief 274
  */
-
 /*!
-    \var Irc::Rfc::RPL_ADMINEMAIL
-    \brief 259 :\<admin info\>
-
-    When replying to an ADMIN message, a server is expected to use replies RPL_ADMINME through to RPL_ADMINEMAIL and provide a text message with each. For RPL_ADMINLOC1 a description of what city, state and country the server is in is expected, followed by details of the institution (RPL_ADMINLOC2) and finally the administrative contact for the server (an email address here is REQUIRED) in RPL_ADMINEMAIL.
+    \var Irc::RPL_VCHANEXIST
+    \brief 276
  */
-
 /*!
-    \var Irc::Rfc::RPL_TRYAGAIN
-    \brief 263 \<command\> :Please wait a while and try again.
-
-    When a server drops a command without processing it, it MUST use the reply RPL_TRYAGAIN to inform the originating client.
+    \var Irc::RPL_VCHANLIST
+    \brief 277
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOSUCHNICK
-    \brief 401 \<nickname\> :No such nick/channel
-
-    Used to indicate the nickname parameter supplied to a command is currently unused.
+    \var Irc::RPL_VCHANHELP
+    \brief 278
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOSUCHSERVER
-    \brief 402 \<server name\> :No such server
-
-    Used to indicate the server name given currently does not exist.
+    \var Irc::RPL_GLIST
+    \brief 280
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOSUCHCHANNEL
-    \brief 403 \<channel name\> :No such channel
-
-    Used to indicate the given channel name is invalid.
+    \var Irc::RPL_ENDOFGLIST
+    \brief 281
  */
-
 /*!
-    \var Irc::Rfc::ERR_CANNOTSENDTOCHAN
-    \brief 404 \<channel name\> :Cannot send to channel
-
-    Sent to a user who is either (a) not on a channel which is mode +n or (b) not a chanop (or mode +v) on a channel which has mode +m set or where the user is banned and is trying to send a PRIVMSG message to that channel.
+    \var Irc::RPL_ACCEPTLIST
+    \brief 281
  */
-
 /*!
-    \var Irc::Rfc::ERR_TOOMANYCHANNELS
-    \brief 405 \<channel name\> :You have joined too many channels
-
-    Sent to a user when they have joined the maximum number of allowed channels and they try to join another channel.
+    \var Irc::RPL_ENDOFACCEPT
+    \brief 282
  */
-
 /*!
-    \var Irc::Rfc::ERR_WASNOSUCHNICK
-    \brief 406 \<nickname\> :There was no such nickname
-
-    Returned by WHOWAS to indicate there is no history information for that nickname.
+    \var Irc::RPL_JUPELIST
+    \brief 282
  */
-
 /*!
-    \var Irc::Rfc::ERR_TOOMANYTARGETS
-    \brief 407 \<target\> :\<error code\> recipients. \<abort message\>
-
-    Returned to a client which is attempting to send a PRIVMSG/NOTICE using the user\@host destination format and for a user\@host which has several occurrences. - Returned to a client which trying to send a PRIVMSG/NOTICE to too many recipients. - Returned to a client which is attempting to JOIN a safe channel using the shortname when there are more than one such channel.
+    \var Irc::RPL_ENDOFJUPELIST
+    \brief 283
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOSUCHSERVICE
-    \brief 408 \<service name\> :No such service
-
-    Returned to a client which is attempting to send a SQUERY to a service which does not exist.
+    \var Irc::RPL_FEATURE
+    \brief 284
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOORIGIN
-    \brief 409 :No origin specified
-
-    PING or PONG message missing the originator parameter.
+    \var Irc::RPL_GLIST_HASH
+    \brief 285
  */
-
 /*!
-    \var Irc::Rfc::ERR_NORECIPIENT
-    \brief 411 :No recipient given (\<command\>)
-
-    No description available in RFC
+    \var Irc::RPL_CHANINFO_HANDLE
+    \brief 285
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOTEXTTOSEND
-    \brief 412 :No text to send
-
-    No description available in RFC
+    \var Irc::RPL_NEWHOSTIS
+    \brief 285
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOTOPLEVEL
-    \brief 413 \<mask\> :No toplevel domain specified
-
-    No description available in RFC
+    \var Irc::RPL_CHANINFO_USERS
+    \brief 286
  */
-
 /*!
-    \var Irc::Rfc::ERR_WILDTOPLEVEL
-    \brief 414 \<mask\> :Wildcard in toplevel domain
-
-    No description available in RFC
+    \var Irc::RPL_CHKHEAD
+    \brief 286
  */
-
 /*!
-    \var Irc::Rfc::ERR_BADMASK
-    \brief 415 \<mask\> :Bad Server/host mask
-
-    412 - 415 are returned by PRIVMSG to indicate that the message wasn't delivered for some reason. ERR_NOTOPLEVEL and ERR_WILDTOPLEVEL are errors that are returned when an invalid use of "PRIVMSG $\<server\>" or "PRIVMSG #\<host\>" is attempted.
+    \var Irc::RPL_CHANINFO_CHOPS
+    \brief 287
  */
-
 /*!
-    \var Irc::Rfc::ERR_UNKNOWNCOMMAND
-    \brief 421 \<command\> :Unknown command
-
-    Returned to a registered client to indicate that the command sent is unknown by the server.
+    \var Irc::RPL_CHANUSER
+    \brief 287
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOMOTD
-    \brief 422 :MOTD File is missing
-
-    Server's MOTD file could not be opened by the server.
+    \var Irc::RPL_CHANINFO_VOICES
+    \brief 288
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOADMININFO
-    \brief 423 \<server\> :No administrative info available
-
-    Returned by a server in response to an ADMIN message when there is an error in finding the appropriate information.
+    \var Irc::RPL_PATCHHEAD
+    \brief 288
  */
-
 /*!
-    \var Irc::Rfc::ERR_FILEERROR
-    \brief 424 :File error doing \<file op\> on \<file\>
-
-    Generic error message used to report a failed file operation during the processing of a message.
+    \var Irc::RPL_CHANINFO_AWAY
+    \brief 289
  */
-
 /*!
-    \var Irc::Rfc::ERR_NONICKNAMEGIVEN
-    \brief 431 :No nickname given
-
-    Returned when a nickname parameter expected for a command and isn't found.
+    \var Irc::RPL_PATCHCON
+    \brief 289
  */
-
 /*!
-    \var Irc::Rfc::ERR_ERRONEUSNICKNAME
-    \brief 432 \<nick\> :Erroneous nickname
-
-    Returned after receiving a NICK message which contains characters which do not fall in the defined set. See section 2.3.1 for details on valid nicknames.
+    \var Irc::RPL_CHANINFO_OPERS
+    \brief 290
  */
-
 /*!
-    \var Irc::Rfc::ERR_NICKNAMEINUSE
-    \brief 433 \<nick\> :Nickname is already in use
-
-    Returned when a NICK message is processed that results in an attempt to change to a currently existing nickname.
+    \var Irc::RPL_HELPHDR
+    \brief 290
  */
-
 /*!
-    \var Irc::Rfc::ERR_NICKCOLLISION
-    \brief 436 \<nick\> :Nickname collision KILL from \<user\>\@\<host\>
-
-    Returned by a server to a client when it detects a nickname collision (registered of a NICK that already exists by another server).
+    \var Irc::RPL_DATASTR
+    \brief 290
  */
-
 /*!
-    \var Irc::Rfc::ERR_UNAVAILRESOURCE
-    \brief 437 \<nick/channel\> :Nick/channel is temporarily unavailable
-
-    Returned by a server to a user trying to join a channel currently blocked by the channel delay mechanism. - Returned by a server to a user trying to change nickname when the desired nickname is blocked by the nick delay mechanism.
+    \var Irc::RPL_CHANINFO_BANNED
+    \brief 291
  */
-
 /*!
-    \var Irc::Rfc::ERR_USERNOTINCHANNEL
-    \brief 441 \<nick\> \<channel\> :They aren't on that channel
-
-    Returned by the server to indicate that the target user of the command is not on the given channel.
+    \var Irc::RPL_HELPOP
+    \brief 291
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOTONCHANNEL
-    \brief 442 \<channel\> :You're not on that channel
-
-    Returned by the server whenever a client tries to perform a channel affecting command for which the client isn't a member.
+    \var Irc::RPL_ENDOFCHECK
+    \brief 291
  */
-
 /*!
-    \var Irc::Rfc::ERR_USERONCHANNEL
-    \brief 443 \<user\> \<channel\> :is already on channel
-
-    Returned when a client tries to invite a user to a channel they are already on.
+    \var Irc::RPL_CHANINFO_BANS
+    \brief 292
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOLOGIN
-    \brief 444 \<user\> :User not logged in
-
-    Returned by the summon after a SUMMON command for a user was unable to be performed since they were not logged in.
+    \var Irc::RPL_HELPTLR
+    \brief 292
  */
-
 /*!
-    \var Irc::Rfc::ERR_SUMMONDISABLED
-    \brief 445 :SUMMON has been disabled
-
-    Returned as a response to the SUMMON command. MUST be returned by any server which doesn't implement it.
+    \var Irc::RPL_CHANINFO_INVITE
+    \brief 293
  */
-
 /*!
-    \var Irc::Rfc::ERR_USERSDISABLED
-    \brief 446 :USERS has been disabled
-
-    Returned as a response to the USERS command. MUST be returned by any server which does not implement it.
+    \var Irc::RPL_HELPHLP
+    \brief 293
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOTREGISTERED
-    \brief 451 :You have not registered
-
-    Returned by the server to indicate that the client MUST be registered before the server will allow it to be parsed in detail.
+    \var Irc::RPL_CHANINFO_INVITES
+    \brief 294
  */
-
 /*!
-    \var Irc::Rfc::ERR_NEEDMOREPARAMS
-    \brief 461 \<command\> :Not enough parameters
-
-    Returned by the server by numerous commands to indicate to the client that it didn't supply enough parameters.
+    \var Irc::RPL_HELPFWD
+    \brief 294
  */
-
 /*!
-    \var Irc::Rfc::ERR_ALREADYREGISTRED
-    \brief 462 :Unauthorized command (already registered)
-
-    Returned by the server to any link which tries to change part of the registered details (such as password or user details from second USER message).
+    \var Irc::RPL_CHANINFO_KICK
+    \brief 295
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOPERMFORHOST
-    \brief 463 :Your host isn't among the privileged
-
-    Returned to a client which attempts to register with a server which does not been setup to allow connections from the host the attempted connection is tried.
+    \var Irc::RPL_HELPIGN
+    \brief 295
  */
-
 /*!
-    \var Irc::Rfc::ERR_PASSWDMISMATCH
-    \brief 464 :Password incorrect
-
-    Returned to indicate a failed attempt at registering a connection for which a password was required and was either not given or incorrect.
+    \var Irc::RPL_CHANINFO_KICKS
+    \brief 296
  */
-
 /*!
-    \var Irc::Rfc::ERR_YOUREBANNEDCREEP
-    \brief 465 :You are banned from this server
-
-    Returned after an attempt to connect and register yourself with a server which has been setup to explicitly deny connections to you.
+    \var Irc::RPL_END_CHANINFO
+    \brief 299
  */
-
 /*!
-    \var Irc::Rfc::ERR_YOUWILLBEBANNED
-    \brief 466 :You will be banned from this server
-
-    Sent by a server to a user to inform that access to the server will soon be denied.
+    \var Irc::RPL_NONE
+    \brief 300
  */
-
 /*!
-    \var Irc::Rfc::ERR_KEYSET
-    \brief 467 \<channel\> :Channel key already set
-
-    No description available in RFC
+    \var Irc::RPL_AWAY
+    \brief 301
  */
-
 /*!
-    \var Irc::Rfc::ERR_CHANNELISFULL
-    \brief 471 \<channel\> :Cannot join channel (+l)
-
-    No description available in RFC
+    \var Irc::RPL_USERHOST
+    \brief 302
  */
-
 /*!
-    \var Irc::Rfc::ERR_UNKNOWNMODE
-    \brief 472 \<char\> :is unknown mode char to me for \<channel\>
-
-    No description available in RFC
+    \var Irc::RPL_ISON
+    \brief 303
  */
-
 /*!
-    \var Irc::Rfc::ERR_INVITEONLYCHAN
-    \brief 473 \<channel\> :Cannot join channel (+i)
-
-    No description available in RFC
+    \var Irc::RPL_TEXT
+    \brief 304
  */
-
 /*!
-    \var Irc::Rfc::ERR_BANNEDFROMCHAN
-    \brief 474 \<channel\> :Cannot join channel (+b)
-
-    No description available in RFC
+    \var Irc::RPL_UNAWAY
+    \brief 305
  */
-
+/*!
+    \var Irc::RPL_NOWAWAY
+    \brief 306
+ */
+/*!
+    \var Irc::RPL_WHOISREGNICK
+    \brief 307
+ */
+/*!
+    \var Irc::RPL_SUSERHOST
+    \brief 307
+ */
+/*!
+    \var Irc::RPL_NOTIFYACTION
+    \brief 308
+ */
+/*!
+    \var Irc::RPL_WHOISADMIN
+    \brief 308
+ */
+/*!
+    \var Irc::RPL_NICKTRACE
+    \brief 309
+ */
+/*!
+    \var Irc::RPL_WHOISSADMIN
+    \brief 309
+ */
+/*!
+    \var Irc::RPL_WHOISHELPER
+    \brief 309
+ */
+/*!
+    \var Irc::RPL_WHOISSVCMSG
+    \brief 310
+ */
+/*!
+    \var Irc::RPL_WHOISHELPOP
+    \brief 310
+ */
+/*!
+    \var Irc::RPL_WHOISSERVICE
+    \brief 310
+ */
+/*!
+    \var Irc::RPL_WHOISUSER
+    \brief 311
+ */
+/*!
+    \var Irc::RPL_WHOISSERVER
+    \brief 312
+ */
+/*!
+    \var Irc::RPL_WHOISOPERATOR
+    \brief 313
+ */
+/*!
+    \var Irc::RPL_WHOWASUSER
+    \brief 314
+ */
+/*!
+    \var Irc::RPL_ENDOFWHO
+    \brief 315
+ */
+/*!
+    \var Irc::RPL_WHOISCHANOP
+    \brief 316
+ */
+/*!
+    \var Irc::RPL_WHOISIDLE
+    \brief 317
+ */
+/*!
+    \var Irc::RPL_ENDOFWHOIS
+    \brief 318
+ */
+/*!
+    \var Irc::RPL_WHOISCHANNELS
+    \brief 319
+ */
+/*!
+    \var Irc::RPL_WHOISVIRT
+    \brief 320
+ */
+/*!
+    \var Irc::RPL_WHOIS_HIDDEN
+    \brief 320
+ */
+/*!
+    \var Irc::RPL_WHOISSPECIAL
+    \brief 320
+ */
+/*!
+    \var Irc::RPL_LISTSTART
+    \brief 321
+ */
+/*!
+    \var Irc::RPL_LIST
+    \brief 322
+ */
+/*!
+    \var Irc::RPL_LISTEND
+    \brief 323
+ */
+/*!
+    \var Irc::RPL_CHANNELMODEIS
+    \brief 324
+ */
+/*!
+    \var Irc::RPL_UNIQOPIS
+    \brief 325
+ */
+/*!
+    \var Irc::RPL_CHANNELPASSIS
+    \brief 325
+ */
+/*!
+    \var Irc::RPL_NOCHANPASS
+    \brief 326
+ */
+/*!
+    \var Irc::RPL_CHPASSUNKNOWN
+    \brief 327
+ */
+/*!
+    \var Irc::RPL_CHANNEL_URL
+    \brief 328
+ */
+/*!
+    \var Irc::RPL_CREATIONTIME
+    \brief 329
+ */
+/*!
+    \var Irc::RPL_WHOWAS_TIME
+    \brief 330
+ */
+/*!
+    \var Irc::RPL_WHOISACCOUNT
+    \brief 330
+ */
+/*!
+    \var Irc::RPL_NOTOPIC
+    \brief 331
+ */
+/*!
+    \var Irc::RPL_TOPIC
+    \brief 332
+ */
+/*!
+    \var Irc::RPL_TOPICWHOTIME
+    \brief 333
+ */
+/*!
+    \var Irc::RPL_LISTUSAGE
+    \brief 334
+ */
+/*!
+    \var Irc::RPL_COMMANDSYNTAX
+    \brief 334
+ */
+/*!
+    \var Irc::RPL_LISTSYNTAX
+    \brief 334
+ */
+/*!
+    \var Irc::RPL_CHANPASSOK
+    \brief 338
+ */
+/*!
+    \var Irc::RPL_WHOISACTUALLY
+    \brief 338
+ */
+/*!
+    \var Irc::RPL_BADCHANPASS
+    \brief 339
+ */
+/*!
+    \var Irc::RPL_INVITING
+    \brief 341
+ */
+/*!
+    \var Irc::RPL_SUMMONING
+    \brief 342
+ */
+/*!
+    \var Irc::RPL_INVITED
+    \brief 345
+ */
+/*!
+    \var Irc::RPL_INVITELIST
+    \brief 346
+ */
+/*!
+    \var Irc::RPL_ENDOFINVITELIST
+    \brief 347
+ */
+/*!
+    \var Irc::RPL_EXCEPTLIST
+    \brief 348
+ */
+/*!
+    \var Irc::RPL_ENDOFEXCEPTLIST
+    \brief 349
+ */
+/*!
+    \var Irc::RPL_VERSION
+    \brief 351
+ */
+/*!
+    \var Irc::RPL_WHOREPLY
+    \brief 352
+ */
+/*!
+    \var Irc::RPL_NAMREPLY
+    \brief 353
+ */
+/*!
+    \var Irc::RPL_WHOSPCRPL
+    \brief 354
+ */
+/*!
+    \var Irc::RPL_NAMREPLY_
+    \brief 355
+ */
+/*!
+    \var Irc::RPL_KILLDONE
+    \brief 361
+ */
+/*!
+    \var Irc::RPL_CLOSING
+    \brief 362
+ */
+/*!
+    \var Irc::RPL_CLOSEEND
+    \brief 363
+ */
+/*!
+    \var Irc::RPL_LINKS
+    \brief 364
+ */
+/*!
+    \var Irc::RPL_ENDOFLINKS
+    \brief 365
+ */
+/*!
+    \var Irc::RPL_ENDOFNAMES
+    \brief 366
+ */
+/*!
+    \var Irc::RPL_BANLIST
+    \brief 367
+ */
+/*!
+    \var Irc::RPL_ENDOFBANLIST
+    \brief 368
+ */
+/*!
+    \var Irc::RPL_ENDOFWHOWAS
+    \brief 369
+ */
+/*!
+    \var Irc::RPL_INFO
+    \brief 371
+ */
+/*!
+    \var Irc::RPL_MOTD
+    \brief 372
+ */
+/*!
+    \var Irc::RPL_INFOSTART
+    \brief 373
+ */
+/*!
+    \var Irc::RPL_ENDOFINFO
+    \brief 374
+ */
+/*!
+    \var Irc::RPL_MOTDSTART
+    \brief 375
+ */
+/*!
+    \var Irc::RPL_ENDOFMOTD
+    \brief 376
+ */
+/*!
+    \var Irc::RPL_KICKEXPIRED
+    \brief 377
+ */
+/*!
+    \var Irc::RPL_SPAM
+    \brief 377
+ */
+/*!
+    \var Irc::RPL_BANEXPIRED
+    \brief 378
+ */
+/*!
+    \var Irc::RPL_WHOISHOST
+    \brief 378
+ */
+/*!
+    \var Irc::RPL_KICKLINKED
+    \brief 379
+ */
+/*!
+    \var Irc::RPL_WHOISMODES
+    \brief 379
+ */
+/*!
+    \var Irc::RPL_BANLINKED
+    \brief 380
+ */
+/*!
+    \var Irc::RPL_YOURHELPER
+    \brief 380
+ */
+/*!
+    \var Irc::RPL_YOUREOPER
+    \brief 381
+ */
+/*!
+    \var Irc::RPL_REHASHING
+    \brief 382
+ */
+/*!
+    \var Irc::RPL_YOURESERVICE
+    \brief 383
+ */
+/*!
+    \var Irc::RPL_MYPORTIS
+    \brief 384
+ */
+/*!
+    \var Irc::RPL_NOTOPERANYMORE
+    \brief 385
+ */
+/*!
+    \var Irc::RPL_QLIST
+    \brief 386
+ */
+/*!
+    \var Irc::RPL_IRCOPS
+    \brief 386
+ */
+/*!
+    \var Irc::RPL_ENDOFQLIST
+    \brief 387
+ */
+/*!
+    \var Irc::RPL_ENDOFIRCOPS
+    \brief 387
+ */
+/*!
+    \var Irc::RPL_ALIST
+    \brief 388
+ */
+/*!
+    \var Irc::RPL_ENDOFALIST
+    \brief 389
+ */
+/*!
+    \var Irc::RPL_TIME
+    \brief 391
+ */
+/*!
+    \var Irc::RPL_USERSSTART
+    \brief 392
+ */
+/*!
+    \var Irc::RPL_USERS
+    \brief 393
+ */
+/*!
+    \var Irc::RPL_ENDOFUSERS
+    \brief 394
+ */
+/*!
+    \var Irc::RPL_NOUSERS
+    \brief 395
+ */
+/*!
+    \var Irc::RPL_HOSTHIDDEN
+    \brief 396
+ */
+/*!
+    \var Irc::ERR_UNKNOWNERROR
+    \brief 400
+ */
+/*!
+    \var Irc::ERR_NOSUCHNICK
+    \brief 401
+ */
+/*!
+    \var Irc::ERR_NOSUCHSERVER
+    \brief 402
+ */
+/*!
+    \var Irc::ERR_NOSUCHCHANNEL
+    \brief 403
+ */
+/*!
+    \var Irc::ERR_CANNOTSENDTOCHAN
+    \brief 404
+ */
+/*!
+    \var Irc::ERR_TOOMANYCHANNELS
+    \brief 405
+ */
+/*!
+    \var Irc::ERR_WASNOSUCHNICK
+    \brief 406
+ */
+/*!
+    \var Irc::ERR_TOOMANYTARGETS
+    \brief 407
+ */
+/*!
+    \var Irc::ERR_NOSUCHSERVICE
+    \brief 408
+ */
+/*!
+    \var Irc::ERR_NOCOLORSONCHAN
+    \brief 408
+ */
+/*!
+    \var Irc::ERR_NOORIGIN
+    \brief 409
+ */
+/*!
+    \var Irc::ERR_NORECIPIENT
+    \brief 411
+ */
+/*!
+    \var Irc::ERR_NOTEXTTOSEND
+    \brief 412
+ */
+/*!
+    \var Irc::ERR_NOTOPLEVEL
+    \brief 413
+ */
+/*!
+    \var Irc::ERR_WILDTOPLEVEL
+    \brief 414
+ */
+/*!
+    \var Irc::ERR_BADMASK
+    \brief 415
+ */
+/*!
+    \var Irc::ERR_TOOMANYMATCHES
+    \brief 416
+ */
+/*!
+    \var Irc::ERR_QUERYTOOLONG
+    \brief 416
+ */
+/*!
+    \var Irc::ERR_LENGTHTRUNCATED
+    \brief 419
+ */
+/*!
+    \var Irc::ERR_UNKNOWNCOMMAND
+    \brief 421
+ */
+/*!
+    \var Irc::ERR_NOMOTD
+    \brief 422
+ */
+/*!
+    \var Irc::ERR_NOADMININFO
+    \brief 423
+ */
+/*!
+    \var Irc::ERR_FILEERROR
+    \brief 424
+ */
+/*!
+    \var Irc::ERR_NOOPERMOTD
+    \brief 425
+ */
+/*!
+    \var Irc::ERR_TOOMANYAWAY
+    \brief 429
+ */
+/*!
+    \var Irc::ERR_EVENTNICKCHANGE
+    \brief 430
+ */
+/*!
+    \var Irc::ERR_NONICKNAMEGIVEN
+    \brief 431
+ */
+/*!
+    \var Irc::ERR_ERRONEUSNICKNAME
+    \brief 432
+ */
+/*!
+    \var Irc::ERR_NICKNAMEINUSE
+    \brief 433
+ */
+/*!
+    \var Irc::ERR_SERVICENAMEINUSE
+    \brief 434
+ */
+/*!
+    \var Irc::ERR_NORULES
+    \brief 434
+ */
+/*!
+    \var Irc::ERR_SERVICECONFUSED
+    \brief 435
+ */
+/*!
+    \var Irc::ERR_BANONCHAN
+    \brief 435
+ */
+/*!
+    \var Irc::ERR_NICKCOLLISION
+    \brief 436
+ */
+/*!
+    \var Irc::ERR_UNAVAILRESOURCE
+    \brief 437
+ */
+/*!
+    \var Irc::ERR_BANNICKCHANGE
+    \brief 437
+ */
+/*!
+    \var Irc::ERR_NICKTOOFAST
+    \brief 438
+ */
+/*!
+    \var Irc::ERR_DEAD
+    \brief 438
+ */
+/*!
+    \var Irc::ERR_TARGETTOOFAST
+    \brief 439
+ */
+/*!
+    \var Irc::ERR_SERVICESDOWN
+    \brief 440
+ */
+/*!
+    \var Irc::ERR_USERNOTINCHANNEL
+    \brief 441
+ */
+/*!
+    \var Irc::ERR_NOTONCHANNEL
+    \brief 442
+ */
+/*!
+    \var Irc::ERR_USERONCHANNEL
+    \brief 443
+ */
+/*!
+    \var Irc::ERR_NOLOGIN
+    \brief 444
+ */
+/*!
+    \var Irc::ERR_SUMMONDISABLED
+    \brief 445
+ */
+/*!
+    \var Irc::ERR_USERSDISABLED
+    \brief 446
+ */
+/*!
+    \var Irc::ERR_NONICKCHANGE
+    \brief 447
+ */
+/*!
+    \var Irc::ERR_NOTIMPLEMENTED
+    \brief 449
+ */
+/*!
+    \var Irc::ERR_NOTREGISTERED
+    \brief 451
+ */
+/*!
+    \var Irc::ERR_IDCOLLISION
+    \brief 452
+ */
+/*!
+    \var Irc::ERR_NICKLOST
+    \brief 453
+ */
+/*!
+    \var Irc::ERR_HOSTILENAME
+    \brief 455
+ */
+/*!
+    \var Irc::ERR_ACCEPTFULL
+    \brief 456
+ */
+/*!
+    \var Irc::ERR_ACCEPTEXIST
+    \brief 457
+ */
+/*!
+    \var Irc::ERR_ACCEPTNOT
+    \brief 458
+ */
+/*!
+    \var Irc::ERR_NOHIDING
+    \brief 459
+ */
+/*!
+    \var Irc::ERR_NOTFORHALFOPS
+    \brief 460
+ */
+/*!
+    \var Irc::ERR_NEEDMOREPARAMS
+    \brief 461
+ */
+/*!
+    \var Irc::ERR_ALREADYREGISTERED
+    \brief 462
+ */
+/*!
+    \var Irc::ERR_NOPERMFORHOST
+    \brief 463
+ */
+/*!
+    \var Irc::ERR_PASSWDMISMATCH
+    \brief 464
+ */
+/*!
+    \var Irc::ERR_YOUREBANNEDCREEP
+    \brief 465
+ */
+/*!
+    \var Irc::ERR_YOUWILLBEBANNED
+    \brief 466
+ */
+/*!
+    \var Irc::ERR_KEYSET
+    \brief 467
+ */
+/*!
+    \var Irc::ERR_INVALIDUSERNAME
+    \brief 468
+ */
+/*!
+    \var Irc::ERR_ONLYSERVERSCANCHANGE
+    \brief 468
+ */
+/*!
+    \var Irc::ERR_LINKSET
+    \brief 469
+ */
+/*!
+    \var Irc::ERR_LINKCHANNEL
+    \brief 470
+ */
+/*!
+    \var Irc::ERR_KICKEDFROMCHAN
+    \brief 470
+ */
+/*!
+    \var Irc::ERR_CHANNELISFULL
+    \brief 471
+ */
+/*!
+    \var Irc::ERR_UNKNOWNMODE
+    \brief 472
+ */
+/*!
+    \var Irc::ERR_INVITEONLYCHAN
+    \brief 473
+ */
+/*!
+    \var Irc::ERR_BANNEDFROMCHAN
+    \brief 474
+ */
+/*!
+    \var Irc::ERR_BADCHANNELKEY
+    \brief 475
+ */
+/*!
+    \var Irc::ERR_BADCHANMASK
+    \brief 476
+ */
+/*!
+    \var Irc::ERR_NOCHANMODES
+    \brief 477
+ */
+/*!
+    \var Irc::ERR_NEEDREGGEDNICK
+    \brief 477
+ */
+/*!
+    \var Irc::ERR_BANLISTFULL
+    \brief 478
+ */
+/*!
+    \var Irc::ERR_BADCHANNAME
+    \brief 479
+ */
+/*!
+    \var Irc::ERR_LINKFAIL
+    \brief 479
+ */
+/*!
+    \var Irc::ERR_NOULINE
+    \brief 480
+ */
+/*!
+    \var Irc::ERR_CANNOTKNOCK
+    \brief 480
+ */
+/*!
+    \var Irc::ERR_NOPRIVILEGES
+    \brief 481
+ */
+/*!
+    \var Irc::ERR_CHANOPRIVSNEEDED
+    \brief 482
+ */
+/*!
+    \var Irc::ERR_CANTKILLSERVER
+    \brief 483
+ */
+/*!
+    \var Irc::ERR_RESTRICTED
+    \brief 484
+ */
+/*!
+    \var Irc::ERR_ISCHANSERVICE
+    \brief 484
+ */
+/*!
+    \var Irc::ERR_DESYNC
+    \brief 484
+ */
 /*!
-    \var Irc::Rfc::ERR_BADCHANNELKEY
-    \brief 475 \<channel\> :Cannot join channel (+k)
-
-    No description available in RFC
+    \var Irc::ERR_ATTACKDENY
+    \brief 484
  */
-
 /*!
-    \var Irc::Rfc::ERR_BADCHANMASK
-    \brief 476 \<channel\> :Bad Channel Mask
-
-    No description available in RFC
+    \var Irc::ERR_UNIQOPRIVSNEEDED
+    \brief 485
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOCHANMODES
-    \brief 477 \<channel\> :Channel doesn't support modes
-
-    No description available in RFC
+    \var Irc::ERR_KILLDENY
+    \brief 485
  */
-
 /*!
-    \var Irc::Rfc::ERR_BANLISTFULL
-    \brief 478 \<channel\> \<char\> :Channel list is full
-
-    No description available in RFC
+    \var Irc::ERR_CANTKICKADMIN
+    \brief 485
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOPRIVILEGES
-    \brief 481 :Permission Denied- You're not an IRC operator
-
-    Any command requiring operator privileges to operate MUST return this error to indicate the attempt was unsuccessful.
+    \var Irc::ERR_ISREALSERVICE
+    \brief 485
  */
-
 /*!
-    \var Irc::Rfc::ERR_CHANOPRIVSNEEDED
-    \brief 482 \<channel\> :You're not channel operator
-
-    Any command requiring 'chanop' privileges (such as MODE messages) MUST return this error if the client making the attempt is not a chanop on the specified channel.
+    \var Irc::ERR_NONONREG
+    \brief 486
  */
-
 /*!
-    \var Irc::Rfc::ERR_CANTKILLSERVER
-    \brief 483 :You can't kill a server!
-
-    Any attempts to use the KILL command on a server are to be refused and this error returned directly to the client.
+    \var Irc::ERR_HTMDISABLED
+    \brief 486
  */
-
 /*!
-    \var Irc::Rfc::ERR_RESTRICTED
-    \brief 484 :Your connection is restricted!
-
-    Sent by the server to a user upon connection to indicate the restricted nature of the connection (user mode "+r").
+    \var Irc::ERR_ACCOUNTONLY
+    \brief 486
  */
-
 /*!
-    \var Irc::Rfc::ERR_UNIQOPPRIVSNEEDED
-    \brief 485 :You're not the original channel operator
-
-    Any MODE requiring "channel creator" privileges MUST return this error if the client making the attempt is not a chanop on the specified channel.
+    \var Irc::ERR_CHANTOORECENT
+    \brief 487
  */
-
 /*!
-    \var Irc::Rfc::ERR_NOOPERHOST
-    \brief 491 :No O-lines for your host
-
-    If a client sends an OPER message and the server has not been configured to allow connections from the client's host as an operator, this error MUST be returned.
+    \var Irc::ERR_MSGSERVICES
+    \brief 487
  */
-
 /*!
-    \var Irc::Rfc::ERR_UMODEUNKNOWNFLAG
-    \brief 501 :Unknown MODE flag
-
-    Returned by the server to indicate that a MODE message was sent with a nickname parameter and that the a mode flag sent was not recognized.
+    \var Irc::ERR_TSLESSCHAN
+    \brief 488
  */
-
 /*!
-    \var Irc::Rfc::ERR_USERSDONTMATCH
-    \brief 502 :Cannot change mode for other users
-
-    Error sent to any user trying to view or change the user mode for a user other than themselves.
+    \var Irc::ERR_VOICENEEDED
+    \brief 489
+ */
+/*!
+    \var Irc::ERR_SECUREONLYCHAN
+    \brief 489
+ */
+/*!
+    \var Irc::ERR_NOOPERHOST
+    \brief 491
+ */
+/*!
+    \var Irc::ERR_NOSERVICEHOST
+    \brief 492
+ */
+/*!
+    \var Irc::ERR_NOFEATURE
+    \brief 493
+ */
+/*!
+    \var Irc::ERR_BADFEATURE
+    \brief 494
+ */
+/*!
+    \var Irc::ERR_BADLOGTYPE
+    \brief 495
+ */
+/*!
+    \var Irc::ERR_BADLOGSYS
+    \brief 496
+ */
+/*!
+    \var Irc::ERR_BADLOGVALUE
+    \brief 497
+ */
+/*!
+    \var Irc::ERR_ISOPERLCHAN
+    \brief 498
+ */
+/*!
+    \var Irc::ERR_CHANOWNPRIVNEEDED
+    \brief 499
+ */
+/*!
+    \var Irc::ERR_UMODEUNKNOWNFLAG
+    \brief 501
+ */
+/*!
+    \var Irc::ERR_USERSDONTMATCH
+    \brief 502
+ */
+/*!
+    \var Irc::ERR_GHOSTEDCLIENT
+    \brief 503
+ */
+/*!
+    \var Irc::ERR_VWORLDWARN
+    \brief 503
+ */
+/*!
+    \var Irc::ERR_USERNOTONSERV
+    \brief 504
+ */
+/*!
+    \var Irc::ERR_SILELISTFULL
+    \brief 511
+ */
+/*!
+    \var Irc::ERR_TOOMANYWATCH
+    \brief 512
+ */
+/*!
+    \var Irc::ERR_BADPING
+    \brief 513
+ */
+/*!
+    \var Irc::ERR_INVALID_ERROR
+    \brief 514
+ */
+/*!
+    \var Irc::ERR_TOOMANYDCC
+    \brief 514
+ */
+/*!
+    \var Irc::ERR_BADEXPIRE
+    \brief 515
+ */
+/*!
+    \var Irc::ERR_DONTCHEAT
+    \brief 516
+ */
+/*!
+    \var Irc::ERR_DISABLED
+    \brief 517
+ */
+/*!
+    \var Irc::ERR_NOINVITE
+    \brief 518
+ */
+/*!
+    \var Irc::ERR_LONGMASK
+    \brief 518
+ */
+/*!
+    \var Irc::ERR_ADMONLY
+    \brief 519
+ */
+/*!
+    \var Irc::ERR_TOOMANYUSERS
+    \brief 519
+ */
+/*!
+    \var Irc::ERR_OPERONLY
+    \brief 520
+ */
+/*!
+    \var Irc::ERR_MASKTOOWIDE
+    \brief 520
+ */
+/*!
+    \var Irc::ERR_WHOTRUNC
+    \brief 520
+ */
+/*!
+    \var Irc::ERR_LISTSYNTAX
+    \brief 521
+ */
+/*!
+    \var Irc::ERR_WHOSYNTAX
+    \brief 522
+ */
+/*!
+    \var Irc::ERR_WHOLIMEXCEED
+    \brief 523
+ */
+/*!
+    \var Irc::ERR_QUARANTINED
+    \brief 524
+ */
+/*!
+    \var Irc::ERR_OPERSPVERIFY
+    \brief 524
+ */
+/*!
+    \var Irc::ERR_REMOTEPFX
+    \brief 525
+ */
+/*!
+    \var Irc::ERR_PFXUNROUTABLE
+    \brief 526
+ */
+/*!
+    \var Irc::ERR_BADHOSTMASK
+    \brief 550
+ */
+/*!
+    \var Irc::ERR_HOSTUNAVAIL
+    \brief 551
+ */
+/*!
+    \var Irc::ERR_USINGSLINE
+    \brief 552
+ */
+/*!
+    \var Irc::ERR_STATSSLINE
+    \brief 553
+ */
+/*!
+    \var Irc::RPL_LOGON
+    \brief 600
+ */
+/*!
+    \var Irc::RPL_LOGOFF
+    \brief 601
+ */
+/*!
+    \var Irc::RPL_WATCHOFF
+    \brief 602
+ */
+/*!
+    \var Irc::RPL_WATCHSTAT
+    \brief 603
+ */
+/*!
+    \var Irc::RPL_NOWON
+    \brief 604
+ */
+/*!
+    \var Irc::RPL_NOWOFF
+    \brief 605
+ */
+/*!
+    \var Irc::RPL_WATCHLIST
+    \brief 606
+ */
+/*!
+    \var Irc::RPL_ENDOFWATCHLIST
+    \brief 607
+ */
+/*!
+    \var Irc::RPL_WATCHCLEAR
+    \brief 608
+ */
+/*!
+    \var Irc::RPL_ISOPER
+    \brief 610
+ */
+/*!
+    \var Irc::RPL_ISLOCOP
+    \brief 611
+ */
+/*!
+    \var Irc::RPL_ISNOTOPER
+    \brief 612
+ */
+/*!
+    \var Irc::RPL_ENDOFISOPER
+    \brief 613
+ */
+/*!
+    \var Irc::RPL_DCCSTATUS
+    \brief 617
+ */
+/*!
+    \var Irc::RPL_DCCLIST
+    \brief 618
+ */
+/*!
+    \var Irc::RPL_ENDOFDCCLIST
+    \brief 619
+ */
+/*!
+    \var Irc::RPL_WHOWASHOST
+    \brief 619
+ */
+/*!
+    \var Irc::RPL_DCCINFO
+    \brief 620
+ */
+/*!
+    \var Irc::RPL_ENDOFO
+    \brief 626
+ */
+/*!
+    \var Irc::RPL_SETTINGS
+    \brief 630
+ */
+/*!
+    \var Irc::RPL_ENDOFSETTINGS
+    \brief 631
+ */
+/*!
+    \var Irc::RPL_DUMPING
+    \brief 640
+ */
+/*!
+    \var Irc::RPL_DUMPRPL
+    \brief 641
+ */
+/*!
+    \var Irc::RPL_EODUMP
+    \brief 642
+ */
+/*!
+    \var Irc::RPL_TRACEROUTE_HOP
+    \brief 660
+ */
+/*!
+    \var Irc::RPL_TRACEROUTE_START
+    \brief 661
+ */
+/*!
+    \var Irc::RPL_MODECHANGEWARN
+    \brief 662
+ */
+/*!
+    \var Irc::RPL_CHANREDIR
+    \brief 663
+ */
+/*!
+    \var Irc::RPL_SERVMODEIS
+    \brief 664
+ */
+/*!
+    \var Irc::RPL_OTHERUMODEIS
+    \brief 665
+ */
+/*!
+    \var Irc::RPL_ENDOF_GENERIC
+    \brief 666
+ */
+/*!
+    \var Irc::RPL_WHOWASDETAILS
+    \brief 670
+ */
+/*!
+    \var Irc::RPL_WHOISSECURE
+    \brief 671
+ */
+/*!
+    \var Irc::RPL_UNKNOWNMODES
+    \brief 672
+ */
+/*!
+    \var Irc::RPL_CANNOTSETMODES
+    \brief 673
+ */
+/*!
+    \var Irc::RPL_LUSERSTAFF
+    \brief 678
+ */
+/*!
+    \var Irc::RPL_TIMEONSERVERIS
+    \brief 679
+ */
+/*!
+    \var Irc::RPL_NETWORKS
+    \brief 682
+ */
+/*!
+    \var Irc::RPL_YOURLANGUAGEIS
+    \brief 687
+ */
+/*!
+    \var Irc::RPL_LANGUAGE
+    \brief 688
+ */
+/*!
+    \var Irc::RPL_WHOISSTAFF
+    \brief 689
+ */
+/*!
+    \var Irc::RPL_WHOISLANGUAGE
+    \brief 690
+ */
+/*!
+    \var Irc::RPL_HELPSTART
+    \brief 704
+ */
+/*!
+    \var Irc::RPL_HELPTXT
+    \brief 705
+ */
+/*!
+    \var Irc::RPL_ENDOFHELP
+    \brief 706
+ */
+/*!
+    \var Irc::RPL_ETRACEFULL
+    \brief 708
+ */
+/*!
+    \var Irc::RPL_ETRACE
+    \brief 709
+ */
+/*!
+    \var Irc::RPL_KNOCK
+    \brief 710
+ */
+/*!
+    \var Irc::RPL_KNOCKDLVR
+    \brief 711
+ */
+/*!
+    \var Irc::ERR_TOOMANYKNOCK
+    \brief 712
+ */
+/*!
+    \var Irc::ERR_CHANOPEN
+    \brief 713
+ */
+/*!
+    \var Irc::ERR_KNOCKONCHAN
+    \brief 714
+ */
+/*!
+    \var Irc::ERR_KNOCKDISABLED
+    \brief 715
+ */
+/*!
+    \var Irc::RPL_TARGUMODEG
+    \brief 716
+ */
+/*!
+    \var Irc::RPL_TARGNOTIFY
+    \brief 717
+ */
+/*!
+    \var Irc::RPL_UMODEGMSG
+    \brief 718
+ */
+/*!
+    \var Irc::RPL_ENDOFOMOTD
+    \brief 722
+ */
+/*!
+    \var Irc::ERR_NOPRIVS
+    \brief 723
+ */
+/*!
+    \var Irc::RPL_TESTMARK
+    \brief 724
+ */
+/*!
+    \var Irc::RPL_TESTLINE
+    \brief 725
+ */
+/*!
+    \var Irc::RPL_NOTESTLINE
+    \brief 726
+ */
+/*!
+    \var Irc::RPL_XINFO
+    \brief 771
+ */
+/*!
+    \var Irc::RPL_XINFOSTART
+    \brief 773
+ */
+/*!
+    \var Irc::RPL_XINFOEND
+    \brief 774
+ */
+/*!
+    \var Irc::ERR_CANNOTDOCOMMAND
+    \brief 972
+ */
+/*!
+    \var Irc::ERR_CANNOTCHANGEUMODE
+    \brief 973
+ */
+/*!
+    \var Irc::ERR_CANNOTCHANGECHANMODE
+    \brief 974
+ */
+/*!
+    \var Irc::ERR_CANNOTCHANGESERVERMODE
+    \brief 975
+ */
+/*!
+    \var Irc::ERR_CANNOTSENDTONICK
+    \brief 976
+ */
+/*!
+    \var Irc::ERR_UNKNOWNSERVERMODE
+    \brief 977
+ */
+/*!
+    \var Irc::ERR_SERVERMODELOCK
+    \brief 979
+ */
+/*!
+    \var Irc::ERR_BADCHARENCODING
+    \brief 980
+ */
+/*!
+    \var Irc::ERR_TOOMANYLANGUAGES
+    \brief 981
+ */
+/*!
+    \var Irc::ERR_NOLANGUAGE
+    \brief 982
+ */
+/*!
+    \var Irc::ERR_TEXTTOOSHORT
+    \brief 983
+ */
+/*!
+    \var Irc::ERR_NUMERIC_ERR
+    \brief 999
  */

@@ -25,9 +25,15 @@
 #include "pre_guard.h"
 #include "ui_irc.h"
 #ifdef Q_CC_MSVC
+#include <irc.h>
 #include <ircsession.h>
+#include <irccommand.h>
+#include <ircmessage.h>
 #else
+#include "irc/include/irc.h"
 #include "irc/include/ircsession.h"
+#include "irc/include/irccommand.h"
+#include "irc/include/ircmessage.h"
 #endif
 #include "post_guard.h"
 
@@ -38,17 +44,21 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
 
 public:
     dlgIRC();
-    Irc::Session* session;
+    IrcSession* session;
     QString mNick;
 
 public slots:
+    void onMessageReceived(IrcMessage*);
+    void anchorClicked(const QUrl& link);
+    void sendMsg();
+    void onConnected();
+
+private:
     void irc_gotMsg(QString, QString, QString);
     void irc_gotMsg2(QString a, QStringList c);
     void irc_gotMsg3(QString a, uint code, QStringList c);
-    void anchorClicked(const QUrl& link);
     void slot_joined(QString, QString);
     void slot_parted(QString, QString, QString);
-    void sendMsg();
 };
 
 #endif // MUDLET_DLGIRC_H

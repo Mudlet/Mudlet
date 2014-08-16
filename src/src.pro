@@ -196,7 +196,12 @@ SOURCES += \
     HostManager.cpp \
     HostPool.cpp \
     irc/src/irc.cpp \
-    irc/src/ircbuffer.cpp \
+    irc/src/irccodecplugin.cpp \
+    irc/src/irccommand.cpp \
+    irc/src/ircdecoder.cpp \
+    irc/src/ircmessage.cpp \
+    irc/src/ircparser.cpp \
+    irc/src/ircsender.cpp \
     irc/src/ircsession.cpp \
     irc/src/ircutil.cpp \
     KeyUnit.cpp \
@@ -280,7 +285,9 @@ HEADERS += \
     HostManager.h \
     HostPool.h \
     irc/include/irc.h \
-    irc/include/ircbuffer.h \
+    irc/include/irccodecplugin.h \
+    irc/include/irccommand.h \
+    irc/include/ircmessage.h \
     irc/include/ircsession.h \
     irc/include/ircutil.h \
     KeyUnit.h \

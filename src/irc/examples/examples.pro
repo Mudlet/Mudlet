@@ -1,6 +1,7 @@
 ######################################################################
-# LibIrcClient-Qt
+# Communi
 ######################################################################
 
 TEMPLATE = subdirs
-SUBDIRS += compattest irctest ssltest
+contains(MEEGO_EDITION,harmattan):SUBDIRS += mobile
+else:SUBDIRS += bot desktop
