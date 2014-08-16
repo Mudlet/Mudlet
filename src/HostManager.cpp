@@ -70,24 +70,3 @@ bool HostManager::renameHost( QString url )
 {
     return mHostPool.renameHost( url );
 }
-
-bool HostManager::serialize()
-{
-    QString directory = QDir::homePath()+"/.config/mudlet/profiles/";
-    QDir dir;
-    if( ! dir.exists( directory ) )
-    {
-        dir.mkpath( directory );
-    }
-
-    std::cout << "Mudlet is exiting now." << std::endl << "ordering all Hosts to shut down" << std::endl;
-
-    mHostPool.orderShutDown();
-    mHostPool.serialize( directory );
-
-    std::cout << "mudlet: DONE" << std::endl << "Have a nice day :-)" << std::endl;
-    return true;
-}
-
-
-

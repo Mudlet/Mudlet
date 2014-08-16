@@ -48,8 +48,6 @@ public:
     bool                  killTrigger( QString & name );
     bool                  registerTrigger( TTrigger * pT );
     void                  unregisterTrigger( TTrigger * pT );
-    bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream &, bool );
     void                  reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  processDataStream( QString &, int );
     void                  dump();
