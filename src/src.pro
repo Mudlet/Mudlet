@@ -193,7 +193,6 @@ SOURCES += \
     irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
-    lua_yajl.c \
     main.cpp \
     mudlet.cpp \
     ScriptUnit.cpp \
@@ -230,6 +229,9 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
+
+!msvc:SOURCES += lua_yajl.c
+msvc:SOURCES += lua_yajl.cpp
 
 
 HEADERS += \
