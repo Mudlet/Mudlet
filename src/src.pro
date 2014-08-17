@@ -30,6 +30,9 @@ VERSION = 3.0.1
 !msvc:QMAKE_CXXFLAGS_RELEASE += -O3
 !msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
 
+# MSVC specific flags. Enable multiprocessor MSVC builds.
+msvc:QMAKE_CXXFLAGS += -MP
+
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 
