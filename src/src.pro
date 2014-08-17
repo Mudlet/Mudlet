@@ -56,6 +56,7 @@ macx {
 } else {
     TARGET = mudlet
 }
+msvc:DEFINES += LUA_CPP PCRE_STATIC HUNSPELL_STATIC
 
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
