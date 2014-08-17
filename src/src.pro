@@ -24,10 +24,11 @@ lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
 VERSION = 3.0.1
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
-CONFIG += warn_off
+!msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O0 -Wall -g -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+!msvc:QMAKE_CXXFLAGS_RELEASE += -O3
+!msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
 
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
