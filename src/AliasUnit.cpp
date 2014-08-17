@@ -314,17 +314,6 @@ void AliasUnit::reenableAllTriggers()
     }
 }
 
-//bool AliasUnit::serialize( QDataStream & ofs )
-//{
-//    return true;
-//}
-
-
-//bool AliasUnit::restore( QDataStream & ifs, bool initMode )
-//{
-//    return true;
-//}
-
 TAlias * AliasUnit::findAlias( QString & name )
 {
     //TAlias * pT = 0;

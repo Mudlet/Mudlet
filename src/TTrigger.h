@@ -125,8 +125,6 @@ public:
     int              getConditionLineDelta() { return mConditionLineDelta; }
     bool             registerTrigger();
     void             setSound( QString file ){ mSoundFile = file; }
-    bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs, bool );
     bool             setupColorTrigger( int, int );
     bool             setupTmpColorTrigger( int ansiFg, int ansiBg );
     TColorTable*     createColorPattern(int, int);

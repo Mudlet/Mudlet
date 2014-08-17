@@ -352,52 +352,6 @@ void TriggerUnit::reenableAllTriggers()
     }
 }
 
-bool TriggerUnit::serialize( QDataStream & ofs )
-{
-    bool ret = true;
-    ofs << (qint64)mMaxID;
-    ofs << (qint64)mTriggerRootNodeList.size();
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
-    {
-        TTrigger * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
-}
-
-
-bool TriggerUnit::restore( QDataStream & ifs, bool initMode )
-{
-    ifs >> mMaxID;
-    qint64 children;
-    ifs >> children;
-
-    //if( initMode ) qDebug()<<"TriggerUnit::restore() mMaxID="<<mMaxID<<" children="<<children;
-
-    bool ret1 = false;
-    bool ret2 = true;
-
-    if( ifs.status() == QDataStream::Ok )
-        ret1 = true;
-
-    mMaxID = 0;
-    for( qint64 i=0; i<children; i++ )
-    {
-        TTrigger * pChild = new TTrigger( 0, mpHost );
-        ret2 = pChild->restore( ifs, initMode );
-
-        if( ( pChild->isTempTrigger() ) || ( ! initMode ) )
-        {
-            delete pChild;
-        }
-        else
-            registerTrigger( pChild );
-    }
-
-    return ret1 && ret2;
-}
-
 TTrigger * TriggerUnit::findTrigger( QString & name )
 {
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
