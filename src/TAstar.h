@@ -22,19 +22,21 @@
 
 
 #ifndef Q_MOC_RUN
-#include <boost/graph/astar_search.hpp>
+#include "pre_guard.h"
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/astar_search.hpp>
+#include <boost/graph/graphviz.hpp>
 #include <boost/graph/random.hpp>
 #include <boost/random.hpp>
-#include <boost/graph/graphviz.hpp>
+#include "post_guard.h"
 #endif
-//#include <sys/time.h>
-#include <vector>
-#include <list>
-#include <iostream>
-#include <fstream>
-#include <math.h>    // for sqrt
+
+#include "pre_guard.h"
 #include <QDebug>
+#include "post_guard.h"
+
+#include <math.h>    // for sqrt
+
 
 using namespace boost;
 using namespace std;

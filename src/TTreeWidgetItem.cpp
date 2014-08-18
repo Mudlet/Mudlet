@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,11 +19,11 @@
  ***************************************************************************/
 
 
-#include <QtGui>
-#include <QTreeWidgetItem>
-#include "Host.h"
-#include "HostManager.h"
 #include "TTreeWidgetItem.h"
+
+
+#include "TTreeWidget.h"
+
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, const QStringList & strings, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, strings, type )
@@ -99,4 +99,3 @@ void TTreeWidgetItem::addChild( QTreeWidgetItem * child )
 {
     QTreeWidgetItem::addChild( child );
 }
-

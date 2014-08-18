@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
- *   <email Chris>                                                         *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,9 +20,17 @@
 
 
 #include "LuaInterface.h"
-#include "TVar.h"
+
+
+#include "Host.h"
 #include "VarUnit.h"
+
+#include "pre_guard.h"
 #include <QTime>
+#include "post_guard.h"
+
+#include <setjmp.h>
+
 
 static jmp_buf buf;
 

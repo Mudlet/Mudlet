@@ -21,12 +21,13 @@
  ***************************************************************************/
 
 
+#include "pre_guard.h"
 #include <QSyntaxHighlighter>
-
-#include <QHash>
 #include <QTextCharFormat>
+#include "post_guard.h"
 
 class QTextDocument;
+
 
 class THighlighter : public QSyntaxHighlighter
 {

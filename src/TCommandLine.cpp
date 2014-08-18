@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
- *                                                                         *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,13 +17,23 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
+
 #include "TCommandLine.h"
-#include <QShortcut>
+
+
+#include "mudlet.h"
+#include "Host.h"
 #include "TConsole.h"
-#include "TTextEdit.h"
-#include <QPlainTextEdit>
 #include "TSplitter.h"
-#include <hunspell/hunspell.h>
+#include "TTextEdit.h"
+
+#include "pre_guard.h"
+#include <QAction>
+#include <QApplication>
+#include <QMenu>
+#include "post_guard.h"
+
 
 TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent )
 : QPlainTextEdit( parent )
@@ -703,4 +713,3 @@ void TCommandLine::historyUp(QKeyEvent *event)
         handleAutoCompletion();
     }
 }
-

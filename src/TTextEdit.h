@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,22 +22,21 @@
  ***************************************************************************/
 
 
-//#include <sys/time.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <iostream>
-//#include <strstream>
-
+#include "pre_guard.h"
 #include <QMap>
-#include <QString>
-#include <QScrollBar>
 #include <QTime>
-#include "mudlet.h"
-#include "TBuffer.h"
+#include <QWidget>
+#include "post_guard.h"
+
+#include <string>
 
 class Host;
+class TBuffer;
 class TConsole;
+
+class QScrollBar;
+class QString;
+
 
 class TTextEdit : public QWidget
 {

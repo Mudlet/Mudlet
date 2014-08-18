@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,19 +18,29 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QMainWindow>
-#include <QColorDialog>
-#include <QPalette>
-#include <QFontDialog>
-#include <QFont>
-#include <QToolBar>
+
 #include "dlgProfilePreferences.h"
-#include <QtCore>
-#include <QDir>
-#include <QRegExp>
+
+
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
 #include "Host.h"
 #include "mudlet.h"
+#include "TConsole.h"
+#include "TMap.h"
 #include "TTextEdit.h"
+
+#include "pre_guard.h"
+#include <QColorDialog>
+#include <QFileDialog>
+#include <QFontDialog>
+#include <QMainWindow>
+#include <QPalette>
+#include <QRegExp>
+#include <QToolBar>
+#include "post_guard.h"
+
 
 dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 : QDialog( pF )
@@ -1326,16 +1336,12 @@ void dlgProfilePreferences::setColorLightWhite2()
     }
 }
 
-#include "dlgMapper.h"
-
 void dlgProfilePreferences::downloadMap()
 {
     if( ! mpHost->mpMap->mpMapper ) mudlet::self()->slot_mapper();
 
     mpHost->mpMap->mpMapper->downloadMap();
 }
-
-#include <QFileDialog>
 
 void dlgProfilePreferences::loadMap()
 {
@@ -1468,8 +1474,6 @@ void dlgProfilePreferences::copyMap()
 
 }
 
-#include "dlgIRC.h"
-
 void dlgProfilePreferences::slot_save_and_exit()
 {
     Host * pHost = mpHost;
@@ -1565,7 +1569,3 @@ void dlgProfilePreferences::slot_save_and_exit()
 qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     close();
 }
-
-
-
-

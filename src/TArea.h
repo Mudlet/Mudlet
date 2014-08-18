@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,16 +22,12 @@
  ***************************************************************************/
 
 
-
-
+#include "pre_guard.h"
 #include <QList>
-#include <QMultiMap>
+#include <QMap>
 #include <QPair>
-#include <QSizeF>
-#include <QColor>
-#include <QPixmap>
 #include <QVector3D>
-#include "TRoomDB.h"
+#include "post_guard.h"
 
 class TMap;
 class TRoomDB;

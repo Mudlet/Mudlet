@@ -1,7 +1,6 @@
-
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,35 +19,30 @@
  ***************************************************************************/
 
 
-
-
-#include <QString>
 #include "Host.h"
-#include "ctelnet.h"
-#include <QDataStream>
-#include <QFile>
-#include <QDir>
-#include <QDateTime>
+
+
+#include "dlgTriggerEditor.h"
+#include "LuaInterface.h"
+#include "mudlet.h"
+#include "TConsole.h"
+#include "TEvent.h"
+#include "TMap.h"
+#include "TRoomDB.h"
+#include "TScript.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
-#include "mudlet.h"
-#include "TEvent.h"
+
+#include "pre_guard.h"
+#include <QtUiTools>
+#include <QDir>
 #include <QMessageBox>
-#include <QUiLoader>
-#include "dlgNotepad.h"
+#include "post_guard.h"
+
 #include "zip.h"
 #include "zipconf.h"
-#include <errno.h>
 
-#ifndef LUA_CPP
-extern "C" {
-#endif
-    #include "lua.h"
-    #include "lualib.h"
-    #include "lauxlib.h"
-#ifndef LUA_CPP
-}
-#endif
+#include <errno.h>
 
 
 Host::Host( int port, QString hostname, QString login, QString pass, int id )
@@ -1247,6 +1241,3 @@ void Host::readPackageConfig( QString luaConfig, QString & packageName )
         lua_close(L);
     }
 }
-
-
-

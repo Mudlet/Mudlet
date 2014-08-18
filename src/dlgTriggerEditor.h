@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,30 +22,35 @@
  ***************************************************************************/
 
 
-#include <QFile>
-
+#include "pre_guard.h"
 #include "ui_trigger_editor.h"
+#include "post_guard.h"
+
+#include "dlgOptionsAreaTriggers.h"
+#include "dlgSearchArea.h"
+#include "dlgSourceEditorArea.h"
+#include "dlgSystemMessageArea.h"
+#include "dlgTimersMainArea.h"
+#include "dlgTriggersMainArea.h"
+#include "dlgVarsMainArea.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTreeWidget.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+#include "TVar.h"
+
+#include "pre_guard.h"
+#include <QFile>
 #include <QDialog>
 #include <QListWidgetItem>
 #include <QListWidget>
+#include <QScrollArea>
 #include <QTableWidget>
 #include <QTableWidgetItem>
-#include <QScrollArea>
-#include "TTrigger.h"
-#include "TAction.h"
-//#include <Qsci/qsciscintilla.h>
-//#include <Qsci/qscilexerlua.h>
-#include "dlgTriggersMainArea.h"
-#include "dlgTimersMainArea.h"
-#include "dlgSystemMessageArea.h"
-#include "dlgSourceEditorArea.h"
-#include "dlgOptionsAreaTriggers.h"
-#include "dlgSearchArea.h"
-#include "TTreeWidget.h"
-#include "TKey.h"
-#include "dlgVarsMainArea.h"
-#include "TVar.h"
-//#include "TConsole.h"
+#include "post_guard.h"
 
 class dlgTimersMainArea;
 class dlgSystemMessageArea;
@@ -61,9 +67,11 @@ class dlgOptionsAreaTimers;
 class dlgOptionsAreaAction;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
+class TAction;
 class TKey;
 class TConsole;
 class dlgVarsMainArea;
+
 
 class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
 {

@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,16 +19,19 @@
  ***************************************************************************/
 
 
-#include <map>
+#include "HostPool.h"
+
+
+#include "Host.h"
+
+#include "pre_guard.h"
 #include <QDir>
+#include "post_guard.h"
+
 #include <iostream>
 #include <fstream>
-#include <QStringList>
+#include <map>
 
-#include "HostPool.h"
-#include "Host.h"
-#include <QMutex>
-#include <QMutexLocker>
 
 bool HostPool::deleteHost(QString hostname)
 {

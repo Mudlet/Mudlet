@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,19 +18,25 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <QMap>
-#include <QString>
-#include <QWidget>
-#include <QPainter>
-#include <QClipboard>
-#include <QTime>
-#include "mudlet.h"
-#include "TDebug.h"
+
 #include "TTextEdit.h"
-#include <math.h>
+
+
+#include "Host.h"
+#include "TConsole.h"
+#include "TEvent.h"
+
+#include "pre_guard.h"
+#include <QtEvents>
+#include <QApplication>
+#include <QClipboard>
+#include <QMenu>
+#include <QPainter>
+#include <QString>
+#include <QScrollBar>
+#include <QToolTip>
+#include "post_guard.h"
+
 
 TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen )
 : QWidget( pW )
@@ -999,8 +1005,6 @@ void TTextEdit::swap( QPoint & p1, QPoint & p2 )
     p2 = tmp;
 }
 
-#include<QToolTip>
-
 void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 {
     if( (mFontWidth == 0) | (mFontHeight == 0) ) return;
@@ -1688,12 +1692,3 @@ int TTextEdit::bufferScrollDown( int lines )
         return 0;
     }
 }
-
-
-
-
-
-
-
-
-

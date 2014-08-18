@@ -1,14 +1,9 @@
-#ifndef MUDLET_TFORKEDPROCESS_H
-#define MUDLET_TFORKEDPROCESS_H
-
 /***************************************************************************
- *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
+ *   it under the terms of the GNU General Public License version 2 as     *
+ *   published by the Free Software Foundation.                            *
  *                                                                         *
  *   This program is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
@@ -22,36 +17,10 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
-#include <QProcess>
-#include "post_guard.h"
+#if defined(_DEBUG) && defined(_MSC_VER)
+#pragma pop_macro("new")
+#pragma pop_macro("malloc")
+#pragma pop_macro("realloc")
+#pragma pop_macro("free")
+#endif // _DEBUG && _MSC_VER
 
-#include "TLuaInterpreter.h"
-
-
-class TForkedProcess : public QProcess {
-
-Q_OBJECT
-
-public:
-    virtual ~TForkedProcess();
-
-    static int startProcess( TLuaInterpreter *, lua_State *);
-
-private:
-    TForkedProcess( TLuaInterpreter *, lua_State * );
-
-    int callBackFunctionRef;
-    TLuaInterpreter *interpreter;
-    bool running;
-
-    static int closeInputOfProcess ( lua_State * L );
-    static int isProcessRunning ( lua_State * L );
-    static int sendMessage( lua_State * L );
-
-private slots:
-    void slotReceivedData();
-    void slotFinish();
-};
-
-#endif // MUDLET_TFORKEDPROCESS_H

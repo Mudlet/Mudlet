@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,11 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
+#include "pre_guard.h"
 #include <QMap>
 #include <QStringList>
-#include <QTreeWidgetItem>
 #include <QSet>
-#include "TVar.h"
+#include "post_guard.h"
+
+
+class TVar;
+
+class QTreeWidgetItem;
+
 
 class VarUnit
 {

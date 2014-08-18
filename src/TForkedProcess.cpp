@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2009 by Benjamin Lerman                                 *
- *   mudlet@ambre.net                                                      *
+ *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,9 +18,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "TForkedProcess.h"
 
+
+#include "pre_guard.h"
 #include <QPointer>
+#include "post_guard.h"
+
 
 TForkedProcess::~TForkedProcess()
 {

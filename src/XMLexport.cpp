@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,6 +20,19 @@
 
 
 #include "XMLexport.h"
+
+
+#include "Host.h"
+#include "LuaInterface.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTrigger.h"
+#include "TTimer.h"
+#include "TVar.h"
+#include "VarUnit.h"
+
 
 using namespace std;
 
@@ -959,4 +973,3 @@ bool XMLexport::writeKey( TKey * pT )
 
     return true;
 }
-

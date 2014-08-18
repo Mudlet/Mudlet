@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2010-2011 by Heiko Koehn ( KoehnHeiko@googlemail.com )  *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,20 +18,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QtGui>
 
-//#include <QtOpenGL/qgl.h>
-
-#include <QtOpenGL/qgl.h> //problem with git
-#include <math.h>
-#include <QDebug>
 #include "glwidget.h"
-#include "Host.h"
-#include "dlgMapper.h"
 
-#ifndef GL_MULTISAMPLE
-#define GL_MULTISAMPLE  0x809D
-#endif
+
+#include "dlgMapper.h"
+#include "Host.h"
+#include "TArea.h"
+#include "TMap.h"
+#include "TRoom.h"
+#include "TRoomDB.h"
+
+#include "pre_guard.h"
+#include <QtEvents>
+#include "post_guard.h"
 
 #if QT_VERSION >= 0x040800
     #ifdef __APPLE__
@@ -39,6 +39,13 @@
     #else
         #include <GL/glu.h>
     #endif
+#endif
+
+#include <math.h>
+
+
+#ifndef GL_MULTISAMPLE
+#define GL_MULTISAMPLE  0x809D
 #endif
 
 bool ortho;
@@ -2054,13 +2061,3 @@ void GLWidget::wheelEvent ( QWheelEvent * e )
     e->ignore();
     return;
 }
-
-
-
-
-
-
-
-
-
-

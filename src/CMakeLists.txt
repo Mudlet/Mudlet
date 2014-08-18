@@ -186,6 +186,8 @@ SET(mudlet_HDRS
     HostPool.h
     KeyUnit.h
     LuaInterface.h
+    pre_guard.h
+    post_guard.h
     ScriptUnit.h
     TAction.h
     TAlias.h

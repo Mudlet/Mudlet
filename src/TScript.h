@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,21 +22,13 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QTimer>
-#include <QString>
-#include <QRegExp>
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
-#include <QTextBlock>
-#include "TLuaInterpreter.h"
 
+#include "pre_guard.h"
+#include <QStringList>
+#include "post_guard.h"
+
+class Host;
 class TEvent;
 
 

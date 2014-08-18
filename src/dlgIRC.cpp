@@ -1,7 +1,6 @@
-
-
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,16 +17,21 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
+
+#include "dlgIRC.h"
+
+
+#include "mudlet.h"
+
+#include "pre_guard.h"
 #include <QDebug>
 #include <QDesktopServices>
-#include <QScrollBar>
-//#define IRC_SHARED
-#include "dlgIRC.h"
 #include <QDir>
-//#include "irc/include/ircsession.h"
-
-//#include <ircsession.h>
-#include "mudlet.h"
+#include <QScrollBar>
+#include <QString>
+#include <QTime>
+#include "post_guard.h"
 
 
 dlgIRC::dlgIRC()
@@ -102,9 +106,6 @@ void dlgIRC::sendMsg()
     session->cmdMessage("#mudlet", txt);
     session->cmdNames( "#mudlet" );
 }
-
-#include <QTime>
-#include <QString>
 
 void dlgIRC::irc_gotMsg( QString a, QString b, QString c )
 {
@@ -281,4 +282,3 @@ void dlgIRC::anchorClicked(const QUrl& link)
 {
     QDesktopServices::openUrl(link);
 }
-

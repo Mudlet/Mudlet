@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,22 +22,19 @@
  ***************************************************************************/
 
 
-
+#include "pre_guard.h"
+#include <QMap>
 #include <QXmlStreamReader>
-
-#include "Host.h"
-#include "TVar.h"
-#include "LuaInterface.h"
-#include "VarUnit.h"
+#include "post_guard.h"
 
 class Host;
-class TTrigger;
-class TTimer;
-class TAlias;
 class TAction;
-class TScript;
+class TAlias;
 class TKey;
-
+class TScript;
+class TTimer;
+class TTrigger;
+class TVar;
 
 
 class XMLimport : public QXmlStreamReader

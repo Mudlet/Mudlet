@@ -21,14 +21,14 @@
  ***************************************************************************/
 
 
-#include <QMainWindow>
+#include "pre_guard.h"
 #include "ui_irc.h"
-
 #ifdef Q_CC_MSVC
     #include <ircsession.h>
 #else
     #include "irc/include/ircsession.h"
 #endif
+#include "post_guard.h"
 
 
 class dlgIRC : public QMainWindow, public Ui::irc_dlg

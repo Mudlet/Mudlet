@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,33 +22,35 @@
  ***************************************************************************/
 
 
-
-
-#include <QMainWindow>
-#include <QCloseEvent>
-//#include "ui_console.h"
-#include "TConsole.h"
-#include "mudlet.h"
-#include "ctelnet.h"
 #include "HostManager.h"
-#include <map>
-#include <QMap>
-#include "Host.h"
-#include <QMdiArea>
-#include "TConsole.h"
+
+#include "pre_guard.h"
 #include "ui_main_window.h"
+#include <QMainWindow>
+#include <QMap>
 #include <QMediaPlayer>
+#include <QQueue>
+#include <QTime>
+#include "post_guard.h"
+
+#include <assert.h>
 
 class QAction;
+class QCloseEvent;
 class QMenu;
+class QListWidget;
+class QPushButton;
+class QTableWidget;
+class QTableWidgetItem;
 class QTextEdit;
-class EAction;
+class QTimer;
+
+class Host;
 class TConsole;
+class TEvent;
 class TLabel;
+class TTimer;
 class dlgIRC;
-
-
-
 
 
 class mudlet : public QMainWindow, public Ui::MainWindow

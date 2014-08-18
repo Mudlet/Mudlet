@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,27 +22,26 @@
  ***************************************************************************/
 
 
-
-
-class TRoom;
-class TArea;
-class Host;
-class GLWidget;
-class T2DMap;
-
-#include <QMap>
-#include "TRoom.h"
-#include "TArea.h"
-#include "glwidget.h"
-#include <stdlib.h>
 #include "TAstar.h"
-//#include "dlgMapper.h"
-#include <QSizeF>
+
+#include "pre_guard.h"
 #include <QColor>
+#include <QMap>
 #include <QPixmap>
+#include <QSizeF>
 #include <QVector3D>
+#include "post_guard.h"
+
+#include <stdlib.h>
 
 class dlgMapper;
+class Host;
+class GLWidget;
+class TArea;
+class TRoom;
+class TRoomDB;
+class T2DMap;
+
 
 class TMapLabel
 {

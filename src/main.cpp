@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn -KoehnHeiko@googlemail.com     *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,17 +20,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QtCore>
+
+#include "FontManager.h"
+#include "HostManager.h"
+#include "mudlet.h"
+
+#include "pre_guard.h"
 #include <QApplication>
 #include <QDir>
 #include <QFile>
-#include <QFontDatabase>
+#include <QPainter>
 #include <QSplashScreen>
 #include <QStringBuilder>
 #include <QTextLayout>
-#include "TConsole.h"
-#include "FontManager.h"
-#include "mudlet.h"
+#include "post_guard.h"
+
 
 // N/U: #define MUDLET_HOME "/usr/local/share/mudlet/"
 
@@ -433,4 +439,3 @@ int main(int argc, char *argv[])
     // the earlier setOverrideCursor() line and this one.  8-( !
     app->exec();
 }
-

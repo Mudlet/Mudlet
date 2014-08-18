@@ -22,9 +22,22 @@
  ***************************************************************************/
 
 
-#include <QWidget>
-#include <TMap.h>
+#include "pre_guard.h"
+#include <QColor>
 #include <QPixmap>
+#include <QTreeWidget>
+#include <QWidget>
+#include "post_guard.h"
+
+class Host;
+class TMap;
+
+class QCheckBox;
+class QComboBox;
+class QListWidgetItem;
+class QPushButton;
+class QTreeWidgetItem;
+
 
 class T2DMap : public QWidget
 {

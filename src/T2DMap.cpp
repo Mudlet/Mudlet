@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,24 +19,44 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QColorDialog>
-#include <QDir>
-#include <QFileDialog>
-#include <QFontDialog>
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QPixmap>
-#include <QSignalMapper>
 #include <QTreeWidget>
 #include <QtUiTools>
 
 #include "T2DMap.h"
+
+
+#include "dlgRoomExits.h"
+#include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
+#include "TEvent.h"
 #include "TMap.h"
 #include "TRoom.h"
-#include "Host.h"
-#include "dlgRoomExits.h"
+#include "TRoomDB.h"
+
+#include "pre_guard.h"
+#include <QtEvents>
+#include <QtUiTools>
+#include <QAction>
+#include <QColorDialog>
+#include <QComboBox>
+#include <QCheckBox>
+#include <QDir>
+#include <QFileDialog>
+#include <QFontDialog>
+#include <QHBoxLayout>
+#include <QInputDialog>
+#include <QLabel>
+#include <QListWidget>
+#include <QMenu>
+#include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
+#include <QPushButton>
+#include <QSignalMapper>
+#include <QTreeWidget>
+#include "post_guard.h"
+
 
 T2DMap::T2DMap(QWidget * parent)
 : QWidget(parent)
@@ -1821,7 +1842,6 @@ void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
     repaint();
 }
 
-// Moved include of QFontDialog, QFileDialog and QMessageBox from here
 void T2DMap::createLabel( QRectF labelRect )
 {
 // N/U:     QRectF selectedRegion = labelRect;
@@ -3163,7 +3183,6 @@ void T2DMap::slot_shrink()
     repaint();
 }
 
-// Moved include of dlgRoomExits from here
 void T2DMap::slot_setExits()
 {
     if( mMultiSelectionList.size() < 1 ) return;
@@ -3224,7 +3243,6 @@ void T2DMap::slot_setRoomWeight()
     }
 }
 
-// Moved include of QtUiTools from here
 void T2DMap::slot_setArea()
 {
     QUiLoader loader;
@@ -3597,7 +3615,6 @@ void T2DMap::setExitSize( double f )
     if( mpHost ) mpHost->mLineSize = f;
 }
 
-// Moved include of QTreeWidget from here
 void T2DMap::slot_setCustomLine()
 {
     if( mMultiSelectionList.size() < 1 )
@@ -3902,7 +3919,6 @@ void T2DMap::slot_customLineColor()
     }
 }
 
-// Moved include of TRoom from here
 void T2DMap::slot_setCustomLine2()
 {
     QPushButton* pB = qobject_cast<QPushButton *>( sender() );
@@ -4031,7 +4047,6 @@ void T2DMap::slot_roomSelectionChanged()
 
 }
 
-// Moved include of QDir from here
 void T2DMap::paintMap()
 {
 //    if( !mpMap ) return;
@@ -5173,5 +5188,3 @@ void T2DMap::paintMap()
 //    pix.save(erg);
 
 }
-
-

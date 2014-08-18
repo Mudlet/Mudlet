@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,22 +22,20 @@
  ***************************************************************************/
 
 
-#include <QLineEdit>
-#include <QMainWindow>
-#include <QCloseEvent>
-//#include "ui_console.h"
-//#include <QtWebKit>
-#include <iostream>
-#include "ctelnet.h"
-#include "TCommandLine.h"
-#include "Host.h"
+#include "pre_guard.h"
+#include <QMap>
 #include <QPlainTextEdit>
+#include <QString>
+#include <QStringList>
+#include "post_guard.h"
+
 #include <hunspell/hunspell.h>
 
 class TConsole;
 class KeyUnit;
 class Host;
 class TConsole;
+
 
 class TCommandLine : public QPlainTextEdit//QLineEdit
 {

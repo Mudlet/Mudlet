@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,14 +22,17 @@
  ***************************************************************************/
 
 
-#include "TScript.h"
-#include <list>
-#include <map>
+#include "pre_guard.h"
+#include <QMap>
 #include <QMutex>
-#include <QDataStream>
+#include <QString>
+#include "post_guard.h"
 
-class TScript;
+#include <list>
+
 class Host;
+class TScript;
+
 
 class ScriptUnit
 {

@@ -1,7 +1,6 @@
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,7 +20,14 @@
 
 
 #include "TLabel.h"
-#include <QDebug>
+
+#include "Host.h"
+#include "TEvent.h"
+
+#include "pre_guard.h"
+#include <QtEvents>
+#include "post_guard.h"
+
 
 TLabel::TLabel( QWidget * pW )
 : QLabel( pW )

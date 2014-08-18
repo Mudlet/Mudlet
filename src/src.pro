@@ -272,6 +272,8 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
+    pre_guard.h \
+    post_guard.h \
     ScriptUnit.h \
     T2DMap.h \
     TAction.h \

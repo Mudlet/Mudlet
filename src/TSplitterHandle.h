@@ -21,10 +21,12 @@
  ***************************************************************************/
 
 
+#include "pre_guard.h"
 #include <QSplitterHandle>
-#include "TSplitter.h"
+#include "post_guard.h"
 
 class TSplitter;
+
 
 class TSplitterHandle : public QSplitterHandle
 {

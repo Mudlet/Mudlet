@@ -22,21 +22,14 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QTimer>
-#include <QString>
-#include <QRegExp>
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
-#include <QTextBlock>
 
-class TLuaInterpreter;
+#include "pre_guard.h"
+#include <QRegExp>
+#include "post_guard.h"
+
+class Host;
+
 
 class TKey : public Tree<TKey>
 {
