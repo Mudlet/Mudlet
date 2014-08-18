@@ -374,12 +374,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
 
-    QAction * saveMenu = new QAction( QIcon( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
-    saveMenu->setEnabled( true );
-    saveMenu->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-    saveMenu->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
+//    QAction * saveMenu = new QAction( QIcon( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
+//    saveMenu->setEnabled( true );
+//    saveMenu->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
+//    saveMenu->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
 
-    connect( saveMenu, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
+//    connect( saveMenu, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
 
     QAction * profileSaveAction = new QAction( QIcon ( QStringLiteral( ":/icons/document-save.png" ) ), tr("Save Profile"), this);
     profileSaveAction->setEnabled( true );
