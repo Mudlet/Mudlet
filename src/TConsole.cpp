@@ -85,7 +85,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mpMainDisplay( new QWidget( mpMainFrame ) )
 , mpMapper( 0 )
 , mpScrollBar( new QScrollBar )
-
 , mRecordReplay( false )
 , mSystemMessageBgColor( mBgColor )
 , mSystemMessageFgColor( QColor( 255,0,0 ) )
