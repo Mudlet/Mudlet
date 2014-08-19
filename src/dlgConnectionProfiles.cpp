@@ -533,9 +533,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     connect(delete_profile_lineedit, SIGNAL(textChanged(const QString)), this, SLOT(slot_deleteprofile_check(const QString)));
     connect(delete_profile_dialog, SIGNAL(accepted()), this, SLOT(slot_reallyDeleteProfile()));
 
-    #if QT_VERSION >= 0x040700
     delete_profile_lineedit->setPlaceholderText(profile);
-    #endif
     cancel_button->setFocus();
     delete_button->setDisabled(true);
     delete_profile_dialog->setWindowTitle("Deleting '"+profile+"'");
