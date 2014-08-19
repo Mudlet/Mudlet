@@ -186,7 +186,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mIsScriptsMainAreaEditHandler = false;
     mpScriptsMainAreaEditHandlerItem = 0;
     connect(mpScriptsMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_script_main_area_add_handler()));
-    connect(mpScriptsMainArea->listWidget_registered_event_handlers, SIGNAL(itemClicked ( QListWidgetItem *, int )), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
+    connect(mpScriptsMainArea->listWidget_registered_event_handlers, SIGNAL(currentItemChanged ( QListWidgetItem *, QListWidgetItem *)), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
 
     // source editor area
 
@@ -553,16 +553,16 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     connect( comboBox_search_triggers, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
-    connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_scripts, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_alias, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_vars, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_keys, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_timers, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_scripts, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_alias, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_actions, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_vars, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     //connect( mpSearchArea, SIGNAL(currentItemChanged(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
-    connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
+    connect( tree_widget_search_results_main, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem *)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, QTreeWidgetItem*)));
     //connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     //connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     //connect( mpTriggersMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_trigger_main_area_delete_regex()));
@@ -748,7 +748,7 @@ void dlgTriggerEditor::slot_switchToExpertMonde()
     //toolButton_delete_trigger->show();
 }
 
-void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, int mode )
+void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, QTreeWidgetItem * previous)
 {
     if ( !pItem )
         return;
@@ -4342,8 +4342,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current trigger before switching to the new one
-    if ( pItem != mCurrentTrigger )
-        saveTrigger();
+    saveTrigger();
 
     mCurrentTrigger = pItem;
     mpTriggersMainArea->show();
@@ -4514,8 +4513,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current alias before switching to the new one
-    if ( pItem != mCurrentAlias )
-        saveAlias();
+    saveAlias();
 
     mCurrentAlias = pItem;
     mpAliasMainArea->show();
@@ -4558,8 +4556,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current key before switching to the new one
-    if ( pItem != mCurrentKey )
-        saveKey();
+    saveKey();
 
     mCurrentKey = pItem;
     mpKeysMainArea->show();
@@ -4782,8 +4779,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current action before switching to the new one
-    if ( pItem != mCurrentAction )
-        saveAction();
+    saveAction();
 
     mCurrentAction = pItem;
     mpActionsMainArea->show();
@@ -4865,8 +4861,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current script before switching to the new one
-    if ( pItem != mCurrentScript )
-        saveScript();
+    saveScript();
 
     mCurrentScript = pItem;
     mpScriptsMainArea->show();
@@ -4906,8 +4901,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current timer before switching to the new one
-    if ( pItem != mCurrentTimer )
-        saveTimer();
+    saveTimer();
 
     mCurrentTimer = pItem;
     mpTimersMainArea->show();
