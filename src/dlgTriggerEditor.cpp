@@ -4342,7 +4342,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current trigger before switching to the new one
-    saveTrigger();
+    if ( pItem != mCurrentTrigger )
+        saveTrigger();
 
     mCurrentTrigger = pItem;
     mpTriggersMainArea->show();
@@ -4513,7 +4514,8 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current alias before switching to the new one
-    saveAlias();
+    if ( pItem != mCurrentAlias )
+        saveAlias();
 
     mCurrentAlias = pItem;
     mpAliasMainArea->show();
@@ -4556,7 +4558,8 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current key before switching to the new one
-    saveKey();
+    if ( pItem != mCurrentKey )
+        saveKey();
 
     mCurrentKey = pItem;
     mpKeysMainArea->show();
@@ -4779,7 +4782,8 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current action before switching to the new one
-    saveAction();
+    if ( pItem != mCurrentAction )
+        saveAction();
 
     mCurrentAction = pItem;
     mpActionsMainArea->show();
@@ -4861,7 +4865,8 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current script before switching to the new one
-    saveScript();
+    if ( pItem != mCurrentScript )
+        saveScript();
 
     mCurrentScript = pItem;
     mpScriptsMainArea->show();
@@ -4901,7 +4906,8 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current timer before switching to the new one
-    saveTimer();
+    if ( pItem != mCurrentTimer )
+        saveTimer();
 
     mCurrentTimer = pItem;
     mpTimersMainArea->show();
