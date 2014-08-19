@@ -2382,10 +2382,10 @@ void mudlet::slot_replaySpeedDown()
 
 void mudlet::stopSounds()
 {
-//    mpMusicBox1->stop();
-//    mpMusicBox2->stop();
-//    mpMusicBox3->stop();
-//    mpMusicBox4->stop();
+    mpMusicBox1->stop();
+    mpMusicBox2->stop();
+    mpMusicBox3->stop();
+    mpMusicBox4->stop();
 }
 
 void mudlet::playSound( QString s )
