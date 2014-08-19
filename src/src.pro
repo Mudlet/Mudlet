@@ -24,10 +24,14 @@ lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
 VERSION = 3.0.1
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
-CONFIG += warn_off
+!msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
-QMAKE_CXXFLAGS_RELEASE += -O3 -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
-QMAKE_CXXFLAGS_DEBUG += -O0 -Wall -g -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+!msvc:QMAKE_CXXFLAGS_RELEASE += -O3
+!msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
+
+# MSVC specific flags. Enable multiprocessor MSVC builds.
+msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
@@ -52,6 +56,7 @@ macx {
 } else {
     TARGET = mudlet
 }
+msvc:DEFINES += LUA_CPP PCRE_STATIC HUNSPELL_STATIC
 
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
@@ -189,7 +194,6 @@ SOURCES += \
     irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
-    lua_yajl.c \
     main.cpp \
     mudlet.cpp \
     ScriptUnit.cpp \
@@ -226,6 +230,9 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
+
+!msvc:SOURCES += lua_yajl.c
+msvc:SOURCES += lua_yajl.cpp
 
 
 HEADERS += \
