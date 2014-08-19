@@ -452,9 +452,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchBox->setSizePolicy( sizePolicy5 );
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy( Qt::ClickFocus );
-#if QT_VERSION >= 0x040700
     mpBufferSearchBox->setPlaceholderText("Search ...");
-#endif
     QPalette __pal;
     __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
     __pal.setColor(QPalette::Highlight,QColor(0,0,192));
