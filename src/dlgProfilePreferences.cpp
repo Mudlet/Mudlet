@@ -1527,7 +1527,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mRawStreamDump = mRawStreamDump->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
     pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
-    pHost->mpConsole->changeColors();
+    if( mudlet::self()->mConsoleMap.contains( pHost ) )
+    {
+        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    }
     QString lIgnore = doubleclick_ignore_lineedit->text();
     for(int i=0;i<lIgnore.size();i++){
         mpHost->mDoubleClickIgnore.insert(lIgnore.at(i));
@@ -1558,14 +1561,17 @@ void dlgProfilePreferences::slot_save_and_exit()
        QFile file_use_smallscreen( QDir::homePath()+"/.config/mudlet/mudlet_option_use_smallscreen" );
        file_use_smallscreen.remove();
     }
-    pHost->mpConsole->console->updateScreenView();
-    pHost->mpConsole->console->forceUpdate();
-    pHost->mpConsole->refresh();
-    int x = pHost->mpConsole->width();
-    int y = pHost->mpConsole->height();
-    QSize s = QSize(x,y);
-    QResizeEvent event(s, s);
-    QApplication::sendEvent( pHost->mpConsole, &event);
+    if( mudlet::self()->mConsoleMap.contains( pHost ) )
+    {
+        mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
+        mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+        mudlet::self()->mConsoleMap[pHost]->refresh();
+        int x = mudlet::self()->mConsoleMap[pHost]->width();
+        int y = mudlet::self()->mConsoleMap[pHost]->height();
+        QSize s = QSize(x,y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent( mudlet::self()->mConsoleMap[pHost], &event);
 qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
+    }
     close();
 }
