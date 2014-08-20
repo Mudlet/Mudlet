@@ -30,10 +30,10 @@ class TSplitter;
 
 class TSplitterHandle : public QSplitterHandle
 {
-//Q_OBJECT
- public:
-     TSplitterHandle(Qt::Orientation orientation, TSplitter * parent );
-     void paintEvent( QPaintEvent * );
+    // Q_OBJECT
+public:
+    TSplitterHandle(Qt::Orientation orientation, TSplitter * parent );
+    void paintEvent( QPaintEvent * );
 };
 
 #endif // MUDLET_TSPLITTERHANDLE_H

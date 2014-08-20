@@ -30,5 +30,4 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget * pF) : QWidget(pF)
     setupUi(this);
     highlighter = new THighlighter(editor->document());
     editor->setTabStopWidth(25);
-
 }

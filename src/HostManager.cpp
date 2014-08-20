@@ -62,7 +62,7 @@ void HostManager::postIrcMessage( QString a, QString b, QString c )
 bool HostManager::addHost( QString url, QString port, QString login, QString pass )
 {
     bool ret = mHostPool.addNewHost( url, port, login, pass );
-    //FIXME nur provisorisch bis ich multi host support fertig habe
+    // FIXME nur provisorisch bis ich multi host support fertig habe
     mpActiveHost = getFirstHost();
     return ret;
 }

@@ -32,12 +32,11 @@
 class Host;
 
 
-class dlgProfilePreferences : public QDialog , public Ui::profile_preferences
+class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
 
 public:
-
     dlgProfilePreferences( QWidget *, Host * );
 
     int mFontSize;

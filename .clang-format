@@ -45,7 +45,7 @@ AlwaysBreakAfterDefinitionReturnType: false
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: true
 BreakBeforeBinaryOperators: true
-BreakBeforeBraces: Allman
+BreakBeforeBraces: Linux
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: true
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
@@ -60,7 +60,7 @@ SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
 SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
-SpacesInParentheses: true
+SpacesInParentheses: false
 
 # parameters
 AllowAllParametersOfDeclarationOnNextLine: true

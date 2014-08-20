@@ -27,20 +27,17 @@
 #include "post_guard.h"
 
 
-class dlgSearchArea : public QWidget , public Ui::extended_search_area
+class dlgSearchArea : public QWidget, public Ui::extended_search_area
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgSearchArea(QWidget *);
-    
+
+public:
+    dlgSearchArea(QWidget *);
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGSEARCHAREA_H

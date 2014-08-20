@@ -26,7 +26,6 @@
 class TEvent
 {
 public:
-    
     QStringList mArgumentList;
     QList<int> mArgumentTypeList;
 };

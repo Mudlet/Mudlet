@@ -37,11 +37,11 @@ class HostPool
     QMutex                mPoolLock;
     QMap<QString, Host *> mHostPool;
 
- public:
+public:
 
     Host *                getHost( QString hostname );
     Host *                getFirstHost();
-    Host *                getNextHost( QString LastHost ); //get next host key by providing a LastHost
+    Host *                getNextHost( QString LastHost ); // get next host key by providing a LastHost
     QList<QString>        getHostNameList();
     QStringList           getHostList();
     bool                  addNewHost( QString hostname, QString port, QString login, QString pass );
@@ -52,7 +52,6 @@ class HostPool
     void                  postIrcMessage( QString, QString, QString );
 
 private:
-
     int createNewHostID();
 };
 

@@ -28,12 +28,12 @@
 #include "post_guard.h"
 
 
-TSplitter::TSplitter(Qt::Orientation o, QWidget * p )
+TSplitter::TSplitter(Qt::Orientation o, QWidget * p ) 
 : QSplitter( o, p )
 {
 }
 
 QSplitterHandle * TSplitter::createHandle()
- {
-     return new TSplitterHandle( orientation(), this );
- }
+{
+    return new TSplitterHandle( orientation(), this );
+}

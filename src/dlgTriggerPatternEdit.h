@@ -27,21 +27,18 @@
 #include "post_guard.h"
 
 
-class dlgTriggerPatternEdit : public QWidget , public Ui::trigger_pattern_edit
+class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgTriggerPatternEdit(QWidget*);
-        int mRow;
-    
+
+public:
+    dlgTriggerPatternEdit(QWidget*);
+    int mRow;
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGTRIGGERPATTERNEDIT_H

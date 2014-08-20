@@ -32,16 +32,15 @@ class mudlet;
 
 class EAction : public QAction
 {
-Q_OBJECT
-      
+    Q_OBJECT
+
 public:
-        
                     EAction(QIcon &, QString &, mudlet * );
     QWidget *       createWidget( QWidget * );
-    
+
     int             mID;
     Host *          mpHost;
-    
+
 public slots:
 
     void            slot_execute( bool checked );
@@ -49,8 +48,6 @@ public slots:
 signals:
 
     void            triggered( QAction * );
-    
-    
 };
 
 #endif // MUDLET_EACTION_H

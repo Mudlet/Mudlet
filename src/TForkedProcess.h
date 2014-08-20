@@ -31,7 +31,7 @@
 
 class TForkedProcess : public QProcess {
 
-Q_OBJECT
+    Q_OBJECT
 
 public:
     virtual ~TForkedProcess();
@@ -45,8 +45,8 @@ private:
     TLuaInterpreter *interpreter;
     bool running;
 
-    static int closeInputOfProcess ( lua_State * L );
-    static int isProcessRunning ( lua_State * L );
+    static int closeInputOfProcess( lua_State * L );
+    static int isProcessRunning( lua_State * L );
     static int sendMessage( lua_State * L );
 
 private slots:

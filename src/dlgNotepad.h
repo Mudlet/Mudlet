@@ -29,16 +29,15 @@
 class Host;
 
 
-class dlgNotepad : public QMainWindow , public Ui::NotesEditor
+class dlgNotepad : public QMainWindow, public Ui::NotesEditor
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
-
-        dlgNotepad( Host * );
-        void save();
-        void restore();
-        Host * mpHost;
+    dlgNotepad( Host * );
+    void save();
+    void restore();
+    Host * mpHost;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H
