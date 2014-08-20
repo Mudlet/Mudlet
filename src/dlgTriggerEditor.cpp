@@ -186,7 +186,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mIsScriptsMainAreaEditHandler = false;
     mpScriptsMainAreaEditHandlerItem = 0;
     connect(mpScriptsMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_script_main_area_add_handler()));
-    connect(mpScriptsMainArea->listWidget_registered_event_handlers, SIGNAL(itemClicked ( QListWidgetItem *, int )), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
+    connect(mpScriptsMainArea->listWidget_registered_event_handlers, SIGNAL(currentItemChanged ( QListWidgetItem *, QListWidgetItem *)), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
 
     // source editor area
 
@@ -553,16 +553,16 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     connect( comboBox_search_triggers, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
-    connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_scripts, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_alias, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_vars, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_keys, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_timers, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_scripts, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_alias, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_actions, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_vars, SIGNAL( currentItemChanged( QTreeWidgetItem *, QTreeWidgetItem * ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     //connect( mpSearchArea, SIGNAL(currentItemChanged(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
-    connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
+    connect( tree_widget_search_results_main, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem *)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, QTreeWidgetItem*)));
     //connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     //connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
     //connect( mpTriggersMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_trigger_main_area_delete_regex()));
@@ -748,7 +748,7 @@ void dlgTriggerEditor::slot_switchToExpertMonde()
     //toolButton_delete_trigger->show();
 }
 
-void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, int mode )
+void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, QTreeWidgetItem * previous)
 {
     if ( !pItem )
         return;
@@ -2733,10 +2733,9 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
 
-    treeWidget->setCurrentItem( pNewItem );
     mCurrentTrigger = pNewItem;
     showInfo( msgInfoAddTrigger );
-    slot_trigger_selected( treeWidget->currentItem() );
+    treeWidget->setCurrentItem( pNewItem );
 }
 
 
@@ -2827,10 +2826,10 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
     mpSourceEditorArea->editor->clear();
-    treeWidget_timers->setCurrentItem( pNewItem );
+
     mCurrentTimer = pNewItem;
     showInfo( msgInfoAddTimer );
-    slot_timer_selected( treeWidget_timers->currentItem() );
+    treeWidget_timers->setCurrentItem( pNewItem );
 }
 
 void dlgTriggerEditor::addVar( bool isFolder )
@@ -2899,13 +2898,10 @@ void dlgTriggerEditor::addVar( bool isFolder )
         newVar->setValueType(LUA_TNONE);
     vu->addTempVar( newItem, newVar );
     newItem->setFlags(newItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled ));
-    if (newItem)
-    {
-        treeWidget_vars->setCurrentItem( newItem );
-        mCurrentVar = (QTreeWidgetItem*)newItem;
-        showInfo( msgInfoAddVar );
-        slot_var_selected( (QTreeWidgetItem*)treeWidget_vars->currentItem() );
-    }
+
+    mCurrentVar = newItem;
+    showInfo( msgInfoAddVar );
+    treeWidget_vars->setCurrentItem( newItem );
 }
 
 void dlgTriggerEditor::addKey( bool isFolder )
@@ -2992,10 +2988,10 @@ void dlgTriggerEditor::addKey( bool isFolder )
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
     mpSourceEditorArea->editor->clear();
-    treeWidget_keys->setCurrentItem( pNewItem );
+
     mCurrentKey = pNewItem;
     showInfo( msgInfoAddKey );
-    slot_key_selected( treeWidget_keys->currentItem() );
+    treeWidget_keys->setCurrentItem( pNewItem );
 }
 
 
@@ -3091,10 +3087,9 @@ ROOT_ALIAS:
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
-    treeWidget_alias->setCurrentItem( pNewItem );
     mCurrentAlias = pNewItem;
     showInfo(msgInfoAddAlias);
-    slot_alias_selected( treeWidget_alias->currentItem() );
+    treeWidget_alias->setCurrentItem( pNewItem );
 }
 
 void dlgTriggerEditor::addAction( bool isFolder )
@@ -3196,11 +3191,10 @@ void dlgTriggerEditor::addAction( bool isFolder )
 
     mpHost->getActionUnit()->updateToolbar();
 
-    treeWidget_actions->setCurrentItem( pNewItem );
     mpCurrentActionItem = pNewItem;
     mCurrentAction = pNewItem;
     showInfo( msgInfoAddButton );
-    slot_action_selected( treeWidget_actions->currentItem() );
+    treeWidget_actions->setCurrentItem( pNewItem );
 }
 
 
@@ -3293,9 +3287,10 @@ void dlgTriggerEditor::addScript( bool isFolder )
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
     mpSourceEditorArea->editor->setPlainText( script );
+
     mCurrentScript = pNewItem;
+    showInfo( msgInfoAddScript );
     treeWidget_scripts->setCurrentItem( pNewItem );
-    slot_scripts_selected( treeWidget_scripts->currentItem() );
 }
 
 void dlgTriggerEditor::slot_saveVarAfterEdit()
