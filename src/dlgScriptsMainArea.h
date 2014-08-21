@@ -27,20 +27,17 @@
 #include "post_guard.h"
 
 
-class dlgScriptsMainArea : public QWidget , public Ui::scripts_main_area
+class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgScriptsMainArea(QWidget*);
-    
+
+public:
+    dlgScriptsMainArea(QWidget*);
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

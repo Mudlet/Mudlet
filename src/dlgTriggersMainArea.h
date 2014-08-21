@@ -27,21 +27,17 @@
 #include "post_guard.h"
 
 
-class dlgTriggersMainArea : public QWidget , public Ui::trigger_main_area
+class dlgTriggersMainArea : public QWidget, public Ui::trigger_main_area
 {
     Q_OBJECT
-        
+
 public:
-        
-         dlgTriggersMainArea(QWidget*);
+    dlgTriggersMainArea(QWidget*);
 
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGTRIGGERSMAINAREA_H
-

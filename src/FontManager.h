@@ -25,10 +25,8 @@ class QString;
 class FontManager
 {
 public:
-	void addFonts();
-	void loadFonts(QString folder);
-	
-	
+    void addFonts();
+    void loadFonts(QString folder);
 };
 
 #endif // MUDLET_FONTMANAGER_H

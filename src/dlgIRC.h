@@ -24,16 +24,16 @@
 #include "pre_guard.h"
 #include "ui_irc.h"
 #ifdef Q_CC_MSVC
-    #include <ircsession.h>
+#include <ircsession.h>
 #else
-    #include "irc/include/ircsession.h"
+#include "irc/include/ircsession.h"
 #endif
 #include "post_guard.h"
 
 
 class dlgIRC : public QMainWindow, public Ui::irc_dlg
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
     dlgIRC();
@@ -48,7 +48,6 @@ public slots:
     void slot_joined(QString, QString);
     void slot_parted(QString, QString, QString);
     void sendMsg();
-
 };
 
 #endif // MUDLET_DLGIRC_H

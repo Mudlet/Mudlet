@@ -29,20 +29,19 @@
 class Host;
 
 
-class dlgComposer : public QMainWindow , public Ui::composer
+class dlgComposer : public QMainWindow, public Ui::composer
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
+    dlgComposer( Host * );
 
-        dlgComposer( Host * );
-
-        void init( QString title, QString txt );
-        Host * mpHost;
+    void init( QString title, QString txt );
+    Host * mpHost;
 
 public slots:
-        void save();
-        void cancel();
+    void save();
+    void cancel();
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

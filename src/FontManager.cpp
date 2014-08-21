@@ -63,5 +63,4 @@ void FontManager::loadFonts(QString folder)
             std::cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().
                 data() << "/" << fontfile.toUtf8().data() << std::endl;
     }
-
 }

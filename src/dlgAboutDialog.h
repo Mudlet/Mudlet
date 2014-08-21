@@ -27,13 +27,12 @@
 #include "post_guard.h"
 
 
-class dlgAboutDialog : public QDialog , public Ui::about_dialog
+class dlgAboutDialog : public QDialog, public Ui::about_dialog
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgAboutDialog(QWidget * parent = 0);
+
+public:
+    dlgAboutDialog(QWidget * parent = 0);
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H

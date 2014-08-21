@@ -27,20 +27,17 @@
 #include "post_guard.h"
 
 
-class dlgTimersMainArea : public QWidget , public Ui::timers_main_area
+class dlgTimersMainArea : public QWidget, public Ui::timers_main_area
 {
     Q_OBJECT
-        
+
 public:
-        
-                   dlgTimersMainArea(QWidget*);
-    
+    dlgTimersMainArea(QWidget*);
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGTIMERSMAINAREA_H

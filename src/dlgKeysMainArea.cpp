@@ -26,5 +26,4 @@ dlgKeysMainArea::dlgKeysMainArea( QWidget * pF ):QWidget( pF )
 {
     // init generated dialog
     setupUi(this);
-    
 }

@@ -27,20 +27,17 @@
 #include "post_guard.h"
 
 
-class dlgSystemMessageArea : public QWidget , public Ui::systemMessageArea
+class dlgSystemMessageArea : public QWidget, public Ui::systemMessageArea
 {
-Q_OBJECT
-        
+    Q_OBJECT
+
 public:
-        
-   dlgSystemMessageArea(QWidget*);
-    
+    dlgSystemMessageArea(QWidget*);
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGSYSTEMMESSAGEAREA_H

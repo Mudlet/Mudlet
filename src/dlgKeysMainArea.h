@@ -27,20 +27,17 @@
 #include "post_guard.h"
 
 
-class dlgKeysMainArea : public QWidget , public Ui::keys_main_area
+class dlgKeysMainArea : public QWidget, public Ui::keys_main_area
 {
-Q_OBJECT
-        
+    Q_OBJECT
+
 public:
-    
-     dlgKeysMainArea( QWidget * );
-    
+    dlgKeysMainArea( QWidget * );
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGKEYSMAINAREA_H

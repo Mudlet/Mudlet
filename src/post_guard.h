@@ -23,4 +23,3 @@
 #pragma pop_macro("realloc")
 #pragma pop_macro("free")
 #endif // _DEBUG && _MSC_VER
-

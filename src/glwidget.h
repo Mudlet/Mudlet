@@ -38,7 +38,7 @@ public:
     GLWidget(QWidget *parent = 0);
     GLWidget(TMap * pM, QWidget *parent = 0);
     ~GLWidget();
-    void wheelEvent ( QWheelEvent * e );
+    void wheelEvent( QWheelEvent * e );
 
     bool is2DView;
 
@@ -117,7 +117,7 @@ public:
     TMap * mpMap;
     int mTarget;
     Host * mpHost;
-    QMap<int,int> mQuads;
+    QMap<int, int> mQuads;
 };
 
 #endif // MUDLET_GLWIDGET_H

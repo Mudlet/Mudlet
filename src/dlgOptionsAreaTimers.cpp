@@ -26,5 +26,4 @@ dlgOptionsAreaTimers::dlgOptionsAreaTimers(QWidget * pF):QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
-    
 }

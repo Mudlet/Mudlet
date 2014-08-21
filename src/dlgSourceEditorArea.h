@@ -29,22 +29,19 @@
 class THighlighter;
 
 
-class dlgSourceEditorArea : public QWidget , public Ui::source_editor_area
+class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgSourceEditorArea(QWidget*);
-        THighlighter * highlighter;
-    //QsciLexerLua * mpLuaLexer;
-    
+
+public:
+    dlgSourceEditorArea(QWidget*);
+    THighlighter * highlighter;
+    // QsciLexerLua * mpLuaLexer;
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGSOURCEEDITORAREA_H

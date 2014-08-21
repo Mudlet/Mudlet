@@ -30,14 +30,15 @@ class TSplitterHandle;
 
 class TSplitter : public QSplitter
 {
-Q_OBJECT
- public:
-     TSplitter( Qt::Orientation orientation, QWidget *parent = 0 );
+    Q_OBJECT
 
- protected:
-     QSplitterHandle * createHandle();
+public:
+    TSplitter( Qt::Orientation orientation, QWidget *parent = 0 );
 
-     TSplitterHandle * mpSplitterHandle;
+protected:
+    QSplitterHandle * createHandle();
+
+    TSplitterHandle * mpSplitterHandle;
 };
 
 #endif // MUDLET_TSPLITTER_H

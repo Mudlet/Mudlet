@@ -34,7 +34,7 @@ ExitsTreeWidget::ExitsTreeWidget( QWidget * pW ) : QTreeWidget( pW )
     setUniformRowHeights(true);
 }
 
-void ExitsTreeWidget::keyPressEvent ( QKeyEvent * event )
+void ExitsTreeWidget::keyPressEvent( QKeyEvent * event )
 {
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
     {

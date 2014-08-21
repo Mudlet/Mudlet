@@ -27,20 +27,17 @@
 #include "post_guard.h"
 
 
-class dlgOptionsAreaAlias : public QWidget , public Ui::options_area_aliases
+class dlgOptionsAreaAlias : public QWidget, public Ui::options_area_aliases
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgOptionsAreaAlias(QWidget *);
-    
+
+public:
+    dlgOptionsAreaAlias(QWidget *);
+
 signals:
-    
-    
+
+
 public slots:
-    
-    
 };
 
 #endif // MUDLET_DLGOPTIONSAREAALIASES_H

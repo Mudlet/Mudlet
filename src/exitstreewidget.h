@@ -29,13 +29,13 @@
 
 class ExitsTreeWidget : public QTreeWidget
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
-        ExitsTreeWidget( QWidget * pW );
-        void keyPressEvent ( QKeyEvent * event );
-private:
+    ExitsTreeWidget( QWidget * pW );
+    void keyPressEvent( QKeyEvent * event );
 
+private:
 signals:
 
 public slots:

@@ -49,4 +49,3 @@ dlgVarsMainArea::dlgVarsMainArea(QWidget * pF) : QWidget(pF)
     value_type->setMenu(valueTypeMenu);
     hideVariable->setText("Hidden Variable");*/
 }
-

@@ -30,12 +30,11 @@ class Host;
 class TTrigger;
 
 
-class dlgColorTrigger : public QDialog , public Ui::color_trigger_dlg
+class dlgColorTrigger : public QDialog, public Ui::color_trigger_dlg
 {
     Q_OBJECT
 
 public:
-
     dlgColorTrigger( QWidget *, TTrigger *, int );
 signals:
 
@@ -62,10 +61,8 @@ public slots:
     void slot_save_and_exit();
 
 private:
-
     TTrigger * mpTrigger;
     int        mMode;
-
 };
 
 #endif // MUDLET_DLGCOLORTRIGGER_H
