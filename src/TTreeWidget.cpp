@@ -230,7 +230,6 @@ void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, i
                 mChildID = 0;
         }
     }
-    //QTreeWidget::rowsAboutToBeRemoved( parent, start, end );
 }
 
 

@@ -36,7 +36,6 @@ class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 public:
     dlgSourceEditorArea(QWidget*);
     THighlighter * highlighter;
-    // QsciLexerLua * mpLuaLexer;
 
 signals:
 

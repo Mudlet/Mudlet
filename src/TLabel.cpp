@@ -52,11 +52,6 @@ void TLabel::mousePressEvent( QMouseEvent * event )
 
     QWidget::mousePressEvent( event );
 }
-/*
-void TLabel::mouseMoveEvent( QMouseEvent * event )
-{
-    if (event->)
-}*/
 
 void TLabel::leaveEvent( QEvent * event )
 {
