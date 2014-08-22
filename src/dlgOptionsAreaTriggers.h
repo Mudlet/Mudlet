@@ -33,11 +33,6 @@ class dlgOptionsAreaTriggers : public QWidget, public Ui::options_area_triggers
 
 public:
     dlgOptionsAreaTriggers(QWidget *);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGOPTIONSAREATRIGGERS_H

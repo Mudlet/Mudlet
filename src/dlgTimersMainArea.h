@@ -33,11 +33,6 @@ class dlgTimersMainArea : public QWidget, public Ui::timers_main_area
 
 public:
     dlgTimersMainArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGTIMERSMAINAREA_H

@@ -33,11 +33,6 @@ class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area
 
 public:
     dlgScriptsMainArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

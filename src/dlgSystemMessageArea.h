@@ -33,11 +33,6 @@ class dlgSystemMessageArea : public QWidget, public Ui::systemMessageArea
 
 public:
     dlgSystemMessageArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGSYSTEMMESSAGEAREA_H

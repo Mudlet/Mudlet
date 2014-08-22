@@ -33,11 +33,6 @@ class dlgAliasMainArea : public QWidget, public Ui::aliases_main_area
 
 public:
     dlgAliasMainArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGALIASESMAINAREA_H

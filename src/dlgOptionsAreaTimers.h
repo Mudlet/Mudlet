@@ -33,11 +33,6 @@ class dlgOptionsAreaTimers : public QWidget, public Ui::options_area_timers
 
 public:
     dlgOptionsAreaTimers(QWidget *);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGOPTIONSAREATIMERS_H
