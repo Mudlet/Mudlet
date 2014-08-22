@@ -60,7 +60,7 @@
 #include <string>
 
 #ifdef Q_OS_MAC
-    #include "luazip.c"
+#include "luazip.c"
 #endif
 
 
@@ -68,7 +68,7 @@
 extern "C"
 {
 #endif
-    int luaopen_yajl(lua_State*);
+int luaopen_yajl(lua_State*);
 #ifndef LUA_CPP
 }
 #endif
@@ -78,28 +78,28 @@ using namespace std;
 map<lua_State*, Host*> TLuaInterpreter::luaInterpreterMap;
 
 TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
-:mpHost( pH )
-,mHostID( id )
-,purgeTimer(this)
+: mpHost( pH )
+, mHostID( id )
+, purgeTimer(this)
 {
     pGlobalLua = 0;
 
-    connect(this,SIGNAL(signalEchoMessage(int, QString)), this,SLOT(slotEchoMessage(int,QString)));
-    connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)));
+    connect(this, SIGNAL(signalEchoMessage(int, QString)), this, SLOT(slotEchoMessage(int, QString)));
+    connect(this, SIGNAL(signalNewCommand(int, QString)), this, SLOT(slotNewCommand(int, QString)));
 
-    connect(this,SIGNAL(signalOpenUserWindow(int,QString)), this,SLOT(slotOpenUserWindow(int,QString)));
-    connect(this,SIGNAL(signalEchoUserWindow(int,QString,QString)), this,SLOT(slotEchoUserWindow(int,QString,QString)));
-    connect(this,SIGNAL(signalEnableTimer(int,QString)),this,SLOT(slotEnableTimer(int,QString)));
-    connect(this,SIGNAL(signalDisableTimer(int,QString)),this,SLOT(slotDisableTimer(int,QString)));
-    connect(this,SIGNAL(signalClearUserWindow(int,QString)),this,SLOT(slotClearUserWindow(int,QString)));
+    connect(this, SIGNAL(signalOpenUserWindow(int, QString)), this, SLOT(slotOpenUserWindow(int, QString)));
+    connect(this, SIGNAL(signalEchoUserWindow(int, QString, QString)), this, SLOT(slotEchoUserWindow(int, QString, QString)));
+    connect(this, SIGNAL(signalEnableTimer(int, QString)), this, SLOT(slotEnableTimer(int, QString)));
+    connect(this, SIGNAL(signalDisableTimer(int, QString)), this, SLOT(slotDisableTimer(int, QString)));
+    connect(this, SIGNAL(signalClearUserWindow(int, QString)), this, SLOT(slotClearUserWindow(int, QString)));
 
-    connect(this, SIGNAL(signalTempTimer(int, double,QString,QString)), this, SLOT(slotTempTimer(int,double,QString,QString)));
-    connect(this, SIGNAL(signalReplace(int, QString)), this, SLOT(slotReplace(int,QString)));
+    connect(this, SIGNAL(signalTempTimer(int, double, QString, QString)), this, SLOT(slotTempTimer(int, double, QString, QString)));
+    connect(this, SIGNAL(signalReplace(int, QString)), this, SLOT(slotReplace(int, QString)));
 
     connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
 
     mpFileDownloader = new QNetworkAccessManager( this );
-    connect(mpFileDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
+    connect(mpFileDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
 
     initLuaGlobals();
 
@@ -110,16 +110,16 @@ lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
 {
     switch( unit )
     {
-        case 1:
-            return pGlobalLua;
-        case 2:
-            return pGlobalLua;
-        case 3:
-            return pGlobalLua;
-        case 4:
-            return pGlobalLua;
-        case 5:
-            return pGlobalLua;
+    case 1:
+        return pGlobalLua;
+    case 2:
+        return pGlobalLua;
+    case 3:
+        return pGlobalLua;
+    case 4:
+        return pGlobalLua;
+    case 5:
+        return pGlobalLua;
     };
     return 0;
 }
@@ -168,27 +168,27 @@ void TLuaInterpreter::slotPurge() {
 
 int TLuaInterpreter::Wait( lua_State *L )
 {
-  int n = lua_gettop( L );
-  if(n!=1)
-  {
-      lua_pushstring( L, "Wait: wrong number of arguments" );
-      lua_error( L );
-      return 1;
-  }
+    int n = lua_gettop( L );
+    if(n!=1)
+    {
+        lua_pushstring( L, "Wait: wrong number of arguments" );
+        lua_error( L );
+        return 1;
+    }
 
-  int luaSleepMsec;
-  if( ! lua_isnumber( L, 1 ) )
-  {
-      lua_pushstring( L, "Wait: wrong argument type" );
-      lua_error( L );
-      return 1;
-  }
-  else
-  {
-      luaSleepMsec = lua_tointeger( L, 1 );
-  }
-  msleep( luaSleepMsec );//FIXME thread::sleep()
-  return 0;
+    int luaSleepMsec;
+    if( ! lua_isnumber( L, 1 ) )
+    {
+        lua_pushstring( L, "Wait: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSleepMsec = lua_tointeger( L, 1 );
+    }
+    msleep( luaSleepMsec ); // FIXME thread::sleep()
+    return 0;
 }
 
 QString TLuaInterpreter::dirToString( lua_State * L, int position )
@@ -311,7 +311,6 @@ int TLuaInterpreter::resetProfile( lua_State * L )
     pHost->mResetProfile = true;
     return 0;
 }
-
 
 
 // cursorPositionInLine = select( text ) if not found -1

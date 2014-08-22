@@ -38,7 +38,6 @@ class HostPool
     QMap<QString, Host *> mHostPool;
 
 public:
-
     Host *                getHost( QString hostname );
     Host *                getFirstHost();
     Host *                getNextHost( QString LastHost ); // get next host key by providing a LastHost

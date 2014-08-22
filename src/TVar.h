@@ -46,7 +46,7 @@ public:
     void    setNewName(QString, int);
     void    setNewName(QString);
     void    setReference(bool);
-    QList<TVar *>  getChildren(int);
+    QList<TVar *> getChildren(int);
     TVar *  getParent();
     QString getValue();
     QString getName();
@@ -56,23 +56,25 @@ public:
     int     getNewKeyType();
     int     getValueType();
     bool    isReference();
+
 public:
     bool    hidden;
-    const void*   kpointer;
-    const void*   vpointer;
+    const void* kpointer;
+    const void* vpointer;
     bool    saved;
+
 private:
-    bool        reference;
+    bool    reference;
     QList<TVar *> children;
     TVar * parent;
-    QString     name;
-    int         kType;
-    QString     value;
-    int         vType;
-    int         nkType;
-    int         nvType;
-    QString     nName;
-    QString     nValue;
+    QString name;
+    int     kType;
+    QString value;
+    int     vType;
+    int     nkType;
+    int     nvType;
+    QString nName;
+    QString nValue;
 };
 
 #endif // MUDLET_TVAR_H
