@@ -628,7 +628,7 @@ void cTelnet::processTelnetCommand( const string & command )
                            sendTelnetOption( TN_DO, option );
                            hisOptionState[idxOption] = true;
                            //inform MCCP object about the change
-                           if( ( option == OPT_COMPRESS ) )
+                           if( option == OPT_COMPRESS )
                            {
                                mMCCP_version_1 = true;
                                //MCCP->setMCCP1(true);
@@ -685,13 +685,13 @@ void cTelnet::processTelnetCommand( const string & command )
                   sendTelnetOption( TN_DONT, option );
                   hisOptionState[idxOption] = false;
 
-                  if( ( option == OPT_COMPRESS ) )
+                  if( option == OPT_COMPRESS )
                   {
                       //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
                       //cout << "MCCP v1 disabled !" << endl;
                   }
-                  if( ( option == OPT_COMPRESS2 ) )
+                  if( option == OPT_COMPRESS2 )
                   {
                       mMCCP_version_2 = false;
                       //MCCP->setMCCP2 (false);
