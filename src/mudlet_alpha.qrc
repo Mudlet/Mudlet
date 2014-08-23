@@ -145,5 +145,7 @@
         <file>ui/custom_lines_properties.ui</file>
         <file>icons/mudlet_configure.png</file>
         <file>icons/mudlet_important.png</file>
+        <file>icons/mudlet_query.png</file>
+        <file>icons/mudlet_warning.png</file>
     </qresource>
 </RCC>
