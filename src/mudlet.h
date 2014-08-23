@@ -143,6 +143,9 @@ public:
    void                          deselect( Host * pHost, QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
+    QString                     getSystemLuaPath();
+
+
    QTime                         mReplayTime;
    int                           mReplaySpeed;
    QToolBar *                    mpMainToolBar;
@@ -165,6 +168,7 @@ public:
  * 8-)!
  * From SlySven
  */
+    bool                        mDebug_forceSourceLuaFilesUsage;
 
 /*
  *
@@ -238,6 +242,7 @@ public slots:
  * connect SIGNALS from dlgProfilePreferences.cpp to these SLOTS.
  * From SlySven
  */
+   void                         slot_setForceSourceLuaFilesUsage( int state );
 
 /*
  *
@@ -289,6 +294,12 @@ private slots:
 private:
 
    void                          goingDown() { mIsGoingDown = true; }
+    void                        setSystemLuaPath();
+                                // Not implimented yet, might be required if
+                                // option to change this put into preferences
+                                // dialog and then this must be made public
+
+
    QMap<QString, TConsole *>         mTabMap;
    //QTabBar *                     mpTabBar;
    QWidget *                     mainPane;
@@ -321,6 +332,12 @@ private:
    QPushButton *                 moduleUninstallButton;
    QPushButton *                 moduleInstallButton;
    QPushButton *                 moduleHelpButton;
+    QString                     mSystemLuaFilePath;
+                                // Path to where LuaGlobal.lua is, stored in
+                                // main QSettings "location".  Ideally an
+                                // installer program should store the required
+                                // value there so the user doesn't get asked to
+                                // go and find it on first time start-up
 
 };
 

@@ -30,6 +30,7 @@
 #include <QRegExp>
 #include "Host.h"
 #include "mudlet.h"
+#include "mudlet-lua/lua/luaLocation.h"
 #include "TTextEdit.h"
 
 dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
@@ -383,6 +384,34 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 //    horizontalLayout_RoomOpacity->addWidget(label_RoomOpacity);
 //    verticalLayout_debugOptions->addLayout(horizontalLayout_RoomOpacity);
 
+    QHBoxLayout * horizontalLayout_ForceSourceLuaFilesUsage = new QHBoxLayout( 0 );
+    horizontalLayout_ForceSourceLuaFilesUsage->setAlignment( Qt::AlignLeft );
+    QLabel * label_ForceSourceLuaFilesUsage = new QLabel( tr( "Use Mudlet Lua files from build (./src/mudlet-lua/lua) location." ), 0 );
+    label_ForceSourceLuaFilesUsage->setTextFormat( Qt::PlainText );
+    label_ForceSourceLuaFilesUsage->adjustSize();
+    QCheckBox * checkBox_ForceSourceLuaFilesUsage = new QCheckBox( 0 );
+    QFile luaLocationHeaderPathFile( sourceLuaHeaderPathFile );
+    if( luaLocationHeaderPathFile.exists() )
+    { // Have found it necassary to check that the src version of the lua files are available...!
+        checkBox_ForceSourceLuaFilesUsage->setToolTip( tr( "If checked will ignore the location stored in the (per user) Mudlet config file\nfor following profile connections." ) );
+        checkBox_ForceSourceLuaFilesUsage->setChecked( mudlet::self()->mDebug_forceSourceLuaFilesUsage );
+        connect(checkBox_ForceSourceLuaFilesUsage, SIGNAL( stateChanged( int ) ), mudlet::self(), SLOT( slot_setForceSourceLuaFilesUsage( int ) ) );
+    }
+    else
+    {
+        checkBox_ForceSourceLuaFilesUsage->setToolTip( tr( "This instance of Mudlet does not seem to be running on the machine where\nit was compiled so this option is not available." ) );
+        checkBox_ForceSourceLuaFilesUsage->setTristate( true );
+        if( mudlet::self()->mDebug_forceSourceLuaFilesUsage )
+            checkBox_ForceSourceLuaFilesUsage->setCheckState( Qt::PartiallyChecked );
+        else
+            checkBox_ForceSourceLuaFilesUsage->setCheckState( Qt::Unchecked );
+        checkBox_ForceSourceLuaFilesUsage->setEnabled( false );
+    }
+    checkBox_ForceSourceLuaFilesUsage->adjustSize();
+    checkBox_ForceSourceLuaFilesUsage->setStatusTip( tr( "Override from where Mudlet loads its core lua files." ) );
+    horizontalLayout_ForceSourceLuaFilesUsage->addWidget(checkBox_ForceSourceLuaFilesUsage);
+    horizontalLayout_ForceSourceLuaFilesUsage->addWidget(label_ForceSourceLuaFilesUsage);
+    verticalLayout_debugOptions->addLayout(horizontalLayout_ForceSourceLuaFilesUsage);
 
 /*
  *

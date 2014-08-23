@@ -187,6 +187,7 @@ SET(mudlet_HDRS
     HostPool.h
     KeyUnit.h
     LuaInterface.h
+    mudlet-lua/lua/luaLocation.h
     ScriptUnit.h
     TAction.h
     TAlias.h
@@ -216,9 +217,12 @@ SET(mudlet_HDRS
 )
 
 IF(MSVC)
+# Tell nmake used by MSVC to use more than one processor
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP")
-ELSE(MSVC)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+ELSEIF(CMAKE_COMPILER_IS_GNUCXX)
+# Unfortunately -Wno-deprecated does not silence deprecated-declarations and
+# there are quite a few in the irccqt sub-project (version 0.5) that we use
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-unused-local-typedefs -Wno-unused-parameter -fPIC")
 ENDIF(MSVC)
 
 SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
@@ -324,16 +328,53 @@ QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 
-ADD_EXECUTABLE(mudlet WIN32
-    ${mudlet_SRCS}
-    ${mudlet_MOC_SRCS}
-    ${mudlet_RCC_SRCS}
-    ${mudlet_HDRS}
-    ${mudlet_UIS_H}
-    ${mudlet_MOC_HDRS}
-)
+# Rename debug versions if we can determine them
+# Detect if the target is NOT windows, allows for cross-compilation if that is
+# ever achieviable..
+# By rights we ought to be using CMAKE_XXXX_POSTFIX where XXXX is the value of
+# CMAKE_BUILD_TYPE but it is not clear to me how to do that... SlySven
+IF(CMAKE_BUILD_TYPE MATCHES "DEBUG|RELWITHDEB")
+    IF(NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+        SET(TARGET_TARGETNAME "${APP_TARGET}_debug${APP_EXT}")
+    ELSE()
+        SET(TARGET_TARGETNAME "${APP_TARGET}d${APP_EXT}")
+    ENDIF()
+    MESSAGE(STATUS "Renaming application in debug form." )
+ELSE()
+    SET(TARGET_TARGETNAME "${APP_TARGET}${APP_EXT}")
+ENDIF()
 
-TARGET_LINK_LIBRARIES(mudlet
+IF(CMAKE_SYSTEM_NAME MATCHES "Windows")
+    ADD_EXECUTABLE(${TARGET_TARGETNAME} WIN32
+        ${mudlet_SRCS}
+        ${mudlet_MOC_SRCS}
+        ${mudlet_RCC_SRCS}
+        ${mudlet_HDRS}
+        ${mudlet_UIS_H}
+        ${mudlet_MOC_HDRS}
+    )
+ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    ADD_EXECUTABLE(${TARGET_TARGETNAME} WIN32
+        ${mudlet_SRCS}
+        ${mudlet_MOC_SRCS}
+        ${mudlet_RCC_SRCS}
+        ${mudlet_HDRS}
+        ${mudlet_UIS_H}
+        ${mudlet_MOC_HDRS}
+    )
+ELSE()
+    ADD_EXECUTABLE(${TARGET_TARGETNAME}
+        ${mudlet_SRCS}
+        ${mudlet_MOC_SRCS}
+        ${mudlet_RCC_SRCS}
+        ${mudlet_HDRS}
+        ${mudlet_UIS_H}
+        ${mudlet_MOC_HDRS}
+    )
+ENDIF()
+
+
+TARGET_LINK_LIBRARIES(${TARGET_TARGETNAME}
     ${Qt5Core_LIBRARIES}
     ${Qt5Widgets_LIBRARIES}
     ${Qt5Network_LIBRARIES}
@@ -350,3 +391,15 @@ TARGET_LINK_LIBRARIES(mudlet
     ${ZLIB_LIBRARIES}
     irccqt
 )
+
+IF(CMAKE_SYSTEM_NAME MATCHES "Linux|Unix")
+############################# Unix system target ###############################
+    INSTALL(TARGETS ${TARGET_TARGETNAME} RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+############################## Macintosh target ################################
+# UNTESTED!
+    INSTALL(TARGETS ${TARGET_TARGETNAME} RUNTIME DESTINATION "Contents/MacOS" BUNDLE DESTINATION "Contents/MacOS" )
+ELSEIF()
+############################ Windows system target #############################
+# TODO!
+ENDIF()

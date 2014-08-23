@@ -25,6 +25,7 @@
 #include <QRegExp>
 #include <QNetworkAccessManager>
 #include <QSslConfiguration>
+#include <QStringBuilder>
 #include <QDesktopServices>
 #include "TLuaInterpreter.h"
 #include "TForkedProcess.h"
@@ -11108,34 +11109,67 @@ void TLuaInterpreter::initLuaGlobals()
 
 void TLuaInterpreter::loadGlobal()
 {
-# // Load relatively to MacOS inside Resources when we're in a .app bundle,
-# // as mudlet-lua always gets copied in by the build script into the bundle
-#if defined(Q_OS_MAC)
-    QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
-#else
-    QString path = "../src/mudlet-lua/lua/LuaGlobal.lua";
-    // Additional "../src/" allows location of lua code when object code is in a
-    // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
-#endif
+    // Adjust the path to look in mudlet system dir which depends to a certain
+    // extent on who compiles the code, ALSO change to THAT directory temporarily:
+    QString luaCommandString = QStringLiteral( "package.path = package.path .. ';%1' lfs.chdir('%1') " ).arg( mudlet::self()->getSystemLuaPath() );
+    QString msg;
 
-    int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
-    if( error != 0 )
+    int error = luaL_dostring( pGlobalLua, luaCommandString.toUtf8().data() );
+    if( error )
     {
-        QString msg;
-        if( lua_isstring( pGlobalLua, -1 ) )
-            msg = tr( "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                            "Error from Lua: %1." ).arg( QString::fromUtf8( lua_tostring( pGlobalLua, -1 ) ) );
+        string e = "";
+        if( lua_isstring( pGlobalLua, 1 ) )
+            msg = tr( "[ ERROR ] - Cannot set the path to the Mudlet Lua main file LuaGlobal.lua.\n"
+                                  "Mudlet specific functions will not be available.\n"
+                                  "Lua error: %1." ).arg( QString::fromUtf8( lua_tostring( pGlobalLua, -1 ) ) );
         else
-            msg = tr( "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                            "Error from Lua: No error message available from Lua." );
+            msg = tr( "[ ERROR ] - Cannot set the path to the Mudlet Lua main file LuaGlobal.lua.\n"
+                                   "Mudlet specific functions will not be available.\n"
+                                   "Lua error:no error message available from Lua." );
 
-        mpHost->mTelnet.postMessage( msg );
     }
     else
-    {
-        mpHost->mTelnet.postMessage( tr( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." ) );
-    }
+        msg = tr( "[  OK  ]  - Lua search path set to include Mudlet lua files in:\n"
+                              "%1 .").arg( QDir::toNativeSeparators( mudlet::self()->getSystemLuaPath() % QDir::separator() ) );
 
+    mpHost->mTelnet.postMessage( msg );
+
+    error = luaL_dofile( pGlobalLua, QStringLiteral( "%1LuaGlobal.lua" ).arg( mudlet::self()->getSystemLuaPath() % QDir::separator() ).toUtf8().data() );
+    if( error )
+    {
+        if( lua_isstring( pGlobalLua, -1 ) )
+            msg = tr( "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                                  "Lua error: %1." ).arg( QString::fromUtf8( lua_tostring( pGlobalLua, -1 ) ) );
+        else
+            msg = tr( "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                                  "Lua error: no error message available from Lua." );
+
+    }
+    else
+        msg =  tr( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
+
+    mpHost->mTelnet.postMessage( msg );
+
+    //Now change the current directory (back?) to the mudlet executable's one
+    //FIXED: is this directory the best to use? No - use the profile home directory:
+    QString homeDirPath = QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( mpHost->getName() );
+    luaCommandString = QStringLiteral( "lfs.chdir('%1') " ).arg( homeDirPath );
+    error = luaL_dostring( pGlobalLua, luaCommandString.toUtf8().data() );
+    if( error )
+    {
+        if( lua_isstring( pGlobalLua, -1 ) )
+            msg = tr( "[ ERROR ] - Cannot set the lua current directory to the Mudlet profile's home one!\n"
+                                  "Lua error: %1." ).arg( QString::fromUtf8( lua_tostring( pGlobalLua, -1 ) ) );
+        else
+            msg = tr( "[ ERROR ] - Cannot set the lua current directory to the Mudlet profile's home one!\n"
+                                  "Lua error: no error message available from Lua." );
+
+    }
+    else
+        msg = tr( "[  OK  ]  - Lua current directory set to:\n"
+                              "%1 ." ).arg( QDir::toNativeSeparators( homeDirPath % QDir::separator() ) );
+
+    mpHost->mTelnet.postMessage( msg );
 }
 
 void TLuaInterpreter::slotEchoMessage(int hostID, QString msg)
