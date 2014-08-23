@@ -153,7 +153,6 @@ public slots:
     void                        slot_action_selected( QTreeWidgetItem * pItem );
     void                        slot_key_selected( QTreeWidgetItem *pItem );
     void                        slot_update();
-    void                        slot_deleteProfile();
     void                        slot_connection_dlg_finnished();
     void                        slot_add_new();
     void                        slot_add_new_folder();
@@ -184,7 +183,6 @@ public slots:
     void                        slot_key_toggle_active();
     void                        slot_search_triggers( const QString s );
     void                        slot_item_selected_search_list(QTreeWidgetItem*, int);
-    void                        slot_switchToExpertMonde();
     void                        slot_delete_item();
     void                        slot_deleteTrigger();
     void                        slot_deleteTimer();
@@ -194,10 +192,7 @@ public slots:
     void                        slot_deleteKey();
     void                        slot_save_edit();
     void                        slot_chose_action_icon();
-    //void                        slot_trigger_main_area_edit_regex(QListWidgetItem*);
-    //void                        slot_trigger_main_area_add_regex();
     void                        slot_show_search_area();
-    //void                        slot_trigger_main_area_delete_regex();
     void                        slot_script_main_area_delete_handler();
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
@@ -281,8 +276,6 @@ private:
     dlgSystemMessageArea *      mpSystemMessageArea;
     dlgSourceEditorArea *       mpSourceEditorArea;
     dlgOptionsAreaTriggers *    mpOptionsAreaTriggers;
-    //dlgSearchArea *             mpSearchArea;
-    //QTreeWidget *               mpSearchArea;
     dlgAliasMainArea *          mpAliasMainArea;
     dlgActionMainArea *         mpActionsMainArea;
     dlgScriptsMainArea *        mpScriptsMainArea;
@@ -291,12 +284,9 @@ private:
     dlgOptionsAreaAction *      mpOptionsAreaActions;
     dlgOptionsAreaAlias *       mpOptionsAreaAlias;
     dlgOptionsAreaTimers *      mpOptionsAreaTimers;
-    //bool                        mIsTriggerMainAreaEditRegex;
-    //QListWidgetItem *           mpTriggerMainAreaEditRegexItem;
     bool                        mIsScriptsMainAreaEditHandler;
     QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
     bool                        mIsGrabKey;
-    //QsciDocument                mDocument;
     Host *                      mpHost;
     QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
     dlgVarsMainArea *           mpVarsMainArea;

@@ -143,11 +143,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpTriggersMainArea->setSizePolicy( sizePolicy );
     pVB1->addWidget( mpTriggersMainArea );
-    //mIsTriggerMainAreaEditRegex = false;
-    //mpTriggerMainAreaEditRegexItem = 0;
     mpTriggersMainArea->lineEdit_soundFile->hide();
-    //connect(mpTriggersMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_trigger_main_area_add_regex()));
-    //connect(mpTriggersMainArea->listWidget_regex_list, SIGNAL(currentItemChanged ( QListWidgetItem *)), this, SLOT(slot_trigger_main_area_edit_regex(QListWidgetItem*)));
     connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
     connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
     connect(mpTriggersMainArea->pushButtonSound, SIGNAL(clicked()), this, SLOT(slot_soundTrigger()));
@@ -163,10 +159,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pVB1->addWidget( mpAliasMainArea );
 
     mpActionsMainArea = new dlgActionMainArea( mainArea );
-    //QSizePolicy sizePolicy8(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpActionsMainArea->setSizePolicy( sizePolicy8 );
-    //connect( mpActionsMainArea->pushButton_chose_icon, SIGNAL( pressed()), this, SLOT(slot_chose_action_icon()));
-    //connect( mpActionsMainArea->pushButton_color, SIGNAL(pressed()), this, SLOT(slot_choseButtonColor()));
     pVB1->addWidget( mpActionsMainArea );
 
     mpKeysMainArea = new dlgKeysMainArea( mainArea );
@@ -196,15 +189,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pVB1->addWidget( mpSourceEditorArea );
     QPlainTextEdit * editp = mpSourceEditorArea->editor;
     editp->setWordWrapMode( QTextOption::NoWrap );
-    //QLineEdit * mpCursorPositionIndicator = new QLineEdit;
-    //(QMainWindow::statusBar())->addWidget( mpCursorPositionIndicator  );
     connect(editp,SIGNAL(cursorPositionChanged()), this, SLOT(slot_cursorPositionChanged()));
     // option areas
 
     QHBoxLayout * pHB2 = new QHBoxLayout(popupArea);
     QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Maximum);
     popupArea->setMinimumSize(200,60);
-    //    pHB2->setMaximumSize(170);
     pHB2->setSizeConstraint( QLayout::SetMaximumSize );
     mpErrorConsole = new TConsole(mpHost,false, popupArea);
     mpErrorConsole->setWrapAt(100);
@@ -237,10 +227,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
 
 
-    mpSearchArea = tree_widget_search_results_main;//new dlgSearchArea( popupArea );
+    mpSearchArea = tree_widget_search_results_main;
     connect( messageAreaCloseButton, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
-    //mpSearchArea->setSizePolicy( sizePolicy2 );
-    //pHB2->addWidget( mpSearchArea );
 
 
 
@@ -412,16 +400,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     viewErrorsAction->setEnabled( true );
     connect( viewErrorsAction, SIGNAL(triggered()), this, SLOT( slot_viewErrorsAction()));
 
-
-    //Action * saveProfileMenu = new QMenu( this );
-    //saveProfileMenu->addAction( profileSaveAction );
-    //saveProfileMenu->addAction( saveProfileAsAction );
-    //saveMenu->setMenu( saveProfileMenu );
-
-    /*QAction * actionProfileBackup = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Backup Profile"), this);
-    actionProfileBackup->setStatusTip(tr("Backup Profile"));*/
-
-
     QAction * showDebugAreaAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-report-bug.png" ) ), tr("Debug"), this);
     showDebugAreaAction->setEnabled( true );
     showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be *MUCH* slower"));
@@ -463,8 +441,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addTriggerMenu->addAction( addAliasMenuAction );
     addTriggerMenu->addAction( addKeysMenuAction );
 
-    //addTriggerAction->setMenu( addTriggerMenu );
-
     QAction * addTriggerGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
     addTriggerGroupMenuAction->setStatusTip(tr("Add Trigger Group"));
     connect(addTriggerGroupMenuAction, SIGNAL(triggered()), this, SLOT(slot_addTriggerGroup()));
@@ -484,21 +460,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addScriptsGroupMenuAction->setEnabled( true );
     connect( addScriptsGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScriptGroup()));
 
-    //QAction * addFiltersGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/view-filter.png" ) ), tr("Filters"), this);
-    //addFiltersGroupMenuAction->setStatusTip(tr("Add Filter Group"));
-    //addFiltersGroupMenuAction->setEnabled( false );
-    //connect( viewFiltersAction, SIGNAL(triggered()), this, SLOT( showFiltersView()));
-
     QMenu * addTriggerGroupMenu = new QMenu( this );
     addTriggerGroupMenu->addAction( addTriggerGroupMenuAction );
     addTriggerGroupMenu->addAction( addTimersGroupMenuAction );
     addTriggerGroupMenu->addAction( addScriptsGroupMenuAction );
     addTriggerGroupMenu->addAction( addAliasGroupMenuAction );
-    //addTriggerGroupMenu->addAction( addFiltersGroupMenuAction );
-
-    //addFolderAction->setMenu( addTriggerGroupMenu );
-
-    //toolBar->addSeparator();
 
     toolBar = new QToolBar();
     toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
@@ -527,9 +493,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect(toggleHiddenVarsButton, SIGNAL(clicked()), this, SLOT(slot_toggleHiddenVars()));
 
     connect(mpVarsMainArea->hideVariable, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar( bool )));
-//    QAction * toggleHiddenVariables = new QAction("Toggle Hidden Variables", toolBar2);
-//    varMenu->addAction(toggleHiddenVariables);
-//    connect(toggleHiddenVariables, SIGNAL(triggered()), this, SLOT(toggleHiddenVars()));
+
     toolBar2->addAction( viewTriggerAction );
     toolBar2->addAction( viewAliasAction );
     toolBar2->addAction( viewScriptsAction );
@@ -561,11 +525,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_vars, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
-    //connect( mpSearchArea, SIGNAL(currentItemChanged(QTreeWidgetItem*, int)), this, SLOT( slot_item_clicked_search_list(QTreeWidgetItem*, int)));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
-    //connect( mpTriggersMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
-    //connect( mpTriggersMainArea->toolButton_update, SIGNAL(pressed()), this, SLOT(slot_trigger_main_area_add_regex()));
-    //connect( mpTriggersMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_trigger_main_area_delete_regex()));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
 
@@ -600,7 +560,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     readSettings();
     setTBIconSize( 0 );
-    //connect( mpTriggersMainArea->listWidget_regex_list, SIGNAL(cellChanged(int,int)), this, SLOT(slot_set_pattern_type_color(int,int)));
 
     tree_widget_search_results_main->setColumnCount( 4 );
     QStringList labelList;
@@ -711,7 +670,6 @@ void dlgTriggerEditor::slot_choseButtonColor()
      QColor color = QColorDialog::getColor();
      QPalette palette;
      palette.setColor( QPalette::Button, color );
-     //mpActionsMainArea->pushButton_color->setPalette( palette );
 }
 
 void dlgTriggerEditor::closeEvent(QCloseEvent *event)
@@ -735,17 +693,6 @@ void dlgTriggerEditor::writeSettings()
     QSettings settings("Mudlet", "Mudlet 1.0");
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
-}
-
-
-void dlgTriggerEditor::slot_switchToExpertMonde()
-{
-    //    toolButton_add_trigger->show();
-    //toolButton_search_area->show();
-    //toolButton_add_trigger_group->show();
-    //toolButton_options_area->show();
-    //toolButton_toggle_active_trigger->show();
-    //toolButton_delete_trigger->show();
 }
 
 void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, int mode )
@@ -903,7 +850,6 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
 {
     QRegExp pattern = QRegExp( s );
 
-    //mpSourceEditorArea->highlighter->rehighlight();
     tree_widget_search_results_main->clear();
     tree_widget_search_results_main->show();
     tree_widget_search_results_main->setUpdatesEnabled( false );
@@ -2160,7 +2106,6 @@ void dlgTriggerEditor::children_icon_triggers( QTreeWidgetItem * pWidgetItemPare
                     }
                 }
             }
-            //pItem->setDisabled(!pT->ancestorsActive());
             pItem->setIcon(0, icon);
         }
         else
@@ -2840,7 +2785,6 @@ void dlgTriggerEditor::addVar( bool isFolder )
     mpVarsMainArea->key_type->setCurrentIndex(0);
     if (isFolder)
     {
-//        mpSourceEditorArea->editor
         mpSourceEditorArea->editor->setReadOnly(true);
         mpVarsMainArea->var_type->setDisabled(true);
         mpVarsMainArea->var_type->setCurrentIndex(4);
@@ -3188,8 +3132,6 @@ void dlgTriggerEditor::addAction( bool isFolder )
     }
     pNewItem->setIcon( 0, icon );
     if( pParent ) pParent->setExpanded( true );
-//    mpActionsMainArea->lineEdit_action_button_down->clear();
-//    mpActionsMainArea->lineEdit_action_button_up->clear();
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
     mpSourceEditorArea->editor->clear();
@@ -3661,7 +3603,7 @@ void dlgTriggerEditor::saveAlias()
 
             if( pT->state() )
             {
-                if( old_name == "New Alias" )//|| old_name == "New Alias Group" )
+                if( old_name == "New Alias" )
                 {
                     QIcon _icon;
                     if( pT->isFolder() )
@@ -3710,25 +3652,16 @@ void dlgTriggerEditor::saveAction()
     if( ! pItem ) return;
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
-    //QString cmdDown = mpActionsMainArea->lineEdit_action_button_down->text();
-    //QString cmdUp = mpActionsMainArea->lineEdit_action_button_up->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
     QString script = mpSourceEditorArea->editor->toPlainText();
-    //QColor color = mpActionsMainArea->pushButton_color->palette().color(QPalette::Button);
-//    int sizeX = mpActionsMainArea->buttonSizeX->text().toInt();
-//    int sizeY = mpActionsMainArea->buttonSizeY->text().toInt();
-//    int posX = mpActionsMainArea->buttonPosX->text().toInt();
-//    int posY = mpActionsMainArea->buttonPosY->text().toInt();
     int rotation = mpActionsMainArea->buttonRotation->currentIndex();
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
-    //bool flatButton = mpActionsMainArea->buttonFlat->isChecked();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
     int location = mpActionsMainArea->comboBox_location->currentIndex();
     if( location > 0 ) location++;
 
     int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
-// N/U:     bool useCustomLayout = false;//mpActionsMainArea->useCustomLayout->isChecked();
     if( pItem )
     {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -3736,23 +3669,15 @@ void dlgTriggerEditor::saveAction()
         if( pT )
         {
             pT->setName( name );
-            //pT->setCommandButtonDown( cmdDown );
-            //pT->setCommandButtonUp( cmdUp );
             pT->setIcon( icon );
             pT->setScript( script );
             pT->setIsPushDownButton( isChecked );
             pT->mLocation = location;
             pT->mOrientation = orientation;
             pT->setIsActive( pT->shouldBeActive() );
-            // pT->setButtonColor( color );
             pT->setButtonRotation( rotation );
             pT->setButtonColumns( columns );
-      //      pT->setButtonFlat( flatButton );
-            pT->mUseCustomLayout = false;//useCustomLayout;
-//            pT->mPosX = posX;
-//            pT->mPosY = posY;
-//            pT->mSizeX = sizeX;
-//            pT->mSizeY = sizeY;
+            pT->mUseCustomLayout = false;
             pT->css = mpActionsMainArea->css->toPlainText();
             QIcon icon;
             if( pT->isFolder() )
@@ -4020,7 +3945,6 @@ void dlgTriggerEditor::saveVar()
             nameType = LUA_TSTRING;
     }
     if ( ( valueType != LUA_TTABLE ) && ( valueType == -1 ) )
-         //( ( valueType == -1 ) || ( var && valueType != var->getValueType() ) ) )
     {
         if ( newValue.toInt() )
             valueType = LUA_TNUMBER;
@@ -4275,11 +4199,6 @@ void dlgTriggerEditor::saveKey()
     }
 }
 
-
-void dlgTriggerEditor::slot_deleteProfile()
-{
-}
-
 void dlgTriggerEditor::slot_set_pattern_type_color( int type )
 {
     QComboBox * pBox = (QComboBox *) sender();
@@ -4333,7 +4252,6 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
         pItem->bgB->show();
         break;
     }
-    //pItem->setPalette( palette );
     pItem->lineEdit->setPalette( palette );
 }
 
@@ -4486,24 +4404,6 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
         mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
         QString script = pT->getScript();
         mpSourceEditorArea->editor->setPlainText( script );
-
-        /*mpTriggersMainArea->colorTrigger->setChecked( pT->mColorTrigger );
-        if( pT->mColorTriggerBg )
-        {
-            QPalette palette;
-            QColor color = pT->mColorTriggerBgColor;
-            palette.setColor( QPalette::Button, color );
-            QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-            mpTriggersMainArea->colorTriggerBg->setStyleSheet( styleSheet );
-        }
-        if( pT->mColorTriggerFg )
-        {
-            QPalette palette;
-            QColor color = pT->mColorTriggerFgColor;
-            palette.setColor( QPalette::Button, color );
-            QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-            mpTriggersMainArea->colorTriggerFg->setStyleSheet( styleSheet );
-        }*/
 
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -4681,8 +4581,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
         }
     }
     mpVarsMainArea->show();
-//    if ( pItem == mpCurrentVarItem )
-//        return;
+
     mCurrentVar = pItem;
     if( (pItem == 0) || (column != 0) )
     {
@@ -4790,23 +4689,12 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpSourceEditorArea->editor->show();
 
     mpSystemMessageArea->hide();
-    //mpActionsMainArea->lineEdit_action_button_down->clear();
     mpSourceEditorArea->editor->setPlainText( "" );
 
-    //mpActionsMainArea->lineEdit_action_button_up->clear();
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
     mpActionsMainArea->buttonColumns->clear();
-    //mpActionsMainArea->isLabel->setChecked(false);
-    //mpActionsMainArea->useCustomLayout->setChecked(false);
-//    mpActionsMainArea->buttonPosX->setText("0");
-//    mpActionsMainArea->buttonPosY->setText("0");
-//    mpActionsMainArea->buttonSizeX->setText("80");
-//    mpActionsMainArea->buttonSizeY->setText("25");
-    //mpActionsMainArea->buttonFlat->setChecked(false);
-    //mpActionsMainArea->isLabel->setChecked(false);
-    //mpActionsMainArea->useCustomLayout->setChecked(false);
     mpActionsMainArea->css->clear();
     if( pItem == 0 )
     {
@@ -4819,8 +4707,6 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     {
         mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
         mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
-        //mpActionsMainArea->lineEdit_action_button_down->setText( pT->getCommandButtonDown() );
-        //mpActionsMainArea->lineEdit_action_button_up->setText( pT->getCommandButtonUp() );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
         mpSourceEditorArea->editor->setPlainText( pT->getScript() );
         // location = 1 = location = bottom is no longer supported
@@ -4831,18 +4717,8 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         QColor color = pT->getButtonColor();
         QPalette palette;
         palette.setColor( QPalette::Button, color );
-        //mpActionsMainArea->pushButton_color->setPalette( palette );
         mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
         mpActionsMainArea->buttonColumns->setValue( pT->getButtonColumns() );
-      //  mpActionsMainArea->buttonFlat->setChecked( pT->getButtonFlat() );
-//        mpActionsMainArea->buttonSizeX->setText(QString::number(pT->getSizeX()) );
-//        mpActionsMainArea->buttonSizeY->setText(QString::number(pT->getSizeY()) );
-        //mpActionsMainArea->isLabel->setChecked( pT->mIsLabel );
-        //mpActionsMainArea->useCustomLayout->setChecked( pT->mUseCustomLayout );
-//        mpActionsMainArea->buttonPosX->setText( QString::number(pT->mPosX) );
-//        mpActionsMainArea->buttonPosY->setText( QString::number(pT->mPosY) );
-//        mpActionsMainArea->buttonSizeX->setText( QString::number(pT->mSizeX) );
-//        mpActionsMainArea->buttonSizeY->setText( QString::number(pT->mSizeY) );
         mpActionsMainArea->css->clear();
         mpActionsMainArea->css->setPlainText( pT->css );
         if( ! pT->getParent() )
@@ -5276,7 +5152,6 @@ void dlgTriggerEditor::fillout_form()
     {
         TAlias * pT = *it;
         QString s = pT->getName();
-        //        TTimer * pTimer = *it;
         QStringList sList;
         sList << s;
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpAliasBaseItem, sList);
@@ -6017,15 +5892,6 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
             pItem->setIcon( 0, iconError );
             showError( pT->getError() );
         }
-//        qDebug()<<"WARNING: dlgTriggerEditor::expand_child_timers() called name:"<<pT->getName();
-//        if( pT->isActive() )
-//        {
-//            pT->enableTimer();// pT->getName() );
-//        }
-//        else
-//        {
-//            pT->disableTimer();// pT->getName() );
-//        }
     }
 }
 
@@ -6102,7 +5968,6 @@ void dlgTriggerEditor::enterEvent( QEvent *pE )
         fillout_form();
         mNeedUpdateData = false;
     }
-    //QWidget::enterEvent( pE );
 }
 
 void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
@@ -6143,8 +6008,6 @@ void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
         mCurrentAction->setSelected( true );
     if( mCurrentKey )
         mCurrentKey->setSelected( true );
-
-    //QWidget::focusInEvent( pE );
 }
 
 void dlgTriggerEditor::focusOutEvent( QFocusEvent * pE )
@@ -7142,7 +7005,6 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
        return;
     }
     XMLexport writer( mpHost, true );//just export a generic package without host element
-    //writer.exportHost( & file );
     writer.exportGenericPackage( & file );
     file.close();
 }
@@ -7216,8 +7078,6 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
-// N/U:     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-// N/U:     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
 
     QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonFgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
@@ -7235,8 +7095,6 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     QTreeWidgetItem * pItem = mCurrentTrigger;
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
-// N/U:     int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-// N/U:     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
 
     QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonBgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
@@ -7360,30 +7218,6 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     if( ! pI ) return;
     pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
     pB->setStyleSheet( styleSheet );
-
-    /*QTreeWidgetItem * pItem = mCurrentTrigger;
-    if( ! pItem )
-    {
-        return;
-    }
-    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
-    if( ! pT ) return;
-
-    dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 1 );
-    pD->exec();
-    QPalette palette;
-    QColor color = pT->mColorTriggerBgColor;
-    palette.setColor( QPalette::Button, color );
-    QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-
-    QPushButton * pB = (QPushButton *) sender();
-    if( ! pB ) return;
-    int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
-    dlgTriggerPatternEdit * pI = (dlgTriggerPatternEdit*)mpTriggersMainArea->listWidget_regex_list->cellWidget( row, 0 );
-    if( ! pI ) return;
-    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
-    pB->setStyleSheet( styleSheet );*/
 }
 
 void dlgTriggerEditor::slot_cursorPositionChanged()

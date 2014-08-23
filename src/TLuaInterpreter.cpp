@@ -64,16 +64,6 @@
 #endif
 
 
-/*//for map var access
-union mVarTypes {
-    int * i;
-    float * f;
-    bool * b;
-    string * s;
-    QString * qs;
-};*/
-
-
 #ifndef LUA_CPP
 extern "C"
 {
@@ -94,8 +84,8 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 {
     pGlobalLua = 0;
 
-    connect(this,SIGNAL(signalEchoMessage(int, QString)), this,SLOT(slotEchoMessage(int,QString)));//,Qt::DirectConnection);
-    connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)));//,Qt::QueuedConnection);
+    connect(this,SIGNAL(signalEchoMessage(int, QString)), this,SLOT(slotEchoMessage(int,QString)));
+    connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)));
 
     connect(this,SIGNAL(signalOpenUserWindow(int,QString)), this,SLOT(slotOpenUserWindow(int,QString)));
     connect(this,SIGNAL(signalEchoUserWindow(int,QString,QString)), this,SLOT(slotEchoUserWindow(int,QString,QString)));
