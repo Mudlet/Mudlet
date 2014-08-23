@@ -19,6 +19,10 @@
   <property name="windowTitle">
    <string>Profile preferences</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../mudlet_alpha.qrc">
+    <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
     <widget class="QTabWidget" name="tabWidgeta">
@@ -38,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="General">
       <property name="sizePolicy">
