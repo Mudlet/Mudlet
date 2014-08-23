@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -157,11 +158,44 @@ public:
    QMediaPlayer *                mpMusicBox4;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
+/* DEBUGCONTROLS 1A - Application wide debug variables declarations
+ * Variables for runtime configuration of development/debug feature controls.
+ *
+ * Please use a "mDebug_" prefix - so others can search for where they are used
+ * 8-)!
+ * From SlySven
+ */
 
+/*
+ *
+ *
+ * From Heiko
+ */
+
+/*
+ *
+ *
+ * From Valdim
+ */
+
+/*
+ *
+ *
+ * From Chris
+ */
+
+/*
+ *
+ *
+ * From Others(?)
+ */
+
+/*
+ * End of Application wide debug variables declarations
+ */
 
 
 public slots:
-
    void                          processEventLoopHack_timerRun();
    void                          slot_mapper();
    void                          slot_replayTimeChanged();
@@ -200,6 +234,38 @@ public slots:
    void                          slot_module_manager();
    void                          layoutModules();
    void                          slot_help_module();
+/* DEBUGCONTROLS 2A - Application wide debug variable control slots declarations
+ * connect SIGNALS from dlgProfilePreferences.cpp to these SLOTS.
+ * From SlySven
+ */
+
+/*
+ *
+ *
+ * From Heiko
+ */
+
+/*
+ *
+ *
+ * From Valdim
+ */
+
+/*
+ *
+ *
+ * From Chris
+ */
+
+/*
+ *
+ *
+ * From Others(?)
+ */
+
+/*
+ * End of Application wide debug variable control slots declarations
+ */
 
 protected:
 

@@ -97,6 +97,42 @@ public slots:
 private:
     void setColors();
     Host * mpHost;
+
+
+private slots:
+/* DEBUGCONTROLS 2S - Auxillary inter-control slot declarations
+ * needed only if one debug control is modified by the action of another
+ *
+ * From SlySven:
+ */
+
+/*
+ *
+ *
+ * From Heiko
+ */
+
+/*
+ *
+ *
+ * From Valdim
+ */
+
+/*
+ *
+ *
+ * From Chris
+ */
+
+/*
+ *
+ *
+ * From Others(?)
+ */
+
+/*
+ * End of Auxillary inter-control slot declarations
+ */
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

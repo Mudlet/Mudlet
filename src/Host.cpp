@@ -1,6 +1,6 @@
-
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -159,6 +159,41 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mCommandLineBgColor( QColor(  0,  0,  0) )
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
+/* DEBUGCONTROLS 3P - Per profile debug variable default values
+ * controls in dlgProfilePreferences here.
+ *
+ * From SlySven
+ */
+// Not used at the moment so leave commented out
+//, mDebug_RoomTransparency ( 0 )
+
+/*
+ *
+ *
+ * From Heiko
+ */
+
+/*
+ *
+ *
+ * From Valdim
+ */
+
+/*
+ *
+ *
+ * From Chris
+ */
+
+/*
+ *
+ *
+ * From Others(?)
+ */
+
+/*
+ * End of Per profile debug variable default values (B)
+ */
 {
    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface = new LuaInterface(this);
@@ -1248,5 +1283,41 @@ void Host::readPackageConfig( QString luaConfig, QString & packageName )
     }
 }
 
+/* DEBUGCONTROLS 4P - Per profile debug control adjustment slots
+ *
+ * From SlySven
+ */
+//Not used at the moment leave commented out
+//void Host::slot_setRoomOpacity(int value )
+//{
+//    mDebug_RoomTransparency = value;
+//}
 
+/*
+ *
+ *
+ * From Heiko
+ */
+
+/*
+ *
+ *
+ * From Valdim
+ */
+
+/*
+ *
+ *
+ * From Chris
+ */
+
+/*
+ *
+ *
+ * From Others(?)
+ */
+
+/*
+ * End of Per profile debug control adjustment slots
+ */
 

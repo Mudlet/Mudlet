@@ -143,5 +143,6 @@
         <file>icons/mudlet_information.png</file>
         <file>icons/mudlet_custom_exit.png</file>
         <file>ui/custom_lines_properties.ui</file>
+        <file>icons/mudlet_configure.png</file>
     </qresource>
 </RCC>

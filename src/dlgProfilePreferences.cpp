@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014      by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -77,10 +77,11 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
     if( pH->mUrl.toLower().contains("achaea.com") || pH->mUrl.toLower().contains("aetolia.com") || pH->mUrl.toLower().contains("imperian.com") || pH->mUrl.toLower().contains("midkemiaonline.com") || pH->mUrl.toLower().contains("lusternia.com") )
     {
-        downloadMapOptions->setVisible( true );
-        connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
-    } else
-        downloadMapOptions->setVisible( false );
+        groupBox_Map_download->setVisible( true );
+        connect(pushButton_DownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
+    }
+    else
+        groupBox_Map_download->setVisible( false );
 
 
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
@@ -352,6 +353,68 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
     connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
 
+/* DEBUGCONTROLS 0 - Insert debug variable controls
+ * they go into groupbox_debug and are initalised from variables in THost.cpp
+ * (per profile) or mudlet.cpp (application wide).  The controls are to be
+ * connected to corresponding slots to adjust those variables via "slot_"'s
+ * in the appropriate one of those files.
+ *
+ * Use a QHBoxLayout for each control or group of controls and add that layout
+ * into "verticalLayout_debug" - which is on the last tab of the
+ * profile_preference dialog.
+ *
+ *  From SlySven:
+ */
+// Not used for now, leave commented out
+//    QHBoxLayout * horizontalLayout_RoomOpacity = new QHBoxLayout( 0 );
+//    horizontalLayout_RoomOpacity->setAlignment(Qt::AlignLeft);
+//    QLabel * label_RoomOpacity = new QLabel("Reduce Room Symbol visibility on 2D map.", 0 );
+//    label_RoomOpacity->setTextFormat(Qt::PlainText);
+//    label_RoomOpacity->adjustSize();
+//    QSpinBox * spinBox_RoomOpacity = new QSpinBox( 0 );
+//    spinBox_RoomOpacity->setStatusTip( tr( "Enables checking of exit line detail close to or under room symbol in 2D maps." ) );
+//    spinBox_RoomOpacity->setRange(0, 255);
+//    spinBox_RoomOpacity->setSingleStep(16);
+//    spinBox_RoomOpacity->setSpecialValueText( tr( "Normal" ) );
+//    spinBox_RoomOpacity->setValue( mpHost->mDebug_RoomTransparency );
+//    connect(spinBox_RoomOpacity, SIGNAL(valueChanged(int)), mpHost, SLOT( slot_setRoomOpacity(int) ));
+//    spinBox_RoomOpacity->adjustSize();
+//    horizontalLayout_RoomOpacity->addWidget(spinBox_RoomOpacity);
+//    horizontalLayout_RoomOpacity->addWidget(label_RoomOpacity);
+//    verticalLayout_debugOptions->addLayout(horizontalLayout_RoomOpacity);
+
+
+/*
+ *
+ *  From Heiko
+ *
+ */
+
+/*
+ *
+ *  From Valdim
+ *
+ */
+
+/*
+ *
+ *  From Chris
+ *
+ */
+
+/*
+ *
+ *  Others(?)
+ *
+ */
+
+/*  End of Insert debug variable controls
+ *  Now add them all into layout:
+ */
+    verticalLayout_debugOptions->setAlignment(Qt::AlignTop);
+    groupBox_Debug->setLayout(verticalLayout_debugOptions);
+
+
     Host * pHost = mpHost;
     if( pHost )
     {
@@ -417,7 +480,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
             if( (mProfileList[i] == ".") || (mProfileList[i] == ".." ) )
                 continue;
 
-            mapper_profiles_combobox->addItem( mProfileList[i] );
+            combobox_mapper_profiles->addItem( mProfileList[i] );
         }
 
         connect(copy_map_profile, SIGNAL(clicked()), this, SLOT(copyMap()));
@@ -1398,7 +1461,7 @@ void dlgProfilePreferences::copyMap()
     Host * pHost = mpHost;
     if( ! pHost ) return;
 
-    QString toProfile = mapper_profiles_combobox->itemText(mapper_profiles_combobox->currentIndex());
+    QString toProfile = combobox_mapper_profiles->itemText(combobox_mapper_profiles->currentIndex());
 
     // at first, save our current map
     map_file_action->show();
@@ -1566,6 +1629,44 @@ qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<
     close();
 }
 
+/* DEBUGCONTROLS 4S - Auxillary inter-control slots definitions
+ * needed only if one debug control is modified by the action of another.
+ *
+ * Will have to "find" any controls { with findChild() ? } we have added if we
+ * need to modify them, as they won't be in the files that the MOC produces.
+ * Not essential but might be helpful if the same name is give to the local
+ * pointer here as in this dialog's constructor...
+ *
+ * Don't forget to call update(), if you change anything, to refresh any
+ * modified controls...!
+ *
+ * From SlySven:
+ */
 
+/*
+ *
+ *
+ * From Heiko
+ */
 
+/*
+ *
+ *
+ * From Valdim
+ */
 
+/*
+ *
+ *
+ * From Chris
+ */
+
+/*
+ *
+ *
+ * From Others(?)
+ */
+
+/*
+ * End of Auxillary inter-control slots definitions
+ */

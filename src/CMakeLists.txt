@@ -1,5 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
+#    Copyright (C) 2014 by Stephen Lyons - slysven@virginmedia.com         #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License version 2 as     #
@@ -162,6 +163,7 @@ SET(mudlet_MOC_HDRS
     EAction.h
     exitstreewidget.h
     glwidget.h
+    Host.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
@@ -181,7 +183,6 @@ SET(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     FontManager.h
-    Host.h
     HostManager.h
     HostPool.h
     KeyUnit.h
