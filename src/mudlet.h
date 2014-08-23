@@ -56,7 +56,6 @@ class mudlet : public QMainWindow, public Ui::MainWindow
 Q_OBJECT
 
 public:
-
                                  mudlet();
                                 ~mudlet();
    static                        mudlet * self();
@@ -66,8 +65,8 @@ public:
    void                          printSystemMessage( Host * pH, QString & s );
    void                          print( Host *, QString & );
    void                          addConsoleForNewHost( Host * pH );
-   void							 disableToolbarButtons();
-   void							 enableToolbarButtons();
+    void                        disableToolbarButtons();
+    void                        enableToolbarButtons();
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * );
    void                          unregisterTimer( QTimer * );
@@ -117,6 +116,22 @@ public:
    void                          showUnzipProgress( QString txt );
    bool                          openWebPage(QString path);
    void                          processEventLoopHack();
+   bool                          isGoingDown() { return mIsGoingDown; }
+   void                          setIcoSize( int s );
+   void                          replayStart();
+   bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
+   void                          replayOver();
+   void                          showEvent( QShowEvent * event );
+   void                          hideEvent( QHideEvent * event );
+   bool                          resetFormat( Host *, QString & name );
+   bool                          moduleTableVisible();
+   void                          doAutoLogin( QString & );
+   void                          deselect( Host * pHost, QString & name );
+   void                          stopSounds();
+   void                          playSound( QString s );
+    QString                     getSystemLuaPath();
+
+
    static TConsole *             mpDebugConsole;
    static QMainWindow *          mpDebugArea;
    static bool                   debugMode;
@@ -126,26 +141,9 @@ public:
    QIcon *                       testicon;
    bool                          mShowMenuBar;
    bool                          mShowToolbar;
-   bool                          isGoingDown() { return mIsGoingDown; }
    int                           mMainIconSize;
    int                           mTEFolderIconSize;
-   void                          setIcoSize( int s );
-   void                          replayStart();
-   bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
-   void                          replayOver();
-   void                          showEvent( QShowEvent * event );
-   void                          hideEvent( QHideEvent * event );
-   bool                          resetFormat( Host *, QString & name );
-   bool                          moduleTableVisible();
    bool                          mWindowMinimized;
-   //QString                       readProfileData( QString profile, QString item );
-   void                          doAutoLogin( QString & );
-   void                          deselect( Host * pHost, QString & name );
-   void                          stopSounds();
-   void                          playSound( QString s );
-    QString                     getSystemLuaPath();
-
-
    QTime                         mReplayTime;
    int                           mReplaySpeed;
    QToolBar *                    mpMainToolBar;
@@ -272,12 +270,12 @@ public slots:
  * End of Application wide debug variable control slots declarations
  */
 
-protected:
 
+protected:
    void                          closeEvent(QCloseEvent *event);
 
-private slots:
 
+private slots:
    void                          slot_close_profile();
    void                          slot_tab_changed( int );
    void                          show_help_dialog();
@@ -291,9 +289,10 @@ private slots:
    void                          show_variable_dialog();
    void                          show_options_dialog();
 
-private:
 
+private:
    void                          goingDown() { mIsGoingDown = true; }
+   void                          check_for_mappingscript();
     void                        setSystemLuaPath();
                                 // Not implimented yet, might be required if
                                 // option to change this put into preferences
@@ -322,7 +321,6 @@ private:
    QAction *                     actionReplaySpeedUp;
    QAction *                     actionReconnect;
 
-   void                          check_for_mappingscript();
 
    QListWidget *                 packageList;
    QPushButton *                 uninstallButton;
