@@ -74,9 +74,9 @@ public:
     void deleteMapLabel( int area, int labelID );
     bool addRoom( int id=0 );
     void setRoomArea( int id, int area );
-    //void deleteRoom( int id );
+    // void deleteRoom( int id );
     void deleteArea( int id );
-    int  createNewRoomID();
+    int createNewRoomID();
     void logError(QString &msg);
     void tidyMap( int area );
     void getConnectedNodesGreaterThanX( int id, int x );
@@ -112,17 +112,17 @@ public:
     float m2DPanXStart;
     float m2DPanYStart;
     int mViewArea;
-    //mapVar mVars[20];
-    //mapVar <int> mvRoomId;
-    //QMap<QString, mVarTypes> mVars;
-    //QMap<QString, *QVariant> mVars;
-    //mVars.insert("RoomId", &mRoomId);
+    // mapVar mVars[20];
+    // mapVar <int> mvRoomId;
+    // QMap<QString, mVarTypes> mVars;
+    // QMap<QString, *QVariant> mVars;
+    // mVars.insert("RoomId", &mRoomId);
     int mTargetID;
     QList<int> mPathList;
     QList<QString> mDirList;
-    QMap<int,QColor> customEnvColors;
+    QMap<int, QColor> customEnvColors;
     QMap<int, QVector3D> unitVectors;
-    QMap<int, int> reverseDirections; //contains complementary directions of dirs on TRoom.h
+    QMap<int, int> reverseDirections; // contains complementary directions of dirs on TRoom.h
     GLWidget * mpM;
     dlgMapper * mpMapper;
     QList<int> mTestedNodes;
@@ -146,9 +146,7 @@ public:
     bool mNewMove;
     QMap<qint32, QMap<qint32, TMapLabel> > mapLabels;
 
-    int version; //map file format version
-
-
+    int version; // map file format version
 };
 
 #endif // MUDLET_TMAP_H

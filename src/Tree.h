@@ -30,14 +30,14 @@
 #include <list>
 
 
-template<class T>
+template <class T>
 class Tree
 {
 public:
                        Tree();
                        Tree( T * parent );
     virtual            ~Tree();
-                       T * getParent()             { return mpParent; }
+    T *                getParent()                 { return mpParent; }
     std::list<T *> *   getChildrenList();
     bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
     int                getChildCount()             { return mpMyChildrenList->size(); }
@@ -76,21 +76,17 @@ public:
 
 
 protected:
-
     virtual bool       canBeActivated();
     bool               mOK_init;
     bool               mOK_code;
 
 private:
-
     bool               mActive;
     bool               mUserActiveState;
     QString            mErrorMessage;
-
-
 };
 
-template<class T>
+template <class T>
 Tree<T>::Tree()
 : mpParent( 0 )
 , mpMyChildrenList( new std::list<T *> )
@@ -102,8 +98,8 @@ Tree<T>::Tree()
 {
 }
 
-template<class T>
-Tree<T>::Tree( T *  pParent )
+template <class T>
+Tree<T>::Tree( T * pParent )
 : mpParent( pParent )
 , mpMyChildrenList( new std::list<T *> )
 , mID( 0 )
@@ -114,12 +110,13 @@ Tree<T>::Tree( T *  pParent )
 {
     if( pParent )
     {
-        pParent->addChild( (T*)( this ) );
+        pParent->addChild((T*)(this));
     }
-    else mpParent=0;
+    else
+        mpParent = 0;
 }
 
-template<class T>
+template <class T>
 Tree<T>::~Tree()
 {
     while( mpMyChildrenList->size() > 0 )
@@ -139,7 +136,7 @@ Tree<T>::~Tree()
     }
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::ancestorsActive()
 {
     Tree<T> * node(mpParent);
@@ -154,19 +151,19 @@ bool Tree<T>::ancestorsActive()
     return true;
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::shouldBeActive()
 {
     return mUserActiveState;
 }
 
-template<class T>
+template <class T>
 void Tree<T>::setShouldBeActive( bool b )
 {
     mUserActiveState = b;
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::setIsActive( bool b )
 {
     setShouldBeActive( b );
@@ -181,19 +178,19 @@ bool Tree<T>::setIsActive( bool b )
     }
 }
 
-template<class T>
+template <class T>
 inline bool Tree<T>::state()
 {
     return ( mOK_init && mOK_code );
 }
 
-template<class T>
+template <class T>
 inline bool Tree<T>::canBeActivated()
 {
     return ( shouldBeActive() && state() );
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::activate()
 {
     if( canBeActivated() )
@@ -205,19 +202,19 @@ bool Tree<T>::activate()
     return false;
 }
 
-template<class T>
+template <class T>
 void Tree<T>::deactivate()
 {
     mActive = false;
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::isActive()
 {
     return (mActive && canBeActivated());
 }
 
-template<class T>
+template <class T>
 void Tree<T>::enableFamily()
 {
     activate();
@@ -228,7 +225,7 @@ void Tree<T>::enableFamily()
     }
 }
 
-template<class T>
+template <class T>
 void Tree<T>::disableFamily()
 {
     deactivate();
@@ -239,7 +236,7 @@ void Tree<T>::disableFamily()
     }
 }
 
-template<class T>
+template <class T>
 void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
 {
     if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mpMyChildrenList->size()) ) )
@@ -251,9 +248,9 @@ void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
         // insert item at proper position
         int cnt = 0;
         typedef typename std::list<T *>::iterator IT;
-        for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it ++ )
+        for ( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
         {
-            if( cnt >= childPosition )
+            if ( cnt >= childPosition )
             {
                 mpMyChildrenList->insert( it, newChild );
                 break;
@@ -263,13 +260,13 @@ void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
     }
 }
 
-template<class T>
+template <class T>
 void Tree<T>::setParent( T * pParent )
 {
     mpParent = pParent;
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::popChild( T * pChild )
 {
     typedef typename std::list<T *>::const_iterator IT;
@@ -284,26 +281,26 @@ bool Tree<T>::popChild( T * pChild )
     return false;
 }
 
-template<class T>
+template <class T>
 std::list<T *> * Tree<T>::getChildrenList()
 {
     return mpMyChildrenList;
 }
 
-template<class T>
+template <class T>
 QString & Tree<T>::getError()
 {
     return mErrorMessage;
 }
 
-template<class T>
+template <class T>
 void Tree<T>::setError( QString error )
 {
     mErrorMessage = error;
 }
 
 
-template<class T>
+template <class T>
 void Tree<T>::DumpFamily()
 {
     Dump();
@@ -311,11 +308,12 @@ void Tree<T>::DumpFamily()
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {
         T * pChild = *it;
-        if( pChild ) pChild->DumpFamily();
+        if( pChild )
+            pChild->DumpFamily();
     }
 }
 
-template<class T>
+template <class T>
 void Tree<T>::Dump()
 {
     std::cout << "My ID=" << mID << " my parent="<< mpParent << std::endl;
@@ -325,7 +323,8 @@ void Tree<T>::Dump()
     {
         std::cout << " dumping:"<<std::endl;
         T* pChild = *it;
-        if( pChild ) std::cout << pChild->mID << ", ";
+        if( pChild )
+            std::cout << pChild->mID << ", ";
     }
     std::cout << "ende dump()"<< std::endl;
 }

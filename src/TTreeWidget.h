@@ -31,17 +31,17 @@ class Host;
 
 class TTreeWidget : public QTreeWidget
 {
-Q_OBJECT
-        
+    Q_OBJECT
+
 public:
-        TTreeWidget( QWidget * pW );
+    TTreeWidget( QWidget * pW );
     Qt::DropActions supportedDropActions() const;
     void dragEnterEvent( QDragEnterEvent * event );
     void dragMoveEvent( QDragMoveEvent * event );
     void dropEvent( QDropEvent * event );
-    void startDrag( Qt::DropActions supportedActions ); 
+    void startDrag( Qt::DropActions supportedActions );
     bool dropMimeData( QTreeWidgetItem * parent, int index, const QMimeData * data, Qt::DropAction action );
-    void rowsAboutToBeRemoved ( const QModelIndex & parent, int start, int end );   
+    void rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end );
     void rowsInserted( const QModelIndex & parent, int start, int end );
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
@@ -53,15 +53,14 @@ public:
     void setIsActionTree();
     void setIsVarTree();
     void setIsKeyTree();
-    void beginInsertRows ( const QModelIndex & parent, int first, int last );
+    void beginInsertRows( const QModelIndex & parent, int first, int last );
     void getAllChildren( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
-    
+
 private:
-    
     bool mIsDropAction;
     Host * mpHost;
-    int  mOldParentID;
-    int  mChildID;
+    int mOldParentID;
+    int mChildID;
     bool mIsTriggerTree;
     bool mIsAliasTree;
     bool mIsScriptTree;
