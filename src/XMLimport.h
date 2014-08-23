@@ -1,5 +1,5 @@
 #ifndef MUDLET_XMLIMPORT_H
-#define MUDLET_XMLEXPORT_H
+#define MUDLET_XMLIMPORT_H
 
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
