@@ -486,7 +486,7 @@ LUA.files = \
 LUA.depends = mudlet
 
 # A variable used to write a file who's sole purpose is to record the absolute
-# location of the above files, must include trailing slash:
+# location of the above files, no trailing slash:
 LUA_SOURCE_LOCATION = $${PWD}/mudlet-lua/lua
 
 # Geyser lua files:
@@ -537,7 +537,7 @@ unix:!macx: {
         target \
         LUA \
         LUA_GEYSER
-} else {
+} else:macx: {
 # Install for macx:
     # Copy mudlet-lua into the .app bundle
     QMAKE_BUNDLE_DATA += \
@@ -547,6 +547,7 @@ unix:!macx: {
     # Set the .app's icns file
     ICON = osx-installer/osx.icns
 }
+# No install process for Windows (yet?)
 
 SUBDIRS += \
     irc/libircclient-qt.pro
@@ -555,10 +556,10 @@ SUBDIRS += \
 # core Lua files in the source files for the project, if changed please ensure
 # the effective contents are the same in the toplevel cmake project file, ie.
 # ../CMAkeLists.txt, for qmake the hash character has to be entered as
-# $${LITERAL_HASH} otherlise it comments out the remainder of the line in this 
-# project file gets required, also I have not found a way to insert an empty line
-# into the file so have to insert a single space on each such line which git may
-# moan about:
+# $${LITERAL_HASH} otherwise it comments out the remainder of the line in this
+# project file, also I have not found a way to insert an empty line into the
+# file in this manner so have had to insert a single space on each such line
+# which git may moan about:
 luaLocationHeaderData = \
 "$${LITERAL_HASH}ifndef MUDLET_LUALOCATION_H" \
 "$${LITERAL_HASH}define MUDLET_LUALOCATION_H" \
@@ -596,8 +597,8 @@ luaLocationHeaderData = \
 " * system for normal use.  For systems/installations where two such sets are" \
 " * not maintained, or for release builds in package form in a distribution and" \
 " * used by others, the physical absence of this file at run-time will cleanly" \
-" * disable the ability to choose to use development versions of the core Mudlet" \
-" * Lua files." \
+" * disable the ability to try to choose non-existant source versions of the" \
+" * core Mudlet Lua files." \
 " */" \
 " " \
 "$${LITERAL_HASH}include <QString>" \

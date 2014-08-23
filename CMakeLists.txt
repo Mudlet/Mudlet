@@ -171,8 +171,8 @@ SET(LUA_LOCATION_HEADER_DATA
  * system for normal use.  For systems/installations where two such sets are
  * not maintained, or for release builds in package form in a distribution and
  * used by others, the physical absence of this file at run-time will cleanly
- * disable the ability to choose to use development versions of the core Mudlet
- * Lua files.
+ * disable the ability to try to choose non-existant source versions of the
+ * core Mudlet Lua files.
  */
  
 #include <QString>
