@@ -99,11 +99,6 @@ bool HostPool::addNewHost( QString hostname, QString port, QString login, QStrin
     int id = createNewHostID();
     Host * pNewHost = new Host( portnumber, hostname, login, pass, id );
 
-    if( pNewHost == 0 ) //enough memory?
-    {
-        return false;
-    }
-
     mHostPool[hostname] = pNewHost;
     return true;
 }
