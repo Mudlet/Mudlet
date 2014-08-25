@@ -70,11 +70,6 @@ private:
     bool mIsVarTree;
     bool mIsActionTree;
     QModelIndex mClickedItem;
-    
-signals:
-    
-public slots:
-    
 };
 
 #endif // MUDLET_TTREEWIDGET_H

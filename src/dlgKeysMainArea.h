@@ -33,11 +33,6 @@ class dlgKeysMainArea : public QWidget, public Ui::keys_main_area
 
 public:
     dlgKeysMainArea( QWidget * );
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGKEYSMAINAREA_H

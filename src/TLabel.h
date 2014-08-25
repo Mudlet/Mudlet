@@ -55,11 +55,6 @@ TEvent *          mpParameters;
 TEvent *          mLeaveParams;
 TEvent *          mEnterParams;
 bool              mouseInside;
-public slots:
-
-signals:
-
-
 };
 
 #endif // MUDLET_TLABEL_H

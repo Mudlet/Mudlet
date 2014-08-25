@@ -33,11 +33,6 @@ class dlgOptionsAreaAction : public QWidget, public Ui::options_area_actions
 
 public:
     dlgOptionsAreaAction(QWidget *);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGOPTIONSAREAACTION_H

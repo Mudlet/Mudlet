@@ -33,11 +33,6 @@ class dlgActionMainArea : public QWidget, public Ui::actions_main_area
 
 public:
     dlgActionMainArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGACTIONMAINAREA_H

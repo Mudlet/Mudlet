@@ -33,11 +33,6 @@ class dlgTriggersMainArea : public QWidget, public Ui::trigger_main_area
 
 public:
     dlgTriggersMainArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGTRIGGERSMAINAREA_H

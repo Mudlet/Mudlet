@@ -33,11 +33,6 @@ class dlgOptionsAreaScripts : public QWidget, public Ui::options_area_scripts
 
 public:
     dlgOptionsAreaScripts(QWidget *);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGOPTIONSAREASCRIPTS_H

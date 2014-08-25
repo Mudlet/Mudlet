@@ -34,11 +34,6 @@ class ExitsTreeWidget : public QTreeWidget
 public:
     ExitsTreeWidget( QWidget * pW );
     void keyPressEvent( QKeyEvent * event );
-
-private:
-signals:
-
-public slots:
 };
 
 #endif // MUDLET_EXITSTREEWIDGET_H

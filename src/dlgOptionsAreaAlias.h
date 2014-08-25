@@ -33,11 +33,6 @@ class dlgOptionsAreaAlias : public QWidget, public Ui::options_area_aliases
 
 public:
     dlgOptionsAreaAlias(QWidget *);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGOPTIONSAREAALIASES_H

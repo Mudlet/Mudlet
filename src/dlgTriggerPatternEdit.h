@@ -34,11 +34,6 @@ class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
 public:
     dlgTriggerPatternEdit(QWidget*);
     int mRow;
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
