@@ -2538,7 +2538,7 @@ void T2DMap::slot_customLineProperties()
             file.close();
             if( ! d )
             {
-                qWarning("T2DMap::slot_customLineProperties() ERRROR: failed to create the dialog!");
+                qWarning("T2DMap::slot_customLineProperties() ERROR: failed to create the dialog!");
                 return;
             }
             d->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit_properties.png" ) ) );
@@ -2626,7 +2626,7 @@ void T2DMap::slot_customLineProperties()
 
             QString _styleSheet = QString("background-color:"+ mCurrentLineColor.name() );
             mpCurrentLineColor->setStyleSheet( _styleSheet );
-            connect( mpCurrentLineColor, SIGNAL(pressed()), this, SLOT(slot_customLineColor()));
+            connect( mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
 
             if( d->exec() == QDialog::Accepted )
             {
@@ -3660,13 +3660,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("NW")||pR->customLines.contains("nw") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("n");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"n\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"n\" exit line button!");
         return;
     }
     else if( pR->getNorth() <= 0 )
@@ -3678,13 +3678,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("N")||pR->customLines.contains("n") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("ne");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"ne\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"ne\" exit line button!");
         return;
     }
     else if( pR->getNortheast() <= 0 )
@@ -3696,13 +3696,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("NE")||pR->customLines.contains("ne") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("up");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"up\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"up\" exit line button!");
         return;
     }
     else if( pR->getUp() <= 0 )
@@ -3714,13 +3714,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("UP")||pR->customLines.contains("up") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("w");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"w\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"w\" exit line button!");
         return;
     }
     else if( pR->getWest() <= 0 )
@@ -3732,13 +3732,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("W")||pR->customLines.contains("w") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("e");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"e\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"e\" exit line button!");
         return;
     }
     else if( pR->getEast() <= 0 )
@@ -3750,13 +3750,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("E")||pR->customLines.contains("e") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("down");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"down\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"down\" exit line button!");
         return;
     }
     else if( pR->getDown() <= 0 )
@@ -3768,13 +3768,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("DOWN")||pR->customLines.contains("down") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("sw");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"sw\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"sw\" exit line button!");
         return;
     }
     else if( pR->getSouthwest() <= 0 )
@@ -3786,13 +3786,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("SW")||pR->customLines.contains("sw") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("s");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"s\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"s\" exit line button!");
         return;
     }
     else if( pR->getSouth() <= 0 )
@@ -3804,13 +3804,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("S")||pR->customLines.contains("s") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("se");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"se\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"se\" exit line button!");
         return;
     }
     else if( pR->getSoutheast() <= 0 )
@@ -3822,13 +3822,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("SE")||pR->customLines.contains("se") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("in");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"in\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"in\" exit line button!");
         return;
     }
     else if( pR->getIn() <= 0 )
@@ -3840,13 +3840,13 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("IN")||pR->customLines.contains("in") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     b_ = d->findChild<QPushButton*>("out");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"out\" exit line button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"out\" exit line button!");
         return;
     }
     else if( pR->getOut() <= 0 )
@@ -3858,7 +3858,7 @@ void T2DMap::slot_setCustomLine()
     {
         b_->setCheckable(true);
         b_->setChecked( pR->customLines.contains("OUT")||pR->customLines.contains("out") );
-        connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+        connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     }
 
     QMapIterator<int, QString> it(pR->getOtherMap());
@@ -3885,10 +3885,10 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("button_cancel");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERRROR: failed to find \"cancel\" button!");
+        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"cancel\" button!");
         return;
     }
-    connect(b_, SIGNAL(pressed()), this, SLOT(slot_setCustomLine2()));
+    connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
     // Arrange that even a cancel request gets handled by the slot_setCustomLine2() method
 
     QStringList _lineStyles;
@@ -3898,7 +3898,7 @@ void T2DMap::slot_setCustomLine()
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
     mpCurrentLineColor->setStyleSheet("background-color:" + mCurrentLineColor.name());
     connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem *,int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
-    connect(mpCurrentLineColor, SIGNAL(pressed()), this, SLOT(slot_customLineColor()));
+    connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
     d->show();
     d->raise();
 }

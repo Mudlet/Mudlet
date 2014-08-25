@@ -1647,14 +1647,14 @@ void dlgRoomExits::init( int id ) {
 // We now do not connect up all these things until AFTER we have initialised
 // things as some controls will issue unwanted signals upon setting values into
 // them as we have above...
-    connect( button_save,          SIGNAL(pressed()),                            this, SLOT(slot_endEditSpecialExits()));
-    connect( button_save,          SIGNAL(pressed()),                            this, SLOT(slot_checkModified()));
-    connect( button_save,          SIGNAL(pressed()),                            this, SLOT(save()));
-    connect( button_addSpecialExit,SIGNAL(pressed()),                            this, SLOT(slot_addSpecialExit()));
+    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
+    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
+    connect( button_save,          SIGNAL(clicked()),                            this, SLOT(save()));
+    connect( button_addSpecialExit,SIGNAL(clicked()),                            this, SLOT(slot_addSpecialExit()));
     connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_editSpecialExit(QTreeWidgetItem *, int)));
     connect( specialExits,         SIGNAL(itemClicked( QTreeWidgetItem *, int)), this, SLOT(slot_checkModified()));
-    connect( button_endEditing,    SIGNAL(pressed()),                            this, SLOT(slot_endEditSpecialExits()));
-    connect( button_endEditing,    SIGNAL(pressed()),                            this, SLOT(slot_checkModified()));
+    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_endEditSpecialExits()));
+    connect( button_endEditing,    SIGNAL(clicked()),                            this, SLOT(slot_checkModified()));
     connect( nw,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_nw_textEdited(const QString &)));
     connect( n,                    SIGNAL(textEdited(const QString &)),          this, SLOT(slot_n_textEdited(const QString &)));
     connect( ne,                   SIGNAL(textEdited(const QString &)),          this, SLOT(slot_ne_textEdited(const QString &)));
