@@ -500,7 +500,7 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
-    removeDir( dir.path(), dir.path() );
+    dir.removeRecursively(); // note: we should replace this with a function that pops up a progress dialog should the deletion be taking longer than a second
     fillout_form();
     profiles_tree_widget->setFocus();
 }
@@ -1348,34 +1348,4 @@ void dlgConnectionProfiles::copyFolder(QString sourceFolder, QString destFolder)
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
     }
-}
-
-// credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
-bool dlgConnectionProfiles::removeDir( const QString dirName, QString originalPath )
-{
-    bool result = true;
-    QDir dir(dirName);
-    if( dir.exists( dirName ) )
-    {
-        Q_FOREACH( QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
-        {
-            // prevent recursion outside of the original branch
-            if( info.isDir() && info.absoluteFilePath().startsWith( originalPath ) )
-            {
-                result = removeDir( info.absoluteFilePath(), originalPath );
-            }
-            else
-            {
-                result = QFile::remove( info.absoluteFilePath() );
-            }
-
-            if( !result )
-            {
-                return result;
-            }
-        }
-        result = dir.rmdir( dirName );
-    }
-
-    return result;
 }
