@@ -36,7 +36,6 @@ class TRoomDB;
 class TArea
 {
 public:
-
     TArea( TMap *, TRoomDB * );
     ~TArea();
     int getAreaID();
@@ -49,11 +48,11 @@ public:
     void removeRoom(int);
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition( int x, int y, int z );
-    QMap<int,QMap<int,QMultiMap<int,int> > > koordinatenSystem();
+    QMap<int, QMap<int, QMultiMap<int, int> > > koordinatenSystem();
     void ausgaengeBestimmen();
     QMultiMap<int, QPair<int, int> > exits; // rooms that border on this area: key=in_area room id, pair.first=out_of_area room id pair.second=direction
-    QList<int> rooms; // rooms of this area
-    QVector3D pos; // pos auf der map und 0 punkt des area internen koordinatensystems
+    QList<int> rooms;                       // rooms of this area
+    QVector3D pos;                          // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
     int min_x;
     int min_y;
@@ -75,8 +74,7 @@ public:
 
 private:
     TArea(){qFatal("FATAL: illegal default constructor use of TArea()");};
-    //QMap<int, TMapLabel> labelMap;
-
+    // QMap<int, TMapLabel> labelMap;
 };
 
 // - gezeichnet werden erstmal die areas

@@ -23,7 +23,6 @@
 class TMatchState
 {
 public:
-    
     TMatchState( int NumberOfConditions, int delta )
     {
         mNumberOfConditions = NumberOfConditions;
@@ -32,7 +31,7 @@ public:
         mLineCount = 1;
         mSpacer = 0;
     }
-    
+
     TMatchState( const TMatchState &ms )
     {
         mNumberOfConditions = ms.mNumberOfConditions;
@@ -40,30 +39,30 @@ public:
         mDelta = ms.mDelta;
         mLineCount = ms.mLineCount;
     }
-    
-    int  nextCondition() { return mNextCondition; }
+
+    int nextCondition() { return mNextCondition; }
     void conditionMatched(){ mNextCondition++; }
-    bool isComplete() 
-    { 
+    bool isComplete()
+    {
         if( mNextCondition >= mNumberOfConditions )
         {
             return true;
-        } 
+        }
         else
         {
-            return false; 
+            return false;
         }
     }
     void newLineArrived(){ mLineCount++; }
-    bool newLine() 
-    { 
+    bool newLine()
+    {
         if( mLineCount > mDelta )
         {
             return false;
         }
         else
         {
-            return true; 
+            return true;
         }
     }
 
