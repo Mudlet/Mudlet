@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,26 +45,12 @@ public:
     void conditionMatched(){ mNextCondition++; }
     bool isComplete()
     {
-        if( mNextCondition >= mNumberOfConditions )
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return ( mNextCondition >= mNumberOfConditions );
     }
     void newLineArrived(){ mLineCount++; }
     bool newLine()
     {
-        if( mLineCount > mDelta )
-        {
-            return false;
-        }
-        else
-        {
-            return true;
-        }
+        return !( mLineCount > mDelta );
     }
 
     bool lineSpacerMatch( int lines )
