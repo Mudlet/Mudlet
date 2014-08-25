@@ -23,7 +23,6 @@
 #include "dlgRoomExits.h"
 
 
-#include <QStringBuilder>
 #include "TArea.h"
 #include "TMap.h"
 #include "TRoom.h"
@@ -34,6 +33,7 @@
 
 #include "pre_guard.h"
 #include <QDebug>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW ): QDialog( pW ), mpHost( pH ), mpEditItem( 0 )
