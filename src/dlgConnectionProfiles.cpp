@@ -326,9 +326,9 @@ void dlgConnectionProfiles::slot_update_name( const QString _n )
 void dlgConnectionProfiles::slot_save_name()
 {
     QListWidgetItem * pItem = profiles_tree_widget->currentItem();
-    QString name = profile_name_entry->text().trimmed();
+    QString newProfileName = profile_name_entry->text().trimmed();
 
-    if (notificationAreaIconLabelError->isVisible() || name == "")
+    if (notificationAreaIconLabelError->isVisible() || newProfileName == "")
         return;
 
     validName = true;
@@ -338,24 +338,24 @@ void dlgConnectionProfiles::slot_save_name()
         int row = mProfileList.indexOf( mCurrentProfileEditName );
         if( ( row >= 0 ) && ( row < mProfileList.size() ) )
         {
-            mProfileList[row] = name;
+            mProfileList[row] = newProfileName;
         }
         else
-            mProfileList << name;
+            mProfileList << newProfileName;
 
         // don't do anything if this was just a normal click, and not an edit of any sort
-        if (mCurrentProfileEditName == name)
+        if (mCurrentProfileEditName == newProfileName)
             return;
 
-        pItem->setText( name );
+        pItem->setText( newProfileName );
 
-        QDir previouspath(QDir::homePath()+"/.config/mudlet/profiles/"+mCurrentProfileEditName);
+        QDir currentPath(QDir::homePath()+"/.config/mudlet/profiles/"+mCurrentProfileEditName);
         QDir dir;
 
-        if (previouspath.exists())
+        if (currentPath.exists())
         {
             QDir parentpath(QDir::homePath()+"/.config/mudlet/profiles/");
-            if (! parentpath.rename( mCurrentProfileEditName, name ) )
+            if (! parentpath.rename( mCurrentProfileEditName, newProfileName ) )
             {
                 notificationArea->show();
                 notificationAreaIconLabelWarning->show();
@@ -364,7 +364,7 @@ void dlgConnectionProfiles::slot_save_name()
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText( tr("Couldn't rename your profile data on the computer." ));
             }
-        } else if (! dir.mkpath(QDir::homePath()+"/.config/mudlet/profiles/"+name) )
+        } else if (! dir.mkpath(QDir::homePath()+"/.config/mudlet/profiles/"+newProfileName) )
         {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
@@ -374,10 +374,10 @@ void dlgConnectionProfiles::slot_save_name()
             notificationAreaMessageBox->setText( tr("Couldn't create the new profile folder on your computer." ));
         }
 
-        // code stolen from fillout_form, should be moved to it's own function
+        // code stolen from fillout_form, should be moved to its own function
         QFont font("Bitstream Vera Sans Mono", 1 );//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
-        QString sList = name;
-        QString s = name;
+        QString sList = newProfileName;
+        QString s = newProfileName;
         pItem->setFont(font);
         pItem->setForeground(QColor(255,255,255,255));
         profiles_tree_widget->addItem( pItem );
@@ -482,6 +482,7 @@ void dlgConnectionProfiles::slot_addProfile()
     connect_button->setDisabled(true);
 }
 
+// enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
 {
     QString profile = profiles_tree_widget->currentItem()->text();
@@ -494,16 +495,17 @@ void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
     }
 }
 
+// actually performs the deletion once the correct text has been entered
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
-// N/U:     int currentRow = profiles_tree_widget->currentIndex().row();
     QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
     removeDir( dir.path(), dir.path() );
     fillout_form();
     profiles_tree_widget->setFocus();
 }
 
+// called when the 'delete' button is pressed, raises a dialog to confirm deletion
 void dlgConnectionProfiles::slot_deleteProfile()
 {
     if( ! profiles_tree_widget->currentItem() )
