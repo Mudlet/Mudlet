@@ -533,19 +533,20 @@ Custom Line?</string>
       <item row="4" column="0">
        <widget class="QPushButton" name="button_cancel">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
         <property name="minimumSize">
          <size>
-          <width>50</width>
-          <height>20</height>
+          <width>85</width>
+          <height>27</height>
          </size>
         </property>
         <property name="toolTip">
-         <string>To remove a custom line, select it and right-click to obtain a &quot;delete&quot; option.</string>
+         <string>To remove a custom line, cancel this dialog,
+select the line and right-click to obtain a &quot;delete&quot; option.</string>
         </property>
         <property name="layoutDirection">
          <enum>Qt::RightToLeft</enum>

@@ -1965,21 +1965,33 @@
      <property name="enabled">
       <bool>false</bool>
      </property>
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="toolTip">
       <string>Use this button to save any changes, will also remove any invalid Special exits.</string>
      </property>
      <property name="text">
-      <string>Save</string>
+      <string>&amp;Save</string>
      </property>
     </widget>
    </item>
    <item row="2" column="4">
     <widget class="QPushButton" name="button_cancel">
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="toolTip">
       <string>Use this button to close the dialogue without changing anything.</string>
      </property>
      <property name="text">
-      <string>Cancel</string>
+      <string>&amp;Cancel</string>
      </property>
     </widget>
    </item>
@@ -2106,6 +2118,12 @@ or LUA script</string>
    </item>
    <item row="2" column="0">
     <widget class="QPushButton" name="button_addSpecialExit">
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="toolTip">
       <string>Add an empty item to Special exits to be edited as required</string>
      </property>
@@ -2118,6 +2136,12 @@ or LUA script</string>
     <widget class="QPushButton" name="button_endEditing">
      <property name="enabled">
       <bool>false</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
      </property>
      <property name="toolTip">
       <string>Press this button to deactivate the selection of a Special exit</string>
@@ -2180,17 +2204,17 @@ or LUA script</string>
   </property>
  </designerdata>
  <buttongroups>
+  <buttongroup name="doortype_nw"/>
   <buttongroup name="doortype_n"/>
   <buttongroup name="doortype_ne"/>
-  <buttongroup name="doortype_nw"/>
-  <buttongroup name="doortype_se"/>
-  <buttongroup name="doortype_out"/>
+  <buttongroup name="doortype_up"/>
+  <buttongroup name="doortype_w"/>
+  <buttongroup name="doortype_e"/>
+  <buttongroup name="doortype_down"/>
   <buttongroup name="doortype_sw"/>
   <buttongroup name="doortype_s"/>
+  <buttongroup name="doortype_se"/>
   <buttongroup name="doortype_in"/>
-  <buttongroup name="doortype_up"/>
-  <buttongroup name="doortype_down"/>
-  <buttongroup name="doortype_e"/>
-  <buttongroup name="doortype_w"/>
+  <buttongroup name="doortype_out"/>
  </buttongroups>
 </ui>
