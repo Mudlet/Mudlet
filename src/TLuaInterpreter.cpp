@@ -11157,14 +11157,23 @@ void TLuaInterpreter::loadGlobal()
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
     if( error != 0 )
     {
-        string e = "no error message available from Lua";
-        if( lua_isstring( pGlobalLua, -1 ) )
-        {
-            e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                            "Error from Lua: ";
-            e += lua_tostring( pGlobalLua, -1 );
+        // For the installer we do not go down a level to search for this. So
+        // we check again for the user case of a windows install.
+        path = "mudlet-lua/lua/LuaGlobal.lua";
+        error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
+        if( error != 0 ) {
+            string e = "no error message available from Lua";
+            if( lua_isstring( pGlobalLua, -1 ) )
+            {
+                e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                                "Error from Lua: ";
+                e += lua_tostring( pGlobalLua, -1 );
+            }
+            mpHost->mTelnet.postMessage( e.c_str() );
         }
-        mpHost->mTelnet.postMessage( e.c_str() );
+        else {
+            mpHost->mTelnet.postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
+        }
     }
     else
     {
