@@ -27,7 +27,7 @@ Standard: Cpp03
 DisableFormat: false
 
 # line length
-ColumnLimit: 200
+ColumnLimit: 200 # revisit when tuning.
 
 # indentation
 IndentWidth: 4
@@ -49,7 +49,7 @@ BreakBeforeBraces: Linux
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: true
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
-KeepEmptyLinesAtTheStartOfBlocks: true
+KeepEmptyLinesAtTheStartOfBlocks: true # revisit
 MaxEmptyLinesToKeep: 2
 
 # spaces
@@ -74,8 +74,8 @@ PointerAlignment: Left
 Cpp11BracedListStyle: false
 
 # single line statements
-AllowShortBlocksOnASingleLine: false
-AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: false # revisit
+AllowShortFunctionsOnASingleLine: Inline # revisit
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 
@@ -83,7 +83,7 @@ AllowShortLoopsOnASingleLine: false
 AlignEscapedNewlinesLeft: false
 AlignTrailingComments: true
 
-# penalties
+# penalties (revisit)
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
