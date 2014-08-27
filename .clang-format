@@ -19,71 +19,155 @@
 # For more information on clang-format:
 # http://clang.llvm.org/docs/ClangFormat.html
 
+# All the current options are explicitly specified below other than
+# undocumented/experimental options, so this is only useful for new options
+# where we get a reasonable default before we explicitly decide here.
 BasedOnStyle: LLVM
 
 # language
+
+# The language we are formatting.
 Language: Cpp
+# The standard version, we aren't using C++11 yet.
 Standard: Cpp03
+# We want to turn on formatting.
 DisableFormat: false
 
 # line length
+
+# Ignore this, we'll need to fine tune it once the other options are settled.
 ColumnLimit: 200
 
 # indentation
+
+# This is consistent currently except for ctelnet, which I'm updating.
 IndentWidth: 4
+# Use spaces instead of tabs.
 UseTab: Never
+# If tabs exist, which they won't, they'll be counted as being 8 spaces wide.
 TabWidth: 8
+# public/private/protected are generally 'outdented' in the code base currently.
 AccessModifierOffset: -4
+# This isn't currently consistently applied or really done, but I'd prefer to
+# do it, since I think it ends up nicer.
 ConstructorInitializerIndentWidth: 4
+# This is if a line is broken into two lines, how much to indent the second
+# line. This is usually the same as the indent width.
 ContinuationIndentWidth: 4
+# Not doing this tends to reduce large amounts of unnecessary indentation.
 IndentCaseLabels: false
+# The code base doesn't have many, if any instances where this matters, but I
+# prefer not indenting.
 IndentWrappedFunctionNames: false
+# The code base doesn't have any namespaces currently, but I'd like to add some
+# and would rather not have them indented.
 NamespaceIndentation: None
 
 # line breaks
+
+# The code base never does this.
 AlwaysBreakAfterDefinitionReturnType: false
+# It would make sense for this to be true, but the default for LLVM is false,
+# hence it being false here.
 AlwaysBreakBeforeMultilineStrings: false
+# We consistently do this, so it seems reasonable to have it here.
 AlwaysBreakTemplateDeclarations: true
+# This means that when line breaks do happen, they place the binary operator
+# at the beginning of the second line rather than the end of the first.
+# I'm told that this is beneficial because humans mostly read from left to right
+# and that makes important information being on the left easier to read.
 BreakBeforeBinaryOperators: true
+# ** Where do braces go?
+# I'm personally going to vote for Attach, with Linux coming in second.
 BreakBeforeBraces: Linux
+# I haven't seen a case where this matters for us, but I like this behavior.
 BreakBeforeTernaryOperators: true
+# This is the way the code base currently does this.
 BreakConstructorInitializersBeforeComma: true
+# This is mostly the way the code base currently does this.
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
+# I'd prefer this be false, personally, but it's not a big deal and forcing
+# it for every block seems excessive.
 KeepEmptyLinesAtTheStartOfBlocks: true
+# This will delete consecutive empty lines until there are two left. I like
+# the option of using two empty lines to have a more pronounced distinction
+# between two parts of the code, but three seems excessive.
 MaxEmptyLinesToKeep: 2
 
 # spaces
+
+# We don't do this consistently, but I'm not sure if that's by accident or not.
+# I prefer this.
 SpaceBeforeAssignmentOperators: true
+# ** It seems lots of our code looks like if( instead of if ( and I'm not sure
+# if it's intentional or not. I prefer if ( because it's not a function call
+# and if( makes it look like a function call.
 SpaceBeforeParens: ControlStatements
+# We don't do this, so I doubt this matters.
 SpaceInEmptyParentheses: false
+# We do this in most places where the comment isn't code, and I'd like to
+# remove commented out code.
 SpacesBeforeTrailingComments: 1
+# ** This may be contentious. We aren't consistent here, but I prefer not having
+# spaces, especially in C++11 where they aren't required for parsing >>.
 SpacesInAngles: false
+# C++ doesn't have container literals.
 SpacesInContainerLiterals: true
+# ** We aren't consistent here, but I'd prefer not having C-style casts and
+# until they are all removed, I might as well have them without spaces.
 SpacesInCStyleCastParentheses: false
+# ** This is seemingly the most inconsistent formatting thing we do. I prefer
+# no spaces.
 SpacesInParentheses: false
 
 # parameters
+
+# This happens with really long type names and function names and parameter
+# names, which aren't very common in our codebase.
 AllowAllParametersOfDeclarationOnNextLine: true
+# Bin packing parameters seems more cluttered than just having one per line,
+# unless they fit on one line.
 BinPackParameters: false
 
 # pointers
+
+# This allows clang-format to guess the value to use for the option after this.
+# Not useful in our case.
 DerivePointerAlignment: false
+# ** The options are T* t, T * t and T *t. Note, * and & are treated the same
+# way, so you get the same behavior for both.
 PointerAlignment: Left
 
 # braces
+
+# This should be changed when we move to C++11.
 Cpp11BracedListStyle: false
 
 # single line statements
+
+# I tend to prefer not doing this, since it makes blocks harder to notice.
+# I also prefer to have {} around every block, to avoid goto fail bugs, but
+# clang-format doesn't add {}'s.
 AllowShortBlocksOnASingleLine: false
+# I'd prefer None or Inline, as opposed to All. We currently have some inline
+# functions defined this way, though it's not consistent.
 AllowShortFunctionsOnASingleLine: None
+# Same as the comment for blocks, above.
 AllowShortIfStatementsOnASingleLine: false
+# Same as the comment for blocks, above.
 AllowShortLoopsOnASingleLine: false
 
 # alignment
+
+# Note, this is about \'s at the ends of lines. I don't think we have this
+# anywhere in the code base.
 AlignEscapedNewlinesLeft: false
+# I tend to prefer this, but I'm not set on it being this way.
 AlignTrailingComments: true
 
 # penalties
+
+# Ignore all of these, since they are for fine tuning line length.
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
@@ -92,7 +176,10 @@ PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 60
 
 # macros
+# These are the only ones we use, so no need to change them.
 ForEachMacros: [ foreach, Q_FOREACH, BOOST_FOREACH ]
 
 # comments
+
+# We don't do this, so no need to override it.
 # CommentPragmas:
