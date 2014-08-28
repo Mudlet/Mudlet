@@ -203,24 +203,3 @@ Host * HostPool::getFirstHost()
     Host * pHost = mHostPool.begin().value();
     return pHost;
 }
-
-Host * HostPool::getNextHost( QString LastHost )
-{
-    QMutexLocker locker(& mPoolLock);
-    if( mHostPool.find( LastHost ) != mHostPool.end() )
-    {
-        //ok host exists get next one
-        QMap<QString, Host*>::iterator it;
-        if( ++it != mHostPool.end() )
-        {
-            Host * pHost = mHostPool[it.key()];
-            return pHost;
-        }
-    }
-    else
-    {
-        return 0;
-    }
-    Host * pHost = mHostPool[mHostPool.begin().key()];
-    return pHost;
-}
