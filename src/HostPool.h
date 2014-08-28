@@ -40,7 +40,6 @@ class HostPool
 public:
     Host *                getHost( QString hostname );
     Host *                getFirstHost();
-    Host *                getNextHost( QString LastHost ); // get next host key by providing a LastHost
     QList<QString>        getHostNameList();
     QStringList           getHostList();
     bool                  addNewHost( QString hostname, QString port, QString login, QString pass );
