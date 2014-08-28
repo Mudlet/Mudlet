@@ -94,6 +94,10 @@ TMap::TMap( Host * pH )
 // N/U:     int mViewArea = 0;
 }
 
+TMap::~TMap() {
+    delete mpRoomDB;
+}
+
 void TMap::mapClear()
 {
     mpRoomDB->clearMapDB();

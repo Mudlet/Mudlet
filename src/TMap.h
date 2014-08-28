@@ -66,6 +66,7 @@ class TMap
 {
 public:
     TMap( Host *);
+    ~TMap();
     void mapClear();
     int createMapLabelID( int area );
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling );
