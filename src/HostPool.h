@@ -35,7 +35,7 @@ class mudlet;
 class HostPool
 {
     QMutex                mPoolLock;
-    QMap<QString, Host *> mHostPool;
+    QMap<QString, QSharedPointer<Host> > mHostPool;
 
 public:
     Host *                getHost( QString hostname );
