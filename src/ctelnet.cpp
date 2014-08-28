@@ -161,7 +161,7 @@ cTelnet::~cTelnet()
 
 void cTelnet::encodingChanged(QString encoding)
 {
-    //cout << "cTelnet::encodingChanged() called!" << endl;
+    qDebug() << "cTelnet::encodingChanged() called!";
     encoding = encoding;
 
     // unicode carries information in form of single byte characters
@@ -467,13 +467,21 @@ void cTelnet::processTelnetCommand( const string & command )
   QString _type;
   switch ((quint8)ch)
   {
+  case 239: _type = "TN_EOR"; break;
+  case 249: _type = "TN_GA"; break;
+  case 250: _type = "SB"; break;
   case 251: _type = "WILL"; break;
   case 252: _type = "WONT"; break;
   case 253: _type = "DO"; break;
   case 254: _type = "DONT"; break;
+  case 255: _type = "IAC"; break;
   default: _type = QString::number((quint8)ch);
   };
-  qDebug()<<"SERVER sends telnet signal:"<<_type<<" + "<<(quint8)command[2];
+  if (command.size() > 2) {
+    qDebug()<<"SERVER sends telnet signal ("<< command.size() << "):" <<_type << " + " << (quint8)command[2];
+  } else {
+    qDebug()<<"SERVER sends telnet signal ("<< command.size() << "):" <<_type;
+  }
 #endif
 
   char option;
@@ -482,9 +490,6 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_GA:
       case TN_EOR:
       {
-          #ifdef DEBUG_TELNET
-            cout << "cTelnet::processTelnetCommand() command = TN_GA/TN_EOR"<<endl;
-          #endif
           recvdGA = true;
           break;
       }
@@ -496,7 +501,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
           if( option == static_cast<char>(25) ) //EOR support (END OF RECORD=TN_GA
           {
-              cout << "EOR enabled" << endl;
+              qDebug() << "EOR enabled";
               sendTelnetOption( TN_DO, 25 );
               break;
           }
@@ -524,7 +529,7 @@ void cTelnet::processTelnetCommand( const string & command )
               //FIXME: this is a bug, some muds offer both atcp + gmcp
               if( mpHost->mEnableGMCP ) break;
 
-              cout << "ATCP enabled" << endl;
+              qDebug() << "ATCP enabled";
               enableATCP = true;
               sendTelnetOption( TN_DO, 200 );
 
@@ -545,7 +550,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
               enableGMCP = true;
               sendTelnetOption( TN_DO, GMCP );
-              cout << "GMCP enabled" << endl;
+              qDebug() << "GMCP enabled";
 
               string _h;
               _h = TN_IAC;
@@ -583,7 +588,7 @@ void cTelnet::processTelnetCommand( const string & command )
           //option = command[2];
           if( option == static_cast<char>(102) ) // Aardwulf channel 102 support
           {
-              cout << "Aardwulf channel 102 support enabled" << endl;
+              qDebug() << "Aardwulf channel 102 support enabled";
               enableChannel102 = true;
               sendTelnetOption( TN_DO, 102 );
               break;
@@ -621,7 +626,7 @@ void cTelnet::processTelnetCommand( const string & command )
                            //MCCP v2...
                            sendTelnetOption( TN_DONT, option );
                            hisOptionState[idxOption] = false;
-                           //cout << "Rejecting MCCP v1, because v2 has already been negotiated." << endl;
+                           qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated.";
                        }
                        else
                        {
@@ -632,13 +637,13 @@ void cTelnet::processTelnetCommand( const string & command )
                            {
                                mMCCP_version_1 = true;
                                //MCCP->setMCCP1(true);
-                               //cout << "MCCP v1 negotiated." << endl;
+                               qDebug() << "MCCP v1 negotiated.";
                            }
                            else
                            {
                                mMCCP_version_2 = true;
                                //MCCP->setMCCP2( true );
-                               //cout << "MCCP v2 negotiated!" << endl;
+                               qDebug() << "MCCP v2 negotiated!";
                            }
                        }
                    }
@@ -664,7 +669,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
           //server refuses to enable some option...
           #ifdef DEBUG
-              cout << "cTelnet::processTelnetCommand() TN_WONT command="<<(quint8)command[2]<<endl;
+              qDebug() << "cTelnet::processTelnetCommand() TN_WONT command="<<(quint8)command[2];
           #endif
           option = command[2];
           int idxOption = static_cast<int>(option);
@@ -677,7 +682,7 @@ void cTelnet::processTelnetCommand( const string & command )
           else
           {
               #ifdef DEBUG
-                  cout << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled"<<endl;
+                  qDebug() << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled";
               #endif
               //send DONT if needed (see RFC 854 for details)
               if( hisOptionState[idxOption] || ( heAnnouncedState[idxOption] ) )
@@ -689,13 +694,13 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
-                      //cout << "MCCP v1 disabled !" << endl;
+                      qDebug() << "MCCP v1 disabled !";
                   }
                   if( option == OPT_COMPRESS2 )
                   {
                       mMCCP_version_2 = false;
                       //MCCP->setMCCP2 (false);
-                      //      cout << "MCCP v1 disabled !" << endl;
+                      qDebug() << "MCCP v1 disabled !";
                   }
               }
               heAnnouncedState[idxOption] = true;
@@ -706,14 +711,14 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_DO:
       {
 #ifdef DEBUG
-      cout << "telnet: server wants us to enable option:"<< (quint8)command[2]<<endl;
+      qDebug() << "telnet: server wants us to enable option:"<< (quint8)command[2];
 #endif
           //server wants us to enable some option
           option = command[2];
           int idxOption = static_cast<int>(option);
           if( option == static_cast<char>(69) ) // MSDP support
           {
-            cout << "TELNET IAC DO MSDP" << endl;
+            qDebug() << "TELNET IAC DO MSDP";
             sendTelnetOption( TN_WILL, 69 );
 
 
@@ -721,14 +726,14 @@ void cTelnet::processTelnetCommand( const string & command )
           }
           if( option == static_cast<char>(200) ) // ATCP support
           {
-            cout << "TELNET IAC DO ATCP" << endl;
+            qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
             sendTelnetOption( TN_WILL, 200 );
             break;
           }
           if( option == static_cast<char>(201) ) // GMCP support
           {
-            cout << "TELNET IAC DO GMCP" << endl;
+            qDebug() << "TELNET IAC DO GMCP";
             enableATCP = true;
             sendTelnetOption( TN_WILL, 201 );
             break;
@@ -741,17 +746,17 @@ void cTelnet::processTelnetCommand( const string & command )
           }
           if( option == static_cast<char>(102) ) // channel 102 support
           {
-            cout << "TELNET IAC DO CHANNEL 102" << endl;
+            qDebug() << "TELNET IAC DO CHANNEL 102";
             enableChannel102 = true;
             sendTelnetOption( TN_WILL, 102 );
             break;
           }
 #ifdef DEBUG
-          cout << "server wants us to enable telnet option " << (quint8)option << "(TN_DO + "<< (quint8)option<<")"<<endl;
+          qDebug() << "server wants us to enable telnet option " << (quint8)option << "(TN_DO + "<< (quint8)option<<")";
 #endif
           if(option == OPT_TIMING_MARK)
           {
-              cout << "OK we are willing to enable TIMING_MARK" << endl;
+              qDebug() << "OK we are willing to enable TIMING_MARK";
               //send WILL TIMING_MARK
               sendTelnetOption( TN_WILL, option );
           }
@@ -763,17 +768,17 @@ void cTelnet::processTelnetCommand( const string & command )
                   ( option == OPT_NAWS ) ||
                   ( option == OPT_TERMINAL_TYPE ) )
               {
-                  if( option == OPT_SUPPRESS_GA ) cout << "OK we are willing to enable option SUPPRESS_GA"<<endl;
-                  if( option == OPT_STATUS ) cout << "OK we are willing to enable telnet option STATUS"<<endl;
-                  if( option == OPT_TERMINAL_TYPE ) cout << "OK we are willing to enable telnet option TERMINAL_TYPE"<<endl;
-                  if( option == OPT_NAWS ) cout << "OK we are willing to enable telnet option NAWS"<<endl;
+                  if( option == OPT_SUPPRESS_GA ) qDebug() << "OK we are willing to enable option SUPPRESS_GA";
+                  if( option == OPT_STATUS ) qDebug() << "OK we are willing to enable telnet option STATUS";
+                  if( option == OPT_TERMINAL_TYPE ) qDebug() << "OK we are willing to enable telnet option TERMINAL_TYPE";
+                  if( option == OPT_NAWS ) qDebug() << "OK we are willing to enable telnet option NAWS";
                   sendTelnetOption( TN_WILL, option );
                   myOptionState[idxOption] = true;
                   announcedState[idxOption] = true;
               }
               else
               {
-                  cout << "SORRY, we are NOT WILLING to enable this telnet option." << endl;
+                  qDebug() << "SORRY, we are NOT WILLING to enable this telnet option.";
                   sendTelnetOption (TN_WONT, option);
                   myOptionState[idxOption] = false;
                   announcedState[idxOption] = true;
@@ -790,7 +795,7 @@ void cTelnet::processTelnetCommand( const string & command )
       {
           //only respond if value changed or if this option has not been announced yet
 #ifdef DEBUG
-              cout << "cTelnet::processTelnetCommand() TN_DONT command="<<(quint8)command[2]<<endl;
+              qDebug() << "cTelnet::processTelnetCommand() TN_DONT command="<<(quint8)command[2];
 #endif
           option = command[2];
           int idxOption = static_cast<int>(option);
@@ -805,6 +810,7 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_SB:
       {
           option = command[2];
+          qDebug() << "content: " << command.substr(3, command.size() - 5).c_str();
 
           // MSDP
           if( option == static_cast<char>(69) )
@@ -912,10 +918,10 @@ void cTelnet::processTelnetCommand( const string & command )
                   //see OPT_TERMINAL_TYPE for explanation why I'm doing this
                   if( true )
                   {
-                      cout << "WARNING: FIXME #501" << endl;
+                      qDebug() << "WARNING: FIXME #501";
                       if(command[3] == TNSB_SEND)
                       {
-                          cout << "WARNING: FIXME #504" << endl;
+                          qDebug() << "WARNING: FIXME #504";
                           //request to send all enabled commands; if server sends his
                           //own list of commands, we just ignore it (well, he shouldn't
                           //send anything, as we do not request anything, but there are
@@ -948,7 +954,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
               case OPT_TERMINAL_TYPE:
               {
-                  cout << "server sends telnet option terminal type"<<endl;
+                  qDebug() << "server sends telnet option terminal type";
                   if( myOptionState[static_cast<int>(OPT_TERMINAL_TYPE)] )
                   {
                       if(command[3] == TNSB_SEND )
@@ -1494,7 +1500,7 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
     if( zval == Z_STREAM_END )
     {
         inflateEnd( & mZstream );
-        std::cout << "recv Z_STREAM_END, ending compression" << std::endl;
+        qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
         this->mMCCP_version_1 = false;
         this->mMCCP_version_2 = false;
@@ -1576,11 +1582,11 @@ void cTelnet::readPipe()
     for( int i = 0; i < datalen; i++ )
     {
         char ch = loadBuffer[i];
-        cout << "GOT REPLAY:"<<loadBuffer<<endl;
+        qDebug() << "GOT REPLAY:"<<loadBuffer;
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
-                cout <<" SERVER sends telnet command "<<(quint8)ch<<endl;
+                qDebug() <<" SERVER sends telnet command "<<(quint8)ch;
             #endif
             if (! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
@@ -1798,18 +1804,18 @@ void cTelnet::handle_socket_signal_readyRead()
                             bool _compress = false;
                             if( ( i > 1 ) && ( i+2 < datalen ) )
                             {
-                                cout << "checking mccp start seq..." << endl;
+                                qDebug() << "checking mccp start seq...";
                                 if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) && ( buffer[i+1] == TN_WILL ) && ( buffer[i+2] == TN_SE ) )
                                 {
-                                    //cout << "MCCP version 2 starting sequence" << endl;
+                                    qDebug() << "MCCP version 1 starting sequence";
                                     _compress = true;
                                 }
                                 if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) && ( buffer[i+1] == TN_IAC ) && ( buffer[i+2] == TN_SE ) )
                                 {
-                                    //cout << "MCCP version 1 starting sequence" << endl;
+                                    qDebug() << "MCCP version 2 starting sequence";
                                     _compress = true;
                                 }
-                                cout << (int)buffer[i-2]<<","<<(int)buffer[i-1]<<","<<(int)buffer[i]<<","<<(int)buffer[i+1]<<","<<(int)buffer[i+2]<<endl;
+                                qDebug() << (int)buffer[i-2]<<","<<(int)buffer[i-1]<<","<<(int)buffer[i]<<","<<(int)buffer[i+1]<<","<<(int)buffer[i+2];
                             }
                             if( _compress )
                             {
