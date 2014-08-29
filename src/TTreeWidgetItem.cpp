@@ -80,10 +80,6 @@ void TTreeWidgetItem::addChildren( const QList<QTreeWidgetItem *> & children )
     QTreeWidgetItem::addChildren( children );
 }
 
-void TTreeWidgetItem::addChildren( const QList<TTreeWidgetItem *> & children )
-{
-    // QTreeWidgetItem::addChildren( children );
-}
 
 TTreeWidgetItem * TTreeWidgetItem::takeChild( int index )
 {
