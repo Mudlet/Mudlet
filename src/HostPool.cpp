@@ -46,9 +46,8 @@ bool HostPool::deleteHost(QString hostname)
     }
     else
     {
-        Host * pH = mHostPool[hostname];
-        pH->mIsGoingDown = true;
-        pH->mTelnet.disconnect();
+        mHostPool[hostname]->mIsGoingDown = true;
+        mHostPool[hostname]->mTelnet.disconnect();
         std::cout << "[OK] Host deleted removing pool entry ..."<<std::endl;
         int ret = mHostPool.remove( hostname );
         std::cout << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret<<std::endl;
@@ -69,7 +68,7 @@ bool HostPool::renameHost(QString hostname)
     else
     {
         //Host * pNewHost = getHost( hostname ); // see why it doesn't work
-        Host * pNewHost = mHostPool[hostname];
+        QSharedPointer<Host> pNewHost = mHostPool[hostname];
         mHostPool.remove( hostname );
         mHostPool.insert(pNewHost->getName(), pNewHost);
     }
@@ -97,9 +96,9 @@ bool HostPool::addNewHost( QString hostname, QString port, QString login, QStrin
     }
 
     int id = createNewHostID();
-    Host * pNewHost = new Host( portnumber, hostname, login, pass, id );
+    QSharedPointer<Host> pNewHost( new Host( portnumber, hostname, login, pass, id ) );
 
-    mHostPool[hostname] = pNewHost;
+    mHostPool.insert( hostname, pNewHost );
     return true;
 }
 
@@ -142,7 +141,7 @@ void HostPool::orderShutDown()
 {
     QMutexLocker locker(& mPoolLock);
 
-    QList<Host*> hostList = mHostPool.values();
+    QList<QSharedPointer<Host> > hostList = mHostPool.values();
     for( int i=0; i<hostList.size(); i++ )
     {
         hostList[i]->orderShutDown();
@@ -159,7 +158,7 @@ void HostPool::postIrcMessage( QString a, QString b, QString c )
 {
     QMutexLocker locker(& mPoolLock);
 
-    QList<Host*> hostList = mHostPool.values();
+    QList<QSharedPointer<Host> > hostList = mHostPool.values();
     for( int i=0; i<hostList.size(); i++ )
     {
         hostList[i]->postIrcMessage( a, b, c );
@@ -172,7 +171,7 @@ Host * HostPool::getHost( QString hostname )
     if( mHostPool.find( hostname ) != mHostPool.end() )
     {
         // host exists
-        return mHostPool[hostname];
+        return mHostPool[hostname].data();
     }
     else
     {
@@ -183,14 +182,13 @@ Host * HostPool::getHost( QString hostname )
 Host * HostPool::getHostFromHostID( int id )
 {
     QMutexLocker locker( & mPoolLock );
-    QMapIterator<QString, Host *> it(mHostPool);
+    QMapIterator<QString, QSharedPointer<Host> > it(mHostPool);
     while( it.hasNext() )
     {
         it.next();
-        Host * pHost = it.value();
-        if( pHost->getHostID() == id )
+        if( it.value()->getHostID() == id )
         {
-            return pHost;
+            return it.value().data();
         }
     }
     qDebug()<<"ERROR: didnt find requested id in hostpool";
@@ -200,6 +198,5 @@ Host * HostPool::getHostFromHostID( int id )
 Host * HostPool::getFirstHost()
 {
     QMutexLocker locker(& mPoolLock);
-    Host * pHost = mHostPool.begin().value();
-    return pHost;
+    return mHostPool.begin().value().data();
 }
