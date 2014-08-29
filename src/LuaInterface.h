@@ -32,7 +32,7 @@
 extern "C"
 {
 #endif
-    #include <lua.h>
+#include <lua.h>
 #ifndef LUA_CPP
 }
 #endif
@@ -69,6 +69,7 @@ public:
     bool validMove( QTreeWidgetItem * );
     void getAllChildren( TVar * var, QList<TVar *> * list);
     static int onPanic( lua_State * );
+
 private:
     Host * mpHost;
     int mHostID;

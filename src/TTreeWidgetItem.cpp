@@ -60,18 +60,15 @@ TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, int type )
 {
 }
 
-
-
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, TTreeWidgetItem * preceding, int type )
 : QTreeWidgetItem( (QTreeWidgetItem*)parent, (QTreeWidgetItem*)preceding, type )
 {
 }
-    
+
 TTreeWidgetItem::TTreeWidgetItem( const TTreeWidgetItem & other )
 : QTreeWidgetItem( other )
 {
 }
-
 
 void TTreeWidgetItem::removeChild( QTreeWidgetItem * child )
 {
@@ -85,12 +82,10 @@ void TTreeWidgetItem::addChildren( const QList<QTreeWidgetItem *> & children )
 
 void TTreeWidgetItem::addChildren( const QList<TTreeWidgetItem *> & children )
 {
-    //QTreeWidgetItem::addChildren( children );
+    // QTreeWidgetItem::addChildren( children );
 }
 
-
-
-TTreeWidgetItem * TTreeWidgetItem::takeChild ( int index )
+TTreeWidgetItem * TTreeWidgetItem::takeChild( int index )
 {
     return static_cast<TTreeWidgetItem *>(QTreeWidgetItem::takeChild( index ));
 }
