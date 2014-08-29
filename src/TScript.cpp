@@ -101,7 +101,7 @@ void TScript::compileAll()
     }
 }
 
-void TScript::callEventHandler( TEvent * pE )
+void TScript::callEventHandler( const TEvent * pE )
 {
     // Only call this event handler if this script and all its ancestors are active:
     if(isActive() && ancestorsActive())

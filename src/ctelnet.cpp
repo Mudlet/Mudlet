@@ -301,12 +301,12 @@ bool cTelnet::sendData( QString & data )
     {
         data.replace(QChar('\n'),"");
     }
-    TEvent * pE = new TEvent;
-    pE->mArgumentList.append( "sysDataSendRequest" );
-    pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    pE->mArgumentList.append( data );
-    pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( pE );
+    TEvent pE;
+    pE.mArgumentList.append( "sysDataSendRequest" );
+    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    pE.mArgumentList.append( data );
+    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( &pE );
     if( mpHost->mAllowToSendCommand )
     {
         string outdata = (outgoingDataCodec->fromUnicode(data)).data();
