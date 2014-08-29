@@ -128,7 +128,7 @@ local packages = {
 -- TODO: extend to support common Lua code being placed in system shared directory
 -- tree as ought to happen for *nix install builds.
 local prefixes = {"../src/mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
-    "mudlet.app/Contents/Resources/mudlet-lua/lua/"}
+    "mudlet.app/Contents/Resources/mudlet-lua/lua/", "mudlet-lua/lua"}
 
 local prefix
 for i = 1, #prefixes do
@@ -136,6 +136,12 @@ for i = 1, #prefixes do
         prefix = prefixes[i]
         break
     end
+end
+
+-- For some reason on windows, mudlet-lua/lua/ does not register as a directory with the above strategy.
+-- Thus, if chosen we need to append a slash.
+if prefix == "mudlet-lua/lua" then
+	prefix = prefix .. "/"
 end
 
 if not prefix then
