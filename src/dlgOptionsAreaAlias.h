@@ -32,7 +32,7 @@ class dlgOptionsAreaAlias : public QWidget, public Ui::options_area_aliases
     Q_OBJECT
 
 public:
-    dlgOptionsAreaAlias(QWidget *);
+    dlgOptionsAreaAlias(QWidget*);
 };
 
 #endif // MUDLET_DLGOPTIONSAREAALIASES_H

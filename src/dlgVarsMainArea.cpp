@@ -22,7 +22,7 @@
 #include "dlgVarsMainArea.h"
 
 
-dlgVarsMainArea::dlgVarsMainArea(QWidget * pF) : QWidget(pF)
+dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);

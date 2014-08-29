@@ -32,7 +32,7 @@ class dlgAboutDialog : public QDialog, public Ui::about_dialog
     Q_OBJECT
 
 public:
-    dlgAboutDialog(QWidget * parent = 0);
+    dlgAboutDialog(QWidget* parent = 0);
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H

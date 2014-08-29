@@ -32,7 +32,7 @@ class dlgOptionsAreaScripts : public QWidget, public Ui::options_area_scripts
     Q_OBJECT
 
 public:
-    dlgOptionsAreaScripts(QWidget *);
+    dlgOptionsAreaScripts(QWidget*);
 };
 
 #endif // MUDLET_DLGOPTIONSAREASCRIPTS_H

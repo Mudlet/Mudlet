@@ -32,7 +32,7 @@ class dlgOptionsAreaTimers : public QWidget, public Ui::options_area_timers
     Q_OBJECT
 
 public:
-    dlgOptionsAreaTimers(QWidget *);
+    dlgOptionsAreaTimers(QWidget*);
 };
 
 #endif // MUDLET_DLGOPTIONSAREATIMERS_H
