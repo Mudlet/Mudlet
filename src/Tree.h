@@ -41,10 +41,6 @@ public:
     std::list<T *> *   getChildrenList();
     bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
     int                getChildCount()             { return mpMyChildrenList->size(); }
-    void               DumpFamily();
-    void               Dump();
-    void               setFullyExpanded()          { FullyExpanded = true; }
-    bool               isFullyExpanded()           { return FullyExpanded; }
     qint64             getID()                     { return mID; }
     void               setID( qint64 id )          { mID=id; }
     void               addChild( T * newChild, int parentPostion = -1, int parentPosition = -1 );
@@ -70,7 +66,6 @@ public:
     void               setPackageName( QString n ){ mPackageName = n; }
     void               setModuleName( QString n ){ mModuleName = n;}
     QString            getModuleName() {return mModuleName;}
-    bool               FullyExpanded;
     QString            mPackageName;
     QString            mModuleName;
 
@@ -297,36 +292,6 @@ template <class T>
 void Tree<T>::setError( QString error )
 {
     mErrorMessage = error;
-}
-
-
-template <class T>
-void Tree<T>::DumpFamily()
-{
-    Dump();
-    typedef typename std::list<T *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
-    {
-        T * pChild = *it;
-        if( pChild )
-            pChild->DumpFamily();
-    }
-}
-
-template <class T>
-void Tree<T>::Dump()
-{
-    std::cout << "My ID=" << mID << " my parent="<< mpParent << std::endl;
-    std::cout << " my children are:";
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
-    {
-        std::cout << " dumping:"<<std::endl;
-        T* pChild = *it;
-        if( pChild )
-            std::cout << pChild->mID << ", ";
-    }
-    std::cout << "ende dump()"<< std::endl;
 }
 
 #endif // MUDLET_TREE_H

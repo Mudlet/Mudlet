@@ -416,19 +416,6 @@ bool TriggerUnit::killTrigger( QString & name )
     return false;
 }
 
-
-void TriggerUnit::dump()
-{
-    typedef list<TTrigger *>::const_iterator I;
-    cout << "TriggerUnit::dump() entries="<<mTriggerRootNodeList.size()<<endl;
-
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
-    {
-        TTrigger * pChild = *it;
-        pChild->DumpFamily();
-    }
-}
-
 void TriggerUnit::_assembleReport( TTrigger * pChild )
 {
     typedef list<TTrigger *>::const_iterator I;

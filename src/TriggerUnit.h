@@ -53,7 +53,6 @@ public:
     void                  unregisterTrigger( TTrigger * pT );
     void                  reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  processDataStream( QString &, int );
-    void                  dump();
     void                  compileAll();
     void                  setTriggerStayOpen( QString, int );
     void                  stopAllTriggers();
