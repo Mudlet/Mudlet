@@ -810,7 +810,9 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_SB:
       {
           option = command[2];
+#ifdef DEBUG
           qDebug() << "content: " << command.substr(3, command.size() - 5).c_str();
+#endif
 
           // MSDP
           if( option == static_cast<char>(69) )
