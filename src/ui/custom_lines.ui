@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>606</width>
-    <height>427</height>
+    <width>632</width>
+    <height>436</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -92,7 +92,7 @@
            <column>
             <property name="text">
              <string>Has
-Custom Line?</string>
+custom line?</string>
             </property>
             <property name="toolTip">
              <string>Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.</string>
@@ -138,14 +138,14 @@ Custom Line?</string>
         </property>
         <property name="font">
          <font>
-          <pointsize>14</pointsize>
+          <pointsize>11</pointsize>
          </font>
         </property>
         <property name="autoFillBackground">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Choose line format, color and arrow option THEN select exit...</string>
+         <string>Choose line format, color and arrow option and then select the exit to start drawing</string>
         </property>
         <property name="tooltip" stdset="0">
          <string>Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.</string>
