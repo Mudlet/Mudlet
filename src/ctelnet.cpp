@@ -1484,18 +1484,19 @@ void cTelnet::initStreamDecompressor()
     inflateInit( & mZstream );
 }
 
-int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
+int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer )
 {
-    char cleanBuffer[100001]; //clean data after decompression
-
     mZstream.avail_in = length;
-    mZstream.next_in = (Bytef *) dirtyBuffer;
+    mZstream.next_in = (Bytef *) in_buffer;
 
     mZstream.avail_out = 100000;
-    mZstream.next_out = (Bytef *) cleanBuffer;
+    mZstream.next_out = (Bytef *) out_buffer;
 
     int zval = inflate( & mZstream, Z_SYNC_FLUSH );
     int outSize = 100000 - mZstream.avail_out;
+
+    length = mZstream.avail_in;
+    in_buffer = (char*)mZstream.next_in;
 
     if( zval == Z_STREAM_END )
     {
@@ -1518,7 +1519,6 @@ int cTelnet::decompressBuffer( char * dirtyBuffer, int length )
             return -1;
         }
     }
-    memcpy( dirtyBuffer, cleanBuffer, outSize );
     return outSize;
 }
 
@@ -1700,18 +1700,24 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char buffer[100010];
+    char in_bufferx[100010];
+    char* in_buffer = in_bufferx;
+    char out_buffer[100010];
 
-    int amount = socket.read( buffer, 100000 );
-    buffer[amount+1] = '\0';
+    int amount = socket.read( in_buffer, 100000 );
+    in_buffer[amount+1] = '\0';
     if( amount == -1 ) return;
     if( amount == 0 ) return;
 
-    int datalen = amount;
-    char * pBuffer = buffer;
+    string cleandata = "";
+    int datalen;
+    do {
+    datalen = amount;
+    char * buffer = in_buffer;
     if( mNeedDecompression )
     {
-        datalen = decompressBuffer( pBuffer, amount );
+        datalen = decompressBuffer( in_buffer, amount, out_buffer );
+        buffer = out_buffer;
     }
     buffer[datalen] = '\0';
     #ifdef DEBUG
@@ -1724,7 +1730,6 @@ void cTelnet::handle_socket_signal_readyRead()
         mpHost->mpConsole->mReplayStream.writeRawData( &buffer[0], datalen );
     }
 
-    string cleandata = "";
     recvdGA = false;
     for( int i = 0; i < datalen; i++ )
     {
@@ -1825,11 +1830,12 @@ void cTelnet::handle_socket_signal_readyRead()
                                 //mpHost->mpConsole->print("\n<starting MCCP data compression>\n");
                                 cleandata = "";
                                 initStreamDecompressor();
-                                pBuffer += i + 3;//bugfix: BenH
+                                buffer += i + 3;//bugfix: BenH
                                 int restLength = datalen - i - 3;
                                 if( restLength > 0 )
                                 {
-                                    datalen = decompressBuffer( pBuffer, restLength );
+                                    datalen = decompressBuffer( buffer, restLength, out_buffer );
+                                    buffer = out_buffer;
                                 }
                                 //bugfix: BenH
                                 iac = false;
@@ -1895,6 +1901,7 @@ MAIN_LOOP_END: ;
             }
         }
     }//for
+    } while (datalen == 100000);
 
     if( cleandata.size() > 0 )
     {
