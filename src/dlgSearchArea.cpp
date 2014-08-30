@@ -22,7 +22,7 @@
 #include "dlgSearchArea.h"
 
 
-dlgSearchArea::dlgSearchArea(QWidget * pF):QWidget(pF)
+dlgSearchArea::dlgSearchArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);

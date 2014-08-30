@@ -34,10 +34,10 @@ class dlgComposer : public QMainWindow, public Ui::composer
     Q_OBJECT
 
 public:
-    dlgComposer( Host * );
+    dlgComposer(Host*);
 
-    void init( QString title, QString txt );
-    Host * mpHost;
+    void init(QString title, QString txt);
+    Host* mpHost;
 
 public slots:
     void save();

@@ -34,10 +34,10 @@ class dlgNotepad : public QMainWindow, public Ui::NotesEditor
     Q_OBJECT
 
 public:
-    dlgNotepad( Host * );
+    dlgNotepad(Host*);
     void save();
     void restore();
-    Host * mpHost;
+    Host* mpHost;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

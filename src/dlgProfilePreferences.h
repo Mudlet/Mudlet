@@ -37,7 +37,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
     Q_OBJECT
 
 public:
-    dlgProfilePreferences( QWidget *, Host * );
+    dlgProfilePreferences(QWidget*, Host*);
 
     int mFontSize;
 
@@ -99,7 +99,7 @@ public slots:
 
 private:
     void setColors();
-    Host * mpHost;
+    Host* mpHost;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

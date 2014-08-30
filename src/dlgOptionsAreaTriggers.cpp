@@ -22,7 +22,7 @@
 #include "dlgOptionsAreaTriggers.h"
 
 
-dlgOptionsAreaTriggers::dlgOptionsAreaTriggers(QWidget * pF):QWidget(pF)
+dlgOptionsAreaTriggers::dlgOptionsAreaTriggers(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);

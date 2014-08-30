@@ -22,7 +22,7 @@
 #include "dlgTriggerPatternEdit.h"
 
 
-dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget * pF) : QWidget(pF)
+dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
