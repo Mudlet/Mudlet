@@ -375,21 +375,6 @@ bool AliasUnit::killAlias( QString & name )
     return false;
 }
 
-
-void AliasUnit::dump()
-{
-    //bool ret = true;
-
-    typedef list<TAlias *>::const_iterator I;
-    cout << "AliasUnit::dump() entries="<<mAliasRootNodeList.size()<<endl;
-
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
-    {
-        TAlias * pChild = *it;
-        pChild->DumpFamily();
-    }
-}
-
 void AliasUnit::_assembleReport( TAlias * pChild )
 {
     typedef list<TAlias *>::const_iterator I;
