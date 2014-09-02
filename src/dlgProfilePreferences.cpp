@@ -66,11 +66,20 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
     enableSpellCheck->setChecked( pH->mEnableSpellCheck );
 
+    QString path;
 #ifdef Q_OS_LINUX
-    QDir dir( "/usr/share/hunspell/" );
+    if ( QFile::exists("/usr/share/hunspell/"+ pHost->mSpellDic + ".aff") )
+        path = "/usr/share/hunspell/";
+    else
+        path = "./";
+#elif defined(Q_OS_MAC)
+    path = QCoreApplication::applicationDirPath() + "/../Resources/";
 #else
-    QDir dir( "./" );
+    path = "./";
 #endif
+
+    QDir dir(path);
+
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     QRegExp rex("\\.dic$");
     entries = entries.filter( rex );
