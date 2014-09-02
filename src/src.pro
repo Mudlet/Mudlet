@@ -411,7 +411,7 @@ LUA_GEYSER.depends = mudlet
 macx: {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
-    APP_MUDLET_LUA_FILES.files = mudlet-lua
+    APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
