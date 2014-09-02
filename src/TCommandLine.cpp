@@ -49,6 +49,8 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
         path = "/usr/share/hunspell/";
     else
         path = "./";
+#elif defined(Q_OS_MAC)
+    path = QCoreApplication::applicationDirPath() + "/../Resources/";
 #else
     path = "./";
 #endif
