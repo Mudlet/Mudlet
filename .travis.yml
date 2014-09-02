@@ -13,7 +13,7 @@ before_script:
 script:
   - qmake && make -j2
   - cd ../build
-  - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then cmake .. && make -j2 && make test; fi
+  - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then cmake .. && make -j2 && make check; fi
 notifications:
   webhooks:
     urls:

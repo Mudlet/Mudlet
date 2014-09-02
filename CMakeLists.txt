@@ -24,6 +24,15 @@ ELSE()
   CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
 ENDIF()
 
+IF(CMAKE_CONFIGURATION_TYPES)
+  ADD_CUSTOM_TARGET(check COMMAND ${CMAKE_CTEST_COMMAND}
+                    --force-new-ctest-process --output-on-failure
+                    --build-config "$<CONFIGURATION>")
+ELSE()
+  ADD_CUSTOM_TARGET(check COMMAND ${CMAKE_CTEST_COMMAND}
+                    --force-new-ctest-process --output-on-failure)
+ENDIF()
+
 ENABLE_TESTING()
 
 IF(POLICY CMP0020)
