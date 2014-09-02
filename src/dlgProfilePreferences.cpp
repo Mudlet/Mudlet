@@ -68,7 +68,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
     QString path;
 #ifdef Q_OS_LINUX
-    if ( QFile::exists("/usr/share/hunspell/"+ pHost->mSpellDic + ".aff") )
+    if ( QFile::exists("/usr/share/hunspell/"+ mpHost->mSpellDic + ".aff") )
         path = "/usr/share/hunspell/";
     else
         path = "./";
