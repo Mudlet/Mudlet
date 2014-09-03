@@ -605,24 +605,24 @@ void dlgProfilePreferences::resetColors()
     Host * pHost = mpHost;
     if( ! pHost ) return;
 
-    pHost->mFgColor       = QColor(255,255,255);
-    pHost->mBgColor       = QColor(  0,  0,  0);
-    pHost->mBlack         = QColor(  0,  0,  0);
-    pHost->mLightBlack    = QColor(128,128,128);
-    pHost->mRed           = QColor(128,  0,  0);
-    pHost->mLightRed      = QColor(255,  0,  0);
+    pHost->mFgColor       = Qt::white;
+    pHost->mBgColor       = Qt::black;
+    pHost->mBlack         = Qt::black;
+    pHost->mLightBlack    = Qt::darkGray;
+    pHost->mRed           = Qt::darkRed;
+    pHost->mLightRed      = Qt::red;
     pHost->mGreen         = QColor(  0,179,  0);
-    pHost->mLightGreen    = QColor(  0,255  ,0);
-    pHost->mBlue          = QColor(  0,  0,128);
-    pHost->mLightBlue     = QColor(  0,  0,255);
-    pHost->mYellow        = QColor(128,128,  0);
-    pHost->mLightYellow   = QColor(255,255,  0);
-    pHost->mCyan          = QColor(  0,128,128);
-    pHost->mLightCyan     = QColor(  0,255,255);
-    pHost->mMagenta       = QColor(128,  0,128);
-    pHost->mLightMagenta  = QColor(255,  0,255);
-    pHost->mWhite         = QColor(192,192,192);
-    pHost->mLightWhite    = QColor(255,255,255);
+    pHost->mLightGreen    = Qt::green;
+    pHost->mBlue          = Qt::darkBlue;
+    pHost->mLightBlue     = Qt::blue;
+    pHost->mYellow        = Qt::darkYellow;
+    pHost->mLightYellow   = Qt::yellow;
+    pHost->mCyan          = Qt::darkCyan;
+    pHost->mLightCyan     = Qt::cyan;
+    pHost->mMagenta       = Qt::darkMagenta;
+    pHost->mLightMagenta  = Qt::magenta;
+    pHost->mWhite         = Qt::lightGray;
+    pHost->mLightWhite    = Qt::white;
 
     setColors();
     if( mudlet::self()->mConsoleMap.contains( pHost ) )
