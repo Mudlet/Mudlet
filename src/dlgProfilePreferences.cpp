@@ -127,7 +127,9 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
     connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
     connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
+
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
+
     connect(fontComboBox, SIGNAL( currentFontChanged( const QFont & ) ), this, SLOT(setDisplayFont()));
     QStringList sizeList;
     for( int i=1; i<40; i++ ) sizeList << QString::number(i);
@@ -385,7 +387,7 @@ void dlgProfilePreferences::resetColors()
     Host * pHost = mpHost;
     if( ! pHost ) return;
 
-    pHost->mFgColor            = Qt::white;
+    pHost->mFgColor            = Qt::lightGray;
     pHost->mBgColor            = Qt::black;
     pHost->mBlack              = Qt::black;
     pHost->mLightBlack         = Qt::darkGray;
