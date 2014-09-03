@@ -45,7 +45,12 @@ signals:
 
 
 public slots:
+    // Fonts.
     void setFontSize();
+    void setDisplayFont();
+    void setCommandLineFont();
+
+    // Terminal colors.
     void setColorBlack();
     void setColorLightBlack();
     void setColorRed();
@@ -62,15 +67,15 @@ public slots:
     void setColorLightMagenta();
     void setColorWhite();
     void setColorLightWhite();
-    void setDisplayFont();
-    void setCommandLineFont();
     void setFgColor();
     void setBgColor();
     void setCommandLineBgColor();
     void setCommandLineFgColor();
-
     void setCommandFgColor();
     void setCommandBgColor();
+    void resetColors();
+
+    // Mapper colors.
     void setColorBlack2();
     void setColorLightBlack2();
     void setColorRed2();
@@ -89,16 +94,22 @@ public slots:
     void setColorLightWhite2();
     void setFgColor2();
     void setBgColor2();
-    void resetColors();
+    void resetColors2();
+
+    // Map.
     void downloadMap();
     void loadMap();
     void saveMap();
     void copyMap();
-    void hideActionLabel();
+
+    // Save.
     void slot_save_and_exit();
+
+    void hideActionLabel();
 
 private:
     void setColors();
+    void setColor(QPushButton* b, QColor& c);
     Host* mpHost;
 };
 
