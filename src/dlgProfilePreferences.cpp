@@ -158,6 +158,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
     connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
 
+    connect(reset_colors_button_2, SIGNAL(clicked()), this, SLOT(resetColors2()));
 
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_gmcp->hide();
@@ -387,6 +388,10 @@ void dlgProfilePreferences::resetColors()
     Host * pHost = mpHost;
     if( ! pHost ) return;
 
+    pHost->mCommandLineFgColor = Qt::darkGray;
+    pHost->mCommandLineBgColor = Qt::black;
+    pHost->mCommandFgColor     = QColor(113,113,  0);
+    pHost->mCommandBgColor     = Qt::black;
     pHost->mFgColor            = Qt::lightGray;
     pHost->mBgColor            = Qt::black;
     pHost->mBlack              = Qt::black;
@@ -405,6 +410,37 @@ void dlgProfilePreferences::resetColors()
     pHost->mLightMagenta       = Qt::magenta;
     pHost->mWhite              = Qt::lightGray;
     pHost->mLightWhite         = Qt::white;
+
+    setColors();
+    if( mudlet::self()->mConsoleMap.contains( pHost ) )
+    {
+        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    }
+}
+
+void dlgProfilePreferences::resetColors2()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) return;
+
+    pHost->mFgColor_2      = Qt::lightGray;
+    pHost->mBgColor_2      = Qt::black;
+    pHost->mBlack_2        = QColor(  36,  36,  36);
+    pHost->mLightBlack_2   = Qt::darkGray;
+    pHost->mRed_2          = Qt::darkRed;
+    pHost->mLightRed_2     = Qt::red;
+    pHost->mGreen_2        = QColor(  0,179,  0);
+    pHost->mLightGreen_2   = Qt::green;
+    pHost->mBlue_2         = Qt::darkBlue;
+    pHost->mLightBlue_2    = Qt::blue;
+    pHost->mYellow_2       = Qt::darkYellow;
+    pHost->mLightYellow_2  = Qt::yellow;
+    pHost->mCyan_2         = Qt::darkCyan;
+    pHost->mLightCyan_2    = Qt::cyan;
+    pHost->mMagenta_2      = Qt::darkMagenta;
+    pHost->mLightMagenta_2 = Qt::magenta;
+    pHost->mWhite_2        = Qt::lightGray;
+    pHost->mLightWhite_2   = Qt::white;
 
     setColors();
     if( mudlet::self()->mConsoleMap.contains( pHost ) )
