@@ -103,55 +103,30 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
 
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
-    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
 
     connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
-
     connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
 
-
+    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
     connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
-
     connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
-
     connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
-
     connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
-
     connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
-
     connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
-
     connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
-
     connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
-
     connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
-
     connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
-
     connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
-
     connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
-
     connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
-
     connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
-
     connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
     connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
     connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
-
-
-
     connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
-
-
     connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
-
-
-
-
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
     connect(fontComboBox, SIGNAL( currentFontChanged( const QFont & ) ), this, SLOT(setDisplayFont()));
     QStringList sizeList;
@@ -162,38 +137,21 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
     connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
 
-
-
     connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
-
     connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
-
     connect(pushButton_green_2, SIGNAL(clicked()), this, SLOT(setColorGreen2()));
-
     connect(pushButton_Lgreen_2, SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
-
     connect(pushButton_red_2, SIGNAL(clicked()), this, SLOT(setColorRed2()));
-
     connect(pushButton_Lred_2, SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
-
     connect(pushButton_blue_2, SIGNAL(clicked()), this, SLOT(setColorBlue2()));
-
     connect(pushButton_Lblue_2, SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
-
     connect(pushButton_yellow_2, SIGNAL(clicked()), this, SLOT(setColorYellow2()));
-
     connect(pushButton_Lyellow_2, SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
-
     connect(pushButton_cyan_2, SIGNAL(clicked()), this, SLOT(setColorCyan2()));
-
     connect(pushButton_Lcyan_2, SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
-
     connect(pushButton_magenta_2, SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
-
     connect(pushButton_Lmagenta_2, SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
-
     connect(pushButton_white_2, SIGNAL(clicked()), this, SLOT(setColorWhite2()));
-
     connect(pushButton_Lwhite_2, SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
     connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
     connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
@@ -427,24 +385,24 @@ void dlgProfilePreferences::resetColors()
     Host * pHost = mpHost;
     if( ! pHost ) return;
 
-    pHost->mFgColor       = Qt::white;
-    pHost->mBgColor       = Qt::black;
-    pHost->mBlack         = Qt::black;
-    pHost->mLightBlack    = Qt::darkGray;
-    pHost->mRed           = Qt::darkRed;
-    pHost->mLightRed      = Qt::red;
-    pHost->mGreen         = QColor(  0,179,  0);
-    pHost->mLightGreen    = Qt::green;
-    pHost->mBlue          = Qt::darkBlue;
-    pHost->mLightBlue     = Qt::blue;
-    pHost->mYellow        = Qt::darkYellow;
-    pHost->mLightYellow   = Qt::yellow;
-    pHost->mCyan          = Qt::darkCyan;
-    pHost->mLightCyan     = Qt::cyan;
-    pHost->mMagenta       = Qt::darkMagenta;
-    pHost->mLightMagenta  = Qt::magenta;
-    pHost->mWhite         = Qt::lightGray;
-    pHost->mLightWhite    = Qt::white;
+    pHost->mFgColor            = Qt::white;
+    pHost->mBgColor            = Qt::black;
+    pHost->mBlack              = Qt::black;
+    pHost->mLightBlack         = Qt::darkGray;
+    pHost->mRed                = Qt::darkRed;
+    pHost->mLightRed           = Qt::red;
+    pHost->mGreen              = QColor(  0,179,  0);
+    pHost->mLightGreen         = Qt::green;
+    pHost->mBlue               = Qt::darkBlue;
+    pHost->mLightBlue          = Qt::blue;
+    pHost->mYellow             = Qt::darkYellow;
+    pHost->mLightYellow        = Qt::yellow;
+    pHost->mCyan               = Qt::darkCyan;
+    pHost->mLightCyan          = Qt::cyan;
+    pHost->mMagenta            = Qt::darkMagenta;
+    pHost->mLightMagenta       = Qt::magenta;
+    pHost->mWhite              = Qt::lightGray;
+    pHost->mLightWhite         = Qt::white;
 
     setColors();
     if( mudlet::self()->mConsoleMap.contains( pHost ) )
