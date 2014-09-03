@@ -390,7 +390,7 @@ void dlgProfilePreferences::resetColors()
 
     pHost->mCommandLineFgColor = Qt::darkGray;
     pHost->mCommandLineBgColor = Qt::black;
-    pHost->mCommandFgColor     = QColor(113,113,  0);
+    pHost->mCommandFgColor     = QColor(113, 113, 0);
     pHost->mCommandBgColor     = Qt::black;
     pHost->mFgColor            = Qt::lightGray;
     pHost->mBgColor            = Qt::black;
@@ -398,7 +398,7 @@ void dlgProfilePreferences::resetColors()
     pHost->mLightBlack         = Qt::darkGray;
     pHost->mRed                = Qt::darkRed;
     pHost->mLightRed           = Qt::red;
-    pHost->mGreen              = QColor(  0,179,  0);
+    pHost->mGreen              = Qt::darkGreen;
     pHost->mLightGreen         = Qt::green;
     pHost->mBlue               = Qt::darkBlue;
     pHost->mLightBlue          = Qt::blue;
@@ -425,11 +425,11 @@ void dlgProfilePreferences::resetColors2()
 
     pHost->mFgColor_2      = Qt::lightGray;
     pHost->mBgColor_2      = Qt::black;
-    pHost->mBlack_2        = QColor(  36,  36,  36);
+    pHost->mBlack_2        = Qt::black;
     pHost->mLightBlack_2   = Qt::darkGray;
     pHost->mRed_2          = Qt::darkRed;
     pHost->mLightRed_2     = Qt::red;
-    pHost->mGreen_2        = QColor(  0,179,  0);
+    pHost->mGreen_2        = Qt::darkGreen;
     pHost->mLightGreen_2   = Qt::green;
     pHost->mBlue_2         = Qt::darkBlue;
     pHost->mLightBlue_2    = Qt::blue;
