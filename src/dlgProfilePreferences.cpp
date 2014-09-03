@@ -630,6 +630,24 @@ void dlgProfilePreferences::resetColors()
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
 }
+
+void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
+{
+    Host* pHost = mpHost;
+    if(!pHost) return;
+
+    QColor color = QColorDialog::getColor(c, this);
+    if (color.isValid()) {
+        c = color;
+        if(mudlet::self()->mConsoleMap.contains(pHost)) {
+            mudlet::self()->mConsoleMap[pHost]->changeColors();
+        }
+
+        QString styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+        b->setStyleSheet(styleSheet);
+    }
+}
+
 void dlgProfilePreferences::setFgColor()
 {
     Host * pHost = mpHost;
