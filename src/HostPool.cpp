@@ -46,8 +46,6 @@ bool HostPool::deleteHost(QString hostname)
     }
     else
     {
-        mHostPool[hostname]->mIsGoingDown = true;
-        mHostPool[hostname]->mTelnet.disconnect();
         std::cout << "[OK] Host deleted removing pool entry ..."<<std::endl;
         int ret = mHostPool.remove( hostname );
         std::cout << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret<<std::endl;

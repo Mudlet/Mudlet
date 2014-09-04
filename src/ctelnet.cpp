@@ -155,7 +155,6 @@ cTelnet::~cTelnet()
             qWarning("%s\n------------", qPrintable( message ) );
         }
     }
-    disconnect();
     socket.deleteLater();
 }
 
