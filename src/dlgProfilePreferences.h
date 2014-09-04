@@ -99,7 +99,7 @@ public slots:
 
 private:
     void setColors();
-    Host * mpHost;
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
