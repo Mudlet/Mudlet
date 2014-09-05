@@ -468,31 +468,37 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
 
 void dlgProfilePreferences::setFgColor()
 {
-    setColor(pushButton_foreground_color, mpHost->mFgColor);
+    if( mpHost )
+        setColor(pushButton_foreground_color, mpHost->mFgColor);
 }
 void dlgProfilePreferences::setBgColor()
 {
-    setColor(pushButton_background_color, mpHost->mBgColor);
+    if( mpHost )
+        setColor(pushButton_background_color, mpHost->mBgColor);
 }
 
 void dlgProfilePreferences::setCommandFgColor()
 {
-    setColor(pushButton_command_foreground_color, mpHost->mCommandFgColor);
+    if( mpHost )
+        setColor(pushButton_command_foreground_color, mpHost->mCommandFgColor);
 }
 
 void dlgProfilePreferences::setCommandLineFgColor()
 {
-    setColor(pushButton_command_line_foreground_color, mpHost->mCommandLineFgColor);
+    if( mpHost )
+        setColor(pushButton_command_line_foreground_color, mpHost->mCommandLineFgColor);
 }
 
 void dlgProfilePreferences::setCommandLineBgColor()
 {
-    setColor(pushButton_command_line_background_color, mpHost->mCommandLineBgColor);
+    if( mpHost )
+        setColor(pushButton_command_line_background_color, mpHost->mCommandLineBgColor);
 }
 
 void dlgProfilePreferences::setCommandBgColor()
 {
-    setColor(pushButton_command_background_color, mpHost->mCommandBgColor);
+    if( mpHost )
+        setColor(pushButton_command_background_color, mpHost->mCommandBgColor);
 }
 
 
@@ -531,157 +537,191 @@ void dlgProfilePreferences::setCommandLineFont()
 
 void dlgProfilePreferences::setColorBlack()
 {
-    setColor(pushButton_black, mpHost->mBlack);
+    if( mpHost )
+        setColor(pushButton_black, mpHost->mBlack);
 }
 
 void dlgProfilePreferences::setColorLightBlack()
 {
-    setColor(pushButton_Lblack, mpHost->mLightBlack);
+    if( mpHost )
+        setColor(pushButton_Lblack, mpHost->mLightBlack);
 }
 
 void dlgProfilePreferences::setColorRed()
 {
-    setColor(pushButton_red, mpHost->mRed);
+    if( mpHost )
+        setColor(pushButton_red, mpHost->mRed);
 }
 void dlgProfilePreferences::setColorLightRed()
 {
-    setColor(pushButton_Lred, mpHost->mLightRed);
+    if( mpHost )
+        setColor(pushButton_Lred, mpHost->mLightRed);
 }
 
 void dlgProfilePreferences::setColorGreen()
 {
-    setColor(pushButton_green, mpHost->mGreen);
+    if( mpHost )
+        setColor(pushButton_green, mpHost->mGreen);
 }
 void dlgProfilePreferences::setColorLightGreen()
 {
-    setColor(pushButton_Lgreen, mpHost->mLightGreen);
+    if( mpHost )
+        setColor(pushButton_Lgreen, mpHost->mLightGreen);
 }
 
 void dlgProfilePreferences::setColorBlue()
 {
-    setColor(pushButton_blue, mpHost->mBlue);
+    if( mpHost )
+        setColor(pushButton_blue, mpHost->mBlue);
 }
 void dlgProfilePreferences::setColorLightBlue()
 {
-    setColor(pushButton_Lblue, mpHost->mLightBlue);
+    if( mpHost )
+        setColor(pushButton_Lblue, mpHost->mLightBlue);
 }
 
 void dlgProfilePreferences::setColorYellow()
 {
-    setColor(pushButton_yellow, mpHost->mYellow);
+    if( mpHost )
+        setColor(pushButton_yellow, mpHost->mYellow);
 }
 void dlgProfilePreferences::setColorLightYellow()
 {
-    setColor(pushButton_Lyellow, mpHost->mLightYellow);
+    if( mpHost )
+        setColor(pushButton_Lyellow, mpHost->mLightYellow);
 }
 
 void dlgProfilePreferences::setColorCyan()
 {
-    setColor(pushButton_cyan, mpHost->mCyan);
+    if( mpHost )
+        setColor(pushButton_cyan, mpHost->mCyan);
 }
 void dlgProfilePreferences::setColorLightCyan()
 {
-    setColor(pushButton_Lcyan, mpHost->mLightCyan);
+    if( mpHost )
+        setColor(pushButton_Lcyan, mpHost->mLightCyan);
 }
 
 void dlgProfilePreferences::setColorMagenta()
 {
-    setColor(pushButton_magenta, mpHost->mMagenta);
+    if( mpHost )
+        setColor(pushButton_magenta, mpHost->mMagenta);
 }
 void dlgProfilePreferences::setColorLightMagenta()
 {
-    setColor(pushButton_Lmagenta, mpHost->mLightMagenta);
+    if( mpHost )
+        setColor(pushButton_Lmagenta, mpHost->mLightMagenta);
 }
 
 void dlgProfilePreferences::setColorWhite()
 {
-    setColor(pushButton_white, mpHost->mWhite);
+    if( mpHost )
+        setColor(pushButton_white, mpHost->mWhite);
 }
 void dlgProfilePreferences::setColorLightWhite()
 {
-    setColor(pushButton_Lwhite, mpHost->mLightWhite);
+    if( mpHost )
+        setColor(pushButton_Lwhite, mpHost->mLightWhite);
 }
 
 void dlgProfilePreferences::setFgColor2()
 {
-    setColor(pushButton_foreground_color_2, mpHost->mFgColor_2);
+    if( mpHost )
+        setColor(pushButton_foreground_color_2, mpHost->mFgColor_2);
 }
 void dlgProfilePreferences::setBgColor2()
 {
-    setColor(pushButton_background_color_2, mpHost->mBgColor_2);
+    if( mpHost )
+        setColor(pushButton_background_color_2, mpHost->mBgColor_2);
 }
 
 
 void dlgProfilePreferences::setColorBlack2()
 {
-    setColor(pushButton_black_2, mpHost->mBlack_2);
+    if( mpHost )
+        setColor(pushButton_black_2, mpHost->mBlack_2);
 }
 void dlgProfilePreferences::setColorLightBlack2()
 {
-    setColor(pushButton_Lblack_2, mpHost->mLightBlack_2);
+    if( mpHost )
+        setColor(pushButton_Lblack_2, mpHost->mLightBlack_2);
 }
 
 void dlgProfilePreferences::setColorRed2()
 {
-    setColor(pushButton_red_2, mpHost->mRed_2);
+    if( mpHost )
+        setColor(pushButton_red_2, mpHost->mRed_2);
 }
 void dlgProfilePreferences::setColorLightRed2()
 {
-    setColor(pushButton_Lred_2, mpHost->mLightRed_2);
+    if( mpHost )
+        setColor(pushButton_Lred_2, mpHost->mLightRed_2);
 }
 
 void dlgProfilePreferences::setColorGreen2()
 {
-    setColor(pushButton_green_2, mpHost->mGreen_2);
+    if( mpHost )
+        setColor(pushButton_green_2, mpHost->mGreen_2);
 }
 void dlgProfilePreferences::setColorLightGreen2()
 {
-    setColor(pushButton_Lgreen_2, mpHost->mLightGreen_2);
+    if( mpHost )
+        setColor(pushButton_Lgreen_2, mpHost->mLightGreen_2);
 }
 
 void dlgProfilePreferences::setColorBlue2()
 {
-    setColor(pushButton_blue_2, mpHost->mBlue_2);
+    if( mpHost )
+        setColor(pushButton_blue_2, mpHost->mBlue_2);
 }
 void dlgProfilePreferences::setColorLightBlue2()
 {
-    setColor(pushButton_Lblue_2, mpHost->mLightBlue_2);
+    if( mpHost )
+        setColor(pushButton_Lblue_2, mpHost->mLightBlue_2);
 }
 
 void dlgProfilePreferences::setColorYellow2()
 {
-    setColor(pushButton_yellow_2, mpHost->mYellow_2);
+    if( mpHost )
+        setColor(pushButton_yellow_2, mpHost->mYellow_2);
 }
 void dlgProfilePreferences::setColorLightYellow2()
 {
-    setColor(pushButton_Lyellow_2, mpHost->mLightYellow_2);
+    if( mpHost )
+        setColor(pushButton_Lyellow_2, mpHost->mLightYellow_2);
 }
 
 void dlgProfilePreferences::setColorCyan2()
 {
-    setColor(pushButton_cyan_2, mpHost->mCyan_2);
+    if( mpHost )
+        setColor(pushButton_cyan_2, mpHost->mCyan_2);
 }
 void dlgProfilePreferences::setColorLightCyan2()
 {
-    setColor(pushButton_Lcyan_2, mpHost->mLightCyan_2);
+    if( mpHost )
+        setColor(pushButton_Lcyan_2, mpHost->mLightCyan_2);
 }
 
 void dlgProfilePreferences::setColorMagenta2()
 {
-    setColor(pushButton_magenta_2, mpHost->mMagenta_2);
+    if( mpHost )
+        setColor(pushButton_magenta_2, mpHost->mMagenta_2);
 }
 void dlgProfilePreferences::setColorLightMagenta2()
 {
-    setColor(pushButton_Lmagenta_2, mpHost->mLightMagenta_2);
+    if( mpHost )
+        setColor(pushButton_Lmagenta_2, mpHost->mLightMagenta_2);
 }
 
 void dlgProfilePreferences::setColorWhite2()
 {
-    setColor(pushButton_white_2, mpHost->mWhite_2);
+    if( mpHost )
+        setColor(pushButton_white_2, mpHost->mWhite_2);
 }
 void dlgProfilePreferences::setColorLightWhite2()
 {
-    setColor(pushButton_Lwhite_2, mpHost->mLightWhite_2);
+    if( mpHost )
+        setColor(pushButton_Lwhite_2, mpHost->mLightWhite_2);
 }
 
 void dlgProfilePreferences::downloadMap()
