@@ -178,6 +178,8 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 
 Host::~Host()
 {
+    mIsGoingDown = true;
+    mTelnet.disconnect();
     mErrorLogStream.flush();
     mErrorLogFile.close();
 }
