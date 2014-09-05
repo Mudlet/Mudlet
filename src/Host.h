@@ -197,7 +197,7 @@ public:
 
     QString            mPass;
     dlgTriggerEditor * mpEditorDialog;
-    TMap *             mpMap;
+    QScopedPointer<TMap> mpMap;
     dlgNotepad *       mpNotePad;
     QStringList        mParagraphList;
 

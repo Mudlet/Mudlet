@@ -2401,7 +2401,7 @@ void TConsole::createMapper( int x, int y, int width, int height )
 {
     if( ! mpMapper )
     {
-        mpMapper = new dlgMapper( mpMainFrame, mpHost, mpHost->mpMap );
+        mpMapper = new dlgMapper( mpMainFrame, mpHost, mpHost->mpMap.data() );
         mpHost->mpMap->mpM = mpMapper->glWidget;
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;

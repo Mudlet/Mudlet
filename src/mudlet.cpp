@@ -1881,7 +1881,7 @@ void mudlet::slot_mapper()
     }
 
     QDockWidget * pDock = new QDockWidget("Mudlet Mapper");
-    pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap );//FIXME: mpHost definieren
+    pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
 
