@@ -57,7 +57,7 @@ public:
     bool             registerScript();
     //bool             serialize( QDataStream & );
     //bool             restore( QDataStream & fs, bool );
-    void             callEventHandler( TEvent * );
+    void             callEventHandler( const TEvent * );
     void             setEventHandlerList( QStringList handlerList );
     QStringList      getEventHandlerList()                             { return mEventHandlerList; }
     bool             exportItem;

@@ -626,7 +626,7 @@ void Host::unregisterEventHandler( QString name, TScript * pScript )
     }
 }
 
-void Host::raiseEvent( TEvent * pE )
+void Host::raiseEvent( const TEvent * pE )
 {
     if( pE->mArgumentList.size() < 1 ) return;
     if( mEventHandlerMap.contains( pE->mArgumentList[0] ) )
@@ -649,11 +649,11 @@ void Host::raiseEvent( TEvent * pE )
 
 void Host::postIrcMessage( QString a, QString b, QString c )
 {
-    TEvent * pE = new TEvent;
-    pE->mArgumentList << "sysIrcMessage";
-    pE->mArgumentList << a << b << c;
-    pE->mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    raiseEvent( pE );
+    TEvent pE;
+    pE.mArgumentList << "sysIrcMessage";
+    pE.mArgumentList << a << b << c;
+    pE.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent( &pE );
 }
 
 void Host::enableTimer( QString & name )
