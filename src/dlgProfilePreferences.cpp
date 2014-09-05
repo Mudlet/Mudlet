@@ -686,7 +686,12 @@ void dlgProfilePreferences::setColorLightWhite2()
 
 void dlgProfilePreferences::downloadMap()
 {
-    if( ! mpHost->mpMap->mpMapper ) mudlet::self()->slot_mapper();
+    if (!mpHost) {
+        return;
+    }
+    if( ! mpHost->mpMap->mpMapper ) {
+        mudlet::self()->slot_mapper();
+    }
 
     mpHost->mpMap->mpMapper->downloadMap();
 }

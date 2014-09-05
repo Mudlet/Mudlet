@@ -110,7 +110,7 @@ public slots:
 private:
     void setColors();
     void setColor(QPushButton* b, QColor& c);
-    Host* mpHost;
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
