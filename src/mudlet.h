@@ -150,7 +150,7 @@ public:
    QTimer *                      mpReplayTimer;
    int                           mReplayTimeOffset;
    int                           mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
-   int                           mReplaySpeed;
+   int                           mReplaySpeed; // Now uses a NEGATIVE value to represent a FRACTIONAL value
    QToolBar *                    mpMainToolBar;
    QMap<QTimer *, TTimer *>      mTimerMap;
    dlgIRC *                      mpIRC;
