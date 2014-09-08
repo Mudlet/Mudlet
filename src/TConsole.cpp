@@ -1088,11 +1088,12 @@ void TConsole::setConsoleFgColor( int r, int g, int b )
 
 
 
-void TConsole::loadRawFile( std::string n )
-{
-    QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    QString fileName = directoryLogFile + "/"+QString(n.c_str());
-    mpHost->mTelnet.loadReplay( fileName );
+void TConsole::loadRawFile( QString fileName ) {
+    QString pathFileName = QStringLiteral( "%1/.config/mudlet/profiles/%2/log/%3" )
+                           .arg( QDir::homePath() )
+                           .arg( profile_name )
+                           .arg( fileName );
+    mpHost->mTelnet.loadReplay( pathFileName );
 }
 
 void TConsole::printOnDisplay( std::string & incomingSocketData )

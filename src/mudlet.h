@@ -145,8 +145,13 @@ public:
    void                          deselect( Host * pHost, QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
+   bool                          isReplayInProgress();
    QTime                         mReplayTime;
-   int                           mReplaySpeed;
+   QTimer *                      mpReplayTimer;
+   int                           mReplayTimeOffset;
+   ulong                         mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
+   ulong                         mReplayScaledChunkTime; // The above divided by current speed factor (doubling speed halves time to next chunk);
+   int                           mReplaySpeed; // Now uses a NEGATIVE value to represent a FRACTIONAL value
    QToolBar *                    mpMainToolBar;
    QMap<QTimer *, TTimer *>      mTimerMap;
    dlgIRC *                      mpIRC;
@@ -244,8 +249,8 @@ private:
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
 
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
+   QAction *                     mpActionReplaySpeedDown;
+   QAction *                     mpActionReplaySpeedUp;
    QAction *                     actionReconnect;
 
    void                          check_for_mappingscript();
