@@ -85,6 +85,7 @@ cTelnet::cTelnet( Host * pH )
 , enableATCP( false )
 , enableGMCP( false )
 , enableChannel102( false )
+, mLoadingReplay( false )
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -1534,7 +1535,6 @@ void cTelnet::recordReplay()
 char loadBuffer[100001];
 int loadedBytes;
 QDataStream replayStream;
-bool loadingReplay;
 QFile replayFile;
 
 void cTelnet::loadReplay( QString & name )
@@ -1544,7 +1544,7 @@ void cTelnet::loadReplay( QString & name )
     postMessage( msg );
     replayFile.open( QIODevice::ReadOnly );
     replayStream.setDevice( &replayFile );
-    loadingReplay = true;
+    mLoadingReplay = true;
     mudlet::self()->replayStart();
     _loadReplay();
 }
@@ -1562,12 +1562,12 @@ void cTelnet::_loadReplay()
         loadedBytes = replayStream.readRawData ( pB, amount );
         qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , offset/(1000.0 * mudlet::self()->mReplaySpeed) );
         loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
-        QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
+        QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
     }
     else
     {
-        loadingReplay = false;
+        mLoadingReplay = false;
         replayFile.close();
         QString msg = "The replay has ended.\n";
         postMessage( msg );
@@ -1688,7 +1688,8 @@ void cTelnet::readPipe()
     }
 
     mpHost->mpConsole->finalize();
-    if( loadingReplay ) _loadReplay();
+    if( mLoadingReplay )
+        _loadReplay();
 }
 
 void cTelnet::handle_socket_signal_readyRead()

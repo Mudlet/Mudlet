@@ -244,8 +244,6 @@ private:
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
 
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
    QAction *                     actionReconnect;
 
    void                          check_for_mappingscript();
