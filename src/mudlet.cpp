@@ -85,7 +85,6 @@ QAction * pActionSpeedDisplay = 0;
 QAction * pActionReplayTime = 0;
 QLabel * pReplaySpeedDisplay = 0;
 QLabel * pReplayTime = 0;
-QTimer * pReplayTimer = 0;
 QToolBar * pReplayToolBar = 0;
 const QString timeFormat = "hh:mm:ss";
 
@@ -2329,11 +2328,12 @@ void mudlet::replayStart()
     // STILL invalid afterwards!
     // It does not run in real time, instead it is updated every time a chunk
     // from the replay file (with an offset value) is consumed.
+    mReplayTimeOffset = 0;
 
-    pReplayTimer = new QTimer( this );
-    pReplayTimer->setInterval(1000);
-    pReplayTimer->setSingleShot( false );
-    connect( pReplayTimer, SIGNAL( timeout() ), this, SLOT( slot_replayTimeChanged() ));
+    mpReplayTimer = new QTimer( this );
+    mpReplayTimer->setInterval(1000);
+    mpReplayTimer->setSingleShot( false );
+    connect( mpReplayTimer, SIGNAL( timeout() ), this, SLOT( slot_replayTimeChanged() ));
 
     QString txt2 = "<font size=25><b>Time:";
     txt2.append( mReplayTime.toString( timeFormat ) );
@@ -2344,14 +2344,15 @@ void mudlet::replayStart()
     pReplayTime->show();
     insertToolBar( mpMainToolBar, pReplayToolBar );
     pReplayToolBar->show();
-    pReplayTimer->start();
+    mpReplayTimer->start();
 }
 
 void mudlet::slot_replayTimeChanged()
 {
     QString txt2 = "<font size=25><b>Time:";
-    txt2.append( mReplayTime.toString( timeFormat ) );
+    txt2.append( mReplayTime.addMSecs( mReplayTimeOffset * 1000 - mReplayChunkTime ).toString( timeFormat ) );
     txt2.append("</b></font>");
+    ++mReplayTimeOffset;
     pReplayTime->setText( txt2 );
     pReplayTime->show();
 }
@@ -2365,8 +2366,12 @@ void mudlet::replayOver()
 
     if( pActionReplaySpeedUp )
     {
+        mpReplayTimer->stop();
         disconnect(pActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
         disconnect(pActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+        disconnect(mpReplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+        delete( mpReplayTimer );
+        mpReplayTimer = 0;
         pReplayToolBar->removeAction( pActionReplaySpeedUp );
         pReplayToolBar->removeAction( pActionReplaySpeedDown );
         pReplayToolBar->removeAction( pActionSpeedDisplay );
