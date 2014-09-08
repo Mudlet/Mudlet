@@ -198,3 +198,20 @@ Host * HostPool::getFirstHost()
     QMutexLocker locker(& mPoolLock);
     return mHostPool.begin().value().data();
 }
+
+Host * HostPool::getNextHost( QString lastHost ) {
+    QMutexLocker locker(& mPoolLock);
+
+    QList<QSharedPointer<Host> > hostList = mHostPool.values();
+    uint hostCount = mHostPool.count();
+    for( int i=0; i<hostList.size(); i++ ) {
+        if( hostList[i]->getName() == lastHost ) {
+            if( i < ( hostCount - 1 ) )
+                return hostList[i+1].data();
+            else
+                return 0;
+
+        }
+    }
+    return 0;
+}
