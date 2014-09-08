@@ -1560,8 +1560,8 @@ void cTelnet::_loadReplay()
 
         char * pB = &loadBuffer[0];
         loadedBytes = replayStream.readRawData ( pB, amount );
-        //qDebug()<<"loaded:"<<loadedBytes<<"/"<<amount<<" bytes"<<" waiting for "<<offset<<" milliseconds";
-        loadBuffer[loadedBytes+1] = '\0';
+        qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , offset/(1000.0 * mudlet::self()->mReplaySpeed) );
+        loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
         QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
     }
@@ -1581,10 +1581,10 @@ void cTelnet::readPipe()
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
+    qDebug( "Replay data: \"%s\"", loadBuffer );
     for( int i = 0; i < datalen; i++ )
     {
         char ch = loadBuffer[i];
-        qDebug() << "GOT REPLAY:"<<loadBuffer;
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
