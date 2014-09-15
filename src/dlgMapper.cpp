@@ -257,7 +257,7 @@ void dlgMapper::replyFinished( QNetworkReply * reply )
     TEvent mapDownloadEvent;
     mapDownloadEvent.mArgumentList.append( "sysMapDownloadEvent" );
     mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent( & mapDownloadEvent );
+    mpHost->raiseEvent( mapDownloadEvent );
 
 }
 

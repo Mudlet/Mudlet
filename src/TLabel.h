@@ -22,6 +22,8 @@
  ***************************************************************************/
 
 
+#include "TEvent.h"
+
 #include "pre_guard.h"
 #include <QLabel>
 #include <QPointer>
@@ -29,7 +31,6 @@
 #include "post_guard.h"
 
 class Host;
-class TEvent;
 
 class QMouseEvent;
 
@@ -41,9 +42,9 @@ Q_OBJECT
 public:
 
                   TLabel( QWidget * pW=0 );
-void              setScript( Host * pHost, QString & func, TEvent * args );
-void              setEnter( Host * pHost, QString & func, TEvent * args );
-void              setLeave( Host * pHost, QString & func, TEvent * args );
+void              setScript( Host * pHost, QString & func, const TEvent & args );
+void              setEnter( Host * pHost, QString & func, const TEvent & args );
+void              setLeave( Host * pHost, QString & func, const TEvent & args );
 void              mousePressEvent( QMouseEvent *  );
 void              leaveEvent(QEvent *);
 void              enterEvent(QEvent *);
@@ -52,9 +53,9 @@ QPointer<Host>    mpHost;
 QString           mScript;
 QString           mEnter;
 QString           mLeave;
-TEvent *          mpParameters;
-TEvent *          mLeaveParams;
-TEvent *          mEnterParams;
+TEvent            mpParameters;
+TEvent            mLeaveParams;
+TEvent            mEnterParams;
 bool              mouseInside;
 };
 

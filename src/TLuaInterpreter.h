@@ -107,7 +107,7 @@ public:
     void startLuaSessionInterpreter();
     void adjustCaptureGroups( int x, int a );
     void clearCaptureGroups();
-    bool callEventHandler( QString & function, const TEvent * pE );
+    bool callEventHandler( QString & function, const TEvent & pE );
     static QString dirToString( lua_State *, int );
     static int dirToNumber( lua_State *, int );
 

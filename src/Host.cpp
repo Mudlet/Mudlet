@@ -353,7 +353,7 @@ void Host::resetProfile()
     TEvent event;
     event.mArgumentList.append( "sysLoadEvent" );
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent( & event );
+    raiseEvent( event );
     qDebug()<<"resetProfile() DONE";
 }
 
@@ -628,20 +628,20 @@ void Host::unregisterEventHandler( QString name, TScript * pScript )
     }
 }
 
-void Host::raiseEvent( const TEvent * pE )
+void Host::raiseEvent( const TEvent & pE )
 {
-    if( pE->mArgumentList.size() < 1 ) return;
-    if( mEventHandlerMap.contains( pE->mArgumentList[0] ) )
+    if( pE.mArgumentList.size() < 1 ) return;
+    if( mEventHandlerMap.contains( pE.mArgumentList[0] ) )
     {
-        QList<TScript *> scriptList = mEventHandlerMap[pE->mArgumentList[0]];
+        QList<TScript *> scriptList = mEventHandlerMap[pE.mArgumentList[0]];
         for( int i=0; i<scriptList.size(); i++ )
         {
             scriptList[i]->callEventHandler( pE );
         }
     }
-    if( mAnonymousEventHandlerFunctions.contains( pE->mArgumentList[0] ) )
+    if( mAnonymousEventHandlerFunctions.contains( pE.mArgumentList[0] ) )
     {
-        QStringList funList = mAnonymousEventHandlerFunctions[pE->mArgumentList[0]];
+        QStringList funList = mAnonymousEventHandlerFunctions[pE.mArgumentList[0]];
         for( int i=0; i<funList.size(); i++ )
         {
             mLuaInterpreter.callEventHandler( funList[i], pE );
@@ -655,7 +655,7 @@ void Host::postIrcMessage( QString a, QString b, QString c )
     pE.mArgumentList << "sysIrcMessage";
     pE.mArgumentList << a << b << c;
     pE.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    raiseEvent( &pE );
+    raiseEvent( pE );
 }
 
 void Host::enableTimer( QString & name )

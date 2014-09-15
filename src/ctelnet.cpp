@@ -211,7 +211,7 @@ void cTelnet::disconnect ()
     TEvent me;
     me.mArgumentList.append( "sysDisconnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( &me );
+    mpHost->raiseEvent( me );
 
 }
 
@@ -248,7 +248,7 @@ void cTelnet::handle_socket_signal_connected()
     TEvent me;
     me.mArgumentList.append( "sysConnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( &me );
+    mpHost->raiseEvent( me );
 
 }
 
@@ -258,7 +258,7 @@ void cTelnet::handle_socket_signal_disconnected()
     TEvent me;
     me.mArgumentList.append( "sysDisconnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( &me );
+    mpHost->raiseEvent( me );
     QString msg;
     QTime timeDiff(0,0,0,0);
     msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
@@ -305,7 +305,7 @@ bool cTelnet::sendData( QString & data )
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     pE.mArgumentList.append( data );
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( &pE );
+    mpHost->raiseEvent( pE );
     if( mpHost->mAllowToSendCommand )
     {
         string outdata = (outgoingDataCodec->fromUnicode(data)).data();
@@ -996,7 +996,7 @@ void cTelnet::processTelnetCommand( const string & command )
       me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
       me.mArgumentList.append( msg );
       me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-      mpHost->raiseEvent( &me );
+      mpHost->raiseEvent( me );
   }
 }
 

@@ -20,6 +20,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
+#include "pre_guard.h"
+#include <QStringList>
+#include <QList>
+#include "post_guard.h"
+
+
 #define ARGUMENT_TYPE_NUMBER 0
 #define ARGUMENT_TYPE_STRING 1
 

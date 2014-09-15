@@ -2858,13 +2858,13 @@ void T2DMap::slot_userAction(QString uniqueName){
             event.mArgumentList.append(QString::number(*i));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         }
-        mpHost->raiseEvent( & event );
+        mpHost->raiseEvent( event );
     }
     else if( mMultiSelectionList.size() > 0 )
     {
         event.mArgumentList.append(QString::number(mMultiSelectionList[0]));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mpHost->raiseEvent( & event );
+        mpHost->raiseEvent( event );
     }
     else
     {
@@ -2875,7 +2875,7 @@ void T2DMap::slot_userAction(QString uniqueName){
             event.mArgumentList.append(userEvent[i]);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         }
-        mpHost->raiseEvent( & event );
+        mpHost->raiseEvent( event );
     }
 }
 

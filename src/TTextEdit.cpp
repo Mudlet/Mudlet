@@ -1264,7 +1264,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( &me );
+        mpHost->raiseEvent( me );
     }
     if( event->button() == Qt::LeftButton )
     {
@@ -1551,7 +1551,7 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( &me );
+        mpHost->raiseEvent( me );
     }
 }
 
