@@ -29,6 +29,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
+#include <QPointer>
 #include <QQueue>
 #include <QTime>
 #include "post_guard.h"
@@ -119,7 +120,7 @@ public:
    void                          showUnzipProgress( QString txt );
    bool                          openWebPage(QString path);
    void                          processEventLoopHack();
-   static TConsole *             mpDebugConsole;
+   static QPointer<TConsole>     mpDebugConsole;
    static QMainWindow *          mpDebugArea;
    static bool                   debugMode;
    QMap<Host *, TConsole *>     mConsoleMap;
