@@ -26,6 +26,7 @@
 #include "pre_guard.h"
 #include <QHostAddress>
 #include <QHostInfo>
+#include <QPointer>
 #include <QTcpSocket>
 #include <QTime>
 #include "post_guard.h"
@@ -159,7 +160,7 @@ private:
 
 
 
-    Host *            mpHost;
+    QPointer<Host>    mpHost;
     QTcpSocket        socket;
     QHostAddress      mHostAddress;
     QTextCodec *      incomingDataCodec;

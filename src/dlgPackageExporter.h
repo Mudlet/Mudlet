@@ -72,7 +72,7 @@ public:
     QString filePath;
 private:
     Ui::dlgPackageExporter *ui;
-    Host* mpHost;
+    QPointer<Host> mpHost;
     QTreeWidget * treeWidget;
     QPushButton *exportButton;
     QPushButton *closeButton;

@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include "ui_composer.h"
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -37,7 +38,7 @@ public:
     dlgComposer( Host * );
 
     void init( QString title, QString txt );
-    Host * mpHost;
+    QPointer<Host> mpHost;
 
 public slots:
     void save();

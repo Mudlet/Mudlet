@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QMutex>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -66,7 +67,7 @@ private:
     void                  addKey( TKey * pT );
     void                  removeKeyRootNode( TKey * pT );
     void                  removeKey( TKey *);
-    Host *                mpHost;
+    QPointer<Host>        mpHost;
     QMap<int, TKey *>     mKeyMap;
     std::list<TKey *>     mKeyRootNodeList;
     qint64                mMaxID;

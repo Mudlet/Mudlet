@@ -24,6 +24,10 @@
 
 #include "Tree.h"
 
+#include "pre_guard.h"
+#include <QPointer>
+#include "post_guard.h"
+
 #include <pcre.h>
 
 class Host;
@@ -68,7 +72,7 @@ public:
     pcre *           mpRegex;
     QString          mScript;
     bool             mIsFolder;
-    Host *           mpHost;
+    QPointer<Host>   mpHost;
     bool             mNeedsToBeCompiled;
     bool             mIsTempAlias;
     bool                  mModuleMember;

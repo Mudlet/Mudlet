@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMutex>
 #include <QMultiMap>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -77,7 +78,7 @@ private:
     void                  addTimer( TTimer * pT );
     void                  _removeTimerRootNode( TTimer * pT );
     void                  _removeTimer( TTimer *);
-    Host *                mpHost;
+    QPointer<Host>        mpHost;
     QMap<int, TTimer *>   mTimerMap;
     std::list<TTimer *>   mTimerRootNodeList;
     qint64                mMaxID;

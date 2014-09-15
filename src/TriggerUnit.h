@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMutex>
 #include <QMultiMap>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -93,7 +94,7 @@ private:
     void                      removeTriggerRootNode( TTrigger * pT );
     void                      removeTrigger( TTrigger *);
 
-    Host *                    mpHost;
+    QPointer<Host>            mpHost;
     QMap<int, TTrigger *>     mTriggerMap;
     std::list<TTrigger *>     mTriggerRootNodeList;
     qint64                    mMaxID;

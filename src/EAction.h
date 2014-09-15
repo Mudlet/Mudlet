@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include <QAction>
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -39,7 +40,7 @@ public:
     QWidget *       createWidget( QWidget * );
 
     int             mID;
-    Host *          mpHost;
+    QPointer<Host>  mpHost;
 
 public slots:
 

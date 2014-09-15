@@ -28,6 +28,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDataStream>
+#include <QPointer>
 #include <QWidget>
 #include "post_guard.h"
 
@@ -94,7 +95,7 @@ public:
       void              reset();
       void              resetMainConsole();
       void              echoUserWindow( QString & );
-      Host *            getHost() { return mpHost; }
+      Host *            getHost();
       TCommandLine *    mpCommandLine;
       void              replace( QString );
       void              insertHTML( QString );
@@ -185,7 +186,7 @@ public:
       QString           assemble_html_font_specs();
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
 
-      Host *            mpHost;
+      QPointer<Host>    mpHost;
 
       TBuffer           buffer;
       static const QString     cmLuaLineVariable;

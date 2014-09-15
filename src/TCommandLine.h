@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QPlainTextEdit>
+#include <QPointer>
 #include <QString>
 #include <QStringList>
 #include "post_guard.h"
@@ -67,7 +68,7 @@ private:
     QMap<QString,int> mHistoryMap;
     bool              mAutoCompletion;
     bool              mTabCompletion;
-    Host *            mpHost;
+    QPointer<Host>    mpHost;
     int               mTabCompletionCount;
     int               mAutoCompletionCount;
     QString           mTabCompletionTyped;

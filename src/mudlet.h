@@ -152,7 +152,7 @@ public:
    QMap<QTimer *, TTimer *>      mTimerMap;
    dlgIRC *                      mpIRC;
    QString                       version;
-   Host *                        mpCurrentActiveHost;
+   QPointer<Host>                mpCurrentActiveHost;
    bool                          mAutolog;
    QString                       mIrcNick;
    QMediaPlayer *                mpMusicBox1;
@@ -231,7 +231,7 @@ private:
    //QTabBar *                     mpTabBar;
    QWidget *                     mainPane;
 
-   Host *                        mpDefaultHost;
+   QPointer<Host>                mpDefaultHost;
    QQueue<QString>               tempLoginQueue;
    QQueue<QString>               tempPassQueue;
    QQueue<Host *>                tempHostQueue;

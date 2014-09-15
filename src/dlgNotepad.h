@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include "ui_notes_editor.h"
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -37,7 +38,7 @@ public:
     dlgNotepad( Host * );
     void save();
     void restore();
-    Host * mpHost;
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

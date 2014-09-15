@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QMutex>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -63,7 +64,7 @@ private:
     void                  addScript( TScript * pT );
     void                  removeScriptRootNode( TScript * pT );
     void                  removeScript( TScript *);
-    Host *                mpHost;
+    QPointer<Host>        mpHost;
     QMap<int, TScript *>  mScriptMap;
     std::list<TScript *>  mScriptRootNodeList;
     qint64                mMaxID;

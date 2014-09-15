@@ -28,6 +28,7 @@
 #include <QColor>
 #include <QMap>
 #include <QPixmap>
+#include <QPointer>
 #include <QSizeF>
 #include <QVector3D>
 #include "post_guard.h"
@@ -104,7 +105,7 @@ public:
     TRoomDB * mpRoomDB;
     QMap<int, int> envColors;
     QVector3D span;
-    Host * mpHost;
+    QPointer<Host> mpHost;
     int mRoomId;
     bool m2DPanMode;
     bool mLeftDown;

@@ -25,6 +25,7 @@
 #include "Tree.h"
 
 #include "pre_guard.h"
+#include <QPointer>
 #include <QStringList>
 #include "post_guard.h"
 
@@ -69,7 +70,7 @@ private:
     QString          mScript;
     QString          mFuncName;
     bool             mIsFolder;
-    Host *           mpHost;
+    QPointer<Host>   mpHost;
     bool             mNeedsToBeCompiled;
     QStringList      mEventHandlerList;
     bool                  mModuleMember;

@@ -574,6 +574,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 
 }
 
+Host * TConsole::getHost() { return mpHost; }
+
 void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
 {
     std::string key = buf;

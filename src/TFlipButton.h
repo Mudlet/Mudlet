@@ -23,6 +23,7 @@
 
 
 #include "pre_guard.h"
+#include <QPointer>
 #include <QPushButton>
 #include "post_guard.h"
 
@@ -59,7 +60,7 @@ public:
     bool mMirrored;
     TAction * mpTAction;
     int mID;
-    Host * mpHost;
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_TFLIPBUTTON_H

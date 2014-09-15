@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include "ui_trigger_editor.h"
+#include <QPointer>
 #include "post_guard.h"
 
 #include "dlgOptionsAreaTriggers.h"
@@ -288,7 +289,7 @@ private:
     bool                        mIsScriptsMainAreaEditHandler;
     QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
     bool                        mIsGrabKey;
-    Host *                      mpHost;
+    QPointer<Host>              mpHost;
     QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
     dlgVarsMainArea *           mpVarsMainArea;
     bool                        mChangingVar;

@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include <QMap>
+#include <QPointer>
 #include <QXmlStreamReader>
 #include "post_guard.h"
 
@@ -93,7 +94,7 @@ private:
     void      readMapList( QMap<QString, QStringList> & );
     //void      readMapList( QMap<QString, QString> &);
 
-    Host *    mpHost;
+    QPointer<Host> mpHost;
     QString   mPackageName;
 
     TTrigger * mpTrigger;

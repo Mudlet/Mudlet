@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QMutex>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -75,7 +76,7 @@ private:
     void                  addAction( TAction * pT );
     void                  removeActionRootNode( TAction * pT );
     void                  removeAction( TAction *);
-    Host *                mpHost;
+    QPointer<Host>        mpHost;
     QMap<int, TAction *>  mActionMap;
     std::list<TAction *>  mActionRootNodeList;
     qint64                mMaxID;
