@@ -109,6 +109,7 @@ public:
     QString           loadReplay( QString &, bool );
     void              _loadReplay();
     bool              isReplaying() { return mLoadingReplay; }
+    void              abortReplay();
     void              setChannel102Variables( QString & );
 
 
