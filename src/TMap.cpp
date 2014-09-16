@@ -512,9 +512,9 @@ void TMap::initGraph()
                 //edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                             roomidToIndex[pR->getNorth()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getNorth()],
+                                                  g );
                 if( exitWeights.contains("n"))
                     weightmap[e] = pR->getExitWeight("n");
                 else
@@ -528,9 +528,9 @@ void TMap::initGraph()
                 //edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getSouth()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getSouth()],
+                                                  g );
                 if( exitWeights.contains("s"))
                     weightmap[e] = pR->getExitWeight("s");
                 else
@@ -544,9 +544,9 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getNortheast()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getNortheast()],
+                                                  g );
                 if( exitWeights.contains("ne"))
                     weightmap[e] = pR->getExitWeight("ne");
                 else
@@ -560,9 +560,9 @@ void TMap::initGraph()
                //edgeCount++;
                edge_descriptor e;
                bool inserted;
-               tie(e, inserted) = add_edge( roomIndex,
-                                           roomidToIndex[pR->getEast()],
-                                           g );
+               std::tie(e, inserted) = add_edge( roomIndex,
+                                                 roomidToIndex[pR->getEast()],
+                                                 g );
                if( exitWeights.contains("e"))
                    weightmap[e] = pR->getExitWeight("e");
                else
@@ -577,9 +577,9 @@ void TMap::initGraph()
                 edge_descriptor e;
                 bool inserted;
 //                bool exit = false;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getWest()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getWest()],
+                                                  g );
                 if( exitWeights.contains("w"))
                     weightmap[e] = pR->getExitWeight("w");
                 else
@@ -593,9 +593,9 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getSouthwest()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getSouthwest()],
+                                                  g );
                 if( exitWeights.contains("sw"))
                     weightmap[e] = pR->getExitWeight("sw");
                 else
@@ -609,9 +609,9 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getSoutheast()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getSoutheast()],
+                                                  g );
                 if( exitWeights.contains("se"))
                     weightmap[e] = pR->getExitWeight("se");
                 else
@@ -625,9 +625,9 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getNorthwest()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getNorthwest()],
+                                                  g );
                 if( exitWeights.contains("nw"))
                     weightmap[e] = pR->getExitWeight("nw");
                 else
@@ -641,9 +641,9 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getUp()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getUp()],
+                                                  g );
                 if( exitWeights.contains("up"))
                     weightmap[e] = pR->getExitWeight("up");
                 else
@@ -657,9 +657,9 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getDown()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getDown()],
+                                                  g );
                 if( exitWeights.contains("down"))
                     weightmap[e] = pR->getExitWeight("down");
                 else
@@ -673,9 +673,9 @@ void TMap::initGraph()
 //                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-                tie(e, inserted) = add_edge( roomIndex,
-                                            roomidToIndex[pR->getIn()],
-                                            g );
+                std::tie(e, inserted) = add_edge( roomIndex,
+                                                  roomidToIndex[pR->getIn()],
+                                                  g );
                 if( exitWeights.contains("in"))
                     weightmap[e] = pR->getExitWeight("in");
                 else
@@ -689,9 +689,9 @@ void TMap::initGraph()
 //                 edgeCount++;
                  edge_descriptor e;
                  bool inserted;
-                 tie(e, inserted) = add_edge( roomIndex,
-                                              roomidToIndex[pR->getOut()],
-                                             g );
+                 std::tie(e, inserted) = add_edge( roomIndex,
+                                                   roomidToIndex[pR->getOut()],
+                                                   g );
                  if( exitWeights.contains("out"))
                      weightmap[e] = pR->getExitWeight("out");
                  else
@@ -715,9 +715,9 @@ void TMap::initGraph()
 //                    edgeCount++;
                     edge_descriptor e;
                     bool inserted;
-                    tie(e, inserted) = add_edge( roomIndex,
-                                                roomidToIndex[pSpecial->getId()],
-                                                g );
+                    std::tie(e, inserted) = add_edge( roomIndex,
+                                                      roomidToIndex[pSpecial->getId()],
+                                                      g );
                     if( exitWeights.contains(_cmd))
                     {
                         weightmap[e] = pR->getExitWeight(_cmd);
