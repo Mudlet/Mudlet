@@ -167,10 +167,10 @@ TBuffer::TBuffer( Host * pH )
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
 
-    TMxpElement * _element = new TMxpElement;
-    _element->name = "SEND";
-    _element->href = "";
-    _element->hint = "";
+    TMxpElement _element;
+    _element.name = "SEND";
+    _element.href = "";
+    _element.hint = "";
     mMXP_Elements["SEND"] = _element;
 }
 
@@ -1525,10 +1525,10 @@ void TBuffer::translateToPlainText( std::string & s )
                                 _hint = _hint.replace( '\"', "" );//NEU
                                 _hint = _hint.replace( "&#34", "\"" );
                             }
-                            TMxpElement * _element = new TMxpElement;
-                            _element->name = _tn;
-                            _element->href = _ref;
-                            _element->hint = _hint;
+                            TMxpElement _element;
+                            _element.name = _tn;
+                            _element.href = _ref;
+                            _element.hint = _hint;
                             mMXP_Elements[_tn] = _element;
                         }
                         openT = 0;
@@ -1578,9 +1578,9 @@ void TBuffer::translateToPlainText( std::string & s )
                         else
                             _tp = "";
                         QString _t1 = _tp.toUpper();
-                        TMxpElement * _element = mMXP_Elements[_tn];
-                        QString _t2 = _element->href;
-                        QString _t3 = _element->hint;
+                        const TMxpElement & _element = mMXP_Elements[_tn];
+                        QString _t2 = _element.href;
+                        QString _t3 = _element.hint;
                         bool _userTag = true;
                         if( _t2.size() < 1 ) _userTag = false;
                         QRegExp _rex;

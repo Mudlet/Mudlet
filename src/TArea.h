@@ -36,18 +36,18 @@ class TRoomDB;
 class TArea
 {
 public:
-    TArea( TMap *, TRoomDB * );
+    TArea(TMap*, TRoomDB*);
     ~TArea();
     int getAreaID();
-    void addRoom( int id );
-    const QList<int> & getAreaRooms() const { return rooms; }
+    void addRoom(int id);
+    const QList<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExits() const { return exits.uniqueKeys(); }
     void calcSpan();
     void fast_calcSpan(int);
     void fast_ausgaengeBestimmen(int);
     void removeRoom(int);
     QList<int> getCollisionNodes();
-    QList<int> getRoomsByPosition( int x, int y, int z );
+    QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int> > > koordinatenSystem();
     void ausgaengeBestimmen();
     QMultiMap<int, QPair<int, int> > exits; // rooms that border on this area: key=in_area room id, pair.first=out_of_area room id pair.second=direction
@@ -70,10 +70,10 @@ public:
     bool gridMode;
     bool isZone;
     int zoneAreaRef;
-    TRoomDB * mpRoomDB;
+    TRoomDB* mpRoomDB;
 
 private:
-    TArea(){qFatal("FATAL: illegal default constructor use of TArea()");};
+    TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
     // QMap<int, TMapLabel> labelMap;
 };
 

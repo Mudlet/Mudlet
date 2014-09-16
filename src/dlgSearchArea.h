@@ -32,7 +32,7 @@ class dlgSearchArea : public QWidget, public Ui::extended_search_area
     Q_OBJECT
 
 public:
-    dlgSearchArea(QWidget *);
+    dlgSearchArea(QWidget*);
 };
 
 #endif // MUDLET_DLGSEARCHAREA_H

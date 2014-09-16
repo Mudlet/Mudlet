@@ -155,7 +155,6 @@ cTelnet::~cTelnet()
             qWarning("%s\n------------", qPrintable( message ) );
         }
     }
-    disconnect();
     socket.deleteLater();
 }
 
@@ -301,12 +300,12 @@ bool cTelnet::sendData( QString & data )
     {
         data.replace(QChar('\n'),"");
     }
-    TEvent * pE = new TEvent;
-    pE->mArgumentList.append( "sysDataSendRequest" );
-    pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    pE->mArgumentList.append( data );
-    pE->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( pE );
+    TEvent pE;
+    pE.mArgumentList.append( "sysDataSendRequest" );
+    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    pE.mArgumentList.append( data );
+    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( &pE );
     if( mpHost->mAllowToSendCommand )
     {
         string outdata = (outgoingDataCodec->fromUnicode(data)).data();
@@ -811,7 +810,9 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_SB:
       {
           option = command[2];
+#ifdef DEBUG
           qDebug() << "content: " << command.substr(3, command.size() - 5).c_str();
+#endif
 
           // MSDP
           if( option == static_cast<char>(69) )

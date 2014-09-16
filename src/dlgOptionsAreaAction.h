@@ -32,7 +32,7 @@ class dlgOptionsAreaAction : public QWidget, public Ui::options_area_actions
     Q_OBJECT
 
 public:
-    dlgOptionsAreaAction(QWidget *);
+    dlgOptionsAreaAction(QWidget*);
 };
 
 #endif // MUDLET_DLGOPTIONSAREAACTION_H

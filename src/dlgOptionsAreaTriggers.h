@@ -32,7 +32,7 @@ class dlgOptionsAreaTriggers : public QWidget, public Ui::options_area_triggers
     Q_OBJECT
 
 public:
-    dlgOptionsAreaTriggers(QWidget *);
+    dlgOptionsAreaTriggers(QWidget*);
 };
 
 #endif // MUDLET_DLGOPTIONSAREATRIGGERS_H

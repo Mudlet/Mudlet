@@ -126,7 +126,7 @@ public:
     void               registerEventHandler( QString, TScript * );
     void               registerAnonymousEventHandler( QString name, QString fun );
     void               unregisterEventHandler( QString, TScript * );
-    void               raiseEvent( TEvent * event );
+    void               raiseEvent( const TEvent * event );
     void               resetProfile();
     void               callEventHandlers();
     void               stopAllTriggers();
@@ -197,7 +197,7 @@ public:
 
     QString            mPass;
     dlgTriggerEditor * mpEditorDialog;
-    TMap *             mpMap;
+    QScopedPointer<TMap> mpMap;
     dlgNotepad *       mpNotePad;
     QStringList        mParagraphList;
 

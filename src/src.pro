@@ -22,7 +22,7 @@ lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.0
+VERSION = 3.0.1
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -31,11 +31,16 @@ VERSION = 3.0.0
 !msvc:QMAKE_CXXFLAGS_RELEASE += -O3
 !msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
 
+# enable C++11 for builds.
+!msvc:QMAKE_CXXFLAGS += -std=c++0x
+macx:QMAKE_CXXFLAGS += -stdlib=libc++
+macx:QMAKE_LFLAGS += -stdlib=libc++
+
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia
 
@@ -43,7 +48,7 @@ QT += network opengl uitools multimedia
 # (it is NOT a Qt built-in variable) for a release build or, if you are
 # distributing modified code, it would be useful if you could put something to
 # distinguish the version:
-BUILD = "-alpha"
+BUILD = -dev
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to

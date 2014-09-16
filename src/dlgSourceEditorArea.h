@@ -35,7 +35,7 @@ class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 
 public:
     dlgSourceEditorArea(QWidget*);
-    THighlighter * highlighter;
+    THighlighter* highlighter;
 };
 
 #endif // MUDLET_DLGSOURCEEDITORAREA_H

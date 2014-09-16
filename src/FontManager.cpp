@@ -45,7 +45,7 @@ void FontManager::addFonts()
     loadFonts(dir.absolutePath());
 
     // load all fonts in the subfolders of 'font'
-    foreach(QString fontfolder, dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
+    foreach (QString fontfolder, dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
         loadFonts(dir.absolutePath() + "/" + fontfolder);
     }
 }
@@ -59,7 +59,7 @@ void FontManager::loadFonts(QString folder)
     QDir dir = folder;
     dir.setNameFilters(filters);
 
-    foreach(QString fontfile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
+    foreach (QString fontfile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
         if (QFontDatabase::addApplicationFont(dir.absolutePath() + "/" + fontfile) == -1)
             std::cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().
                 data() << "/" << fontfile.toUtf8().data() << std::endl;

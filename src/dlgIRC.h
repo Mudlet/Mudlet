@@ -42,9 +42,9 @@ public:
     QString mNick;
 
 public slots:
-    void irc_gotMsg( QString, QString, QString );
-    void irc_gotMsg2( QString a, QStringList c );
-    void irc_gotMsg3( QString a, uint code, QStringList c );
+    void irc_gotMsg(QString, QString, QString);
+    void irc_gotMsg2(QString a, QStringList c);
+    void irc_gotMsg3(QString a, uint code, QStringList c);
     void anchorClicked(const QUrl& link);
     void slot_joined(QString, QString);
     void slot_parted(QString, QString, QString);

@@ -45,7 +45,6 @@ public:
     TTreeWidgetItem( const TTreeWidgetItem & other );
     
     void addChildren( const QList<QTreeWidgetItem *> & children );
-    void addChildren( const QList<TTreeWidgetItem *> & children );
         
         
     void removeChild( QTreeWidgetItem * child );

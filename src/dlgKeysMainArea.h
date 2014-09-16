@@ -32,7 +32,7 @@ class dlgKeysMainArea : public QWidget, public Ui::keys_main_area
     Q_OBJECT
 
 public:
-    dlgKeysMainArea( QWidget * );
+    dlgKeysMainArea(QWidget*);
 };
 
 #endif // MUDLET_DLGKEYSMAINAREA_H

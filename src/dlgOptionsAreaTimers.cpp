@@ -22,7 +22,7 @@
 #include "dlgOptionsAreaTimers.h"
 
 
-dlgOptionsAreaTimers::dlgOptionsAreaTimers(QWidget * pF):QWidget(pF)
+dlgOptionsAreaTimers::dlgOptionsAreaTimers(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);

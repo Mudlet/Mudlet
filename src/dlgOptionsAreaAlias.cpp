@@ -22,7 +22,7 @@
 #include "dlgOptionsAreaAlias.h"
 
 
-dlgOptionsAreaAlias::dlgOptionsAreaAlias(QWidget * pF):QWidget(pF)
+dlgOptionsAreaAlias::dlgOptionsAreaAlias(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);

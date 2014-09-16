@@ -153,7 +153,7 @@ public:
     std::string       currentToken;
     int               openT;
     int               closeT;
-    QMap<QString,TMxpElement *> mMXP_Elements;
+    QMap<QString,TMxpElement> mMXP_Elements;
     TMxpElement       mCurrentElement;
     bool              mMXP_LINK_MODE;
     bool              mIgnoreTag;

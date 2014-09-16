@@ -34,7 +34,7 @@ VarUnit::VarUnit()
 }
 
 bool VarUnit::isHidden( TVar * var ){
-    if ( var->getName() == "_G" )//we never hide global
+    if ( var->getName() == "_G" ) // we never hide global
         return false;
     if (hidden.contains(shortVarName(var).join(".")))
         return true;
@@ -73,7 +73,7 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             pItem->setCheckState(0, Qt::Unchecked);
             if ( isSaved( child ) )
                 pItem->setCheckState(0, Qt::Checked);
-            if ( ! shouldSave( child ) ){//6 is lua_tfunction, parent must be saveable as well if not global
+            if ( ! shouldSave( child ) ){ // 6 is lua_tfunction, parent must be saveable as well if not global
                 pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsUserCheckable));
                 pItem->setForeground(0, QBrush(QColor("grey")));
                 pItem->setToolTip(0, "");
@@ -134,7 +134,7 @@ QStringList VarUnit::varName(TVar * var){
     names << var->getName();
     TVar * p = var->getParent();
     while (p && p != base){
-        names.insert(1,p->getName());
+        names.insert(1, p->getName());
         if (p == base)
             break;
         p = p->getParent();
@@ -151,7 +151,7 @@ QStringList VarUnit::shortVarName(TVar * var){
     names << var->getName();
     TVar * p = var->getParent();
     while (p && p->getName() != "_G"){
-        names.insert(0,p->getName());
+        names.insert(0, p->getName());
         p = p->getParent();
     }
     return names;
@@ -159,7 +159,7 @@ QStringList VarUnit::shortVarName(TVar * var){
 
 void VarUnit::addVariable(TVar * var){
     QString n = varName(var).join(".");
-//    pointers.insert(var->pointer);
+    // pointers.insert(var->pointer);
     varList.insert(n);
     if ( var->hidden ){
         hidden.insert(shortVarName(var).join("."));
@@ -203,10 +203,10 @@ bool VarUnit::isSaved( TVar * var ){
 }
 
 void VarUnit::removeVariable(TVar * var){
-//    TVar * parent = var->getParent();
-//    parent->removeChild(var);
-//    if (var->getValueType() == 5)
-//        pointers.remove(var->pointer);
+    // TVar * parent = var->getParent();
+    // parent->removeChild(var);
+    // if (var->getValueType() == 5)
+    //     pointers.remove(var->pointer);
     varList.remove(varName(var).join("."));
 }
 
@@ -224,7 +224,7 @@ void VarUnit::setBase(TVar * t){
 }
 
 void VarUnit::clear(){
-    //delete base;
+    // delete base;
     tVars.clear();
     wVars.clear();
     varList.clear();
