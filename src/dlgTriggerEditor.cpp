@@ -524,6 +524,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_alias, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_vars, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_vars, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
@@ -3908,6 +3909,14 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
 
 void dlgTriggerEditor::saveVar()
 {
+    // We can enter this function if:
+    // we click on a variable without having one selected ( no parent )
+    // we click on a variable from another variable
+    // we click on a variable from having the top-most element selected ( parent but parent is not a variable/table )
+    // we click on a variable from the same variable (such as a double click)
+    // we add a new variable
+    // we switch away from a variable (so we are saving the old variable)
+
     if (!mCurrentVar)
         return;
     QTreeWidgetItem * pItem = (QTreeWidgetItem*)mCurrentVar;
@@ -3931,6 +3940,7 @@ void dlgTriggerEditor::saveVar()
         slot_var_selected(pItem);
         return;
     }
+    mChangingVar = true;
     int nameType = mpVarsMainArea->key_type->itemData(mpVarsMainArea->key_type->currentIndex(), Qt::UserRole).toInt();
     int valueType = mpVarsMainArea->var_type->itemData(mpVarsMainArea->var_type->currentIndex(), Qt::UserRole).toInt();
     if ( ( nameType == 3 || nameType == 4 ) && newVar )
@@ -4083,16 +4093,16 @@ void dlgTriggerEditor::saveVar()
     //redo this here in case we changed type
     pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-    pItem->setCheckState(0, Qt::Unchecked);
-    if ( vu->isSaved( var ) )
-    {
-        pItem->setCheckState(0, Qt::Checked);
-    }
     if ( ! vu->shouldSave( var ) )
     {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));
         pItem->setToolTip(0, "");
+        pItem->setCheckState(0, Qt::Unchecked);
+    }
+    else if ( vu->isSaved( var ) )
+    {
+        pItem->setCheckState(0, Qt::Checked);
     }
     pItem->setData( 0, Qt::UserRole, var->getValueType() );
     QIcon icon;
@@ -4109,6 +4119,7 @@ void dlgTriggerEditor::saveVar()
             break;
     }
     pItem->setIcon( 0, icon );
+    mChangingVar = false;
     slot_var_selected(pItem);
 }
 
@@ -4516,6 +4527,70 @@ void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list, 
         recurseVariablesDown( it.next(), list, sort );
 }
 
+void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem *pItem){
+    // This handles a small case where the radio buttom is clicked while the item is currently selected
+    // which causes the variable to not save. In places where we populate the TreeWidgetItem, we have
+    // to guard it with mChangingVar or else this will be called with every change such as the variable
+    // name, etc.
+    if( !pItem || mChangingVar )
+        return;
+    int column = 0;
+    int state = pItem->checkState( column );
+    LuaInterface * lI = mpHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    TVar * var = vu->getWVar(pItem);
+    if( !var )
+        return;
+    if ( state == Qt::Checked || state == Qt::PartiallyChecked )
+    {
+        if ( vu->isSaved( var ) )
+            return;
+        vu->addSavedVar( var );
+        QList< QTreeWidgetItem * > list;
+        recurseVariablesUp( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
+                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+                vu->addSavedVar( v );
+        }
+        list.clear();
+        recurseVariablesDown( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
+                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+                vu->addSavedVar( v );
+        }
+    }
+    else{
+        // we're not checked, dont save us
+        if( ! vu->isSaved( var ) )
+            return;
+        vu->removeSavedVar(var);
+        QList< QTreeWidgetItem * > list;
+        recurseVariablesUp( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
+                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+                vu->removeSavedVar( v );
+        }
+        list.clear();
+        recurseVariablesDown( pItem, list );
+        for(int i=0;i<list.size();i++)
+        {
+            TVar * v = vu->getWVar( list[i] );
+            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
+                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+                vu->removeSavedVar( v );
+        }
+    }
+}
+
 void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
 {
     if( ! pItem ) return;
@@ -4524,6 +4599,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     if ( pItem != mCurrentVar )
         saveVar();
 
+    mChangingVar = true;
     int column = treeWidget_vars->currentColumn();
     int state = pItem->checkState( column );
     if ( state == Qt::Checked || state == Qt::PartiallyChecked )
@@ -4585,6 +4661,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     mCurrentVar = pItem;
     if( (pItem == 0) || (column != 0) )
     {
+        mChangingVar = false;
         return;
     }
     mpCurrentVarItem = pItem; //remember what has been clicked to save it
@@ -4609,6 +4686,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
             mpVarsMainArea->var_type->setCurrentIndex(0);
         }
         mpVarsMainArea->key_type->setCurrentIndex(0);
+        mChangingVar = false;
         return;
     }
     int varType = var->getValueType();
@@ -4664,16 +4742,17 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
-    if ( vu->isSaved( var ) )
-        pItem->setCheckState(0, Qt::Checked);
     if ( ! vu->shouldSave( var ) )
     {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));
         pItem->setToolTip(0, "");
     }
+    else if ( vu->isSaved( var ) )
+        pItem->setCheckState(0, Qt::Checked);
     pItem->setData( 0, Qt::UserRole, var->getValueType() );
     pItem->setIcon( 0, icon );
+    mChangingVar = false;
 }
 
 void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
