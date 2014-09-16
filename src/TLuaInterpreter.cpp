@@ -9369,6 +9369,20 @@ int TLuaInterpreter::getMudletVersion( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::openWebPage( lua_State * L )
+{
+    if(lua_isstring(L, 1)){
+        QString url = lua_tostring(L, 1);
+        lua_pushboolean(L, mudlet::self()->openWebPage(url));
+    }
+    else{
+        lua_pushfstring( L, "openWebPage: bad argument #%d (string expected, got %s)", 1, luaL_typename(L, 1) );
+        lua_error(L);
+    }
+    return 1;
+
+}
+
 
 //syntax: getTime( bool return_string, string time_format ) with return_string == false -> return table
 int TLuaInterpreter::getTime( lua_State * L )
@@ -10999,6 +11013,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine );
     lua_register( pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines );
     lua_register( pGlobalLua, "getMudletVersion", TLuaInterpreter::getMudletVersion );
+    lua_register( pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);
 
 
 
