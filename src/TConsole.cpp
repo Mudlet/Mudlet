@@ -781,6 +781,10 @@ void TConsole::closeEvent( QCloseEvent *event )
         }
         if( choice == QMessageBox::Yes )
         {
+            // Must abort any replay in progress for this profile!
+            if( mpHost->mTelnet.isReplaying() )
+                mpHost->mTelnet.abortReplay();
+
             QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
             QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
             QDir dir_xml;
@@ -828,6 +832,10 @@ void TConsole::closeEvent( QCloseEvent *event )
         }
         else if( choice == QMessageBox::No )
         {
+            // Must abort any replay in progress for this profile!
+            if( mpHost->mTelnet.isReplaying() )
+                mpHost->mTelnet.abortReplay();
+
             event->accept();
             return;
         }

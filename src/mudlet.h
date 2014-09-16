@@ -135,7 +135,7 @@ public:
    void                          setIcoSize( int s );
    void                          replayStart( Host * );
    bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
-   void                          replayOver( Host * );
+   void                          replayOver( Host *, bool );
    void                          showEvent( QShowEvent * event );
    void                          hideEvent( QHideEvent * event );
    bool                          resetFormat( Host *, QString & name );

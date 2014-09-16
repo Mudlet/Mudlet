@@ -2377,7 +2377,7 @@ void mudlet::slot_replayTimeChanged()
     pReplayTime->show();
 }
 
-void mudlet::replayOver(Host * pHost)
+void mudlet::replayOver(Host * pHost, bool isEndOfReplay)
 {
     if( ! mpMainToolBar )
        return;
@@ -2408,7 +2408,11 @@ void mudlet::replayOver(Host * pHost)
     otherReplayOverEvent.mArgumentList.append( "sysReplayEvent" );
     myReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     otherReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    myReplayOverEvent.mArgumentList.append( "myReplayOver" );
+    if( isEndOfReplay )
+        myReplayOverEvent.mArgumentList.append( "myReplayOver" );
+    else
+        myReplayOverEvent.mArgumentList.append( "myReplayAborted" );
+
     otherReplayOverEvent.mArgumentList.append( "otherReplayOver" );
     myReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     otherReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
