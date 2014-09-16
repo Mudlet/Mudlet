@@ -121,6 +121,7 @@ public slots:
     void                        slot_saveVarAfterEdit();
     void                        slot_deleteVar();
     void                        slot_var_selected( QTreeWidgetItem * );
+    void                        slot_var_changed( QTreeWidgetItem * );
     void                        slot_show_vars( );
     void                        slot_viewErrorsAction();
     void                        slot_cursorPositionChanged();
@@ -290,6 +291,7 @@ private:
     Host *                      mpHost;
     QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
     dlgVarsMainArea *           mpVarsMainArea;
+    bool                        mChangingVar;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
