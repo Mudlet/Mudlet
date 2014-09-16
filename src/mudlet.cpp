@@ -245,7 +245,7 @@ mudlet::mudlet()
 
 
     QAction * actionReplay = new QAction( QIcon( QStringLiteral( ":/icons/media-optical.png" ) ), tr("Replay"), this);
-    actionReplay->setToolTip(tr("Load a Mudlet replay"));
+    actionReplay->setToolTip(tr("Once a profile is loaded - allows you to load a previously recorded Mudlet replay"));
     mpMainToolBar->addAction( actionReplay );
 
     actionReconnect = new QAction( QIcon( QStringLiteral( ":/icons/system-restart.png" ) ), tr("Reconnect"), this);
@@ -963,6 +963,7 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[13]->setEnabled( true );
     mpMainToolBar->actions()[14]->setEnabled( true );
     mpMainToolBar->actions()[15]->setEnabled( true ); // Replay
+    mpMainToolBar->actions()[15]->setToolTip(tr("Allows you to load a previously recorded Mudlet replay"));
 }
 
 bool mudlet::openWindow( Host * pHost, QString & name )
@@ -2296,7 +2297,7 @@ void mudlet::replayStart(Host * pHost)
         return;
 
     mpMainToolBar->actions()[15]->setEnabled( false ); // Disable Replay button;
-    mpMainToolBar->actions()[15]->setToolTip( tr( "Unable to load a Mudlet log file to replay as one is already in progress!"));
+    mpMainToolBar->actions()[15]->setToolTip( tr( "Unable to load a Mudlet replay as one is already being played for a loaded profile!"));
 
     TEvent myReplayStartEvent, otherReplayStartEvent;
     myReplayStartEvent.mArgumentList.append( "sysReplayEvent" );
@@ -2435,6 +2436,7 @@ void mudlet::replayOver(Host * pHost, bool isEndOfReplay)
     }
 
     mpMainToolBar->actions()[15]->setEnabled( true ); // Enable Replay button;
+    mpMainToolBar->actions()[15]->setToolTip(tr("Allows you to load a previously recorded Mudlet replay"));
 }
 
 void mudlet::slot_replaySpeedUp()
