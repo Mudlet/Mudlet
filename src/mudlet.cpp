@@ -2290,15 +2290,36 @@ void mudlet::toggleFullScreenView()
         showFullScreen();
 }
 
-void mudlet::replayStart()
+void mudlet::replayStart(Host * pHost)
 {
     if( ! mpMainToolBar )
         return;
 
     mpMainToolBar->actions()[15]->setEnabled( false ); // Disable Replay button;
+    mpMainToolBar->actions()[15]->setToolTip( tr( "Unable to load a Mudlet log file to replay as one is already in progress!"));
+
+    TEvent myReplayStartEvent, otherReplayStartEvent;
+    myReplayStartEvent.mArgumentList.append( "sysReplayEvent" );
+    otherReplayStartEvent.mArgumentList.append( "sysReplayEvent" );
+    myReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    myReplayStartEvent.mArgumentList.append( "myReplayStart" );
+    otherReplayStartEvent.mArgumentList.append( "otherReplayStart" );
+    myReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent( & myReplayStartEvent );
+
+    Host * pAnyHost = HostManager::self()->getFirstHost();
+    while ( pAnyHost ) {
+        if( pAnyHost != pHost )
+            pAnyHost->raiseEvent( & otherReplayStartEvent );
+
+        pAnyHost = HostManager::self()->getNextHost( pAnyHost->getName() );
+    }
 
     pReplayToolBar = new QToolBar( this );
     mReplaySpeed = 1;
+    mPreviousReplaySpeed = 1;
     pReplayTime = new QLabel( this );
     pActionReplayTime = pReplayToolBar->addWidget( pReplayTime );
 
@@ -2356,7 +2377,7 @@ void mudlet::slot_replayTimeChanged()
     pReplayTime->show();
 }
 
-void mudlet::replayOver()
+void mudlet::replayOver(Host * pHost)
 {
     if( ! mpMainToolBar )
        return;
@@ -2382,28 +2403,36 @@ void mudlet::replayOver()
         pActionReplayTime = 0;
         pReplayToolBar = 0;
     }
+    TEvent myReplayOverEvent, otherReplayOverEvent;
+    myReplayOverEvent.mArgumentList.append( "sysReplayEvent" );
+    otherReplayOverEvent.mArgumentList.append( "sysReplayEvent" );
+    myReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    myReplayOverEvent.mArgumentList.append( "myReplayOver" );
+    otherReplayOverEvent.mArgumentList.append( "otherReplayOver" );
+    myReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent( & myReplayOverEvent );
+
+    Host * pAnyHost = HostManager::self()->getFirstHost();
+    while ( pAnyHost ) {
+        if( pAnyHost != pHost )
+            pAnyHost->raiseEvent( & otherReplayOverEvent );
+
+        pAnyHost = HostManager::self()->getNextHost( pAnyHost->getName() );
+    }
 
     mpMainToolBar->actions()[15]->setEnabled( true ); // Enable Replay button;
 }
 
 void mudlet::slot_replaySpeedUp()
 {
-    switch( mReplaySpeed )
-    {
-        case -2:
-            mReplaySpeed = 1;
-            break;
-        case -4:
-            mReplaySpeed = -2;
-            break;
-        case -8:
-            mReplaySpeed = -4;
-            break;
-        case 128:
-            mReplaySpeed = 128;
-            break;
-        default:
-            mReplaySpeed *= 2;
+    switch( mReplaySpeed ) {
+        case -2:    mReplaySpeed = 1;   break;
+        case -4:    mReplaySpeed = -2;  break;
+        case -8:    mReplaySpeed = -4;  break;
+        case 128:   mReplaySpeed = 128; break;
+        default:    mReplaySpeed *= 2;
     }
 
     QString txt;
@@ -2423,22 +2452,12 @@ void mudlet::slot_replaySpeedUp()
 
 void mudlet::slot_replaySpeedDown()
 {
-    switch( mReplaySpeed )
-    {
-        case 1:
-            mReplaySpeed = -2;
-            break;
-        case -2:
-            mReplaySpeed = -4;
-            break;
-        case -4:
-            mReplaySpeed = -8;
-            break;
-        case -8:
-            mReplaySpeed = -8;
-            break;
-        default:
-            mReplaySpeed /= 2;
+    switch( mReplaySpeed ) {
+        case 1:     mReplaySpeed = -2;  break;
+        case -2:    mReplaySpeed = -4;  break;
+        case -4:    mReplaySpeed = -8;  break;
+        case -8:    mReplaySpeed = -8;  break;
+        default:    mReplaySpeed /= 2;
     }
 
     QString txt;

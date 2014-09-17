@@ -132,9 +132,9 @@ public:
    int                           mMainIconSize;
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
-   void                          replayStart();
+   void                          replayStart( Host * );
    bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
-   void                          replayOver();
+   void                          replayOver( Host * );
    void                          showEvent( QShowEvent * event );
    void                          hideEvent( QHideEvent * event );
    bool                          resetFormat( Host *, QString & name );
@@ -151,6 +151,7 @@ public:
    int                           mReplayTimeOffset;
    int                           mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
    int                           mReplaySpeed; // Now uses a NEGATIVE value to represent a FRACTIONAL value
+   int                           mPreviousReplaySpeed;
    QToolBar *                    mpMainToolBar;
    QMap<QTimer *, TTimer *>      mTimerMap;
    dlgIRC *                      mpIRC;
