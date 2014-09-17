@@ -125,7 +125,6 @@ public:
 
       int               getColumnNumber();
       void              createMapper( int, int, int, int );
-      void              loadRawFile( std::string );
       void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
       void              setIndentCount( int count ){ mIndentCount = count; buffer.setWrapIndent( count ); }
       void              echo( QString & );

@@ -107,7 +107,7 @@ public:
     void              set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
     void              set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
     void              recordReplay();
-    void              loadReplay( QString & );
+    QString           loadReplay( QString &, bool );
     void              _loadReplay();
     bool              isReplaying() { return mLoadingReplay; }
     void              setChannel102Variables( QString & );
@@ -211,6 +211,7 @@ private:
     bool              enableChannel102;
     QStringList       messageStack;
     bool              mLoadingReplay;
+    bool              mIsReportingReplayStatus;
 };
 
 #endif // MUDLET_CTELNET_H

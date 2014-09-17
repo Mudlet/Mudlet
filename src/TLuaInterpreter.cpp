@@ -786,21 +786,43 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
 
 int TLuaInterpreter::loadRawFile( lua_State * L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "loadRawFile: wrong argument type" );
+    QString fileName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "loadRawFile: bad argument #1 (replay file, optionally with a path, as string expected, got %1)" )
+                           .arg( luaL_typename(L, 1) ).toUtf8() );
         lua_error( L );
         return 1;
     }
     else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
+        fileName = QDir::fromNativeSeparators( QString::fromUtf8( lua_tostring( L, 1 ) ) );
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->loadRawFile( luaSendText );
-    return 0;
+    QString pathFileName = QStringLiteral( "%1/.config/mudlet/profiles/%2/log/%3" )
+                               .arg( QDir::homePath() )
+                               .arg( pHost->getName() )
+                               .arg( fileName );
+
+    QString result = pHost->mTelnet.loadReplay( pathFileName, false );
+    bool ok = false;
+    int retCode = result.left(1).toUInt( & ok );
+    if( ! ok )
+        retCode = -1;
+    switch( retCode ) {
+        case 0: // OK, remainder is canonical pathFile of replay file
+            lua_pushnumber( L, result.left(1).toInt() );
+            lua_pushstring( L, result.mid(1).toUtf8() );
+            break;
+        case 1: // Replay active in this profile
+        case 2: // Replay active in other profile
+        case 3: // File does not exist
+        case 4: // File is not readable
+            lua_pushnumber( L, result.left(1).toInt() );
+            lua_pushstring( L, result.mid(1).toUtf8() );
+            break;
+        default:
+            lua_pushstring( L, tr( "loadRawFile: unexpected internal error code: \"%1\"!" ).arg( result.left(1) ).toUtf8() );
+    }
+    return 2;
 }
 
 int TLuaInterpreter::getCurrentLine( lua_State * L )

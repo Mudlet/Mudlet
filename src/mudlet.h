@@ -146,6 +146,7 @@ public:
    void                          deselect( Host * pHost, QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
+   bool                          isReplayInProgress();
    QTime                         mReplayTime;
    QTimer *                      mpReplayTimer;
    int                           mReplayTimeOffset;

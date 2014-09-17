@@ -65,6 +65,12 @@
 
 #define DEBUG
 
+// Items used during REPLAY of a previously recorded RAW log file:
+char loadBuffer[100001];
+int loadedBytes;
+QDataStream replayStream;
+QFile replayFile;
+
 using namespace std;
 
 
@@ -1532,27 +1538,91 @@ void cTelnet::recordReplay()
     timeOffset.start();
 }
 
-char loadBuffer[100001];
-int loadedBytes;
-QDataStream replayStream;
-QFile replayFile;
-
-void cTelnet::loadReplay( QString & name )
+// This is where replay code program flow converges when initiated from main
+// toolbar and user lua request, to enable the method to determine which called
+// it the former should set the second argument to true.
+// For the latter QString status messages beginning with a digit are used and
+// made available to the user's lua scripts, the values are:
+// 0 = Replay file loaded and replay has started, includes the canonical path
+//     and filename in the message.
+// 1 = THIS profile is already running a replay so cannot run another now.
+// 2 = ANOTHER profile is running a replay so this one cannot run one now.
+// 3 = The replay file does not seem to exist. Includes the canonical path
+//     and filename in the message to enable user to check for themselves.
+// 4 = The replay file can not be read - user may have to check permissions.
+//     Includes the canonical path and filename in the message to enable user to
+//     check for themselves.
+// TODO: once a "New" replay format has been designed with magic and version data:
+//    5 = The file doesn't have the right "magic" so does not appear to be a Mudlet replay file.
+//    6 = The file is from a newer (unspported) version of Mudlet.
+// For the former usage a message in a format suitable with this class's
+// postMessage() method is returned with the same sort of information.
+QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole )
 {
-    replayFile.setFileName( name );
-    QString msg = "loading replay " + name;
-    postMessage( msg );
-    replayFile.open( QIODevice::ReadOnly );
-    replayStream.setDevice( &replayFile );
-    mLoadingReplay = true;
-    mudlet::self()->replayStart();
-    _loadReplay();
+
+    QString msg;
+    if( mLoadingReplay ) {
+        // Prevent trying to start a SECOND replay in THIS profile
+        if( isStatusToBeReportedInConsole )
+            msg = tr( "[ ALERT ] - A replay is already in progress for this profile!" );
+        else
+            msg = tr( "1error: a Replay is already in progress in this profile.", "Do not change the inital digit '1' it is used to return status information to the caller." );
+
+    }
+    else if( mudlet::self()->isReplayInProgress() ) {
+        // Prevent trying to start a SECOND replay (in ANY profile as it happens) if one is in progress
+        if( isStatusToBeReportedInConsole )
+            msg = tr( "[ ALERT ] - A replay is already in progress in another profile, please let that one finish before trying to load another!" );
+        else
+            msg = tr( "2error: a Replay is already in progress in another profile.", "Do not change the inital digit '2' it is used to return status information to the caller." );
+
+    }
+    else {
+        QFileInfo replayFileInfo( name );
+        replayFileInfo.makeAbsolute();
+        replayFile.setFileName( replayFileInfo.canonicalFilePath() );
+        if( ! replayFileInfo.exists() ) {
+            if( isStatusToBeReportedInConsole )
+                msg = tr( "[ ALERT ] - Replay file does not exist: %1 .", "Do not translate [ ALERT ] it is used to key the color coding of the message" )
+                              .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+            else
+                msg = tr( "3error: the file \"%1\" does not exist.", "Do not change the initial digit '3' it is used to return status information to the caller." )
+                      .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+
+        }
+        else {
+            if( ! replayFile.open( QIODevice::ReadOnly ) ) {
+                if( isStatusToBeReportedInConsole )
+                    msg = tr( "[ ALERT ] - Unable to read replay file: %1 .", "Do not translate [ ALERT ] it is used to key the color coding of the message" )
+                          .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+                else
+                    msg = tr( "4error: unable to read existing file \"%1\".", "Do not change the initial digit '4' it is used to return status information to the caller." )
+                          .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+
+            }
+            else {
+                if( isStatusToBeReportedInConsole ) {
+                    mIsReportingReplayStatus = true;
+                    msg = tr( "[ INFO ]  - Loading replay file: %1 .", "Do not translate [ INFO ] it is used to key the color coding of the message" )
+                          .arg( QDir::toNativeSeparators( replayFile.fileName() ) );
+                }
+                else
+                    msg = tr( "0Replay file \"%1\" loaded.", "Do not change the initial digit '0' it is used to return status information to the caller." )
+                          .arg( QDir::toNativeSeparators( replayFile.fileName() ) );
+
+                replayStream.setDevice( &replayFile );
+                mLoadingReplay = true;
+                mudlet::self()->replayStart();
+                _loadReplay();
+            }
+        }
+    }
+    return msg;
 }
 
 void cTelnet::_loadReplay()
 {
-    if( ! replayStream.atEnd() )
-    {
+    if( ! replayStream.atEnd() ) {
         mudlet::self()->mpReplayTimer->stop();
         int offset;
         int amount;
@@ -1560,12 +1630,13 @@ void cTelnet::_loadReplay()
         replayStream >> amount;
 
         char * pB = &loadBuffer[0];
-        loadedBytes = replayStream.readRawData ( pB, amount );
+        loadedBytes = replayStream.readRawData ( pB, amount ); // loadedBytes will be -1 on error!
+        loadBuffer[loadedBytes+1] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
+
         if( mudlet::self()->mReplaySpeed < 1 )
-            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duriation is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , - mudlet::self()->mReplaySpeed * offset/1000.0 );
+            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , - mudlet::self()->mReplaySpeed * offset/1000.0 );
         else
-            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duriation is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , offset/(1000.0 * mudlet::self()->mReplaySpeed) );
-        loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
+            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , offset/(1000.0 * mudlet::self()->mReplaySpeed) );
 
         mudlet::self()->mReplayChunkTime = offset;
         mudlet::self()->mReplayTimeOffset = 0;
@@ -1579,12 +1650,14 @@ void cTelnet::_loadReplay()
             QTimer::singleShot( offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
         }
     }
-    else
-    {
+    else {
         mLoadingReplay = false;
         replayFile.close();
-        QString msg = "The replay has ended.\n";
-        postMessage( msg );
+        if( mIsReportingReplayStatus ) {
+            QString msg = tr( "[  OK  ]  - The replay has ended.\n", "Do not translate [  OK  ] it is used to color code the message." );
+            postMessage( msg );
+            mIsReportingReplayStatus = false;
+        }
         mudlet::self()->replayOver();
     }
 }
@@ -1721,7 +1794,7 @@ void cTelnet::handle_socket_signal_readyRead()
     char* in_buffer = in_bufferx;
     char out_buffer[100010];
 
-    int amount = socket.read( in_buffer, 100000 );
+    int amount = socket.read( in_buffer, 100000 ); // CHECK: Should be using qint64 ???
     in_buffer[amount+1] = '\0';
     if( amount == -1 ) return;
     if( amount == 0 ) return;
@@ -1925,5 +1998,5 @@ MAIN_LOOP_END: ;
        gotRest( cleandata );
     }
     mpHost->mpConsole->finalize();
-    lastTimeOffset = timeOffset.elapsed();
+    lastTimeOffset = timeOffset.elapsed(); // CHECK: Should this not have been done immediately after the write as it will includes the processing time from then to here?
 }
