@@ -2395,12 +2395,20 @@ void mudlet::replayOver(Host * pHost, bool isEndOfReplay)
         pReplayToolBar->removeAction( pActionReplaySpeedUp );
         pReplayToolBar->removeAction( pActionReplaySpeedDown );
         pReplayToolBar->removeAction( pActionSpeedDisplay );
+        pReplayToolBar->removeAction( pActionReplayTime);
 
         removeToolBar( pReplayToolBar );
+        delete( pActionReplaySpeedUp );
         pActionReplaySpeedUp = 0;
+        delete( pActionReplaySpeedDown );
         pActionReplaySpeedDown = 0;
+        delete( pActionSpeedDisplay );
         pActionSpeedDisplay = 0;
+        pReplaySpeedDisplay = 0;
+        delete( pActionReplayTime );
         pActionReplayTime = 0;
+        pReplayTime = 0;
+        delete( pReplayToolBar );
         pReplayToolBar = 0;
     }
     TEvent myReplayOverEvent, otherReplayOverEvent;
