@@ -28,6 +28,7 @@
 #include <QColor>
 #include <QMap>
 #include <QVector3D>
+#include <QHash>
 #include "post_guard.h"
 
 
@@ -56,6 +57,7 @@ public:
     void setId( int );
     bool setExit( int to, int direction );
     int getExit( int direction );
+    QHash<int, int> getExits();
     bool hasExit( int direction );
     void setWeight( int );
     void setExitLock( int, bool );
@@ -153,6 +155,7 @@ private:
     int in;
     int out;
 
+    // FIXME: This should be a map of String->room id because there can be multiple special exits to the same room
     QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
                                    //verbotene exits werden mit 0 geprefixed, offene mit 1
 

@@ -300,6 +300,41 @@ int TRoom::getExit( int direction )
     return -1;
 }
 
+QHash<int, int> TRoom::getExits(){
+    // key is room id we exit to, value is type of exit. 0 is normal, 1 is special
+    QHash<int, int> exitList;
+    if(north != -1)
+        exitList[north] = 0;
+    if(northeast != -1)
+        exitList[northeast] = 0;
+    if(east != -1)
+        exitList[east] = 0;
+    if(southeast != -1)
+        exitList[southeast] = 0;
+    if(south != -1)
+        exitList[south] = 0;
+    if(southwest != -1)
+        exitList[southwest] = 0;
+    if(west != -1)
+        exitList[west] = 0;
+    if(northwest != -1)
+        exitList[northwest] = 0;
+    if(up != -1)
+        exitList[up] = 0;
+    if(down != -1)
+        exitList[down] = 0;
+    if(in != -1)
+        exitList[in] = 0;
+    if(out != -1)
+        exitList[out] = 0;
+    QMapIterator<int, QString> it(other);
+    while(it.hasNext()){
+        it.next();
+        exitList[it.key()] == 1;
+    }
+    return exitList;
+}
+
 void TRoom::setExitLock( int exit, bool state )
 {
     if( ! state )
