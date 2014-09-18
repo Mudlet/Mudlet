@@ -141,7 +141,8 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua yajl libpcre libzip
+    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip
+    INCLUDEPATH += /usr/local/include
 }
 
 # There does not seem to be an obvious pkg-config option for these two
