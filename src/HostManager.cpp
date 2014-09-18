@@ -32,16 +32,16 @@
 #include <ostream>
 
 
-HostManager * HostManager::_self = 0;
+QScopedPointer<HostManager> HostManager::_self;
 
 HostManager * HostManager::self()
 {
     if( ! _self )
     {
-        _self = new HostManager;
+        _self.reset( new HostManager );
         _self->init();
     }
-    return _self;
+    return _self.data();
 }
 
 void HostManager::init()

@@ -57,7 +57,7 @@ private:
     void                init();
 
 
-    static HostManager * _self;
+    static QScopedPointer<HostManager> _self;
     HostPool            mHostPool;
     QMutex              mLock;
     Host *              mpActiveHost;
