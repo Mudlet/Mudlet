@@ -44,6 +44,7 @@ class TCommandLine : public QPlainTextEdit//QLineEdit
 public:
 
                       TCommandLine( Host *, TConsole *, QWidget * );
+                      ~TCommandLine();
 //    void              keyPressEvent(QKeyEvent *event);
     void              focusInEvent ( QFocusEvent * );
     void              focusOutEvent ( QFocusEvent * );

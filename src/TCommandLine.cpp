@@ -92,6 +92,11 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
     setContentsMargins(0,0,0,0);
 }
 
+TCommandLine::~TCommandLine()
+{
+    Hunspell_destroy( mpHunspell );
+}
+
 void TCommandLine::slot_textChanged( const QString & text )
 {
 }
