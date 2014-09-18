@@ -52,6 +52,9 @@
 using namespace std;
 
 const QString TConsole::cmLuaLineVariable("line");
+qint64 replayDurationOffset = 0;
+// The offset in the file to the duration item (which has to be overwritten at
+// the end.
 
 TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 : QWidget( parent )
@@ -85,8 +88,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mpMainDisplay( new QWidget( mpMainFrame ) )
 , mpMapper( 0 )
 , mpScrollBar( new QScrollBar )
-
-, mRecordReplay( false )
+, mIsRecording( false )
 , mSystemMessageBgColor( mBgColor )
 , mSystemMessageFgColor( QColor( 255,0,0 ) )
 , mTriggerEngineMode( false )
@@ -861,6 +863,8 @@ int TConsole::getButtonState()
     return mButtonState;
 }
 
+// TODO: HTML output needs updating, to include the now mandatory
+// tag <title...></title> at least...
 void TConsole::slot_toggleLogging()
 {
     if( mIsDebugConsole ) return;
@@ -882,7 +886,7 @@ void TConsole::slot_toggleLogging()
     {
         mLastBufferLogLine = buffer.size();
         QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+        mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         if( mpHost->mRawStreamDump )
         {
             mLogFileName.append(".html");
@@ -913,31 +917,135 @@ void TConsole::slot_toggleLogging()
 
 void TConsole::slot_toggleReplayRecording()
 {
-    if( mIsDebugConsole ) return;
-    mRecordReplay = ! mRecordReplay;
-    if( mRecordReplay )
-    {
-        QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        mLogFileName.append(".dat");
-        QDir dirLogFile;
-        if( ! dirLogFile.exists( directoryLogFile ) )
-        {
-            dirLogFile.mkpath( directoryLogFile );
+    if( mIsDebugConsole )
+        return;
+
+    mIsRecording = ! mIsRecording;
+    if( mIsRecording ) {
+        QString recordPath = QStringLiteral( "%1/.config/mudlet/profiles/%2/log" )
+                                .arg( QDir::homePath() )
+                                .arg( profile_name );
+        QString recordPathFile = QStringLiteral( "%1/%2.mreplay" )
+                               .arg( recordPath )
+                               .arg( QDateTime::currentDateTime().toString("yyyy-MM-dd#hh-mm-ss") );
+        // Previous date format might have looked nice but doesn't sort well,
+        // this way (common in Far East) makes an alphanumberic sort return the
+        // same as an actual datetime sort and if the files involved have been
+        // copied or archived they do not always retain their original datetime
+        // values, which can be a pain if one ends up with a group of files all
+        // with the same datetime metadata...!
+
+        QDir dirRecordFile;
+        if( ! dirRecordFile.exists( recordPath ) )
+            dirRecordFile.mkpath( recordPath );
+
+        mRecordFile.setFileName( recordPathFile );
+        if( ! mRecordFile.open( QIODevice::ReadWrite ) ) {
+            QString message = tr( "[ ERROR ] - Replay recording has NOT started. Cannot open for read and writing file:\n"
+                                               "\"%1\".\n" ).arg(mRecordFile.fileName());
+            mpHost->mTelnet.postMessage( message );
         }
-        mReplayFile.setFileName( mLogFileName );
-        mReplayFile.open( QIODevice::WriteOnly );
-        mReplayStream.setDevice( &mReplayFile );
-        mpHost->mTelnet.recordReplay();
-        QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName() + "\n";
-        printSystemMessage( message );
+        mRecordStream.setDevice( &mRecordFile );
+        mRecordStream.setVersion( QDataStream::Qt_4_6 );
+        // Ensure that we use a consistant datastream version over time
+
+        // Additional stuff to provide some "magic", also allows some useful
+        // external inspection by *nix file(1) command:
+        mRecordStream.writeRawData( replayMagic.constData(), replayMagic.size() + 1 );
+        mRecordStream << replayVersion; // A single byte
+        mRecordStartTime = QDateTime::currentDateTime().toUTC();
+        mpHost->mTelnet.mRecordLastDateTimeOffset = mRecordStartTime;
+        // Unlike previously used QTime this is good for more than 24 Hours or
+        // if system time changes when DST goes on/off, both rare but not
+        // impossible occurrances!
+        qint64 secondsFromEpoch = mRecordStartTime.toMSecsSinceEpoch() / 1000;
+        mRecordStream << secondsFromEpoch;
+        // A qint64, 8-byte (long long) signed number of seconds since
+        // 1970-01-01T00:00:00.000
+        mRecordFile.flush();
+        replayDurationOffset = mRecordFile.pos();
+        // Store this position so we can seek back to overwrite the following
+        // pieces of information; have found that it is tricky to divide up a
+        // single number of milliseconds in the magic(5) configuration file used
+        // in the file(1) utility on *nix systems so will save the numbers
+        // separately:
+        mRecordStream << static_cast<quint16>( 0 ); // hours (0-65536 ?)
+        mRecordStream << static_cast<quint8>( 0 ); // mins (0-59)
+        mRecordStream << static_cast<quint8>( 0 ); // Secs (0-59)
+        mRecordStream << static_cast<quint16>( 0 ); // milliSecs (0-999)
+        // The above zero values will be overwritten by the duration of the
+        // replay when we close the file - if all goes well...
+        mRecordStream.writeBytes( profile_name.toUtf8().constData(), profile_name.toUtf8().length() );
+        // And note the name of the profile from which it was recorded, using a
+        // format that can be externally parsed (a so-called "pascal" string,
+        // with a leading quint32 number {4 bytes} of bytes followed by the
+        // NON-null terminated string {in a Utf-8 encoding}).
+
+        QString message = tr( "[ INFO ]  - Replay recording has started. File: %1\n" ).arg(mRecordFile.fileName());
+        mpHost->mTelnet.postMessage( message );
     }
+    else {
+        mRecordFile.flush();
+        mRecordFile.seek(replayDurationOffset);
+        qint64 duration = mRecordStartTime.msecsTo( mpHost->mTelnet.mRecordLastDateTimeOffset );
+        qint16 duration_mSec = duration % 1000;
+        duration /= 1000;
+        qint8 duration_sec = duration % 60;
+        duration /= 60;
+        qint8 duration_min = duration % 60;
+        qint16 duration_hour = duration / 60;
+        mRecordStream << duration_hour;
+        mRecordStream << duration_min;
+        mRecordStream << duration_sec;
+        mRecordStream << duration_mSec;
+        mRecordFile.close();
+        QString message = tr( "[  OK  ]  - Replay recording has been stopped. File: %1\n").arg(mRecordFile.fileName());
+        mpHost->mTelnet.postMessage( message );
+    }
+}
+
+void TConsole::abortRecording()
+{
+    mIsRecording = false;
+    mRecordFile.flush();
+    if( mRecordStream.status() == QDataStream::WriteFailed )
+        mRecordStream.resetStatus(); // Recover the file datastream if possible
+
+    qint64 duration = mRecordStartTime.msecsTo( mpHost->mTelnet.mRecordLastDateTimeOffset );
+    // as mRecordLastDateTimeOffset was not updated by the last failed write
+    // that brought us here, it will only report the duration up to the end of
+    // the previous replay chunk that WAS written out correctly, so if we can
+    // regain write capabilites to the already written portion of the file we
+    // can at least report the duration up to that point, if not the duration
+    // will be zeroed in the start of the file, which can be detected as
+    // indicative of a defective recording.
+    qint16 duration_mSec = duration % 1000;
+    duration /= 1000;
+    qint8 duration_sec = duration % 60;
+    duration /= 60;
+    qint8 duration_min = duration % 60;
+    qint16 duration_hour = duration / 60;
+    if( mRecordFile.seek(replayDurationOffset) && mRecordStream.status() == QDataStream::Ok ) {
+        mRecordStream << duration_hour;
+        mRecordStream << duration_min;
+        mRecordStream << duration_sec;
+        mRecordStream << duration_mSec;
+    }
+    QString message;
+    if( mRecordStream.status() == QDataStream::WriteFailed )
+        message = tr( "[ ERROR ] - Replay recording has been terminated unexpectedly.\n"
+                                  "Mudlet has not even been able to cleanly handle what has\n"
+                                  "already been recorded so playback of this recording may\n"
+                                  "be problematic.  Is there still space on the relevant\n"
+                                  "filesystem device?\n" );
     else
-    {
-        mReplayFile.close();
-        QString message = QString("Replay recording has been stopped. File: ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
-    }
+        message = tr( "[ ALERT ] - Replay recording has been terminated unexpectedly.\n"
+                                  "However the initial %1%2 {hh:mm:ss} should still be replayable."
+                                  "Is there still space on the relevant filesystem device?\n" )
+                  .arg( duration_hour > 23 ? tr( "(+%1 days)" ).arg(duration_hour / 24 ) : "" )
+                  .arg( QTime( duration_hour % 24, duration_min, duration_sec, duration_mSec ).toString( "hh:mm:ss.zzz" ) );
+    mpHost->mTelnet.postMessage( message );
+    mRecordFile.close();
 }
 
 void TConsole::changeColors()

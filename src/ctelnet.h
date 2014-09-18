@@ -24,12 +24,13 @@
 
 
 #include "pre_guard.h"
+#include <QFile>
 #include <QHostAddress>
 #include <QHostInfo>
+#include <QStringList>
 #include <QTcpSocket>
 #include <QTime>
 #include "post_guard.h"
-#include <QStringList>
 
 #include <zlib.h>
 
@@ -107,8 +108,8 @@ public:
     void              set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
     void              recordReplay();
     QString           loadReplay( QString &, bool );
-    void              _loadReplay();
-    bool              isReplaying() { return mLoadingReplay; }
+    void              _loadReplay( quint8 );
+    bool              isReplaying() { return mIsReplaying; }
     void              abortReplay();
     void              setChannel102Variables( QString & );
 
@@ -129,11 +130,20 @@ public:
     QProgressDialog * mpProgressDialog;
     QString           mServerPackage;
     void              postMessage( QString msg );
+    QDateTime           mRecordLastDateTimeOffset;
+    QFile               mReplayFile;
+    quint8              mReplayFileVersion;
+    QDateTime           mReplayStartDateTime;
+    QDateTime           mReplayPlaybackStartDateTime;
+    quint16             mReplayHours;
+    quint8              mReplayMins;
+    quint8              mReplaySecs;
+    quint16             mReplayMSecs;
 
 public slots:
     void              setDownloadProgress( qint64, qint64 );
     void              replyFinished( QNetworkReply * );
-    void              readPipe();
+    void              slot_readPipe();
     void              handle_socket_signal_hostFound(QHostInfo);
     void              handle_socket_signal_connected();
     void              handle_socket_signal_disconnected();
@@ -203,14 +213,12 @@ private:
     bool              mIsTimerPosting;
     QTimer *          mTimerLogin;
     QTimer *          mTimerPass;
-    QTime             timeOffset;
     QTime             mConnectionTime;
-    int               lastTimeOffset;
     bool              enableATCP;
     bool              enableGMCP;
     bool              enableChannel102;
     QStringList       messageStack;
-    bool              mLoadingReplay;
+    bool              mIsReplaying;
     bool              mIsReportingReplayStatus;
 };
 

@@ -2020,7 +2020,8 @@ void mudlet::slot_replay() {
 
     QString replayFileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
                                                     replayHomePath,
-                                                    tr("*.dat"));
+                                                    tr( "Mudlet replay files(*.mreplay);;Old format Mudlet replay files(*.dat)",
+                                                        "Don't try and translate file extension (part in parentheses)" ) );
     if( replayFileName.isEmpty() )
         return; // will be empty if cancel is used in above dialog
 
@@ -2352,10 +2353,14 @@ void mudlet::replayStart(Host * pHost)
     // from the replay file (with an offset value) is consumed.
     mReplayTimeOffset = 0;
 
-    mpReplayTimer = new QTimer( this );
-    mpReplayTimer->setInterval(1000);
-    mpReplayTimer->setSingleShot( false );
-    connect( mpReplayTimer, SIGNAL( timeout() ), this, SLOT( slot_replayTimeChanged() ));
+    mpReplayDisplayTimer = new QTimer( this );
+    mpReplayDisplayTimer->setInterval(1000);
+    mpReplayDisplayTimer->setSingleShot( false );
+    connect( mpReplayDisplayTimer, SIGNAL( timeout() ), this, SLOT( slot_replayTimeChanged() ));
+
+    mpReplayChunkTimer = new QTimer( this );
+    mpReplayChunkTimer->setSingleShot( true );
+    connect( mpReplayChunkTimer, SIGNAL( timeout() ), &(pHost->mTelnet), SLOT( slot_readPipe() ));
 
     QString txt2 = tr( "<font size=25><b>Time: %1 </b></font>", "Don't try to translate the HTML tags!")
                    .arg( mReplayTime.addSecs( mReplayTimeOffset ).toString( timeFormat ) );
@@ -2365,7 +2370,7 @@ void mudlet::replayStart(Host * pHost)
     pReplayTime->show();
     insertToolBar( mpMainToolBar, pReplayToolBar );
     pReplayToolBar->show();
-    mpReplayTimer->start();
+    mpReplayDisplayTimer->start();
 }
 
 void mudlet::slot_replayTimeChanged()
@@ -2378,6 +2383,7 @@ void mudlet::slot_replayTimeChanged()
     pReplayTime->show();
 }
 
+// Cleans up main replay UI and non-Host specific resources
 void mudlet::replayOver(Host * pHost, bool isEndOfReplay)
 {
     if( ! mpMainToolBar )
@@ -2387,12 +2393,16 @@ void mudlet::replayOver(Host * pHost, bool isEndOfReplay)
 
     if( pActionReplaySpeedUp )
     {
-        mpReplayTimer->stop();
+        mpReplayDisplayTimer->stop();
+        mpReplayChunkTimer->stop(); // This is probably redundant but safest
         disconnect(pActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
         disconnect(pActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
-        disconnect(mpReplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
-        delete( mpReplayTimer );
-        mpReplayTimer = 0;
+        disconnect(mpReplayDisplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+        delete( mpReplayDisplayTimer );
+        mpReplayDisplayTimer = 0;
+        disconnect(mpReplayChunkTimer, SIGNAL(timeout()), &(pHost->mTelnet), SLOT(slot_readPipe()));
+        delete( mpReplayChunkTimer );
+        mpReplayChunkTimer = 0;
         pReplayToolBar->removeAction( pActionReplaySpeedUp );
         pReplayToolBar->removeAction( pActionReplaySpeedDown );
         pReplayToolBar->removeAction( pActionSpeedDisplay );
