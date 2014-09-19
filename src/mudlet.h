@@ -147,6 +147,7 @@ public:
    void                          stopSounds();
    void                          playSound( QString s );
    bool                          isReplayInProgress();
+   void                          updateReplaySpeedDisplay();
    QTime                         mReplayTime;
    QTimer *                      mpReplayDisplayTimer;
    QTimer *                      mpReplayChunkTimer;
