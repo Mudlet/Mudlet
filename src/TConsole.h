@@ -25,6 +25,7 @@
 #include "TBuffer.h"
 
 #include "pre_guard.h"
+#include <QByteArray>
 #include <QFile>
 #include <QTextStream>
 #include <QDataStream>
@@ -84,7 +85,6 @@ public:
 
 };
 
-
 class TConsole : public QWidget
 {
 Q_OBJECT
@@ -95,8 +95,7 @@ public:
       void              reset();
       void              resetMainConsole();
       void              echoUserWindow( QString & );
-      Host *            getHost();
-      TCommandLine *    mpCommandLine;
+      Host *            getHost() { return mpHost; }
       void              replace( QString );
       void              insertHTML( QString );
       void              insertText( QString );
@@ -184,9 +183,11 @@ public:
       void              logger_set_text_properties( QString );
       QString           assemble_html_font_specs();
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
+      QDateTime         getReplayStartDateTime() { return mRecordStartTime;}
+      void              abortRecording();
 
+      TCommandLine *    mpCommandLine;
       QPointer<Host>    mpHost;
-
       TBuffer           buffer;
       static const QString     cmLuaLineVariable;
       TTextEdit *       console;
@@ -254,9 +255,9 @@ public:
 
 
       QTime             mProcessingTime;
-      bool              mRecordReplay;
-      QFile             mReplayFile;
-      QDataStream       mReplayStream;
+      bool              mIsRecording;
+      QFile             mRecordFile;
+      QDataStream       mRecordStream;
       TChar             mStandardFormat;
       QList<TConsole *> mSubConsoleList;
       std::map<std::string, TConsole *> mSubConsoleMap;
@@ -284,6 +285,8 @@ public:
       int               mCurrentSearchResult;
       QList<int>        mSearchResults;
       QString           mSearchQuery;
+      const QByteArray  replayMagic = {"MudletReplayFile"}; // Do not change, will be used to validate replay file in the future.
+      const quint8      replayVersion = 2;                  // Just in case we ever change the format, treat unversioned "old" replays as version 1 .
 
 signals:
 
@@ -295,6 +298,10 @@ public slots:
       void              slot_toggleReplayRecording();
       void              slot_stop_all_triggers( bool );
       void              slot_toggleLogging();
+
+
+private:
+      QDateTime         mRecordStartTime;
 
 };
 

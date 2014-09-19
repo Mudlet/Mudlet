@@ -808,7 +808,7 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
     if( ! ok )
         retCode = -1;
     switch( retCode ) {
-        case 0: // OK, remainder is canonical pathFile of replay file
+        case 0: // OK, remainder includes canonical pathFile of replay file
             lua_pushnumber( L, result.left(1).toInt() );
             lua_pushstring( L, result.mid(1).toUtf8() );
             break;
@@ -816,6 +816,7 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
         case 2: // Replay active in other profile
         case 3: // File does not exist
         case 4: // File is not readable
+        case 5: // Replay file version is too high, newer than we understand...
             lua_pushnumber( L, result.left(1).toInt() );
             lua_pushstring( L, result.mid(1).toUtf8() );
             break;

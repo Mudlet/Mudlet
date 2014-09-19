@@ -4,6 +4,32 @@ Installing on Windows
 Installing on Linux
 -------------------
 
+The replay files (recording of input received during a session from a MUD
+server) have gained some magic(5) and now have a .mreplay extension.  To permit
+some useful data to be extracted from them on the command line by file(1) you
+will wish to have this chunk (inside the "=====" delimiters, contains and needs
+TAB characters as separators) added to your system /etc/magic file:
+
+=====
+0	string	MudletReplayFile\0
+>17	byte	>1	Mudlet replay file, version %i
+>>18	beqdate	x	\b, started: %s
+>>26	beshort	>0	\bi, %i:
+>>>28	byte	x	\b%02i:
+>>>29	byte	x	\b%02i.
+>>>30	beshort	x	\b%03i(h:m:s) long
+>>>32	pstring/L	x	\b, profile: "%s"
+>>26	beshort	0	
+>>>28	byte	>0	\b, %02i:
+>>>>29	byte	x	\b%02i.
+>>>>30	beshort	x	\b%03i(m:s) long
+>>>>32	pstring/L	x	\b, profile: "%s"
+>>>28	byte	0	
+>>>>29	byte	x	\b, %02i.
+>>>>30	beshort	x	\b%03i(s) long
+>>>>32	pstring/L	x	\b, profile: "%s"
+=====
+
 Installing on OSX
 -----------------
 
