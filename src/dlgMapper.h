@@ -28,6 +28,7 @@
 #include <QMainWindow>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QPointer>
 #include <QProgressDialog>
 #include "post_guard.h"
 
@@ -45,7 +46,7 @@ public:
         void downloadMap();
         void updateAreaComboBox();
         TMap * mpMap;
-        Host * mpHost;
+        QPointer<Host> mpHost;
         QNetworkAccessManager * mpDownloader;
         QProgressDialog * mpProgressDialog;
         QNetworkReply * mpReply;

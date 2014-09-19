@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QMutex>
+#include <QPointer>
 #include <QTime>
 #include "post_guard.h"
 
@@ -89,7 +90,7 @@ private:
     QString            mCommand;
     QString            mFuncName;
     bool               mIsFolder;
-    Host *             mpHost;
+    QPointer<Host>     mpHost;
     bool               mNeedsToBeCompiled;
     bool               mIsTempTimer;
     QMutex             mLock;

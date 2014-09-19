@@ -26,6 +26,7 @@
 #include "ui_room_exits.h"
 #include <QCheckBox>
 #include <QDialog>
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -65,7 +66,7 @@ class dlgRoomExits : public QDialog, public Ui::roomExits
 public:
     explicit dlgRoomExits(Host *, QWidget *parent = 0);
     void init( int );
-    Host * mpHost;
+    QPointer<Host> mpHost;
     QTreeWidgetItem * mpEditItem;
 
 signals:

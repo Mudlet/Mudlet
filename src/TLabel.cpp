@@ -38,6 +38,27 @@ TLabel::TLabel( QWidget * pW )
 
 QString nothing = "";
 
+void TLabel::setScript( Host * pHost, QString & func, TEvent * args )
+{
+    mpHost = pHost;
+    mScript = func;
+    mpParameters = args;
+}
+
+void TLabel::setEnter( Host * pHost, QString & func, TEvent * args )
+{
+    mpHost = pHost;
+    mEnter = func;
+    mEnterParams = args;
+}
+
+void TLabel::setLeave( Host * pHost, QString & func, TEvent * args )
+{
+    mpHost = pHost;
+    mLeave = func;
+    mLeaveParams = args;
+}
+
 void TLabel::mousePressEvent( QMouseEvent * event )
 {
     if( event->button() == Qt::LeftButton )

@@ -27,6 +27,7 @@
 #include "pre_guard.h"
 #include <QColor>
 #include <QIcon>
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -125,7 +126,7 @@ public:
     bool             mUseCustomLayout;
     QString          css;
     QColor           mButtonColor;
-    Host *           mpHost;
+    QPointer<Host>   mpHost;
     bool             exportItem;
     bool            mModuleMasterFolder;
 private:

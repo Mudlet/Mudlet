@@ -27,6 +27,7 @@
 #include "pre_guard.h"
 #include <QColor>
 #include <QMap>
+#include <QPointer>
 #include "post_guard.h"
 
 #include <pcre.h>
@@ -143,7 +144,7 @@ public:
     int              mColorTriggerFgAnsi;
     int              mColorTriggerBgAnsi;
     int              mKeepFiring;
-    Host *           mpHost;
+    QPointer<Host>   mpHost;
     QString                                mName;
     bool                                   mIsTempTrigger;
     QStringList                            mRegexCodeList;

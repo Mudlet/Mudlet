@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include <QMap>
+#include <QPointer>
 #include <QTime>
 #include <QWidget>
 #include "post_guard.h"
@@ -146,7 +147,7 @@ private:
     QPoint            mPB;
     TBuffer *         mpBuffer;
     TConsole *        mpConsole;
-    Host *            mpHost;
+    QPointer<Host>    mpHost;
     QScrollBar *      mpScrollBar;
     int               mScreenHeight;
     QPixmap           mScreenMap;

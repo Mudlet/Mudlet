@@ -23,6 +23,7 @@
 
 
 #include "pre_guard.h"
+#include <QPointer>
 #include <QXmlStreamWriter>
 #include "post_guard.h"
 
@@ -80,7 +81,7 @@ public:
     bool            exportKey( TKey * );
 
 private:
-    Host *          mpHost;
+    QPointer<Host>  mpHost;
     TTrigger *      mpTrigger;
     TTimer *        mpTimer;
     TAlias *        mpAlias;

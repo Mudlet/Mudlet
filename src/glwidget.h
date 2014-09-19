@@ -23,6 +23,7 @@
 
 
 #include "pre_guard.h"
+#include <QPointer>
 #include <QtOpenGL/qgl.h> //problem with git
 #include "post_guard.h"
 
@@ -116,7 +117,7 @@ public:
     float mScale;
     TMap * mpMap;
     int mTarget;
-    Host * mpHost;
+    QPointer<Host> mpHost;
     QMap<int, int> mQuads;
 };
 

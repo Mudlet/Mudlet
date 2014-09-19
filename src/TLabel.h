@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include <QLabel>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -40,14 +41,14 @@ Q_OBJECT
 public:
 
                   TLabel( QWidget * pW=0 );
-void              setScript( Host * pHost, QString & func, TEvent * args ){ mpHost = pHost; mScript = func; mpParameters = args; }
-void              setEnter( Host * pHost, QString & func, TEvent * args ){ mpHost = pHost; mEnter = func; mEnterParams = args; }
-void              setLeave( Host * pHost, QString & func, TEvent * args ){ mpHost = pHost; mLeave = func; mLeaveParams = args; }
+void              setScript( Host * pHost, QString & func, TEvent * args );
+void              setEnter( Host * pHost, QString & func, TEvent * args );
+void              setLeave( Host * pHost, QString & func, TEvent * args );
 void              mousePressEvent( QMouseEvent *  );
 void              leaveEvent(QEvent *);
 void              enterEvent(QEvent *);
 
-Host *            mpHost;
+QPointer<Host>    mpHost;
 QString           mScript;
 QString           mEnter;
 QString           mLeave;

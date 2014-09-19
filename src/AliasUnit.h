@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMutex>
 #include <QMultiMap>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -90,7 +91,7 @@ private:
     void                            removeAliasRootNode( TAlias * pT );
     void                            removeAlias( TAlias *);
 
-    Host *                          mpHost;
+    QPointer<Host>                  mpHost;
     QMap<int, TAlias *>             mAliasMap;
     std::list<TAlias *>             mAliasRootNodeList;
     qint64                          mMaxID;

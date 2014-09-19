@@ -76,7 +76,7 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
     }
 }
 
-TConsole *  mudlet::mpDebugConsole = 0;
+QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QMainWindow * mudlet::mpDebugArea = 0;
 bool mudlet::debugMode = false;
 

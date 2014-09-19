@@ -27,6 +27,7 @@
 #include <QColor>
 #include <QMap>
 #include <QPoint>
+#include <QPointer>
 #include <QStringList>
 #include <QTime>
 #include "post_guard.h"
@@ -257,7 +258,7 @@ private:
     int               bgColorB;
     QColor            mBgColor;
 
-    Host *            mpHost;
+    QPointer<Host>    mpHost;
     int               maxx;
     int               maxy;
     bool              hadLF;

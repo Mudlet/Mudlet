@@ -23,6 +23,7 @@
 
 
 #include "pre_guard.h"
+#include <QPointer>
 #include <QTreeWidget>
 #include "post_guard.h"
 
@@ -58,7 +59,7 @@ public:
 
 private:
     bool mIsDropAction;
-    Host * mpHost;
+    QPointer<Host> mpHost;
     int mOldParentID;
     int mChildID;
     bool mIsTriggerTree;

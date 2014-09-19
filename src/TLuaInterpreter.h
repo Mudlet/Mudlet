@@ -26,6 +26,7 @@
 #include <QMutex>
 #include <QNetworkReply>
 #include <QNetworkAccessManager>
+#include <QPointer>
 #include <QThread>
 #include <QTimer>
 #include "post_guard.h"
@@ -432,7 +433,7 @@ private:
     lua_State* pGlobalLua;
     TLuaMainThread * mpLuaSessionThread;
 
-    Host * mpHost;
+    QPointer<Host> mpHost;
     int mHostID;
     //std::list<std::string> mCaptureList;
     QList<QObject *> objectsToDelete;

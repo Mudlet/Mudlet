@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QColor>
 #include <QPixmap>
+#include <QPointer>
 #include <QTreeWidget>
 #include <QWidget>
 #include "post_guard.h"
@@ -64,7 +65,7 @@ public:
     void     setExitSize( double );
     void     createLabel( QRectF labelRect );
     TMap *   mpMap;
-    Host *   mpHost;
+    QPointer<Host> mpHost;
     int      xzoom;
     int      yzoom;
     int      _rx;
