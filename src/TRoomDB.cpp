@@ -38,18 +38,12 @@ TRoomDB::TRoomDB( TMap * pMap )
 
 TRoom * TRoomDB::getRoom( int id )
 {
+    if (id < 0)
+        return 0;
     QHash< int, TRoom * >::iterator i = rooms.find( id );
     if ( i != rooms.end() && i.key() == id )
         return i.value();
     return 0;
-//    if( rooms.contains( id ) && id > 0 )
-//    {
-//        return rooms[id];
-//    }
-//    else
-//    {
-//        return 0;
-//    }
 }
 
 bool TRoomDB::addRoom( int id )
@@ -59,6 +53,10 @@ bool TRoomDB::addRoom( int id )
     {
         rooms[id] = new TRoom( this );
         rooms[id]->setId(id);
+        QHash<int, int> exits = rooms[id]->getExits();
+        QList<int> toExits = exits.keys();
+        for( int i=0; i<toExits.size(); i++ )
+            reverseExitMap.insert(id, toExits[i]);
         return true;
     }
     else
@@ -89,52 +87,55 @@ bool TRoomDB::addRoom( int id, TRoom * pR )
 // this is call by TRoom destructor only
 bool TRoomDB::__removeRoom( int id )
 {
-    if( rooms.contains(id ) && id > 0 )
+    TRoom * pR = getRoom(id);
+    if( pR )
     {
-        TRoom * pR = getRoom( id );
-        if( !pR ) return false;
-        QHashIterator<int, TRoom *> it( rooms );
-        while( it.hasNext() )
+        // FIXME: make a proper exit controller so we don't need to do all these if statements
+        QMultiHash<int, int>::iterator i = reverseExitMap.find(id);
+        while (i != reverseExitMap.end() && i.key() == id) {
+            TRoom * r = getRoom(i.value());
+            if(r){
+                if( r->getNorth() == id ) r->setNorth(-1);
+                if( r->getNortheast() == id ) r->setNortheast(-1);
+                if( r->getNorthwest() == id ) r->setNorthwest(-1);
+                if( r->getEast() == id ) r->setEast(-1);
+                if( r->getWest() == id ) r->setWest(-1);
+                if( r->getSouth() == id ) r->setSouth(-1);
+                if( r->getSoutheast() == id ) r->setSoutheast(-1);
+                if( r->getSouthwest() == id ) r->setSouthwest(-1);
+                if( r->getUp() == id ) r->setUp(-1);
+                if( r->getDown() == id ) r->setDown(-1);
+                if( r->getIn() == id ) r->setIn(-1);
+                if( r->getOut() == id ) r->setOut(-1);
+                r->removeAllSpecialExitsToRoom( id );
+            }
+            ++i;
+        }
+        rooms.remove( id );
+        // FIXME: make hashTable a bimap
+        QList<QString> keyList = hashTable.keys();
+        QList<int> valueList = hashTable.values();
+        for( int i=0; i<valueList.size(); i++ )
         {
-            it.next();
-            TRoom * r = it.value();
-            if( r->getNorth() == id ) r->setNorth(-1);
-            if( r->getNortheast() == id ) r->setNortheast(-1);
-            if( r->getNorthwest() == id ) r->setNorthwest(-1);
-            if( r->getEast() == id ) r->setEast(-1);
-            if( r->getWest() == id ) r->setWest(-1);
-            if( r->getSouth() == id ) r->setSouth(-1);
-            if( r->getSoutheast() == id ) r->setSoutheast(-1);
-            if( r->getSouthwest() == id ) r->setSouthwest(-1);
-            if( r->getUp() == id ) r->setUp(-1);
-            if( r->getDown() == id ) r->setDown(-1);
-            if( r->getIn() == id ) r->setIn(-1);
-            if( r->getOut() == id ) r->setOut(-1);
-            r->removeAllSpecialExitsToRoom( id );
+            if( valueList[i] == id )
+            {
+                hashTable.remove( keyList[i] );
+            }
         }
         int areaID = pR->getArea();
         TArea * pA = getArea( areaID );
-// FIXME: Is it appropriate to bail out here if there is no Area as we haven't
-// cleared the Hash table yet...!
-        if( !pA ) return false;
-        pA->removeRoom( id );
+        if( pA )
+            pA->removeRoom( id );
+        reverseExitMap.remove(id);
+        // Because we clear the graph in initGraph which will be called
+        // if mMapGraphNeedsUpdate is true -- we don't need to
+        // remove the vertex using clear_vertex and remove_vertex here
         mpMap->mMapGraphNeedsUpdate = true;
-        rooms.remove( id );
+        return true;
     }
-    QList<QString> keyList = hashTable.keys();
-    QList<int> valueList = hashTable.values();
-    for( int i=0; i<valueList.size(); i++ )
-    {
-        if( valueList[i] == id )
-        {
-            hashTable.remove( keyList[i] );
-        }
-    }
-    return true;
+    return false;
 }
 
-
-// called by TRoom destructor
 bool TRoomDB::removeRoom( int id )
 {
     if( rooms.contains(id ) && id > 0 )
