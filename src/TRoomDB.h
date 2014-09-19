@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include <QHash>
+#include <QMultiHash>
 #include <QMap>
 #include <QString>
 #include "post_guard.h"
@@ -79,6 +80,7 @@ private:
     bool __removeRoom( int id );
 
     QHash<int, TRoom *> rooms;
+    QMultiHash<int, int> reverseExitMap;
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
     TMap * mpMap;
