@@ -133,9 +133,9 @@ public:
    int                           mMainIconSize;
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
-   void                          replayStart();
+   void                          replayStart( Host * );
    bool                          setConsoleBufferSize( Host * pHost, QString & name, int x1, int y1 );
-   void                          replayOver();
+   void                          replayOver( Host *, bool );
    void                          showEvent( QShowEvent * event );
    void                          hideEvent( QHideEvent * event );
    bool                          resetFormat( Host *, QString & name );
@@ -146,8 +146,15 @@ public:
    void                          deselect( Host * pHost, QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
+   bool                          isReplayInProgress();
+   void                          updateReplaySpeedDisplay();
    QTime                         mReplayTime;
-   int                           mReplaySpeed;
+   QTimer *                      mpReplayDisplayTimer;
+   QTimer *                      mpReplayChunkTimer;
+   int                           mReplayTimeOffset;
+   int                           mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
+   int                           mReplaySpeed; // Now uses a NEGATIVE value to represent a FRACTIONAL value
+   int                           mPreviousReplaySpeed;
    QToolBar *                    mpMainToolBar;
    QMap<QTimer *, TTimer *>      mTimerMap;
    dlgIRC *                      mpIRC;
@@ -245,8 +252,6 @@ private:
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
 
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
    QAction *                     actionReconnect;
 
    void                          check_for_mappingscript();

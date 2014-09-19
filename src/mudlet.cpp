@@ -79,6 +79,14 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QScopedPointer<QMainWindow> mudlet::mpDebugArea;
 bool mudlet::debugMode = false;
+QAction * pActionReplaySpeedDown = 0;
+QAction * pActionReplaySpeedUp = 0;
+QAction * pActionSpeedDisplay = 0;
+QAction * pActionReplayTime = 0;
+QLabel * pReplaySpeedDisplay = 0;
+QLabel * pReplayTime = 0;
+QToolBar * pReplayToolBar = 0;
+const QString timeFormat = "hh:mm:ss";
 
 mudlet * mudlet::_self = 0;
 
@@ -102,8 +110,6 @@ mudlet::mudlet()
 , version( QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD) )
 , mpCurrentActiveHost( 0 )
 , mIsGoingDown( false )
-, actionReplaySpeedDown( 0 )
-, actionReplaySpeedUp( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -239,7 +245,7 @@ mudlet::mudlet()
 
 
     QAction * actionReplay = new QAction( QIcon( QStringLiteral( ":/icons/media-optical.png" ) ), tr("Replay"), this);
-    actionReplay->setToolTip(tr("Load a Mudlet replay"));
+    actionReplay->setToolTip(tr("Once a profile is loaded - allows you to load a previously recorded Mudlet replay"));
     mpMainToolBar->addAction( actionReplay );
 
     actionReconnect = new QAction( QIcon( QStringLiteral( ":/icons/system-restart.png" ) ), tr("Reconnect"), this);
@@ -938,6 +944,7 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled( false );
     mpMainToolBar->actions()[13]->setEnabled( false );
     mpMainToolBar->actions()[14]->setEnabled( false );
+    mpMainToolBar->actions()[15]->setEnabled( false ); // Replay
 }
 
 void mudlet::enableToolbarButtons()
@@ -955,6 +962,8 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled( true );
     mpMainToolBar->actions()[13]->setEnabled( true );
     mpMainToolBar->actions()[14]->setEnabled( true );
+    mpMainToolBar->actions()[15]->setEnabled( true ); // Replay
+    mpMainToolBar->actions()[15]->setToolTip(tr("Allows you to load a previously recorded Mudlet replay"));
 }
 
 bool mudlet::openWindow( Host * pHost, QString & name )
@@ -1729,6 +1738,10 @@ void mudlet::setIcoSize( int s )
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     else
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
+    if( pReplayToolBar ) {
+        pReplayToolBar->setIconSize( mpMainToolBar->iconSize() );
+        pReplayToolBar->setToolButtonStyle( mpMainToolBar->toolButtonStyle() );
+    }
     if( mShowMenuBar )
         menuBar()->show();
     else
@@ -1996,30 +2009,27 @@ void mudlet::slot_disconnect()
     pHost->mTelnet.disconnect();
 }
 
-void mudlet::slot_replay()
-{
+void mudlet::slot_replay() {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    QString home = QDir::homePath() + "/.config/mudlet/profiles/";
-    home.append( pHost->getName() );
-    home.append( "/log/" );
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
-                                                    home,
-                                                    tr("*.dat"));
-    if( fileName.isEmpty() ) return;
-
-    QFile file(fileName);
-    if( ! file.open(QFile::ReadOnly | QFile::Text) )
-    {
-        QMessageBox::warning(this, tr("Select Replay"),
-                             tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+    if( ! pHost )
         return;
-    }
-    //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    //QString fileName = directoryLogFile + "/"+QString(n.c_str());
-    pHost->mTelnet.loadReplay( fileName );
+
+    QString replayHomePath = QStringLiteral( "%1/.config/mudlet/profiles/%2/log/" )
+                             .arg( QDir::homePath() )
+                             .arg( pHost->getName() );
+
+    QString replayFileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
+                                                    replayHomePath,
+                                                    tr( "Mudlet replay files(*.mreplay);;Old format Mudlet replay files(*.dat)",
+                                                        "Don't try and translate file extension (part in parentheses)" ) );
+    if( replayFileName.isEmpty() )
+        return; // will be empty if cancel is used in above dialog
+
+    // This call to cTelnet class is where the replay code becomes common with
+    // the lua loadRawFile() ...
+    // Second argument is to enable display of messages in console
+    QString msg = pHost->mTelnet.loadReplay( replayFileName, true );
+    pHost->mTelnet.postMessage( msg );
 }
 
 void mudlet::printSystemMessage( Host * pH, QString & s )
@@ -2282,104 +2292,202 @@ void mudlet::toggleFullScreenView()
         showFullScreen();
 }
 
-QLabel * replaySpeedDisplay = 0;
-QLabel * replayTime = 0;
-QAction * actionSpeedDisplay = 0;
-QAction * actionReplayTime = 0;
-QToolBar * replayToolBar = 0;
-const QString timeFormat = "hh:mm:ss";
-QTimer * replayTimer = 0;
-
-void mudlet::replayStart()
+void mudlet::replayStart(Host * pHost)
 {
-    if( ! mpMainToolBar ) return;
-    replayToolBar = new QToolBar( this );
+    if( ! mpMainToolBar )
+        return;
+
+    mpMainToolBar->actions()[15]->setEnabled( false ); // Disable Replay button;
+    mpMainToolBar->actions()[15]->setToolTip( tr( "Unable to load a Mudlet replay as one is already being played for a loaded profile!"));
+
+    TEvent myReplayStartEvent, otherReplayStartEvent;
+    myReplayStartEvent.mArgumentList.append( "sysReplayEvent" );
+    otherReplayStartEvent.mArgumentList.append( "sysReplayEvent" );
+    myReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    myReplayStartEvent.mArgumentList.append( "myReplayStart" );
+    otherReplayStartEvent.mArgumentList.append( "otherReplayStart" );
+    myReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayStartEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent( & myReplayStartEvent );
+
+    Host * pAnyHost = HostManager::self()->getFirstHost();
+    while ( pAnyHost ) {
+        if( pAnyHost != pHost )
+            pAnyHost->raiseEvent( & otherReplayStartEvent );
+
+        pAnyHost = HostManager::self()->getNextHost( pAnyHost->getName() );
+    }
+
+    pReplayToolBar = new QToolBar( this );
     mReplaySpeed = 1;
-    replayTime = new QLabel( this );
-    actionReplayTime = replayToolBar->addWidget( replayTime );
+    mPreviousReplaySpeed = 1;
+    pReplayTime = new QLabel( this );
+    pActionReplayTime = pReplayToolBar->addWidget( pReplayTime );
 
-    actionReplaySpeedUp = new QAction( QIcon( QStringLiteral( ":/icons/export.png" ) ), tr("Faster"), this);
-    actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
-    replayToolBar->addAction( actionReplaySpeedUp );
+    pActionReplaySpeedUp = new QAction( QIcon( QStringLiteral( ":/icons/export.png" ) ), tr("Faster"), this);
+    pActionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
+    pReplayToolBar->addAction( pActionReplaySpeedUp );
 
-    actionReplaySpeedDown = new QAction( QIcon( QStringLiteral( ":/icons/port.png" ) ), tr("Slower"), this);
-    actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
-    replayToolBar->addAction( actionReplaySpeedDown );
-    replaySpeedDisplay = new QLabel( this );
-    actionSpeedDisplay = replayToolBar->addWidget( replaySpeedDisplay );
+    pActionReplaySpeedDown = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Slower"), this);
+    pActionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
+    pReplayToolBar->addAction( pActionReplaySpeedDown );
+    pReplaySpeedDisplay = new QLabel( this );
+    pActionSpeedDisplay = pReplayToolBar->addWidget( pReplaySpeedDisplay );
 
-    connect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-    connect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+    pReplayToolBar->setIconSize( mpMainToolBar->iconSize() );
+    pReplayToolBar->setToolButtonStyle( mpMainToolBar->toolButtonStyle() );
+    connect(pActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+    connect(pActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
 
-    QString txt = "<font size=25><b>speed:";
-    txt.append( QString::number( mReplaySpeed ) );
-    txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
+    QString txt = tr( "<font size=25><b> Speed: %1%2</b></font>", "Don't try to translate the HTML tags!")
+                  .arg( QChar(215) ) // N.B. The first argument is U+00D7 "multiplication sign"
+                  .arg( QString::number( mReplaySpeed ) );
+    pReplaySpeedDisplay->setText(txt);
 
-    QString txt2 = "<font size=25><b>Time:";
-    txt2.append( mReplayTime.toString( timeFormat ) );
-    txt2.append("</b></font>");
-    replayTime->setText( txt2 );
+    mReplayTime = QTime( 0, 0, 0, 1);
+    // Use the smallest possible valid time as a starting value. Since Qt5 a
+    // NULL(zero) QTime is NOT valid and adding anything to an invalid time is
+    // STILL invalid afterwards!
+    // It does not run in real time, instead it is updated every time a chunk
+    // from the replay file (with an offset value) is consumed.
+    mReplayTimeOffset = 0;
 
-    replaySpeedDisplay->show();
-    replayTime->show();
-    insertToolBar( mpMainToolBar, replayToolBar );
-    replayToolBar->show();
-    replayTimer = new QTimer( this );
-    replayTimer->setInterval(1000);
-    replayTimer->setSingleShot( false );
-    connect( replayTimer, SIGNAL( timeout() ), this, SLOT(slot_replayTimeChanged()));
-    replayTimer->start();
+    mpReplayDisplayTimer = new QTimer( this );
+    mpReplayDisplayTimer->setInterval(1000);
+    mpReplayDisplayTimer->setSingleShot( false );
+    connect( mpReplayDisplayTimer, SIGNAL( timeout() ), this, SLOT( slot_replayTimeChanged() ));
+
+    mpReplayChunkTimer = new QTimer( this );
+    mpReplayChunkTimer->setSingleShot( true );
+    connect( mpReplayChunkTimer, SIGNAL( timeout() ), &(pHost->mTelnet), SLOT( slot_readPipe() ));
+
+    QString txt2 = tr( "<font size=25><b>Time: %1 </b></font>", "Don't try to translate the HTML tags!")
+                   .arg( mReplayTime.addSecs( mReplayTimeOffset ).toString( timeFormat ) );
+    pReplayTime->setText( txt2 );
+
+    pReplaySpeedDisplay->show();
+    pReplayTime->show();
+    insertToolBar( mpMainToolBar, pReplayToolBar );
+    pReplayToolBar->show();
+    mpReplayDisplayTimer->start();
 }
 
 void mudlet::slot_replayTimeChanged()
 {
-    QString txt2 = "<font size=25><b>Time:";
-    txt2.append( mReplayTime.toString( timeFormat ) );
-    txt2.append("</b></font>");
-    replayTime->setText( txt2 );
+    QString txt2 = tr( "<font size=25><b>Time: %1 </b></font>", "Don't try to translate the HTML tags!")
+              .arg( mReplayTime.addMSecs( mReplayTimeOffset * 1000 - mReplayChunkTime ).toString( timeFormat ) );
+
+    ++mReplayTimeOffset;
+    pReplayTime->setText( txt2 );
+    pReplayTime->show();
 }
 
-void mudlet::replayOver()
+// Cleans up main replay UI and non-Host specific resources
+void mudlet::replayOver(Host * pHost, bool isEndOfReplay)
 {
-    if( ! mpMainToolBar ) return;
-    if( ! replayToolBar ) return;
+    if( ! mpMainToolBar )
+       return;
+    if( ! pReplayToolBar )
+       return;
 
-    if( actionReplaySpeedUp )
+    if( pActionReplaySpeedUp )
     {
-        disconnect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-        disconnect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
-        replayToolBar->removeAction( actionReplaySpeedUp );
-        replayToolBar->removeAction( actionReplaySpeedDown );
-        replayToolBar->removeAction( actionSpeedDisplay );
-        removeToolBar( replayToolBar );
-        actionReplaySpeedUp = 0;
-        actionReplaySpeedDown = 0;
-        actionSpeedDisplay = 0;
-        actionReplayTime = 0;
-        replayToolBar = 0;
+        mpReplayDisplayTimer->stop();
+        mpReplayChunkTimer->stop(); // This is probably redundant but safest
+        disconnect(pActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+        disconnect(pActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+        disconnect(mpReplayDisplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+        delete( mpReplayDisplayTimer );
+        mpReplayDisplayTimer = 0;
+        disconnect(mpReplayChunkTimer, SIGNAL(timeout()), &(pHost->mTelnet), SLOT(slot_readPipe()));
+        delete( mpReplayChunkTimer );
+        mpReplayChunkTimer = 0;
+        pReplayToolBar->removeAction( pActionReplaySpeedUp );
+        pReplayToolBar->removeAction( pActionReplaySpeedDown );
+        pReplayToolBar->removeAction( pActionSpeedDisplay );
+        pReplayToolBar->removeAction( pActionReplayTime);
+
+        removeToolBar( pReplayToolBar );
+        delete( pActionReplaySpeedUp );
+        pActionReplaySpeedUp = 0;
+        delete( pActionReplaySpeedDown );
+        pActionReplaySpeedDown = 0;
+        delete( pActionSpeedDisplay );
+        pActionSpeedDisplay = 0;
+        pReplaySpeedDisplay = 0;
+        delete( pActionReplayTime );
+        pActionReplayTime = 0;
+        pReplayTime = 0;
+        delete( pReplayToolBar );
+        pReplayToolBar = 0;
     }
+    TEvent myReplayOverEvent, otherReplayOverEvent;
+    myReplayOverEvent.mArgumentList.append( "sysReplayEvent" );
+    otherReplayOverEvent.mArgumentList.append( "sysReplayEvent" );
+    myReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    if( isEndOfReplay )
+        myReplayOverEvent.mArgumentList.append( "myReplayOver" );
+    else
+        myReplayOverEvent.mArgumentList.append( "myReplayAborted" );
+
+    otherReplayOverEvent.mArgumentList.append( "otherReplayOver" );
+    myReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    otherReplayOverEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent( & myReplayOverEvent );
+
+    Host * pAnyHost = HostManager::self()->getFirstHost();
+    while ( pAnyHost ) {
+        if( pAnyHost != pHost )
+            pAnyHost->raiseEvent( & otherReplayOverEvent );
+
+        pAnyHost = HostManager::self()->getNextHost( pAnyHost->getName() );
+    }
+
+    mpMainToolBar->actions()[15]->setEnabled( true ); // Enable Replay button;
+    mpMainToolBar->actions()[15]->setToolTip(tr("Allows you to load a previously recorded Mudlet replay"));
 }
 
 void mudlet::slot_replaySpeedUp()
 {
-    mReplaySpeed = mReplaySpeed * 2;
-    QString txt = "<font size=25><b>speed:";
-    txt.append( QString::number( mReplaySpeed ) );
-    txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
-    replaySpeedDisplay->show();
+    switch( mReplaySpeed ) {
+        case -2:    mReplaySpeed = 1;   break;
+        case -4:    mReplaySpeed = -2;  break;
+        case -8:    mReplaySpeed = -4;  break;
+        case 128:   mReplaySpeed = 128; break;
+        default:    mReplaySpeed *= 2;
+    }
+    updateReplaySpeedDisplay();
 }
 
 void mudlet::slot_replaySpeedDown()
 {
-    mReplaySpeed = mReplaySpeed / 2;
-    if( mReplaySpeed < 1 ) mReplaySpeed = 1;
-    QString txt = "<font size=25><b>speed:";
-    txt.append( QString::number( mReplaySpeed ) );
-    txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
-    replaySpeedDisplay->show();
+    switch( mReplaySpeed ) {
+        case 1:     mReplaySpeed = -2;  break;
+        case -2:    mReplaySpeed = -4;  break;
+        case -4:    mReplaySpeed = -8;  break;
+        case -8:    mReplaySpeed = -8;  break;
+        default:    mReplaySpeed /= 2;
+    }
+    updateReplaySpeedDisplay();
+}
+
+void mudlet::updateReplaySpeedDisplay()
+{
+    QString txt;
+    if( mReplaySpeed < 1 )
+        txt = tr( "<font size=25><b> Speed: %1<sup>1</sup>/<sub>%2<sub></b></font>", "Don't try to translate the HTML tags!")
+              .arg( QChar(215) )
+              .arg( QString::number( -mReplaySpeed ) );
+    else
+        txt = tr( "<font size=25><b> Speed: %1%2</b></font>", "Don't try to translate the HTML tags!")
+              .arg( QChar(215) )
+              .arg( QString::number( mReplaySpeed ) );
+
+    pReplaySpeedDisplay->setText(txt);
+    pReplaySpeedDisplay->show();
+    pReplayToolBar->update(); // If the speed values gains a character it won't fit unless the toolbar is redrawn
 }
 
 void mudlet::stopSounds()
@@ -2413,4 +2521,20 @@ void mudlet::playSound( QString s )
         mpMusicBox4->setMedia( QUrl::fromLocalFile( s ) );
         mpMusicBox4->play();
     }
+}
+
+// Survey all the profiles loaded and check whether any are already replaying a
+// stored log - the current mechanism is not reentrant so must prevent more
+// than one replay at a time!
+bool mudlet::isReplayInProgress()
+{
+    Host * pHost = HostManager::self()->getFirstHost();
+    while ( pHost ) {
+        if( pHost->mTelnet.isReplaying() )
+            return true;
+
+        pHost = HostManager::self()->getNextHost( pHost->getName() );
+    }
+
+    return false;
 }

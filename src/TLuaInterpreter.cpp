@@ -786,21 +786,180 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
 
 int TLuaInterpreter::loadRawFile( lua_State * L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "loadRawFile: wrong argument type" );
+    QString fileName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "loadRawFile: bad argument #1 (replay file, optionally with a path, as string expected, got %1)" )
+                           .arg( luaL_typename(L, 1) ).toUtf8() );
         lua_error( L );
         return 1;
     }
     else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
+        fileName = QDir::fromNativeSeparators( QString::fromUtf8( lua_tostring( L, 1 ) ) );
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->loadRawFile( luaSendText );
-    return 0;
+    QString pathFileName = QStringLiteral( "%1/.config/mudlet/profiles/%2/log/%3" )
+                               .arg( QDir::homePath() )
+                               .arg( pHost->getName() )
+                               .arg( fileName );
+
+    QString result = pHost->mTelnet.loadReplay( pathFileName, false );
+    bool ok = false;
+    int retCode = result.left(1).toUInt( & ok );
+    if( ! ok )
+        retCode = -1;
+    switch( retCode ) {
+        case 0: // OK, remainder includes canonical pathFile of replay file
+            lua_pushboolean( L, true );
+            lua_pushstring( L, result.mid(1).toUtf8() );
+            lua_pushnumber( L, result.left(1).toInt() );
+            break;
+        case 1: // Replay active in this profile
+        case 2: // Replay active in other profile
+        case 3: // File does not exist
+        case 4: // File is not readable
+        case 5: // Replay file version is too high, newer than we understand...
+            lua_pushnil( L );
+            lua_pushstring( L, result.mid(1).toUtf8() );
+            lua_pushnumber( L, result.left(1).toInt() );
+            break;
+        default:
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "loadRawFile: unexpected internal error code: \"%1\"!" ).arg( result.left(1) ).toUtf8() );
+            lua_pushnumber( L, result.left(1).toInt() );
+    }
+    return 3;
+}
+
+int TLuaInterpreter::abortReplay( lua_State * L ) {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mTelnet.isReplaying() ){
+        pHost->mTelnet.abortReplay();
+        lua_pushboolean( L , true );
+    }
+    else
+        lua_pushnil( L );
+
+    return 1;
+}
+
+int TLuaInterpreter::setReplaySpeed( lua_State * L ) {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mTelnet.isReplaying() ){
+        if( ! lua_isnumber( L, 1 ) ) {
+            lua_pushstring( L, tr( "setReplaySpeed: bad argument #1 (replay speed, number expected, got %1)" )
+                               .arg( luaL_typename(L, 1) ).toUtf8() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            float value = lua_tonumber( L, 1 );
+            int newSpeed = 0;
+            if( qFuzzyCompare ( static_cast<float>(1.0), static_cast<float>(value) ) )
+                newSpeed = 1; // Use floats rather than doubles as they should have a wider margin for fuzziness
+            else if( qFuzzyCompare ( static_cast<float>(129.0), static_cast<float>(1.0 + value) ) )
+                newSpeed = 128;
+            else if( qFuzzyCompare ( static_cast<float>(65.0), static_cast<float>(1.0 + value ) ) )
+                newSpeed = 64;
+            else if( qFuzzyCompare ( static_cast<float>(33.0), static_cast<float>(1.0 + value ) ) )
+                newSpeed = 32;
+            else if( qFuzzyCompare ( static_cast<float>(17.0), static_cast<float>(1.0 + value ) ) )
+                newSpeed = 16;
+            else if( qFuzzyCompare ( static_cast<float>(9.0), static_cast<float>(1.0 + value ) ) )
+                newSpeed = 8;
+            else if( qFuzzyCompare ( static_cast<float>(5.0), static_cast<float>(1.0 + value ) ) )
+                newSpeed = 4;
+            else if( qFuzzyCompare ( static_cast<float>(3.0), static_cast<float>(1.0 + value ) ) )
+                newSpeed = 2;
+            else if( qFuzzyCompare ( static_cast<float>(1.5), static_cast<float>(1.0 + value ) ) )
+                newSpeed = -2;
+            else if( qFuzzyCompare ( static_cast<float>(1.25), static_cast<float>(1.0 + value ) ) )
+                newSpeed = -4;
+            else if( qFuzzyCompare ( static_cast<float>(1.125), static_cast<float>(1.0 + value ) ) )
+                newSpeed = -8;
+            else {
+                lua_pushstring( L, tr( "setReplaySpeed: bad value #1 (replay speed, value got %1,\n"
+                                       "value expected, one of: 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125)" )
+                                   .arg( QString::number(value) ).toUtf8() );
+                lua_error( L );
+                return 1;
+            }
+            mudlet::self()->mReplaySpeed = newSpeed;
+            mudlet::self()->updateReplaySpeedDisplay();
+        }
+        lua_pushboolean( L , true );
+    }
+    else
+        lua_pushnil( L );
+
+    return 1;
+}
+
+int TLuaInterpreter::getReplayStatus( lua_State * L ) {
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( pHost->mTelnet.isReplaying() ) {
+        uint replayVersion = pHost->mTelnet.mReplayFileVersion;
+
+        lua_newtable( L );
+
+        lua_pushstring( L, "displayedSpeed" );
+        int replaySpeed = mudlet::self()->mReplaySpeed;
+        double reportedSpeed;
+        if( replaySpeed > 0 )
+            reportedSpeed = replaySpeed;
+        else
+            reportedSpeed = -1.0/replaySpeed;
+
+        lua_pushnumber( L, reportedSpeed );
+        lua_settable( L, -3 );
+
+        lua_pushstring( L, "displayedTime" );
+        QString replayDisplayedElapsedTime = mudlet::self()->mReplayTime.addMSecs( mudlet::self()->mReplayTimeOffset * 1000 - mudlet::self()->mReplayChunkTime ).toString();
+        lua_pushstring( L, replayDisplayedElapsedTime.toLatin1() );
+        lua_settable(L, -3);
+
+        uint replayHours = pHost->mTelnet.mReplayHours;
+        uint replayMinutes = pHost->mTelnet.mReplayMins;
+        uint replaySeconds = pHost->mTelnet.mReplaySecs;
+        uint replayMilliSeconds = pHost->mTelnet.mReplayMSecs;
+        uint replayDays = replayHours/24;
+        uint replayHoursInDay = replayHours%24;
+
+        lua_pushstring( L, "duration" );
+        if( replayVersion == 1 )
+            lua_pushnil( L );
+        else {
+            QString replayDuration;
+            if( replayDays )
+                replayDuration = tr( "(+%1 days) %2", "An extremely long duration replay that is >=24 hours!", replayDays )
+                                 .arg( replayDays )
+                                 .arg( QTime( replayHoursInDay, replayMinutes, replaySeconds, replayMilliSeconds ).toString("hh:mm:ss.zzz") );
+            else
+                replayDuration = QTime( replayHoursInDay, replayMinutes, replaySeconds, replayMilliSeconds ).toString("hh:mm:ss.zzz");
+
+            lua_pushstring( L, replayDuration.toUtf8() );
+        }
+        lua_settable( L, -3 );
+
+        lua_pushstring( L, "file" );
+        QString replayFile = pHost->mTelnet.mReplayFile.fileName();
+        lua_pushstring( L, replayFile.toUtf8() );
+        lua_settable( L, -3 );
+
+        lua_pushstring( L, "recorded" );
+        QString replayRecordingStart = pHost->mTelnet.mReplayStartDateTime.toString( Qt::ISODate );
+        lua_pushstring( L, replayRecordingStart.toLatin1() );
+        lua_settable( L, -3 );
+
+        lua_pushstring( L, "version" );
+        lua_pushinteger( L, replayVersion );
+        lua_settable( L, -3 );
+
+    }
+    else
+        lua_pushnil(L);
+
+    return 1;
 }
 
 int TLuaInterpreter::getCurrentLine( lua_State * L )
@@ -10842,6 +11001,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "showToolBar", TLuaInterpreter::showToolBar );
     lua_register( pGlobalLua, "hideToolBar", TLuaInterpreter::hideToolBar );
     lua_register( pGlobalLua, "loadRawFile", TLuaInterpreter::loadRawFile );
+    lua_register( pGlobalLua, "abortReplay", TLuaInterpreter::abortReplay );
+    lua_register( pGlobalLua, "setReplaySpeed", TLuaInterpreter::setReplaySpeed );
+    lua_register( pGlobalLua, "getReplayStatus", TLuaInterpreter::getReplayStatus );
     lua_register( pGlobalLua, "setBold", TLuaInterpreter::setBold );
     lua_register( pGlobalLua, "setItalics", TLuaInterpreter::setItalics );
     lua_register( pGlobalLua, "setUnderline", TLuaInterpreter::setUnderline );
