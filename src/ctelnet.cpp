@@ -85,6 +85,7 @@ cTelnet::cTelnet( Host * pH )
 , enableATCP( false )
 , enableGMCP( false )
 , enableChannel102( false )
+, mLoadingReplay( false )
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -1534,25 +1535,46 @@ void cTelnet::recordReplay()
 char loadBuffer[100001];
 int loadedBytes;
 QDataStream replayStream;
-bool loadingReplay;
 QFile replayFile;
 
 void cTelnet::loadReplay( QString & name )
 {
-    replayFile.setFileName( name );
-    QString msg = "loading replay " + name;
+    QString msg;
+
+    if( mudlet::self()->isReplayInProgress() ) {
+        // Prevent trying to start a SECOND replay (in ANY profile as it happens) if one is in progress
+        msg = tr( "[ ALERT ] - A replay is already in progress for a profile, please let that one finish before trying to load another!" );
+    }
+    else {
+        QFileInfo replayFileInfo( name );
+        replayFileInfo.makeAbsolute();
+        replayFile.setFileName( replayFileInfo.canonicalFilePath() );
+        if( replayFile.exists() )
+            if( replayFile.open( QIODevice::ReadOnly ) ) {
+                msg = tr( "[ INFO ]  - Loading replay file: %1 .", "Do not translate [ INFO ] it is used to key the color coding of the message" )
+                      .arg( QDir::toNativeSeparators( replayFile.fileName() ) );
+                replayStream.setDevice( &replayFile );
+                mLoadingReplay = true;
+                mudlet::self()->replayStart();
+                _loadReplay();
+            }
+            else
+                msg = tr( "[ ALERT ] - Unable to read replay file: %1 .", "Do not translate [ ALERT ] it is used to key the color coding of the message" )
+                      .arg( QDir::toNativeSeparators( replayFile.fileName() ) );
+
+        else
+           msg = tr( "[ ALERT ] - Replay file does not exist: %1 .", "Do not translate [ ALERT ] it is used to key the color coding of the message" )
+                 .arg( QDir::toNativeSeparators( replayFile.fileName() ) );
+    }
+
     postMessage( msg );
-    replayFile.open( QIODevice::ReadOnly );
-    replayStream.setDevice( &replayFile );
-    loadingReplay = true;
-    mudlet::self()->replayStart();
-    _loadReplay();
 }
 
 void cTelnet::_loadReplay()
 {
     if( ! replayStream.atEnd() )
     {
+        mudlet::self()->mpReplayTimer->stop();
         int offset;
         int amount;
         replayStream >> offset;
@@ -1560,16 +1582,31 @@ void cTelnet::_loadReplay()
 
         char * pB = &loadBuffer[0];
         loadedBytes = replayStream.readRawData ( pB, amount );
-        //qDebug()<<"loaded:"<<loadedBytes<<"/"<<amount<<" bytes"<<" waiting for "<<offset<<" milliseconds";
-        loadBuffer[loadedBytes+1] = '\0';
-        QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
+//        if( mudlet::self()->mReplaySpeed < 1 )
+//            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duriation is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , - mudlet::self()->mReplaySpeed * offset/1000.0 );
+//        else
+//            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duriation is: %1.3f Seconds. )", loadedBytes, amount, offset/1000.0 , offset/(1000.0 * mudlet::self()->mReplaySpeed) );
+//        loadBuffer[loadedBytes+1] = '\0';
+        loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
+
+        mudlet::self()->mReplayChunkTime = offset;
+        mudlet::self()->mReplayTimeOffset = 0;
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
+        if( mudlet::self()->mReplaySpeed < 1 ) {
+            mudlet::self()->mReplayScaledChunkTime = - offset * mudlet::self()->mReplaySpeed;
+            mudlet::self()->mpReplayTimer->start( -1000 * mudlet::self()->mReplaySpeed );
+        }
+        else {
+            mudlet::self()->mReplayScaledChunkTime = offset / mudlet::self()->mReplaySpeed;
+            mudlet::self()->mpReplayTimer->start( 1000 / mudlet::self()->mReplaySpeed );
+        }
+        QTimer::singleShot( mudlet::self()->mReplayScaledChunkTime, this, SLOT(readPipe()));
     }
     else
     {
-        loadingReplay = false;
+        mLoadingReplay = false;
         replayFile.close();
-        QString msg = "The replay has ended.\n";
+        QString msg = tr( "[  OK  ]  - The replay has ended.\n", "Do not translate [  OK  ] it is used to color code the message." );
         postMessage( msg );
         mudlet::self()->replayOver();
     }
@@ -1581,10 +1618,10 @@ void cTelnet::readPipe()
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
+    qDebug( "Replay data: \"%s\"", loadBuffer );
     for( int i = 0; i < datalen; i++ )
     {
         char ch = loadBuffer[i];
-        qDebug() << "GOT REPLAY:"<<loadBuffer;
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
@@ -1683,12 +1720,11 @@ void cTelnet::readPipe()
     }//for
 
     if( cleandata.size() > 0 )
-    {
        gotRest( cleandata );
-    }
 
     mpHost->mpConsole->finalize();
-    if( loadingReplay ) _loadReplay();
+    if( mLoadingReplay )
+        _loadReplay();
 }
 
 void cTelnet::handle_socket_signal_readyRead()

@@ -784,22 +784,20 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
     return 1;
 }
 
-int TLuaInterpreter::loadRawFile( lua_State * L )
-{
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "loadRawFile: wrong argument type" );
+// Loads and initiates playback of a previously recorded log file, the
+// file-name is relative to the log subdirectory of the profile's home directory
+int TLuaInterpreter::loadRawFile( lua_State * L ) {
+    QString fileName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "loadRawFile: wrong argument(1) type, filename (string) required." ).toUtf8() );
         lua_error( L );
         return 1;
     }
     else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
+        fileName = QDir::fromNativeSeparators( QString::fromUtf8( lua_tostring( L, 1 ) ) );
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->loadRawFile( luaSendText );
+    pHost->mpConsole->loadRawFile( fileName );
     return 0;
 }
 
