@@ -809,21 +809,25 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
         retCode = -1;
     switch( retCode ) {
         case 0: // OK, remainder includes canonical pathFile of replay file
-            lua_pushnumber( L, result.left(1).toInt() );
+            lua_pushboolean( L, true );
             lua_pushstring( L, result.mid(1).toUtf8() );
+            lua_pushnumber( L, result.left(1).toInt() );
             break;
         case 1: // Replay active in this profile
         case 2: // Replay active in other profile
         case 3: // File does not exist
         case 4: // File is not readable
         case 5: // Replay file version is too high, newer than we understand...
-            lua_pushnumber( L, result.left(1).toInt() );
+            lua_pushnil( L );
             lua_pushstring( L, result.mid(1).toUtf8() );
+            lua_pushnumber( L, result.left(1).toInt() );
             break;
         default:
+            lua_pushnil( L );
             lua_pushstring( L, tr( "loadRawFile: unexpected internal error code: \"%1\"!" ).arg( result.left(1) ).toUtf8() );
+            lua_pushnumber( L, result.left(1).toInt() );
     }
-    return 2;
+    return 3;
 }
 
 int TLuaInterpreter::abortReplay( lua_State * L ) {
@@ -833,7 +837,7 @@ int TLuaInterpreter::abortReplay( lua_State * L ) {
         lua_pushboolean( L , true );
     }
     else
-        lua_pushboolean( L , false );
+        lua_pushnil( L );
 
     return 1;
 }
@@ -842,7 +846,7 @@ int TLuaInterpreter::setReplaySpeed( lua_State * L ) {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( pHost->mTelnet.isReplaying() ){
         if( ! lua_isnumber( L, 1 ) ) {
-            lua_pushstring( L, tr( "setReplaySpeed: bad argument #1 (replay speed, float expected, got %1)" )
+            lua_pushstring( L, tr( "setReplaySpeed: bad argument #1 (replay speed, number expected, got %1)" )
                                .arg( luaL_typename(L, 1) ).toUtf8() );
             lua_error( L );
             return 1;
@@ -885,7 +889,7 @@ int TLuaInterpreter::setReplaySpeed( lua_State * L ) {
         lua_pushboolean( L , true );
     }
     else
-        lua_pushboolean( L , false );
+        lua_pushnil( L );
 
     return 1;
 }
