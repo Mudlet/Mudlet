@@ -2458,20 +2458,7 @@ void mudlet::slot_replaySpeedUp()
         case 128:   mReplaySpeed = 128; break;
         default:    mReplaySpeed *= 2;
     }
-
-    QString txt;
-    if( mReplaySpeed < 1 )
-        txt = tr( "<font size=25><b> Speed: %1<sup>1</sup>/<sub>%2<sub></b></font>", "Don't try to translate the HTML tags!")
-              .arg( QChar(215) )
-              .arg( QString::number( -mReplaySpeed ) );
-    else
-        txt = tr( "<font size=25><b> Speed: %1%2</b></font>", "Don't try to translate the HTML tags!")
-              .arg( QChar(215) )
-              .arg( QString::number( mReplaySpeed ) );
-
-    pReplaySpeedDisplay->setText(txt);
-    pReplaySpeedDisplay->show();
-    pReplayToolBar->update(); // If the speed values gains a character it won't fit unless the toolbar is redrawn
+    updateReplaySpeedDisplay();
 }
 
 void mudlet::slot_replaySpeedDown()
@@ -2483,7 +2470,11 @@ void mudlet::slot_replaySpeedDown()
         case -8:    mReplaySpeed = -8;  break;
         default:    mReplaySpeed /= 2;
     }
+    updateReplaySpeedDisplay();
+}
 
+void mudlet::updateReplaySpeedDisplay()
+{
     QString txt;
     if( mReplaySpeed < 1 )
         txt = tr( "<font size=25><b> Speed: %1<sup>1</sup>/<sub>%2<sub></b></font>", "Don't try to translate the HTML tags!")
