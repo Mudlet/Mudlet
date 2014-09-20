@@ -420,6 +420,7 @@ int main(int argc, char *argv[])
         splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
         app->processEvents();
 
+        mudlet::start();
         splash.finish( mudlet::self() );
     }
 
