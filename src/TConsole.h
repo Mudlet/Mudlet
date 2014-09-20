@@ -95,7 +95,7 @@ public:
       void              reset();
       void              resetMainConsole();
       void              echoUserWindow( QString & );
-      Host *            getHost() { return mpHost; }
+      Host *            getHost();
       void              replace( QString );
       void              insertHTML( QString );
       void              insertText( QString );
@@ -285,8 +285,8 @@ public:
       int               mCurrentSearchResult;
       QList<int>        mSearchResults;
       QString           mSearchQuery;
-      const QByteArray  replayMagic = {"MudletReplayFile"}; // Do not change, will be used to validate replay file in the future.
-      const quint8      replayVersion = 2;                  // Just in case we ever change the format, treat unversioned "old" replays as version 1 .
+      const QByteArray  replayMagic;
+      const quint8      replayVersion;
 
 signals:
 

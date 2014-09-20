@@ -103,6 +103,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mpBufferSearchDown( new QToolButton )
 , mCurrentSearchResult( 0 )
 , mSearchQuery("")
+, replayMagic( "MudletReplayFile" )   // Do not change, will be used to validate replay file in the future.
+, replayVersion( 2 )    // Just in case we ever change the format, treat unversioned "old" replays as version 1 .
 {
     //mDisplayFont.setWordSpacing( 0 );
 //    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );

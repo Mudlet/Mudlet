@@ -789,7 +789,7 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
     QString fileName;
     if( ! lua_isstring( L, 1 ) ) {
         lua_pushstring( L, tr( "loadRawFile: bad argument #1 (replay file, optionally with a path, as string expected, got %1)" )
-                           .arg( luaL_typename(L, 1) ).toUtf8() );
+                           .arg( luaL_typename(L, 1) ).toUtf8().data());
         lua_error( L );
         return 1;
     }
@@ -810,7 +810,7 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
     switch( retCode ) {
         case 0: // OK, remainder includes canonical pathFile of replay file
             lua_pushboolean( L, true );
-            lua_pushstring( L, result.mid(1).toUtf8() );
+            lua_pushstring( L, result.mid(1).toUtf8().data());
             lua_pushnumber( L, result.left(1).toInt() );
             break;
         case 1: // Replay active in this profile
@@ -819,12 +819,12 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
         case 4: // File is not readable
         case 5: // Replay file version is too high, newer than we understand...
             lua_pushnil( L );
-            lua_pushstring( L, result.mid(1).toUtf8() );
+            lua_pushstring( L, result.mid(1).toUtf8().data());
             lua_pushnumber( L, result.left(1).toInt() );
             break;
         default:
             lua_pushnil( L );
-            lua_pushstring( L, tr( "loadRawFile: unexpected internal error code: \"%1\"!" ).arg( result.left(1) ).toUtf8() );
+            lua_pushstring( L, tr( "loadRawFile: unexpected internal error code: \"%1\"!" ).arg( result.left(1) ).toUtf8().data());
             lua_pushnumber( L, result.left(1).toInt() );
     }
     return 3;
@@ -835,11 +835,14 @@ int TLuaInterpreter::abortReplay( lua_State * L ) {
     if( pHost->mTelnet.isReplaying() ){
         pHost->mTelnet.abortReplay();
         lua_pushboolean( L , true );
+        lua_pushstring( L, tr( "abortReplay: replay aborted." ).toUtf8().data());
     }
-    else
+    else {
         lua_pushnil( L );
+        lua_pushstring( L, tr( "abortReplay: no replay currently playing, in this profile, to abort!" ).toUtf8().data());
+    }
 
-    return 1;
+    return 2;
 }
 
 int TLuaInterpreter::setReplaySpeed( lua_State * L ) {
@@ -847,7 +850,7 @@ int TLuaInterpreter::setReplaySpeed( lua_State * L ) {
     if( pHost->mTelnet.isReplaying() ){
         if( ! lua_isnumber( L, 1 ) ) {
             lua_pushstring( L, tr( "setReplaySpeed: bad argument #1 (replay speed, number expected, got %1)" )
-                               .arg( luaL_typename(L, 1) ).toUtf8() );
+                               .arg( luaL_typename(L, 1) ).toUtf8().data());
             lua_error( L );
             return 1;
         }
@@ -879,7 +882,7 @@ int TLuaInterpreter::setReplaySpeed( lua_State * L ) {
             else {
                 lua_pushstring( L, tr( "setReplaySpeed: bad value #1 (replay speed, value got %1,\n"
                                        "value expected, one of: 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125)" )
-                                   .arg( QString::number(value) ).toUtf8() );
+                                   .arg( QString::number(value) ).toUtf8().data());
                 lua_error( L );
                 return 1;
             }
@@ -887,11 +890,15 @@ int TLuaInterpreter::setReplaySpeed( lua_State * L ) {
             mudlet::self()->updateReplaySpeedDisplay();
         }
         lua_pushboolean( L , true );
+        lua_pushstring( L, tr( "setReplaySpeed: replay speed will be set to x%1 real time from next chunk." )
+                        .arg( QString::number( mudlet::self()->mReplaySpeed ) ).toUtf8().data() );
     }
-    else
+    else {
         lua_pushnil( L );
+        lua_pushstring( L, tr( "setReplaySpeed: no replay currently playing, in this profile, to change the speed of!" ).toUtf8().data() );
+    }
 
-    return 1;
+    return 2;
 }
 
 int TLuaInterpreter::getReplayStatus( lua_State * L ) {
@@ -902,7 +909,7 @@ int TLuaInterpreter::getReplayStatus( lua_State * L ) {
 
         lua_newtable( L );
 
-        lua_pushstring( L, "displayedSpeed" );
+        lua_pushstring( L, tr("displayedSpeed").toUtf8().data() );
         int replaySpeed = mudlet::self()->mReplaySpeed;
         double reportedSpeed;
         if( replaySpeed > 0 )
@@ -913,7 +920,7 @@ int TLuaInterpreter::getReplayStatus( lua_State * L ) {
         lua_pushnumber( L, reportedSpeed );
         lua_settable( L, -3 );
 
-        lua_pushstring( L, "displayedTime" );
+        lua_pushstring( L, tr("displayedTime").toUtf8().data() );
         QString replayDisplayedElapsedTime = mudlet::self()->mReplayTime.addMSecs( mudlet::self()->mReplayTimeOffset * 1000 - mudlet::self()->mReplayChunkTime ).toString();
         lua_pushstring( L, replayDisplayedElapsedTime.toLatin1() );
         lua_settable(L, -3);
@@ -925,7 +932,7 @@ int TLuaInterpreter::getReplayStatus( lua_State * L ) {
         uint replayDays = replayHours/24;
         uint replayHoursInDay = replayHours%24;
 
-        lua_pushstring( L, "duration" );
+        lua_pushstring( L, tr("duration").toUtf8().data() );
         if( replayVersion == 1 )
             lua_pushnil( L );
         else {
@@ -937,29 +944,32 @@ int TLuaInterpreter::getReplayStatus( lua_State * L ) {
             else
                 replayDuration = QTime( replayHoursInDay, replayMinutes, replaySeconds, replayMilliSeconds ).toString("hh:mm:ss.zzz");
 
-            lua_pushstring( L, replayDuration.toUtf8() );
+            lua_pushstring( L, replayDuration.toUtf8().data());
         }
         lua_settable( L, -3 );
 
-        lua_pushstring( L, "file" );
+        lua_pushstring( L, tr("file").toUtf8().data() );
         QString replayFile = pHost->mTelnet.mReplayFile.fileName();
-        lua_pushstring( L, replayFile.toUtf8() );
+        lua_pushstring( L, replayFile.toUtf8().data());
         lua_settable( L, -3 );
 
-        lua_pushstring( L, "recorded" );
+        lua_pushstring( L, tr("recorded").toUtf8().data() );
         QString replayRecordingStart = pHost->mTelnet.mReplayStartDateTime.toString( Qt::ISODate );
-        lua_pushstring( L, replayRecordingStart.toLatin1() );
+        lua_pushstring( L, replayRecordingStart.toLatin1().data() );  // QDateTime strings to (extended) ISO8601 are in ACSII
         lua_settable( L, -3 );
 
-        lua_pushstring( L, "version" );
+        lua_pushstring( L, tr("version").toUtf8().data() );
         lua_pushinteger( L, replayVersion );
         lua_settable( L, -3 );
+        return 1;
 
     }
-    else
-        lua_pushnil(L);
+    else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getReplaySpeed: no replay currently playing, in this profile, to get the speed of!" ).toUtf8().data() );
+        return 2;
+    }
 
-    return 1;
 }
 
 int TLuaInterpreter::getCurrentLine( lua_State * L )
