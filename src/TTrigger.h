@@ -28,6 +28,7 @@
 #include <QColor>
 #include <QMap>
 #include <QPointer>
+#include <QSharedPointer>
 #include "post_guard.h"
 
 #include <pcre.h>
@@ -160,7 +161,7 @@ private:
 
 
     QList<int>                             mRegexCodePropertyList;
-    QMap<int, pcre *>                      mRegexMap;
+    QMap<int, QSharedPointer<pcre> > mRegexMap;
 
     QString                                mScript;
 

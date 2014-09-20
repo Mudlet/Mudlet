@@ -95,7 +95,7 @@ bool TAlias::match( QString & toMatch )
     bool matchCondition = false;
     //bool ret = false;
     //bool conditionMet = false;
-    pcre * re = mpRegex;
+    QSharedPointer<pcre> re = mpRegex;
     if( re == NULL ) return false; //regex compile error
 
     //const char *error;
@@ -116,14 +116,7 @@ bool TAlias::match( QString & toMatch )
     //cout <<" LINE="<<subject<<endl;
     if( mRegexCode.size() > 0 )
     {
-        rc = pcre_exec( re,
-                        0,
-                        subject,
-                        subject_length,
-                        0,
-                        0,
-                        ovector,
-                        100 );
+        rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
     }
     else
         goto MUD_ERROR;
@@ -173,10 +166,7 @@ bool TAlias::match( QString & toMatch )
         posList.push_back( ovector[2*i] );
         if( mudlet::debugMode ) {TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"Alias: capture group #"<<(i+1)<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
     }
-    (void)pcre_fullinfo( re,
-                         NULL,
-                         PCRE_INFO_NAMECOUNT,
-                         &namecount );
+    pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMECOUNT, &namecount);
 
     if( namecount <= 0 )
     {
@@ -185,15 +175,9 @@ bool TAlias::match( QString & toMatch )
     else
     {
         unsigned char *tabptr;
-        (void)pcre_fullinfo( re,
-                             NULL,
-                             PCRE_INFO_NAMETABLE,
-                             &name_table );
+        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMETABLE, &name_table);
 
-        (void)pcre_fullinfo( re,
-                             NULL,
-                             PCRE_INFO_NAMEENTRYSIZE,
-                             &name_entry_size );
+        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
 
         tabptr = name_table;
         for( i = 0; i < namecount; i++ )
@@ -217,14 +201,7 @@ bool TAlias::match( QString & toMatch )
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec( re,
-                        NULL,
-                        subject,
-                        subject_length,
-                        start_offset,
-                        options,
-                        ovector,
-                        30 );
+        rc = pcre_exec(re.data(), NULL, subject, subject_length, start_offset, options, ovector, 30);
 
         if( rc == PCRE_ERROR_NOMATCH )
         {
@@ -281,6 +258,11 @@ MUD_ERROR:
     return matchCondition;
 }
 
+static void pcre_deleter(pcre* pointer)
+{
+    pcre_free(pointer);
+}
+
 void TAlias::setRegexCode( QString code )
 {
     mRegexCode = code;
@@ -289,12 +271,7 @@ void TAlias::setRegexCode( QString code )
     strcpy( pattern, code.toLocal8Bit().data() );
     int erroffset;
 
-    pcre * re;
-    re = pcre_compile( pattern,
-                       0,
-                       &error,
-                       &erroffset,
-                       NULL);
+    QSharedPointer<pcre> re(pcre_compile(pattern, 0, &error, &erroffset, NULL), pcre_deleter);
 
     if( re == NULL )
     {

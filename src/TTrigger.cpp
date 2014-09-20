@@ -125,6 +125,11 @@ void TTrigger::setName( QString name )
     mpHost->getTriggerUnit()->mLookupTable.insertMulti( name, this );
 }
 
+static void pcre_deleter(pcre* pointer)
+{
+    pcre_free(pointer);
+}
+
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
 bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList )
 {
@@ -167,12 +172,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
 
             int erroffset;
 
-            pcre * re;
-            re = pcre_compile( pattern,
-                               0,
-                               &error,
-                               &erroffset,
-                               0 );
+            QSharedPointer<pcre> re(pcre_compile(pattern, 0, &error, &erroffset, 0), pcre_deleter);
 
             if (re == 0)
             {
@@ -257,7 +257,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
 {
     assert( mRegexMap.contains(regexNumber ) );
 
-    pcre * re = mRegexMap[regexNumber];
+    QSharedPointer<pcre> re = mRegexMap[regexNumber];
 
     if( ! re )
     {
@@ -279,14 +279,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
 
     //qDebug() <<"TTrigger::match_perl() regex="<<mRegexCodeList[regexNumber]<<" LINE="<<subject;
 
-    rc = pcre_exec( re,
-                    0,
-                    subject,
-                    subject_length,
-                    0,
-                    0,
-                    ovector,
-                    100 );
+    rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
 
     if( rc < 0 )
     {
@@ -327,10 +320,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
         posList.push_back( ovector[2*i] + posOffset );
         if( mudlet::debugMode ){ TDebug(QColor(Qt::darkCyan),QColor(Qt::black))<<"capture group #"<<(i+1)<<" = ">>0; TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"<"<<match.c_str()<<">\n">>0;}
     }
-    (void)pcre_fullinfo( re,
-                         NULL,
-                         PCRE_INFO_NAMECOUNT,
-                         &namecount);
+    pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMECOUNT, &namecount);
 
     if( namecount <= 0 )
     {
@@ -339,16 +329,9 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
     else
     {
         unsigned char *tabptr;
-        (void)pcre_fullinfo( re,
-                             NULL,
-                             PCRE_INFO_NAMETABLE,
-                             &name_table);
+        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMETABLE, &name_table);
 
-        (void)pcre_fullinfo(
-                             re,
-                             NULL,
-                             PCRE_INFO_NAMEENTRYSIZE,
-                             &name_entry_size);
+        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
 
         tabptr = name_table;
         for( i = 0; i < namecount; i++ )
@@ -377,14 +360,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec( re,
-                        NULL,
-                        subject,
-                        subject_length,
-                        start_offset,
-                        options,
-                        ovector,
-                        30 );
+        rc = pcre_exec(re.data(), NULL, subject, subject_length, start_offset, options, ovector, 30);
 
         if( rc == PCRE_ERROR_NOMATCH )
         {
