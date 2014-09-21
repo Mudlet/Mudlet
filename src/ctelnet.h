@@ -109,7 +109,7 @@ public:
     void              recordReplay();
     void              loadReplay( QString & );
     void              _loadReplay();
-
+    bool              isReplaying() { return loadingReplay; }
     void              setChannel102Variables( QString & );
 
 
@@ -210,6 +210,7 @@ private:
     bool              enableGMCP;
     bool              enableChannel102;
     QStringList       messageStack;
+    bool              loadingReplay;
 };
 
 #endif // MUDLET_CTELNET_H

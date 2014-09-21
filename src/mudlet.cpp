@@ -79,6 +79,7 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QScopedPointer<QMainWindow> mudlet::mpDebugArea;
 bool mudlet::debugMode = false;
+static const QString timeFormat = "hh:mm:ss";
 
 QPointer<mudlet> mudlet::_self;
 
@@ -105,6 +106,12 @@ mudlet::mudlet()
 , mIsGoingDown( false )
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
+, actionSpeedDisplay( 0 )
+, actionReplayTime( 0 )
+, replaySpeedDisplay( 0 )
+, replayTime( 0 )
+, replayTimer( 0 )
+, replayToolBar( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -2283,14 +2290,6 @@ void mudlet::toggleFullScreenView()
     else
         showFullScreen();
 }
-
-QLabel * replaySpeedDisplay = 0;
-QLabel * replayTime = 0;
-QAction * actionSpeedDisplay = 0;
-QAction * actionReplayTime = 0;
-QToolBar * replayToolBar = 0;
-const QString timeFormat = "hh:mm:ss";
-QTimer * replayTimer = 0;
 
 void mudlet::replayStart()
 {
