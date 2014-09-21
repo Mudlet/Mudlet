@@ -85,6 +85,7 @@ cTelnet::cTelnet( Host * pH )
 , enableATCP( false )
 , enableGMCP( false )
 , enableChannel102( false )
+, loadingReplay( false )
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -1534,7 +1535,6 @@ void cTelnet::recordReplay()
 char loadBuffer[100001];
 int loadedBytes;
 QDataStream replayStream;
-bool loadingReplay;
 QFile replayFile;
 
 void cTelnet::loadReplay( QString & name )

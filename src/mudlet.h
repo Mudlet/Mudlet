@@ -39,6 +39,7 @@
 class QAction;
 class QCloseEvent;
 class QMenu;
+class QLabel;
 class QListWidget;
 class QPushButton;
 class QTableWidget;
@@ -249,6 +250,13 @@ private:
 
    QAction *                     actionReplaySpeedDown;
    QAction *                     actionReplaySpeedUp;
+   QAction *                     actionSpeedDisplay;
+   QAction *                     actionReplayTime;
+   QLabel *                      replaySpeedDisplay;
+   QLabel *                      replayTime;
+   QTimer *                      replayTimer;
+   QToolBar *                    replayToolBar;
+
    QAction *                     actionReconnect;
 
    void                          check_for_mappingscript();
