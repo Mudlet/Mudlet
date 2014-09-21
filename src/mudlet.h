@@ -63,6 +63,8 @@ public:
                                  mudlet();
                                 ~mudlet();
    static                        mudlet * self();
+   // This method allows better debugging when mudlet::self() is called inappropriately.
+   static                        void start();
    void                          addSubWindow(TConsole* p);
    int                           getColumnNumber( Host * pHost, QString & name );
    int                           getLineNumber( Host * pHost, QString & name );
@@ -235,7 +237,7 @@ private:
    QQueue<QString>               tempLoginQueue;
    QQueue<QString>               tempPassQueue;
    QQueue<Host *>                tempHostQueue;
-   static                        mudlet * _self;
+   static                        QPointer<mudlet> _self;
    QMap<QString, QDockWidget *>  dockWindowMap;
    //QMap<QString, TConsole *>     dockWindowConsoleMap;
    //QMap<QString, TLabel *>>       mLabelMap;

@@ -80,14 +80,15 @@ QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QScopedPointer<QMainWindow> mudlet::mpDebugArea;
 bool mudlet::debugMode = false;
 
-mudlet * mudlet::_self = 0;
+QPointer<mudlet> mudlet::_self;
+
+void mudlet::start()
+{
+    _self = new mudlet;
+}
 
 mudlet * mudlet::self()
 {
-    if( ! _self )
-    {
-        _self = new mudlet;
-    }
     return _self;
 }
 
@@ -2272,6 +2273,7 @@ void mudlet::slot_stopAllTriggers()
 
 mudlet::~mudlet()
 {
+    mudlet::_self = 0;
 }
 
 void mudlet::toggleFullScreenView()
