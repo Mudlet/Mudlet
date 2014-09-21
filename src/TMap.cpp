@@ -812,7 +812,7 @@ bool TMap::findPath( int from, int to )
                        predecessor_map(&p[0]).distance_map(&d[0]).
                        visitor(astar_goal_visitor<vertex>(goal)) );
      }
-     catch( found_goal fg )
+     catch( found_goal )
      {
          qDebug()<<"time elapsed in astar:"<<t.elapsed();
          t.restart();
