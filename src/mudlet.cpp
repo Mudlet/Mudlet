@@ -2302,7 +2302,7 @@ void mudlet::replayStart()
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction( actionReplaySpeedUp );
 
-    actionReplaySpeedDown = new QAction( QIcon( QStringLiteral( ":/icons/port.png" ) ), tr("Slower"), this);
+    actionReplaySpeedDown = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction( actionReplaySpeedDown );
     replaySpeedDisplay = new QLabel( this );
