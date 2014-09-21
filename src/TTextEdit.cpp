@@ -594,7 +594,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                     else
                         drawBackground( p, textRect, bgColor );
                 }
-                if( ( p.font().bold() != (f.flags & TCHAR_BOLD) ) || ( p.font().underline() != (f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != (f.flags & TCHAR_ITALICS)) )
+                if( ( p.font().bold() != bool(f.flags & TCHAR_BOLD) ) || ( p.font().underline() != bool(f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != bool(f.flags & TCHAR_ITALICS)) )
                 {
                     QFont font = p.font();
                     font.setBold( f.flags & TCHAR_BOLD );

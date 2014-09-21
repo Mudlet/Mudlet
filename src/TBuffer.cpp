@@ -3259,9 +3259,9 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             || buffer[y][x].bgR != bgR
             || buffer[y][x].bgG != bgG
             || buffer[y][x].bgB != bgB
-            || ( buffer[y][x].flags & TCHAR_BOLD ) != bold
-            || ( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
-            || ( buffer[y][x].flags & TCHAR_ITALICS ) != italics )
+            || bool( buffer[y][x].flags & TCHAR_BOLD ) != bold
+            || bool( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
+            || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics )
         {
             needChange = false;
             fgR = buffer[y][x].fgR;
