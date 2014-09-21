@@ -10747,11 +10747,53 @@ void TLuaInterpreter::startLuaSessionInterpreter()
     mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
 }
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+// Enable leak detection for MSVC debug builds.
+
+#define LUA_CLIENT_TYPE (_CLIENT_BLOCK | ((('L' << 8) | 'U') << 16))
+
+static void* l_alloc(void* ud, void* ptr, size_t osize, size_t nsize)
+{
+    (void)ud;
+    (void)osize;
+    if (nsize == 0) {
+        ::_free_dbg(ptr, LUA_CLIENT_TYPE);
+        return NULL;
+    } else {
+        return ::_realloc_dbg(ptr, nsize, LUA_CLIENT_TYPE, __FILE__, __LINE__);
+    }
+}
+
+static int panic(lua_State* L)
+{
+    fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
+            lua_tostring(L, -1));
+    return 0;
+}
+
+static lua_State* newstate()
+{
+    lua_State* L = lua_newstate(l_alloc, NULL);
+    if (L) {
+        lua_atpanic(L, &panic);
+    }
+    return L;
+}
+
+#else
+
+static lua_State* newstate()
+{
+    return luaL_newstate();
+}
+
+#endif // _MSC_VER && _DEBUG
+
 // this function initializes the Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
 {
-    pGlobalLua = luaL_newstate();
+    pGlobalLua = newstate();
     TLuaInterpreter::luaInterpreterMap[pGlobalLua]=mpHost;
 
     luaL_openlibs( pGlobalLua );
