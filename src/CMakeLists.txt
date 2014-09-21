@@ -196,6 +196,7 @@ SET(mudlet_HDRS
     TAstar.h
     TBuffer.h
     TDebug.h
+    testdbg.h
     TEvent.h
     TFlipButton.h
     TimerUnit.h
@@ -311,6 +312,11 @@ ENDIF(LUA_CPP)
 ADD_SUBDIRECTORY(irc)
 
 ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
+
+# Enable leak detection for MSVC debug builds.
+if(MSVC)
+  SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -FItestdbg.h")
+endif()
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 INCLUDE_DIRECTORIES(
