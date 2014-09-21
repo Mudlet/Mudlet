@@ -37,6 +37,7 @@
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
 // leak detection does not work when it is not defined.
+#include <pcre.h>
 #include <Windows.h>
 #endif // _MSC_VER && _DEBUG
 
@@ -48,6 +49,23 @@ using namespace std;
 TConsole *  spDebugConsole = 0;
 
 extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+
+#if defined(_DEBUG) && defined(_MSC_VER)
+// Enable leak detection for MSVC debug builds.
+
+#define PCRE_CLIENT_TYPE (_CLIENT_BLOCK | ((('P' << 8) | 'C') << 16))
+
+static void* pcre_malloc_dbg(size_t size)
+{
+    return ::_malloc_dbg(size, PCRE_CLIENT_TYPE, __FILE__, __LINE__);
+}
+
+static void pcre_free_dbg(void* ptr)
+{
+    return ::_free_dbg(ptr, PCRE_CLIENT_TYPE);
+}
+
+#endif // _DEBUG && _MSC_VER
 
 QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &action)
 {
@@ -137,6 +155,11 @@ int main(int argc, char *argv[])
 
         // Set this to break on the allocation number shown in the debug output above.
         // _crtBreakAlloc = 0;
+
+        pcre_malloc = pcre_malloc_dbg;
+        pcre_free = pcre_free_dbg;
+        pcre_stack_malloc = pcre_malloc_dbg;
+        pcre_stack_free = pcre_free_dbg;
     }
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = 0;
