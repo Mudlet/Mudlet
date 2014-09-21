@@ -10014,7 +10014,7 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
         lua_getglobal(L, "gmcp");
         if( !lua_istable(L, -1) )
         {
-            qDebug()<<"ERROR: msdp table not defined";
+            qDebug()<<"ERROR: gmcp table not defined";
             return;
         }
     }
