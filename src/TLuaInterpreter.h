@@ -76,6 +76,7 @@ Q_OBJECT
 public:
 
     TLuaInterpreter( Host * mpHost, int id );
+    ~TLuaInterpreter();
     void setMSDPTable(QString & key, QString & string_data);
     void parseJSON(QString & key, QString & string_data, QString protocol);
     void startLuaExecThread();

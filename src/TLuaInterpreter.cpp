@@ -106,6 +106,11 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
     purgeTimer.start(2000);
 }
 
+TLuaInterpreter::~TLuaInterpreter()
+{
+    lua_close(pGlobalLua);
+}
+
 lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
 {
     switch( unit )
