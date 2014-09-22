@@ -141,6 +141,14 @@ int main(int argc, char *argv[])
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Enable leak detection for MSVC debug builds.
     {
+        // Check for a debugger and prompt if one is not attached.
+        while (!IsDebuggerPresent()
+               && IDYES == MessageBox(0,
+                                      "You are starting debug mudlet without a debugger attached. If you wish to attach one and verify that it worked, click yes. To continue without a debugger, click no.",
+                                      "Mudlet Debug",
+                                      MB_ICONINFORMATION | MB_YESNO | MB_DEFBUTTON2))
+            ;
+
         // _CRTDBG_ALLOC_MEM_DF: Enable heap debugging.
         // _CRTDBG_LEAK_CHECK_DF: Check for leaks at program exit.
         _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
