@@ -267,11 +267,10 @@ void TAlias::setRegexCode( QString code )
 {
     mRegexCode = code;
     const char *error;
-    char * pattern = (char *) malloc( strlen( code.toLocal8Bit().data() ) + 48 );
-    strcpy( pattern, code.toLocal8Bit().data() );
+    const QByteArray& local8Bit = code.toLocal8Bit();
     int erroffset;
 
-    QSharedPointer<pcre> re(pcre_compile(pattern, 0, &error, &erroffset, NULL), pcre_deleter);
+    QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, NULL), pcre_deleter);
 
     if( re == NULL )
     {
