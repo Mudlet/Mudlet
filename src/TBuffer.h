@@ -58,7 +58,7 @@ public:
     int    bgR;
     int    bgG;
     int    bgB;
-    int    flags;
+    unsigned flags;
 //    bool   italics;
 //    bool   bold;
 //    bool   underline;
