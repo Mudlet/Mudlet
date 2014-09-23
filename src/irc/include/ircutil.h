@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2008-2009 J-P Nurmi jpnurmi@gmail.com
+* Copyright (C) 2008-2012 J-P Nurmi <jpnurmi@gmail.com>
 *
 * This library is free software; you can redistribute it and/or modify it
 * under the terms of the GNU Lesser General Public License as published by
@@ -12,21 +12,17 @@
 * License for more details.
 */
 
-#ifndef IRC_UTIL_H
-#define IRC_UTIL_H
+#ifndef IRCUTIL_H
+#define IRCUTIL_H
 
-#include <irc.h>
+#include <IrcGlobal>
+#include <QString>
 
-namespace Irc
+class COMMUNI_EXPORT IrcUtil
 {
-    class IRC_EXPORT Util
-    {
-    public:
-        static QString nickFromTarget(const QString& target);
-        static QString hostFromTarget(const QString& target);
-        static QString messageToHtml(const QString& message);
-        static QString colorNameFromCode(int code);
-    };
-}
+public:
+    static QString messageToHtml(const QString& message);
+    static QString colorCodeToName(int code, const QString& defaultColor = QLatin1String("black"));
+};
 
-#endif // IRC_UTIL_H
+#endif // IRCUTIL_H

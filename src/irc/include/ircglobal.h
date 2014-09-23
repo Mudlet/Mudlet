@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2008-2009 J-P Nurmi jpnurmi@gmail.com
+* Copyright (C) 2008-2012 J-P Nurmi <jpnurmi@gmail.com>
 *
 * This library is free software; you can redistribute it and/or modify it
 * under the terms of the GNU Lesser General Public License as published by
@@ -12,56 +12,58 @@
 * License for more details.
 */
 
-#ifndef IRC_GLOBAL_H
-#define IRC_GLOBAL_H
+#ifndef IRCGLOBAL_H
+#define IRCGLOBAL_H
 
-#include <QtGlobal>
+#include <QtCore/qglobal.h>
 
 /*!
     \file ircglobal.h
+    \brief #include &lt;IrcGlobal&gt;
  */
-#define IRC_STATIC
-#if defined(IRC_SHARED)
-#  if defined(BUILD_IRC)
-#    define IRC_EXPORT Q_DECL_EXPORT
+#define COMMUNI_STATIC
+#if defined(COMMUNI_SHARED)
+#  if defined(BUILD_COMMUNI)
+#    define COMMUNI_EXPORT Q_DECL_EXPORT
 #  else
-#    define IRC_EXPORT Q_DECL_IMPORT
+#    define COMMUNI_EXPORT Q_DECL_IMPORT
 #  endif
-#elif defined(IRC_STATIC)
-#  define IRC_EXPORT
+#elif defined(COMMUNI_STATIC)
+#  define COMMUNI_EXPORT
 #else
-#  error Installation problem: either IRC_SHARED or IRC_STATIC must be defined!
+#  error Installation problem: either COMMUNI_SHARED or COMMUNI_STATIC must be defined!
 #endif
+
 /*!
-    \def IRC_VERSION
+    \def COMMUNI_VERSION
 
-    This macro expands a numeric value of the form 0xMMNNPP (MM = major, NN = minor, PP = patch) that specifies LibIrcClient-Qt's version number.
-    For example, if you compile your application against LibIrcClient-Qt 1.2.3, the IRC_VERSION macro will expand to 0x010203.
+    This macro expands a numeric value of the form 0xMMNNPP (MM = major, NN = minor, PP = patch) that specifies Communi's version number.
+    For example, if you compile your application against Communi 1.2.3, the COMMUNI_VERSION macro will expand to 0x010203.
 
-    You can use IRC_VERSION to use the latest LibIrcClient-Qt features where available. For example:
+    You can use COMMUNI_VERSION to use the latest Communi features where available. For example:
     \code
-#if IRC_VERSION >= 0x000300
+#if COMMUNI_VERSION >= 0x000300
+    // SSL support since version 0.3.0
     session->setSocket(new QSslSocket(session));
-    session->connectToServer(host, port);
 #endif
     \endcode
     
-    \sa IRC_VERSION_STR and Irc::version().
+    \sa COMMUNI_VERSION_STR and Irc::version().
  */
-#define IRC_VERSION 0x000500
+#define COMMUNI_VERSION 0x010201
 
 /*!
-    \def IRC_VERSION_STR
+    \def COMMUNI_VERSION_STR
 
-    This macro expands to a string that specifies LibIrcClient-Qt's version number (for example, "1.2.3").
+    This macro expands to a string that specifies Communi's version number (for example, "1.2.3").
     This is the version against which the application is compiled.
 
-    \sa Irc::version() and IRC_VERSION.
+    \sa Irc::version() and COMMUNI_VERSION.
  */
-#define IRC_VERSION_STR "0.5.0"
+#define COMMUNI_VERSION_STR "1.2.1"
 
 #ifndef QT_FORWARD_DECLARE_CLASS
 #   define QT_FORWARD_DECLARE_CLASS(name) class name;
 #endif // QT_FORWARD_DECLARE_CLASS
 
-#endif // IRC_GLOBAL_H
+#endif // IRCGLOBAL_H

@@ -1,5 +1,5 @@
 ############################################################################
-# LibIrcClient-Qt                                                          #
+# Communi                                                                  #
 #                                                                          #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #                                                                          #
@@ -29,23 +29,31 @@ IF(POLICY CMP0020)
   CMAKE_POLICY(SET CMP0020 NEW)
 ENDIF()
 
-PROJECT(ircclient-qt)
+PROJECT(communi)
 
 FIND_PACKAGE(Qt5Core REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
 
-SET (SRCS src/irc.cpp src/ircbuffer.cpp src/ircsession.cpp src/ircutil.cpp)
-SET (HDRS include/ircbuffer_p.h include/ircsession_p.h)
-SET (MOC_HDRS include/irc.h include/ircbuffer.h include/ircsession.h)
-SET (PUB_HDRS ${MOC_HDRS} include/ircglobal.h include/ircutil.h include/Irc include/IrcBuffer include/IrcGlobal include/IrcSession include/IrcUtil)
+SET(SRCS src/irc.cpp src/irccodecplugin.cpp src/irccommand.cpp src/ircdecoder.cpp src/ircmessage.cpp src/ircparser.cpp src/ircsender.cpp src/ircsession.cpp src/ircutil.cpp)
+SET(HDRS include/ircdecoder_p.h include/ircparser_p.h include/ircsession_p.h)
+SET(MOC_HDRS include/irc.h include/irccodecplugin.h include/irccommand.h include/ircmessage.h include/ircsession.h)
+SET(PUB_HDRS ${MOC_HDRS} include/ircglobal.h include/ircsender.h include/ircutil.h include/Irc include/IrcCodecPlugin include/IrcCommand include/IrcGlobal include/IrcMessage include/IrcSender include/IrcSession include/IrcUtil)
 
-QT5_GENERATE_MOC(include/ircbuffer.h ${CMAKE_CURRENT_BINARY_DIR}/moc_ircbuffer.cpp)
+QT5_GENERATE_MOC(include/irc.h ${CMAKE_CURRENT_BINARY_DIR}/moc_irc.cpp)
+QT5_GENERATE_MOC(include/irccodecplugin.h ${CMAKE_CURRENT_BINARY_DIR}/moc_irccodecplugin.cpp)
+QT5_GENERATE_MOC(include/irccommand.h ${CMAKE_CURRENT_BINARY_DIR}/moc_irccommand.cpp)
+QT5_GENERATE_MOC(include/ircmessage.h ${CMAKE_CURRENT_BINARY_DIR}/moc_ircmessage.cpp)
 QT5_GENERATE_MOC(include/ircsession.h ${CMAKE_CURRENT_BINARY_DIR}/moc_ircsession.cpp)
 
-SET_PROPERTY(SOURCE src/ircbuffer.cpp APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/moc_ircbuffer.cpp)
 SET_PROPERTY(SOURCE src/ircsession.cpp APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/moc_ircsession.cpp)
 
-ADD_LIBRARY(irccqt STATIC ${SRCS} ${HDRS} ${PUB_HDRS})
+ADD_LIBRARY(irccqt STATIC ${SRCS} ${HDRS} ${PUB_HDRS}
+  ${CMAKE_CURRENT_BINARY_DIR}/moc_irc.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/moc_irccodecplugin.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/moc_irccommand.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/moc_ircmessage.cpp
+)
+
 TARGET_LINK_LIBRARIES(irccqt ${Qt5Core_LIBRARIES} ${Qt5Network_LIBRARIES})
 
 INCLUDE_DIRECTORIES(${Qt5Core_INCLUDE_DIRS} ${Qt5Network_INCLUDE_DIRS})

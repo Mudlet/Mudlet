@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+Name=Communi
+Icon=communi
+Exec=/usr/bin/communi
+GenericName=IRC client
+Categories=Network;IRCClient;Qt;
+X-KDE-StartupNotify=true
+X-Window-Icon=communi
+X-Osso-Type=application/x-executable
