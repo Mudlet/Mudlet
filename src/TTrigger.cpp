@@ -290,10 +290,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
 
     if( rc < 0 )
     {
-        switch(rc)
-        {
-             return false;
-        }
+        return false;
     }
     if( rc > 0 )
     {
