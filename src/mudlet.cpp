@@ -2317,6 +2317,11 @@ void mudlet::replayStart()
     txt.append("X</b></font>");
     replaySpeedDisplay->setText(txt);
 
+    replayTimer = new QTimer(this);
+    replayTimer->setInterval(1000);
+    replayTimer->setSingleShot(false);
+    connect(replayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+
     QString txt2 = "<font size=25><b>Time:";
     txt2.append( mReplayTime.toString( timeFormat ) );
     txt2.append("</b></font>");
@@ -2326,10 +2331,6 @@ void mudlet::replayStart()
     replayTime->show();
     insertToolBar( mpMainToolBar, replayToolBar );
     replayToolBar->show();
-    replayTimer = new QTimer( this );
-    replayTimer->setInterval(1000);
-    replayTimer->setSingleShot( false );
-    connect( replayTimer, SIGNAL( timeout() ), this, SLOT(slot_replayTimeChanged()));
     replayTimer->start();
 }
 

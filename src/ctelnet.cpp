@@ -1566,8 +1566,8 @@ void cTelnet::_loadReplay()
                offset / 1000.0,
                offset / (1000.0 * mudlet::self()->mReplaySpeed));
         loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
-        QTimer::singleShot( offset/mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
+        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
     }
     else
     {
