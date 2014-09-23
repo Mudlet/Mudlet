@@ -25,6 +25,39 @@ static int got_map_key(lua_State* L);
 static int got_map_value(lua_State* L);
 
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+// Enable leak detection for MSVC debug builds.
+
+#define LUAYAJL_CLIENT_TYPE (_CLIENT_BLOCK | ((('L' << 8) | 'Y') << 16))
+
+static void* yajl_malloc_dbg(void* ctx, size_t size)
+{
+    return ::_malloc_dbg(size, LUAYAJL_CLIENT_TYPE, __FILE__, __LINE__);
+}
+
+static void* yajl_realloc_dbg(void* ctx, void* ptr, size_t size)
+{
+    return ::_realloc_dbg(ptr, size, LUAYAJL_CLIENT_TYPE, __FILE__, __LINE__);
+}
+
+static void yajl_free_dbg(void* ctx, void* ptr)
+{
+    return ::_free_dbg(ptr, LUAYAJL_CLIENT_TYPE);
+}
+
+yajl_alloc_funcs yajl_alloc_funcs_dbg = {
+    yajl_malloc_dbg,
+    yajl_realloc_dbg,
+    yajl_free_dbg,
+    0,
+};
+
+#define JS_YAJL_ALLOC_FUNCS &yajl_alloc_funcs_dbg
+#else
+#define JS_YAJL_ALLOC_FUNCS NULL
+#endif // _MSC_VER && _DEBUG
+
+
 static double todouble(lua_State* L, const char* val, size_t len) {
     /* Convert into number using a temporary */
     char* tmp = (char*)lua_newuserdata(L, len+1);
@@ -284,7 +317,7 @@ static int js_to_value(lua_State *L) {
 
     if ( NULL == buff ) return 0;
 
-    handle = yajl_alloc(&js_to_value_callbacks, NULL, (void*)L);
+    handle = yajl_alloc(&js_to_value_callbacks, JS_YAJL_ALLOC_FUNCS, (void*)L);
     lua_pushcfunction(L, noop);
 
     if ( lua_istable(L, 2) ) {
@@ -539,7 +572,7 @@ static int js_parser(lua_State *L) {
 
     handle = (yajl_handle*)lua_newuserdata(L, sizeof(yajl_handle));
 
-    *handle = yajl_alloc(&js_parser_callbacks, NULL, (void*)L);
+    *handle = yajl_alloc(&js_parser_callbacks, JS_YAJL_ALLOC_FUNCS, (void*)L);
     luaL_getmetatable(L, "yajl.parser.meta");
     lua_setmetatable(L, -2);
 

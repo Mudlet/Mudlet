@@ -34,6 +34,13 @@
 #include <QTextLayout>
 #include "post_guard.h"
 
+#if defined(_MSC_VER) && defined(_DEBUG)
+// Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
+// leak detection does not work when it is not defined.
+#include <pcre.h>
+#include <Windows.h>
+#endif // _MSC_VER && _DEBUG
+
 
 // N/U: #define MUDLET_HOME "/usr/local/share/mudlet/"
 
@@ -42,6 +49,23 @@ using namespace std;
 TConsole *  spDebugConsole = 0;
 
 extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+
+#if defined(_DEBUG) && defined(_MSC_VER)
+// Enable leak detection for MSVC debug builds.
+
+#define PCRE_CLIENT_TYPE (_CLIENT_BLOCK | ((('P' << 8) | 'C') << 16))
+
+static void* pcre_malloc_dbg(size_t size)
+{
+    return ::_malloc_dbg(size, PCRE_CLIENT_TYPE, __FILE__, __LINE__);
+}
+
+static void pcre_free_dbg(void* ptr)
+{
+    return ::_free_dbg(ptr, PCRE_CLIENT_TYPE);
+}
+
+#endif // _DEBUG && _MSC_VER
 
 QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &action)
 {
@@ -114,6 +138,30 @@ QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &acti
 
 int main(int argc, char *argv[])
 {
+#if defined(_MSC_VER) && defined(_DEBUG)
+    // Enable leak detection for MSVC debug builds.
+    {
+        // _CRTDBG_ALLOC_MEM_DF: Enable heap debugging.
+        // _CRTDBG_LEAK_CHECK_DF: Check for leaks at program exit.
+        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
+        // Create a log file for writing leaks.
+        HANDLE hLogFile;
+        hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
+            FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL, NULL);
+        _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+        _CrtSetReportFile(_CRT_WARN, hLogFile);
+
+        // Set this to break on the allocation number shown in the debug output above.
+        // _crtBreakAlloc = 0;
+
+        pcre_malloc = pcre_malloc_dbg;
+        pcre_free = pcre_free_dbg;
+        pcre_stack_malloc = pcre_malloc_dbg;
+        pcre_stack_free = pcre_free_dbg;
+    }
+#endif // _MSC_VER && _DEBUG
     spDebugConsole = 0;
     unsigned int startupAction = 0;
 
