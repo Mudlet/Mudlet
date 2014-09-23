@@ -331,7 +331,7 @@ QHash<int, int> TRoom::getExits()
     QMapIterator<int, QString> it(other);
     while (it.hasNext()) {
         it.next();
-        exitList[it.key()] == 1;
+        exitList[it.key()] = 1;
     }
     return exitList;
 }
