@@ -1287,7 +1287,7 @@ bool mudlet::closeWindow( Host * pHost, QString & name )
         return false;
 }
 
-bool mudlet::setLabelClickCallback( Host * pHost, QString & name, QString & func, TEvent * pA )
+bool mudlet::setLabelClickCallback( Host * pHost, QString & name, QString & func, const TEvent & pA )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -1299,7 +1299,7 @@ bool mudlet::setLabelClickCallback( Host * pHost, QString & name, QString & func
         return false;
 }
 
-bool mudlet::setLabelOnEnter( Host * pHost, QString & name, QString & func, TEvent * pA )
+bool mudlet::setLabelOnEnter( Host * pHost, QString & name, QString & func, const TEvent & pA )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -1311,7 +1311,7 @@ bool mudlet::setLabelOnEnter( Host * pHost, QString & name, QString & func, TEve
         return false;
 }
 
-bool mudlet::setLabelOnLeave( Host * pHost, QString & name, QString & func, TEvent * pA )
+bool mudlet::setLabelOnLeave( Host * pHost, QString & name, QString & func, const TEvent & pA )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -1913,7 +1913,7 @@ void mudlet::slot_mapper()
     TEvent mapOpenEvent;
     mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    pHost->raiseEvent( & mapOpenEvent );
+    pHost->raiseEvent( mapOpenEvent );
 }
 
 void mudlet::check_for_mappingscript()
@@ -2248,7 +2248,7 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     TEvent event;
     event.mArgumentList.append( "sysLoadEvent" );
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    pHost->raiseEvent( & event );
+    pHost->raiseEvent( event );
 
     //NOTE: this is a potential problem if users connect by hand quickly
     //      and one host has a slower response time as the other one, but

@@ -650,7 +650,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        mpHost->raiseEvent( &me );
+        mpHost->raiseEvent( me );
     }
 }
 
@@ -727,7 +727,7 @@ void TConsole::closeEvent( QCloseEvent *event )
         TEvent conCloseEvent;
         conCloseEvent.mArgumentList.append( "sysExitEvent" );
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent( & conCloseEvent );
+        mpHost->raiseEvent( conCloseEvent );
 
         if( mpHost->mFORCE_SAVE_ON_EXIT )
         {
@@ -2414,7 +2414,7 @@ void TConsole::createMapper( int x, int y, int width, int height )
         TEvent mapOpenEvent;
         mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent( & mapOpenEvent );
+        mpHost->raiseEvent( mapOpenEvent );
     }
     mpMapper->resize( width, height );
     mpMapper->move( x, y );

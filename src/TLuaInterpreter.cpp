@@ -157,7 +157,7 @@ void TLuaInterpreter::replyFinished(QNetworkReply * reply )
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
     }
 
-    mpHost->raiseEvent( &e );
+    mpHost->raiseEvent( e );
 }
 
 void TLuaInterpreter::slotDeleteSender() {
@@ -305,7 +305,7 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
         }
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->raiseEvent( &pE );
+    pHost->raiseEvent( pE );
     return 0;
 }
 
@@ -3036,7 +3036,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
     QString name(luaName.c_str());
-    mudlet::self()->setLabelClickCallback( pHost, text, name, &pE );
+    mudlet::self()->setLabelClickCallback( pHost, text, name, pE );
 
     return 0;
 }
@@ -3086,7 +3086,7 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
     QString name(luaName.c_str());
-    mudlet::self()->setLabelOnEnter( pHost, text, name, &pE );
+    mudlet::self()->setLabelOnEnter( pHost, text, name, pE );
 
     return 0;
 }
@@ -3136,7 +3136,7 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
     QString name(luaName.c_str());
-    mudlet::self()->setLabelOnLeave( pHost, text, name, &pE );
+    mudlet::self()->setLabelOnLeave( pHost, text, name, pE );
 
     return 0;
 }
@@ -10003,7 +10003,7 @@ void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
     event.mArgumentList.append( arg );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->raiseEvent( & event );
+    pHost->raiseEvent( event );
 }
 
 
@@ -10156,7 +10156,7 @@ void TLuaInterpreter::parseJSON( QString & key, QString & string_data, QString p
             msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
             pHost->mpConsole->printSystemMessage(msg);
         }
-        pHost->raiseEvent( &event );
+        pHost->raiseEvent( event );
     }
     // auto-detect IRE composer
     if( tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit")
@@ -10344,7 +10344,7 @@ void TLuaInterpreter::setChannel102Table( int & var, int & arg )
     event.mArgumentList.append( QString::number(arg) );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->raiseEvent( & event );
+    pHost->raiseEvent( event );
 }
 
 bool TLuaInterpreter::call_luafunction( void * pT )
@@ -10577,7 +10577,7 @@ bool TLuaInterpreter::callMulti( QString & function, QString & mName )
 }
 
 
-bool TLuaInterpreter::callEventHandler( QString & function, const TEvent * pE )
+bool TLuaInterpreter::callEventHandler( QString & function, const TEvent & pE )
 {
     if( function.isEmpty() )
         return false;
@@ -10595,18 +10595,18 @@ bool TLuaInterpreter::callEventHandler( QString & function, const TEvent * pE )
         logError( e, _n, function );
         return false;
     }
-    for( int i=0; i<pE->mArgumentList.size(); i++ )
+    for( int i=0; i<pE.mArgumentList.size(); i++ )
     {
-        if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
+        if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
         {
-            lua_pushnumber( L, pE->mArgumentList[i].toDouble() );
+            lua_pushnumber( L, pE.mArgumentList[i].toDouble() );
         }
         else
         {
-            lua_pushstring( L, pE->mArgumentList[i].toLatin1().data() );
+            lua_pushstring( L, pE.mArgumentList[i].toLatin1().data() );
         }
     }
-    error = lua_pcall( L, pE->mArgumentList.size(), LUA_MULTRET, 0 );
+    error = lua_pcall( L, pE.mArgumentList.size(), LUA_MULTRET, 0 );
     if( error != 0 )
     {
         string e = "";
