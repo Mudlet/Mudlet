@@ -302,11 +302,6 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
         qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
     }
 
-    if( rc < 0 )
-    {
-        return false;
-    }
-
     for( i=0; i < rc; i++ )
     {
         char * substring_start = subject + ovector[2*i];
