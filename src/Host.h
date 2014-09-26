@@ -35,6 +35,7 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QPointer>
 #include <QTextStream>
 #include "post_guard.h"
 
@@ -143,7 +144,7 @@ public:
     void               readPackageConfig( QString, QString & );
 
     cTelnet            mTelnet;
-    TConsole *         mpConsole;
+    QPointer<TConsole> mpConsole;
     TLuaInterpreter    mLuaInterpreter;
     LuaInterface *     mLuaInterface;
     TriggerUnit        mTriggerUnit;

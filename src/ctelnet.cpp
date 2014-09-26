@@ -1469,7 +1469,9 @@ void cTelnet::slot_timerPosting()
 void cTelnet::postData()
 {
     //QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
-    mpHost->mpConsole->printOnDisplay( mMudData );
+    if (mpHost->mpConsole) {
+        mpHost->mpConsole->printOnDisplay(mMudData);
+    }
     if( mAlertOnNewData )
     {
         QApplication::alert( mudlet::self(), 0 );
