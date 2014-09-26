@@ -167,21 +167,20 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         if( propertyList[i] == REGEX_PERL )
         {
             const char *error;
-            char * pattern = (char *) malloc( strlen( regexList[i].toLocal8Bit().data() ) + 48 );
-            strcpy( pattern, regexList[i].toLocal8Bit().data() );
+            const QByteArray& local8Bit = regexList[i].toLocal8Bit();
 
             int erroffset;
 
-            QSharedPointer<pcre> re(pcre_compile(pattern, 0, &error, &erroffset, 0), pcre_deleter);
+            QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, 0), pcre_deleter);
 
             if (re == 0)
             {
                 if( mudlet::debugMode )
                 {
                     TDebug(QColor(Qt::white),QColor(Qt::red))<<"REGEX COMPILE ERROR:">>0;
-                    TDebug(QColor(Qt::red),QColor(Qt::gray))<<pattern<<"\n">>0;
+                    TDebug(QColor(Qt::red),QColor(Qt::gray))<<local8Bit.constData()<<"\n">>0;
                 }
-                setError( QString( "Pattern '" )+QString(pattern)+QString( "' failed to compile. Correct the pattern.") );
+                setError( QString( "Pattern '" )+QString(local8Bit.constData())+QString( "' failed to compile. Correct the pattern.") );
                 state = false;
                 //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
