@@ -26,6 +26,7 @@
 
 #include "pre_guard.h"
 #include <QPointer>
+#include <QSharedPointer>
 #include "post_guard.h"
 
 #include <pcre.h>
@@ -69,7 +70,7 @@ public:
     QString          mName;
     QString          mCommand;
     QString          mRegexCode;
-    pcre *           mpRegex;
+    QSharedPointer<pcre> mpRegex;
     QString          mScript;
     bool             mIsFolder;
     QPointer<Host>   mpHost;
