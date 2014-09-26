@@ -35,9 +35,8 @@ using namespace std;
 
 void AliasUnit::_uninstall( TAlias * pChild, QString packageName )
 {
-    typedef list<TAlias *>::const_iterator I;
     list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TAlias * pT = *it2;
         _uninstall( pT, packageName );
@@ -48,8 +47,7 @@ void AliasUnit::_uninstall( TAlias * pChild, QString packageName )
 
 void AliasUnit::uninstall( QString packageName )
 {
-    typedef std::list<TAlias *>::iterator IT;
-    for( IT it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
+    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
     {
         TAlias * pT = *it;
 
@@ -69,8 +67,7 @@ void AliasUnit::uninstall( QString packageName )
 
 void AliasUnit::compileAll()
 {
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
         if( pChild->isActive() )
@@ -111,8 +108,7 @@ void AliasUnit::addAliasRootNode( TAlias * pT, int parentPosition, int childPosi
     {
          // insert item at proper position
         int cnt = 0;
-        typedef std::list<TAlias *>::iterator IT;
-        for( IT it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
+        for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
         {
             if( cnt >= childPosition )
             {
@@ -269,8 +265,7 @@ bool AliasUnit::processDataStream( QString & data )
     QString lua_command_string = "command";
     Lua->set_lua_string( lua_command_string, data );
     bool state = false;
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
         // = data.replace( "\n", "" );
@@ -291,8 +286,7 @@ bool AliasUnit::processDataStream( QString & data )
 
 void AliasUnit::stopAllTriggers()
 {
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
         QString name = pChild->getName();
@@ -302,8 +296,7 @@ void AliasUnit::stopAllTriggers()
 
 void AliasUnit::reenableAllTriggers()
 {
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
         pChild->enableFamily();
@@ -353,8 +346,7 @@ bool AliasUnit::disableAlias( QString & name )
 
 bool AliasUnit::killAlias( QString & name )
 {
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
         if( pChild->getName() == name )
@@ -377,9 +369,8 @@ bool AliasUnit::killAlias( QString & name )
 
 void AliasUnit::_assembleReport( TAlias * pChild )
 {
-    typedef list<TAlias *>::const_iterator I;
     list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TAlias * pT = *it2;
         _assembleReport( pT );
@@ -394,15 +385,14 @@ QString AliasUnit::assembleReport()
     statsActiveAliass = 0;
     statsAliasTotal = 0;
     statsTempAliass = 0;
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
         TAlias * pChild = *it;
         if( pChild->isActive() ) statsActiveAliass++;
         if( pChild->isTempAlias() ) statsTempAliass++;
         statsAliasTotal++;
         list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-        for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
         {
             TAlias * pT = *it2;
             _assembleReport( pT );
@@ -430,8 +420,7 @@ QString AliasUnit::assembleReport()
 
 void AliasUnit::doCleanup()
 {
-    typedef list<TAlias *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         delete *it;
     }
@@ -440,8 +429,7 @@ void AliasUnit::doCleanup()
 
 void AliasUnit::markCleanup( TAlias * pT )
 {
-    typedef list<TAlias *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         if( *it == pT )
         {

@@ -123,16 +123,6 @@ QList<QString> HostPool::getHostNameList()
     QMutexLocker locker(& mPoolLock);
 
     return mHostPool.keys();
-    /*
-    QList<QString> strlist;
-
-    typedef QMap<QString, Host*>::iterator IT;
-    for( IT it=mHostPool.begin(); it!=mHostPool.end(); it++ )
-    {
-        strlist.push_back(it->first);
-        qDebug() << "host=" << it->first;
-    }
-    return strlist;*/
 }
 
 void HostPool::orderShutDown()
@@ -144,12 +134,6 @@ void HostPool::orderShutDown()
     {
         hostList[i]->orderShutDown();
     }
-    /*
-    typedef QMap<QString, Host*>::iterator I;
-    for(I it=mHostPool.begin(); it!=mHostPool.end(); it++ )
-    {
-        (it->second)->orderShutDown();
-    } */
 }
 
 void HostPool::postIrcMessage( QString a, QString b, QString c )

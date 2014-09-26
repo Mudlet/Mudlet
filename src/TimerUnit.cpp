@@ -31,9 +31,8 @@ using namespace std;
 
 void TimerUnit::_uninstall( TTimer * pChild, QString packageName )
 {
-    typedef list<TTimer *>::const_iterator I;
     list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TTimer * pT = *it2;
         _uninstall( pT, packageName );
@@ -44,8 +43,7 @@ void TimerUnit::_uninstall( TTimer * pChild, QString packageName )
 
 void TimerUnit::uninstall( QString packageName )
 {
-    typedef std::list<TTimer *>::iterator IT;
-    for( IT it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
+    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
     {
         TTimer * pT = *it;
 
@@ -64,8 +62,7 @@ void TimerUnit::uninstall( QString packageName )
 
 void TimerUnit::stopAllTriggers()
 {
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
         pChild->disableTimer( pChild->getID() );
@@ -74,8 +71,7 @@ void TimerUnit::stopAllTriggers()
 
 void TimerUnit::compileAll()
 {
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
         if( pChild->isActive() )
@@ -87,8 +83,7 @@ void TimerUnit::compileAll()
 
 void TimerUnit::reenableAllTriggers()
 {
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
         pChild->enableTimer( pChild->getID() );
@@ -112,8 +107,7 @@ void TimerUnit::addTimerRootNode( TTimer * pT, int parentPosition, int childPosi
     {
         // insert item at proper position
         int cnt = 0;
-        typedef std::list<TTimer *>::iterator IT;
-        for( IT it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
+        for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it ++ )
         {
             if( cnt >= childPosition )
             {
@@ -169,8 +163,7 @@ void TimerUnit::removeAllTempTimers()
 {
     //qDebug()<<"vorher: TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
     mCleanupList.clear();
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
         if( pChild->isTempTimer() )
@@ -387,8 +380,7 @@ TTimer * TimerUnit::findTimer( QString & name )
 bool TimerUnit::killTimer( QString & name )
 {
     //qDebug()<<"TimerUnit::killTimer() name="<<name;
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
         if( pChild->getName() == name )
@@ -411,8 +403,7 @@ qint64 TimerUnit::getNewID()
 void TimerUnit::doCleanup()
 {
     //qDebug()<<"TimerUnit::doCleanup() enter";
-    typedef list<TTimer *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         //qDebug()<<"--> DELETING:"<<(*it)->mName;
         delete (*it);
@@ -422,8 +413,7 @@ void TimerUnit::doCleanup()
 
 void TimerUnit::markCleanup( TTimer * pT )
 {
-    typedef list<TTimer *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         if( *it == pT )
         {
@@ -437,9 +427,8 @@ void TimerUnit::markCleanup( TTimer * pT )
 
 void TimerUnit::_assembleReport( TTimer * pChild )
 {
-    typedef list<TTimer *>::const_iterator I;
     list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TTimer * pT = *it2;
         _assembleReport( pT );
@@ -454,15 +443,14 @@ QString TimerUnit::assembleReport()
     statsActiveTriggers = 0;
     statsTriggerTotal = 0;
     statsTempTriggers = 0;
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
+    for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
         if( pChild->isActive() ) statsActiveTriggers++;
         if( pChild->isTempTimer() ) statsTempTriggers++;
         statsTriggerTotal++;
         list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-        for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
         {
             TTimer * pT = *it2;
             _assembleReport( pT );

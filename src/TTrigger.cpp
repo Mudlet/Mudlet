@@ -589,8 +589,7 @@ inline void TTrigger::filter( std::string & capture, int & posOffset )
         return;
     }
     QString text = capture.c_str();
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         (*it)->match( filterSubject, text, -1, posOffset );
     }
@@ -676,7 +675,6 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
     if( line >= static_cast<int>(mpHost->mpConsole->buffer.buffer.size()) ) return false;
     std::deque<TChar> & bufferLine = mpHost->mpConsole->buffer.buffer[line];
     QString & lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
-    typedef std::deque<TChar>::iterator IT;
     int pos = 0;
     //bool fgColorChange = false;
     int matchBegin = -1;
@@ -690,7 +688,7 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
     int mBgR = pCT->bgR;
     int mBgG = pCT->bgG;
     int mBgB = pCT->bgB;
-    for( IT it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
+    for(auto it=bufferLine.begin(); it!=bufferLine.end(); it++, pos++ )
     {
         if( ( (*it).fgR == mFgR )
          && ( (*it).fgG == mFgG )
@@ -768,10 +766,8 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
             {
                 if( captureList.size() > 0 )
                 {
-                    typedef std::list<std::string>::iterator IT;
-                    typedef std::list<int>::iterator IT2;
-                    IT it1 = captureList.begin();
-                    IT2 it2 = posList.begin();
+                    auto it1 = captureList.begin();
+                    auto it2 = posList.begin();
                     for( ; it1!=captureList.end(); it1++, it2++ )
                     {
                         filter( *it1, *it2 );
@@ -1072,8 +1068,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
         {
             if( conditionMet || ( mRegexCodeList.size() < 1 ) )
             {
-                typedef list<TTrigger *>::const_iterator I;
-                for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+                for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
                 {
                     TTrigger * pChild = *it;
                     ret = pChild->match( subject, toMatch, line );
@@ -1090,8 +1085,7 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
                 execute();
             }
 // N/U:             bool conditionMet = false;
-            typedef list<TTrigger *>::const_iterator I;
-            for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+            for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
             {
                 TTrigger * pChild = *it;
                 ret = pChild->match( subject, toMatch, line );
@@ -1317,8 +1311,7 @@ void TTrigger::compileAll()
         mOK_code = false;
     }
     setRegexCodeList(  mRegexCodeList, mRegexCodePropertyList );
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->compileAll();
@@ -1336,8 +1329,7 @@ void TTrigger::compile()
             mOK_code = false;
         }
     }
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->compile();
@@ -1404,8 +1396,7 @@ void TTrigger::enableTrigger( QString & name )
     {
         setIsActive( true );
     }
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->enableTrigger( name );
@@ -1418,8 +1409,7 @@ void TTrigger::disableTrigger( QString & name )
     {
         setIsActive( false );
     }
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->disableTrigger( name );
@@ -1432,8 +1422,7 @@ TTrigger * TTrigger::killTrigger( QString & name )
     {
         setIsActive( false );
     }
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->killTrigger( name );

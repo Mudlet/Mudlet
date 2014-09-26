@@ -194,8 +194,7 @@ void TEasyButtonBar::slot_pressed()
 void TEasyButtonBar::clear()
 {
     QWidget * pW = new QWidget;
-       typedef std::list<TFlipButton *>::iterator IT;
-    for( IT it = mButtonList.begin(); it != mButtonList.end(); it++ )
+    for(auto it = mButtonList.begin(); it != mButtonList.end(); it++ )
     {
         disconnect( *it, SIGNAL(released()), this, SLOT(slot_pressed()) );
     }
