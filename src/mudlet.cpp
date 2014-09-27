@@ -729,7 +729,7 @@ void mudlet::slot_package_exporter(){
 void mudlet::slot_close_profile_requested( int tab )
 {
     QString name = mpTabBar->tabText( tab );
-    Host * pH = HostManager::self()->getHost( name );
+    Host * pH = getHostManager()->getHost( name );
     if( ! pH ) return;
 
     if( ! pH->mpConsole->close() )
@@ -744,7 +744,7 @@ void mudlet::slot_close_profile_requested( int tab )
         mpTabBar->removeTab( tab );
         mConsoleMap.remove( pH );
         mTabMap.remove( pH->getName() );
-        HostManager::self()->deleteHost( pH->getName() );
+        getHostManager()->deleteHost( pH->getName() );
     }
 
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
@@ -771,7 +771,7 @@ void mudlet::slot_close_profile()
             {
                 mpTabBar->removeTab( mpTabBar->currentIndex() );
                 mConsoleMap.remove( pH );
-                HostManager::self()->deleteHost( pH->getName() );
+                getHostManager()->deleteHost( pH->getName() );
                 mTabMap.remove( pH->getName() );
             }
             if( !mpCurrentActiveHost ) disableToolbarButtons();
@@ -2094,15 +2094,15 @@ void mudlet::doAutoLogin( QString & profile_name )
     if( profile_name.size() < 1 )
         return;
 
-    Host * pOH = HostManager::self()->getHost( profile_name );
+    Host * pOH = getHostManager()->getHost( profile_name );
     if( pOH )
     {
         pOH->mTelnet.connectIt( pOH->getUrl(), pOH->getPort() );
         return;
     }
     // load an old profile if there is any
-    HostManager::self()->addHost( profile_name, "", "", "" );
-    Host * pHost = HostManager::self()->getHost( profile_name );
+    getHostManager()->addHost( profile_name, "", "", "" );
+    Host * pHost = getHostManager()->getHost( profile_name );
 
     if( ! pHost ) return;
 
@@ -2203,7 +2203,7 @@ void mudlet::processEventLoopHack_timerRun()
 
 void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion )
 {
-    Host * pHost = HostManager::self()->getHost( profile );
+    Host * pHost = getHostManager()->getHost( profile );
     if( ! pHost ) return;
     pHost->mIsProfileLoadingSequence = true;
     addConsoleForNewHost( pHost );
