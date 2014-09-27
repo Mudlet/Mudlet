@@ -41,6 +41,8 @@
 #include <Windows.h>
 #endif // _MSC_VER && _DEBUG
 
+#include <iostream>
+
 
 // N/U: #define MUDLET_HOME "/usr/local/share/mudlet/"
 
