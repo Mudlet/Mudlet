@@ -3447,13 +3447,18 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, const QList<QString> cssCac
         s.append( QStringLiteral( "</span>" ) );
         // Needed to balance the open <span>, but only if we have included
         // anything. the previously appearing <br /> is an XML tag, NOT a
-        // (strict) HTML 4 one, we could use <br> but...
+        // (strict) HTML 4 one, we can use <br> but...
 
-    s.append( QStringLiteral( "\n" ) );
-    // Needed to reproduce empty lines in capture, as this method is called for
-    // EACH line, even the empty ones, however as the spans are styled as "pre"
-    // literal linefeeds are treated as such and we do not need to force them
-    // with <br> tags...
+    s.append( QStringLiteral( "<br>\n" ) );
+    // ... as we need to reproduce empty lines in capture, don't make it
+    // conditional as this method is called for EACH line, even the empty ones.
+
+    // The default CSS has been changed to "white-space: nowrap" from
+    // previous "pre-wrap" so that the newline added to the <br> above affects
+    // the HTML source only (ignored by a browser's parser and means the source
+    // does not all end up on a single line of text in a plain text editor) and
+    // we do not end up with each line being double-spaced by virtue of BOTH the
+    // <br> and the line-feed causing line-feeds in the displayed HTML!
 
     return s;
 }

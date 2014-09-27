@@ -1585,7 +1585,7 @@ void TTextEdit::copySelectionToClipboardHTML()
                                    "<title>%3</title>\n"
                                    // title tag is MANDATORY for strict HTML4
                                    "<style type='text/css'>\n"
-                                   "<!-- body { font-family: '%4'; font-size: %5%; line-height: %6em; white-space: pre-wrap; color: rgb(%7,%8,%9); background-color: rgb(%10,%11,%12); }"
+                                   "<!-- body { font-family: '%4'; font-size: %5%; line-height: %6em; white-space: nowrap; color: rgb(%7,%8,%9); background-color: rgb(%10,%11,%12); }"
                                    "%13 -->\n"
                                    "</style>\n"
                                    "</head>\n"
