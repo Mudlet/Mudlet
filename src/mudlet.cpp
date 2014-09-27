@@ -272,8 +272,8 @@ mudlet::mudlet()
     disableToolbarButtons();
 
     mpDebugArea.reset( new QMainWindow(0) );
-    HostManager::self()->addHost("default_host", "", "","" );
-    mpDefaultHost = HostManager::self()->getHost(QString("default_host"));
+    mHostManager.addHost("default_host", "", "","" );
+    mpDefaultHost = mHostManager.getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
     mpDebugConsole->setSizePolicy( sizePolicy );
     mpDebugConsole->setWrapAt(100);
@@ -410,6 +410,11 @@ mudlet::mudlet()
     mpMusicBox3 = new QMediaPlayer;
     mpMusicBox4 = new QMediaPlayer;
 
+}
+
+HostManager * mudlet::getHostManager()
+{
+    return &mHostManager;
 }
 
 bool mudlet::moduleTableVisible()

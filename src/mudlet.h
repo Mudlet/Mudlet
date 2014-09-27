@@ -65,6 +65,7 @@ public:
    static                        mudlet * self();
    // This method allows better debugging when mudlet::self() is called inappropriately.
    static                        void start();
+   HostManager *                 getHostManager();
    void                          addSubWindow(TConsole* p);
    int                           getColumnNumber( Host * pHost, QString & name );
    int                           getLineNumber( Host * pHost, QString & name );
@@ -262,6 +263,7 @@ private:
    QPushButton *                 moduleInstallButton;
    QPushButton *                 moduleHelpButton;
 
+   HostManager                   mHostManager;
 };
 
 class TConsoleMonitor : public QObject
