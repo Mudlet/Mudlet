@@ -1490,10 +1490,10 @@ void TTextEdit::copySelectionToClipboardHTML()
     }
 
     QString title;
-    qreal fontSize;
+//    qreal fontSize;
     if( this->mIsDebugConsole ) {
         title = tr( "Mudlet, debug console extract" );
-        fontSize = this->fontInfo().pointSizeF();
+//        fontSize = this->fontInfo().pointSizeF();
     }
     else if( this->mIsMiniConsole ) {
         if( ! this->mpHost->mpConsole->mSubConsoleMap.empty() ) {
@@ -1504,11 +1504,11 @@ void TTextEdit::copySelectionToClipboardHTML()
                 }
             }
         }
-        fontSize = this->mDisplayFont.pointSizeF();
+//        fontSize = this->mDisplayFont.pointSizeF();
     }
     else {
         title = tr( "Mudlet, %1 console extract from %2 profile" ).arg( this->mpConsole->mConsoleName ).arg(  this->mpHost->getName() );
-        fontSize = this->fontInfo().pointSizeF();
+//        fontSize = this->fontInfo().pointSizeF();
     }
 
 //    qDebug( "TTextEdit::copySelectionToClipboardHTML(): font size for \"%s\", declared: %f, detected font size:%f, original font size: %f!",
@@ -1595,7 +1595,7 @@ void TTextEdit::copySelectionToClipboardHTML()
                    .arg( APP_BUILD )
                    .arg( title ) // Web-page title
                    .arg( fontsList.join( QStringLiteral( "', '" ) ) ) // Font names
-                   .arg( 100.0 * fontSize / 14.0 ) // Use a "%age" for a IE compatible font size, 16 point is the default for web-pages, but 14 seems to produce the right result
+                   .arg( 100.0 /* * fontSize / 14.0 */ ) // Use a "%age" for a IE compatible font size, 16 point is the default for web-pages, but 14 seems to produce the right result
                    .arg( 1.125 ) // Line height, I think, should be equal to 18 point for a 16 point default font size by default but this seems to work even when the size is not 16
                    .arg( 255 )
                    .arg( 255 )
