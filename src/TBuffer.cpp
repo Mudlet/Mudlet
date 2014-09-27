@@ -3213,7 +3213,12 @@ QStringList TBuffer::getEndLines( int n )
     return linesList;
 }
 
-
+// TODO: We could considerably reduce the size of the resulting HTML document by
+// caching all the <span style="{style type}">...</span> style type entries
+// and defining the used ones in the header and using CSS references to pull in
+// the one for each span - unfortunately that would require TWO passess through
+// the entire selection to populate the cache on the first pass before writing
+// it out in the header for/and referring to it in the second pass.  Slysven
 QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
 {
     int y = P1.y();
@@ -3247,12 +3252,15 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     QString fontWeight;
     QString fontStyle;
     QString textDecoration;
-    bool needChange = true;
+    bool initialSpan = true;
+    QString priorSpanCloser;
+
     for( ; x<P2.x(); x++ )
     {
         if( x >= static_cast<int>(buffer[y].size()) )
             break;
-        if( needChange
+
+        if( initialSpan
             || buffer[y][x].fgR != fgR
             || buffer[y][x].fgG != fgG
             || buffer[y][x].fgB != fgB
@@ -3263,7 +3271,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             || bool( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
             || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics )
         {
-            needChange = false;
+
             fgR = buffer[y][x].fgR;
             fgG = buffer[y][x].fgG;
             fgB = buffer[y][x].fgB;
@@ -3273,37 +3281,67 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             bold = buffer[y][x].flags & TCHAR_BOLD;
             italics = buffer[y][x].flags & TCHAR_ITALICS;
             underline = buffer[y][x].flags & TCHAR_UNDERLINE;
+
+            // CHECK: It stils seems to work fine if we don't include the
+            // "normal" values but if this DOES introduce odd-formatting
+            // behaviour then we will have to remove the comments around those
+            // "normal" values
             if( bold )
-                fontWeight = "bold";
+                fontWeight = QStringLiteral( "; font-weight: bold" ); // or 700
             else
-                fontWeight = "normal";
+                fontWeight = QStringLiteral( /*"; font-weight: normal"*/ ); // normal would be 400
+
             if( italics )
-                fontStyle = "italics";
+                fontStyle = QStringLiteral( "; font-style: italics" ); // Or oblique
             else
-                fontStyle = "normal";
+                fontStyle = QStringLiteral( /*"; font-style: normal"*/ );
+
             if( underline )
-                textDecoration = "underline";
+                textDecoration = QStringLiteral( "; text-decoration: underline" );
             else
-                textDecoration = "normal";
-            s += "</span><span style=\"";
-            s += "color: rgb(" + QString::number(fgR) + ","
-                               + QString::number(fgG) + ","
-                               + QString::number(fgB) + ");";
-            s += " background: rgb(" + QString::number(bgR) + ","
-                                     + QString::number(bgG) + ","
-                                     + QString::number(bgB) + ");";
-            s += " font-weight: " + fontWeight +
-                 "; font-style: " + fontStyle +
-                 "; text-decoration: " + textDecoraton + "\">";
+                textDecoration = QStringLiteral( /*"; text-decoration: normal"*/ );
+
+            // If/when we add support for overline and strikethough they are added
+            // as additional space separated words with underline, normal might
+            // only be used in the absence of all others!
+
+            if( initialSpan ) {
+                initialSpan = false;
+                priorSpanCloser = QString();
+            }
+            else {
+                priorSpanCloser = QStringLiteral( "</span>" );
+                // Only the first span won't need to close the previous one
+            }
+
+            s.append( QStringLiteral( "%1<span style=\"color: rgb(%2,%3,%4); background: rgb(%5,%6,%7)%8%9%10\">" )
+                         .arg( priorSpanCloser )
+                         .arg( QString::number(fgR) ).arg( QString::number(fgG) ).arg( QString::number(fgB) )
+                         .arg( QString::number(bgR) ).arg( QString::number(bgG) ).arg( QString::number(bgB) )
+                         .arg( fontWeight ).arg( fontStyle ).arg( textDecoration ) );
         }
         if( lineBuffer[y][x] == '<' )
-            s.append("&lt;");
+            s.append( QStringLiteral( "&lt;" ) );
         else if( lineBuffer[y][x] == '>' )
-            s.append("&gt;");
+            s.append( QStringLiteral( "&gt;" ) );
+// CHECK: May also be required to encode raw ampersands !!!
+//        else if( lineBuffer[y][x] == '&' )
+//            s.append( QStringLiteral( "&amp;" ) );
         else
-            s.append(lineBuffer[y][x]);
+            s.append( lineBuffer[y][x] );
+
     }
     if( s.size() > 0 )
-        s.append("<br />");
+        s.append( QStringLiteral( "</span>" ) );
+        // Needed to balance the open <span>, but only if we have included
+        // anything. the previously appearing <br /> is an XML tag, NOT a
+        // (strict) HTML 4 one, we could use <br> but...
+
+    s.append( QStringLiteral( "\n" ) );
+    // Needed to reproduce empty lines in capture, as this method is called for
+    // EACH line, even the empty ones, however as the spans are styled as "pre"
+    // literal linefeeds are treated as such and we do not need to force them
+    // with <br> tags...
+
     return s;
 }
