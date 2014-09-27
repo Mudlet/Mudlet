@@ -23,6 +23,7 @@
 
 
 #include "Host.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDir>
@@ -32,21 +33,9 @@
 #include <ostream>
 
 
-QScopedPointer<HostManager> HostManager::_self;
-
 HostManager * HostManager::self()
 {
-    if( ! _self )
-    {
-        _self.reset( new HostManager );
-        _self->init();
-    }
-    return _self.data();
-}
-
-void HostManager::init()
-{
-    mpActiveHost = 0;
+    return mudlet::self()->getHostManager();
 }
 
 Host * HostManager::getHost( QString hostname )

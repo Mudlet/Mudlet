@@ -480,7 +480,6 @@ int main(int argc, char *argv[])
     }
 
     mudlet::debugMode = false;
-    HostManager::self();
     FontManager fm;
     fm.addFonts();
     QString home = QDir::homePath()+"/.config/mudlet";

@@ -39,6 +39,7 @@ class HostManager
 {
 public:
 
+                       HostManager() : mpActiveHost() {}
     static             HostManager * self();
     Host *             getHost( QString hostname );
     Host *             getHost( std::string hostname );
@@ -53,13 +54,7 @@ public:
 
 private:
 
-                        HostManager(){;}
-    void                init();
-
-
-    static QScopedPointer<HostManager> _self;
     HostPool            mHostPool;
-    QMutex              mLock;
     Host *              mpActiveHost;
 
 };
