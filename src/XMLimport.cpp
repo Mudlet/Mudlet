@@ -181,17 +181,35 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
     if( ! packName.isEmpty())
     {
        if( ! gotTrigger )
+       {
             mpHost->getTriggerUnit()->unregisterTrigger( mpTrigger );
+            delete mpTrigger;
+       }
        if( ! gotTimer )
+       {
             mpHost->getTimerUnit()->unregisterTimer( mpTimer );
+            delete mpTimer;
+       }
        if( ! gotAlias )
+       {
             mpHost->getAliasUnit()->unregisterAlias( mpAlias );
+            delete mpAlias;
+       }
        if( ! gotAction )
+       {
             mpHost->getActionUnit()->unregisterAction( mpAction );
+            delete mpAction;
+       }
        if( ! gotKey )
+       {
             mpHost->getKeyUnit()->unregisterKey( mpKey );
+            delete mpKey;
+       }
        if( ! gotScript )
+       {
             mpHost->getScriptUnit()->unregisterScript( mpScript );
+            delete mpScript;
+       }
     }
     return ! error();
 }
