@@ -168,8 +168,7 @@ void TTimer::compile()
             mOK_code = false;
         }
     }
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTimer * pChild = *it;
         pChild->compile();
@@ -184,8 +183,7 @@ void TTimer::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of timer:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTimer * pChild = *it;
         pChild->compileAll();
@@ -262,8 +260,7 @@ void TTimer::execute()
 
     if( ( ! isFolder() && hasChildren() ) || ( isOffsetTimer() ) )
     {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TTimer * pChild = *it;
             if( pChild->isOffsetTimer() )
@@ -343,8 +340,7 @@ void TTimer::enableTimer( qint64 id )
 
     if( mIsFolder )
     {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TTimer * pChild = *it;
             if( ! pChild->isOffsetTimer() )
@@ -363,8 +359,7 @@ void TTimer::disableTimer( qint64 id )
         mpTimer->stop();
     }
 
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTimer * pChild = *it;
         if( ! pChild->isOffsetTimer() && pChild->shouldBeActive() )
@@ -393,8 +388,7 @@ void TTimer::enableTimer()
     }
     if( ! isOffsetTimer() )
     {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TTimer * pChild = *it;
             if( ! pChild->isOffsetTimer() ) pChild->enableTimer();
@@ -407,8 +401,7 @@ void TTimer::disableTimer()
     deactivate();
     mpTimer->stop();
     //qDebug()<<"timer "<<mName<<" has been stopped stopping children...\n";
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTimer * pChild = *it;
         pChild->disableTimer();
@@ -437,8 +430,7 @@ void TTimer::enableTimer( QString & name )
 
     if( ! isOffsetTimer() )
     {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TTimer * pChild = *it;
             pChild->enableTimer( pChild->getName() );
@@ -454,8 +446,7 @@ void TTimer::disableTimer( QString & name )
         mpTimer->stop();
     }
 
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTimer * pChild = *it;
         pChild->disableTimer( pChild->getName() );

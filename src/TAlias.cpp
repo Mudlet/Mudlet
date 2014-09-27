@@ -80,8 +80,7 @@ bool TAlias::match( QString & toMatch )
             if( shouldBeActive() )
             {
                 bool matchCondition = false;
-                typedef list<TAlias *>::const_iterator I;
-                for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+                for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
                 {
                     TAlias * pChild = *it;
                     if( pChild->match( toMatch ) ) matchCondition = true;
@@ -247,8 +246,7 @@ END:
     }
 
 MUD_ERROR:
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAlias * pChild = *it;
         if( pChild->match( toMatch ) ) matchCondition = true;
@@ -302,8 +300,7 @@ void TAlias::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAlias * pChild = *it;
         pChild->compileAll();
@@ -320,8 +317,7 @@ void TAlias::compile()
             mOK_code = false;
         }
     }
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAlias * pChild = *it;
         pChild->compile();

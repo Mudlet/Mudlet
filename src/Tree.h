@@ -213,8 +213,7 @@ template <class T>
 void Tree<T>::enableFamily()
 {
     activate();
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {
         (*it)->enableFamily();
     }
@@ -224,8 +223,7 @@ template <class T>
 void Tree<T>::disableFamily()
 {
     deactivate();
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {
         (*it)->disableFamily();
     }
@@ -242,8 +240,7 @@ void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
     {
         // insert item at proper position
         int cnt = 0;
-        typedef typename std::list<T *>::iterator IT;
-        for ( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
+        for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
         {
             if ( cnt >= childPosition )
             {
@@ -264,8 +261,7 @@ void Tree<T>::setParent( T * pParent )
 template <class T>
 bool Tree<T>::popChild( T * pChild )
 {
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
     {
         if( *it == pChild )
         {

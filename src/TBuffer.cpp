@@ -2125,8 +2125,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
         }
         lineBuffer[y].insert( x, text.at( i ) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
-        typedef std::deque<TChar>::iterator IT;
-        IT it = buffer[y].begin();
+        auto it = buffer[y].begin();
         buffer[y].insert( it+x, c );
     }
     dirty[y] = true;
@@ -2156,8 +2155,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
         {
             lineBuffer[y].insert( x+i, text.at( i ) );
             TChar c = format;
-            typedef std::deque<TChar>::iterator IT;
-            IT it = buffer[y].begin();
+            auto it = buffer[y].begin();
             buffer[y].insert( it+x+i, c );
         }
     }
@@ -2772,9 +2770,8 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
             x_end = xe;
         }
         lineBuffer[y].remove( x, x_end-x );
-        typedef std::deque<TChar>::iterator IT;
-        IT it1 = buffer[y].begin()+x;
-        IT it2 = buffer[y].begin()+x_end;
+        auto it1 = buffer[y].begin()+x;
+        auto it2 = buffer[y].begin()+x_end;
         buffer[y].erase( it1, it2 );
     }
 

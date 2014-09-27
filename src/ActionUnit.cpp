@@ -35,9 +35,8 @@ using namespace std;
 
 void ActionUnit::_uninstall( TAction * pChild, QString packageName )
 {
-    typedef list<TAction *>::const_iterator I;
     list<TAction*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TAction * pT = *it2;
         _uninstall( pT, packageName );
@@ -48,8 +47,7 @@ void ActionUnit::_uninstall( TAction * pChild, QString packageName )
 
 void ActionUnit::uninstall( QString packageName )
 {
-    typedef std::list<TAction *>::iterator IT;
-    for( IT it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
+    for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
     {
         TAction * pT = *it;
 
@@ -68,8 +66,7 @@ void ActionUnit::uninstall( QString packageName )
 
 void ActionUnit::compileAll()
 {
-    typedef list<TAction *>::const_iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
+    for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
         TAction * pChild = *it;
         if( pChild->isActive() )
@@ -111,8 +108,7 @@ void ActionUnit::addActionRootNode( TAction * pT, int parentPosition, int childP
     {
          // insert item at proper position
         int cnt = 0;
-        typedef std::list<TAction *>::iterator IT;
-        for( IT it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
+        for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
         {
             if( cnt >= childPosition )
             {
@@ -288,18 +284,15 @@ qint64 ActionUnit::getNewID()
 
 std::list<TToolBar *> ActionUnit::getToolBarList()
 {
-    typedef list<TAction *>::iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
+    for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
         if( (*it)->mPackageName.size() > 0 )
         {
-            typedef list<TAction *>::iterator I3;
-            for( I3 it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
+            for(auto it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
                 bool found = false;
                 TToolBar * pTB = 0;
-                typedef list<TToolBar *>::iterator I2;
-                for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
+                for(auto it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
                 {
                     if( *it2 == (*it3)->mpToolBar )
                     {
@@ -328,8 +321,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         }
         bool found = false;
         TToolBar * pTB = 0;
-        typedef list<TToolBar *>::iterator I2;
-        for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
+        for(auto it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
         {
             if( *it2 == (*it)->mpToolBar )
             {
@@ -360,19 +352,16 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
 
 std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
 {
-    typedef list<TAction *>::iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
+    for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
 
         if( (*it)->mPackageName.size() > 0 )
         {
-            typedef list<TAction *>::iterator I3;
-            for( I3 it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
+            for(auto it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
                 bool found = false;
                 TEasyButtonBar * pTB = 0;
-                typedef list<TEasyButtonBar *>::iterator I2;
-                for( I2 it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
+                for(auto it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
                 {
                     if( *it2 == (*it3)->mpEasyButtonBar )
                     {
@@ -403,8 +392,7 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         }
         bool found = false;
         TEasyButtonBar * pTB = 0;
-        typedef list<TEasyButtonBar *>::iterator I2;
-        for( I2 it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
+        for(auto it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
         {
             if( *it2 == (*it)->mpEasyButtonBar )
             {
@@ -437,12 +425,10 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
 
 TAction * ActionUnit::getHeadAction( TToolBar * pT )
 {
-    typedef list<TAction *>::iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
+    for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
 // N/U:         bool found = false;
-        typedef list<TToolBar *>::iterator I2;
-        for( I2 it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
+        for(auto it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
         {
             if( pT == (*it)->mpToolBar )
             {
@@ -456,8 +442,7 @@ TAction * ActionUnit::getHeadAction( TToolBar * pT )
 
 void ActionUnit::showToolBar( QString & name )
 {
-    typedef list<TEasyButtonBar *>::iterator IT;
-    for( IT it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
+    for(auto it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
     {
         if( (*it)->mpTAction->mName == name )
         {
@@ -471,8 +456,7 @@ void ActionUnit::showToolBar( QString & name )
 
 void ActionUnit::hideToolBar( QString & name )
 {
-    typedef list<TEasyButtonBar *>::iterator IT;
-    for( IT it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
+    for(auto it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
     {
         if( (*it)->mpTAction->mName == name )
         {
@@ -533,12 +517,10 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
 
 TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
 {
-    typedef list<TAction *>::iterator I;
-    for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
+    for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
 // N/U:         bool found = false;
-        typedef list<TEasyButtonBar *>::iterator I2;
-        for( I2 it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
+        for(auto it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
         {
             if( pT == (*it)->mpEasyButtonBar )
             {

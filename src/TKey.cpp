@@ -73,8 +73,7 @@ bool TKey::match( int key, int modifier )
             }
         }
 
-        typedef list<TKey *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TKey * pChild = *it;
             if( pChild->match( key, modifier ) ) return true;
@@ -101,8 +100,7 @@ void TKey::enableKey( QString & name )
     {
         setIsActive( true );
     }
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TKey * pChild = *it;
         pChild->enableKey( name );
@@ -115,8 +113,7 @@ void TKey::disableKey( QString & name )
     {
         setIsActive( false );
     }
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TKey * pChild = *it;
         pChild->disableKey( name );
@@ -131,8 +128,7 @@ void TKey::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of key binding:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TKey * pChild = *it;
         pChild->compileAll();
@@ -149,8 +145,7 @@ void TKey::compile()
             mOK_code = false;
         }
     }
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TKey * pChild = *it;
         pChild->compile();

@@ -863,8 +863,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TTrigger *> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-        typedef list<TTrigger *>::const_iterator I;
-        for( I it = nodes.begin(); it != nodes.end(); it++)
+        for(auto it = nodes.begin(); it != nodes.end(); it++)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
@@ -941,8 +940,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TAlias *> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
-        typedef list<TAlias *>::const_iterator I;
-        for( I it = nodes.begin(); it != nodes.end(); it++)
+        for(auto it = nodes.begin(); it != nodes.end(); it++)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
@@ -1018,8 +1016,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TScript *> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
-        typedef list<TScript *>::const_iterator I;
-        for( I it = nodes.begin(); it != nodes.end(); it++)
+        for(auto it = nodes.begin(); it != nodes.end(); it++)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
@@ -1075,8 +1072,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TAction *> nodes = mpHost->getActionUnit()->getActionRootNodeList();
-        typedef list<TAction *>::const_iterator I;
-        for( I it = nodes.begin(); it != nodes.end(); it++)
+        for(auto it = nodes.begin(); it != nodes.end(); it++)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
@@ -1132,8 +1128,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TTimer *> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = nodes.begin(); it != nodes.end(); it++)
+        for(auto it = nodes.begin(); it != nodes.end(); it++)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
@@ -1189,8 +1184,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TKey *> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
-        typedef list<TKey *>::const_iterator I;
-        for( I it = nodes.begin(); it != nodes.end(); it++)
+        for(auto it = nodes.begin(); it != nodes.end(); it++)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
@@ -1294,8 +1288,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
 void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const QString & s )
 {
     list<TTrigger *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TTrigger *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
@@ -1375,8 +1368,7 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
 void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QString & s )
 {
     list<TAlias *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TAlias *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
@@ -1456,8 +1448,7 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
 void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const QString & s )
 {
     list<TScript *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TScript *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
@@ -1516,8 +1507,7 @@ void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const Q
 void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const QString & s )
 {
     list<TAction *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TAction *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
@@ -1576,8 +1566,7 @@ void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const Q
 void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QString & s )
 {
     list<TTimer *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TTimer *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
@@ -1636,8 +1625,7 @@ void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QSt
 void dlgTriggerEditor::recursiveSearchKeys( TKey * pTriggerParent, const QString & s )
 {
     list<TKey *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TKey *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
@@ -4938,8 +4926,7 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem->setIcon( 0, mainIcon );
     treeWidget->insertTopLevelItem( 0, mpTriggerBaseItem );
     list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-    typedef list<TTrigger *>::iterator IT;
-    for(IT it=baseNodeList.begin(); it!=baseNodeList.end(); it++ )
+    for(auto it=baseNodeList.begin(); it!=baseNodeList.end(); it++ )
     {
         TTrigger * pT = *it;
         if( pT->isTempTrigger() ) continue;
@@ -5540,8 +5527,7 @@ void dlgTriggerEditor::repopulateVars()
 void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TTrigger *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TTrigger *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TTrigger * pT = *it;
         QString s = pT->getName();
@@ -5651,8 +5637,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
 void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TKey *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TKey *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TKey * pT = *it;
         QString s = pT->getName();
@@ -5719,8 +5704,7 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
 void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TScript *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TScript *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TScript * pT = *it;
         QString s = pT->getName();
@@ -5774,8 +5758,7 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
 void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TAlias *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TAlias *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TAlias * pT = *it;
         QString s = pT->getName();
@@ -5841,8 +5824,7 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
 void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TAction *> * childrenList = pTriggerParent->getChildrenList();
-    typedef list<TAction *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TAction * pT = *it;
         QString s = pT->getName();
@@ -5908,8 +5890,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
 void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TTimer *> * childrenList = pTimerParent->getChildrenList();
-    typedef list<TTimer *>::iterator I;
-    for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TTimer * pT = *it;
         QString s = pT->getName();

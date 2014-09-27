@@ -51,9 +51,8 @@ void TriggerUnit::initStats()
 
 void TriggerUnit::_uninstall( TTrigger * pChild, QString packageName )
 {
-    typedef list<TTrigger *>::const_iterator I;
     list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TTrigger * pT = *it2;
         _uninstall( pT, packageName );
@@ -64,8 +63,7 @@ void TriggerUnit::_uninstall( TTrigger * pChild, QString packageName )
 
 void TriggerUnit::uninstall( QString packageName )
 {
-    typedef std::list<TTrigger *>::iterator IT;
-    for( IT it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
+    for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
     {
         TTrigger * pT = *it;
 
@@ -85,8 +83,7 @@ void TriggerUnit::uninstall( QString packageName )
 
 void TriggerUnit::removeAllTempTriggers()
 {
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         if( pChild->isTempTrigger() )
@@ -112,8 +109,7 @@ void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int chi
     {
          // insert item at proper position
         int cnt = 0;
-        typedef std::list<TTrigger *>::iterator IT;
-        for( IT it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
+        for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
         {
             if( cnt >= childPosition )
             {
@@ -263,8 +259,7 @@ void TriggerUnit::removeTrigger( TTrigger * pT )
 void TriggerUnit::reorderTriggersAfterPackageImport()
 {
     QList<TTrigger *> tempList;
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         if( pChild->isTempTrigger() )
@@ -295,8 +290,7 @@ void TriggerUnit::processDataStream( QString & data, int line )
         char * subject = (char *) malloc( strlen( data.toLocal8Bit().data() ) + 1 );
         strcpy( subject, data.toLocal8Bit().data() );
 
-        typedef list<TTrigger *>::const_iterator I;
-        for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+        for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
         {
             TTrigger * pChild = *it;
             //QFuture<bool> future = QtConcurrent::run( pChild, &TTrigger::match, subject, data, line, 0 );
@@ -306,7 +300,7 @@ void TriggerUnit::processDataStream( QString & data, int line )
         }
         free( subject );
 
-        for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++ )
+        for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++ )
         {
             delete *it;
         }
@@ -317,8 +311,7 @@ void TriggerUnit::processDataStream( QString & data, int line )
 
 void TriggerUnit::compileAll()
 {
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         if( pChild->isActive() )
@@ -330,8 +323,7 @@ void TriggerUnit::compileAll()
 
 void TriggerUnit::stopAllTriggers()
 {
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         QString name = pChild->getName();
@@ -341,8 +333,7 @@ void TriggerUnit::stopAllTriggers()
 
 void TriggerUnit::reenableAllTriggers()
 {
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         pChild->enableFamily();
@@ -418,9 +409,8 @@ bool TriggerUnit::killTrigger( QString & name )
 
 void TriggerUnit::_assembleReport( TTrigger * pChild )
 {
-    typedef list<TTrigger *>::const_iterator I;
     list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TTrigger * pT = *it2;
         _assembleReport( pT );
@@ -437,8 +427,7 @@ QString TriggerUnit::assembleReport()
     statsTriggerTotal = 0;
     statsTempTriggers = 0;
     statsPatterns = 0;
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
+    for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
     {
         TTrigger * pChild = *it;
         if( pChild->isActive() ) statsActiveTriggers++;
@@ -446,7 +435,7 @@ QString TriggerUnit::assembleReport()
         statsPatterns += pChild->mRegexCodeList.size();
         statsTriggerTotal++;
         list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-        for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
         {
             TTrigger * pT = *it2;
             _assembleReport( pT );
@@ -476,8 +465,7 @@ QString TriggerUnit::assembleReport()
 
 void TriggerUnit::doCleanup()
 {
-    typedef list<TTrigger *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         delete *it;
     }
@@ -486,8 +474,7 @@ void TriggerUnit::doCleanup()
 
 void TriggerUnit::markCleanup( TTrigger * pT )
 {
-    typedef list<TTrigger *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         if( *it == pT )
         {

@@ -421,8 +421,7 @@ int TLuaInterpreter::isAnsiFgColor( lua_State * L )
     std::list<int> result;
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     result = pHost->mpConsole->getFgColor( console );
-    typedef std::list<int>::iterator IT;
-    IT it=result.begin();
+    auto it=result.begin();
     if( result.size() < 3 ) return 0;
     if( ansiFg < 0 ) return 0;
     if( ansiFg > 16 ) return 0;
@@ -492,8 +491,7 @@ int TLuaInterpreter::isAnsiBgColor( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) return 0;
     result = pHost->mpConsole->getBgColor( console );
-    typedef std::list<int>::iterator IT;
-    IT it=result.begin();
+    auto it=result.begin();
     if( result.size() < 3 ) return 0;
     if( ansiFg < 0 ) return 0;
     if( ansiFg > 16 ) return 0;
@@ -566,8 +564,7 @@ int TLuaInterpreter::getFgColor( lua_State * L )
     std::list<int> result;
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     result = pHost->mpConsole->getFgColor( luaSendText );
-    typedef std::list<int>::iterator IT;
-    for( IT it=result.begin(); it!=result.end(); it++ )
+    for(auto it=result.begin(); it!=result.end(); it++ )
     {
         int pos = *it;
         lua_pushnumber( L, pos );
@@ -599,8 +596,7 @@ int TLuaInterpreter::getBgColor( lua_State * L )
     std::list<int> result;
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     result = pHost->mpConsole->getBgColor( luaSendText );
-    typedef std::list<int>::iterator IT;
-    for( IT it=result.begin(); it!=result.end(); it++ )
+    for(auto it=result.begin(); it!=result.end(); it++ )
     {
         int pos = *it;
         lua_pushnumber( L, pos );
@@ -9978,8 +9974,7 @@ void TLuaInterpreter::clearCaptureGroups()
 void TLuaInterpreter::adjustCaptureGroups( int x, int a )
 {
     // adjust all capture group positions in line if data has been inserted by the user
-    typedef std::list<int>::iterator I;
-    for( I it=mCaptureGroupPosList.begin(); it!=mCaptureGroupPosList.end(); it++ )
+    for(auto it=mCaptureGroupPosList.begin(); it!=mCaptureGroupPosList.end(); it++ )
     {
         if( *it >= x )
         {

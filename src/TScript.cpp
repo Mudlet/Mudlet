@@ -93,8 +93,7 @@ void TScript::setEventHandlerList( QStringList handlerList )
 void TScript::compileAll()
 {
     compile();
-    typedef list<TScript *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TScript * pChild = *it;
         pChild->compileAll();
@@ -120,8 +119,7 @@ void TScript::compile()
             mOK_code = false;
         }
     }
-    typedef list<TScript *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TScript * pChild = *it;
         pChild->compile();

@@ -101,8 +101,7 @@ void TAction::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of action:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    typedef list<TAction *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAction * pChild = *it;
         pChild->compileAll();
@@ -119,8 +118,7 @@ void TAction::compile()
             mOK_code = false;
         }
     }
-    typedef list<TAction *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAction * pChild = *it;
         pChild->compile();
@@ -187,8 +185,7 @@ void TAction::_execute(QStringList & list)
 
 void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 {
-   typedef list<TAction *>::const_iterator I;
-   for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
        TAction * pChild = *it;
 
@@ -235,8 +232,7 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
         newMenu->setStyleSheet( css );
         action->setMenu( newMenu );
 
-        typedef list<TAction *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TAction * pChild = *it;
             pChild->insertActions( pMainWindow, pT, newMenu );
@@ -247,8 +243,7 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 
 void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * menu )
 {
-   typedef list<TAction *>::const_iterator I;
-   for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
        TAction * pChild = *it;
        if( ! pChild->isActive() ) continue;
@@ -283,8 +278,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
 
 void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
 {
-    typedef list<TAction *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAction * pChild = *it;
         if( ! pChild->isActive() ) continue;

@@ -38,9 +38,8 @@ KeyUnit::KeyUnit( Host * pHost )
 
 void KeyUnit::_uninstall( TKey * pChild, QString packageName )
 {
-    typedef list<TKey *>::const_iterator I;
     list<TKey*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TKey * pT = *it2;
         _uninstall( pT, packageName );
@@ -51,8 +50,7 @@ void KeyUnit::_uninstall( TKey * pChild, QString packageName )
 
 void KeyUnit::uninstall( QString packageName )
 {
-    typedef std::list<TKey *>::iterator IT;
-    for( IT it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
+    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
     {
         TKey * pT = *it;
 
@@ -71,8 +69,7 @@ void KeyUnit::uninstall( QString packageName )
 
 bool KeyUnit::processDataStream( int key, int modifier )
 {
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         if( pChild->match( key, modifier ) ) return true;
@@ -83,8 +80,7 @@ bool KeyUnit::processDataStream( int key, int modifier )
 
 void KeyUnit::compileAll()
 {
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         if( pChild->isActive() )
@@ -98,8 +94,7 @@ bool KeyUnit::enableKey( QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         pChild->enableKey( name );
@@ -112,8 +107,7 @@ bool KeyUnit::disableKey( QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         pChild->disableKey( name );
@@ -138,8 +132,7 @@ void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
     {
         // insert item at proper position
         int cnt = 0;
-        typedef std::list<TKey *>::iterator IT;
-        for( IT it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
+        for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
         {
             if( cnt >= childPosition )
             {

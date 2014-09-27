@@ -34,9 +34,8 @@ using namespace std;
 
 void ScriptUnit::_uninstall( TScript * pChild, QString packageName )
 {
-    typedef list<TScript *>::const_iterator I;
     list<TScript*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TScript * pT = *it2;
         _uninstall( pT, packageName );
@@ -47,8 +46,7 @@ void ScriptUnit::_uninstall( TScript * pChild, QString packageName )
 
 void ScriptUnit::uninstall( QString packageName )
 {
-    typedef std::list<TScript *>::iterator IT;
-    for( IT it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
+    for(auto it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
     {
         TScript * pT = *it;
 
@@ -67,8 +65,7 @@ void ScriptUnit::uninstall( QString packageName )
 
 void ScriptUnit::stopAllTriggers()
 {
-    typedef list<TScript *>::const_iterator I;
-    for( I it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
+    for(auto it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
     {
         TScript * pChild = *it;
         pChild->setIsActive( false );
@@ -91,8 +88,7 @@ void ScriptUnit::addScriptRootNode( TScript * pT, int parentPosition, int childP
     {
         // insert item at proper position
         int cnt = 0;
-        typedef std::list<TScript *>::iterator IT;
-        for( IT it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
+        for(auto it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
         {
             if( cnt >= childPosition )
             {
@@ -234,8 +230,7 @@ qint64 ScriptUnit::getNewID()
 
 void ScriptUnit::compileAll()
 {
-    typedef list<TScript *>::const_iterator I;
-    for( I it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
+    for(auto it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
     {
         TScript * pChild = *it;
         if( pChild->isActive() )
