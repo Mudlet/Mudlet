@@ -124,7 +124,7 @@ public:
    bool                          openWebPage(QString path);
    void                          processEventLoopHack();
    static QPointer<TConsole>     mpDebugConsole;
-   static QScopedPointer<QMainWindow> mpDebugArea;
+   static QMainWindow*           mpDebugArea;
    static bool                   debugMode;
    QMap<Host *, TConsole *>     mConsoleMap;
    QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
