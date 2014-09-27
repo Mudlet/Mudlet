@@ -32,8 +32,6 @@
 #include <QStringList>
 #include "post_guard.h"
 
-class Host;
-
 
 class HostManager
 {

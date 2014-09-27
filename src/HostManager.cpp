@@ -22,15 +22,7 @@
 #include "HostManager.h"
 
 
-#include "Host.h"
 #include "mudlet.h"
-
-#include "pre_guard.h"
-#include <QDir>
-#include "post_guard.h"
-
-#include <iostream>
-#include <ostream>
 
 
 HostManager * HostManager::self()

@@ -22,15 +22,11 @@
 #include "HostPool.h"
 
 
-#include "Host.h"
-
 #include "pre_guard.h"
 #include <QDir>
 #include "post_guard.h"
 
 #include <iostream>
-#include <fstream>
-#include <map>
 
 
 bool HostPool::deleteHost(QString hostname)
