@@ -3095,7 +3095,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     // - so use as initialization values
     QString fontWeight;
     QString fontStyle;
-    QString fontDecoration;
+    QString textDecoration;
     bool needChange = true;
     for( ; x<P2.x(); x++ )
     {
@@ -3131,9 +3131,9 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             else
                 fontStyle = "normal";
             if( underline )
-                fontDecoration = "underline";
+                textDecoration = "underline";
             else
-                fontDecoration = "normal";
+                textDecoration = "normal";
             s += "</span><span style=\"";
             s += "color: rgb(" + QString::number(fgR) + ","
                                + QString::number(fgG) + ","
@@ -3143,7 +3143,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                                      + QString::number(bgB) + ");";
             s += " font-weight: " + fontWeight +
                  "; font-style: " + fontStyle +
-                 "; font-decoration: " + fontDecoration + "\">";
+                 "; text-decoration: " + textDecoraton + "\">";
         }
         if( lineBuffer[y][x] == '<' )
             s.append("&lt;");
