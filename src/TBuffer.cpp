@@ -2518,7 +2518,8 @@ void TBuffer::log( int from, int to )
                 {
                     QPoint P1 = QPoint(0,i);
                     QPoint P2 = QPoint( buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2);
+                    toLog = bufferToHtml(P1, P2, QList<QString>());
+                    // Need an empty list for third argument to disable the CSS caching code
                 }
                 else
                 {
@@ -3213,13 +3214,108 @@ QStringList TBuffer::getEndLines( int n )
     return linesList;
 }
 
-// TODO: We could considerably reduce the size of the resulting HTML document by
-// caching all the <span style="{style type}">...</span> style type entries
-// and defining the used ones in the header and using CSS references to pull in
-// the one for each span - unfortunately that would require TWO passess through
-// the entire selection to populate the cache on the first pass before writing
-// it out in the header for/and referring to it in the second pass.  Slysven
-QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
+// We can considerably reduce the size of the resulting HTML document by caching
+// all the <span style="{style type}">...</span> style type entries and defining
+// the used ones in the header and using CSS references to pull in the one for
+// each span - this requires TWO passess through the entire selection to
+// populate the cache on the first pass before writing it out in the header
+// for/and referring to it in the second pass.
+// This method does the first "scan" pass - Slysven
+void TBuffer::scanForCssCache(QPoint P1, QPoint P2, QSet<QString> & cssSet)
+{
+    int y = P1.y();
+    int x = P1.x();
+
+    if( y < 0 || y >= static_cast<int>(buffer.size()) )
+        return;
+
+    if( ( x < 0 )
+        || ( x >= static_cast<int>(buffer[y].size()) )
+        || ( P2.x() >= static_cast<int>(buffer[y].size()) ) )
+        x=0;
+
+    if( P2.x() < 0 )
+        P2.setX(buffer[y].size());
+
+    bool bold = false;
+    bool italics = false;
+    bool underline = false;
+    int fgR=0;
+    int fgG=0;
+    int fgB=0;
+    int bgR=0;
+    int bgG=0;
+    int bgB=0;
+    QString fontWeight;
+    QString fontStyle;
+    QString textDecoration;
+    bool initialSpan = true;
+
+    for( ; x<P2.x(); x++ ) {
+        if( x >= static_cast<int>(buffer[y].size()) )
+            break;
+
+        if( initialSpan
+            || buffer[y][x].fgR != fgR
+            || buffer[y][x].fgG != fgG
+            || buffer[y][x].fgB != fgB
+            || buffer[y][x].bgR != bgR
+            || buffer[y][x].bgG != bgG
+            || buffer[y][x].bgB != bgB
+            || bool( buffer[y][x].flags & TCHAR_BOLD ) != bold
+            || bool( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
+            || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics )
+        {
+
+            fgR = buffer[y][x].fgR;
+            fgG = buffer[y][x].fgG;
+            fgB = buffer[y][x].fgB;
+            bgR = buffer[y][x].bgR;
+            bgG = buffer[y][x].bgG;
+            bgB = buffer[y][x].bgB;
+            bold = buffer[y][x].flags & TCHAR_BOLD;
+            italics = buffer[y][x].flags & TCHAR_ITALICS;
+            underline = buffer[y][x].flags & TCHAR_UNDERLINE;
+
+            // If the QStringLiterals below are changed ensure that the relevant
+            // section of bufferToHtml() is changed in the same manner:
+
+            if( bold )
+                fontWeight = QStringLiteral( "; font-weight: bold" ); // or 700
+            else
+                fontWeight = QStringLiteral(); // normal would be 400
+
+            if( italics )
+                fontStyle = QStringLiteral( "; font-style: italics" ); // Or oblique
+            else
+                fontStyle = QStringLiteral();
+
+            if( underline )
+                textDecoration = QStringLiteral( "; text-decoration: underline" );
+            else
+                textDecoration = QStringLiteral();
+
+            // If/when we add support for overline and strikethough they are
+            // added as additional space separated words with underline
+
+            if( initialSpan ) {
+                initialSpan = false;
+            }
+
+            QString cssStyle( QStringLiteral( "color: rgb(%2,%3,%4); background: rgb(%5,%6,%7)%8%9%10" )
+                         .arg( QString::number(fgR) ).arg( QString::number(fgG) ).arg( QString::number(fgB) )
+                         .arg( QString::number(bgR) ).arg( QString::number(bgG) ).arg( QString::number(bgB) )
+                         .arg( fontWeight ).arg( fontStyle ).arg( textDecoration ) );
+
+            if( ! cssSet.contains( cssStyle) )
+                cssSet.insert( cssStyle );
+
+        }
+    }
+}
+
+
+QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, const QList<QString> cssCache )
 {
     int y = P1.y();
     int x = P1.x();
@@ -3282,28 +3378,25 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             italics = buffer[y][x].flags & TCHAR_ITALICS;
             underline = buffer[y][x].flags & TCHAR_UNDERLINE;
 
-            // CHECK: It stils seems to work fine if we don't include the
-            // "normal" values but if this DOES introduce odd-formatting
-            // behaviour then we will have to remove the comments around those
-            // "normal" values
+            // If the QStringLiterals below are changed ensure that the relevant
+            // section of scanForCssCache() is changed in the same manner:
             if( bold )
                 fontWeight = QStringLiteral( "; font-weight: bold" ); // or 700
             else
-                fontWeight = QStringLiteral( /*"; font-weight: normal"*/ ); // normal would be 400
+                fontWeight = QStringLiteral(); // normal would be 400
 
             if( italics )
                 fontStyle = QStringLiteral( "; font-style: italics" ); // Or oblique
             else
-                fontStyle = QStringLiteral( /*"; font-style: normal"*/ );
+                fontStyle = QStringLiteral();
 
             if( underline )
                 textDecoration = QStringLiteral( "; text-decoration: underline" );
             else
-                textDecoration = QStringLiteral( /*"; text-decoration: normal"*/ );
+                textDecoration = QStringLiteral();
 
             // If/when we add support for overline and strikethough they are added
-            // as additional space separated words with underline, normal might
-            // only be used in the absence of all others!
+            // as additional space separated words with underline
 
             if( initialSpan ) {
                 initialSpan = false;
@@ -3314,11 +3407,30 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                 // Only the first span won't need to close the previous one
             }
 
-            s.append( QStringLiteral( "%1<span style=\"color: rgb(%2,%3,%4); background: rgb(%5,%6,%7)%8%9%10\">" )
-                         .arg( priorSpanCloser )
+            QString cssStyle( QStringLiteral( "color: rgb(%2,%3,%4); background: rgb(%5,%6,%7)%8%9%10" )
                          .arg( QString::number(fgR) ).arg( QString::number(fgG) ).arg( QString::number(fgB) )
                          .arg( QString::number(bgR) ).arg( QString::number(bgG) ).arg( QString::number(bgB) )
                          .arg( fontWeight ).arg( fontStyle ).arg( textDecoration ) );
+
+            if( ! cssCache.isEmpty() ) { // Using a cache - for the copy from clipboard usage
+                int index = cssCache.indexOf( cssStyle );
+                if( index >=0 ) {
+                    s.append( QStringLiteral( "%1<span class=\"c%2\">" )
+                              .arg( priorSpanCloser )
+                              .arg( QString::number(index) ) );
+                }
+                else {
+                    qWarning( "TBuffer::bufferToHtml(...) Warning: A span has been found whose CSS does not match a value in the cache:\n"
+                             "\"%s\"", qPrintable(cssStyle) );
+                    s.append( QStringLiteral( "%1<span style=\"%2\">" )
+                              .arg( priorSpanCloser )
+                              .arg( cssStyle ) );
+                }
+            }
+            else // No cache - for the logging case
+                s.append( QStringLiteral( "%1<span style=\"%2\">" )
+                          .arg( priorSpanCloser )
+                          .arg( cssStyle ) );
         }
         if( lineBuffer[y][x] == '<' )
             s.append( QStringLiteral( "&lt;" ) );
