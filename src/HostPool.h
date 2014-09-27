@@ -29,8 +29,6 @@
 #include <QMutex>
 #include "post_guard.h"
 
-class mudlet;
-
 
 class HostPool
 {
