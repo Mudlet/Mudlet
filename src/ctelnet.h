@@ -70,6 +70,7 @@ const char TN_EOR = 239;
 
 const char GMCP = 201; /* GMCP */
 const char MXP = 91; // MXP
+const char MSDP = 69; // MSDP, documented at http://tintin.sourceforge.net/msdp/
 
 const char OPT_ECHO = 1;
 const char OPT_SUPPRESS_GA = 3;
