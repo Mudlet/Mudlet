@@ -1884,51 +1884,28 @@ void TBuffer::translateToPlainText( std::string & s )
             }
             continue;
         }
-        if( ch != '\t' )
+        mMudLine.append( ch );
+        TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
+                  ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                  ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                  bgColorR,
+                  bgColorG,
+                  bgColorB,
+                  mIsDefaultColor ? mBold : false,
+                  mItalics,
+                  mUnderline );
+
+        if( mMXP_LINK_MODE )
         {
-            mMudLine.append( ch );
-            TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
-                     ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
-                     ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
-                     bgColorR,
-                     bgColorG,
-                     bgColorB,
-                     mIsDefaultColor ? mBold : false,
-                     mItalics,
-                     mUnderline );
-
-            if( mMXP_LINK_MODE )
-            {
-                c.link = mLinkID;
-    //            c.fgR = 0;
-    //            c.fgG = 0;
-    //            c.fgB = 255;
-                c.flags |= TCHAR_UNDERLINE;
-            }
-
-
-            mMudBuffer.push_back( c );
+            c.link = mLinkID;
+//            c.fgR = 0;
+//            c.fgG = 0;
+//            c.fgB = 255;
+            c.flags |= TCHAR_UNDERLINE;
         }
-        else
-        {
-            int spaces = 8 - mMudLine.size() % 8;
-            QString tab;
-            for( int spi=0; spi<spaces; spi++ )
-            {
-                tab.append( ' ' );
-                TChar tab_c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
-                         ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
-                         ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
-                         bgColorR,
-                         bgColorG,
-                         bgColorB,
-                         mIsDefaultColor ? mBold : false,
-                         mItalics,
-                         mUnderline );
-                mMudBuffer.push_back(tab_c);
-            }
-            mMudLine.append( tab );
-        }
+
+
+        mMudBuffer.push_back( c );
         msPos++;
     }
 }
