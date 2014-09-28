@@ -23,28 +23,26 @@
 
 
 #include "pre_guard.h"
-#include <QDir>
+#include <QDebug>
 #include "post_guard.h"
-
-#include <iostream>
 
 
 bool HostPool::deleteHost(QString hostname)
 {
     QMutexLocker locker(& mPoolLock);
 
-    std::cout << "---> trying to delete host <"<<hostname.toLatin1().data()<<"> from host pool."<<std::endl;
+    qDebug() << "---> trying to delete host <"<<hostname.toLatin1().data()<<"> from host pool.";
     // make sure this is really a new host
     if( ! mHostPool.contains( hostname ) )
     {
-        std::cout << "[CRITICAL ERROR]: cannot delete host:"<<hostname.toLatin1().data()<<" it is not a member of host pool."<<std::endl;
+        qDebug() << "[CRITICAL ERROR]: cannot delete host:"<<hostname.toLatin1().data()<<" it is not a member of host pool.";
         return false;
     }
     else
     {
-        std::cout << "[OK] Host deleted removing pool entry ..."<<std::endl;
+        qDebug() << "[OK] Host deleted removing pool entry ...";
         int ret = mHostPool.remove( hostname );
-        std::cout << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret<<std::endl;
+        qDebug() << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret;
 
     }
     return true;
