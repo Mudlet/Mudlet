@@ -192,7 +192,6 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
-    HostPool.cpp \
     irc/src/irc.cpp \
     irc/src/irccodecplugin.cpp \
     irc/src/irccommand.cpp \
@@ -281,7 +280,6 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
-    HostPool.h \
     irc/include/irc.h \
     irc/include/irccodecplugin.h \
     irc/include/irccommand.h \
