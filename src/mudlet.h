@@ -150,6 +150,9 @@ public:
    void                          stopSounds();
    void                          playSound( QString s );
    QTime                         mReplayTime;
+   QTimer *                      mpReplayTimer;
+   int                           mReplayTimeOffset; // How many milliSeconds into this chunk of replay are we?
+   int                           mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
    int                           mReplaySpeed;
    QToolBar *                    mpMainToolBar;
    QMap<QTimer *, TTimer *>      mTimerMap;
@@ -251,7 +254,6 @@ private:
    QAction *                     mpActionReplayTime;
    QLabel *                      mpReplaySpeedDisplay;
    QLabel *                      mpReplayTimeDisplay;
-   QTimer *                      mpReplayTimer;
    QToolBar *                    mpReplayToolBar;
 
    QAction *                     actionReconnect;
