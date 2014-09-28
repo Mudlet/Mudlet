@@ -33,44 +33,26 @@
 #include "post_guard.h"
 
 
-class HostPool
-{
-    QMutex                mPoolLock;
-    QMap<QString, QSharedPointer<Host> > mHostPool;
-
-public:
-    Host *                getHost( QString hostname );
-    Host *                getFirstHost();
-    QList<QString>        getHostNameList();
-    QStringList           getHostList();
-    bool                  addNewHost( QString hostname, QString port, QString login, QString pass );
-    bool                  deleteHost( QString url );
-    bool                  renameHost( QString url );
-    Host *                getHostFromHostID( int id );
-    void                  postIrcMessage( QString, QString, QString );
-
-private:
-    int createNewHostID();
-};
-
 class HostManager
 {
 public:
 
                        HostManager() : mpActiveHost() {}
     Host *             getHost( QString hostname );
-    QStringList        getHostList() { return mHostPool.getHostList(); }
-    QList<QString>     getHostNameList() { return mHostPool.getHostNameList(); }
-    Host *             getFirstHost(){ return mHostPool.getFirstHost(); }
+    QStringList        getHostList();
+    QList<QString>     getHostNameList();
+    Host *             getFirstHost();
     bool               addHost( QString name, QString port, QString login, QString pass );
     bool               deleteHost( QString );
     bool               renameHost( QString );
-    Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
+    Host *             getHostFromHostID( int id );
     void               postIrcMessage(QString, QString, QString );
 
 private:
+    int createNewHostID();
 
-    HostPool            mHostPool;
+    QMutex              mPoolLock;
+    QMap<QString, QSharedPointer<Host> > mHostPool;
     Host *              mpActiveHost;
 
 };

@@ -29,35 +29,7 @@
 #include "post_guard.h"
 
 
-Host * HostManager::getHost( QString hostname )
-{
-    return mHostPool.getHost( hostname );
-}
-
-void HostManager::postIrcMessage( QString a, QString b, QString c )
-{
-    mHostPool.postIrcMessage( a, b, c );
-}
-
-bool HostManager::addHost( QString url, QString port, QString login, QString pass )
-{
-    bool ret = mHostPool.addNewHost( url, port, login, pass );
-    // FIXME nur provisorisch bis ich multi host support fertig habe
-    mpActiveHost = getFirstHost();
-    return ret;
-}
-
-bool HostManager::deleteHost( QString url )
-{
-    return mHostPool.deleteHost( url );
-}
-
-bool HostManager::renameHost( QString url )
-{
-    return mHostPool.renameHost( url );
-}
-
-bool HostPool::deleteHost(QString hostname)
+bool HostManager::deleteHost( QString hostname )
 {
     QMutexLocker locker(& mPoolLock);
 
@@ -78,7 +50,7 @@ bool HostPool::deleteHost(QString hostname)
     return true;
 }
 
-bool HostPool::renameHost(QString hostname)
+bool HostManager::renameHost( QString hostname )
 {
     QMutexLocker locker(& mPoolLock);
 
@@ -99,7 +71,7 @@ bool HostPool::renameHost(QString hostname)
 
 }
 
-bool HostPool::addNewHost( QString hostname, QString port, QString login, QString pass )
+bool HostManager::addHost( QString hostname, QString port, QString login, QString pass )
 {
     QMutexLocker locker(&mPoolLock);
 
@@ -121,15 +93,16 @@ bool HostPool::addNewHost( QString hostname, QString port, QString login, QStrin
     QSharedPointer<Host> pNewHost( new Host( portnumber, hostname, login, pass, id ) );
 
     mHostPool.insert( hostname, pNewHost );
+    mpActiveHost = getFirstHost();
     return true;
 }
 
-int HostPool::createNewHostID()
+int HostManager::createNewHostID()
 {
     return (mHostPool.size() + 1);
 }
 
-QStringList HostPool::getHostList()
+QStringList HostManager::getHostList()
 {
     QMutexLocker locker(& mPoolLock);
 
@@ -140,14 +113,14 @@ QStringList HostPool::getHostList()
     return strlist;
 }
 
-QList<QString> HostPool::getHostNameList()
+QList<QString> HostManager::getHostNameList()
 {
     QMutexLocker locker(& mPoolLock);
 
     return mHostPool.keys();
 }
 
-void HostPool::postIrcMessage( QString a, QString b, QString c )
+void HostManager::postIrcMessage( QString a, QString b, QString c )
 {
     QMutexLocker locker(& mPoolLock);
 
@@ -158,7 +131,7 @@ void HostPool::postIrcMessage( QString a, QString b, QString c )
     }
 }
 
-Host * HostPool::getHost( QString hostname )
+Host * HostManager::getHost( QString hostname )
 {
     QMutexLocker locker(& mPoolLock);
     if( mHostPool.find( hostname ) != mHostPool.end() )
@@ -172,7 +145,7 @@ Host * HostPool::getHost( QString hostname )
     }
 }
 
-Host * HostPool::getHostFromHostID( int id )
+Host * HostManager::getHostFromHostID( int id )
 {
     QMutexLocker locker( & mPoolLock );
     QMapIterator<QString, QSharedPointer<Host> > it(mHostPool);
@@ -188,7 +161,7 @@ Host * HostPool::getHostFromHostID( int id )
     return 0;
 }
 
-Host * HostPool::getFirstHost()
+Host * HostManager::getFirstHost()
 {
     QMutexLocker locker(& mPoolLock);
     return mHostPool.begin().value().data();
