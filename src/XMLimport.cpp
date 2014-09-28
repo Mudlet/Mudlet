@@ -847,6 +847,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mFORCE_GA_OFF = ( attributes().value("mFORCE_GA_OFF") == "yes" );
     pT->mFORCE_SAVE_ON_EXIT = ( attributes().value("mFORCE_SAVE_ON_EXIT") == "yes" );
     pT->mEnableGMCP = ( attributes().value("mEnableGMCP") == "yes" );
+    pT->mEnableMSDP = ( attributes().value("mEnableMSDP") == "yes" );
     pT->mMapStrongHighlight = ( attributes().value("mMapStrongHighlight") == "yes" );
     pT->mLogStatus = ( attributes().value("mLogStatus") == "yes" );
     pT->mEnableSpellCheck = ( attributes().value("mEnableSpellCheck") == "yes" );

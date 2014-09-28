@@ -506,23 +506,33 @@ void cTelnet::processTelnetCommand( const string & command )
               break;
           }
 
-          if( option == static_cast<char>(69) ) //MSDP support
+          if( option == MSDP ) //MSDP support
           {
-              sendTelnetOption( TN_DO, 69 );
-              //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
-              //NOTE: MSDP does not need quotes for string/vals
               string _h;
-              _h += TN_IAC;
-              _h += TN_SB;
-              _h += 69; //MSDP
-              _h += 1; //MSDP_VAR
-              _h += "LIST";
-              _h += 2; //MSDP_VAL
-              _h += "COMMANDS";
-              _h += TN_IAC;
-              _h += TN_SE;
-              socketOutRaw( _h );
-              break;
+              if( !mpHost->mEnableMSDP ) {
+                  _h += TN_IAC;
+                  _h += TN_DONT;
+                  _h += MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
+                  socketOutRaw( _h );
+                  qDebug() << "TELNET IAC DONT MSDP";
+                  break;
+              } else {
+                  sendTelnetOption( TN_DO, 69 );
+                  //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+                  //NOTE: MSDP does not need quotes for string/vals
+                  _h += TN_IAC;
+                  _h += TN_SB;
+                  _h += MSDP; //MSDP
+                  _h += 1; //MSDP_VAR
+                  _h += "LIST";
+                  _h += 2; //MSDP_VAL
+                  _h += "COMMANDS";
+                  _h += TN_IAC;
+                  _h += TN_SE;
+                  socketOutRaw( _h );
+                  qDebug() << "TELNET IAC DO MSDP";
+                  break;
+              }
           }
           if( option == static_cast<char>(200) ) // ATCP support
           {
@@ -716,15 +726,14 @@ void cTelnet::processTelnetCommand( const string & command )
           //server wants us to enable some option
           option = command[2];
           int idxOption = static_cast<int>(option);
-          if( option == static_cast<char>(69) ) // MSDP support
+          if( option == static_cast<char>(69) && mpHost->mEnableMSDP ) // MSDP support
           {
             qDebug() << "TELNET IAC DO MSDP";
             sendTelnetOption( TN_WILL, 69 );
 
-
             break;
           }
-          if( option == static_cast<char>(200) ) // ATCP support
+          if( option == static_cast<char>(200) && !mpHost->mEnableGMCP ) // ATCP support, enable only if GMCP is off as GMCP is better
           {
             qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
