@@ -161,8 +161,9 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(reset_colors_button_2, SIGNAL(clicked()), this, SLOT(resetColors2()));
 
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
-    need_reconnect_for_gmcp->hide();
-    connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_gmcp, SLOT(show()));
+    need_reconnect_for_data_protocol->hide();
+    connect(mEnableGMCP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
+    connect(mEnableMSDP, SIGNAL(clicked()), need_reconnect_for_data_protocol, SLOT(show()));
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -222,6 +223,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         //encoding->setCurrentIndex( pHost->mEncoding );
         mFORCE_SAVE_ON_EXIT->setChecked( pHost->mFORCE_SAVE_ON_EXIT );
         mEnableGMCP->setChecked( pHost->mEnableGMCP );
+        mEnableMSDP->setChecked( pHost->mEnableMSDP );
 
         // load profiles into mappers "copy map to profile" combobox
         // this feature should worm seamlessly both for online and offline profiles
@@ -890,6 +892,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
     pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
     pHost->mEnableGMCP = mEnableGMCP->isChecked();
+    pHost->mEnableMSDP = mEnableMSDP->isChecked();
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
     if( pHost->mpMap )
         if( pHost->mpMap->mpMapper )

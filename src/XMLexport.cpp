@@ -243,6 +243,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mFORCE_GA_OFF", pT->mFORCE_GA_OFF ? "yes" : "no" );
     writeAttribute( "mFORCE_SAVE_ON_EXIT", pT->mFORCE_SAVE_ON_EXIT ? "yes" : "no" );
     writeAttribute( "mEnableGMCP", pT->mEnableGMCP ? "yes" : "no" );
+    writeAttribute( "mEnableMSDP", pT->mEnableMSDP ? "yes" : "no" );
     writeAttribute( "mMapStrongHighlight", pT->mMapStrongHighlight ? "yes" : "no" );
     writeAttribute( "mLogStatus", pT->mLogStatus ? "yes" : "no" );
     writeAttribute( "mEnableSpellCheck", pT->mEnableSpellCheck ? "yes" : "no" );
