@@ -4957,6 +4957,15 @@ int TLuaInterpreter::sendGMCP( lua_State *L )
     return 0;
 }
 
+#define    MSDP_VAR              1
+#define    MSDP_VAL              2
+#define    MSDP_TABLE_OPEN      3
+#define    MSDP_TABLE_CLOSE      4
+#define    MSDP_ARRAY_OPEN      5
+#define    MSDP_ARRAY_CLOSE      6
+#define    IAC 255
+#define    SB 250
+#define    SE 240
 int TLuaInterpreter::sendMSDP( lua_State *L )
 {
     string msg;
@@ -4979,11 +4988,12 @@ int TLuaInterpreter::sendMSDP( lua_State *L )
     string _h;
     _h += TN_IAC;
     _h += TN_SB;
-    _h += 69; //MSDP
+    _h += MSDP;
+    _h += MSDP_VAR;
     _h += msg;
     if( what != "" )
     {
-        _h += " ";
+        _h += MSDP_VAL;
         _h += what;
     }
     _h += TN_IAC;
@@ -10178,15 +10188,6 @@ void TLuaInterpreter::parseJSON( QString & key, QString & string_data, QString p
     lua_pop( L, lua_gettop( L ) );
 }
 
-#define    MSDP_VAR              1
-#define    MSDP_VAL              2
-#define    MSDP_TABLE_OPEN      3
-#define    MSDP_TABLE_CLOSE      4
-#define    MSDP_ARRAY_OPEN      5
-#define    MSDP_ARRAY_CLOSE      6
-#define    IAC 255
-#define    SB 250
-#define    SE 240
 #define BUFFER_SIZE 20000
 void TLuaInterpreter::msdp2Lua(char *src, int srclen)
 {
