@@ -774,7 +774,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
     else
         profile_history->setEnabled(true);
 
-    QStringList loadedProfiles = HostManager::self()->getHostList();
+    QStringList loadedProfiles = mudlet::self()->getHostManager()->getHostList();
     if( loadedProfiles.contains( profile_name ) )
     {
         profile_name_entry->setReadOnly( true );
@@ -1175,7 +1175,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( profile_name.size() < 1 )
         return;
 
-    Host * pOH = HostManager::self()->getHost( profile_name );
+    Host * pOH = mudlet::self()->getHostManager()->getHost( profile_name );
     if( pOH )
     {
         pOH->mTelnet.connectIt( pOH->getUrl(), pOH->getPort() );
@@ -1183,8 +1183,8 @@ void dlgConnectionProfiles::slot_connectToServer()
         return;
     }
     // load an old profile if there is any
-    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
-    Host * pHost = HostManager::self()->getHost( profile_name );
+    mudlet::self()->getHostManager()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+    Host * pHost = mudlet::self()->getHostManager()->getHost( profile_name );
 
     if( ! pHost ) return;
 
@@ -1285,8 +1285,8 @@ void dlgConnectionProfiles::slot_chose_history()
         return;
     }
 
-    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
-    Host * pHost = HostManager::self()->getHost( profile_name );
+    mudlet::self()->getHostManager()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+    Host * pHost = mudlet::self()->getHostManager()->getHost( profile_name );
     if( ! pHost ) return;
     XMLimport importer( pHost );
     importer.importPackage( & file );

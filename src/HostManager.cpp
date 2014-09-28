@@ -25,11 +25,6 @@
 #include "mudlet.h"
 
 
-HostManager * HostManager::self()
-{
-    return mudlet::self()->getHostManager();
-}
-
 Host * HostManager::getHost( QString hostname )
 {
     return mHostPool.getHost( hostname );

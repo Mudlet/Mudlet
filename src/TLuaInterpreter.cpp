@@ -11241,14 +11241,14 @@ void TLuaInterpreter::loadGlobal()
 
 void TLuaInterpreter::slotEchoMessage(int hostID, QString msg)
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );
+    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     mudlet::self()->print( pHost, msg );
 }
 
 
 void TLuaInterpreter::slotNewCommand(int hostID, QString cmd)
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );
+    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     pHost->send( cmd );
 }
 
@@ -11262,13 +11262,13 @@ void TLuaInterpreter::slotClearUserWindow(int hostID, QString windowName )
 
 void TLuaInterpreter::slotEnableTimer(int hostID, QString windowName )
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );
+    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     pHost->enableTimer( windowName );
 }
 
 void TLuaInterpreter::slotDisableTimer(int hostID, QString windowName )
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );
+    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     pHost->disableTimer( windowName );
 }
 
@@ -11282,7 +11282,7 @@ void TLuaInterpreter::slotEchoUserWindow(int hostID, QString windowName, QString
 
 void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString function, QString timerName )
 {
-    Host * pHost = HostManager::self()->getHostFromHostID( hostID );
+    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     QTime time(0,0,0,0);
     int msec = static_cast<int>(timeout * 1000);
     QTime time2 = time.addMSecs( msec );
