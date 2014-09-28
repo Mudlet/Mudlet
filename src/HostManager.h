@@ -22,7 +22,7 @@
  ***************************************************************************/
 
 
-#include "HostPool.h"
+#include "Host.h"
 
 #include "pre_guard.h"
 #include <QList>
@@ -32,6 +32,26 @@
 #include <QStringList>
 #include "post_guard.h"
 
+
+class HostPool
+{
+    QMutex                mPoolLock;
+    QMap<QString, QSharedPointer<Host> > mHostPool;
+
+public:
+    Host *                getHost( QString hostname );
+    Host *                getFirstHost();
+    QList<QString>        getHostNameList();
+    QStringList           getHostList();
+    bool                  addNewHost( QString hostname, QString port, QString login, QString pass );
+    bool                  deleteHost( QString url );
+    bool                  renameHost( QString url );
+    Host *                getHostFromHostID( int id );
+    void                  postIrcMessage( QString, QString, QString );
+
+private:
+    int createNewHostID();
+};
 
 class HostManager
 {
