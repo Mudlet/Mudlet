@@ -170,6 +170,7 @@ public:
     bool               mDisableAutoCompletion;
     QFont              mDisplayFont;
     bool               mEnableGMCP;
+    bool               mEnableMSDP;
     int                mEncoding;
     QTextStream        mErrorLogStream;
     QFile              mErrorLogFile;
