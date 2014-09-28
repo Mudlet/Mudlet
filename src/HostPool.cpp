@@ -119,17 +119,6 @@ QList<QString> HostPool::getHostNameList()
     return mHostPool.keys();
 }
 
-void HostPool::orderShutDown()
-{
-    QMutexLocker locker(& mPoolLock);
-
-    QList<QSharedPointer<Host> > hostList = mHostPool.values();
-    for( int i=0; i<hostList.size(); i++ )
-    {
-        hostList[i]->orderShutDown();
-    }
-}
-
 void HostPool::postIrcMessage( QString a, QString b, QString c )
 {
     QMutexLocker locker(& mPoolLock);

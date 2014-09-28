@@ -84,7 +84,6 @@ public:
     bool               closingDown();
     void               assemblePath();
     int                check_for_mappingscript();
-    void               orderShutDown();
     TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
     TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }
     AliasUnit *        getAliasUnit()                   { return & mAliasUnit; }
