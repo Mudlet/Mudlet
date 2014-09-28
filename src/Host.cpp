@@ -767,13 +767,6 @@ bool Host::closingDown()
     return shutdown;
 }
 
-
-void Host::orderShutDown()
-{
-    QMutexLocker locker(& mLock);
-    mIsClosingDown = true;
-}
-
 // this is called by the Lua function unzip() defined in LuaGlobal.lua
 void Host::showUnpackingProgress( QString  txt )
 {
