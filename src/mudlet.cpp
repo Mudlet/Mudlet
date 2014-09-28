@@ -79,7 +79,6 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QMainWindow* mudlet::mpDebugArea;
 bool mudlet::debugMode = false;
-static const QString timeFormat = "hh:mm:ss";
 
 QPointer<mudlet> mudlet::_self;
 
@@ -2228,14 +2227,15 @@ void mudlet::replayStart()
     // STILL invalid afterwards!
     // It does not run in real time, instead it is updated every time a chunk
     // from the replay file (with an offset value) is consumed.
+    mReplayTimeOffset = 0;
 
     mpReplayTimer = new QTimer(this);
-    mpReplayTimer->setInterval(1000);
+    mpReplayTimer->setInterval(100);
     mpReplayTimer->setSingleShot(false);
     connect(mpReplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
 
     QString txt2 = "<font size=25><b>Time:";
-    txt2.append( mReplayTime.toString( timeFormat ) );
+    txt2.append( mReplayTime.toString() );
     txt2.append("</b></font>");
     mpReplayTimeDisplay->setText( txt2 );
 
@@ -2249,8 +2249,9 @@ void mudlet::replayStart()
 void mudlet::slot_replayTimeChanged()
 {
     QString txt2 = "<font size=25><b>Time:";
-    txt2.append( mReplayTime.toString( timeFormat ) );
+    txt2.append( mReplayTime.addMSecs( mReplayTimeOffset - mReplayChunkTime ).toString() );
     txt2.append("</b></font>");
+    mReplayTimeOffset += 100;
     mpReplayTimeDisplay->setText( txt2 );
     mpReplayTimeDisplay->show();
 }
@@ -2264,12 +2265,15 @@ void mudlet::replayOver()
 
     if( mpActionReplaySpeedUp )
     {
+        mpReplayTimer->stop();
         disconnect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
         disconnect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
         mpReplayToolBar->removeAction( mpActionReplaySpeedUp );
         mpReplayToolBar->removeAction( mpActionReplaySpeedDown );
         mpReplayToolBar->removeAction( mpActionSpeedDisplay );
-
+        disconnect(mpReplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+        delete( mpReplayTimer );
+        mpReplayTimer = 0;
         removeToolBar( mpReplayToolBar );
         mpActionReplaySpeedUp = 0;
         mpActionReplaySpeedDown = 0;
