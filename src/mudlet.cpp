@@ -1695,6 +1695,10 @@ void mudlet::setIcoSize( int s )
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     else
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonIconOnly );
+    if( mpReplayToolBar ) {
+        mpReplayToolBar->setIconSize( mpMainToolBar->iconSize() );
+        mpReplayToolBar->setToolButtonStyle( mpMainToolBar->toolButtonStyle() );
+    }
     if( mShowMenuBar )
         menuBar()->show();
     else
@@ -2208,6 +2212,8 @@ void mudlet::replayStart()
     mpReplaySpeedDisplay = new QLabel( this );
     mpActionSpeedDisplay = mpReplayToolBar->addWidget( mpReplaySpeedDisplay );
 
+    mpReplayToolBar->setIconSize( mpMainToolBar->iconSize() );
+    mpReplayToolBar->setToolButtonStyle( mpMainToolBar->toolButtonStyle() );
     connect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
     connect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
 
@@ -2215,6 +2221,13 @@ void mudlet::replayStart()
     txt.append( QString::number( mReplaySpeed ) );
     txt.append("X</b></font>");
     mpReplaySpeedDisplay->setText(txt);
+
+    mReplayTime = QTime( 0, 0, 0, 1);
+    // Use the smallest possible valid time as a starting value. Since Qt5 a
+    // NULL(zero) QTime is NOT valid and adding anything to an invalid time is
+    // STILL invalid afterwards!
+    // It does not run in real time, instead it is updated every time a chunk
+    // from the replay file (with an offset value) is consumed.
 
     mpReplayTimer = new QTimer(this);
     mpReplayTimer->setInterval(1000);
@@ -2239,6 +2252,7 @@ void mudlet::slot_replayTimeChanged()
     txt2.append( mReplayTime.toString( timeFormat ) );
     txt2.append("</b></font>");
     mpReplayTimeDisplay->setText( txt2 );
+    mpReplayTimeDisplay->show();
 }
 
 void mudlet::replayOver()
@@ -2273,6 +2287,7 @@ void mudlet::slot_replaySpeedUp()
     txt.append("X</b></font>");
     mpReplaySpeedDisplay->setText(txt);
     mpReplaySpeedDisplay->show();
+    mpReplayToolBar->update(); // If the speed values gains a character it won't fit unless the toolbar is redrawn
 }
 
 void mudlet::slot_replaySpeedDown()
@@ -2284,6 +2299,7 @@ void mudlet::slot_replaySpeedDown()
     txt.append("X</b></font>");
     mpReplaySpeedDisplay->setText(txt);
     mpReplaySpeedDisplay->show();
+    mpReplayToolBar->update(); // If the speed values gains a character it won't fit unless the toolbar is redrawn
 }
 
 void mudlet::stopSounds()
