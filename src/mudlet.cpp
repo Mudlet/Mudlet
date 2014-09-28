@@ -77,7 +77,7 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 }
 
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
-QScopedPointer<QMainWindow> mudlet::mpDebugArea;
+QMainWindow* mudlet::mpDebugArea;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
 
@@ -278,7 +278,7 @@ mudlet::mudlet()
 
     disableToolbarButtons();
 
-    mpDebugArea.reset( new QMainWindow(0) );
+    mpDebugArea = new QMainWindow(0);
     mHostManager.addHost("default_host", "", "","" );
     mpDefaultHost = mHostManager.getHost(QString("default_host"));
     mpDebugConsole = new TConsole( mpDefaultHost, true );
@@ -288,7 +288,7 @@ mudlet::mudlet()
     mpDebugArea->setWindowTitle( tr( "Central Debug Console" ) );
     mpDebugArea->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_debug.png" ) ) );
 
-    TConsoleMonitor * consoleCloser = new TConsoleMonitor( mpDebugArea.data() );
+    TConsoleMonitor * consoleCloser = new TConsoleMonitor(mpDebugArea);
     mpDebugArea->installEventFilter(consoleCloser);
 
     QSize generalRule( qApp->desktop()->size() );
