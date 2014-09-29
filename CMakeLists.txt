@@ -38,7 +38,7 @@ ELSE()
 ENDIF()
 
 SET(APP_VERSION 3.0.0)
-SET(APP_BUILD "-alpha")
+SET(APP_BUILD "-beta")
 # APP_BUILD should only be empty/null in official "release" builds,
 # developers may like to set it to their user and branch names to make it easier
 # to tell different builds apart!
