@@ -346,7 +346,6 @@ int main(int argc, char *argv[])
     // all its glory.
     const int startupMessageSize = splash.height() / splash.fontMetrics().lineSpacing();
     QStringList startupMessage;
-    QTime t;
     if( splashScreenTextAnimationInterval )
     {
 //    qDebug("main(): Splashscreen is %i high and the font has a linespacing of %i giving space for %i lines.",
@@ -365,26 +364,18 @@ int main(int argc, char *argv[])
         startupMessage[startupMessageSize-7] = QString("select the 'About' item for details.");
         startupMessage[startupMessageSize-8] = QString("redistribute it under certain conditions;");
         startupMessage[startupMessageSize-9] = QString("This is free software, and you are welcome to");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        int interval = 2 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
         startupMessage[startupMessageSize-11] = QString("ABSOLUTELY NO WARRANTY!");
         startupMessage[startupMessageSize-12] = QString("Mudlet comes with");
         splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
         app->processEvents();
-        t.restart();
-        interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
+
+
+        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
+        app->processEvents();
 
         startupMessage[1] = QString("Locating profiles... ");
         splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
         app->processEvents();
-        t.restart();
-        interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
     }
 
     //qt_ntfs_permission_lookup++; // turn permission checking on on NTFS file systems
@@ -402,9 +393,6 @@ int main(int argc, char *argv[])
         startupMessage[2] = QString("Loading font files... ");
         splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
         app->processEvents();
-        t.restart();
-        int interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
     }
 
     QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
@@ -440,40 +428,8 @@ int main(int argc, char *argv[])
         startupMessage[3] = QString("All data has been loaded successfully.");
         splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
         app->processEvents();
-        t.restart();
-        int interval = 1 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
 
-        startupMessage[4] = QString("Starting...                             " % QChar::Nbsp );
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        interval = 1 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
-        startupMessage[4] = QString("Starting...                     Have fun!");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
-        interval = 1 * splashScreenTextAnimationInterval;
-        for( int i = startupMessageSize - 1; i > 0 ; i-- )
-        {
-            QString temp = " ";
-            startupMessage[0].swap(temp);
-            for( int j = 1; j <= i ; j++ )
-            {
-                startupMessage[j-1].swap(startupMessage[j]);
-            }
-            splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-            app->processEvents();
-            t.restart();
-
-            while( t.elapsed() < interval ) {}
-        }
-        startupMessage[0] = QString(" ");
+        startupMessage[4] = QString("Starting...Have fun!");
         splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
         app->processEvents();
 
