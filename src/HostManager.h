@@ -39,7 +39,6 @@ public:
 
                        HostManager() : mpActiveHost() {}
     Host *             getHost( QString hostname );
-    Host *             getHost( std::string hostname );
     QStringList        getHostList() { return mHostPool.getHostList(); }
     QList<QString>     getHostNameList() { return mHostPool.getHostNameList(); }
     Host *             getFirstHost(){ return mHostPool.getFirstHost(); }
