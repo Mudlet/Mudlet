@@ -52,36 +52,29 @@ class dlgNotepad;
 class TFontSpecsLogger
 {
 public:
-    TFontSpecsLogger(){ reset(); }
-    QString getFontWeight()
-    {
-        if(bold)
-        {
-            return QString("bold");
-        }
-        else return QString("normal");
-    }
-    QString getFontStyle(){ return (italics) ? QString("italics") : QString("normal");}
-    QString getFontDecoration(){ return (underline) ? QString("underline") : QString("normal");}
-    void reset()
-    {
-        bold = false;
-        italics = false;
-        underline = false;
-        m_bgColorHasChanged = false;
-        m_fgColorHasChanged = false;
-    }
-    void bg_color_change(){ m_bgColorHasChanged=true; }
-    void fg_color_change(){ m_fgColorHasChanged=true; }
-    QColor fgColor;
-    QColor fgColorLight;
-    QColor bgColor;
-    bool m_bgColorHasChanged;
-    bool m_fgColorHasChanged;
-    bool bold;
-    bool italics;
-    bool underline;
+                TFontSpecsLogger() { reset(); }
+    QString     getFontWeight()     { return (bold)         ? QStringLiteral("bold")       : QStringLiteral("normal");}
+    QString     getFontStyle()      { return (italics)      ? QStringLiteral("italics")    : QStringLiteral("normal");}
+    QString     getTextDecoration() { return (underline)    ? QStringLiteral("underline")  : QStringLiteral("normal");}
+    void        reset() {
+                    bold = false;
+                    italics = false;
+                    underline = false;
+                    m_bgColorHasChanged = false;
+                    m_fgColorHasChanged = false;
+                }
+    void        bg_color_change() { m_bgColorHasChanged=true; }
+    void        fg_color_change() { m_fgColorHasChanged=true; }
 
+
+    QColor      fgColor;
+    QColor      fgColorLight;
+    QColor      bgColor;
+    bool        m_bgColorHasChanged;
+    bool        m_fgColorHasChanged;
+    bool        bold;
+    bool        italics;
+    bool        underline;
 };
 
 

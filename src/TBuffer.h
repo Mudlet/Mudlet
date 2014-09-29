@@ -88,7 +88,8 @@ public:
     void log( int, int );
     int skipSpacesAtBeginOfLine( int i, int i2 );
     void addLink( bool, QString & text, QStringList & command, QStringList & hint, TChar format );
-    QString bufferToHtml( QPoint P1, QPoint P2 );
+    QString bufferToHtml( QPoint P1, QPoint P2, const QList<QString> cssCache );
+    void scanForCssCache( QPoint P1, QPoint P2, QSet<QString> & cssSet );
     int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
     int find( int line, QString what, int pos );

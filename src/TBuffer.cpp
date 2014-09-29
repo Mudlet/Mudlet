@@ -2493,7 +2493,8 @@ void TBuffer::log( int from, int to )
                 {
                     QPoint P1 = QPoint(0,i);
                     QPoint P2 = QPoint( buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2);
+                    toLog = bufferToHtml(P1, P2, QList<QString>());
+                    // Need an empty list for third argument to disable the CSS caching code
                 }
                 else
                 {
@@ -3187,8 +3188,108 @@ QStringList TBuffer::getEndLines( int n )
     return linesList;
 }
 
+// We can considerably reduce the size of the resulting HTML document by caching
+// all the <span style="{style type}">...</span> style type entries and defining
+// the used ones in the header and using CSS references to pull in the one for
+// each span - this requires TWO passess through the entire selection to
+// populate the cache on the first pass before writing it out in the header
+// for/and referring to it in the second pass.
+// This method does the first "scan" pass - Slysven
+void TBuffer::scanForCssCache(QPoint P1, QPoint P2, QSet<QString> & cssSet)
+{
+    int y = P1.y();
+    int x = P1.x();
 
-QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
+    if( y < 0 || y >= static_cast<int>(buffer.size()) )
+        return;
+
+    if( ( x < 0 )
+        || ( x >= static_cast<int>(buffer[y].size()) )
+        || ( P2.x() >= static_cast<int>(buffer[y].size()) ) )
+        x=0;
+
+    if( P2.x() < 0 )
+        P2.setX(buffer[y].size());
+
+    bool bold = false;
+    bool italics = false;
+    bool underline = false;
+    int fgR=0;
+    int fgG=0;
+    int fgB=0;
+    int bgR=0;
+    int bgG=0;
+    int bgB=0;
+    QString fontWeight;
+    QString fontStyle;
+    QString textDecoration;
+    bool initialSpan = true;
+
+    for( ; x<P2.x(); x++ ) {
+        if( x >= static_cast<int>(buffer[y].size()) )
+            break;
+
+        if( initialSpan
+            || buffer[y][x].fgR != fgR
+            || buffer[y][x].fgG != fgG
+            || buffer[y][x].fgB != fgB
+            || buffer[y][x].bgR != bgR
+            || buffer[y][x].bgG != bgG
+            || buffer[y][x].bgB != bgB
+            || bool( buffer[y][x].flags & TCHAR_BOLD ) != bold
+            || bool( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
+            || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics )
+        {
+
+            fgR = buffer[y][x].fgR;
+            fgG = buffer[y][x].fgG;
+            fgB = buffer[y][x].fgB;
+            bgR = buffer[y][x].bgR;
+            bgG = buffer[y][x].bgG;
+            bgB = buffer[y][x].bgB;
+            bold = buffer[y][x].flags & TCHAR_BOLD;
+            italics = buffer[y][x].flags & TCHAR_ITALICS;
+            underline = buffer[y][x].flags & TCHAR_UNDERLINE;
+
+            // If the QStringLiterals below are changed ensure that the relevant
+            // section of bufferToHtml() is changed in the same manner:
+
+            if( bold )
+                fontWeight = QStringLiteral( "; font-weight: bold" ); // or 700
+            else
+                fontWeight = QStringLiteral(); // normal would be 400
+
+            if( italics )
+                fontStyle = QStringLiteral( "; font-style: italics" ); // Or oblique
+            else
+                fontStyle = QStringLiteral();
+
+            if( underline )
+                textDecoration = QStringLiteral( "; text-decoration: underline" );
+            else
+                textDecoration = QStringLiteral();
+
+            // If/when we add support for overline and strikethough they are
+            // added as additional space separated words with underline
+
+            if( initialSpan ) {
+                initialSpan = false;
+            }
+
+            QString cssStyle( QStringLiteral( "color: rgb(%2,%3,%4); background: rgb(%5,%6,%7)%8%9%10" )
+                         .arg( QString::number(fgR) ).arg( QString::number(fgG) ).arg( QString::number(fgB) )
+                         .arg( QString::number(bgR) ).arg( QString::number(bgG) ).arg( QString::number(bgB) )
+                         .arg( fontWeight ).arg( fontStyle ).arg( textDecoration ) );
+
+            if( ! cssSet.contains( cssStyle) )
+                cssSet.insert( cssStyle );
+
+        }
+    }
+}
+
+
+QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, const QList<QString> cssCache )
 {
     int y = P1.y();
     int x = P1.x();
@@ -3220,13 +3321,16 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     // - so use as initialization values
     QString fontWeight;
     QString fontStyle;
-    QString fontDecoration;
-    bool needChange = true;
+    QString textDecoration;
+    bool initialSpan = true;
+    QString priorSpanCloser;
+
     for( ; x<P2.x(); x++ )
     {
         if( x >= static_cast<int>(buffer[y].size()) )
             break;
-        if( needChange
+
+        if( initialSpan
             || buffer[y][x].fgR != fgR
             || buffer[y][x].fgG != fgG
             || buffer[y][x].fgB != fgB
@@ -3237,7 +3341,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             || bool( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
             || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics )
         {
-            needChange = false;
+
             fgR = buffer[y][x].fgR;
             fgG = buffer[y][x].fgG;
             fgB = buffer[y][x].fgB;
@@ -3247,37 +3351,88 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             bold = buffer[y][x].flags & TCHAR_BOLD;
             italics = buffer[y][x].flags & TCHAR_ITALICS;
             underline = buffer[y][x].flags & TCHAR_UNDERLINE;
+
+            // If the QStringLiterals below are changed ensure that the relevant
+            // section of scanForCssCache() is changed in the same manner:
             if( bold )
-                fontWeight = "bold";
+                fontWeight = QStringLiteral( "; font-weight: bold" ); // or 700
             else
-                fontWeight = "normal";
+                fontWeight = QStringLiteral(); // normal would be 400
+
             if( italics )
-                fontStyle = "italics";
+                fontStyle = QStringLiteral( "; font-style: italics" ); // Or oblique
             else
-                fontStyle = "normal";
+                fontStyle = QStringLiteral();
+
             if( underline )
-                fontDecoration = "underline";
+                textDecoration = QStringLiteral( "; text-decoration: underline" );
             else
-                fontDecoration = "normal";
-            s += "</span><span style=\"";
-            s += "color: rgb(" + QString::number(fgR) + ","
-                               + QString::number(fgG) + ","
-                               + QString::number(fgB) + ");";
-            s += " background: rgb(" + QString::number(bgR) + ","
-                                     + QString::number(bgG) + ","
-                                     + QString::number(bgB) + ");";
-            s += " font-weight: " + fontWeight +
-                 "; font-style: " + fontStyle +
-                 "; font-decoration: " + fontDecoration + "\">";
+                textDecoration = QStringLiteral();
+
+            // If/when we add support for overline and strikethough they are added
+            // as additional space separated words with underline
+
+            if( initialSpan ) {
+                initialSpan = false;
+                priorSpanCloser = QString();
+            }
+            else {
+                priorSpanCloser = QStringLiteral( "</span>" );
+                // Only the first span won't need to close the previous one
+            }
+
+            QString cssStyle( QStringLiteral( "color: rgb(%2,%3,%4); background: rgb(%5,%6,%7)%8%9%10" )
+                         .arg( QString::number(fgR) ).arg( QString::number(fgG) ).arg( QString::number(fgB) )
+                         .arg( QString::number(bgR) ).arg( QString::number(bgG) ).arg( QString::number(bgB) )
+                         .arg( fontWeight ).arg( fontStyle ).arg( textDecoration ) );
+
+            if( ! cssCache.isEmpty() ) { // Using a cache - for the copy from clipboard usage
+                int index = cssCache.indexOf( cssStyle );
+                if( index >=0 ) {
+                    s.append( QStringLiteral( "%1<span class=\"c%2\">" )
+                              .arg( priorSpanCloser )
+                              .arg( QString::number(index) ) );
+                }
+                else {
+                    qWarning( "TBuffer::bufferToHtml(...) Warning: A span has been found whose CSS does not match a value in the cache:\n"
+                             "\"%s\"", qPrintable(cssStyle) );
+                    s.append( QStringLiteral( "%1<span style=\"%2\">" )
+                              .arg( priorSpanCloser )
+                              .arg( cssStyle ) );
+                }
+            }
+            else // No cache - for the logging case
+                s.append( QStringLiteral( "%1<span style=\"%2\">" )
+                          .arg( priorSpanCloser )
+                          .arg( cssStyle ) );
         }
         if( lineBuffer[y][x] == '<' )
-            s.append("&lt;");
+            s.append( QStringLiteral( "&lt;" ) );
         else if( lineBuffer[y][x] == '>' )
-            s.append("&gt;");
+            s.append( QStringLiteral( "&gt;" ) );
+// CHECK: May also be required to encode raw ampersands !!!
+//        else if( lineBuffer[y][x] == '&' )
+//            s.append( QStringLiteral( "&amp;" ) );
         else
-            s.append(lineBuffer[y][x]);
+            s.append( lineBuffer[y][x] );
+
     }
     if( s.size() > 0 )
-        s.append("<br />");
+        s.append( QStringLiteral( "</span>" ) );
+        // Needed to balance the open <span>, but only if we have included
+        // anything. the previously appearing <br /> is an XML tag, NOT a
+        // (strict) HTML 4 one, we can use <br> but...
+
+    s.append( QStringLiteral( "<br>\n" ) );
+    // ... as we need to reproduce empty lines in capture, don't make it
+    // conditional as this method is called for EACH line, even the empty ones.
+
+    // The default CSS has been changed to "white-space: nowrap" from
+    // previous "pre-wrap" so that the newline added to the <br> above affects
+    // the HTML source only (ignored by a browser's parser and means the source
+    // does not all end up on a single line of text in a plain text editor) and
+    // we do not end up with each line being double-spaced by virtue of BOTH the
+    // <br> and the line-feed causing line-feeds in the displayed HTML!
+
     return s;
 }

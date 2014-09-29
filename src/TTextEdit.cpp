@@ -1488,33 +1488,147 @@ void TTextEdit::copySelectionToClipboardHTML()
     {
         swap( mPA, mPB );
     }
-    QString text = "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb(";
-    text.append(QString::number(mpHost->mBgColor.red()));
-    text.append(",");
-    text.append(QString::number(mpHost->mBgColor.green()));
-    text.append(",");
-    text.append(QString::number(mpHost->mBgColor.blue()));
-    text.append(");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>");
 
-    for( int y=mPA.y(); y<=mPB.y(); y++ )
-    {
-        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
-        int x = 0;
-        if( y == mPA.y() )
-        {
-            x = mPA.x();
-            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
-        }
-        else if ( y == mPB.y() )
-        {
-            x = mPB.x();
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
-        }
-        else
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+    QString title;
+//    qreal fontSize;
+    if( this->mIsDebugConsole ) {
+        title = tr( "Mudlet, debug console extract" );
+//        fontSize = this->fontInfo().pointSizeF();
     }
+    else if( this->mIsMiniConsole ) {
+        if( ! this->mpHost->mpConsole->mSubConsoleMap.empty() ) {
+            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin(); it != this->mpHost->mpConsole->mSubConsoleMap.cend(); ++it ) {
+                if( (*it).second == this->mpConsole ) {
+                    title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg( (*it).first.data() ).arg( this->mpHost->getName() );
+                    break;
+                }
+            }
+        }
+//        fontSize = this->mDisplayFont.pointSizeF();
+    }
+    else {
+        title = tr( "Mudlet, %1 console extract from %2 profile" ).arg( this->mpConsole->mConsoleName ).arg(  this->mpHost->getName() );
+//        fontSize = this->fontInfo().pointSizeF();
+    }
+
+//    qDebug( "TTextEdit::copySelectionToClipboardHTML(): font size for \"%s\", declared: %f, detected font size:%f, original font size: %f!",
+//            title.toUtf8().constData(),
+//            this->mDisplayFont.pointSizeF(),
+//            this->fontInfo().pointSizeF(),
+//            this->font().pointSizeF() );
+
+    QStringList fontsList; // List of fonts to become the font-family entry for
+                           // the master css in the header
+
+    fontsList << this->fontInfo().family(); // Seems to be the best way to get the
+                                        // font in use, as different TConsole
+                                        // instances within the same profile
+                                        // might have different fonts in future,
+                                        // and although the font is settable for
+                                        // the main profile window, it is not yet
+                                        // for user miniConsoles, or the Debug one
+    fontsList << QStringLiteral( "Courier New" );
+    fontsList << QStringLiteral( "Monospace" );
+    fontsList << QStringLiteral( "Courier" );
+    fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
+
+    // Scen the data for CSS items
+    // Use a QSet as is fastest for accumulating all the diffferent poosible values
+    QSet<QString> cssEntriesSet;
+    for( int y=mPA.y(); y<=mPB.y(); y++ ) {
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) )
+            break;
+
+        int x = 0;
+        if( y == mPA.y() ) { // First line of selection
+            x = mPA.x();
+            mpBuffer->scanForCssCache(QPoint(x,y),QPoint(-1,y),cssEntriesSet);
+        }
+        else if ( y == mPB.y() ) { // Last line of selection
+            x = mPB.x();
+            mpBuffer->scanForCssCache(QPoint(0,y),QPoint(x,y),cssEntriesSet);
+        }
+        else // inside lines of selection
+            mpBuffer->scanForCssCache(QPoint(0,y),QPoint(-1,y),cssEntriesSet);
+
+    }
+
+    // Convert into a list so we can refer to the index number for the entries
+    QList<QString> cssCache = QList<QString>::fromSet(cssEntriesSet);
+    // Not essential but helps when debuggging the raw HTML produced
+    std::sort( cssCache.begin(), cssCache.end() );
+    // Now produce the CSS styles to go in the header
+    QString cssHeader;
+    for( uint i = 0; i < cssCache.size(); ++i) {
+        cssHeader.append( QStringLiteral( "\n     span.c%1 {%2}" )
+                          .arg( i )
+                          .arg( cssCache.at(i) ) );
+    }
+
+    // Transitional DTD would be:
+    // <!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN' 'http://www.w3.org/TR/html4/loose.dtd'>
+
+    // font size and line height reworked after reading:
+    // http://alistapart.com/article/howtosizetextincss
+
+    // QString text relaid out (and line-feeds included) to improve readability
+    // of generated HTML source.  QStringLiteral() used as text is not a subject
+    // for translation and is faster at run-time than using '+' operator or
+    // QString::append()
+    QString html = QStringLiteral( "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n"
+                                   "<html>\n"
+                                   "<head>\n"
+                                   "<meta http-equiv='content-type' content='text/html; charset=utf-8'>\n"
+                                   // put the charset as early as possible as the parser MUST restart when it switches away from the ASCII default
+                                   "<meta name='generator' content='Mudlet MUD Client version: %1%2'>\n"
+                                   // Nice to identify what made the file!
+                                   "<title>%3</title>\n"
+                                   // title tag is MANDATORY for strict HTML4
+                                   "<style type='text/css'>\n"
+                                   "<!-- body { font-family: '%4'; font-size: %5%; line-height: %6em; white-space: nowrap; color: rgb(%7,%8,%9); background-color: rgb(%10,%11,%12); }"
+                                   "%13 -->\n"
+                                   "</style>\n"
+                                   "</head>\n"
+                                   "<body><div>" )
+                                   // <div></div> tags required around outside of the <span></spans> for strict HTML 4 as we do not use <p></p>s or anything else
+                   .arg( APP_VERSION )
+                   .arg( APP_BUILD )
+                   .arg( title ) // Web-page title
+                   .arg( fontsList.join( QStringLiteral( "', '" ) ) ) // Font names
+                   .arg( 100.0 /* * fontSize / 14.0 */ ) // Use a "%age" for a IE compatible font size, 16 point is the default for web-pages, but 14 seems to produce the right result
+                   .arg( 1.125 ) // Line height, I think, should be equal to 18 point for a 16 point default font size by default but this seems to work even when the size is not 16
+                   .arg( 255 )
+                   .arg( 255 )
+                   .arg( 255 )
+                   .arg( QString::number( this->mBgColor.red() ) )
+                   .arg( QString::number( this->mBgColor.green() ) )
+                   .arg( QString::number( this->mBgColor.blue() ) )
+                   .arg( cssHeader );
+
+    for( int y=mPA.y(); y<=mPB.y(); y++ ) {
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) )
+            break;
+
+        int x = 0;
+        if( y == mPA.y() ) { // First line of selection
+            x = mPA.x();
+            if( x )
+                html.append( QString( x, QLatin1Char(' ') ) ); // Pad to the right so partial first line lines up
+
+            html.append(mpBuffer->bufferToHtml(QPoint(x,y),QPoint(-1,y),cssCache));
+        }
+        else if ( y == mPB.y() ) { // Last line of selection
+            x = mPB.x();
+            html.append(mpBuffer->bufferToHtml(QPoint(0,y),QPoint(x,y),cssCache));
+        }
+        else // inside lines of selection
+            html.append(mpBuffer->bufferToHtml(QPoint(0,y),QPoint(-1,y),cssCache));
+
+    }
+    html.append( QStringLiteral( "</div></body></html>" ) );
+    // The last two of these tags were missing and meant the HTML was not terminated properly
     QClipboard * clipboard = QApplication::clipboard();
-    clipboard->setText( text );
+    clipboard->setText( html );
     mSelectedRegion = QRegion( 0, 0, 0, 0 );
     forceUpdate();
     return;

@@ -1186,27 +1186,26 @@ void TConsole::finalize()
 
 QString TConsole::assemble_html_font_specs()
 {
-    QString s;
-    s = "</span><span style=\"";
+    QString background;
+    QString foreground;
     if( m_LoggerfontSpecs.m_fgColorHasChanged )
-    {
-        s+="color: rgb("+
-            QString::number(m_LoggerfontSpecs.fgColor.red())+","+
-            QString::number(m_LoggerfontSpecs.fgColor.green())+","+
-            QString::number(m_LoggerfontSpecs.fgColor.blue()) + ");";
-    }
+        foreground = QStringLiteral( " color: rgb(%1,%2,%3);" )
+                     .arg(QString::number(m_LoggerfontSpecs.fgColor.red()))
+                     .arg(QString::number(m_LoggerfontSpecs.fgColor.green()))
+                     .arg(QString::number(m_LoggerfontSpecs.fgColor.blue()));
+
     if( m_LoggerfontSpecs.m_bgColorHasChanged )
-    {
-        s += " background: rgb("+
-            QString::number(m_LoggerfontSpecs.bgColor.red())+","+
-            QString::number(m_LoggerfontSpecs.bgColor.green())+","+
-            QString::number(m_LoggerfontSpecs.bgColor.blue()) +");";
-    }
-    s += " font-weight: " + m_LoggerfontSpecs.getFontWeight() +
-        "; font-style: " + m_LoggerfontSpecs.getFontStyle() +
-        "; font-decoration: " + m_LoggerfontSpecs.getFontDecoration() +
-        "\">";
-    return s;
+        background = QStringLiteral( " background: rgb(%1,%2,%3);" )
+                     .arg(QString::number(m_LoggerfontSpecs.bgColor.red()))
+                     .arg(QString::number(m_LoggerfontSpecs.bgColor.green()))
+                     .arg(QString::number(m_LoggerfontSpecs.bgColor.blue()));
+
+    return QStringLiteral( "</span><span style=\"%1%2 font-weight: %3; font-style: %4; text-decoration: %5;\">" )
+            .arg(foreground)
+            .arg(background)
+            .arg(m_LoggerfontSpecs.getFontWeight())
+            .arg(m_LoggerfontSpecs.getFontStyle())
+            .arg(m_LoggerfontSpecs.getTextDecoration());
 }
 
 void TConsole::logger_set_text_properties( QString tags )
