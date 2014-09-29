@@ -405,10 +405,10 @@ mudlet::mudlet()
 
 
     //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
-    mpMusicBox1 = new QMediaPlayer;
-    mpMusicBox2 = new QMediaPlayer;
-    mpMusicBox3 = new QMediaPlayer;
-    mpMusicBox4 = new QMediaPlayer;
+    mpMusicBox1 = new QMediaPlayer(this);
+    mpMusicBox2 = new QMediaPlayer(this);
+    mpMusicBox3 = new QMediaPlayer(this);
+    mpMusicBox4 = new QMediaPlayer(this);
 
 }
 

@@ -156,7 +156,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mHaveMapperScript( false )
 {
    // mLogStatus = mudlet::self()->mAutolog;
-    mLuaInterface = new LuaInterface(this);
+    mLuaInterface.reset(new LuaInterface(this));
     QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
     directoryLogFile.append("/log");
