@@ -556,7 +556,7 @@ void cTelnet::processTelnetCommand( const string & command )
 
           if( option == GMCP )
           {
-              //if( !mpHost->mEnableGMCP ) break;
+              if( !mpHost->mEnableGMCP ) break;
 
               enableGMCP = true;
               sendTelnetOption( TN_DO, GMCP );
