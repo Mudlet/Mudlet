@@ -191,10 +191,6 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
                 }
                 lua_remove(L, -2);
             }
-//            qDebug()<<"new stack fully loaded";
-//            for (int j=1;j<=lua_gettop(L);j++){
-//                qDebug()<<j<<":"<<lua_type(L,j*-1);
-//            }
             lua_insert(L, -2);
             if (!loadKey(L, curVar)){
                 lua_settop(L, stackSize);
@@ -400,9 +396,6 @@ bool LuaInterface::setCValue( QList<TVar *> vars ){
 bool LuaInterface::setValue( TVar * var ){
     //This function assumes the var has been modified and then called
     L = interpreter->pGlobalLua;
-//    QStringList names = varName( var );
-    //if our outer most name is a number, we need to use [] notation
-//    QString toDo;
 
     QList<TVar *> vars = varOrder(var);
     QString newName = vars[0]->getName();
@@ -518,7 +511,6 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
         }
         else{
             //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
-            //lua_pop(L,pCount);
             return;
         }
 
@@ -552,7 +544,6 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
         }
         else{
             //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
-            //lua_pop(L,pCount);
             return;
         }
         lua_gettable(L, -2);
@@ -571,7 +562,6 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
         }
         else{
             //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
-            //lua_pop(L,pCount);
             return;
         }
         pushCount++;
@@ -591,7 +581,6 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
         }
         else{
             //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
-            //lua_pop(L,pCount);
             return;
         }
         lua_pushnil(L);
@@ -761,14 +750,10 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
             continue;
         }
         varUnit->addVariable(var);
-        //lua_pushvalue(L, -1);
 
         varUnit->addPointer(kp);
-//        lua_pop(L, 1);
-//        lua_pushvalue(L, -2);
 
         varUnit->addPointer(vp);
-//        lua_pop(L, 1);
         if (vType == LUA_TTABLE){
             if (depth<=99 && lua_checkstack(L,3)){//depth is historical now
                 //put the table on top
@@ -793,10 +778,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
                   !keyName.toLower().startsWith("action") && !keyName.toLower().startsWith("timer") &&
                   !keyName.toLower().startsWith("key"))){
             //functions are compiled to bytecode so there is no reference
-//            lua_pushvalue(L,-1);
-//            valueName = lua_tostring(L,-1);
             var->setValue("function");
-//            lua_pop(L,1);
         }
         else{
             tVar->removeChild(var);

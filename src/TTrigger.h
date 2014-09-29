@@ -70,14 +70,9 @@ class TTrigger : public Tree<TTrigger>
     friend class XMLimport;
 
 public:
-
-
-                      //TTrigger(const TTrigger &);
     virtual          ~TTrigger();
                      TTrigger( TTrigger * parent, Host * pHost );
                      TTrigger( QString name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
-                      //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
-                      //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
     QString          getCommand()                    { return mCommand; }
     void             compileAll();
     void             setCommand( QString b )         { mCommand = b; }

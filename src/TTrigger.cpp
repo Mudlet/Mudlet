@@ -145,7 +145,6 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
     {
         //FIXME: ronny hat das irgendwie geschafft
         qDebug()<<"[CRITICAL ERROR (plz report):] Trigger name="<<mName<<" aborting reason: propertyList.size() != regexList.size()";
-        //assert( propertyList.size() == regexList.size() );
     }
 
     if( ( propertyList.size() < 1 ) && ( ! isFolder() ) && ( ! mColorTrigger ) )
@@ -182,7 +181,6 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                 }
                 setError( QString( "Pattern '" )+QString(local8Bit.constData())+QString( "' failed to compile. Correct the pattern.") );
                 state = false;
-                //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
             else
             {
@@ -231,10 +229,6 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                 state = false;
                 continue;
             }
-//            else
-//            {
-//                qDebug()<<"[OK] color pattern initialized:"<<regexList[i];
-//            }
         }
         else
         {
@@ -273,10 +267,7 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
-    //int numOfCaptureGroups = pcre_info( re, 0, 0 )*3;
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
-
-    //qDebug() <<"TTrigger::match_perl() regex="<<mRegexCodeList[regexNumber]<<" LINE="<<subject;
 
     rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
 
@@ -327,8 +318,6 @@ bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, i
         tabptr = name_table;
         for( i = 0; i < namecount; i++ )
         {
-            //int n = (tabptr[0] << 8) | tabptr[1];
-            //printf("GOT:(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2, ovector[2*n+1] - ovector[2*n], subject + ovector[2*n]);
             tabptr += name_entry_size;
         }
     }
@@ -475,12 +464,6 @@ END:
     }
 }
     return true;
-
-
-//ERROR:
-
-//    return false;
-
 }
 
 bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset )
@@ -667,8 +650,6 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
 {
     if( regexNumber >= mColorPatternList.size() ) return false;
     if( line == -1 ) return false;
-    //bool bgColorMatch = false;
-    //bool fgColorMatch = false;
     bool canExecute = false;
     std::list<std::string> captureList;
     std::list<int> posList;
@@ -676,7 +657,6 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
     std::deque<TChar> & bufferLine = mpHost->mpConsole->buffer.buffer[line];
     QString & lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
     int pos = 0;
-    //bool fgColorChange = false;
     int matchBegin = -1;
     bool matching = false;
 
@@ -919,7 +899,6 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
         int highestCondition = 0;
         if( mIsMultiline )
         {
-            //int matchStateCnt = 0;
             for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
             {
 
@@ -988,14 +967,12 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
         if( mIsMultiline )
         {
             int k = 0;
-            //bool triggerFires = false;
             conditionMet = false; //invalidate conditionMet as it has no meaning for multiline triggers
             list<TMatchState*> removeList;
 
             for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
             {
                 k++;
-                //qDebug()<<"TMatchState #"<<k<<" lineCount="<<(*it).second->mLineCount<<" delta="<<(*it).second->mDelta<<" conditon ("<<(*it).second->mNextCondition<<"/"<<(*it).second->mNumberOfConditions<<")";
                 if( (*it).second->isComplete() )
                 {
                     mKeepFiring = mStayOpen;
@@ -1084,7 +1061,6 @@ bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset
             {
                 execute();
             }
-// N/U:             bool conditionMet = false;
             for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
             {
                 TTrigger * pChild = *it;

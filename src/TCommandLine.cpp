@@ -88,7 +88,6 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
     setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     setCenterOnScroll( false );
     setWordWrapMode( QTextOption::WrapAnywhere );
-//    setMaximumBlockCount(1);
     setContentsMargins(0,0,0,0);
 }
 
@@ -106,7 +105,6 @@ bool TCommandLine::event( QEvent * event )
     if( event->type() == QEvent::KeyPress )
     {
         QKeyEvent *ke = static_cast<QKeyEvent *>( event );
-        //qDebug()<<"modifier="<<ke->modifiers()<<" key="<<ke->key();
         switch( ke->key() )
         {
             case Qt::Key_Space:
@@ -156,19 +154,6 @@ bool TCommandLine::event( QEvent * event )
             ke->accept();
             return true;
             break;
-
-//            case Qt::Key_Backtab:
-//                handleTabCompletion( false );
-//                ke->accept();
-//                adjustHeight();
-//                return true;
-//                break;
-
-//            case Qt::Key_Tab:
-//                handleTabCompletion( true );
-//                ke->accept();
-//                return true;
-//                break;
 
             case Qt::Key_unknown:
                 qWarning()<<"ERROR: key unknown!";
@@ -244,10 +229,6 @@ bool TCommandLine::event( QEvent * event )
                 else if( ke->modifiers() & Qt::ShiftModifier )
                 {
                     textCursor().insertBlock();
-                    /*if( ! textCursor().movePosition(QTextCursor::Down, QTextCursor::KeepAnchor) )
-                    {
-                        textCursor().insertBlock();
-                    }*/
                     ke->accept();
                     return true;
                 }
@@ -407,7 +388,6 @@ bool TCommandLine::event( QEvent * event )
 
 void TCommandLine::focusInEvent( QFocusEvent * event )
 {
-    //setSelection( mSelectionStart, mSelectedText.length() );
     textCursor().movePosition(QTextCursor::Start);
     textCursor().movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, mSelectedText.length() );
 
@@ -418,7 +398,7 @@ void TCommandLine::focusInEvent( QFocusEvent * event )
 
 void TCommandLine::focusOutEvent( QFocusEvent * event )
 {
-    if( textCursor().hasSelection() )//hasSelectedText() )
+    if( textCursor().hasSelection() )
     {
         mSelectionStart = textCursor().selectionStart();
         mSelectedText = textCursor().selectedText();

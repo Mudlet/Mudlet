@@ -44,8 +44,6 @@
 #include <iostream>
 
 
-// N/U: #define MUDLET_HOME "/usr/local/share/mudlet/"
-
 using namespace std;
 
 TConsole *  spDebugConsole = 0;

@@ -266,8 +266,6 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mDoubleClickIgnore", ignore);
 
     writeTextElement( "name", pT->mHostName );
-    //writeTextElement( "login", pT->mLogin );
-    //writeTextElement( "pass", pT->mPass );
     writeStartElement( "mInstalledPackages" );
     for( int i=0; i<pT->mInstalledPackages.size(); i++ )
     {
@@ -590,7 +588,6 @@ bool XMLexport::exportTrigger( QIODevice * device )
 bool XMLexport::writeTrigger( TTrigger * pT )
 {
     if (!pT->mModuleMasterFolder && pT->exportItem){
-    //qDebug()<<"trigger written"<<pT->mModuleMember;
     QString tag;
     if( pT->mIsFolder )
     {
@@ -644,7 +641,6 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     for(auto it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
     {
         TTrigger * pChild = *it;
-      //  if (pChild->mModuleMember) continue;
         writeTrigger( pChild );
     }
     if (pT->exportItem)

@@ -140,15 +140,12 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
     }
     if( ! pOldParent )
     {
-        //removeTimerRootNode( pChild );
         mTimerRootNodeList.remove( pChild );
     }
     if( pNewParent )
     {
         pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
-        //cout << "dumping family of newParent:"<<endl;
-        //pNewParent->Dump();
     }
     else
     {
@@ -161,7 +158,6 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
 
 void TimerUnit::removeAllTempTimers()
 {
-    //qDebug()<<"vorher: TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
     mCleanupList.clear();
     for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
@@ -173,7 +169,6 @@ void TimerUnit::removeAllTempTimers()
             markCleanup( pChild );
         }
     }
-    //qDebug()<<"TIMERS: insgesamt:"<<mTimerRootNodeList.size()<<" cleanup:"<<mCleanupList.size();
 }
 
 void TimerUnit::_removeTimerRootNode( TTimer * pT )
@@ -239,7 +234,6 @@ void TimerUnit::unregisterTimer( TTimer * pT )
     if( ! pT ) return;
     pT->deactivate();
     pT->stop();
-    //qDebug()<<"unregistring timer: "<<pT->getName();
     if( pT->getParent() )
     {
         _removeTimer( pT );
@@ -291,8 +285,6 @@ bool TimerUnit::enableTimer( QString & name )
     {
         TTimer * pT = it.value();
 
-// N/U:         bool ret = false;
-
         if( ! pT->isOffsetTimer() )
            /* ret = */ pT->setIsActive( true );
         else
@@ -326,17 +318,6 @@ bool TimerUnit::enableTimer( QString & name )
                     pT->disableTimer();
                 }
             }
-            /*else
-            {
-                if( pT->shouldBeActive() )
-                {
-                    pT->enableTimer();
-                }
-                else
-                {
-                    pT->disableTimer();
-                }
-            }*/
         }
 
         ++it;
@@ -366,7 +347,6 @@ bool TimerUnit::disableTimer( QString & name )
 
 TTimer * TimerUnit::findTimer( QString & name )
 {
-    //TTimer * pT = 0;
     QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
     {
@@ -379,7 +359,6 @@ TTimer * TimerUnit::findTimer( QString & name )
 
 bool TimerUnit::killTimer( QString & name )
 {
-    //qDebug()<<"TimerUnit::killTimer() name="<<name;
     for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
         TTimer * pChild = *it;
@@ -402,10 +381,8 @@ qint64 TimerUnit::getNewID()
 
 void TimerUnit::doCleanup()
 {
-    //qDebug()<<"TimerUnit::doCleanup() enter";
     for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
-        //qDebug()<<"--> DELETING:"<<(*it)->mName;
         delete (*it);
     }
     mCleanupList.clear();
@@ -422,7 +399,6 @@ void TimerUnit::markCleanup( TTimer * pT )
     }
 
     mCleanupList.push_back( pT );
-    //qDebug()<<"==> ADDED to cleanup list";
 }
 
 void TimerUnit::_assembleReport( TTimer * pChild )

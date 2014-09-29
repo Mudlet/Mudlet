@@ -99,7 +99,6 @@ void TRoom::setExitStub(int direction, bool status)
         {
             QString error = QString("Set exit stub in given direction in RoomID(%1) - there is already an exit there!").arg( id );
             mpRoomDB->mpMap->logError(error);
-            // qDebug("TRoom::setExitStub(): cannot set an exit stub in given direction in RoomID(%d) - there is already an exit there!", id );
         }
     }
     else
@@ -228,40 +227,6 @@ bool TRoom::setExit( int to, int direction )
     return false;
 }
 
-// Original code unused - checked all the normal exits to see if there is one to
-// given roomId, now we use the same method signature to see if there is a NORMAL
-// exit in the encoded direction given
-/*
- *bool TRoom::hasExit( int _id )
- *{
- *    if( north == _id )
- *        return true;
- *    else if( south == _id )
- *        return true;
- *    else if( northwest == _id )
- *        return true;
- *    else if( northeast == _id )
- *        return true;
- *    else if( southwest == _id )
- *        return true;
- *    else if( southeast == _id )
- *        return true;
- *    else if( east == _id )
- *        return true;
- *    else if( west == _id )
- *        return true;
- *    else if( up == _id )
- *        return true;
- *    else if( down == _id )
- *        return true;
- *    else if( out == _id )
- *        return true;
- *    else if( in == _id )
- *        return true;
- *    else
- *        return false;
- *}
- */
 bool TRoom::hasExit( int direction )
 {
     switch(direction){
@@ -748,7 +713,6 @@ void TRoom::auditExits()
     }
     // These last two were missing!
 
-//    AUDIT_SPECIAL_EXITS: QMapIterator<int, QString> it( other );
 // If we use the Mutable iterator we don't have to restart after a deletion
     QMutableMapIterator<int, QString> it( other );
     while( it.hasNext() )
@@ -759,8 +723,6 @@ void TRoom::auditExits()
         {
             qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (special) exit to %i.", id, it.key());
             // If size is less than or equal to 0 then there is nothing to print!!!
-//            qDebug()<<"AUDIT_SPECIAL_EXITS: roomID:"<<id<<" REMOVING invalid special exit:"<<_cmd;
-//            goto AUDIT_SPECIAL_EXITS;
             other.remove( it.key(), it.value() );
         }
         else if( ! ( _cmd.startsWith('1') || _cmd.startsWith('0') ) )
@@ -776,8 +738,6 @@ void TRoom::auditExits()
                      _nk,
                      qPrintable(_cmd),
                      qPrintable(_nc));
-//            qDebug()<<"AUDIT_SPECIAL_EXITS: roomID:"<<id<<" PATCHING invalid special exit:"<<_cmd << " new:"<<_nc;
-//            goto AUDIT_SPECIAL_EXITS;
         }
     }
 }
