@@ -1846,10 +1846,15 @@ void cTelnet::handle_socket_signal_readyRead()
                                 {
                                     datalen = decompressBuffer( buffer, restLength, out_buffer );
                                     buffer = out_buffer;
+                                    i = -1; // start processing buffer from the beginning.
+                                } else {
+                                    datalen = 0;
+                                    i = -1; // end the loop, this will make i and datalen the same.
                                 }
                                 //bugfix: BenH
                                 iac = false;
                                 insb = false;
+                                command = "";
                                 ////////////////
                                 goto MAIN_LOOP_END;
                             }
