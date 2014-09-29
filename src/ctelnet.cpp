@@ -1575,14 +1575,24 @@ void cTelnet::_loadReplay()
 
         char * pB = &mLoadBuffer[0];
         mLoadedBytes = mReplayStream.readRawData ( pB, amount );
-        qDebug("_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f seconds.)", mLoadedBytes, amount, offset / 1000.0, offset / (1000.0 * mudlet::self()->mReplaySpeed));
+        if( mudlet::self()->mReplaySpeed < 1 )
+            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duriation is: %1.3f Seconds. )", mLoadedBytes, amount, offset/1000.0 , - mudlet::self()->mReplaySpeed * offset/1000.0 );
+        else
+            qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duriation is: %1.3f Seconds. )", mLoadedBytes, amount, offset/1000.0 , offset/(1000.0 * mudlet::self()->mReplaySpeed) );
+
         mLoadBuffer[mLoadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
 
         mudlet::self()->mReplayChunkTime = offset;
         mudlet::self()->mReplayTimeOffset = 0;
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        mudlet::self()->mpReplayTimer->start( 100 / mudlet::self()->mReplaySpeed );
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
+        if( mudlet::self()->mReplaySpeed < 1 ) {
+            mudlet::self()->mpReplayTimer->start( -100 * mudlet::self()->mReplaySpeed );
+            QTimer::singleShot( - offset * mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
+        }
+        else {
+            mudlet::self()->mpReplayTimer->start( 100 / mudlet::self()->mReplaySpeed );
+            QTimer::singleShot( offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
+        }
     }
     else
     {
