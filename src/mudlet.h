@@ -149,6 +149,7 @@ public:
    void                          deselect( Host * pHost, const QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
+   bool                          isReplayInProgress();
    QTime                         mReplayTime;
    QTimer *                      mpReplayTimer;
    int                           mReplayTimeOffset; // How many milliSeconds into this chunk of replay are we?

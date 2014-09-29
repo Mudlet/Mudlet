@@ -1086,15 +1086,6 @@ void TConsole::setConsoleFgColor( int r, int g, int b )
     return time;
 } */
 
-
-
-void TConsole::loadRawFile( std::string n )
-{
-    QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    QString fileName = directoryLogFile + "/"+QString(n.c_str());
-    mpHost->mTelnet.loadReplay( fileName );
-}
-
 void TConsole::printOnDisplay( std::string & incomingSocketData )
 {
     //buffer.messen();

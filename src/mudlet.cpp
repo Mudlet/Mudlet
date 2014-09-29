@@ -240,7 +240,7 @@ mudlet::mudlet()
 
 
     QAction * actionReplay = new QAction( QIcon( QStringLiteral( ":/icons/media-optical.png" ) ), tr("Replay"), this);
-    actionReplay->setToolTip(tr("Load a Mudlet replay"));
+    actionReplay->setToolTip(tr("Once a profile is loaded - allows you to load a previously recorded Mudlet replay"));
     mpMainToolBar->addAction( actionReplay );
 
     actionReconnect = new QAction( QIcon( QStringLiteral( ":/icons/system-restart.png" ) ), tr("Reconnect"), this);
@@ -904,6 +904,7 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled( false );
     mpMainToolBar->actions()[13]->setEnabled( false );
     mpMainToolBar->actions()[14]->setEnabled( false );
+    mpMainToolBar->actions()[15]->setEnabled( false ); // Replay
 }
 
 void mudlet::enableToolbarButtons()
@@ -921,6 +922,8 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled( true );
     mpMainToolBar->actions()[13]->setEnabled( true );
     mpMainToolBar->actions()[14]->setEnabled( true );
+    mpMainToolBar->actions()[15]->setEnabled( true ); // Replay
+    mpMainToolBar->actions()[15]->setToolTip(tr("Allows you to load a previously recorded Mudlet replay"));
 }
 
 bool mudlet::openWindow( Host * pHost, const QString & name )
@@ -1966,27 +1969,24 @@ void mudlet::slot_disconnect()
 void mudlet::slot_replay()
 {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    QString home = QDir::homePath() + "/.config/mudlet/profiles/";
-    home.append( pHost->getName() );
-    home.append( "/log/" );
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
-                                                    home,
-                                                    tr("*.dat"));
-    if( fileName.isEmpty() ) return;
-
-    QFile file(fileName);
-    if( ! file.open(QFile::ReadOnly | QFile::Text) )
-    {
-        QMessageBox::warning(this, tr("Select Replay"),
-                             tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+    if( ! pHost )
         return;
-    }
-    //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    //QString fileName = directoryLogFile + "/"+QString(n.c_str());
-    pHost->mTelnet.loadReplay( fileName );
+
+    QString replayHomePath = QStringLiteral( "%1/.config/mudlet/profiles/%2/log/" )
+                             .arg( QDir::homePath() )
+                             .arg( pHost->getName() );
+
+    QString replayFileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
+                                                    replayHomePath,
+                                                    tr("*.dat"));
+    if( replayFileName.isEmpty() )
+        return; // will be empty if cancel is used in above dialog
+
+    // This call to cTelnet class is where the replay code becomes common with
+    // the lua loadRawFile() ...
+    // Second argument is to enable display of messages in console
+    QString msg = pHost->mTelnet.loadReplay( replayFileName, true );
+    pHost->mTelnet.postMessage( msg );
 }
 
 void mudlet::printSystemMessage( Host * pH, const QString & s )
@@ -2196,6 +2196,9 @@ void mudlet::replayStart()
     if( ! mpMainToolBar )
         return;
 
+    mpMainToolBar->actions()[15]->setEnabled( false ); // Disable Replay button;
+    mpMainToolBar->actions()[15]->setToolTip( tr( "Unable to load a Mudlet replay as one is already being played for a loaded profile!"));
+
     mpReplayToolBar = new QToolBar( this );
     mReplaySpeed = 1;
     mpReplayTimeDisplay = new QLabel( this );
@@ -2280,6 +2283,9 @@ void mudlet::replayOver()
         mpActionReplayTime = 0;
         mpReplayToolBar = 0;
     }
+
+    mpMainToolBar->actions()[15]->setEnabled( true ); // Enable Replay button;
+    mpMainToolBar->actions()[15]->setToolTip(tr("Allows you to load a previously recorded Mudlet replay"));
 }
 
 void mudlet::slot_replaySpeedUp()
@@ -2382,4 +2388,20 @@ void mudlet::playSound( QString s )
         mpMusicBox4->setMedia( QUrl::fromLocalFile( s ) );
         mpMusicBox4->play();
     }
+}
+
+// Survey all the profiles loaded and check whether any are already replaying a
+// stored log - the current mechanism is not reentrant so must prevent more
+// than one replay at a time!
+bool mudlet::isReplayInProgress()
+{
+    Host * pHost = mHostManager.getFirstHost();
+    while( pHost ) {
+        if( pHost->mTelnet.isReplaying() )
+            return true;
+
+        pHost = mHostManager.getNextHost( pHost->getName() );
+    }
+
+    return false;
 }
